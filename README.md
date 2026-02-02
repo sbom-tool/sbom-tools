@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="SBOM Tools logo" width="200">
+</p>
+
 # sbom-tools
 
 A semantic SBOM (Software Bill of Materials) diff and analysis tool. Compare, validate, and assess the quality of SBOMs across CycloneDX and SPDX formats.
@@ -40,6 +44,45 @@ The binary is placed at `target/release/sbom-tools`.
 
 ```sh
 sbom-tools diff old-sbom.json new-sbom.json
+```
+
+#### Common diff options
+
+| Flag | Description |
+|------|-------------|
+| `--fail-on-change` | Exit with code 1 if changes are detected |
+| `--fail-on-vuln` | Exit with code 2 if new vulnerabilities are introduced |
+| `--ecosystem-rules <path>` | Load custom per-ecosystem normalization rules |
+| `--fuzzy-preset <preset>` | Matching preset: `strict`, `balanced` (default), `permissive` |
+| `--enrich-vulns` | Query OSV/KEV databases for vulnerability data |
+| `--detect-typosquats` | Flag components that look like known-package typosquats |
+| `--explain-matches` | Show why each component pair was matched |
+
+#### Example output
+
+```
+sbom-tools diff old-sbom.json new-sbom.json --enrich-vulns
+
+SBOM Diff: old-sbom.json → new-sbom.json
+
+Components: 142 → 145 (+5 added, -2 removed, ~3 modified)
+
+ + pkg:npm/express@4.19.2           (added)
+ + pkg:npm/zod@3.23.8               (added)
+ + pkg:npm/opentelemetry-api@1.9.0  (added)
+ + pkg:npm/ws@8.18.0                (added)
+ + pkg:npm/pino@9.3.2               (added)
+ - pkg:npm/body-parser@1.20.2       (removed)
+ - pkg:npm/winston@3.11.0           (removed)
+ ~ pkg:npm/lodash@4.17.20 → 4.17.21  (version bump)
+ ~ pkg:npm/axios@1.6.0 → 1.7.4       (version bump)
+ ~ pkg:npm/semver@7.5.4 → 7.6.3      (version bump)
+
+Vulnerabilities:
+ ✗ CVE-2024-29041 (HIGH) — express <4.19.2  [resolved by upgrade]
+ ✗ CVE-2024-4068  (HIGH) — braces <3.0.3    [new, in transitive dep]
+
+License changes: none
 ```
 
 ### View a single SBOM
@@ -102,7 +145,7 @@ Select with `--format`:
 
 | Code | Meaning |
 |------|---------|
-| `0` | No changes detected (or `--no-fail-on-change`) |
+| `0` | No changes detected (or without `--fail-on-change`) |
 | `1` | Changes detected |
 | `2` | New vulnerabilities introduced (`--fail-on-vuln`) |
 | `3` | Error |
@@ -128,27 +171,7 @@ See [`examples/ecosystem-rules.yaml`](examples/ecosystem-rules.yaml) for a full 
 
 ## Project structure
 
-```
-src/
-  main.rs          CLI entry point
-  lib.rs           Library interface
-  cli/             Command handlers
-  config/          Configuration loading and validation
-  parsers/         Format detection and parsing
-  model/           Canonical data model (NormalizedSbom, Component, CanonicalId)
-  matching/        Fuzzy matching engine
-  diff/            Semantic diff engine
-  quality/         Quality scoring and compliance checking
-  enrichment/      OSV/KEV vulnerability enrichment
-  reports/         Report generation (JSON, SARIF, HTML, etc.)
-  tui/             Interactive terminal UI
-  pipeline/        Data processing pipeline
-  utils/           Utilities
-tests/             Integration tests and fixtures
-benches/           Performance benchmarks
-docs/              Architecture documentation
-examples/          Example configuration files
-```
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for a detailed overview of the codebase layout, module responsibilities, and data flow.
 
 ## Testing
 
@@ -164,6 +187,10 @@ cargo bench
 
 - [Architecture overview](docs/ARCHITECTURE.md)
 - [Pipeline diagrams](docs/pipeline-diagrams.md)
+
+## Contributing
+
+Contributions are welcome! Please open an issue to discuss your idea before submitting a pull request. Make sure `cargo test` passes and follow the existing code style.
 
 ## License
 

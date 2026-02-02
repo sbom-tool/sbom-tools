@@ -2,9 +2,10 @@
 name = "sbom-tools"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.70"
 authors = ["Binarly.io"]
 description = "Semantic SBOM diff and analysis tool"
-license = "Apache-2.0"
+license = "MIT"
 readme = "README.md"
 repository = "https://github.com/binarly-io/sbom-tools"
 keywords = ["sbom", "cyclonedx", "spdx", "diff", "security"]
