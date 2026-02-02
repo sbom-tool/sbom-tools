@@ -2,8 +2,6 @@
   <img src="assets/logo.png" alt="SBOM Tools logo" width="200">
 </p>
 
-# sbom-tools
-
 A semantic SBOM (Software Bill of Materials) diff and analysis tool. Compare, validate, and assess the quality of SBOMs across CycloneDX and SPDX formats.
 
 ## Features
