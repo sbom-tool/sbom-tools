@@ -254,8 +254,8 @@ impl ExclusionRule {
 
 impl MatchingRulesConfig {
     /// Load rules from a YAML string
-    pub fn from_yaml(yaml: &str) -> Result<Self, serde_yaml::Error> {
-        serde_yaml::from_str(yaml)
+    pub fn from_yaml(yaml: &str) -> Result<Self, serde_yaml_ng::Error> {
+        serde_yaml_ng::from_str(yaml)
     }
 
     /// Load rules from a YAML file

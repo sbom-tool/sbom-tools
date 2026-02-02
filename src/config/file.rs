@@ -104,7 +104,7 @@ pub enum ConfigFileError {
     /// IO error reading file
     Io(std::io::Error),
     /// YAML parsing error
-    Parse(serde_yaml::Error),
+    Parse(serde_yaml_ng::Error),
 }
 
 impl std::fmt::Display for ConfigFileError {
@@ -135,8 +135,8 @@ impl From<std::io::Error> for ConfigFileError {
     }
 }
 
-impl From<serde_yaml::Error> for ConfigFileError {
-    fn from(err: serde_yaml::Error) -> Self {
+impl From<serde_yaml_ng::Error> for ConfigFileError {
+    fn from(err: serde_yaml_ng::Error) -> Self {
         ConfigFileError::Parse(err)
     }
 }
@@ -148,7 +148,7 @@ pub fn load_config_file(path: &Path) -> Result<AppConfig, ConfigFileError> {
     }
 
     let content = std::fs::read_to_string(path)?;
-    let config: AppConfig = serde_yaml::from_str(&content)?;
+    let config: AppConfig = serde_yaml_ng::from_str(&content)?;
     Ok(config)
 }
 
@@ -281,7 +281,7 @@ pub fn generate_example_config() -> String {
 
 {}
 "#,
-        serde_yaml::to_string(&example).unwrap_or_default()
+        serde_yaml_ng::to_string(&example).unwrap_or_default()
     )
 }
 

@@ -6,10 +6,10 @@
 //! 1. Incremental diffing with caching
 //! 2. BatchCandidateGenerator with LSH for large SBOMs
 
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use sbom_tools::diff::{DiffEngine, IncrementalDiffEngine, LargeSbomConfig};
 use sbom_tools::model::{Component, DocumentMetadata, Ecosystem, NormalizedSbom};
-use std::hint::black_box as hint_black_box;
+use std::hint::black_box;
 
 /// Generate a test SBOM with the specified number of components.
 fn generate_sbom(prefix: &str, count: usize, ecosystem: Ecosystem) -> NormalizedSbom {
@@ -66,7 +66,7 @@ fn bench_diff_small(c: &mut Criterion) {
     c.bench_function("diff_100_components", |b| {
         b.iter(|| {
             let result = engine.diff(black_box(&old), black_box(&new));
-            hint_black_box(result);
+            black_box(result);
         })
     });
 }
@@ -78,7 +78,7 @@ fn bench_diff_medium(c: &mut Criterion) {
     c.bench_function("diff_500_components", |b| {
         b.iter(|| {
             let result = engine.diff(black_box(&old), black_box(&new));
-            hint_black_box(result);
+            black_box(result);
         })
     });
 }
@@ -90,7 +90,7 @@ fn bench_diff_large(c: &mut Criterion) {
     c.bench_function("diff_1000_components", |b| {
         b.iter(|| {
             let result = engine.diff(black_box(&old), black_box(&new));
-            hint_black_box(result);
+            black_box(result);
         })
     });
 }
@@ -105,7 +105,7 @@ fn bench_diff_scaling(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("standard", size), size, |b, _| {
             b.iter(|| {
                 let result = engine.diff(black_box(&old), black_box(&new));
-                hint_black_box(result);
+                black_box(result);
             })
         });
     }
@@ -121,14 +121,14 @@ fn bench_lsh_threshold(c: &mut Criterion) {
     // Without LSH (high threshold)
     let engine_no_lsh = DiffEngine::new().with_large_sbom_config(LargeSbomConfig {
         lsh_threshold: 10000, // Effectively disable LSH
-        enable_cross_ecosystem: false,
         max_candidates: 100,
+        ..LargeSbomConfig::default()
     });
 
     group.bench_function("without_lsh", |b| {
         b.iter(|| {
             let result = engine_no_lsh.diff(black_box(&old), black_box(&new));
-            hint_black_box(result);
+            black_box(result);
         })
     });
 
@@ -138,7 +138,7 @@ fn bench_lsh_threshold(c: &mut Criterion) {
     group.bench_function("with_lsh", |b| {
         b.iter(|| {
             let result = engine_with_lsh.diff(black_box(&old), black_box(&new));
-            hint_black_box(result);
+            black_box(result);
         })
     });
 
@@ -157,7 +157,7 @@ fn bench_incremental_cache(c: &mut Criterion) {
         b.iter(|| {
             incremental.clear_cache();
             let result = incremental.diff(black_box(&old), black_box(&new));
-            hint_black_box(result);
+            black_box(result);
         })
     });
 
@@ -168,7 +168,7 @@ fn bench_incremental_cache(c: &mut Criterion) {
     group.bench_function("cached_diff", |b| {
         b.iter(|| {
             let result = incremental.diff(black_box(&old), black_box(&new));
-            hint_black_box(result);
+            black_box(result);
         })
     });
 
@@ -186,7 +186,7 @@ fn bench_repeated_diffs(c: &mut Criterion) {
         b.iter(|| {
             for _ in 0..5 {
                 let result = standard_engine.diff(black_box(&old), black_box(&new));
-                hint_black_box(result);
+                black_box(result);
             }
         })
     });
@@ -198,7 +198,7 @@ fn bench_repeated_diffs(c: &mut Criterion) {
             incremental_engine.clear_cache();
             for _ in 0..5 {
                 let result = incremental_engine.diff(black_box(&old), black_box(&new));
-                hint_black_box(result);
+                black_box(result);
             }
         })
     });

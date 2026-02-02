@@ -314,8 +314,8 @@ impl EcosystemRulesConfig {
     }
 
     /// Load configuration from a YAML string
-    pub fn from_yaml(yaml: &str) -> Result<Self, serde_yaml::Error> {
-        serde_yaml::from_str(yaml)
+    pub fn from_yaml(yaml: &str) -> Result<Self, serde_yaml_ng::Error> {
+        serde_yaml_ng::from_str(yaml)
     }
 
     /// Load configuration from a JSON string
@@ -747,8 +747,8 @@ impl EcosystemRulesConfig {
     }
 
     /// Export configuration to YAML
-    pub fn to_yaml(&self) -> Result<String, serde_yaml::Error> {
-        serde_yaml::to_string(self)
+    pub fn to_yaml(&self) -> Result<String, serde_yaml_ng::Error> {
+        serde_yaml_ng::to_string(self)
     }
 
     /// Export configuration to JSON
@@ -767,7 +767,7 @@ impl Default for EcosystemRulesConfig {
 #[derive(Debug)]
 pub enum ConfigError {
     Io(std::io::Error),
-    Yaml(serde_yaml::Error),
+    Yaml(serde_yaml_ng::Error),
     Json(serde_json::Error),
 }
 

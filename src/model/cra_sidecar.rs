@@ -67,7 +67,7 @@ impl CraSidecarMetadata {
     pub fn from_yaml_file(path: &Path) -> Result<Self, CraSidecarError> {
         let content = std::fs::read_to_string(path)
             .map_err(|e| CraSidecarError::IoError(e.to_string()))?;
-        serde_yaml::from_str(&content)
+        serde_yaml_ng::from_str(&content)
             .map_err(|e| CraSidecarError::ParseError(e.to_string()))
     }
 

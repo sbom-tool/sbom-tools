@@ -444,7 +444,10 @@ impl SpdxParser {
                     }
                 }
                 Ok(Event::Text(ref e)) => {
-                    current_text = e.unescape().unwrap_or_default().to_string();
+                    current_text = e.decode().unwrap_or_default().to_string();
+                }
+                Ok(Event::GeneralRef(_)) => {
+                    // Entity references — handled by decoder
                 }
                 Ok(Event::End(ref e)) => {
                     let local_name = Self::local_name(e.name().as_ref());
