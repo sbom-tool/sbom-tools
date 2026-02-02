@@ -1,0 +1,94 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 2,
+  "metadata": {
+    "timestamp": "2024-06-15T10:00:00Z",
+    "component": {
+      "type": "application",
+      "name": "acme-webapp",
+      "version": "2.0.0"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "lodash",
+      "version": "4.17.21",
+      "purl": "pkg:npm/lodash@4.17.21",
+      "licenses": [{"license": {"id": "MIT"}}]
+    },
+    {
+      "type": "library",
+      "name": "express",
+      "version": "4.18.2",
+      "purl": "pkg:npm/express@4.18.2",
+      "licenses": [{"license": {"id": "MIT"}}]
+    },
+    {
+      "type": "library",
+      "name": "dayjs",
+      "version": "1.11.7",
+      "purl": "pkg:npm/dayjs@1.11.7",
+      "licenses": [{"license": {"id": "MIT"}}]
+    },
+    {
+      "type": "library",
+      "name": "axios",
+      "version": "1.4.0",
+      "purl": "pkg:npm/axios@1.4.0",
+      "licenses": [{"license": {"id": "MIT"}}]
+    },
+    {
+      "type": "library",
+      "name": "react",
+      "version": "18.2.0",
+      "purl": "pkg:npm/react@18.2.0",
+      "licenses": [{"license": {"id": "MIT"}}]
+    },
+    {
+      "type": "library",
+      "name": "typescript",
+      "version": "5.0.4",
+      "purl": "pkg:npm/typescript@5.0.4",
+      "licenses": [{"license": {"id": "Apache-2.0"}}]
+    },
+    {
+      "type": "library",
+      "name": "zod",
+      "version": "3.21.4",
+      "purl": "pkg:npm/zod@3.21.4",
+      "licenses": [{"license": {"id": "MIT"}}]
+    },
+    {
+      "type": "library",
+      "name": "prisma",
+      "version": "4.15.0",
+      "purl": "pkg:npm/prisma@4.15.0",
+      "licenses": [{"license": {"id": "Apache-2.0"}}]
+    }
+  ],
+  "dependencies": [
+    {"ref": "pkg:npm/express@4.18.2", "dependsOn": ["pkg:npm/lodash@4.17.21"]},
+    {"ref": "pkg:npm/dayjs@1.11.7", "dependsOn": []},
+    {"ref": "pkg:npm/axios@1.4.0", "dependsOn": []},
+    {"ref": "pkg:npm/react@18.2.0", "dependsOn": []},
+    {"ref": "pkg:npm/prisma@4.15.0", "dependsOn": ["pkg:npm/typescript@5.0.4"]}
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2023-45857",
+      "source": {"name": "NVD"},
+      "ratings": [{"severity": "critical", "score": 9.8}],
+      "description": "Axios SSRF vulnerability allowing server-side request forgery",
+      "affects": [{"ref": "pkg:npm/axios@1.4.0"}]
+    },
+    {
+      "id": "CVE-2023-26136",
+      "source": {"name": "NVD"},
+      "ratings": [{"severity": "high", "score": 8.1}],
+      "description": "Tough-cookie prototype pollution",
+      "affects": [{"ref": "pkg:npm/express@4.18.2"}]
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:spdx="http://spdx.org/rdf/terms#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
+  <spdx:SpdxDocument rdf:about="https://example.com/test-app-1.0.0">
+    <spdx:specVersion>SPDX-2.3</spdx:specVersion>
+    <spdx:dataLicense rdf:resource="http://spdx.org/licenses/CC0-1.0"/>
+    <spdx:name>test-app</spdx:name>
+    <spdx:spdxId>SPDXRef-DOCUMENT</spdx:spdxId>
+    <spdx:creationInfo>
+      <spdx:CreationInfo>
+        <spdx:created>2026-01-04T12:00:00Z</spdx:created>
+        <spdx:creator>Tool: test-generator-1.0.0</spdx:creator>
+        <spdx:creator>Organization: Test Org</spdx:creator>
+        <spdx:licenseListVersion>3.21</spdx:licenseListVersion>
+      </spdx:CreationInfo>
+    </spdx:creationInfo>
+    <spdx:hasExtractedLicensingInfo/>
+    <spdx:Package rdf:about="https://example.com/test-app-1.0.0#SPDXRef-Package-lodash">
+      <spdx:spdxId>SPDXRef-Package-lodash</spdx:spdxId>
+      <spdx:name>lodash</spdx:name>
+      <spdx:versionInfo>4.17.21</spdx:versionInfo>
+      <spdx:downloadLocation>https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz</spdx:downloadLocation>
+      <spdx:filesAnalyzed>false</spdx:filesAnalyzed>
+      <spdx:licenseConcluded rdf:resource="http://spdx.org/licenses/MIT"/>
+      <spdx:licenseDeclared rdf:resource="http://spdx.org/licenses/MIT"/>
+      <spdx:copyrightText>Copyright JS Foundation and other contributors</spdx:copyrightText>
+      <spdx:supplier>Organization: JS Foundation</spdx:supplier>
+      <spdx:checksum>
+        <spdx:Checksum>
+          <spdx:algorithm rdf:resource="http://spdx.org/rdf/terms#checksumAlgorithm_sha256"/>
+          <spdx:checksumValue>abc123def456...</spdx:checksumValue>
+        </spdx:Checksum>
+      </spdx:checksum>
+      <spdx:externalRef>
+        <spdx:ExternalRef>
+          <spdx:referenceCategory rdf:resource="http://spdx.org/rdf/terms#referenceCategory_packageManager"/>
+          <spdx:referenceType>purl</spdx:referenceType>
+          <spdx:referenceLocator>pkg:npm/lodash@4.17.21</spdx:referenceLocator>
+        </spdx:ExternalRef>
+      </spdx:externalRef>
+    </spdx:Package>
+    <spdx:Package rdf:about="https://example.com/test-app-1.0.0#SPDXRef-Package-express">
+      <spdx:spdxId>SPDXRef-Package-express</spdx:spdxId>
+      <spdx:name>express</spdx:name>
+      <spdx:versionInfo>4.18.2</spdx:versionInfo>
+      <spdx:downloadLocation>https://registry.npmjs.org/express/-/express-4.18.2.tgz</spdx:downloadLocation>
+      <spdx:filesAnalyzed>false</spdx:filesAnalyzed>
+      <spdx:licenseConcluded rdf:resource="http://spdx.org/licenses/MIT"/>
+      <spdx:licenseDeclared rdf:resource="http://spdx.org/licenses/MIT"/>
+      <spdx:copyrightText>Copyright (c) 2009-2014 TJ Holowaychuk</spdx:copyrightText>
+      <spdx:externalRef>
+        <spdx:ExternalRef>
+          <spdx:referenceCategory rdf:resource="http://spdx.org/rdf/terms#referenceCategory_packageManager"/>
+          <spdx:referenceType>purl</spdx:referenceType>
+          <spdx:referenceLocator>pkg:npm/express@4.18.2</spdx:referenceLocator>
+        </spdx:ExternalRef>
+      </spdx:externalRef>
+    </spdx:Package>
+    <spdx:relationship>
+      <spdx:Relationship>
+        <spdx:spdxElementId rdf:resource="https://example.com/test-app-1.0.0#SPDXRef-DOCUMENT"/>
+        <spdx:relationshipType>DESCRIBES</spdx:relationshipType>
+        <spdx:relatedSpdxElement rdf:resource="https://example.com/test-app-1.0.0#SPDXRef-Package-lodash"/>
+      </spdx:Relationship>
+    </spdx:relationship>
+    <spdx:relationship>
+      <spdx:Relationship>
+        <spdx:spdxElementId rdf:resource="https://example.com/test-app-1.0.0#SPDXRef-DOCUMENT"/>
+        <spdx:relationshipType>DESCRIBES</spdx:relationshipType>
+        <spdx:relatedSpdxElement rdf:resource="https://example.com/test-app-1.0.0#SPDXRef-Package-express"/>
+      </spdx:Relationship>
+    </spdx:relationship>
+    <spdx:relationship>
+      <spdx:Relationship>
+        <spdx:spdxElementId rdf:resource="https://example.com/test-app-1.0.0#SPDXRef-Package-express"/>
+        <spdx:relationshipType>DEPENDS_ON</spdx:relationshipType>
+        <spdx:relatedSpdxElement rdf:resource="https://example.com/test-app-1.0.0#SPDXRef-Package-lodash"/>
+      </spdx:Relationship>
+    </spdx:relationship>
+  </spdx:SpdxDocument>
+</rdf:RDF>

@@ -1,0 +1,2031 @@
+//! ViewApp - Dedicated TUI for exploring a single SBOM.
+//!
+//! This provides a rich, purpose-built interface for SBOM analysis
+//! with hierarchical navigation, search, and deep inspection.
+
+use crate::model::{Component, NormalizedSbom, NormalizedSbomIndex, VulnerabilityRef};
+use crate::quality::{ComplianceResult, QualityReport, QualityScorer, ScoringProfile};
+use crate::tui::app_states::SourcePanelState;
+use crate::tui::state::ListNavigation;
+use crate::tui::widgets::TreeState;
+use std::collections::{HashMap, HashSet};
+
+use super::views::{compute_compliance_results, StandardComplianceState};
+
+/// Main application state for single SBOM viewing.
+pub struct ViewApp {
+    /// The SBOM being viewed
+    pub sbom: NormalizedSbom,
+
+    /// Current active view/tab
+    pub active_tab: ViewTab,
+
+    /// Tree navigation state
+    pub tree_state: TreeState,
+
+    /// Current tree grouping mode
+    pub tree_group_by: TreeGroupBy,
+
+    /// Current tree filter
+    pub tree_filter: TreeFilter,
+
+    /// Selected component ID (for detail panel)
+    pub selected_component: Option<String>,
+
+    /// Component detail sub-tab
+    pub component_tab: ComponentDetailTab,
+
+    /// Vulnerability explorer state
+    pub vuln_state: VulnExplorerState,
+
+    /// License view state
+    pub license_state: LicenseViewState,
+
+    /// Dependency view state
+    pub dependency_state: DependencyViewState,
+
+    /// Global search state
+    pub search_state: SearchState,
+
+    /// Focus panel (left list vs right detail)
+    pub focus_panel: FocusPanel,
+
+    /// Show help overlay
+    pub show_help: bool,
+
+    /// Show export dialog
+    pub show_export: bool,
+
+    /// Show legend overlay
+    pub show_legend: bool,
+
+    /// Status message to display temporarily
+    pub status_message: Option<String>,
+
+    /// Navigation context for breadcrumbs
+    pub navigation_ctx: ViewNavigationContext,
+
+    /// Should quit
+    pub should_quit: bool,
+
+    /// Animation tick counter
+    pub tick: u64,
+
+    /// Cached statistics
+    pub stats: SbomStats,
+
+    /// Quality report for the SBOM
+    pub quality_report: QualityReport,
+
+    /// Quality view state
+    pub quality_state: QualityViewState,
+
+    /// Compliance validation results for all standards (lazily computed)
+    pub compliance_results: Option<Vec<ComplianceResult>>,
+
+    /// Compliance view state
+    pub compliance_state: StandardComplianceState,
+
+    /// Precomputed index for fast lookups
+    pub sbom_index: NormalizedSbomIndex,
+
+    /// Source tab state
+    pub source_state: SourcePanelState,
+}
+
+impl ViewApp {
+    /// Create a new ViewApp for the given SBOM.
+    pub fn new(sbom: NormalizedSbom, raw_content: String) -> Self {
+        let stats = SbomStats::from_sbom(&sbom);
+
+        // Calculate quality score
+        let scorer = QualityScorer::new(ScoringProfile::Standard);
+        let quality_report = scorer.score(&sbom);
+        let quality_state = QualityViewState::new(quality_report.recommendations.len());
+
+        let compliance_state = StandardComplianceState::new();
+
+        // Build index for fast lookups (O(1) instead of O(n))
+        let sbom_index = sbom.build_index();
+
+        // Build source panel state from raw content
+        let source_state = SourcePanelState::new(&raw_content);
+
+        // Pre-expand the first few ecosystems
+        let mut tree_state = TreeState::new();
+        for eco in stats.ecosystem_counts.keys().take(3) {
+            tree_state.expand(&format!("eco:{}", eco));
+        }
+
+        Self {
+            sbom,
+            active_tab: ViewTab::Overview,
+            tree_state,
+            tree_group_by: TreeGroupBy::Ecosystem,
+            tree_filter: TreeFilter::All,
+            selected_component: None,
+            component_tab: ComponentDetailTab::Overview,
+            vuln_state: VulnExplorerState::new(),
+            license_state: LicenseViewState::new(),
+            dependency_state: DependencyViewState::new(),
+            search_state: SearchState::new(),
+            focus_panel: FocusPanel::Left,
+            show_help: false,
+            show_export: false,
+            show_legend: false,
+            status_message: None,
+            navigation_ctx: ViewNavigationContext::new(),
+            should_quit: false,
+            tick: 0,
+            stats,
+            quality_report,
+            quality_state,
+            compliance_results: None,
+            compliance_state,
+            sbom_index,
+            source_state,
+        }
+    }
+
+    /// Lazily compute compliance results for all standards when first needed.
+    pub fn ensure_compliance_results(&mut self) {
+        if self.compliance_results.is_none() {
+            self.compliance_results = Some(compute_compliance_results(&self.sbom));
+        }
+    }
+
+    /// Switch to the next tab.
+    pub fn next_tab(&mut self) {
+        self.active_tab = match self.active_tab {
+            ViewTab::Overview => ViewTab::Tree,
+            ViewTab::Tree => ViewTab::Vulnerabilities,
+            ViewTab::Vulnerabilities => ViewTab::Licenses,
+            ViewTab::Licenses => ViewTab::Dependencies,
+            ViewTab::Dependencies => ViewTab::Quality,
+            ViewTab::Quality => ViewTab::Compliance,
+            ViewTab::Compliance => ViewTab::Source,
+            ViewTab::Source => ViewTab::Overview,
+        };
+    }
+
+    /// Switch to the previous tab.
+    pub fn prev_tab(&mut self) {
+        self.active_tab = match self.active_tab {
+            ViewTab::Overview => ViewTab::Source,
+            ViewTab::Tree => ViewTab::Overview,
+            ViewTab::Vulnerabilities => ViewTab::Tree,
+            ViewTab::Licenses => ViewTab::Vulnerabilities,
+            ViewTab::Dependencies => ViewTab::Licenses,
+            ViewTab::Quality => ViewTab::Dependencies,
+            ViewTab::Compliance => ViewTab::Quality,
+            ViewTab::Source => ViewTab::Compliance,
+        };
+    }
+
+    /// Select a specific tab.
+    pub fn select_tab(&mut self, tab: ViewTab) {
+        self.active_tab = tab;
+    }
+
+    // ========================================================================
+    // Index access methods for O(1) lookups
+    // ========================================================================
+
+    /// Get the sort key for a component using the cached index.
+    ///
+    /// Returns pre-computed lowercase strings to avoid repeated allocations during sorting.
+    pub fn get_sort_key(
+        &self,
+        id: &crate::model::CanonicalId,
+    ) -> Option<&crate::model::ComponentSortKey> {
+        self.sbom_index.sort_key(id)
+    }
+
+    /// Get dependencies of a component using the cached index (O(k) instead of O(edges)).
+    pub fn get_dependencies(
+        &self,
+        id: &crate::model::CanonicalId,
+    ) -> Vec<&crate::model::DependencyEdge> {
+        self.sbom_index.dependencies_of(id, &self.sbom.edges)
+    }
+
+    /// Get dependents of a component using the cached index (O(k) instead of O(edges)).
+    pub fn get_dependents(
+        &self,
+        id: &crate::model::CanonicalId,
+    ) -> Vec<&crate::model::DependencyEdge> {
+        self.sbom_index.dependents_of(id, &self.sbom.edges)
+    }
+
+    /// Search components by name using the cached index.
+    pub fn search_components_by_name(&self, query: &str) -> Vec<&crate::model::Component> {
+        self.sbom.search_by_name_indexed(query, &self.sbom_index)
+    }
+
+    /// Toggle focus between left and right panels.
+    pub fn toggle_focus(&mut self) {
+        self.focus_panel = match self.focus_panel {
+            FocusPanel::Left => FocusPanel::Right,
+            FocusPanel::Right => FocusPanel::Left,
+        };
+    }
+
+    /// Start search mode.
+    pub fn start_search(&mut self) {
+        self.search_state.active = true;
+        self.search_state.query.clear();
+        self.search_state.results.clear();
+    }
+
+    /// Stop search mode.
+    pub fn stop_search(&mut self) {
+        self.search_state.active = false;
+    }
+
+    /// Execute search with current query.
+    pub fn execute_search(&mut self) {
+        self.search_state.results = self.search(&self.search_state.query.clone());
+        self.search_state.selected = 0;
+    }
+
+    /// Search across the SBOM for matching items.
+    fn search(&self, query: &str) -> Vec<SearchResult> {
+        if query.len() < 2 {
+            return Vec::new();
+        }
+
+        let query_lower = query.to_lowercase();
+        let mut results = Vec::new();
+
+        // Search components
+        for (id, comp) in &self.sbom.components {
+            if comp.name.to_lowercase().contains(&query_lower) {
+                results.push(SearchResult::Component {
+                    id: id.value().to_string(),
+                    name: comp.name.clone(),
+                    version: comp.version.clone(),
+                    match_field: "name".to_string(),
+                });
+            } else if let Some(purl) = &comp.identifiers.purl {
+                if purl.to_lowercase().contains(&query_lower) {
+                    results.push(SearchResult::Component {
+                        id: id.value().to_string(),
+                        name: comp.name.clone(),
+                        version: comp.version.clone(),
+                        match_field: "purl".to_string(),
+                    });
+                }
+            }
+        }
+
+        // Search vulnerabilities
+        for (_, comp) in &self.sbom.components {
+            for vuln in &comp.vulnerabilities {
+                if vuln.id.to_lowercase().contains(&query_lower) {
+                    results.push(SearchResult::Vulnerability {
+                        id: vuln.id.clone(),
+                        component_id: comp.canonical_id.to_string(),  // Store ID for navigation
+                        component_name: comp.name.clone(),
+                        severity: vuln.severity.as_ref().map(|s| s.to_string()),
+                    });
+                }
+            }
+        }
+
+        // Limit results
+        results.truncate(50);
+        results
+    }
+
+    /// Get the currently selected component.
+    pub fn get_selected_component(&self) -> Option<&Component> {
+        self.selected_component.as_ref().and_then(|selected_id| {
+            self.sbom
+                .components
+                .iter()
+                .find(|(id, _)| id.value() == selected_id)
+                .map(|(_, comp)| comp)
+        })
+    }
+
+    /// Jump tree selection to a component, expanding its group if needed.
+    pub fn jump_to_component_in_tree(&mut self, component_id: &str) -> bool {
+        let group_id = {
+            let comp = match self
+                .sbom
+                .components
+                .iter()
+                .find(|(id, _)| id.value() == component_id)
+                .map(|(_, comp)| comp)
+            {
+                Some(comp) => comp,
+                None => return false,
+            };
+            self.tree_group_id_for_component(comp)
+        };
+        if let Some(ref group_id) = group_id {
+            self.tree_state.expand(group_id);
+        }
+
+        let nodes = self.build_tree_nodes();
+        let mut flat_items = Vec::new();
+        flatten_tree_for_selection(&nodes, &self.tree_state, &mut flat_items);
+
+        if let Some(index) = flat_items
+            .iter()
+            .position(|item| matches!(item, SelectedTreeNode::Component(id) if id == component_id))
+        {
+            self.tree_state.selected = index;
+            return true;
+        }
+
+        if let Some(group_id) = group_id {
+            if let Some(index) = flat_items
+                .iter()
+                .position(|item| matches!(item, SelectedTreeNode::Group(id) if id == &group_id))
+            {
+                self.tree_state.selected = index;
+            }
+        }
+
+        false
+    }
+
+    /// Toggle tree grouping mode.
+    pub fn toggle_tree_grouping(&mut self) {
+        self.tree_group_by = match self.tree_group_by {
+            TreeGroupBy::Ecosystem => TreeGroupBy::License,
+            TreeGroupBy::License => TreeGroupBy::VulnStatus,
+            TreeGroupBy::VulnStatus => TreeGroupBy::Flat,
+            TreeGroupBy::Flat => TreeGroupBy::Ecosystem,
+        };
+        self.tree_state = TreeState::new(); // Reset tree state on grouping change
+    }
+
+    /// Toggle tree filter.
+    pub fn toggle_tree_filter(&mut self) {
+        self.tree_filter = match self.tree_filter {
+            TreeFilter::All => TreeFilter::HasVulnerabilities,
+            TreeFilter::HasVulnerabilities => TreeFilter::Critical,
+            TreeFilter::Critical => TreeFilter::All,
+        };
+        self.tree_state = TreeState::new();
+    }
+
+    /// Cycle to next component detail tab.
+    pub fn next_component_tab(&mut self) {
+        self.component_tab = match self.component_tab {
+            ComponentDetailTab::Overview => ComponentDetailTab::Identifiers,
+            ComponentDetailTab::Identifiers => ComponentDetailTab::Vulnerabilities,
+            ComponentDetailTab::Vulnerabilities => ComponentDetailTab::Dependencies,
+            ComponentDetailTab::Dependencies => ComponentDetailTab::Overview,
+        };
+    }
+
+    /// Cycle to previous component detail tab.
+    pub fn prev_component_tab(&mut self) {
+        self.component_tab = match self.component_tab {
+            ComponentDetailTab::Overview => ComponentDetailTab::Dependencies,
+            ComponentDetailTab::Identifiers => ComponentDetailTab::Overview,
+            ComponentDetailTab::Vulnerabilities => ComponentDetailTab::Identifiers,
+            ComponentDetailTab::Dependencies => ComponentDetailTab::Vulnerabilities,
+        };
+    }
+
+    /// Select a specific component detail tab.
+    pub fn select_component_tab(&mut self, tab: ComponentDetailTab) {
+        self.component_tab = tab;
+    }
+
+    /// Toggle help overlay.
+    pub fn toggle_help(&mut self) {
+        self.show_help = !self.show_help;
+        if self.show_help {
+            self.show_export = false;
+            self.show_legend = false;
+        }
+    }
+
+    /// Toggle export dialog.
+    pub fn toggle_export(&mut self) {
+        self.show_export = !self.show_export;
+        if self.show_export {
+            self.show_help = false;
+            self.show_legend = false;
+        }
+    }
+
+    /// Toggle legend overlay.
+    pub fn toggle_legend(&mut self) {
+        self.show_legend = !self.show_legend;
+        if self.show_legend {
+            self.show_help = false;
+            self.show_export = false;
+        }
+    }
+
+    /// Close all overlays.
+    pub fn close_overlays(&mut self) {
+        self.show_help = false;
+        self.show_export = false;
+        self.show_legend = false;
+        self.search_state.active = false;
+        self.compliance_state.show_detail = false;
+    }
+
+    /// Check if any overlay is open.
+    pub fn has_overlay(&self) -> bool {
+        self.show_help
+            || self.show_export
+            || self.show_legend
+            || self.search_state.active
+            || self.compliance_state.show_detail
+    }
+
+    /// Set a temporary status message.
+    pub fn set_status_message(&mut self, msg: impl Into<String>) {
+        self.status_message = Some(msg.into());
+    }
+
+    /// Clear the status message.
+    pub fn clear_status_message(&mut self) {
+        self.status_message = None;
+    }
+
+    /// Export the current SBOM to a file.
+    pub fn export(&mut self, format: crate::tui::export::ExportFormat) {
+        use crate::tui::export::export_view;
+
+        let result = export_view(format, &self.sbom, None);
+
+        if result.success {
+            self.set_status_message(result.message);
+        } else {
+            self.set_status_message(format!("Export failed: {}", result.message));
+        }
+    }
+
+    /// Export compliance results from the compliance tab
+    pub fn export_compliance(&mut self, format: crate::tui::export::ExportFormat) {
+        use crate::tui::export::export_compliance;
+
+        self.ensure_compliance_results();
+        let results = match self.compliance_results.as_ref() {
+            Some(r) if !r.is_empty() => r,
+            _ => {
+                self.set_status_message("No compliance results to export");
+                return;
+            }
+        };
+
+        let result = export_compliance(
+            format,
+            results,
+            self.compliance_state.selected_standard,
+            None,
+        );
+        if result.success {
+            self.set_status_message(result.message);
+        } else {
+            self.set_status_message(format!("Export failed: {}", result.message));
+        }
+    }
+
+    /// Navigate back using breadcrumb history.
+    pub fn go_back(&mut self) -> bool {
+        if let Some(breadcrumb) = self.navigation_ctx.pop_breadcrumb() {
+            self.active_tab = breadcrumb.tab;
+            // Restore selection index based on tab
+            match breadcrumb.tab {
+                ViewTab::Vulnerabilities => {
+                    self.vuln_state.selected = breadcrumb.selection_index;
+                }
+                ViewTab::Licenses => {
+                    self.license_state.selected = breadcrumb.selection_index;
+                }
+                ViewTab::Dependencies => {
+                    self.dependency_state.selected = breadcrumb.selection_index;
+                }
+                ViewTab::Tree => {
+                    self.tree_state.selected = breadcrumb.selection_index;
+                }
+                ViewTab::Source => {
+                    self.source_state.selected = breadcrumb.selection_index;
+                }
+                _ => {}
+            }
+            self.focus_panel = FocusPanel::Left;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Handle navigation in current view.
+    pub fn navigate_up(&mut self) {
+        match self.active_tab {
+            ViewTab::Tree => self.tree_state.select_prev(),
+            ViewTab::Vulnerabilities => self.vuln_state.select_prev(),
+            ViewTab::Licenses => self.license_state.select_prev(),
+            ViewTab::Dependencies => self.dependency_state.select_prev(),
+            ViewTab::Quality => self.quality_state.select_prev(),
+            ViewTab::Compliance => self.compliance_state.select_prev(),
+            ViewTab::Source => self.source_state.select_prev(),
+            ViewTab::Overview => {} // Overview has no list navigation
+        }
+    }
+
+    /// Handle navigation in current view.
+    pub fn navigate_down(&mut self) {
+        match self.active_tab {
+            ViewTab::Tree => self.tree_state.select_next(),
+            ViewTab::Vulnerabilities => self.vuln_state.select_next(),
+            ViewTab::Licenses => self.license_state.select_next(),
+            ViewTab::Dependencies => self.dependency_state.select_next(),
+            ViewTab::Quality => self.quality_state.select_next(),
+            ViewTab::Compliance => {
+                self.ensure_compliance_results();
+                let max = self.compliance_results.as_ref()
+                    .and_then(|r| r.get(self.compliance_state.selected_standard))
+                    .map(|r| r.violations.len())
+                    .unwrap_or(0);
+                self.compliance_state.select_next(max);
+            }
+            ViewTab::Source => self.source_state.select_next(),
+            ViewTab::Overview => {} // Overview has no list navigation
+        }
+    }
+
+    /// Page up - move up by page size (10 items).
+    pub fn page_up(&mut self) {
+        if self.active_tab == ViewTab::Source {
+            self.source_state.page_up();
+        } else {
+            for _ in 0..10 {
+                self.navigate_up();
+            }
+        }
+    }
+
+    /// Page down - move down by page size (10 items).
+    pub fn page_down(&mut self) {
+        if self.active_tab == ViewTab::Source {
+            self.source_state.page_down();
+        } else {
+            for _ in 0..10 {
+                self.navigate_down();
+            }
+        }
+    }
+
+    /// Go to first item in current view.
+    pub fn go_first(&mut self) {
+        match self.active_tab {
+            ViewTab::Tree => self.tree_state.select_first(),
+            ViewTab::Vulnerabilities => self.vuln_state.selected = 0,
+            ViewTab::Licenses => self.license_state.selected = 0,
+            ViewTab::Dependencies => self.dependency_state.selected = 0,
+            ViewTab::Quality => self.quality_state.scroll_offset = 0,
+            ViewTab::Compliance => self.compliance_state.selected_violation = 0,
+            ViewTab::Source => self.source_state.select_first(),
+            ViewTab::Overview => {}
+        }
+    }
+
+    /// Go to last item in current view.
+    pub fn go_last(&mut self) {
+        match self.active_tab {
+            ViewTab::Tree => self.tree_state.select_last(),
+            ViewTab::Vulnerabilities => {
+                self.vuln_state.selected = self.vuln_state.total.saturating_sub(1);
+            }
+            ViewTab::Licenses => {
+                self.license_state.selected = self.license_state.total.saturating_sub(1);
+            }
+            ViewTab::Dependencies => {
+                self.dependency_state.selected = self.dependency_state.total.saturating_sub(1);
+            }
+            ViewTab::Quality => {
+                self.quality_state.scroll_offset =
+                    self.quality_state.total_recommendations.saturating_sub(1);
+            }
+            ViewTab::Compliance => {
+                self.ensure_compliance_results();
+                let max = self.compliance_results.as_ref()
+                    .and_then(|r| r.get(self.compliance_state.selected_standard))
+                    .map(|r| r.violations.len())
+                    .unwrap_or(0);
+                self.compliance_state.selected_violation = max.saturating_sub(1);
+            }
+            ViewTab::Source => self.source_state.select_last(),
+            ViewTab::Overview => {}
+        }
+    }
+
+    /// Handle enter/select action.
+    pub fn handle_enter(&mut self) {
+        match self.active_tab {
+            ViewTab::Tree => {
+                // Toggle expand or select component
+                if let Some(node) = self.get_selected_tree_node() {
+                    match node {
+                        SelectedTreeNode::Group(id) => {
+                            self.tree_state.toggle_expand(&id);
+                        }
+                        SelectedTreeNode::Component(id) => {
+                            self.selected_component = Some(id);
+                            self.focus_panel = FocusPanel::Right;
+                            self.component_tab = ComponentDetailTab::Overview;
+                        }
+                    }
+                }
+            }
+            ViewTab::Vulnerabilities => {
+                // Select vulnerability's component - push breadcrumb for back navigation
+                if let Some((comp_id, vuln)) = self.vuln_state.get_selected(&self.sbom) {
+                    // Push breadcrumb so we can go back
+                    self.navigation_ctx.push_breadcrumb(
+                        ViewTab::Vulnerabilities,
+                        vuln.id.clone(),
+                        self.vuln_state.selected,
+                    );
+                    self.selected_component = Some(comp_id);
+                    self.component_tab = ComponentDetailTab::Overview;
+                    self.active_tab = ViewTab::Tree;
+                }
+            }
+            ViewTab::Dependencies => {
+                // Toggle expand on the selected dependency node
+                // Node ID is calculated from the flattened view
+                if let Some(node_id) = self.get_selected_dependency_node_id() {
+                    self.dependency_state.toggle_expand(&node_id);
+                }
+            }
+            ViewTab::Compliance => {
+                // Toggle violation detail overlay
+                self.ensure_compliance_results();
+                let idx = self.compliance_state.selected_standard;
+                let has_violations = self
+                    .compliance_results.as_ref()
+                    .and_then(|r| r.get(idx))
+                    .map(|r| !r.violations.is_empty())
+                    .unwrap_or(false);
+                if has_violations {
+                    self.compliance_state.show_detail = !self.compliance_state.show_detail;
+                }
+            }
+            ViewTab::Source => {
+                // Toggle expand/collapse in tree mode
+                if self.source_state.view_mode == crate::tui::app_states::SourceViewMode::Tree {
+                    if let Some(ref tree) = self.source_state.json_tree {
+                        let mut items = Vec::new();
+                        crate::tui::shared::source::flatten_json_tree(
+                            tree,
+                            "",
+                            0,
+                            &self.source_state.expanded,
+                            &mut items,
+                            true,
+                            &[],
+                        );
+                        if let Some(item) = items.get(self.source_state.selected) {
+                            if item.is_expandable {
+                                let node_id = item.node_id.clone();
+                                self.source_state.toggle_expand(&node_id);
+                            }
+                        }
+                    }
+                }
+            }
+            ViewTab::Licenses | ViewTab::Overview | ViewTab::Quality => {}
+        }
+    }
+
+    /// Jump the source panel to the section selected in the map.
+    pub fn handle_source_map_enter(&mut self) {
+        // Build sections from JSON tree root children
+        let tree = match &self.source_state.json_tree {
+            Some(t) => t,
+            None => return,
+        };
+        let children = match tree.children() {
+            Some(c) => c,
+            None => return,
+        };
+
+        // Find the Nth expandable section
+        let expandable: Vec<_> = children
+            .iter()
+            .filter(|c| c.is_expandable())
+            .collect();
+
+        let target = match expandable.get(self.source_state.map_selected) {
+            Some(t) => *t,
+            None => return,
+        };
+
+        let target_id = target.node_id("root");
+
+        match self.source_state.view_mode {
+            crate::tui::app_states::SourceViewMode::Tree => {
+                // Ensure section is expanded
+                if !self.source_state.expanded.contains(&target_id) {
+                    self.source_state.expanded.insert(target_id.clone());
+                }
+                // Flatten and find the target node's index
+                let mut items = Vec::new();
+                crate::tui::shared::source::flatten_json_tree(
+                    tree, "", 0, &self.source_state.expanded, &mut items, true, &[],
+                );
+                if let Some(idx) = items.iter().position(|item| item.node_id == target_id) {
+                    self.source_state.selected = idx;
+                    self.source_state.scroll_offset = idx.saturating_sub(2);
+                }
+            }
+            crate::tui::app_states::SourceViewMode::Raw => {
+                // Find the line that starts this section
+                let key = match target {
+                    crate::tui::app_states::source::JsonTreeNode::Object { key, .. }
+                    | crate::tui::app_states::source::JsonTreeNode::Array { key, .. }
+                    | crate::tui::app_states::source::JsonTreeNode::Leaf { key, .. } => key.clone(),
+                };
+                // Search raw_lines for the top-level key
+                for (i, line) in self.source_state.raw_lines.iter().enumerate() {
+                    let search = format!("\"{}\":", key);
+                    if line.contains(&search) && line.starts_with("  ") && !line.starts_with("    ") {
+                        self.source_state.selected = i;
+                        self.source_state.scroll_offset = i.saturating_sub(2);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Switch focus back to source panel after jumping
+        self.focus_panel = FocusPanel::Left;
+    }
+
+    /// Get the component ID currently shown in the source map context footer.
+    /// Returns the canonical ID value string if inside the "components" section.
+    pub fn get_map_context_component_id(&self) -> Option<String> {
+        let tree = self.source_state.json_tree.as_ref()?;
+        let mut items = Vec::new();
+        crate::tui::shared::source::flatten_json_tree(
+            tree,
+            "",
+            0,
+            &self.source_state.expanded,
+            &mut items,
+            true,
+            &[],
+        );
+        let item = items.get(self.source_state.selected)?;
+        let parts: Vec<&str> = item.node_id.split('.').collect();
+        if parts.len() < 3 || parts[1] != "components" {
+            return None;
+        }
+        let idx_part = parts[2];
+        if idx_part.starts_with('[') && idx_part.ends_with(']') {
+            let idx: usize = idx_part[1..idx_part.len() - 1].parse().ok()?;
+            let (canon_id, _) = self.sbom.components.iter().nth(idx)?;
+            Some(canon_id.value().to_string())
+        } else {
+            None
+        }
+    }
+
+    /// Get the currently selected dependency node ID (if any).
+    pub fn get_selected_dependency_node_id(&self) -> Option<String> {
+        // Build the flattened list of visible dependency nodes
+        let mut visible_nodes = Vec::new();
+        self.collect_visible_dependency_nodes(&mut visible_nodes);
+        visible_nodes.get(self.dependency_state.selected).cloned()
+    }
+
+    /// Collect visible dependency nodes in tree order.
+    fn collect_visible_dependency_nodes(&self, nodes: &mut Vec<String>) {
+        // Build edges map from sbom.edges
+        let mut edges: std::collections::HashMap<String, Vec<String>> =
+            std::collections::HashMap::new();
+        let mut has_parent: std::collections::HashSet<String> = std::collections::HashSet::new();
+        let mut all_nodes: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+        for (id, _) in &self.sbom.components {
+            all_nodes.insert(id.value().to_string());
+        }
+
+        for edge in &self.sbom.edges {
+            let from = edge.from.value().to_string();
+            let to = edge.to.value().to_string();
+            if all_nodes.contains(&from) && all_nodes.contains(&to) {
+                edges.entry(from).or_default().push(to.clone());
+                has_parent.insert(to);
+            }
+        }
+
+        // Find roots, sorted for stable ordering matching render traversal
+        let mut roots: Vec<_> = all_nodes
+            .iter()
+            .filter(|id| !has_parent.contains(*id))
+            .cloned()
+            .collect();
+        roots.sort();
+
+        // Traverse and collect visible nodes
+        for root in roots {
+            self.collect_dep_nodes_recursive(
+                &root,
+                &edges,
+                nodes,
+                &mut std::collections::HashSet::new(),
+            );
+        }
+    }
+
+    fn collect_dep_nodes_recursive(
+        &self,
+        node_id: &str,
+        edges: &std::collections::HashMap<String, Vec<String>>,
+        nodes: &mut Vec<String>,
+        visited: &mut std::collections::HashSet<String>,
+    ) {
+        if visited.contains(node_id) {
+            return;
+        }
+        visited.insert(node_id.to_string());
+        nodes.push(node_id.to_string());
+
+        if self.dependency_state.is_expanded(node_id) {
+            if let Some(children) = edges.get(node_id) {
+                for child in children {
+                    self.collect_dep_nodes_recursive(child, edges, nodes, visited);
+                }
+            }
+        }
+    }
+
+    /// Get the currently selected tree node.
+    fn get_selected_tree_node(&self) -> Option<SelectedTreeNode> {
+        let nodes = self.build_tree_nodes();
+        let mut flat_items = Vec::new();
+        flatten_tree_for_selection(&nodes, &self.tree_state, &mut flat_items);
+
+        flat_items.get(self.tree_state.selected).cloned()
+    }
+
+    /// Build tree nodes based on current grouping.
+    pub fn build_tree_nodes(&self) -> Vec<crate::tui::widgets::TreeNode> {
+        match self.tree_group_by {
+            TreeGroupBy::Ecosystem => self.build_ecosystem_tree(),
+            TreeGroupBy::License => self.build_license_tree(),
+            TreeGroupBy::VulnStatus => self.build_vuln_status_tree(),
+            TreeGroupBy::Flat => self.build_flat_tree(),
+        }
+    }
+
+    fn build_ecosystem_tree(&self) -> Vec<crate::tui::widgets::TreeNode> {
+        use crate::tui::widgets::TreeNode;
+
+        let mut ecosystem_map: HashMap<String, Vec<&Component>> = HashMap::new();
+
+        for comp in self.sbom.components.values() {
+            if !self.matches_filter(comp) {
+                continue;
+            }
+            let eco = comp
+                .ecosystem
+                .as_ref()
+                .map(|e| e.to_string())
+                .unwrap_or_else(|| "Unknown".to_string());
+            ecosystem_map.entry(eco).or_default().push(comp);
+        }
+
+        let mut groups: Vec<TreeNode> = ecosystem_map
+            .into_iter()
+            .map(|(eco, mut components)| {
+                let vuln_count: usize = components.iter().map(|c| c.vulnerabilities.len()).sum();
+                components.sort_by(|a, b| a.name.cmp(&b.name));
+                let children: Vec<TreeNode> = components
+                    .into_iter()
+                    .map(|c| TreeNode::Component {
+                        id: c.canonical_id.value().to_string(),
+                        name: c.name.clone(),
+                        version: c.version.clone(),
+                        vuln_count: c.vulnerabilities.len(),
+                    })
+                    .collect();
+                let count = children.len();
+                TreeNode::Group {
+                    id: format!("eco:{}", eco),
+                    label: eco,
+                    children,
+                    item_count: count,
+                    vuln_count,
+                }
+            })
+            .collect();
+
+        groups.sort_by(|a, b| match (a, b) {
+            (
+                TreeNode::Group { item_count: ac, label: al, .. },
+                TreeNode::Group { item_count: bc, label: bl, .. },
+            ) => bc.cmp(ac).then_with(|| al.cmp(bl)),
+            _ => std::cmp::Ordering::Equal,
+        });
+
+        groups
+    }
+
+    fn build_license_tree(&self) -> Vec<crate::tui::widgets::TreeNode> {
+        use crate::tui::widgets::TreeNode;
+
+        let mut license_map: HashMap<String, Vec<&Component>> = HashMap::new();
+
+        for comp in self.sbom.components.values() {
+            if !self.matches_filter(comp) {
+                continue;
+            }
+            let license = if comp.licenses.declared.is_empty() {
+                "Unknown".to_string()
+            } else {
+                comp.licenses.declared[0].expression.clone()
+            };
+            license_map.entry(license).or_default().push(comp);
+        }
+
+        let mut groups: Vec<TreeNode> = license_map
+            .into_iter()
+            .map(|(license, mut components)| {
+                let vuln_count: usize = components.iter().map(|c| c.vulnerabilities.len()).sum();
+                components.sort_by(|a, b| a.name.cmp(&b.name));
+                let children: Vec<TreeNode> = components
+                    .into_iter()
+                    .map(|c| TreeNode::Component {
+                        id: c.canonical_id.value().to_string(),
+                        name: c.name.clone(),
+                        version: c.version.clone(),
+                        vuln_count: c.vulnerabilities.len(),
+                    })
+                    .collect();
+                let count = children.len();
+                TreeNode::Group {
+                    id: format!("lic:{}", license),
+                    label: license,
+                    children,
+                    item_count: count,
+                    vuln_count,
+                }
+            })
+            .collect();
+
+        groups.sort_by(|a, b| match (a, b) {
+            (
+                TreeNode::Group { item_count: ac, label: al, .. },
+                TreeNode::Group { item_count: bc, label: bl, .. },
+            ) => bc.cmp(ac).then_with(|| al.cmp(bl)),
+            _ => std::cmp::Ordering::Equal,
+        });
+
+        groups
+    }
+
+    fn build_vuln_status_tree(&self) -> Vec<crate::tui::widgets::TreeNode> {
+        use crate::tui::widgets::TreeNode;
+
+        let mut critical_comps = Vec::new();
+        let mut high_comps = Vec::new();
+        let mut other_vuln_comps = Vec::new();
+        let mut clean_comps = Vec::new();
+
+        for comp in self.sbom.components.values() {
+            if !self.matches_filter(comp) {
+                continue;
+            }
+
+            let max_severity = comp
+                .vulnerabilities
+                .iter()
+                .filter_map(|v| v.severity.as_ref().map(|s| s.to_string().to_lowercase()))
+                .max_by(|a, b| {
+                    let order = |s: &str| match s {
+                        "critical" => 4,
+                        "high" => 3,
+                        "medium" => 2,
+                        "low" => 1,
+                        _ => 0,
+                    };
+                    order(a).cmp(&order(b))
+                });
+
+            match max_severity.as_deref() {
+                Some("critical") => critical_comps.push(comp),
+                Some("high") => high_comps.push(comp),
+                Some(_) => other_vuln_comps.push(comp),
+                None if !comp.vulnerabilities.is_empty() => other_vuln_comps.push(comp),
+                None => clean_comps.push(comp),
+            }
+        }
+
+        let build_group = |label: &str, id: &str, comps: Vec<&Component>| -> TreeNode {
+            let vuln_count: usize = comps.iter().map(|c| c.vulnerabilities.len()).sum();
+            let children: Vec<TreeNode> = comps
+                .into_iter()
+                .map(|c| TreeNode::Component {
+                    id: c.canonical_id.value().to_string(),
+                    name: c.name.clone(),
+                    version: c.version.clone(),
+                    vuln_count: c.vulnerabilities.len(),
+                })
+                .collect();
+            let count = children.len();
+            TreeNode::Group {
+                id: id.to_string(),
+                label: label.to_string(),
+                children,
+                item_count: count,
+                vuln_count,
+            }
+        };
+
+        let mut groups = Vec::new();
+        if !critical_comps.is_empty() {
+            groups.push(build_group("Critical", "vuln:critical", critical_comps));
+        }
+        if !high_comps.is_empty() {
+            groups.push(build_group("High", "vuln:high", high_comps));
+        }
+        if !other_vuln_comps.is_empty() {
+            groups.push(build_group(
+                "Other Vulnerabilities",
+                "vuln:other",
+                other_vuln_comps,
+            ));
+        }
+        if !clean_comps.is_empty() {
+            groups.push(build_group("No Vulnerabilities", "vuln:clean", clean_comps));
+        }
+
+        groups
+    }
+
+    fn build_flat_tree(&self) -> Vec<crate::tui::widgets::TreeNode> {
+        use crate::tui::widgets::TreeNode;
+
+        self.sbom
+            .components
+            .values()
+            .filter(|c| self.matches_filter(c))
+            .map(|c| TreeNode::Component {
+                id: c.canonical_id.value().to_string(),
+                name: c.name.clone(),
+                version: c.version.clone(),
+                vuln_count: c.vulnerabilities.len(),
+            })
+            .collect()
+    }
+
+    fn matches_filter(&self, comp: &Component) -> bool {
+        match self.tree_filter {
+            TreeFilter::All => true,
+            TreeFilter::HasVulnerabilities => !comp.vulnerabilities.is_empty(),
+            TreeFilter::Critical => comp.vulnerabilities.iter().any(|v| {
+                v.severity.as_ref().map(|s| s.to_string().to_lowercase())
+                    == Some("critical".to_string())
+            }),
+        }
+    }
+
+    fn tree_group_id_for_component(&self, comp: &Component) -> Option<String> {
+        match self.tree_group_by {
+            TreeGroupBy::Ecosystem => {
+                let eco = comp
+                    .ecosystem
+                    .as_ref()
+                    .map(|e| e.to_string())
+                    .unwrap_or_else(|| "Unknown".to_string());
+                Some(format!("eco:{}", eco))
+            }
+            TreeGroupBy::License => {
+                let license = if comp.licenses.declared.is_empty() {
+                    "Unknown".to_string()
+                } else {
+                    comp.licenses.declared[0].expression.clone()
+                };
+                Some(format!("lic:{}", license))
+            }
+            TreeGroupBy::VulnStatus => {
+                let max_severity = comp
+                    .vulnerabilities
+                    .iter()
+                    .filter_map(|v| v.severity.as_ref().map(|s| s.to_string().to_lowercase()))
+                    .max_by(|a, b| {
+                        let order = |s: &str| match s {
+                            "critical" => 4,
+                            "high" => 3,
+                            "medium" => 2,
+                            "low" => 1,
+                            _ => 0,
+                        };
+                        order(a).cmp(&order(b))
+                    });
+
+                let group = match max_severity.as_deref() {
+                    Some("critical") => "vuln:critical",
+                    Some("high") => "vuln:high",
+                    Some(_) => "vuln:other",
+                    None if !comp.vulnerabilities.is_empty() => "vuln:other",
+                    None => "vuln:clean",
+                };
+                Some(group.to_string())
+            }
+            TreeGroupBy::Flat => None,
+        }
+    }
+}
+
+/// Selected tree node for navigation.
+#[derive(Debug, Clone)]
+enum SelectedTreeNode {
+    Group(String),
+    Component(String),
+}
+
+fn flatten_tree_for_selection(
+    nodes: &[crate::tui::widgets::TreeNode],
+    state: &TreeState,
+    items: &mut Vec<SelectedTreeNode>,
+) {
+    use crate::tui::widgets::TreeNode;
+
+    for node in nodes {
+        match node {
+            TreeNode::Group { id, children, .. } => {
+                items.push(SelectedTreeNode::Group(id.clone()));
+                if state.is_expanded(id) {
+                    flatten_tree_for_selection(children, state, items);
+                }
+            }
+            TreeNode::Component { id, .. } => {
+                items.push(SelectedTreeNode::Component(id.clone()));
+            }
+        }
+    }
+}
+
+/// View tabs for the single SBOM viewer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ViewTab {
+    /// High-level SBOM overview with stats
+    Overview,
+    /// Hierarchical component tree
+    Tree,
+    /// Vulnerability explorer
+    Vulnerabilities,
+    /// License analysis view
+    Licenses,
+    /// Dependency graph view
+    Dependencies,
+    /// Quality score view
+    Quality,
+    /// Compliance validation view
+    Compliance,
+    /// Original SBOM source viewer
+    Source,
+}
+
+impl ViewTab {
+    pub fn title(&self) -> &'static str {
+        match self {
+            ViewTab::Overview => "Overview",
+            ViewTab::Tree => "Components",
+            ViewTab::Vulnerabilities => "Vulnerabilities",
+            ViewTab::Licenses => "Licenses",
+            ViewTab::Dependencies => "Dependencies",
+            ViewTab::Quality => "Quality",
+            ViewTab::Compliance => "Compliance",
+            ViewTab::Source => "Source",
+        }
+    }
+
+    pub fn shortcut(&self) -> &'static str {
+        match self {
+            ViewTab::Overview => "1",
+            ViewTab::Tree => "2",
+            ViewTab::Vulnerabilities => "3",
+            ViewTab::Licenses => "4",
+            ViewTab::Dependencies => "5",
+            ViewTab::Quality => "6",
+            ViewTab::Compliance => "7",
+            ViewTab::Source => "8",
+        }
+    }
+}
+
+/// Tree grouping modes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TreeGroupBy {
+    Ecosystem,
+    License,
+    VulnStatus,
+    Flat,
+}
+
+impl TreeGroupBy {
+    pub fn label(&self) -> &'static str {
+        match self {
+            TreeGroupBy::Ecosystem => "Ecosystem",
+            TreeGroupBy::License => "License",
+            TreeGroupBy::VulnStatus => "Vuln Status",
+            TreeGroupBy::Flat => "Flat List",
+        }
+    }
+}
+
+/// Tree filter options.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TreeFilter {
+    All,
+    HasVulnerabilities,
+    Critical,
+}
+
+impl TreeFilter {
+    pub fn label(&self) -> &'static str {
+        match self {
+            TreeFilter::All => "All",
+            TreeFilter::HasVulnerabilities => "Has Vulns",
+            TreeFilter::Critical => "Critical",
+        }
+    }
+}
+
+/// Component detail sub-tabs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ComponentDetailTab {
+    #[default]
+    Overview,
+    Identifiers,
+    Vulnerabilities,
+    Dependencies,
+}
+
+impl ComponentDetailTab {
+    pub fn title(&self) -> &'static str {
+        match self {
+            ComponentDetailTab::Overview => "Overview",
+            ComponentDetailTab::Identifiers => "Identifiers",
+            ComponentDetailTab::Vulnerabilities => "Vulnerabilities",
+            ComponentDetailTab::Dependencies => "Dependencies",
+        }
+    }
+
+    pub fn shortcut(&self) -> &'static str {
+        match self {
+            ComponentDetailTab::Overview => "1",
+            ComponentDetailTab::Identifiers => "2",
+            ComponentDetailTab::Vulnerabilities => "3",
+            ComponentDetailTab::Dependencies => "4",
+        }
+    }
+
+    pub fn all() -> [ComponentDetailTab; 4] {
+        [
+            ComponentDetailTab::Overview,
+            ComponentDetailTab::Identifiers,
+            ComponentDetailTab::Vulnerabilities,
+            ComponentDetailTab::Dependencies,
+        ]
+    }
+}
+
+/// Focus panel (for split views).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FocusPanel {
+    Left,
+    Right,
+}
+
+/// State for vulnerability explorer.
+#[derive(Debug, Clone)]
+pub struct VulnExplorerState {
+    pub selected: usize,
+    pub total: usize,
+    pub scroll_offset: usize,
+    pub group_by: VulnGroupBy,
+    pub sort_by: VulnSortBy,
+    pub filter_severity: Option<String>,
+}
+
+impl VulnExplorerState {
+    pub fn new() -> Self {
+        Self {
+            selected: 0,
+            total: 0,
+            scroll_offset: 0,
+            group_by: VulnGroupBy::Severity,
+            sort_by: VulnSortBy::Severity,
+            filter_severity: None,
+        }
+    }
+
+    pub fn select_next(&mut self) {
+        if self.total > 0 && self.selected < self.total.saturating_sub(1) {
+            self.selected += 1;
+        }
+    }
+
+    pub fn select_prev(&mut self) {
+        if self.selected > 0 {
+            self.selected -= 1;
+        }
+    }
+
+    /// Ensure selected index is within bounds
+    pub fn clamp_selection(&mut self) {
+        if self.total == 0 {
+            self.selected = 0;
+        } else if self.selected >= self.total {
+            self.selected = self.total.saturating_sub(1);
+        }
+    }
+
+    pub fn toggle_group(&mut self) {
+        self.group_by = match self.group_by {
+            VulnGroupBy::Severity => VulnGroupBy::Component,
+            VulnGroupBy::Component => VulnGroupBy::Flat,
+            VulnGroupBy::Flat => VulnGroupBy::Severity,
+        };
+        self.selected = 0;
+    }
+
+    pub fn toggle_filter(&mut self) {
+        self.filter_severity = match &self.filter_severity {
+            None => Some("critical".to_string()),
+            Some(s) if s == "critical" => Some("high".to_string()),
+            Some(s) if s == "high" => None,
+            _ => None,
+        };
+        self.selected = 0;
+    }
+
+    /// Get the selected vulnerability.
+    pub fn get_selected<'a>(
+        &self,
+        sbom: &'a NormalizedSbom,
+    ) -> Option<(String, &'a VulnerabilityRef)> {
+        let mut idx = 0;
+        for (comp_id, comp) in &sbom.components {
+            for vuln in &comp.vulnerabilities {
+                if let Some(ref filter) = self.filter_severity {
+                    let sev = vuln.severity.as_ref().map(|s| s.to_string().to_lowercase());
+                    if sev.as_deref() != Some(filter) {
+                        continue;
+                    }
+                }
+                if idx == self.selected {
+                    return Some((comp_id.value().to_string(), vuln));
+                }
+                idx += 1;
+            }
+        }
+        None
+    }
+}
+
+impl Default for VulnExplorerState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ListNavigation for VulnExplorerState {
+    fn selected(&self) -> usize {
+        self.selected
+    }
+
+    fn set_selected(&mut self, idx: usize) {
+        self.selected = idx;
+    }
+
+    fn total(&self) -> usize {
+        self.total
+    }
+
+    fn set_total(&mut self, total: usize) {
+        self.total = total;
+    }
+}
+
+/// View mode for quality panel
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum QualityViewMode {
+    #[default]
+    Summary,
+    Breakdown,
+    Metrics,
+    Recommendations,
+}
+
+/// Quality view state
+pub struct QualityViewState {
+    pub view_mode: QualityViewMode,
+    pub selected_recommendation: usize,
+    pub total_recommendations: usize,
+    pub scroll_offset: usize,
+}
+
+impl QualityViewState {
+    pub fn new(total_recommendations: usize) -> Self {
+        Self {
+            view_mode: QualityViewMode::Summary,
+            selected_recommendation: 0,
+            total_recommendations,
+            scroll_offset: 0,
+        }
+    }
+
+    pub fn toggle_view(&mut self) {
+        self.view_mode = match self.view_mode {
+            QualityViewMode::Summary => QualityViewMode::Breakdown,
+            QualityViewMode::Breakdown => QualityViewMode::Metrics,
+            QualityViewMode::Metrics => QualityViewMode::Recommendations,
+            QualityViewMode::Recommendations => QualityViewMode::Summary,
+        };
+        self.selected_recommendation = 0;
+        self.scroll_offset = 0;
+    }
+
+    pub fn select_next(&mut self) {
+        if self.total_recommendations > 0
+            && self.selected_recommendation < self.total_recommendations - 1
+        {
+            self.selected_recommendation += 1;
+        }
+    }
+
+    pub fn select_prev(&mut self) {
+        if self.selected_recommendation > 0 {
+            self.selected_recommendation -= 1;
+        }
+    }
+
+    pub fn scroll_down(&mut self) {
+        self.scroll_offset = self.scroll_offset.saturating_add(1);
+    }
+
+    pub fn scroll_up(&mut self) {
+        self.scroll_offset = self.scroll_offset.saturating_sub(1);
+    }
+}
+
+impl Default for QualityViewState {
+    fn default() -> Self {
+        Self::new(0)
+    }
+}
+
+/// Vulnerability grouping modes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VulnGroupBy {
+    Severity,
+    Component,
+    Flat,
+}
+
+/// Vulnerability sorting modes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VulnSortBy {
+    Severity,
+    Cvss,
+    Component,
+}
+
+/// State for license view.
+#[derive(Debug, Clone)]
+pub struct LicenseViewState {
+    pub selected: usize,
+    pub total: usize,
+    pub scroll_offset: usize,
+    pub group_by: LicenseGroupBy,
+    /// Scroll position within component list in details panel
+    pub component_scroll: usize,
+    /// Total components for the selected license
+    pub component_total: usize,
+}
+
+impl LicenseViewState {
+    pub fn new() -> Self {
+        Self {
+            selected: 0,
+            total: 0,
+            scroll_offset: 0,
+            group_by: LicenseGroupBy::License,
+            component_scroll: 0,
+            component_total: 0,
+        }
+    }
+
+    /// Scroll component list up
+    pub fn scroll_components_up(&mut self) {
+        if self.component_scroll > 0 {
+            self.component_scroll -= 1;
+        }
+    }
+
+    /// Scroll component list down
+    pub fn scroll_components_down(&mut self, visible_count: usize) {
+        if self.component_total > visible_count
+            && self.component_scroll < self.component_total - visible_count
+        {
+            self.component_scroll += 1;
+        }
+    }
+
+    /// Reset component scroll when license selection changes
+    pub fn reset_component_scroll(&mut self) {
+        self.component_scroll = 0;
+    }
+
+    pub fn select_next(&mut self) {
+        if self.total > 0 && self.selected < self.total.saturating_sub(1) {
+            self.selected += 1;
+            self.reset_component_scroll();
+        }
+    }
+
+    pub fn select_prev(&mut self) {
+        if self.selected > 0 {
+            self.selected -= 1;
+            self.reset_component_scroll();
+        }
+    }
+
+    /// Ensure selected index is within bounds
+    pub fn clamp_selection(&mut self) {
+        if self.total == 0 {
+            self.selected = 0;
+        } else if self.selected >= self.total {
+            self.selected = self.total.saturating_sub(1);
+        }
+    }
+
+    pub fn toggle_group(&mut self) {
+        self.group_by = match self.group_by {
+            LicenseGroupBy::License => LicenseGroupBy::Category,
+            LicenseGroupBy::Category => LicenseGroupBy::License,
+        };
+        self.selected = 0;
+        self.reset_component_scroll();
+    }
+}
+
+impl Default for LicenseViewState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ListNavigation for LicenseViewState {
+    fn selected(&self) -> usize {
+        self.selected
+    }
+
+    fn set_selected(&mut self, idx: usize) {
+        self.selected = idx;
+    }
+
+    fn total(&self) -> usize {
+        self.total
+    }
+
+    fn set_total(&mut self, total: usize) {
+        self.total = total;
+    }
+}
+
+/// License grouping modes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LicenseGroupBy {
+    License,
+    Category,
+}
+
+/// Dependency view state.
+#[derive(Debug, Clone)]
+pub struct DependencyViewState {
+    /// Currently selected node in the dependency tree
+    pub selected: usize,
+    /// Total number of visible nodes
+    pub total: usize,
+    /// Set of expanded node IDs
+    pub expanded: HashSet<String>,
+    /// Scroll offset for the tree view
+    pub scroll_offset: usize,
+}
+
+impl DependencyViewState {
+    pub fn new() -> Self {
+        Self {
+            selected: 0,
+            total: 0,
+            expanded: HashSet::new(),
+            scroll_offset: 0,
+        }
+    }
+
+    pub fn select_next(&mut self) {
+        if self.total > 0 && self.selected < self.total.saturating_sub(1) {
+            self.selected += 1;
+        }
+    }
+
+    pub fn select_prev(&mut self) {
+        if self.selected > 0 {
+            self.selected -= 1;
+        }
+    }
+
+    pub fn toggle_expand(&mut self, node_id: &str) {
+        if self.expanded.contains(node_id) {
+            self.expanded.remove(node_id);
+        } else {
+            self.expanded.insert(node_id.to_string());
+        }
+    }
+
+    pub fn is_expanded(&self, node_id: &str) -> bool {
+        self.expanded.contains(node_id)
+    }
+
+    /// Ensure selected index is within bounds
+    pub fn clamp_selection(&mut self) {
+        if self.total == 0 {
+            self.selected = 0;
+        } else if self.selected >= self.total {
+            self.selected = self.total.saturating_sub(1);
+        }
+    }
+}
+
+impl Default for DependencyViewState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ListNavigation for DependencyViewState {
+    fn selected(&self) -> usize {
+        self.selected
+    }
+
+    fn set_selected(&mut self, idx: usize) {
+        self.selected = idx;
+    }
+
+    fn total(&self) -> usize {
+        self.total
+    }
+
+    fn set_total(&mut self, total: usize) {
+        self.total = total;
+    }
+}
+
+/// Global search state.
+#[derive(Debug, Clone)]
+pub struct SearchState {
+    pub active: bool,
+    pub query: String,
+    pub results: Vec<SearchResult>,
+    pub selected: usize,
+}
+
+impl SearchState {
+    pub fn new() -> Self {
+        Self {
+            active: false,
+            query: String::new(),
+            results: Vec::new(),
+            selected: 0,
+        }
+    }
+
+    pub fn push_char(&mut self, c: char) {
+        self.query.push(c);
+    }
+
+    pub fn pop_char(&mut self) {
+        self.query.pop();
+    }
+
+    pub fn select_next(&mut self) {
+        if !self.results.is_empty() && self.selected < self.results.len() - 1 {
+            self.selected += 1;
+        }
+    }
+
+    pub fn select_prev(&mut self) {
+        if self.selected > 0 {
+            self.selected -= 1;
+        }
+    }
+}
+
+impl Default for SearchState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Search result types.
+#[derive(Debug, Clone)]
+pub enum SearchResult {
+    Component {
+        id: String,
+        name: String,
+        version: Option<String>,
+        match_field: String,
+    },
+    Vulnerability {
+        id: String,
+        /// Component canonical ID for navigation
+        component_id: String,
+        /// Component name for display
+        component_name: String,
+        severity: Option<String>,
+    },
+}
+
+/// Cached SBOM statistics.
+#[derive(Debug, Clone)]
+pub struct SbomStats {
+    pub component_count: usize,
+    pub vuln_count: usize,
+    pub license_count: usize,
+    pub ecosystem_counts: HashMap<String, usize>,
+    pub vuln_by_severity: HashMap<String, usize>,
+    pub license_counts: HashMap<String, usize>,
+    pub critical_count: usize,
+    pub high_count: usize,
+    pub medium_count: usize,
+    pub low_count: usize,
+    pub unknown_count: usize,
+}
+
+impl SbomStats {
+    pub fn from_sbom(sbom: &NormalizedSbom) -> Self {
+        let mut ecosystem_counts: HashMap<String, usize> = HashMap::new();
+        let mut vuln_by_severity: HashMap<String, usize> = HashMap::new();
+        let mut license_counts: HashMap<String, usize> = HashMap::new();
+        let mut vuln_count = 0;
+        let mut critical_count = 0;
+        let mut high_count = 0;
+        let mut medium_count = 0;
+        let mut low_count = 0;
+        let mut unknown_count = 0;
+
+        for comp in sbom.components.values() {
+            // Count ecosystems
+            let eco = comp
+                .ecosystem
+                .as_ref()
+                .map(|e| e.to_string())
+                .unwrap_or_else(|| "Unknown".to_string());
+            *ecosystem_counts.entry(eco).or_insert(0) += 1;
+
+            // Count licenses
+            for lic in &comp.licenses.declared {
+                *license_counts.entry(lic.expression.clone()).or_insert(0) += 1;
+            }
+            if comp.licenses.declared.is_empty() {
+                *license_counts.entry("Unknown".to_string()).or_insert(0) += 1;
+            }
+
+            // Count vulnerabilities
+            for vuln in &comp.vulnerabilities {
+                vuln_count += 1;
+                let sev = vuln
+                    .severity
+                    .as_ref()
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| "Unknown".to_string());
+                *vuln_by_severity.entry(sev.clone()).or_insert(0) += 1;
+
+                match sev.to_lowercase().as_str() {
+                    "critical" => critical_count += 1,
+                    "high" => high_count += 1,
+                    "medium" => medium_count += 1,
+                    "low" => low_count += 1,
+                    _ => unknown_count += 1,
+                }
+            }
+        }
+
+        Self {
+            component_count: sbom.components.len(),
+            vuln_count,
+            license_count: license_counts.len(),
+            ecosystem_counts,
+            vuln_by_severity,
+            license_counts,
+            critical_count,
+            high_count,
+            medium_count,
+            low_count,
+            unknown_count,
+        }
+    }
+}
+
+/// Breadcrumb entry for navigation history in view mode.
+#[derive(Debug, Clone)]
+pub struct ViewBreadcrumb {
+    /// Tab we came from
+    pub tab: ViewTab,
+    /// Description of what was selected (e.g., "CVE-2024-1234", "lodash")
+    pub label: String,
+    /// Selection index to restore when going back
+    pub selection_index: usize,
+}
+
+/// Navigation context for cross-view navigation and breadcrumbs in view mode.
+#[derive(Debug, Clone, Default)]
+pub struct ViewNavigationContext {
+    /// Breadcrumb trail for back navigation
+    pub breadcrumbs: Vec<ViewBreadcrumb>,
+    /// Target component name to navigate to (for vuln → component navigation)
+    pub target_component: Option<String>,
+    /// Target vulnerability ID to navigate to (for component → vuln navigation)
+    pub target_vulnerability: Option<String>,
+}
+
+impl ViewNavigationContext {
+    pub fn new() -> Self {
+        Self {
+            breadcrumbs: Vec::new(),
+            target_component: None,
+            target_vulnerability: None,
+        }
+    }
+
+    /// Push a new breadcrumb onto the trail
+    pub fn push_breadcrumb(&mut self, tab: ViewTab, label: String, selection_index: usize) {
+        self.breadcrumbs.push(ViewBreadcrumb {
+            tab,
+            label,
+            selection_index,
+        });
+    }
+
+    /// Pop the last breadcrumb and return it (for back navigation)
+    pub fn pop_breadcrumb(&mut self) -> Option<ViewBreadcrumb> {
+        self.breadcrumbs.pop()
+    }
+
+    /// Clear all breadcrumbs (on explicit tab switch)
+    pub fn clear_breadcrumbs(&mut self) {
+        self.breadcrumbs.clear();
+    }
+
+    /// Check if we have navigation history
+    pub fn has_history(&self) -> bool {
+        !self.breadcrumbs.is_empty()
+    }
+
+    /// Get the current breadcrumb trail as a string
+    pub fn breadcrumb_trail(&self) -> String {
+        self.breadcrumbs
+            .iter()
+            .map(|b| format!("{}: {}", b.tab.title(), b.label))
+            .collect::<Vec<_>>()
+            .join(" > ")
+    }
+
+    /// Clear navigation targets
+    pub fn clear_targets(&mut self) {
+        self.target_component = None;
+        self.target_vulnerability = None;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::NormalizedSbom;
+
+    #[test]
+    fn test_view_app_creation() {
+        let sbom = NormalizedSbom::default();
+        let app = ViewApp::new(sbom, String::new());
+        assert_eq!(app.active_tab, ViewTab::Overview);
+        assert!(!app.should_quit);
+    }
+
+    #[test]
+    fn test_tab_navigation() {
+        let sbom = NormalizedSbom::default();
+        let mut app = ViewApp::new(sbom, String::new());
+
+        app.next_tab();
+        assert_eq!(app.active_tab, ViewTab::Tree);
+
+        app.next_tab();
+        assert_eq!(app.active_tab, ViewTab::Vulnerabilities);
+
+        app.prev_tab();
+        assert_eq!(app.active_tab, ViewTab::Tree);
+    }
+
+    #[test]
+    fn test_vuln_state_navigation_with_zero_total() {
+        // This was causing a crash due to underflow: total - 1 when total = 0
+        let mut state = VulnExplorerState::new();
+        assert_eq!(state.total, 0);
+        assert_eq!(state.selected, 0);
+
+        // This should not panic or change selection
+        state.select_next();
+        assert_eq!(state.selected, 0);
+
+        state.select_prev();
+        assert_eq!(state.selected, 0);
+    }
+
+    #[test]
+    fn test_vuln_state_clamp_selection() {
+        let mut state = VulnExplorerState::new();
+        state.total = 5;
+        state.selected = 10; // Out of bounds
+
+        state.clamp_selection();
+        assert_eq!(state.selected, 4); // Should be clamped to last valid index
+
+        state.total = 0;
+        state.clamp_selection();
+        assert_eq!(state.selected, 0); // Should be 0 when empty
+    }
+
+    #[test]
+    fn test_license_state_navigation_with_zero_total() {
+        let mut state = LicenseViewState::new();
+        assert_eq!(state.total, 0);
+        assert_eq!(state.selected, 0);
+
+        // This should not panic or change selection
+        state.select_next();
+        assert_eq!(state.selected, 0);
+
+        state.select_prev();
+        assert_eq!(state.selected, 0);
+    }
+
+    #[test]
+    fn test_license_state_clamp_selection() {
+        let mut state = LicenseViewState::new();
+        state.total = 3;
+        state.selected = 5; // Out of bounds
+
+        state.clamp_selection();
+        assert_eq!(state.selected, 2); // Should be clamped to last valid index
+    }
+
+    #[test]
+    fn test_dependency_state_navigation() {
+        let mut state = DependencyViewState::new();
+        assert_eq!(state.total, 0);
+        assert_eq!(state.selected, 0);
+
+        // Test with zero total - should not change
+        state.select_next();
+        assert_eq!(state.selected, 0);
+
+        // Test with items
+        state.total = 5;
+        state.select_next();
+        assert_eq!(state.selected, 1);
+
+        state.select_next();
+        state.select_next();
+        state.select_next();
+        assert_eq!(state.selected, 4); // At end
+
+        state.select_next();
+        assert_eq!(state.selected, 4); // Should not go past end
+
+        state.select_prev();
+        assert_eq!(state.selected, 3);
+    }
+
+    #[test]
+    fn test_dependency_state_expand_collapse() {
+        let mut state = DependencyViewState::new();
+
+        assert!(!state.is_expanded("node1"));
+
+        state.toggle_expand("node1");
+        assert!(state.is_expanded("node1"));
+
+        state.toggle_expand("node1");
+        assert!(!state.is_expanded("node1"));
+    }
+}

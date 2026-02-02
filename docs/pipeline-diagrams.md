@@ -1,0 +1,80 @@
+# Pipeline Diagrams
+
+Conceptual process flows for non-stateful pipelines. These focus on data flow and
+decision points rather than UI states.
+
+## Diff Pipeline (DiffEngine::diff)
+Source: `src/diff/engine.rs`
+
+```mermaid
+flowchart TD
+    A[NormalizedSbom old/new] --> B{content_hash equal?}
+    B -->|yes| C[Return empty DiffResult]
+    B -->|no| D[Match components]
+    D --> E[Compute component changes]
+    E --> F[Compute dependency changes]
+    F --> G[Compute license changes]
+    G --> H[Compute vulnerability changes]
+    H --> I[Compute semantic score]
+    I --> J[Calculate summary]
+    J --> K[DiffResult]
+
+    D --> D1[Exact match by CanonicalId]
+    D1 --> D2[Collect unmatched old/new]
+    D2 --> D3{unmatched old > 50?}
+    D3 -->|yes| D4[Parallel fuzzy match]
+    D3 -->|no| D5[Sequential fuzzy match]
+    D4 --> D6[Merge fuzzy matches]
+    D5 --> D6
+```
+
+## Matching Pipeline (FuzzyMatcher::match_components)
+Source: `src/matching/mod.rs`
+
+```mermaid
+flowchart TD
+    A[Component A + Component B] --> B{Both have PURL?}
+    B -->|match| Z1[Score 1.0]
+    B -->|no match| C{Alias table match?}
+    C -->|yes| Z2[Score 0.95]
+    C -->|no| D{Same ecosystem?}
+    D -->|yes| E[Normalize via ecosystem rules]
+    E --> F{Normalized names equal?}
+    F -->|yes| Z3[Score 0.90]
+    F -->|no| G[Compute fuzzy score]
+    D -->|no| G
+    G --> H{score >= threshold?}
+    H -->|yes| Z4[Score = computed]
+    H -->|no| Z5[Score 0.0]
+
+    G --> G1[Jaro-Winkler + Levenshtein]
+    G1 --> G2[Apply weights]
+    G2 --> G3[Version match boost]
+```
+
+## Reporting Pipeline (Reporter selection + generation)
+Source: `src/reports/mod.rs`
+
+```mermaid
+flowchart TD
+    A[Report request] --> B{ReportFormat}
+    B -->|Auto| C[SummaryReporter (color-aware)]
+    B -->|Summary| C
+    B -->|Table| D[TableReporter (color-aware)]
+    B -->|Json| E[JsonReporter]
+    B -->|Sarif| F[SarifReporter]
+    B -->|Markdown| G[MarkdownReporter]
+    B -->|Html| H[HtmlReporter]
+    B -->|SideBySide| I[SideBySideReporter]
+    B -->|Tui| E
+
+    C --> J[generate_diff_report / generate_view_report]
+    D --> J
+    E --> J
+    F --> J
+    G --> J
+    H --> J
+    I --> J
+    J --> K[String output]
+    K --> L[write to file/stdout]
+```

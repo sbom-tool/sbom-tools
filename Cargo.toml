@@ -1,0 +1,84 @@
+[package]
+name = "sbom-tools"
+version = "0.1.0"
+edition = "2021"
+authors = ["Binarly.io"]
+description = "Semantic SBOM diff and analysis tool"
+license = "Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/binarly-io/sbom-tools"
+keywords = ["sbom", "cyclonedx", "spdx", "diff", "security"]
+categories = ["command-line-utilities", "development-tools"]
+
+[dependencies]
+# SBOM Parsing
+spdx = "0.10"
+packageurl = "0.3"
+
+# Diff Algorithm
+pathfinding = "4"
+
+# Fuzzy Matching
+strsim = "0.11"
+semver = { version = "1.0", features = ["serde"] }
+regex = "1.10"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+quick-xml = { version = "0.37", features = ["serialize"] }
+
+# TUI (ratatui ecosystem)
+ratatui = { version = "0.29", features = ["crossterm"] }
+crossterm = "0.28"
+tui-tree-widget = "0.22"
+
+# CLI
+clap = { version = "4.5", features = ["derive", "env"] }
+clap_complete = "4.5"
+
+# HTTP Client for enrichment
+reqwest = { version = "0.12", features = ["blocking", "json", "rustls-tls"], default-features = false, optional = true }
+sha2 = { version = "0.10", optional = true }
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+rayon = "1.10"
+thiserror = "2.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+indexmap = { version = "2.7", features = ["serde"] }
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
+dirs = "6.0.0"
+unicode-width = "0.2"
+schemars = "0.8"
+
+# Optional: ML-based matching
+[dependencies.candle-core]
+version = "0.8"
+optional = true
+
+[features]
+default = ["enrichment"]
+ml-matching = ["candle-core"]
+enrichment = ["reqwest", "sha2"]
+
+[dev-dependencies]
+criterion = "0.5"
+proptest = "1.5"
+tempfile = "3.14"
+insta = { version = "1.41", features = ["json"] }
+
+[[bench]]
+name = "diff_benchmark"
+harness = false
+
+[[bench]]
+name = "large_sbom"
+harness = false
+
+[profile.release]
+lto = true
+codegen-units = 1

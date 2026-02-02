@@ -1,0 +1,100 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2024-01-15T10:00:00Z",
+    "component": {
+      "type": "application",
+      "name": "acme-webapp",
+      "version": "1.0.0"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "lodash",
+      "version": "4.17.20",
+      "purl": "pkg:npm/lodash@4.17.20",
+      "licenses": [{"license": {"id": "MIT"}}]
+    },
+    {
+      "type": "library",
+      "name": "express",
+      "version": "4.17.1",
+      "purl": "pkg:npm/express@4.17.1",
+      "licenses": [{"license": {"id": "MIT"}}]
+    },
+    {
+      "type": "library",
+      "name": "moment",
+      "version": "2.29.1",
+      "purl": "pkg:npm/moment@2.29.1",
+      "licenses": [{"license": {"id": "MIT"}}]
+    },
+    {
+      "type": "library",
+      "name": "request",
+      "version": "2.88.2",
+      "purl": "pkg:npm/request@2.88.2",
+      "licenses": [{"license": {"id": "Apache-2.0"}}]
+    },
+    {
+      "type": "library",
+      "name": "axios",
+      "version": "0.21.1",
+      "purl": "pkg:npm/axios@0.21.1",
+      "licenses": [{"license": {"id": "MIT"}}]
+    },
+    {
+      "type": "library",
+      "name": "underscore",
+      "version": "1.12.0",
+      "purl": "pkg:npm/underscore@1.12.0",
+      "licenses": [{"license": {"id": "MIT"}}]
+    },
+    {
+      "type": "library",
+      "name": "jquery",
+      "version": "3.5.1",
+      "purl": "pkg:npm/jquery@3.5.1",
+      "licenses": [{"license": {"id": "MIT"}}]
+    },
+    {
+      "type": "library",
+      "name": "react",
+      "version": "17.0.1",
+      "purl": "pkg:npm/react@17.0.1",
+      "licenses": [{"license": {"id": "MIT"}}]
+    }
+  ],
+  "dependencies": [
+    {"ref": "pkg:npm/express@4.17.1", "dependsOn": ["pkg:npm/lodash@4.17.20"]},
+    {"ref": "pkg:npm/moment@2.29.1", "dependsOn": []},
+    {"ref": "pkg:npm/axios@0.21.1", "dependsOn": []},
+    {"ref": "pkg:npm/request@2.88.2", "dependsOn": ["pkg:npm/lodash@4.17.20"]}
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2021-23337",
+      "source": {"name": "NVD"},
+      "ratings": [{"severity": "high", "score": 7.2}],
+      "description": "Lodash prototype pollution vulnerability",
+      "affects": [{"ref": "pkg:npm/lodash@4.17.20"}]
+    },
+    {
+      "id": "CVE-2020-28469",
+      "source": {"name": "NVD"},
+      "ratings": [{"severity": "high", "score": 7.5}],
+      "description": "Glob-parent ReDoS vulnerability",
+      "affects": [{"ref": "pkg:npm/express@4.17.1"}]
+    },
+    {
+      "id": "CVE-2022-24999",
+      "source": {"name": "NVD"},
+      "ratings": [{"severity": "medium", "score": 5.3}],
+      "description": "Express.js query parsing vulnerability",
+      "affects": [{"ref": "pkg:npm/express@4.17.1"}]
+    }
+  ]
+}

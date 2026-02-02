@@ -1,0 +1,206 @@
+# Ecosystem Rules Configuration for sbom-tools
+#
+# This file configures how package names are normalized and matched
+# across different ecosystems (npm, PyPI, Cargo, Maven, Go, etc.)
+#
+# File locations (in order of precedence):
+#   1. CLI argument: --ecosystem-rules <path>
+#   2. Environment variable: SBOM_TOOLS_ECOSYSTEM_RULES
+#   3. Project local: .sbom-tools/ecosystem-rules.yaml
+#   4. User config: ~/.config/sbom-tools/ecosystem-rules.yaml
+
+version: "1.0"
+
+# Global settings
+settings:
+  # Default case sensitivity for ecosystems without explicit setting
+  case_sensitive_default: false
+  # Normalize unicode characters (e.g., fancy quotes to ASCII)
+  normalize_unicode: true
+  # Enable security checks (typosquat detection, suspicious patterns)
+  enable_security_checks: true
+
+# Per-ecosystem configuration
+ecosystems:
+  # Python Package Index
+  pypi:
+    normalization:
+      case_sensitive: false
+      # Characters that are considered equivalent: foo-bar == foo_bar == foo.bar
+      equivalent_chars:
+        - ["-", "_", "."]
+      collapse_separators: true
+
+    # Prefixes to strip for fuzzy matching
+    strip_prefixes:
+      - "python-"
+      - "py-"
+      - "lib"
+
+    # Suffixes to strip for fuzzy matching
+    strip_suffixes:
+      - "-python"
+      - "-py"
+      - "-py3"
+      - "-lib"
+
+    # Known package aliases (distribution vs import name)
+    aliases:
+      pillow: ["PIL", "python-pillow"]
+      scikit-learn: ["sklearn", "scikit_learn"]
+      beautifulsoup4: ["bs4", "BeautifulSoup"]
+      pyyaml: ["yaml", "PyYAML"]
+      opencv-python: ["cv2", "opencv-python-headless"]
+
+    # Version handling
+    versioning:
+      spec: pep440
+      prerelease_tags: ["a", "b", "rc", "alpha", "beta", "dev", "post"]
+
+    # Security checks
+    security:
+      known_typosquats:
+        - malicious: "python-dateutils"
+          legitimate: "python-dateutil"
+          description: "Common typosquat"
+        - malicious: "request"
+          legitimate: "requests"
+          description: "Missing 's' typosquat"
+
+  # npm (Node.js)
+  npm:
+    normalization:
+      case_sensitive: false
+      # Preserve scope case: @Angular/Core -> @angular/core
+      scope_handling: preserve_scope_case
+
+    strip_prefixes:
+      - "node-"
+      - "@types/"
+
+    strip_suffixes:
+      - "-js"
+      - ".js"
+      - "-node"
+
+    # Package groups for monorepos
+    package_groups:
+      lodash:
+        canonical: "lodash"
+        members:
+          - "lodash-es"
+          - "lodash.merge"
+          - "lodash.get"
+          - "lodash.set"
+      babel:
+        canonical: "@babel/core"
+        members:
+          - "@babel/*"
+      react:
+        canonical: "react"
+        members:
+          - "react-dom"
+          - "react-router"
+
+    versioning:
+      spec: semver
+      prerelease_tags: ["alpha", "beta", "rc", "next", "canary"]
+
+    security:
+      suspicious_patterns:
+        # Very short package names are often typosquats
+        - "^[a-z]{1,2}$"
+
+  # Rust (crates.io)
+  cargo:
+    normalization:
+      case_sensitive: false
+      # Hyphens and underscores are equivalent: serde-json == serde_json
+      equivalent_chars:
+        - ["_", "-"]
+
+    strip_prefixes:
+      - "rust-"
+      - "lib"
+
+    strip_suffixes:
+      - "-rs"
+      - "-rust"
+
+    versioning:
+      spec: semver
+
+  # Maven (Java)
+  maven:
+    normalization:
+      case_sensitive: true
+      # Use full coordinate (groupId:artifactId)
+      use_full_coordinate: true
+
+    # Group ID migrations (e.g., javax -> jakarta)
+    group_migrations:
+      - from: "javax.*"
+        to: "jakarta.*"
+        after_version: "9"
+
+    versioning:
+      spec: maven
+      qualifier_order: ["alpha", "beta", "milestone", "rc", "snapshot", "final", "ga", "sp"]
+
+  # Go modules
+  golang:
+    normalization:
+      case_sensitive: true
+      # Strip /v2, /v3 version suffixes
+      strip_version_suffix: true
+
+    import_mappings:
+      - pattern: "github.com/*/*"
+        type: github
+      - pattern: "golang.org/x/*"
+        type: stdlib_extension
+
+    versioning:
+      spec: gomod
+
+# Cross-ecosystem package mappings
+# Map equivalent packages across different ecosystems
+cross_ecosystem:
+  yaml_parsing:
+    pypi: "pyyaml"
+    npm: "js-yaml"
+    cargo: "serde_yaml"
+    golang: "gopkg.in/yaml.v3"
+    rubygems: "psych"
+
+  http_client:
+    pypi: "requests"
+    npm: "axios"
+    cargo: "reqwest"
+    rubygems: "faraday"
+
+  testing:
+    pypi: "pytest"
+    npm: "jest"
+    rubygems: "rspec"
+
+# Organization-specific custom rules
+custom_rules:
+  # Internal package prefixes (for private packages)
+  internal_prefixes:
+    - "@mycompany/"
+    - "mycompany-"
+    - "com.mycompany:"
+
+  # Custom equivalences (treat these packages as the same)
+  equivalences:
+    - canonical: "pkg:npm/@mycompany/logger"
+      aliases:
+        - "pkg:npm/mycompany-logger"
+        - "pkg:pypi/mycompany-logger"
+      version_sensitive: false
+
+  # Packages to always ignore in diffs
+  ignored_packages:
+    - "internal-test-utils"
+    - "dev-tools"

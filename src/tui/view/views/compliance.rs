@@ -1,0 +1,435 @@
+//! Compliance tab for ViewApp - SBOM compliance validation against standards.
+
+use crate::quality::{ComplianceChecker, ComplianceLevel, ComplianceResult, ViolationSeverity};
+use crate::tui::shared::compliance as shared_compliance;
+use crate::tui::theme::colors;
+use crate::tui::view::app::ViewApp;
+use ratatui::{
+    prelude::*,
+    widgets::{Block, Borders, Cell, Gauge, Paragraph, Row, Table, Tabs},
+};
+
+pub fn render_compliance(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
+    app.ensure_compliance_results();
+
+    // Main layout
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Standard selector tabs
+            Constraint::Length(5), // Summary gauge
+            Constraint::Min(10),   // Violations list
+            Constraint::Length(3), // Help bar
+        ])
+        .split(area);
+
+    // Adjust scroll before borrowing results (avoids borrow conflict)
+    let violations_viewport = chunks[2].height.saturating_sub(4) as usize;
+    app.compliance_state.adjust_scroll(violations_viewport);
+
+    // Snapshot scroll state before immutable borrows
+    let selected_standard = app.compliance_state.selected_standard;
+    let selected_violation = app.compliance_state.selected_violation;
+    let scroll_offset = app.compliance_state.scroll_offset;
+    let show_detail = app.compliance_state.show_detail;
+
+    // Render standard selector
+    render_standard_selector(frame, chunks[0], app);
+
+    // Get compliance result for selected standard
+    let results = match app.compliance_results.as_ref() {
+        Some(r) => r,
+        None => return,
+    };
+    let result = &results[selected_standard];
+
+    // Render summary gauge
+    render_compliance_summary(frame, chunks[1], result);
+
+    // Render violations with scroll
+    render_violations(frame, chunks[2], result, selected_violation, scroll_offset);
+
+    // Render help bar
+    render_help_bar(frame, chunks[3]);
+
+    // Render detail overlay if active
+    if show_detail {
+        if let Some(violation) = app
+            .compliance_results.as_ref()
+            .and_then(|rs| rs.get(selected_standard))
+            .and_then(|r| r.violations.get(selected_violation))
+        {
+            shared_compliance::render_violation_detail_overlay(frame, area, violation);
+        }
+    }
+}
+
+fn render_standard_selector(frame: &mut Frame, area: Rect, app: &ViewApp) {
+    let scheme = colors();
+    let compliance_results = match app.compliance_results.as_ref() {
+        Some(r) => r,
+        None => return,
+    };
+
+    let standards: Vec<Line> = ComplianceLevel::all()
+        .iter()
+        .enumerate()
+        .map(|(i, level)| {
+            let is_selected = i == app.compliance_state.selected_standard;
+            let result = &compliance_results[i];
+
+            // Status indicator
+            let status = if result.is_compliant {
+                if result.warning_count > 0 {
+                    ("⚠", scheme.warning)
+                } else {
+                    ("✓", scheme.success)
+                }
+            } else {
+                ("✗", scheme.error)
+            };
+
+            let style = if is_selected {
+                Style::default().fg(scheme.text).bold().bg(scheme.selection)
+            } else {
+                Style::default().fg(scheme.muted)
+            };
+
+            Line::from(vec![
+                Span::styled(format!(" {} ", status.0), Style::default().fg(status.1)),
+                Span::styled(level.name(), style),
+                Span::styled(" ", style),
+            ])
+        })
+        .collect();
+
+    let tabs = Tabs::new(standards)
+        .block(
+            Block::default()
+                .title(" Compliance Standards (←/→ to switch) ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(scheme.primary)),
+        )
+        .highlight_style(Style::default().fg(scheme.text).bold())
+        .select(app.compliance_state.selected_standard);
+
+    frame.render_widget(tabs, area);
+}
+
+fn render_compliance_summary(frame: &mut Frame, area: Rect, result: &ComplianceResult) {
+    let scheme = colors();
+
+    // Calculate compliance percentage based on errors and warnings only.
+    // Info messages are recommendations and should not affect the score.
+    let actionable = result.error_count + result.warning_count;
+    let compliance_pct = if actionable == 0 {
+        100
+    } else {
+        // Errors weigh 3x, warnings weigh 1x
+        let error_weight = result.error_count * 3;
+        let warning_weight = result.warning_count;
+        let max_weight = actionable * 3; // worst case: all actionable items are errors
+        ((max_weight.saturating_sub(error_weight + warning_weight)) * 100 / max_weight) as u16
+    };
+
+    let (gauge_color, status_text) = if result.is_compliant {
+        if result.warning_count == 0 && result.info_count == 0 {
+            (scheme.success, "COMPLIANT - All checks passed")
+        } else if result.warning_count == 0 {
+            (scheme.success, "COMPLIANT - With recommendations")
+        } else {
+            (scheme.warning, "COMPLIANT - With warnings")
+        }
+    } else {
+        (scheme.error, "NON-COMPLIANT - Errors must be fixed")
+    };
+
+    let h_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+        .split(area);
+
+    // Gauge
+    let gauge = Gauge::default()
+        .block(
+            Block::default()
+                .title(format!(" {} ", result.level.name()))
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(gauge_color)),
+        )
+        .gauge_style(Style::default().fg(gauge_color).bg(scheme.muted))
+        .percent(compliance_pct.min(100))
+        .label(status_text);
+
+    frame.render_widget(gauge, h_chunks[0]);
+
+    // Issue counts
+    let counts = Paragraph::new(vec![
+        Line::from(vec![
+            Span::styled("Errors: ", Style::default().fg(scheme.muted)),
+            Span::styled(
+                result.error_count.to_string(),
+                if result.error_count > 0 {
+                    Style::default().fg(scheme.error).bold()
+                } else {
+                    Style::default().fg(scheme.success)
+                },
+            ),
+            Span::styled("  Warnings: ", Style::default().fg(scheme.muted)),
+            Span::styled(
+                result.warning_count.to_string(),
+                if result.warning_count > 0 {
+                    Style::default().fg(scheme.warning)
+                } else {
+                    Style::default().fg(scheme.success)
+                },
+            ),
+            Span::styled("  Info: ", Style::default().fg(scheme.muted)),
+            Span::styled(
+                result.info_count.to_string(),
+                Style::default().fg(scheme.info),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("Total issues: ", Style::default().fg(scheme.muted)),
+            Span::styled(
+                result.violations.len().to_string(),
+                Style::default().fg(scheme.text),
+            ),
+        ]),
+    ])
+    .block(
+        Block::default()
+            .title(" Summary ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(scheme.muted)),
+    );
+
+    frame.render_widget(counts, h_chunks[1]);
+}
+
+fn render_violations(
+    frame: &mut Frame,
+    area: Rect,
+    result: &ComplianceResult,
+    selected_violation: usize,
+    scroll_offset: usize,
+) {
+    let scheme = colors();
+
+    if result.violations.is_empty() {
+        let message = Paragraph::new(vec![
+            Line::from(""),
+            Line::styled(
+                "  ✓ All compliance checks passed!",
+                Style::default().fg(scheme.success).bold(),
+            ),
+            Line::from(""),
+            Line::styled(
+                format!("  This SBOM meets {} requirements.", result.level.name()),
+                Style::default().fg(scheme.text),
+            ),
+            Line::from(""),
+            Line::styled(
+                format!("  {}", result.level.description()),
+                Style::default().fg(scheme.muted),
+            ),
+        ])
+        .block(
+            Block::default()
+                .title(" Compliance Status ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(scheme.success)),
+        );
+        frame.render_widget(message, area);
+        return;
+    }
+
+    // Viewport scrolling: compute visible range
+    let viewport_height = area.height.saturating_sub(4) as usize;
+    let visible_end = (scroll_offset + viewport_height).min(result.violations.len());
+
+    // Create table rows from visible violations only
+    let rows: Vec<Row> = result
+        .violations
+        .iter()
+        .enumerate()
+        .skip(scroll_offset)
+        .take(visible_end - scroll_offset)
+        .map(|(i, violation)| {
+            let is_selected = i == selected_violation;
+
+            let severity_style = match violation.severity {
+                ViolationSeverity::Error => Style::default().fg(scheme.error).bold(),
+                ViolationSeverity::Warning => Style::default().fg(scheme.warning),
+                ViolationSeverity::Info => Style::default().fg(scheme.info),
+            };
+
+            let severity_text = match violation.severity {
+                ViolationSeverity::Error => "ERROR",
+                ViolationSeverity::Warning => "WARN",
+                ViolationSeverity::Info => "INFO",
+            };
+
+            let row_style = if is_selected {
+                Style::default().bg(scheme.selection)
+            } else {
+                Style::default()
+            };
+
+            Row::new(vec![
+                Cell::from(severity_text).style(severity_style),
+                Cell::from(violation.category.name()),
+                Cell::from(violation.message.clone()),
+                Cell::from(violation.element.clone().unwrap_or_default())
+                    .style(Style::default().fg(scheme.muted)),
+            ])
+            .style(row_style)
+        })
+        .collect();
+
+    let header = Row::new(vec!["Severity", "Category", "Issue", "Element"])
+        .style(Style::default().fg(scheme.primary).bold())
+        .bottom_margin(1);
+
+    let widths = [
+        Constraint::Length(8),
+        Constraint::Length(20),
+        Constraint::Min(30),
+        Constraint::Length(20),
+    ];
+
+    // Show scroll position in title when scrolled
+    let title = if scroll_offset > 0 || visible_end < result.violations.len() {
+        format!(
+            " Violations ({}) [{}-{}/{}] - j/k to navigate ",
+            result.violations.len(),
+            scroll_offset + 1,
+            visible_end,
+            result.violations.len(),
+        )
+    } else {
+        format!(
+            " Violations ({}) - j/k to navigate ",
+            result.violations.len()
+        )
+    };
+
+    let table = Table::new(rows, widths)
+        .header(header)
+        .block(
+            Block::default()
+                .title(title)
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(if result.is_compliant {
+                    scheme.warning
+                } else {
+                    scheme.error
+                })),
+        )
+        .row_highlight_style(Style::default().bg(scheme.selection));
+
+    frame.render_widget(table, area);
+}
+
+fn render_help_bar(frame: &mut Frame, area: Rect) {
+    let scheme = colors();
+
+    let help = Line::from(vec![
+        Span::styled("←/→", Style::default().fg(scheme.primary)),
+        Span::styled(" switch standard  ", Style::default().fg(scheme.muted)),
+        Span::styled("j/k", Style::default().fg(scheme.primary)),
+        Span::styled(" navigate violations  ", Style::default().fg(scheme.muted)),
+        Span::styled("Enter", Style::default().fg(scheme.primary)),
+        Span::styled(" view details  ", Style::default().fg(scheme.muted)),
+        Span::styled("E", Style::default().fg(scheme.primary)),
+        Span::styled(" export JSON  ", Style::default().fg(scheme.muted)),
+        Span::styled("?", Style::default().fg(scheme.primary)),
+        Span::styled(" help", Style::default().fg(scheme.muted)),
+    ]);
+
+    let paragraph = Paragraph::new(help).block(Block::default().borders(Borders::ALL));
+
+    frame.render_widget(paragraph, area);
+}
+
+/// Compliance view state for multi-standard comparison (view mode)
+#[derive(Debug, Clone)]
+pub struct StandardComplianceState {
+    /// Currently selected compliance standard
+    pub selected_standard: usize,
+    /// Currently selected violation in the list
+    pub selected_violation: usize,
+    /// Scroll offset for violations
+    pub scroll_offset: usize,
+    /// Whether the detail overlay is shown for the selected violation
+    pub show_detail: bool,
+}
+
+impl Default for StandardComplianceState {
+    fn default() -> Self {
+        Self {
+            selected_standard: 2, // Default to NTIA
+            selected_violation: 0,
+            scroll_offset: 0,
+            show_detail: false,
+        }
+    }
+}
+
+impl StandardComplianceState {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn next_standard(&mut self) {
+        let max = ComplianceLevel::all().len();
+        self.selected_standard = (self.selected_standard + 1) % max;
+        self.selected_violation = 0;
+        self.scroll_offset = 0;
+    }
+
+    pub fn prev_standard(&mut self) {
+        let max = ComplianceLevel::all().len();
+        self.selected_standard = if self.selected_standard == 0 {
+            max - 1
+        } else {
+            self.selected_standard - 1
+        };
+        self.selected_violation = 0;
+        self.scroll_offset = 0;
+    }
+
+    pub fn select_next(&mut self, max_violations: usize) {
+        if max_violations > 0 {
+            self.selected_violation = (self.selected_violation + 1).min(max_violations - 1);
+        }
+    }
+
+    pub fn select_prev(&mut self) {
+        self.selected_violation = self.selected_violation.saturating_sub(1);
+    }
+
+    /// Adjust scroll_offset to keep the selected violation visible within the viewport.
+    pub fn adjust_scroll(&mut self, viewport_height: usize) {
+        if viewport_height == 0 {
+            return;
+        }
+        if self.selected_violation < self.scroll_offset {
+            self.scroll_offset = self.selected_violation;
+        } else if self.selected_violation >= self.scroll_offset + viewport_height {
+            self.scroll_offset = self.selected_violation + 1 - viewport_height;
+        }
+    }
+}
+
+/// Compute compliance results for all standards
+pub fn compute_compliance_results(sbom: &crate::model::NormalizedSbom) -> Vec<ComplianceResult> {
+    ComplianceLevel::all()
+        .iter()
+        .map(|level| {
+            let checker = ComplianceChecker::new(*level);
+            checker.check(sbom)
+        })
+        .collect()
+}
