@@ -14,7 +14,6 @@ categories = ["command-line-utilities", "development-tools"]
 [dependencies]
 # SBOM Parsing
 spdx = "0.13"
-packageurl = "0.6"
 
 # Diff Algorithm
 pathfinding = "4"
@@ -69,7 +68,6 @@ enrichment = ["reqwest", "sha2"]
 criterion = "0.8"
 proptest = "1.5"
 tempfile = "3.14"
-insta = { version = "1.41", features = ["json"] }
 
 [[bench]]
 name = "diff_benchmark"
