@@ -6,6 +6,7 @@
 use crate::model::{CanonicalId, Component, NormalizedSbom};
 use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 /// Pre-computed normalized data for a component.
 #[derive(Debug, Clone)]
@@ -31,37 +32,44 @@ pub struct NormalizedEntry {
 /// 2. Bucketing by name prefix
 /// 3. Bucketing by trigrams (3-char substrings) for fuzzy matching
 /// 4. Pre-normalizing names for fast comparison
+///
+/// Uses `Arc<CanonicalId>` internally for efficient cloning during index building.
 pub struct ComponentIndex {
     /// Ecosystem -> list of component IDs in that ecosystem
-    by_ecosystem: HashMap<String, Vec<CanonicalId>>,
+    by_ecosystem: HashMap<String, Vec<Arc<CanonicalId>>>,
     /// Normalized name prefix (first 3 chars) -> component IDs
-    by_prefix: HashMap<String, Vec<CanonicalId>>,
+    by_prefix: HashMap<String, Vec<Arc<CanonicalId>>>,
     /// Trigram -> list of component IDs containing that trigram
-    by_trigram: HashMap<String, Vec<CanonicalId>>,
+    by_trigram: HashMap<String, Vec<Arc<CanonicalId>>>,
     /// Pre-computed normalized data for each component
-    entries: HashMap<CanonicalId, NormalizedEntry>,
+    entries: HashMap<Arc<CanonicalId>, NormalizedEntry>,
     /// All component IDs (for fallback)
-    all_ids: Vec<CanonicalId>,
+    all_ids: Vec<Arc<CanonicalId>>,
 }
 
 impl ComponentIndex {
     /// Build an index from an SBOM.
+    ///
+    /// Uses `Arc<CanonicalId>` internally to avoid expensive cloning of IDs
+    /// across multiple index structures.
     pub fn build(sbom: &NormalizedSbom) -> Self {
-        let mut by_ecosystem: HashMap<String, Vec<CanonicalId>> = HashMap::new();
-        let mut by_prefix: HashMap<String, Vec<CanonicalId>> = HashMap::new();
-        let mut by_trigram: HashMap<String, Vec<CanonicalId>> = HashMap::new();
-        let mut entries: HashMap<CanonicalId, NormalizedEntry> = HashMap::new();
-        let mut all_ids: Vec<CanonicalId> = Vec::new();
+        let mut by_ecosystem: HashMap<String, Vec<Arc<CanonicalId>>> = HashMap::new();
+        let mut by_prefix: HashMap<String, Vec<Arc<CanonicalId>>> = HashMap::new();
+        let mut by_trigram: HashMap<String, Vec<Arc<CanonicalId>>> = HashMap::new();
+        let mut entries: HashMap<Arc<CanonicalId>, NormalizedEntry> = HashMap::new();
+        let mut all_ids: Vec<Arc<CanonicalId>> = Vec::new();
 
         for (id, comp) in &sbom.components {
             let entry = Self::normalize_component(comp);
+            // Wrap ID in Arc once - all subsequent "clones" are cheap reference count increments
+            let arc_id = Arc::new(id.clone());
 
             // Index by ecosystem
             if let Some(ref eco) = entry.ecosystem {
                 by_ecosystem
                     .entry(eco.clone())
                     .or_default()
-                    .push(id.clone());
+                    .push(Arc::clone(&arc_id));
             }
 
             // Index by name prefix
@@ -69,7 +77,7 @@ impl ComponentIndex {
                 by_prefix
                     .entry(entry.prefix.clone())
                     .or_default()
-                    .push(id.clone());
+                    .push(Arc::clone(&arc_id));
             }
 
             // Index by trigrams
@@ -77,11 +85,11 @@ impl ComponentIndex {
                 by_trigram
                     .entry(trigram.clone())
                     .or_default()
-                    .push(id.clone());
+                    .push(Arc::clone(&arc_id));
             }
 
-            entries.insert(id.clone(), entry);
-            all_ids.push(id.clone());
+            entries.insert(Arc::clone(&arc_id), entry);
+            all_ids.push(arc_id);
         }
 
         Self {
@@ -127,14 +135,33 @@ impl ComponentIndex {
     /// Trigrams enable finding matches where only the middle or end differs,
     /// which prefix-based indexing would miss.
     fn compute_trigrams(name: &str) -> Vec<String> {
-        let chars: Vec<char> = name.chars().collect();
-        if chars.len() < 3 {
+        if name.len() < 3 {
             // For very short names, use the name itself as a "trigram"
             return if name.is_empty() {
                 vec![]
             } else {
                 vec![name.to_string()]
             };
+        }
+
+        // Fast path: ASCII-only names (common for package names)
+        // Avoids intermediate Vec<char> allocation
+        if name.is_ascii() {
+            return name
+                .as_bytes()
+                .windows(3)
+                .map(|w| {
+                    // SAFETY: name.is_ascii() was checked above, so all bytes are valid
+                    // single-byte UTF-8 characters. Any 3-byte window is valid UTF-8.
+                    unsafe { std::str::from_utf8_unchecked(w) }.to_string()
+                })
+                .collect();
+        }
+
+        // Slow path: Unicode names - need to collect chars first for windows()
+        let chars: Vec<char> = name.chars().collect();
+        if chars.len() < 3 {
+            return vec![name.to_string()];
         }
 
         chars
@@ -208,18 +235,27 @@ impl ComponentIndex {
 
     /// Get normalized entry for a component.
     pub fn get_entry(&self, id: &CanonicalId) -> Option<&NormalizedEntry> {
+        // Arc<T>: Borrow<T> allows HashMap lookup with &CanonicalId
         self.entries.get(id)
     }
 
     /// Get components by ecosystem.
-    pub fn get_by_ecosystem(&self, ecosystem: &str) -> Option<&Vec<CanonicalId>> {
-        self.by_ecosystem.get(ecosystem)
+    ///
+    /// Returns cloned CanonicalIds for API stability. The internal storage uses Arc
+    /// to avoid expensive cloning during index building.
+    pub fn get_by_ecosystem(&self, ecosystem: &str) -> Option<Vec<CanonicalId>> {
+        self.by_ecosystem
+            .get(ecosystem)
+            .map(|v| v.iter().map(|arc| (**arc).clone()).collect())
     }
 
     /// Find candidate matches for a component.
     ///
     /// Returns a list of component IDs that are likely matches, ordered by likelihood.
     /// Uses ecosystem and prefix-based filtering to reduce candidates.
+    ///
+    /// Returns cloned CanonicalIds for API stability. The internal storage uses Arc
+    /// to avoid expensive cloning during index building.
     pub fn find_candidates(
         &self,
         source_id: &CanonicalId,
@@ -227,22 +263,22 @@ impl ComponentIndex {
         max_candidates: usize,
         max_length_diff: usize,
     ) -> Vec<CanonicalId> {
-        let mut candidates = Vec::new();
-        let mut seen = HashSet::new();
+        let mut candidates: Vec<Arc<CanonicalId>> = Vec::new();
+        let mut seen: HashSet<Arc<CanonicalId>> = HashSet::new();
 
         // Priority 1: Same ecosystem candidates
         if let Some(ref eco) = source_entry.ecosystem {
             if let Some(ids) = self.by_ecosystem.get(eco) {
                 for id in ids {
-                    if id != source_id && !seen.contains(id) {
+                    if id.as_ref() != source_id && !seen.contains(id) {
                         // Apply length filter
-                        if let Some(entry) = self.entries.get(id) {
+                        if let Some(entry) = self.entries.get(id.as_ref()) {
                             let len_diff = (source_entry.name_length as i32
                                 - entry.name_length as i32)
                                 .unsigned_abs() as usize;
                             if len_diff <= max_length_diff {
-                                candidates.push(id.clone());
-                                seen.insert(id.clone());
+                                candidates.push(Arc::clone(id));
+                                seen.insert(Arc::clone(id));
                             }
                         }
                     }
@@ -254,14 +290,14 @@ impl ComponentIndex {
         if candidates.len() < max_candidates && !source_entry.prefix.is_empty() {
             if let Some(ids) = self.by_prefix.get(&source_entry.prefix) {
                 for id in ids {
-                    if id != source_id && !seen.contains(id) {
-                        if let Some(entry) = self.entries.get(id) {
+                    if id.as_ref() != source_id && !seen.contains(id) {
+                        if let Some(entry) = self.entries.get(id.as_ref()) {
                             let len_diff = (source_entry.name_length as i32
                                 - entry.name_length as i32)
                                 .unsigned_abs() as usize;
                             if len_diff <= max_length_diff {
-                                candidates.push(id.clone());
-                                seen.insert(id.clone());
+                                candidates.push(Arc::clone(id));
+                                seen.insert(Arc::clone(id));
                             }
                         }
                     }
@@ -278,15 +314,15 @@ impl ComponentIndex {
             for (prefix, ids) in &self.by_prefix {
                 if prefix.starts_with(prefix_2) && prefix != &source_entry.prefix {
                     for id in ids {
-                        if id != source_id && !seen.contains(id) {
-                            if let Some(entry) = self.entries.get(id) {
+                        if id.as_ref() != source_id && !seen.contains(id) {
+                            if let Some(entry) = self.entries.get(id.as_ref()) {
                                 let len_diff = (source_entry.name_length as i32
                                     - entry.name_length as i32)
                                     .unsigned_abs()
                                     as usize;
                                 if len_diff <= max_length_diff {
-                                    candidates.push(id.clone());
-                                    seen.insert(id.clone());
+                                    candidates.push(Arc::clone(id));
+                                    seen.insert(Arc::clone(id));
                                 }
                             }
                         }
@@ -305,13 +341,13 @@ impl ComponentIndex {
         // Find components that share multiple trigrams with the source
         if candidates.len() < max_candidates && !source_entry.trigrams.is_empty() {
             // Count trigram overlap for each candidate
-            let mut trigram_scores: HashMap<CanonicalId, usize> = HashMap::new();
+            let mut trigram_scores: HashMap<Arc<CanonicalId>, usize> = HashMap::new();
 
             for trigram in &source_entry.trigrams {
                 if let Some(ids) = self.by_trigram.get(trigram) {
                     for id in ids {
-                        if id != source_id && !seen.contains(id) {
-                            *trigram_scores.entry(id.clone()).or_default() += 1;
+                        if id.as_ref() != source_id && !seen.contains(id) {
+                            *trigram_scores.entry(Arc::clone(id)).or_default() += 1;
                         }
                     }
                 }
@@ -335,25 +371,27 @@ impl ComponentIndex {
                 if candidates.len() >= max_candidates {
                     break;
                 }
-                if let Some(entry) = self.entries.get(&id) {
+                if let Some(entry) = self.entries.get(id.as_ref()) {
                     let len_diff = (source_entry.name_length as i32 - entry.name_length as i32)
                         .unsigned_abs() as usize;
                     if len_diff <= max_length_diff {
-                        candidates.push(id.clone());
+                        candidates.push(Arc::clone(&id));
                         seen.insert(id);
                     }
                 }
             }
         }
 
-        // Truncate to max_candidates
+        // Truncate to max_candidates and convert to owned CanonicalIds
         candidates.truncate(max_candidates);
-        candidates
+        candidates.into_iter().map(|arc| (*arc).clone()).collect()
     }
 
     /// Get all component IDs (for fallback full scan).
-    pub fn all_ids(&self) -> &[CanonicalId] {
-        &self.all_ids
+    ///
+    /// Returns cloned CanonicalIds for API stability.
+    pub fn all_ids(&self) -> Vec<CanonicalId> {
+        self.all_ids.iter().map(|arc| (**arc).clone()).collect()
     }
 
     /// Get the number of indexed components.
@@ -408,9 +446,10 @@ impl ComponentIndex {
             .map(|(source_id, source_entry)| {
                 let candidates =
                     self.find_candidates(source_id, source_entry, max_candidates, max_length_diff);
-                ((*source_id).clone(), candidates)
+                // Clone the inner CanonicalId from the Arc
+                ((*source_id).as_ref().clone(), candidates)
             })
-            .collect()
+            .collect::<Vec<_>>()
     }
 
     /// Get statistics about the index.
@@ -580,7 +619,7 @@ impl BatchCandidateGenerator {
         source_id: &CanonicalId,
         source_component: &Component,
     ) -> BatchCandidateResult {
-        let mut seen = HashSet::new();
+        let mut seen: HashSet<CanonicalId> = HashSet::new();
 
         // Get normalized entry for the source
         let source_entry = if let Some(entry) = self.component_index.get_entry(source_id) {
@@ -618,30 +657,30 @@ impl BatchCandidateGenerator {
         };
 
         // 3. Cross-ecosystem candidates
-        let cross_ecosystem_candidates: Vec<CanonicalId> = if let (Some(ref db), Some(ref eco)) =
-            (&self.cross_ecosystem_db, &source_component.ecosystem)
-        {
-            let candidates: Vec<_> = db
-                .find_equivalents(eco, &source_component.name)
-                .into_iter()
-                .flat_map(|m| {
-                    // Look up components with these names in our index
-                    let target_eco_str = m.target_ecosystem.to_string().to_lowercase();
-                    self.component_index
-                        .get_by_ecosystem(&target_eco_str)
-                        .cloned()
-                        .unwrap_or_default()
-                })
-                .filter(|id| id != source_id && !seen.contains(id))
-                .take(self.config.max_candidates / 4) // Limit cross-ecosystem
-                .collect();
-            for id in &candidates {
-                seen.insert(id.clone());
-            }
-            candidates
-        } else {
-            Vec::new()
-        };
+        let cross_ecosystem_candidates: Vec<CanonicalId> =
+            if let (Some(ref db), Some(ref eco)) =
+                (&self.cross_ecosystem_db, &source_component.ecosystem)
+            {
+                let candidates: Vec<_> = db
+                    .find_equivalents(eco, &source_component.name)
+                    .into_iter()
+                    .flat_map(|m| {
+                        // Look up components with these names in our index
+                        let target_eco_str = m.target_ecosystem.to_string().to_lowercase();
+                        self.component_index
+                            .get_by_ecosystem(&target_eco_str)
+                            .unwrap_or_default()
+                    })
+                    .filter(|id| id != source_id && !seen.contains(id))
+                    .take(self.config.max_candidates / 4) // Limit cross-ecosystem
+                    .collect();
+                for id in &candidates {
+                    seen.insert(id.clone());
+                }
+                candidates
+            } else {
+                Vec::new()
+            };
 
         let total_unique = seen.len();
 

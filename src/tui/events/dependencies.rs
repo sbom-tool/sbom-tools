@@ -145,26 +145,26 @@ pub(super) fn handle_dependencies_keys(app: &mut App, key: KeyEvent) {
         }
         KeyCode::Enter => {
             // Toggle expand/collapse of tree node
-            if let Some(node_id) = app.tabs.dependencies.get_selected_node_id().cloned() {
+            if let Some(node_id) = app.tabs.dependencies.get_selected_node_id().map(str::to_string) {
                 app.tabs.dependencies.toggle_node(&node_id);
             }
         }
         KeyCode::Char('c') => {
             // Navigate to component (go to components tab with this component selected)
-            if let Some(node_id) = app.tabs.dependencies.get_selected_node_id().cloned() {
+            if let Some(node_id) = app.tabs.dependencies.get_selected_node_id().map(str::to_string) {
                 // The node_id is often the component name or identifier
                 app.navigate_dep_to_component(&node_id);
             }
         }
         KeyCode::Left => {
             // Collapse node
-            if let Some(node_id) = app.tabs.dependencies.get_selected_node_id().cloned() {
+            if let Some(node_id) = app.tabs.dependencies.get_selected_node_id().map(str::to_string) {
                 app.tabs.dependencies.collapse(&node_id);
             }
         }
         KeyCode::Right => {
             // Expand node
-            if let Some(node_id) = app.tabs.dependencies.get_selected_node_id().cloned() {
+            if let Some(node_id) = app.tabs.dependencies.get_selected_node_id().map(str::to_string) {
                 app.tabs.dependencies.expand(&node_id);
             }
         }

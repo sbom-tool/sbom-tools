@@ -20,6 +20,9 @@ pub struct EcosystemRules {
     suspicious_patterns: HashMap<String, Vec<Regex>>,
     /// Compiled regex patterns for group migrations
     migration_patterns: HashMap<String, Vec<(Regex, String)>>,
+    /// Compiled regex patterns for package group glob members
+    /// Key: ecosystem -> group_name -> Vec<Regex>
+    package_group_patterns: HashMap<String, HashMap<String, Vec<Regex>>>,
 }
 
 impl EcosystemRules {
@@ -32,11 +35,13 @@ impl EcosystemRules {
     pub fn with_config(config: EcosystemRulesConfig) -> Self {
         let suspicious_patterns = Self::compile_suspicious_patterns(&config);
         let migration_patterns = Self::compile_migration_patterns(&config);
+        let package_group_patterns = Self::compile_package_group_patterns(&config);
 
         Self {
             config,
             suspicious_patterns,
             migration_patterns,
+            package_group_patterns,
         }
     }
 
@@ -99,6 +104,39 @@ impl EcosystemRules {
         }
 
         patterns
+    }
+
+    /// Compile package group glob patterns for efficient matching
+    fn compile_package_group_patterns(
+        config: &EcosystemRulesConfig,
+    ) -> HashMap<String, HashMap<String, Vec<Regex>>> {
+        let mut eco_patterns = HashMap::new();
+
+        for (ecosystem, eco_config) in &config.ecosystems {
+            let mut group_patterns = HashMap::new();
+
+            for (group_name, group) in &eco_config.package_groups {
+                let mut compiled = Vec::new();
+                for member in &group.members {
+                    if member.contains('*') {
+                        // Convert glob pattern to regex
+                        let regex_pattern = member.replace('.', r"\.").replace('*', ".*");
+                        if let Ok(re) = Regex::new(&format!("^{}$", regex_pattern)) {
+                            compiled.push(re);
+                        }
+                    }
+                }
+                if !compiled.is_empty() {
+                    group_patterns.insert(group_name.clone(), compiled);
+                }
+            }
+
+            if !group_patterns.is_empty() {
+                eco_patterns.insert(ecosystem.clone(), group_patterns);
+            }
+        }
+
+        eco_patterns
     }
 
     /// Get the underlying configuration
@@ -380,20 +418,24 @@ impl EcosystemRules {
         let name_lower = name.to_lowercase();
 
         if let Some(eco_config) = self.config.ecosystems.get(&eco_key) {
+            // Get pre-compiled patterns for this ecosystem (if any)
+            let compiled_patterns = self.package_group_patterns.get(&eco_key);
+
             for (group_name, group) in &eco_config.package_groups {
                 // Check canonical
                 if group.canonical.to_lowercase() == name_lower {
                     return Some(group_name);
                 }
 
-                // Check members
+                // Check members using pre-compiled patterns for globs
                 for member in &group.members {
                     if member.contains('*') {
-                        // Glob pattern
-                        let pattern = member.replace('*', ".*");
-                        if let Ok(re) = Regex::new(&format!("^{}$", pattern)) {
-                            if re.is_match(&name_lower) {
-                                return Some(group_name);
+                        // Use pre-compiled pattern
+                        if let Some(group_patterns) = compiled_patterns {
+                            if let Some(patterns) = group_patterns.get(group_name) {
+                                if patterns.iter().any(|re| re.is_match(&name_lower)) {
+                                    return Some(group_name);
+                                }
                             }
                         }
                     } else if member.to_lowercase() == name_lower {

@@ -261,8 +261,8 @@ impl DependenciesState {
     }
 
     /// Get all components that depend on this node (reverse lookup)
-    pub fn get_dependents(&self, node_id: &str) -> Option<&Vec<String>> {
-        self.cached_reverse_graph.get(node_id)
+    pub fn get_dependents(&self, node_id: &str) -> Option<&[String]> {
+        self.cached_reverse_graph.get(node_id).map(|v| v.as_slice())
     }
 
     /// Get the cached depth of a node (0 = root)
@@ -363,8 +363,8 @@ impl DependenciesState {
     }
 
     /// Get the node ID for the currently selected item
-    pub fn get_selected_node_id(&self) -> Option<&String> {
-        self.visible_nodes.get(self.selected)
+    pub fn get_selected_node_id(&self) -> Option<&str> {
+        self.visible_nodes.get(self.selected).map(|s| s.as_str())
     }
 
     /// Set the visible nodes and update total (called during rendering)
