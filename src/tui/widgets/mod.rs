@@ -10,7 +10,10 @@ mod tree;
 pub use change_badge::{ChangeIndicator, ChangeType, ChangeTypeBadge};
 pub use severity_badge::{SeverityBadge, SeverityBar};
 pub use sparkline::{EcosystemBar, HorizontalBar, MiniSparkline, PercentageRing};
-pub use tree::{get_selected_node, FlattenedItem, Tree, TreeNode, TreeState};
+pub use tree::{
+    detect_component_type, extract_display_name, get_selected_node, FlattenedItem, Tree, TreeNode,
+    TreeState,
+};
 
 use crate::tui::theme::{colors, Styles};
 use ratatui::{

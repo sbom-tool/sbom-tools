@@ -24,6 +24,10 @@ pub enum TreeNode {
         name: String,
         version: Option<String>,
         vuln_count: usize,
+        /// Maximum severity level of vulnerabilities (critical/high/medium/low)
+        max_severity: Option<String>,
+        /// Component type indicator (library, binary, file, etc.)
+        component_type: Option<String>,
     },
 }
 
@@ -41,12 +45,21 @@ impl TreeNode {
                 label, item_count, ..
             } => format!("{} ({})", label, item_count),
             TreeNode::Component { name, version, .. } => {
+                let display_name = extract_display_name(name);
                 if let Some(v) = version {
-                    format!("{}@{}", name, v)
+                    format!("{}@{}", display_name, v)
                 } else {
-                    name.clone()
+                    display_name
                 }
             }
+        }
+    }
+
+    /// Get the raw name (full path) for display in details
+    pub fn raw_name(&self) -> Option<&str> {
+        match self {
+            TreeNode::Component { name, .. } => Some(name),
+            _ => None,
         }
     }
 
@@ -54,6 +67,20 @@ impl TreeNode {
         match self {
             TreeNode::Group { vuln_count, .. } => *vuln_count,
             TreeNode::Component { vuln_count, .. } => *vuln_count,
+        }
+    }
+
+    pub fn max_severity(&self) -> Option<&str> {
+        match self {
+            TreeNode::Component { max_severity, .. } => max_severity.as_deref(),
+            _ => None,
+        }
+    }
+
+    pub fn component_type(&self) -> Option<&str> {
+        match self {
+            TreeNode::Component { component_type, .. } => component_type.as_deref(),
+            _ => None,
         }
     }
 
@@ -67,6 +94,102 @@ impl TreeNode {
             TreeNode::Component { .. } => None,
         }
     }
+}
+
+/// Extract a meaningful display name from a component path
+pub fn extract_display_name(name: &str) -> String {
+    // If it's a clean package name (no path separators, reasonable length), use it as-is
+    if !name.contains('/') && !name.starts_with('.') && name.len() <= 40 {
+        return name.to_string();
+    }
+
+    // Extract the meaningful part from a path
+    if let Some(filename) = name.rsplit('/').next() {
+        // Clean up common suffixes
+        let clean = filename
+            .trim_end_matches(".squashfs")
+            .trim_end_matches(".squ")
+            .trim_end_matches(".img")
+            .trim_end_matches(".bin")
+            .trim_end_matches(".unknown")
+            .trim_end_matches(".crt")
+            .trim_end_matches(".so")
+            .trim_end_matches(".a")
+            .trim_end_matches(".elf32");
+
+        // If the remaining name is a hash-like string, try to get parent directory context
+        if is_hash_like(clean) {
+            // Try to find a meaningful parent directory
+            let parts: Vec<&str> = name.split('/').collect();
+            if parts.len() >= 2 {
+                // Look for meaningful directory names
+                for part in parts.iter().rev().skip(1) {
+                    if !part.is_empty()
+                        && !part.starts_with('.')
+                        && !is_hash_like(part)
+                        && part.len() > 2
+                    {
+                        return format!("{}/{}", part, truncate_name(filename, 20));
+                    }
+                }
+            }
+            return truncate_name(filename, 25);
+        }
+
+        return clean.to_string();
+    }
+
+    truncate_name(name, 30)
+}
+
+/// Check if a name looks like a hash (hex digits and dashes)
+fn is_hash_like(name: &str) -> bool {
+    if name.len() < 8 {
+        return false;
+    }
+    let clean = name.replace('-', "").replace('_', "");
+    clean.chars().all(|c| c.is_ascii_hexdigit())
+        || (clean.chars().filter(|c| c.is_ascii_digit()).count() > clean.len() / 2)
+}
+
+/// Truncate a name with ellipsis
+fn truncate_name(name: &str, max_len: usize) -> String {
+    if name.len() <= max_len {
+        name.to_string()
+    } else {
+        format!("{}...", &name[..max_len.saturating_sub(3)])
+    }
+}
+
+/// Get component type from path/name
+pub fn detect_component_type(name: &str) -> &'static str {
+    let lower = name.to_lowercase();
+
+    if lower.ends_with(".so") || lower.contains(".so.") {
+        return "lib";
+    }
+    if lower.ends_with(".a") {
+        return "lib";
+    }
+    if lower.ends_with(".crt") || lower.ends_with(".pem") || lower.ends_with(".key") {
+        return "cert";
+    }
+    if lower.ends_with(".img") || lower.ends_with(".bin") || lower.ends_with(".elf")
+        || lower.ends_with(".elf32")
+    {
+        return "bin";
+    }
+    if lower.ends_with(".squashfs") || lower.ends_with(".squ") {
+        return "fs";
+    }
+    if lower.ends_with(".unknown") {
+        return "unk";
+    }
+    if lower.contains("lib") {
+        return "lib";
+    }
+
+    "file"
 }
 
 /// State for the tree widget.
@@ -149,6 +272,10 @@ pub struct FlattenedItem {
     pub is_last_sibling: bool,
     pub vuln_count: usize,
     pub ancestors_last: Vec<bool>,
+    /// Maximum severity for components with vulnerabilities
+    pub max_severity: Option<String>,
+    /// Component type (lib, bin, cert, file, etc.)
+    pub component_type: Option<String>,
 }
 
 /// The tree widget.
@@ -159,7 +286,6 @@ pub struct Tree<'a> {
     highlight_symbol: &'a str,
     group_style: Style,
     component_style: Style,
-    vuln_style: Style,
 }
 
 impl<'a> Tree<'a> {
@@ -174,7 +300,6 @@ impl<'a> Tree<'a> {
             highlight_symbol: "▶ ",
             group_style: Style::default().fg(scheme.primary).bold(),
             component_style: Style::default().fg(scheme.text),
-            vuln_style: Style::default().fg(scheme.critical).bold(),
         }
     }
 
@@ -224,6 +349,8 @@ impl<'a> Tree<'a> {
                 is_last_sibling: is_last,
                 vuln_count: node.vuln_count(),
                 ancestors_last: current_ancestors.clone(),
+                max_severity: node.max_severity().map(|s| s.to_string()),
+                component_type: node.component_type().map(|s| s.to_string()),
             });
 
             // Recursively add children if expanded
@@ -371,13 +498,49 @@ impl<'a> StatefulWidget for Tree<'a> {
                 }
             }
 
-            // Vulnerability indicator
+            // Vulnerability indicator with severity badge
             if item.vuln_count > 0 {
-                let vuln_text = format!(" ⚠{}", item.vuln_count);
-                for ch in vuln_text.chars() {
+                // Get severity color
+                let (sev_char, sev_color) = if let Some(ref sev) = item.max_severity {
+                    match sev.to_lowercase().as_str() {
+                        "critical" => ('C', scheme.critical),
+                        "high" => ('H', scheme.high),
+                        "medium" => ('M', scheme.medium),
+                        "low" => ('L', scheme.low),
+                        _ => ('?', scheme.muted),
+                    }
+                } else {
+                    ('?', scheme.muted)
+                };
+
+                // Space before indicator
+                if x < area.x + area.width {
+                    if let Some(cell) = buf.cell_mut((x, y)) {
+                        cell.set_char(' ');
+                    }
+                    x += 1;
+                }
+
+                // Severity badge [C], [H], [M], [L]
+                let badge_style = Style::default()
+                    .fg(scheme.badge_fg_dark)
+                    .bg(sev_color)
+                    .bold();
+
+                if x < area.x + area.width {
+                    if let Some(cell) = buf.cell_mut((x, y)) {
+                        cell.set_char(sev_char).set_style(badge_style);
+                    }
+                    x += 1;
+                }
+
+                // Vuln count
+                let count_text = format!("{}", item.vuln_count);
+                let count_style = Style::default().fg(sev_color).bold();
+                for ch in count_text.chars() {
                     if x < area.x + area.width {
                         if let Some(cell) = buf.cell_mut((x, y)) {
-                            cell.set_char(ch).set_style(self.vuln_style);
+                            cell.set_char(ch).set_style(count_style);
                         }
                         x += 1;
                     }
@@ -452,10 +615,40 @@ mod tests {
             name: "lodash".to_string(),
             version: Some("4.17.21".to_string()),
             vuln_count: 2,
+            max_severity: Some("high".to_string()),
+            component_type: Some("lib".to_string()),
         };
 
         assert_eq!(node.label(), "lodash@4.17.21");
         assert_eq!(node.vuln_count(), 2);
+        assert_eq!(node.max_severity(), Some("high"));
         assert!(!node.is_group());
+    }
+
+    #[test]
+    fn test_extract_display_name() {
+        // Path-like names - extracts the filename
+        assert_eq!(
+            extract_display_name("./6488064-48136192.squashfs_v4_le_extract/SMASH/ShowProperty"),
+            "ShowProperty"
+        );
+
+        // Clean package names should pass through
+        assert_eq!(extract_display_name("lodash"), "lodash");
+        assert_eq!(extract_display_name("openssl-1.1.1"), "openssl-1.1.1");
+
+        // Hash-like filenames with meaningful parent get parent/file format
+        let hash_result = extract_display_name("./6488064-48136192.squashfs");
+        assert!(hash_result.len() <= 30);
+    }
+
+    #[test]
+    fn test_detect_component_type() {
+        assert_eq!(detect_component_type("libssl.so"), "lib");
+        assert_eq!(detect_component_type("libcrypto.so.1.1"), "lib");
+        assert_eq!(detect_component_type("server.crt"), "cert");
+        assert_eq!(detect_component_type("firmware.img"), "bin");
+        assert_eq!(detect_component_type("rootfs.squashfs"), "fs");
+        assert_eq!(detect_component_type("random.unknown"), "unk");
     }
 }

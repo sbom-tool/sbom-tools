@@ -57,7 +57,28 @@ fn render_tree_panel(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
 
 fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let scheme = colors();
-    let spans = vec![
+
+    // If search is active, show search input
+    if app.tree_search_active {
+        let cursor = if app.tick % 10 < 5 { "▌" } else { " " };
+        let spans = vec![
+            Span::styled("Search: ", Style::default().fg(scheme.accent).bold()),
+            Span::styled(
+                format!("{}{}", app.tree_search_query, cursor),
+                Style::default().fg(scheme.text).bg(scheme.selection),
+            ),
+            Span::raw("  "),
+            Span::styled("[Esc]", Style::default().fg(scheme.text_muted)),
+            Span::styled(" cancel  ", Style::default().fg(scheme.text_muted)),
+            Span::styled("[Enter]", Style::default().fg(scheme.text_muted)),
+            Span::styled(" done", Style::default().fg(scheme.text_muted)),
+        ];
+        let para = Paragraph::new(Line::from(spans));
+        frame.render_widget(para, area);
+        return;
+    }
+
+    let mut spans = vec![
         Span::styled("Group: ", Style::default().fg(scheme.text_muted)),
         Span::styled(
             format!(" {} ", app.tree_group_by.label()),
@@ -75,14 +96,25 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
                 .bg(scheme.highlight)
                 .bold(),
         ),
-        Span::raw("  │  "),
-        Span::styled("[g]", Style::default().fg(scheme.accent)),
-        Span::raw(" group  "),
-        Span::styled("[f]", Style::default().fg(scheme.accent)),
-        Span::raw(" filter  "),
-        Span::styled("[←→]", Style::default().fg(scheme.accent)),
-        Span::raw(" expand"),
     ];
+
+    // Show search query if present
+    if !app.tree_search_query.is_empty() {
+        spans.push(Span::raw("  "));
+        spans.push(Span::styled("Search: ", Style::default().fg(scheme.text_muted)));
+        spans.push(Span::styled(
+            format!("\"{}\"", app.tree_search_query),
+            Style::default().fg(scheme.info),
+        ));
+    }
+
+    spans.push(Span::raw("  │  "));
+    spans.push(Span::styled("[/]", Style::default().fg(scheme.accent)));
+    spans.push(Span::raw(" search  "));
+    spans.push(Span::styled("[g]", Style::default().fg(scheme.accent)));
+    spans.push(Span::raw(" group  "));
+    spans.push(Span::styled("[f]", Style::default().fg(scheme.accent)));
+    spans.push(Span::raw(" filter"));
 
     let para = Paragraph::new(Line::from(spans));
     frame.render_widget(para, area);
@@ -124,39 +156,8 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &ViewApp) {
             }
         }
     } else {
-        // No component selected
-        let lines = vec![
-            Line::from(""),
-            Line::styled(
-                "Select a component to view details",
-                Style::default().fg(scheme.text_muted),
-            ),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("[↑↓]", Style::default().fg(scheme.accent)),
-                Span::raw(" navigate  "),
-                Span::styled("[Enter]", Style::default().fg(scheme.accent)),
-                Span::raw(" select"),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("[p]", Style::default().fg(scheme.accent)),
-                Span::raw(" switch focus  "),
-                Span::styled("[[]/[]]", Style::default().fg(scheme.accent)),
-                Span::raw(" detail tabs"),
-            ]),
-        ];
-
-        let panel = Paragraph::new(lines)
-            .block(
-                Block::default()
-                    .title(" Component Details ")
-                    .borders(Borders::ALL)
-                    .border_style(Style::default().fg(scheme.border)),
-            )
-            .alignment(Alignment::Center);
-
-        frame.render_widget(panel, area);
+        // No component selected - show quick stats overview
+        render_component_stats_panel(frame, area, app, scheme.border);
     }
 }
 
@@ -654,6 +655,181 @@ fn render_dependencies_tab(
         .block(
             Block::default()
                 .title(" Dependencies ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(border_color)),
+        )
+        .wrap(Wrap { trim: true });
+
+    frame.render_widget(panel, area);
+}
+
+/// Render component stats panel when no component is selected
+fn render_component_stats_panel(frame: &mut Frame, area: Rect, app: &ViewApp, border_color: Color) {
+    let scheme = colors();
+    let mut lines = vec![];
+    let width = area.width.saturating_sub(4) as usize;
+
+    // Title
+    lines.push(Line::from(vec![Span::styled(
+        "Component Statistics",
+        Style::default().fg(scheme.accent).bold(),
+    )]));
+    lines.push(Line::from(""));
+
+    // Total count
+    lines.push(Line::from(vec![
+        Span::styled("Total Components: ", Style::default().fg(scheme.text_muted)),
+        Span::styled(
+            format!("{}", app.stats.component_count),
+            Style::default().fg(scheme.text).bold(),
+        ),
+    ]));
+    lines.push(Line::from(""));
+
+    // Count components by type
+    let mut type_counts: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+    let mut vuln_counts: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+    vuln_counts.insert("critical", 0);
+    vuln_counts.insert("high", 0);
+    vuln_counts.insert("medium", 0);
+    vuln_counts.insert("low", 0);
+    vuln_counts.insert("clean", 0);
+
+    for comp in app.sbom.components.values() {
+        // Type detection
+        let comp_type = crate::tui::widgets::detect_component_type(&comp.name);
+        *type_counts.entry(comp_type).or_insert(0) += 1;
+
+        // Vulnerability severity
+        if comp.vulnerabilities.is_empty() {
+            *vuln_counts.entry("clean").or_insert(0) += 1;
+        } else {
+            // Find max severity
+            let max_sev = comp
+                .vulnerabilities
+                .iter()
+                .filter_map(|v| v.severity.as_ref().map(|s| s.to_string().to_lowercase()))
+                .max_by(|a, b| {
+                    let order = |s: &str| match s {
+                        "critical" => 4,
+                        "high" => 3,
+                        "medium" => 2,
+                        "low" => 1,
+                        _ => 0,
+                    };
+                    order(a).cmp(&order(b))
+                })
+                .unwrap_or_else(|| "low".to_string());
+            match max_sev.as_str() {
+                "critical" => *vuln_counts.entry("critical").or_insert(0) += 1,
+                "high" => *vuln_counts.entry("high").or_insert(0) += 1,
+                "medium" => *vuln_counts.entry("medium").or_insert(0) += 1,
+                _ => *vuln_counts.entry("low").or_insert(0) += 1,
+            }
+        }
+    }
+
+    // By Type section
+    lines.push(Line::styled(
+        "By Type:",
+        Style::default().fg(scheme.highlight).bold(),
+    ));
+
+    let type_order = vec![
+        ("lib", "Libraries", scheme.info),
+        ("bin", "Binaries", scheme.accent),
+        ("cert", "Certificates", scheme.success),
+        ("fs", "Filesystems", scheme.highlight),
+        ("file", "Other Files", scheme.text_muted),
+    ];
+
+    let max_type_count = type_counts.values().copied().max().unwrap_or(1);
+    let bar_width = width.saturating_sub(20).min(30);
+
+    for (key, label, color) in &type_order {
+        let count = type_counts.get(key).copied().unwrap_or(0);
+        if count == 0 {
+            continue;
+        }
+        let bar_len = if max_type_count > 0 {
+            (count * bar_width) / max_type_count
+        } else {
+            0
+        };
+        let bar = "█".repeat(bar_len);
+        lines.push(Line::from(vec![
+            Span::styled(format!("  {:12}", label), Style::default().fg(*color)),
+            Span::styled(format!("{:>5} ", count), Style::default().fg(scheme.text)),
+            Span::styled(bar, Style::default().fg(*color)),
+        ]));
+    }
+
+    lines.push(Line::from(""));
+
+    // Vulnerability Status section
+    lines.push(Line::styled(
+        "Vulnerability Status:",
+        Style::default().fg(scheme.critical).bold(),
+    ));
+
+    let vuln_order = vec![
+        ("critical", "Critical", scheme.critical),
+        ("high", "High", scheme.high),
+        ("medium", "Medium", scheme.warning),
+        ("low", "Low", scheme.info),
+        ("clean", "Clean", scheme.success),
+    ];
+
+    let max_vuln_count = vuln_counts.values().copied().max().unwrap_or(1);
+
+    for (key, label, color) in &vuln_order {
+        let count = vuln_counts.get(key).copied().unwrap_or(0);
+        let bar_len = if max_vuln_count > 0 {
+            (count * bar_width) / max_vuln_count
+        } else {
+            0
+        };
+        let bar = "█".repeat(bar_len);
+        lines.push(Line::from(vec![
+            Span::styled(format!("  {:12}", label), Style::default().fg(*color)),
+            Span::styled(format!("{:>5} ", count), Style::default().fg(scheme.text)),
+            Span::styled(bar, Style::default().fg(*color)),
+        ]));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(Line::from(""));
+
+    // Navigation hints
+    lines.push(Line::styled(
+        "Navigation:",
+        Style::default().fg(scheme.text_muted),
+    ));
+    lines.push(Line::from(vec![
+        Span::styled("  [↑↓]", Style::default().fg(scheme.accent)),
+        Span::styled(" select component", Style::default().fg(scheme.text_muted)),
+    ]));
+    lines.push(Line::from(vec![
+        Span::styled("  [←→]", Style::default().fg(scheme.accent)),
+        Span::styled(" expand/collapse", Style::default().fg(scheme.text_muted)),
+    ]));
+    lines.push(Line::from(vec![
+        Span::styled("  [g]", Style::default().fg(scheme.accent)),
+        Span::styled(" change grouping", Style::default().fg(scheme.text_muted)),
+    ]));
+    lines.push(Line::from(vec![
+        Span::styled("  [f]", Style::default().fg(scheme.accent)),
+        Span::styled(" filter components", Style::default().fg(scheme.text_muted)),
+    ]));
+    lines.push(Line::from(vec![
+        Span::styled("  [/]", Style::default().fg(scheme.accent)),
+        Span::styled(" search", Style::default().fg(scheme.text_muted)),
+    ]));
+
+    let panel = Paragraph::new(lines)
+        .block(
+            Block::default()
+                .title(" Component Overview ")
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(border_color)),
         )

@@ -29,6 +29,12 @@ pub struct ViewApp {
     /// Current tree filter
     pub tree_filter: TreeFilter,
 
+    /// Tree search query (inline filter)
+    pub tree_search_query: String,
+
+    /// Whether tree search is active
+    pub tree_search_active: bool,
+
     /// Selected component ID (for detail panel)
     pub selected_component: Option<String>,
 
@@ -123,6 +129,8 @@ impl ViewApp {
             tree_state,
             tree_group_by: TreeGroupBy::Ecosystem,
             tree_filter: TreeFilter::All,
+            tree_search_query: String::new(),
+            tree_search_active: false,
             selected_component: None,
             component_tab: ComponentDetailTab::Overview,
             vuln_state: VulnExplorerState::new(),
@@ -356,7 +364,8 @@ impl ViewApp {
         self.tree_group_by = match self.tree_group_by {
             TreeGroupBy::Ecosystem => TreeGroupBy::License,
             TreeGroupBy::License => TreeGroupBy::VulnStatus,
-            TreeGroupBy::VulnStatus => TreeGroupBy::Flat,
+            TreeGroupBy::VulnStatus => TreeGroupBy::ComponentType,
+            TreeGroupBy::ComponentType => TreeGroupBy::Flat,
             TreeGroupBy::Flat => TreeGroupBy::Ecosystem,
         };
         self.tree_state = TreeState::new(); // Reset tree state on grouping change
@@ -369,6 +378,36 @@ impl ViewApp {
             TreeFilter::HasVulnerabilities => TreeFilter::Critical,
             TreeFilter::Critical => TreeFilter::All,
         };
+        self.tree_state = TreeState::new();
+    }
+
+    /// Start tree search mode.
+    pub fn start_tree_search(&mut self) {
+        self.tree_search_active = true;
+        self.tree_search_query.clear();
+    }
+
+    /// Stop tree search mode.
+    pub fn stop_tree_search(&mut self) {
+        self.tree_search_active = false;
+    }
+
+    /// Clear tree search and exit search mode.
+    pub fn clear_tree_search(&mut self) {
+        self.tree_search_query.clear();
+        self.tree_search_active = false;
+        self.tree_state = TreeState::new();
+    }
+
+    /// Add character to tree search query.
+    pub fn tree_search_push_char(&mut self, c: char) {
+        self.tree_search_query.push(c);
+        self.tree_state = TreeState::new();
+    }
+
+    /// Remove character from tree search query.
+    pub fn tree_search_pop_char(&mut self) {
+        self.tree_search_query.pop();
         self.tree_state = TreeState::new();
     }
 
@@ -879,6 +918,7 @@ impl ViewApp {
             TreeGroupBy::Ecosystem => self.build_ecosystem_tree(),
             TreeGroupBy::License => self.build_license_tree(),
             TreeGroupBy::VulnStatus => self.build_vuln_status_tree(),
+            TreeGroupBy::ComponentType => self.build_type_tree(),
             TreeGroupBy::Flat => self.build_flat_tree(),
         }
     }
@@ -912,6 +952,10 @@ impl ViewApp {
                         name: c.name.clone(),
                         version: c.version.clone(),
                         vuln_count: c.vulnerabilities.len(),
+                        max_severity: get_max_severity(c),
+                        component_type: Some(
+                            crate::tui::widgets::detect_component_type(&c.name).to_string(),
+                        ),
                     })
                     .collect();
                 let count = children.len();
@@ -965,6 +1009,10 @@ impl ViewApp {
                         name: c.name.clone(),
                         version: c.version.clone(),
                         vuln_count: c.vulnerabilities.len(),
+                        max_severity: get_max_severity(c),
+                        component_type: Some(
+                            crate::tui::widgets::detect_component_type(&c.name).to_string(),
+                        ),
                     })
                     .collect();
                 let count = children.len();
@@ -1035,6 +1083,10 @@ impl ViewApp {
                     name: c.name.clone(),
                     version: c.version.clone(),
                     vuln_count: c.vulnerabilities.len(),
+                    max_severity: get_max_severity(c),
+                    component_type: Some(
+                        crate::tui::widgets::detect_component_type(&c.name).to_string(),
+                    ),
                 })
                 .collect();
             let count = children.len();
@@ -1068,6 +1120,61 @@ impl ViewApp {
         groups
     }
 
+    fn build_type_tree(&self) -> Vec<crate::tui::widgets::TreeNode> {
+        use crate::tui::widgets::TreeNode;
+
+        let mut type_map: HashMap<&'static str, Vec<&Component>> = HashMap::new();
+
+        for comp in self.sbom.components.values() {
+            if !self.matches_filter(comp) {
+                continue;
+            }
+            let comp_type = crate::tui::widgets::detect_component_type(&comp.name);
+            type_map.entry(comp_type).or_default().push(comp);
+        }
+
+        // Define type order and labels
+        let type_order = vec![
+            ("lib", "Libraries"),
+            ("bin", "Binaries"),
+            ("cert", "Certificates"),
+            ("fs", "Filesystems"),
+            ("file", "Other Files"),
+        ];
+
+        let mut groups = Vec::new();
+        for (type_key, type_label) in type_order {
+            if let Some(mut components) = type_map.remove(type_key) {
+                if components.is_empty() {
+                    continue;
+                }
+                let vuln_count: usize = components.iter().map(|c| c.vulnerabilities.len()).sum();
+                components.sort_by(|a, b| a.name.cmp(&b.name));
+                let children: Vec<TreeNode> = components
+                    .into_iter()
+                    .map(|c| TreeNode::Component {
+                        id: c.canonical_id.value().to_string(),
+                        name: c.name.clone(),
+                        version: c.version.clone(),
+                        vuln_count: c.vulnerabilities.len(),
+                        max_severity: get_max_severity(c),
+                        component_type: Some(type_key.to_string()),
+                    })
+                    .collect();
+                let count = children.len();
+                groups.push(TreeNode::Group {
+                    id: format!("type:{}", type_key),
+                    label: type_label.to_string(),
+                    children,
+                    item_count: count,
+                    vuln_count,
+                });
+            }
+        }
+
+        groups
+    }
+
     fn build_flat_tree(&self) -> Vec<crate::tui::widgets::TreeNode> {
         use crate::tui::widgets::TreeNode;
 
@@ -1080,19 +1187,57 @@ impl ViewApp {
                 name: c.name.clone(),
                 version: c.version.clone(),
                 vuln_count: c.vulnerabilities.len(),
+                max_severity: get_max_severity(c),
+                component_type: Some(
+                    crate::tui::widgets::detect_component_type(&c.name).to_string(),
+                ),
             })
             .collect()
     }
 
     fn matches_filter(&self, comp: &Component) -> bool {
-        match self.tree_filter {
+        // Check tree filter first
+        let passes_filter = match self.tree_filter {
             TreeFilter::All => true,
             TreeFilter::HasVulnerabilities => !comp.vulnerabilities.is_empty(),
             TreeFilter::Critical => comp.vulnerabilities.iter().any(|v| {
                 v.severity.as_ref().map(|s| s.to_string().to_lowercase())
                     == Some("critical".to_string())
             }),
+        };
+
+        if !passes_filter {
+            return false;
         }
+
+        // Check search query
+        if self.tree_search_query.is_empty() {
+            return true;
+        }
+
+        let query_lower = self.tree_search_query.to_lowercase();
+        let name_lower = comp.name.to_lowercase();
+
+        // Match against name
+        if name_lower.contains(&query_lower) {
+            return true;
+        }
+
+        // Match against version
+        if let Some(ref version) = comp.version {
+            if version.to_lowercase().contains(&query_lower) {
+                return true;
+            }
+        }
+
+        // Match against ecosystem
+        if let Some(ref eco) = comp.ecosystem {
+            if eco.to_string().to_lowercase().contains(&query_lower) {
+                return true;
+            }
+        }
+
+        false
     }
 
     fn tree_group_id_for_component(&self, comp: &Component) -> Option<String> {
@@ -1138,9 +1283,30 @@ impl ViewApp {
                 };
                 Some(group.to_string())
             }
+            TreeGroupBy::ComponentType => {
+                let comp_type = crate::tui::widgets::detect_component_type(&comp.name);
+                Some(format!("type:{}", comp_type))
+            }
             TreeGroupBy::Flat => None,
         }
     }
+}
+
+/// Get the maximum severity level from a component's vulnerabilities
+fn get_max_severity(comp: &Component) -> Option<String> {
+    comp.vulnerabilities
+        .iter()
+        .filter_map(|v| v.severity.as_ref().map(|s| s.to_string().to_lowercase()))
+        .max_by(|a, b| {
+            let order = |s: &str| match s {
+                "critical" => 4,
+                "high" => 3,
+                "medium" => 2,
+                "low" => 1,
+                _ => 0,
+            };
+            order(a).cmp(&order(b))
+        })
 }
 
 /// Selected tree node for navigation.
@@ -1227,6 +1393,7 @@ pub enum TreeGroupBy {
     Ecosystem,
     License,
     VulnStatus,
+    ComponentType,
     Flat,
 }
 
@@ -1236,6 +1403,7 @@ impl TreeGroupBy {
             TreeGroupBy::Ecosystem => "Ecosystem",
             TreeGroupBy::License => "License",
             TreeGroupBy::VulnStatus => "Vuln Status",
+            TreeGroupBy::ComponentType => "Type",
             TreeGroupBy::Flat => "Flat List",
         }
     }

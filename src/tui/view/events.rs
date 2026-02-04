@@ -97,6 +97,26 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
         return;
     }
 
+    // Handle tree search input
+    if app.active_tab == ViewTab::Tree && app.tree_search_active {
+        match key.code {
+            KeyCode::Esc => {
+                app.clear_tree_search();
+            }
+            KeyCode::Enter => {
+                app.stop_tree_search();
+            }
+            KeyCode::Backspace => {
+                app.tree_search_pop_char();
+            }
+            KeyCode::Char(c) => {
+                app.tree_search_push_char(c);
+            }
+            _ => {}
+        }
+        return;
+    }
+
     // Handle overlays first
     if app.search_state.active {
         handle_search_key(app, key);
@@ -200,6 +220,8 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
         KeyCode::Char('/') => {
             if app.active_tab == ViewTab::Source {
                 app.source_state.start_search();
+            } else if app.active_tab == ViewTab::Tree {
+                app.start_tree_search();
             } else {
                 app.start_search();
             }
