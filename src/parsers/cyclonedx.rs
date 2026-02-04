@@ -407,6 +407,13 @@ impl CycloneDxParser {
             }
         }
 
+        // Fallback: derive severity from CVSS score if no explicit severity was provided
+        if vuln_ref.severity.is_none() {
+            if let Some(max_score) = vuln_ref.max_cvss_score() {
+                vuln_ref.severity = Some(Severity::from_cvss(max_score));
+            }
+        }
+
         // Parse CWEs
         if let Some(cwes) = &vuln.cwes {
             vuln_ref.cwes = cwes.iter().map(|c| format!("CWE-{}", c)).collect();

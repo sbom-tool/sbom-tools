@@ -49,7 +49,9 @@ impl SeverityBadge {
             "medium" | "moderate" => "M",
             "low" => "L",
             "info" | "informational" => "I",
-            _ => "?",
+            "none" => "-",
+            "unknown" => "U",
+            _ => "U",
         }
     }
 
@@ -197,6 +199,9 @@ mod tests {
         assert_eq!(SeverityBadge::indicator("medium"), "M");
         assert_eq!(SeverityBadge::indicator("low"), "L");
         assert_eq!(SeverityBadge::indicator("info"), "I");
+        assert_eq!(SeverityBadge::indicator("none"), "-");
+        assert_eq!(SeverityBadge::indicator("unknown"), "U");
+        assert_eq!(SeverityBadge::indicator("other"), "U");
     }
 
     #[test]

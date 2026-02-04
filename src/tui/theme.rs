@@ -616,39 +616,47 @@ pub fn status_badge(status: &str) -> Span<'static> {
 /// Render a severity badge with consistent styling
 pub fn severity_badge(severity: &str) -> Span<'static> {
     let scheme = colors();
-    let (label, bg_color) = match severity.to_lowercase().as_str() {
-        "critical" => ("CRITICAL", scheme.critical),
-        "high" => ("HIGH", scheme.high),
-        "medium" | "moderate" => ("MEDIUM", scheme.medium),
-        "low" => ("LOW", scheme.low),
-        "info" | "informational" | "none" => ("INFO", scheme.info),
-        _ => ("UNKNOWN", scheme.text_muted),
+    let (label, bg_color, is_unknown) = match severity.to_lowercase().as_str() {
+        "critical" => ("CRITICAL", scheme.critical, false),
+        "high" => ("HIGH", scheme.high, false),
+        "medium" | "moderate" => ("MEDIUM", scheme.medium, false),
+        "low" => ("LOW", scheme.low, false),
+        "info" | "informational" => ("INFO", scheme.info, false),
+        "none" => ("NONE", scheme.muted, false),
+        _ => ("UNKNOWN", scheme.muted, true),
     };
     let fg_color = scheme.severity_badge_fg(severity);
 
-    Span::styled(
-        format!(" {} ", label),
-        Style::default().fg(fg_color).bg(bg_color).bold(),
-    )
+    let style = if is_unknown {
+        Style::default().fg(fg_color).bg(bg_color).dim()
+    } else {
+        Style::default().fg(fg_color).bg(bg_color).bold()
+    };
+
+    Span::styled(format!(" {} ", label), style)
 }
 
 /// Render a compact severity indicator (single char)
 pub fn severity_indicator(severity: &str) -> Span<'static> {
     let scheme = colors();
-    let (symbol, bg_color) = match severity.to_lowercase().as_str() {
-        "critical" => ("C", scheme.critical),
-        "high" => ("H", scheme.high),
-        "medium" | "moderate" => ("M", scheme.medium),
-        "low" => ("L", scheme.low),
-        "info" | "informational" | "none" => ("I", scheme.info),
-        _ => ("?", scheme.text_muted),
+    let (symbol, bg_color, is_unknown) = match severity.to_lowercase().as_str() {
+        "critical" => ("C", scheme.critical, false),
+        "high" => ("H", scheme.high, false),
+        "medium" | "moderate" => ("M", scheme.medium, false),
+        "low" => ("L", scheme.low, false),
+        "info" | "informational" => ("I", scheme.info, false),
+        "none" => ("-", scheme.muted, false),
+        _ => ("U", scheme.muted, true),
     };
     let fg_color = scheme.severity_badge_fg(severity);
 
-    Span::styled(
-        format!(" {} ", symbol),
-        Style::default().fg(fg_color).bg(bg_color).bold(),
-    )
+    let style = if is_unknown {
+        Style::default().fg(fg_color).bg(bg_color).dim()
+    } else {
+        Style::default().fg(fg_color).bg(bg_color).bold()
+    };
+
+    Span::styled(format!(" {} ", symbol), style)
 }
 
 /// Render a count badge
@@ -773,7 +781,8 @@ impl FooterHints {
             "vulnerabilities" | "vulns" => {
                 hints.insert(0, ("f", "filter: All→Critical→High"));
                 hints.insert(1, ("g", "group: Severity→Component→Flat"));
-                hints.insert(2, ("Enter", "jump to component"));
+                hints.insert(2, ("d", "deduplicate by CVE"));
+                hints.insert(3, ("Enter", "jump to component"));
             }
             "licenses" => {
                 hints.insert(0, ("g", "group: License→Category"));

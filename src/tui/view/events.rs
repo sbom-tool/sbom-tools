@@ -340,6 +340,11 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
             ViewTab::Vulnerabilities => app.vuln_state.toggle_filter(),
             _ => {}
         },
+        KeyCode::Char('d') => {
+            if app.active_tab == ViewTab::Vulnerabilities {
+                app.vuln_state.toggle_deduplicate();
+            }
+        }
         KeyCode::Char('n') if app.active_tab == ViewTab::Source => {
             app.source_state.next_search_match();
         }

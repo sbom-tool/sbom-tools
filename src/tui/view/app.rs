@@ -1314,6 +1314,8 @@ pub struct VulnExplorerState {
     pub group_by: VulnGroupBy,
     pub sort_by: VulnSortBy,
     pub filter_severity: Option<String>,
+    /// When true, deduplicate vulnerabilities by CVE ID and show affected component count
+    pub deduplicate: bool,
 }
 
 impl VulnExplorerState {
@@ -1325,6 +1327,7 @@ impl VulnExplorerState {
             group_by: VulnGroupBy::Severity,
             sort_by: VulnSortBy::Severity,
             filter_severity: None,
+            deduplicate: false,
         }
     }
 
@@ -1365,6 +1368,11 @@ impl VulnExplorerState {
             Some(s) if s == "high" => None,
             _ => None,
         };
+        self.selected = 0;
+    }
+
+    pub fn toggle_deduplicate(&mut self) {
+        self.deduplicate = !self.deduplicate;
         self.selected = 0;
     }
 
