@@ -14,6 +14,7 @@ use crate::matching::{
     ComponentMatcher, FuzzyMatchConfig, FuzzyMatcher, MatchingRulesConfig, RuleEngine,
 };
 use crate::model::NormalizedSbom;
+use std::borrow::Cow;
 
 /// Semantic diff engine for comparing SBOMs.
 pub struct DiffEngine {
@@ -118,16 +119,17 @@ impl DiffEngine {
         }
 
         // Apply custom matching rules if configured
+        // Use Cow to avoid cloning SBOMs when no rules are applied
         let (old_filtered, new_filtered, canonical_maps) =
             if let Some(rule_result) = apply_rules(self.rule_engine.as_ref(), old, new) {
                 result.rules_applied = rule_result.rules_count;
                 (
-                    rule_result.old_filtered,
-                    rule_result.new_filtered,
+                    Cow::Owned(rule_result.old_filtered),
+                    Cow::Owned(rule_result.new_filtered),
                     Some((rule_result.old_canonical, rule_result.new_canonical)),
                 )
             } else {
-                (old.clone(), new.clone(), None)
+                (Cow::Borrowed(old), Cow::Borrowed(new), None)
             };
 
         // Build component mappings using the configured matcher

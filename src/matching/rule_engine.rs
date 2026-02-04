@@ -51,8 +51,12 @@ pub struct RuleEngine {
     config: MatchingRulesConfig,
     /// Compiled regex patterns for exclusions
     compiled_exclusion_regexes: Vec<Option<Regex>>,
+    /// Compiled glob patterns for exclusions (converted to regex)
+    compiled_exclusion_globs: Vec<Option<Regex>>,
     /// Compiled regex patterns for equivalence aliases
     compiled_alias_regexes: Vec<Vec<Option<Regex>>>,
+    /// Compiled glob patterns for equivalence aliases (converted to regex)
+    compiled_alias_globs: Vec<Vec<Option<Regex>>>,
 }
 
 impl RuleEngine {
@@ -69,6 +73,22 @@ impl RuleEngine {
                         Regex::new(re)
                             .map(Some)
                             .map_err(|e| format!("Invalid exclusion regex '{}': {}", re, e))
+                    } else {
+                        Ok(None)
+                    }
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        // Pre-compile glob patterns for exclusions
+        let compiled_exclusion_globs = config
+            .exclusions
+            .iter()
+            .map(|rule| match rule {
+                ExclusionRule::Exact(_) => Ok(None),
+                ExclusionRule::Conditional { pattern, .. } => {
+                    if let Some(pat) = pattern {
+                        compile_glob(pat).map(Some)
                     } else {
                         Ok(None)
                     }
@@ -99,10 +119,33 @@ impl RuleEngine {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
+        // Pre-compile glob patterns for equivalence aliases
+        let compiled_alias_globs = config
+            .equivalences
+            .iter()
+            .map(|eq| {
+                eq.aliases
+                    .iter()
+                    .map(|alias| match alias {
+                        AliasPattern::Exact(_) => Ok(None),
+                        AliasPattern::Pattern { pattern, .. } => {
+                            if let Some(pat) = pattern {
+                                compile_glob(pat).map(Some)
+                            } else {
+                                Ok(None)
+                            }
+                        }
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
         Ok(Self {
             config,
             compiled_exclusion_regexes,
+            compiled_exclusion_globs,
             compiled_alias_regexes,
+            compiled_alias_globs,
         })
     }
 
@@ -186,11 +229,13 @@ impl RuleEngine {
                     }
                 }
 
-                // Check pattern
-                if let Some(pat) = pattern {
+                // Check pre-compiled glob pattern
+                if pattern.is_some() {
                     if let Some(purl) = &component.identifiers.purl {
-                        if !glob_matches(pat, purl) {
-                            return false;
+                        if let Some(Some(re)) = self.compiled_exclusion_globs.get(rule_idx) {
+                            if !re.is_match(purl) {
+                                return false;
+                            }
                         }
                     } else {
                         return false;
@@ -255,21 +300,22 @@ impl RuleEngine {
     /// Check if a PURL matches any alias in an equivalence group
     fn alias_matches(&self, eq_idx: usize, eq: &EquivalenceGroup, purl: &str) -> bool {
         let alias_regexes = self.compiled_alias_regexes.get(eq_idx);
+        let alias_globs = self.compiled_alias_globs.get(eq_idx);
 
         for (alias_idx, alias) in eq.aliases.iter().enumerate() {
             let matches = match alias {
                 AliasPattern::Exact(exact_purl) => purl == exact_purl,
                 AliasPattern::Pattern {
-                    pattern,
+                    pattern: _,
                     regex: _,
                     ecosystem,
                     name,
                 } => {
                     let mut matched = false;
 
-                    // Check glob pattern
-                    if let Some(pat) = pattern {
-                        if glob_matches(pat, purl) {
+                    // Check pre-compiled glob pattern
+                    if let Some(Some(re)) = alias_globs.and_then(|v| v.get(alias_idx)) {
+                        if re.is_match(purl) {
                             matched = true;
                         }
                     }
@@ -283,9 +329,17 @@ impl RuleEngine {
 
                     // Check ecosystem match in PURL
                     if let Some(eco) = ecosystem {
-                        let eco_pattern = format!("pkg:{}/", eco.to_lowercase());
-                        if purl.to_lowercase().starts_with(&eco_pattern) {
-                            matched = true;
+                        let purl_lower = purl.to_lowercase();
+                        let eco_lower = eco.to_lowercase();
+                        // Check if PURL starts with pkg:<ecosystem>/
+                        if purl_lower.starts_with("pkg:") {
+                            if let Some(rest) = purl_lower.strip_prefix("pkg:") {
+                                if rest.starts_with(&eco_lower)
+                                    && rest[eco_lower.len()..].starts_with('/')
+                                {
+                                    matched = true;
+                                }
+                            }
                         }
                     }
 
@@ -323,11 +377,15 @@ impl RuleEngine {
                     }
                 }
                 ExclusionRule::Conditional { pattern, .. } => {
-                    if let Some(pat) = pattern {
-                        if glob_matches(pat, purl) {
-                            return true;
+                    // Check pre-compiled glob pattern
+                    if pattern.is_some() {
+                        if let Some(Some(re)) = self.compiled_exclusion_globs.get(idx) {
+                            if re.is_match(purl) {
+                                return true;
+                            }
                         }
                     }
+                    // Check pre-compiled regex
                     if let Some(Some(re)) = self.compiled_exclusion_regexes.get(idx) {
                         if re.is_match(purl) {
                             return true;
@@ -353,14 +411,21 @@ impl RuleEngine {
     }
 }
 
-/// Simple glob pattern matching (supports * and ?)
-fn glob_matches(pattern: &str, text: &str) -> bool {
+/// Compile a glob pattern to a regex at construction time.
+fn compile_glob(pattern: &str) -> Result<Regex, String> {
     let regex_pattern = pattern
         .replace('.', "\\.")
         .replace('*', ".*")
         .replace('?', ".");
 
     Regex::new(&format!("^{}$", regex_pattern))
+        .map_err(|e| format!("Invalid glob pattern '{}': {}", pattern, e))
+}
+
+/// Simple glob pattern matching (supports * and ?) - used only in tests
+#[cfg(test)]
+fn glob_matches(pattern: &str, text: &str) -> bool {
+    compile_glob(pattern)
         .map(|re| re.is_match(text))
         .unwrap_or(false)
 }
