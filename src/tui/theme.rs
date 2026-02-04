@@ -294,6 +294,17 @@ impl ColorScheme {
         }
     }
 
+    /// Get a subtle background tint for severity (used for row highlighting)
+    pub fn severity_bg_tint(&self, severity: &str) -> Color {
+        match severity.to_lowercase().as_str() {
+            "critical" => Color::Rgb(50, 15, 50),
+            "high" => Color::Rgb(50, 15, 15),
+            "medium" => Color::Rgb(45, 40, 10),
+            "low" => Color::Rgb(15, 35, 40),
+            _ => Color::Reset,
+        }
+    }
+
     /// Get color for change status
     pub fn change_color(&self, status: &str) -> Color {
         match status.to_lowercase().as_str() {

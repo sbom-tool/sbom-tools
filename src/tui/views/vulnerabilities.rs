@@ -13,6 +13,19 @@ use ratatui::{
 /// Vulnerability detail tuple: (status, id, severity, cvss, component, description, cwes, source).
 type VulnDetail = (String, String, String, Option<f32>, String, Option<String>, Vec<String>, String);
 
+/// Render item for grouped vulnerability display.
+enum VulnRenderItem {
+    /// A component group header row
+    ComponentHeader {
+        name: String,
+        vuln_count: usize,
+        max_severity: String,
+        expanded: bool,
+    },
+    /// A vulnerability row (index into the underlying vuln list)
+    VulnRow(usize),
+}
+
 /// Pre-built vulnerability list to avoid rebuilding on each render call.
 /// Built once per frame in render_vulnerabilities and passed to sub-functions.
 pub enum VulnListData<'a> {
@@ -65,6 +78,14 @@ pub fn render_vulnerabilities(frame: &mut Frame, area: Rect, app: &mut App) {
         }
     };
     app.tabs.vulnerabilities.clamp_selection();
+
+    // When in grouped mode, update total to match visible render items count
+    // (must happen before building vuln_data to avoid borrow conflicts)
+    if app.tabs.vulnerabilities.group_by_component {
+        let grouped_count = count_grouped_items(app);
+        app.tabs.vulnerabilities.total = grouped_count;
+        app.tabs.vulnerabilities.clamp_selection();
+    }
 
     // Build the list data once for rendering (uses cache when available)
     if app.mode == AppMode::Diff {
@@ -268,7 +289,6 @@ fn render_vuln_table(
     let header = Row::new(vec![
         Cell::from("Status").style(Style::default().fg(colors().accent).bold()),
         Cell::from("ID").style(Style::default().fg(colors().accent).bold()),
-        Cell::from("Sev").style(Style::default().fg(colors().accent).bold()),
         Cell::from("CVSS").style(Style::default().fg(colors().accent).bold()),
         Cell::from("SLA").style(Style::default().fg(colors().accent).bold()),
         Cell::from("Component").style(Style::default().fg(colors().accent).bold()),
@@ -277,10 +297,16 @@ fn render_vuln_table(
 
     // Use pre-built vulnerability list (state already updated in render_vulnerabilities)
     let cached_depths = &app.tabs.dependencies.cached_depths;
-    let rows: Vec<Row> = match vuln_data {
-        VulnListData::Diff(items) => get_diff_vuln_rows(items),
-        VulnListData::View(items) => get_view_vuln_rows(items, cached_depths),
-        VulnListData::Empty => vec![],
+
+    // Build rows (flat or grouped)
+    let rows: Vec<Row> = if app.tabs.vulnerabilities.group_by_component {
+        build_grouped_rows(app, vuln_data, cached_depths)
+    } else {
+        match vuln_data {
+            VulnListData::Diff(items) => get_diff_vuln_rows(items),
+            VulnListData::View(items) => get_view_vuln_rows(items, cached_depths),
+            VulnListData::Empty => vec![],
+        }
     };
 
     // Handle empty states
@@ -307,11 +333,10 @@ fn render_vuln_table(
 
     let widths = [
         Constraint::Length(12),
-        Constraint::Percentage(20),
-        Constraint::Length(4),
+        Constraint::Percentage(25),
         Constraint::Length(5),
         Constraint::Length(10),
-        Constraint::Percentage(25),
+        Constraint::Percentage(30),
     ];
 
     let table = Table::new(rows, widths)
@@ -332,14 +357,381 @@ fn render_vuln_table(
     frame.render_stateful_widget(table, area, &mut state);
 }
 
+/// Build the grouped render items list from vulnerability data.
+/// Groups vulns by component name, renders headers with expand/collapse.
+fn build_grouped_render_items(
+    app: &App,
+    vuln_data: &VulnListData,
+) -> Vec<VulnRenderItem> {
+    let mut items = Vec::new();
+
+    match vuln_data {
+        VulnListData::Diff(diff_items) => {
+            // Group by component name
+            let mut groups: indexmap::IndexMap<String, Vec<(usize, &DiffVulnItem)>> =
+                indexmap::IndexMap::new();
+            for (idx, item) in diff_items.iter().enumerate() {
+                groups
+                    .entry(item.vuln.component_name.clone())
+                    .or_default()
+                    .push((idx, item));
+            }
+
+            // Sort groups by max severity
+            let mut sorted_groups: Vec<_> = groups.into_iter().collect();
+            sorted_groups.sort_by(|a, b| {
+                let max_sev_a = a.1.iter().map(|(_, it)| severity_rank(&it.vuln.severity)).min().unwrap_or(99);
+                let max_sev_b = b.1.iter().map(|(_, it)| severity_rank(&it.vuln.severity)).min().unwrap_or(99);
+                max_sev_a.cmp(&max_sev_b)
+            });
+
+            for (comp_name, vulns) in sorted_groups {
+                let max_sev = vulns
+                    .iter()
+                    .map(|(_, it)| it.vuln.severity.as_str())
+                    .min_by_key(|s| severity_rank(s))
+                    .unwrap_or("Unknown")
+                    .to_string();
+                let expanded = app.tabs.vulnerabilities.is_group_expanded(&comp_name);
+
+                items.push(VulnRenderItem::ComponentHeader {
+                    name: comp_name,
+                    vuln_count: vulns.len(),
+                    max_severity: max_sev,
+                    expanded,
+                });
+
+                if expanded {
+                    for (idx, _) in &vulns {
+                        items.push(VulnRenderItem::VulnRow(*idx));
+                    }
+                }
+            }
+        }
+        VulnListData::View(view_items) => {
+            // Group by component name (track index only, look up items later)
+            let mut groups: indexmap::IndexMap<String, Vec<usize>> =
+                indexmap::IndexMap::new();
+            for (idx, item) in view_items.iter().enumerate() {
+                groups
+                    .entry(item.0.name.clone())
+                    .or_default()
+                    .push(idx);
+            }
+
+            // Sort groups by max severity
+            let mut sorted_groups: Vec<_> = groups.into_iter().collect();
+            sorted_groups.sort_by(|a, b| {
+                let max_sev_a = a.1.iter().filter_map(|&i| view_items.get(i)).map(|it| {
+                    severity_rank(&it.1.severity.as_ref().map(|s| s.to_string()).unwrap_or_default())
+                }).min().unwrap_or(99);
+                let max_sev_b = b.1.iter().filter_map(|&i| view_items.get(i)).map(|it| {
+                    severity_rank(&it.1.severity.as_ref().map(|s| s.to_string()).unwrap_or_default())
+                }).min().unwrap_or(99);
+                max_sev_a.cmp(&max_sev_b)
+            });
+
+            for (comp_name, vuln_indices) in sorted_groups {
+                let max_sev = vuln_indices
+                    .iter()
+                    .filter_map(|&i| view_items.get(i))
+                    .map(|it| {
+                        it.1.severity
+                            .as_ref()
+                            .map(|s| s.to_string())
+                            .unwrap_or_else(|| "Unknown".to_string())
+                    })
+                    .min_by_key(|s| severity_rank(s))
+                    .unwrap_or_else(|| "Unknown".to_string());
+                let expanded = app.tabs.vulnerabilities.is_group_expanded(&comp_name);
+
+                items.push(VulnRenderItem::ComponentHeader {
+                    name: comp_name,
+                    vuln_count: vuln_indices.len(),
+                    max_severity: max_sev,
+                    expanded,
+                });
+
+                if expanded {
+                    for &idx in &vuln_indices {
+                        items.push(VulnRenderItem::VulnRow(idx));
+                    }
+                }
+            }
+        }
+        VulnListData::Empty => {}
+    }
+
+    items
+}
+
+/// Severity rank for sorting (lower = more severe)
+fn severity_rank(severity: &str) -> u8 {
+    match severity.to_lowercase().as_str() {
+        "critical" => 0,
+        "high" => 1,
+        "medium" | "moderate" => 2,
+        "low" => 3,
+        "info" | "informational" | "none" => 4,
+        _ => 5,
+    }
+}
+
+/// Build table rows for grouped mode.
+fn build_grouped_rows<'a>(
+    app: &App,
+    vuln_data: &VulnListData<'a>,
+    cached_depths: &std::collections::HashMap<String, usize>,
+) -> Vec<Row<'static>> {
+    let render_items = build_grouped_render_items(app, vuln_data);
+    let scheme = colors();
+
+    render_items
+        .iter()
+        .map(|item| match item {
+            VulnRenderItem::ComponentHeader {
+                name,
+                vuln_count,
+                max_severity,
+                expanded,
+            } => {
+                let arrow = if *expanded { "▼" } else { "▶" };
+                let sev_color = scheme.severity_color(max_severity);
+                let bg_tint = scheme.severity_bg_tint(max_severity);
+
+                Row::new(vec![
+                    Cell::from(Span::styled(
+                        format!(" {} ", max_severity.chars().next().unwrap_or('?')),
+                        Style::default()
+                            .fg(scheme.severity_badge_fg(max_severity))
+                            .bg(sev_color)
+                            .bold(),
+                    )),
+                    Cell::from(Line::from(vec![
+                        Span::styled(
+                            format!("{} ", arrow),
+                            Style::default().fg(scheme.accent),
+                        ),
+                        Span::styled(
+                            name.to_string(),
+                            Style::default().fg(scheme.text).bold(),
+                        ),
+                    ])),
+                    Cell::from(""),
+                    Cell::from(Span::styled(
+                        format!("{} CVEs", vuln_count),
+                        Style::default().fg(scheme.text_muted),
+                    )),
+                    Cell::from(""),
+                ])
+                .style(Style::default().bg(bg_tint))
+            }
+            VulnRenderItem::VulnRow(idx) => match vuln_data {
+                VulnListData::Diff(items) => {
+                    if let Some(row) = items.get(*idx) {
+                        build_single_diff_row(row, &scheme)
+                    } else {
+                        Row::new(vec![Cell::from("")])
+                    }
+                }
+                VulnListData::View(items) => {
+                    if let Some(item) = items.get(*idx) {
+                        build_single_view_row(item, cached_depths, &scheme)
+                    } else {
+                        Row::new(vec![Cell::from("")])
+                    }
+                }
+                VulnListData::Empty => Row::new(vec![Cell::from("")]),
+            },
+        })
+        .collect()
+}
+
+/// Build a single diff-mode row (extracted for reuse in grouped mode).
+fn build_single_diff_row(
+    item: &DiffVulnItem<'_>,
+    scheme: &crate::tui::theme::ColorScheme,
+) -> Row<'static> {
+    let (status_label, status_bg, status_fg, row_style) = match item.status {
+        DiffVulnStatus::Introduced => (
+            " + NEW ",
+            scheme.removed,
+            scheme.badge_fg_light,
+            Style::default().fg(scheme.text),
+        ),
+        DiffVulnStatus::Resolved => (
+            " - FIX ",
+            scheme.added,
+            scheme.badge_fg_dark,
+            Style::default().fg(scheme.added),
+        ),
+        DiffVulnStatus::Persistent => (
+            " = OLD ",
+            scheme.modified,
+            scheme.badge_fg_dark,
+            Style::default().fg(scheme.text),
+        ),
+    };
+
+    let vuln = item.vuln;
+
+    // Build ID cell with KEV and DIR/TRN badges
+    let mut id_spans: Vec<Span<'_>> = Vec::new();
+    if vuln.is_kev {
+        id_spans.push(Span::styled(
+            "KEV",
+            Style::default()
+                .fg(scheme.kev_badge_fg())
+                .bg(scheme.kev())
+                .bold(),
+        ));
+        id_spans.push(Span::raw(" "));
+    }
+    if let Some(depth) = vuln.component_depth {
+        let (label, bg_color) = if depth == 1 {
+            ("DIR", scheme.direct_dep())
+        } else {
+            ("TRN", scheme.transitive_dep())
+        };
+        id_spans.push(Span::styled(
+            label,
+            Style::default()
+                .fg(scheme.badge_fg_dark)
+                .bg(bg_color)
+                .bold(),
+        ));
+        id_spans.push(Span::raw(" "));
+    }
+    id_spans.push(Span::raw(vuln.id.clone()));
+
+    let sla_cell = format_sla_cell(
+        vuln.sla_status(),
+        vuln.days_since_published,
+        scheme,
+    );
+
+    let bg_tint = if item.status == DiffVulnStatus::Resolved {
+        Color::Reset
+    } else {
+        scheme.severity_bg_tint(&vuln.severity)
+    };
+
+    Row::new(vec![
+        Cell::from(Span::styled(
+            status_label,
+            Style::default().fg(status_fg).bg(status_bg).bold(),
+        )),
+        Cell::from(Line::from(id_spans)),
+        Cell::from(
+            vuln.cvss_score
+                .map(|s| format!("{:.1}", s))
+                .unwrap_or_else(|| "-".to_string()),
+        ),
+        sla_cell,
+        Cell::from(widgets::truncate_str(&vuln.component_name, 30)),
+    ])
+    .style(row_style.bg(bg_tint))
+}
+
+/// Build a single view-mode row (extracted for reuse in grouped mode).
+fn build_single_view_row(
+    item: &(&Component, &VulnerabilityRef),
+    cached_depths: &std::collections::HashMap<String, usize>,
+    scheme: &crate::tui::theme::ColorScheme,
+) -> Row<'static> {
+    let (comp, vuln) = item;
+    let severity = vuln
+        .severity
+        .as_ref()
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "Unknown".to_string());
+    let sev_color = scheme.severity_color(&severity);
+
+    let mut id_spans: Vec<Span<'_>> = Vec::new();
+    if vuln.is_kev {
+        id_spans.push(Span::styled(
+            "KEV",
+            Style::default()
+                .fg(scheme.kev_badge_fg())
+                .bg(scheme.kev())
+                .bold(),
+        ));
+        id_spans.push(Span::raw(" "));
+    }
+    let comp_id = comp.canonical_id.to_string();
+    if let Some(&depth) = cached_depths.get(&comp_id) {
+        let (label, bg_color) = if depth == 1 {
+            ("DIR", scheme.direct_dep())
+        } else {
+            ("TRN", scheme.transitive_dep())
+        };
+        id_spans.push(Span::styled(
+            label,
+            Style::default()
+                .fg(scheme.badge_fg_dark)
+                .bg(bg_color)
+                .bold(),
+        ));
+        id_spans.push(Span::raw(" "));
+    }
+    id_spans.push(Span::raw(vuln.id.clone()));
+
+    let sla_cell = format_view_vuln_sla_cell(vuln, &severity, scheme);
+    let bg_tint = scheme.severity_bg_tint(&severity);
+
+    Row::new(vec![
+        Cell::from(Span::styled(
+            format!(" {} ", severity.chars().next().unwrap_or('?')),
+            Style::default()
+                .fg(scheme.severity_badge_fg(&severity))
+                .bg(sev_color)
+                .bold(),
+        )),
+        Cell::from(Line::from(id_spans)),
+        Cell::from(
+            vuln.max_cvss_score()
+                .map(|s| format!("{:.1}", s))
+                .unwrap_or_else(|| "-".to_string()),
+        ),
+        sla_cell,
+        Cell::from(widgets::truncate_str(&comp.name, 30)),
+    ])
+    .style(Style::default().fg(scheme.text).bg(bg_tint))
+}
+
 fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &VulnListData) {
     let selected = app.tabs.vulnerabilities.selected;
 
-    // Use pre-built vulnerability list instead of rebuilding
-    let vuln_info = match vuln_data {
-        VulnListData::Diff(items) => get_diff_vuln_at(items, selected),
-        VulnListData::View(items) => get_view_vuln_at(items, selected),
-        VulnListData::Empty => None,
+    // In grouped mode, resolve the selected index through the render items
+    let vuln_info = if app.tabs.vulnerabilities.group_by_component {
+        let render_items = build_grouped_render_items(app, vuln_data);
+        match render_items.get(selected) {
+            Some(VulnRenderItem::VulnRow(idx)) => match vuln_data {
+                VulnListData::Diff(items) => get_diff_vuln_at(items, *idx),
+                VulnListData::View(items) => get_view_vuln_at(items, *idx),
+                VulnListData::Empty => None,
+            },
+            Some(VulnRenderItem::ComponentHeader { name, vuln_count, max_severity, .. }) => {
+                // Show a summary for the component group header
+                Some((
+                    "Component Group".to_string(),
+                    name.clone(),
+                    max_severity.clone(),
+                    None,
+                    name.clone(),
+                    Some(format!("{} vulnerabilities in this component", vuln_count)),
+                    Vec::new(),
+                    String::new(),
+                ))
+            }
+            None => None,
+        }
+    } else {
+        match vuln_data {
+            VulnListData::Diff(items) => get_diff_vuln_at(items, selected),
+            VulnListData::View(items) => get_view_vuln_at(items, selected),
+            VulnListData::Empty => None,
+        }
     };
 
     if let Some((status, id, severity, cvss, component, description, cwes, source)) = vuln_info {
@@ -403,18 +795,12 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
             ]),
         ];
 
-        // Description
+        // Description (inline label, no heavy borders)
         if let Some(desc) = description {
             lines.push(Line::from(""));
             lines.push(Line::from(vec![
-                Span::styled("━━━ ", Style::default().fg(colors().border)),
-                Span::styled(
-                    "Description",
-                    Style::default().fg(colors().text_muted).bold(),
-                ),
-                Span::styled(" ━━━", Style::default().fg(colors().border)),
+                Span::styled("Description: ", Style::default().fg(colors().text_muted)),
             ]));
-            // Wrap description to fit
             let max_width = area.width.saturating_sub(4) as usize;
             for chunk in desc.chars().collect::<Vec<_>>().chunks(max_width) {
                 lines.push(Line::styled(
@@ -424,38 +810,20 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
             }
         }
 
-        // CWEs
+        // CWEs (inline label)
         if !cwes.is_empty() {
-            lines.push(Line::from(""));
+            let cwe_list = cwes.iter().take(3).cloned().collect::<Vec<_>>().join(", ");
             lines.push(Line::from(vec![
-                Span::styled("━━━ ", Style::default().fg(colors().border)),
-                Span::styled("CWEs", Style::default().fg(colors().text_muted).bold()),
-                Span::styled(" ━━━", Style::default().fg(colors().border)),
+                Span::styled("CWEs: ", Style::default().fg(colors().text_muted)),
+                Span::styled(cwe_list, Style::default().fg(colors().accent)),
             ]));
-            for cwe in cwes.iter().take(3) {
-                lines.push(Line::from(vec![
-                    Span::styled("  • ", Style::default().fg(colors().text_muted)),
-                    Span::styled(cwe, Style::default().fg(colors().accent)),
-                ]));
-            }
         }
 
         // Attack Paths (show how to reach this vulnerable component from entry points)
         if matches!(app.mode, AppMode::Diff | AppMode::View) {
-            // Build forward dependency graph from reverse graph
+            // Use cached forward graph instead of rebuilding every frame
+            let forward_graph = &app.tabs.dependencies.cached_forward_graph;
             let reverse_graph = &app.tabs.dependencies.cached_reverse_graph;
-            let mut forward_graph: std::collections::HashMap<String, Vec<String>> =
-                std::collections::HashMap::new();
-
-            // Invert the reverse graph to get forward dependencies
-            for (dependent, dependencies) in reverse_graph {
-                for dep in dependencies {
-                    forward_graph
-                        .entry(dep.clone())
-                        .or_default()
-                        .push(dependent.clone());
-                }
-            }
 
             // Find root components (those with no dependencies pointing to them)
             let all_components: Vec<String> = reverse_graph.keys().cloned().collect();
@@ -465,7 +833,7 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
             // Find attack paths to this vulnerable component
             let attack_paths = crate::tui::security::find_attack_paths(
                 &component,
-                &forward_graph,
+                forward_graph,
                 &roots,
                 3,  // max 3 paths
                 5,  // max depth 5
@@ -474,12 +842,10 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
             if !attack_paths.is_empty() {
                 lines.push(Line::from(""));
                 lines.push(Line::from(vec![
-                    Span::styled("━━━ ", Style::default().fg(colors().border)),
                     Span::styled(
-                        format!("⚡ Attack Paths ({})", attack_paths.len()),
+                        format!("Attack Paths ({}): ", attack_paths.len()),
                         Style::default().fg(colors().high).bold(),
                     ),
-                    Span::styled(" ━━━", Style::default().fg(colors().border)),
                 ]));
 
                 for (i, path) in attack_paths.iter().take(3).enumerate() {
@@ -766,11 +1132,6 @@ fn get_diff_vuln_rows(items: &[crate::tui::app::DiffVulnItem<'_>]) -> Vec<Row<'s
             };
 
             let vuln = item.vuln;
-            let sev_color = if item.status == DiffVulnStatus::Resolved {
-                scheme.added
-            } else {
-                scheme.severity_color(&vuln.severity)
-            };
 
             // Build ID cell with KEV and DIR/TRN badges if applicable
             let mut id_spans: Vec<Span<'_>> = Vec::new();
@@ -815,25 +1176,28 @@ fn get_diff_vuln_rows(items: &[crate::tui::app::DiffVulnItem<'_>]) -> Vec<Row<'s
                 &scheme,
             );
 
+            // Subtle row background tint based on severity
+            let bg_tint = if item.status == DiffVulnStatus::Resolved {
+                Color::Reset
+            } else {
+                scheme.severity_bg_tint(&vuln.severity)
+            };
+
             Row::new(vec![
                 Cell::from(Span::styled(
                     status_label,
                     Style::default().fg(status_fg).bg(status_bg).bold(),
                 )),
                 id_cell,
-                Cell::from(Span::styled(
-                    vuln.severity.chars().next().unwrap_or('?').to_string(),
-                    Style::default().fg(sev_color).bold(),
-                )),
                 Cell::from(
                     vuln.cvss_score
                         .map(|s| format!("{:.1}", s))
                         .unwrap_or_else(|| "-".to_string()),
                 ),
                 sla_cell,
-                Cell::from(widgets::truncate_str(&vuln.component_name, 25)),
+                Cell::from(widgets::truncate_str(&vuln.component_name, 30)),
             ])
-            .style(row_style)
+            .style(row_style.bg(bg_tint))
         })
         .collect()
 }
@@ -893,6 +1257,9 @@ fn get_view_vuln_rows(
             // Calculate SLA for view mode (from VulnerabilityRef dates)
             let sla_cell = format_view_vuln_sla_cell(vuln, &severity, &scheme);
 
+            // Subtle row background tint based on severity
+            let bg_tint = scheme.severity_bg_tint(&severity);
+
             Row::new(vec![
                 Cell::from(Span::styled(
                     format!(" {} ", severity.chars().next().unwrap_or('?')),
@@ -902,19 +1269,15 @@ fn get_view_vuln_rows(
                         .bold(),
                 )),
                 id_cell,
-                Cell::from(Span::styled(
-                    severity.chars().next().unwrap_or('?').to_string(),
-                    Style::default().fg(sev_color).bold(),
-                )),
                 Cell::from(
                     vuln.max_cvss_score()
                         .map(|s| format!("{:.1}", s))
                         .unwrap_or_else(|| "-".to_string()),
                 ),
                 sla_cell,
-                Cell::from(widgets::truncate_str(&comp.name, 25)),
+                Cell::from(widgets::truncate_str(&comp.name, 30)),
             ])
-            .style(Style::default().fg(scheme.text))
+            .style(Style::default().fg(scheme.text).bg(bg_tint))
         })
         .collect()
 }
@@ -1062,4 +1425,64 @@ fn calculate_view_vuln_urgency(
     }
 
     calculate_fix_urgency(severity_rank, blast_radius, cvss_score)
+}
+
+/// Count the number of visible items in grouped mode without building full VulnListData.
+/// Each component group adds 1 header + N vulns (if expanded).
+fn count_grouped_items(app: &App) -> usize {
+    match app.mode {
+        AppMode::Diff => {
+            let items = app.diff_vulnerability_items_from_cache();
+            let mut groups: Vec<(String, usize)> = Vec::new();
+            let mut group_map: std::collections::HashMap<String, usize> =
+                std::collections::HashMap::new();
+
+            for item in &items {
+                let name = &item.vuln.component_name;
+                if let Some(&group_idx) = group_map.get(name) {
+                    groups[group_idx].1 += 1;
+                } else {
+                    let group_idx = groups.len();
+                    group_map.insert(name.clone(), group_idx);
+                    groups.push((name.clone(), 1));
+                }
+            }
+
+            let mut count = 0;
+            for (comp_name, vuln_count) in &groups {
+                count += 1; // header
+                if app.tabs.vulnerabilities.is_group_expanded(comp_name) {
+                    count += vuln_count;
+                }
+            }
+            count
+        }
+        AppMode::View => {
+            let vulns = collect_view_vulns(app);
+            let mut groups: Vec<(String, usize)> = Vec::new();
+            let mut group_map: std::collections::HashMap<String, usize> =
+                std::collections::HashMap::new();
+
+            for (comp, _) in &vulns {
+                let name = &comp.name;
+                if let Some(&group_idx) = group_map.get(name) {
+                    groups[group_idx].1 += 1;
+                } else {
+                    let group_idx = groups.len();
+                    group_map.insert(name.clone(), group_idx);
+                    groups.push((name.clone(), 1));
+                }
+            }
+
+            let mut count = 0;
+            for (comp_name, vuln_count) in &groups {
+                count += 1; // header
+                if app.tabs.vulnerabilities.is_group_expanded(comp_name) {
+                    count += vuln_count;
+                }
+            }
+            count
+        }
+        _ => 0,
+    }
 }

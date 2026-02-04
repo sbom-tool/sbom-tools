@@ -89,6 +89,8 @@ pub struct DependenciesState {
     pub cached_direct_deps: HashSet<String>,
     /// Reverse dependency graph: child -> [parents that depend on it]
     pub cached_reverse_graph: HashMap<String, Vec<String>>,
+    /// Forward dependency graph (inverted reverse graph): parent -> [children that depend on parent]
+    pub cached_forward_graph: HashMap<String, Vec<String>>,
     /// Current sort order
     pub sort_order: DependencySort,
     /// Cached depth for each node
@@ -128,6 +130,7 @@ impl DependenciesState {
             // Transitive filtering and sorting
             cached_direct_deps: HashSet::new(),
             cached_reverse_graph: HashMap::new(),
+            cached_forward_graph: HashMap::new(),
             sort_order: DependencySort::default(),
             cached_depths: HashMap::new(),
         }
@@ -270,10 +273,11 @@ impl DependenciesState {
         self.cached_depths.get(node_id).copied().unwrap_or(0)
     }
 
-    /// Update transitive caches: direct deps, reverse graph, and depths
+    /// Update transitive caches: direct deps, reverse graph, forward graph, and depths
     pub fn update_transitive_cache(&mut self) {
         self.cached_direct_deps.clear();
         self.cached_reverse_graph.clear();
+        self.cached_forward_graph.clear();
         self.cached_depths.clear();
 
         // Build reverse graph and track direct deps (depth 1)
@@ -318,6 +322,17 @@ impl DependenciesState {
                         queue.push_back((child.clone(), depth + 1));
                     }
                 }
+            }
+        }
+
+        // Build forward graph by inverting reverse graph
+        // reverse_graph: child -> [parents], forward_graph: parent -> [children]
+        for (child, parents) in &self.cached_reverse_graph {
+            for parent in parents {
+                self.cached_forward_graph
+                    .entry(parent.clone())
+                    .or_default()
+                    .push(child.clone());
             }
         }
     }
