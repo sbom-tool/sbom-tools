@@ -1039,6 +1039,7 @@ impl ViewApp {
 
     fn build_vuln_status_tree(&self) -> Vec<crate::tui::widgets::TreeNode> {
         use crate::tui::widgets::TreeNode;
+        use super::severity::severity_category;
 
         let mut critical_comps = Vec::new();
         let mut high_comps = Vec::new();
@@ -1050,27 +1051,11 @@ impl ViewApp {
                 continue;
             }
 
-            let max_severity = comp
-                .vulnerabilities
-                .iter()
-                .filter_map(|v| v.severity.as_ref().map(|s| s.to_string().to_lowercase()))
-                .max_by(|a, b| {
-                    let order = |s: &str| match s {
-                        "critical" => 4,
-                        "high" => 3,
-                        "medium" => 2,
-                        "low" => 1,
-                        _ => 0,
-                    };
-                    order(a).cmp(&order(b))
-                });
-
-            match max_severity.as_deref() {
-                Some("critical") => critical_comps.push(comp),
-                Some("high") => high_comps.push(comp),
-                Some(_) => other_vuln_comps.push(comp),
-                None if !comp.vulnerabilities.is_empty() => other_vuln_comps.push(comp),
-                None => clean_comps.push(comp),
+            match severity_category(&comp.vulnerabilities) {
+                "critical" => critical_comps.push(comp),
+                "high" => high_comps.push(comp),
+                "clean" => clean_comps.push(comp),
+                _ => other_vuln_comps.push(comp),
             }
         }
 
@@ -1196,14 +1181,16 @@ impl ViewApp {
     }
 
     fn matches_filter(&self, comp: &Component) -> bool {
+        use super::severity::severity_matches;
+
         // Check tree filter first
         let passes_filter = match self.tree_filter {
             TreeFilter::All => true,
             TreeFilter::HasVulnerabilities => !comp.vulnerabilities.is_empty(),
-            TreeFilter::Critical => comp.vulnerabilities.iter().any(|v| {
-                v.severity.as_ref().map(|s| s.to_string().to_lowercase())
-                    == Some("critical".to_string())
-            }),
+            TreeFilter::Critical => comp
+                .vulnerabilities
+                .iter()
+                .any(|v| severity_matches(v.severity.as_ref(), "critical")),
         };
 
         if !passes_filter {
@@ -1259,27 +1246,12 @@ impl ViewApp {
                 Some(format!("lic:{}", license))
             }
             TreeGroupBy::VulnStatus => {
-                let max_severity = comp
-                    .vulnerabilities
-                    .iter()
-                    .filter_map(|v| v.severity.as_ref().map(|s| s.to_string().to_lowercase()))
-                    .max_by(|a, b| {
-                        let order = |s: &str| match s {
-                            "critical" => 4,
-                            "high" => 3,
-                            "medium" => 2,
-                            "low" => 1,
-                            _ => 0,
-                        };
-                        order(a).cmp(&order(b))
-                    });
-
-                let group = match max_severity.as_deref() {
-                    Some("critical") => "vuln:critical",
-                    Some("high") => "vuln:high",
-                    Some(_) => "vuln:other",
-                    None if !comp.vulnerabilities.is_empty() => "vuln:other",
-                    None => "vuln:clean",
+                use super::severity::severity_category;
+                let group = match severity_category(&comp.vulnerabilities) {
+                    "critical" => "vuln:critical",
+                    "high" => "vuln:high",
+                    "clean" => "vuln:clean",
+                    _ => "vuln:other",
                 };
                 Some(group.to_string())
             }
@@ -1294,19 +1266,7 @@ impl ViewApp {
 
 /// Get the maximum severity level from a component's vulnerabilities
 fn get_max_severity(comp: &Component) -> Option<String> {
-    comp.vulnerabilities
-        .iter()
-        .filter_map(|v| v.severity.as_ref().map(|s| s.to_string().to_lowercase()))
-        .max_by(|a, b| {
-            let order = |s: &str| match s {
-                "critical" => 4,
-                "high" => 3,
-                "medium" => 2,
-                "low" => 1,
-                _ => 0,
-            };
-            order(a).cmp(&order(b))
-        })
+    super::severity::max_severity_from_vulns(&comp.vulnerabilities)
 }
 
 /// Selected tree node for navigation.

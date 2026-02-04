@@ -665,8 +665,10 @@ fn render_dependencies_tab(
 
 /// Render component stats panel when no component is selected
 fn render_component_stats_panel(frame: &mut Frame, area: Rect, app: &ViewApp, border_color: Color) {
+    use crate::tui::view::severity::severity_category;
+
     let scheme = colors();
-    let mut lines = vec![];
+    let mut lines = Vec::with_capacity(30);
     let width = area.width.saturating_sub(4) as usize;
 
     // Title
@@ -680,15 +682,17 @@ fn render_component_stats_panel(frame: &mut Frame, area: Rect, app: &ViewApp, bo
     lines.push(Line::from(vec![
         Span::styled("Total Components: ", Style::default().fg(scheme.text_muted)),
         Span::styled(
-            format!("{}", app.stats.component_count),
+            app.stats.component_count.to_string(),
             Style::default().fg(scheme.text).bold(),
         ),
     ]));
     lines.push(Line::from(""));
 
-    // Count components by type
-    let mut type_counts: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
-    let mut vuln_counts: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+    // Count components by type - pre-allocate with known capacity
+    let mut type_counts: std::collections::HashMap<&str, usize> =
+        std::collections::HashMap::with_capacity(5);
+    let mut vuln_counts: std::collections::HashMap<&str, usize> =
+        std::collections::HashMap::with_capacity(5);
     vuln_counts.insert("critical", 0);
     vuln_counts.insert("high", 0);
     vuln_counts.insert("medium", 0);
@@ -700,33 +704,9 @@ fn render_component_stats_panel(frame: &mut Frame, area: Rect, app: &ViewApp, bo
         let comp_type = crate::tui::widgets::detect_component_type(&comp.name);
         *type_counts.entry(comp_type).or_insert(0) += 1;
 
-        // Vulnerability severity
-        if comp.vulnerabilities.is_empty() {
-            *vuln_counts.entry("clean").or_insert(0) += 1;
-        } else {
-            // Find max severity
-            let max_sev = comp
-                .vulnerabilities
-                .iter()
-                .filter_map(|v| v.severity.as_ref().map(|s| s.to_string().to_lowercase()))
-                .max_by(|a, b| {
-                    let order = |s: &str| match s {
-                        "critical" => 4,
-                        "high" => 3,
-                        "medium" => 2,
-                        "low" => 1,
-                        _ => 0,
-                    };
-                    order(a).cmp(&order(b))
-                })
-                .unwrap_or_else(|| "low".to_string());
-            match max_sev.as_str() {
-                "critical" => *vuln_counts.entry("critical").or_insert(0) += 1,
-                "high" => *vuln_counts.entry("high").or_insert(0) += 1,
-                "medium" => *vuln_counts.entry("medium").or_insert(0) += 1,
-                _ => *vuln_counts.entry("low").or_insert(0) += 1,
-            }
-        }
+        // Vulnerability severity - use shared helper
+        let category = severity_category(&comp.vulnerabilities);
+        *vuln_counts.entry(category).or_insert(0) += 1;
     }
 
     // By Type section

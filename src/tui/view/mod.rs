@@ -5,6 +5,7 @@
 
 mod app;
 mod events;
+pub mod severity;
 mod ui;
 pub mod views;
 
