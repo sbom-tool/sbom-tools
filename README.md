@@ -1,5 +1,9 @@
 # sbom-tools
 
+[![crates.io](https://img.shields.io/crates/v/sbom-tools)](https://crates.io/crates/sbom-tools)
+[![license](https://img.shields.io/crates/l/sbom-tools)](https://github.com/sbom-tool/sbom-tools)
+[![crates.io downloads](https://img.shields.io/crates/d/sbom-tools)](https://crates.io/crates/sbom-tools)
+
 A semantic SBOM (Software Bill of Materials) diff and analysis tool. Compare, validate, and assess the quality of SBOMs across CycloneDX and SPDX formats.
 
 ## Features
