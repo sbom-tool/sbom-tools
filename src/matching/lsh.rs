@@ -160,11 +160,13 @@ impl LshIndex {
         }
 
         // Initialize empty buckets for each band
-        let buckets = (0..config.num_bands).map(|_| HashMap::new()).collect();
+        let buckets = (0..config.num_bands)
+            .map(|_| HashMap::with_capacity(64))
+            .collect();
 
         Self {
             config,
-            signatures: HashMap::new(),
+            signatures: HashMap::with_capacity(256),
             buckets,
             hash_coeffs,
             prime: 0xFFFFFFFFFFFFFFC5, // Large prime close to 2^64
@@ -294,7 +296,10 @@ impl LshIndex {
         // Use ComponentIndex's normalization for consistency
         let normalized = ComponentIndex::normalize_name(&component.name, ecosystem_str);
         let chars: Vec<char> = normalized.chars().collect();
-        let mut shingles = HashSet::new();
+
+        // Estimate capacity: roughly (len - shingle_size + 1) shingles + 2 tokens
+        let estimated_shingles = chars.len().saturating_sub(self.config.shingle_size) + 3;
+        let mut shingles = HashSet::with_capacity(estimated_shingles);
 
         // Compute name shingles
         if chars.len() < self.config.shingle_size {
@@ -303,10 +308,10 @@ impl LshIndex {
             normalized.hash(&mut hasher);
             shingles.insert(hasher.finish());
         } else {
+            // Hash character windows directly without allocating intermediate strings
             for window in chars.windows(self.config.shingle_size) {
-                let shingle: String = window.iter().collect();
                 let mut hasher = std::collections::hash_map::DefaultHasher::new();
-                shingle.hash(&mut hasher);
+                window.hash(&mut hasher);
                 shingles.insert(hasher.finish());
             }
         }
@@ -315,7 +320,8 @@ impl LshIndex {
         if self.config.include_ecosystem_token {
             if let Some(ref eco) = ecosystem {
                 let mut hasher = std::collections::hash_map::DefaultHasher::new();
-                format!("__eco:{}", eco.to_lowercase()).hash(&mut hasher);
+                "__eco:".hash(&mut hasher);
+                eco.to_lowercase().hash(&mut hasher);
                 shingles.insert(hasher.finish());
             }
         }
@@ -324,7 +330,8 @@ impl LshIndex {
         if self.config.include_group_token {
             if let Some(ref group) = component.group {
                 let mut hasher = std::collections::hash_map::DefaultHasher::new();
-                format!("__grp:{}", group.to_lowercase()).hash(&mut hasher);
+                "__grp:".hash(&mut hasher);
+                group.to_lowercase().hash(&mut hasher);
                 shingles.insert(hasher.finish());
             }
         }

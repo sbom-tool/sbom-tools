@@ -66,10 +66,10 @@ impl EcosystemRules {
 
     /// Compile suspicious package name patterns
     fn compile_suspicious_patterns(config: &EcosystemRulesConfig) -> HashMap<String, Vec<Regex>> {
-        let mut patterns = HashMap::new();
+        let mut patterns = HashMap::with_capacity(config.ecosystems.len());
 
         for (ecosystem, eco_config) in &config.ecosystems {
-            let mut compiled = Vec::new();
+            let mut compiled = Vec::with_capacity(eco_config.security.suspicious_patterns.len());
             for pattern in &eco_config.security.suspicious_patterns {
                 if let Ok(re) = Regex::new(pattern) {
                     compiled.push(re);
@@ -87,10 +87,10 @@ impl EcosystemRules {
     fn compile_migration_patterns(
         config: &EcosystemRulesConfig,
     ) -> HashMap<String, Vec<(Regex, String)>> {
-        let mut patterns = HashMap::new();
+        let mut patterns = HashMap::with_capacity(config.ecosystems.len());
 
         for (ecosystem, eco_config) in &config.ecosystems {
-            let mut compiled = Vec::new();
+            let mut compiled = Vec::with_capacity(eco_config.group_migrations.len());
             for migration in &eco_config.group_migrations {
                 // Convert glob pattern to regex
                 let regex_pattern = migration.from.replace('.', r"\.").replace('*', ".*");
@@ -110,13 +110,15 @@ impl EcosystemRules {
     fn compile_package_group_patterns(
         config: &EcosystemRulesConfig,
     ) -> HashMap<String, HashMap<String, Vec<Regex>>> {
-        let mut eco_patterns = HashMap::new();
+        let mut eco_patterns = HashMap::with_capacity(config.ecosystems.len());
 
         for (ecosystem, eco_config) in &config.ecosystems {
-            let mut group_patterns = HashMap::new();
+            let mut group_patterns = HashMap::with_capacity(eco_config.package_groups.len());
 
             for (group_name, group) in &eco_config.package_groups {
-                let mut compiled = Vec::new();
+                // Count glob patterns to pre-allocate
+                let glob_count = group.members.iter().filter(|m| m.contains('*')).count();
+                let mut compiled = Vec::with_capacity(glob_count);
                 for member in &group.members {
                     if member.contains('*') {
                         // Convert glob pattern to regex

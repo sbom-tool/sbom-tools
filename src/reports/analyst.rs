@@ -5,6 +5,7 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::fmt::Write;
 
 /// Complete analyst report structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,61 +50,75 @@ impl AnalystReport {
 
     /// Export report to Markdown format
     pub fn to_markdown(&self) -> String {
-        let mut md = String::new();
+        // Estimate capacity: ~200 bytes per section, plus variable content
+        let estimated_size = 2000
+            + self.vulnerability_findings.kev_vulnerabilities.len() * 100
+            + self.component_findings.license_issues.len() * 150
+            + self.recommendations.len() * 300
+            + self.analyst_notes.len() * 100;
+        let mut md = String::with_capacity(estimated_size);
 
         // Title
         md.push_str("# Security Analysis Report\n\n");
 
         // Metadata
         if let Some(title) = &self.metadata.title {
-            md.push_str(&format!("**Analysis:** {}\n", title));
+            let _ = writeln!(md, "**Analysis:** {}", title);
         }
         if let Some(analyst) = &self.metadata.analyst {
-            md.push_str(&format!("**Analyst:** {}\n", analyst));
+            let _ = writeln!(md, "**Analyst:** {}", analyst);
         }
-        md.push_str(&format!(
-            "**Generated:** {}\n",
+        let _ = writeln!(
+            md,
+            "**Generated:** {}",
             self.generated_at.format("%Y-%m-%d %H:%M:%S UTC")
-        ));
+        );
         if !self.metadata.sbom_paths.is_empty() {
-            md.push_str(&format!(
-                "**SBOMs Analyzed:** {}\n",
+            let _ = writeln!(
+                md,
+                "**SBOMs Analyzed:** {}",
                 self.metadata.sbom_paths.join(", ")
-            ));
+            );
         }
         md.push_str("\n---\n\n");
 
         // Executive Summary
         md.push_str("## Executive Summary\n\n");
-        md.push_str(&format!(
-            "**Risk Score:** {} ({:?})\n\n",
+        let _ = writeln!(
+            md,
+            "**Risk Score:** {} ({:?})\n",
             self.executive_summary.risk_score, self.executive_summary.risk_level
-        ));
+        );
 
         md.push_str("| Metric | Count |\n");
         md.push_str("|--------|-------|\n");
-        md.push_str(&format!(
-            "| Critical Issues | {} |\n",
+        let _ = writeln!(
+            md,
+            "| Critical Issues | {} |",
             self.executive_summary.critical_issues
-        ));
-        md.push_str(&format!(
-            "| High Issues | {} |\n",
+        );
+        let _ = writeln!(
+            md,
+            "| High Issues | {} |",
             self.executive_summary.high_issues
-        ));
-        md.push_str(&format!(
-            "| KEV Vulnerabilities | {} |\n",
+        );
+        let _ = writeln!(
+            md,
+            "| KEV Vulnerabilities | {} |",
             self.executive_summary.kev_count
-        ));
-        md.push_str(&format!(
-            "| Stale Dependencies | {} |\n",
+        );
+        let _ = writeln!(
+            md,
+            "| Stale Dependencies | {} |",
             self.executive_summary.stale_dependencies
-        ));
-        md.push_str(&format!(
-            "| License Conflicts | {} |\n",
+        );
+        let _ = writeln!(
+            md,
+            "| License Conflicts | {} |",
             self.executive_summary.license_conflicts
-        ));
+        );
         if let Some(cra) = self.executive_summary.cra_compliance_score {
-            md.push_str(&format!("| CRA Compliance | {}% |\n", cra));
+            let _ = writeln!(md, "| CRA Compliance | {}% |", cra);
         }
         md.push('\n');
 
@@ -114,26 +129,31 @@ impl AnalystReport {
 
         // Vulnerability Findings
         md.push_str("## Vulnerability Findings\n\n");
-        md.push_str(&format!(
-            "- **Total Vulnerabilities:** {}\n",
+        let _ = writeln!(
+            md,
+            "- **Total Vulnerabilities:** {}",
             self.vulnerability_findings.total_count
-        ));
-        md.push_str(&format!(
-            "- **Critical:** {}\n",
+        );
+        let _ = writeln!(
+            md,
+            "- **Critical:** {}",
             self.vulnerability_findings.critical_vulnerabilities.len()
-        ));
-        md.push_str(&format!(
-            "- **High:** {}\n",
+        );
+        let _ = writeln!(
+            md,
+            "- **High:** {}",
             self.vulnerability_findings.high_vulnerabilities.len()
-        ));
-        md.push_str(&format!(
-            "- **Medium:** {}\n",
+        );
+        let _ = writeln!(
+            md,
+            "- **Medium:** {}",
             self.vulnerability_findings.medium_vulnerabilities.len()
-        ));
-        md.push_str(&format!(
-            "- **Low:** {}\n",
+        );
+        let _ = writeln!(
+            md,
+            "- **Low:** {}",
             self.vulnerability_findings.low_vulnerabilities.len()
-        ));
+        );
 
         if !self.vulnerability_findings.kev_vulnerabilities.is_empty() {
             md.push_str("\n### Known Exploited Vulnerabilities (KEV)\n\n");
@@ -141,36 +161,42 @@ impl AnalystReport {
                 "These vulnerabilities are actively being exploited in the wild and require immediate attention.\n\n",
             );
             for vuln in &self.vulnerability_findings.kev_vulnerabilities {
-                md.push_str(&format!(
-                    "- **{}** ({}) - {}\n",
+                let _ = writeln!(
+                    md,
+                    "- **{}** ({}) - {}",
                     vuln.id, vuln.severity, vuln.component_name
-                ));
+                );
             }
         }
         md.push('\n');
 
         // Component Findings
         md.push_str("## Component Findings\n\n");
-        md.push_str(&format!(
-            "- **Total Components:** {}\n",
+        let _ = writeln!(
+            md,
+            "- **Total Components:** {}",
             self.component_findings.total_components
-        ));
-        md.push_str(&format!(
-            "- **Added:** {}\n",
+        );
+        let _ = writeln!(
+            md,
+            "- **Added:** {}",
             self.component_findings.added_count
-        ));
-        md.push_str(&format!(
-            "- **Removed:** {}\n",
+        );
+        let _ = writeln!(
+            md,
+            "- **Removed:** {}",
             self.component_findings.removed_count
-        ));
-        md.push_str(&format!(
-            "- **Stale:** {}\n",
+        );
+        let _ = writeln!(
+            md,
+            "- **Stale:** {}",
             self.component_findings.stale_components.len()
-        ));
-        md.push_str(&format!(
-            "- **Deprecated:** {}\n",
+        );
+        let _ = writeln!(
+            md,
+            "- **Deprecated:** {}",
             self.component_findings.deprecated_components.len()
-        ));
+        );
         md.push('\n');
 
         // License Issues
@@ -178,10 +204,11 @@ impl AnalystReport {
             md.push_str("### License Issues\n\n");
             for issue in &self.component_findings.license_issues {
                 let components = issue.affected_components.join(", ");
-                md.push_str(&format!(
-                    "- **{}** ({}): {} - {}\n",
+                let _ = writeln!(
+                    md,
+                    "- **{}** ({}): {} - {}",
                     issue.issue_type, issue.severity, issue.description, components
-                ));
+                );
             }
             md.push('\n');
         }
@@ -189,18 +216,20 @@ impl AnalystReport {
         // Compliance Status
         if self.compliance_status.score > 0 {
             md.push_str("## Compliance Status\n\n");
-            md.push_str(&format!(
-                "**CRA Compliance:** {}%\n\n",
+            let _ = writeln!(
+                md,
+                "**CRA Compliance:** {}%\n",
                 self.compliance_status.score
-            ));
+            );
 
             if !self.compliance_status.violations_by_article.is_empty() {
                 md.push_str("### CRA Violations\n\n");
                 for violation in &self.compliance_status.violations_by_article {
-                    md.push_str(&format!(
-                        "- **{}** ({} occurrences): {}\n",
+                    let _ = writeln!(
+                        md,
+                        "- **{}** ({} occurrences): {}",
                         violation.article, violation.count, violation.description
-                    ));
+                    );
                 }
                 md.push('\n');
             }
@@ -214,20 +243,22 @@ impl AnalystReport {
             sorted_recs.sort_by(|a, b| a.priority.cmp(&b.priority));
 
             for rec in &sorted_recs {
-                md.push_str(&format!(
-                    "### [{:?}] {} - {}\n\n",
+                let _ = writeln!(
+                    md,
+                    "### [{:?}] {} - {}\n",
                     rec.priority, rec.category, rec.title
-                ));
+                );
                 md.push_str(&rec.description);
                 md.push_str("\n\n");
                 if !rec.affected_components.is_empty() {
-                    md.push_str(&format!(
-                        "**Affected:** {}\n\n",
+                    let _ = writeln!(
+                        md,
+                        "**Affected:** {}\n",
                         rec.affected_components.join(", ")
-                    ));
+                    );
                 }
                 if let Some(effort) = &rec.effort {
-                    md.push_str(&format!("**Estimated Effort:** {}\n\n", effort));
+                    let _ = writeln!(md, "**Estimated Effort:** {}\n", effort);
                 }
             }
         }
@@ -236,20 +267,24 @@ impl AnalystReport {
         if !self.analyst_notes.is_empty() {
             md.push_str("## Analyst Notes\n\n");
             for note in &self.analyst_notes {
-                let target = note
-                    .target_id
-                    .as_ref()
-                    .map(|id| format!(" ({})", id))
-                    .unwrap_or_default();
                 let fp_marker = if note.false_positive {
                     " [FALSE POSITIVE]"
                 } else {
                     ""
                 };
-                md.push_str(&format!(
-                    "- **{}{}{}**: {}\n",
-                    note.target_type, target, fp_marker, note.note
-                ));
+                if let Some(id) = &note.target_id {
+                    let _ = writeln!(
+                        md,
+                        "- **{} ({}){}**: {}",
+                        note.target_type, id, fp_marker, note.note
+                    );
+                } else {
+                    let _ = writeln!(
+                        md,
+                        "- **{}{}**: {}",
+                        note.target_type, fp_marker, note.note
+                    );
+                }
             }
             md.push('\n');
         }
@@ -364,7 +399,12 @@ pub struct VulnerabilityFindings {
 impl VulnerabilityFindings {
     /// Get all findings in priority order
     pub fn all_findings(&self) -> Vec<&VulnFinding> {
-        let mut all = Vec::new();
+        let capacity = self.kev_vulnerabilities.len()
+            + self.critical_vulnerabilities.len()
+            + self.high_vulnerabilities.len()
+            + self.medium_vulnerabilities.len()
+            + self.low_vulnerabilities.len();
+        let mut all = Vec::with_capacity(capacity);
         all.extend(self.kev_vulnerabilities.iter());
         all.extend(self.critical_vulnerabilities.iter());
         all.extend(self.high_vulnerabilities.iter());
