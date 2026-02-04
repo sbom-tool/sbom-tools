@@ -16,4 +16,4 @@ pub use overview::render_overview;
 pub use quality::render_quality;
 pub use source::render_source;
 pub use tree::render_tree;
-pub use vulnerabilities::render_vulnerabilities;
+pub use vulnerabilities::{render_vulnerabilities, VulnCache, VulnCacheRef, VulnRow};

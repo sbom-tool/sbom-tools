@@ -215,9 +215,82 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
 
 /// Main content area with table and detail panel
 fn render_vuln_content(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
+    // Use cached data if available, otherwise rebuild
+    if !app.vuln_state.is_cache_valid() {
+        let cache = build_vuln_cache(app);
+        app.vuln_state.set_cache(cache);
+    }
+
+    // Clone cache data to avoid borrow conflicts (cache is already computed, clone is cheap for metadata)
+    let cache = app.vuln_state.cached_data.clone().unwrap();
+    let has_any_cvss = cache.has_any_cvss;
+    let all_same_component = cache.all_same_component;
+    let total_unfiltered = cache.total_unfiltered;
+
+    // Handle empty states
+    if cache.vulns.is_empty() {
+        if total_unfiltered == 0 {
+            crate::tui::widgets::render_empty_state_enhanced(
+                frame,
+                area,
+                "✓",
+                "No vulnerabilities detected",
+                Some("Great news! No known vulnerabilities were found"),
+                None,
+            );
+        } else {
+            let filter_label = app
+                .vuln_state
+                .filter_severity
+                .as_ref()
+                .map(|s| s.to_uppercase())
+                .unwrap_or_else(|| "current".to_string());
+            crate::tui::widgets::render_no_results_state(
+                frame,
+                area,
+                "Severity Filter",
+                &filter_label,
+            );
+        }
+        app.vuln_state.total = 0;
+        return;
+    }
+
+    // Update total and clamp selection (vulns are pre-sorted in cache)
+    app.vuln_state.total = cache.vulns.len();
+    app.vuln_state.clamp_selection();
+
+    // Split into table and detail panel
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(55), // Table
+            Constraint::Percentage(45), // Detail panel
+        ])
+        .split(area);
+
+    let is_left_focused = app.focus_panel == FocusPanel::Left;
+
+    // Render table
+    render_vuln_table_panel(
+        frame,
+        chunks[0],
+        &cache.vulns,
+        app,
+        has_any_cvss,
+        all_same_component,
+        is_left_focused,
+    );
+
+    // Render detail panel
+    let selected_vuln = cache.vulns.get(app.vuln_state.selected);
+    render_vuln_detail_panel(frame, chunks[1], selected_vuln, !is_left_focused);
+}
+
+/// Build the vulnerability cache from SBOM data
+fn build_vuln_cache(app: &ViewApp) -> VulnCache {
     use std::collections::HashMap;
 
-    // Build vulnerability list first to check if we have any
     let mut vulns: Vec<VulnRow> = Vec::new();
     let mut total_unfiltered = 0;
     let mut has_any_cvss = false;
@@ -271,6 +344,7 @@ fn render_vuln_content(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
                         affected_count: 1,
                         affected_components: vec![comp.name.clone()],
                         cwes: vuln.cwes.clone(),
+                        display_name: None,
                     });
             }
         }
@@ -317,41 +391,13 @@ fn render_vuln_content(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
                     affected_count: 1,
                     affected_components: vec![comp.name.clone()],
                     cwes: vuln.cwes.clone(),
+                    display_name: None,
                 });
             }
         }
     }
 
-    // Handle empty states
-    if vulns.is_empty() {
-        if total_unfiltered == 0 {
-            crate::tui::widgets::render_empty_state_enhanced(
-                frame,
-                area,
-                "✓",
-                "No vulnerabilities detected",
-                Some("Great news! No known vulnerabilities were found"),
-                None,
-            );
-        } else {
-            let filter_label = app
-                .vuln_state
-                .filter_severity
-                .as_ref()
-                .map(|s| s.to_uppercase())
-                .unwrap_or_else(|| "current".to_string());
-            crate::tui::widgets::render_no_results_state(
-                frame,
-                area,
-                "Severity Filter",
-                &filter_label,
-            );
-        }
-        app.vuln_state.total = 0;
-        return;
-    }
-
-    // Sort by severity then CVSS
+    // Sort by severity then CVSS (done once at cache build time)
     vulns.sort_by(|a, b| {
         let sev_order = |s: &str| match s.to_lowercase().as_str() {
             "critical" => 4,
@@ -370,35 +416,12 @@ fn render_vuln_content(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
         }
     });
 
-    // Update total and clamp selection
-    app.vuln_state.total = vulns.len();
-    app.vuln_state.clamp_selection();
-
-    // Split into table and detail panel
-    let chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(55), // Table
-            Constraint::Percentage(45), // Detail panel
-        ])
-        .split(area);
-
-    let is_left_focused = app.focus_panel == FocusPanel::Left;
-
-    // Render table
-    render_vuln_table_panel(
-        frame,
-        chunks[0],
-        &vulns,
-        app,
+    VulnCache {
+        vulns,
         has_any_cvss,
         all_same_component,
-        is_left_focused,
-    );
-
-    // Render detail panel
-    let selected_vuln = vulns.get(app.vuln_state.selected);
-    render_vuln_detail_panel(frame, chunks[1], selected_vuln, !is_left_focused);
+        total_unfiltered,
+    }
 }
 
 fn render_vuln_table_panel(
@@ -481,8 +504,30 @@ fn render_vuln_table_panel(
             + 5, // borders and spacing
     ) as usize;
 
-    // Build rows
-    let rows: Vec<Row> = vulns
+    // VIRTUALIZATION: Only render visible rows for performance
+    // Calculate visible window (header=1, borders=2, so content height = area.height - 3)
+    let visible_height = area.height.saturating_sub(3) as usize;
+    let total_items = vulns.len();
+
+    // Ensure scroll offset keeps selection visible
+    let selected = app.vuln_state.selected;
+    let mut scroll_offset = app.vuln_state.scroll_offset;
+
+    // Adjust scroll to keep selection in view
+    if selected < scroll_offset {
+        scroll_offset = selected;
+    } else if selected >= scroll_offset + visible_height {
+        scroll_offset = selected.saturating_sub(visible_height - 1);
+    }
+    app.vuln_state.scroll_offset = scroll_offset;
+
+    // Calculate the range of items to render (with a small buffer)
+    let buffer = 2; // Render a few extra rows for smooth scrolling
+    let start = scroll_offset.saturating_sub(buffer);
+    let end = (scroll_offset + visible_height + buffer).min(total_items);
+
+    // Build rows only for visible window
+    let rows: Vec<Row> = vulns[start..end]
         .iter()
         .map(|v| {
             let sev_color = SeverityBadge::fg_color(&v.severity);
@@ -548,6 +593,13 @@ fn render_vuln_table_panel(
         scheme.border
     };
 
+    // Adjust selected index relative to the visible window
+    let relative_selected = if selected >= start && selected < end {
+        Some(selected - start)
+    } else {
+        None
+    };
+
     let table = Table::new(rows, widths)
         .header(header)
         .block(
@@ -563,16 +615,12 @@ fn render_vuln_table_panel(
         )
         .highlight_symbol("▶");
 
+    // Use relative offset within the visible window
     let mut state = TableState::default()
-        .with_offset(app.vuln_state.scroll_offset)
-        .with_selected(if vulns.is_empty() {
-            None
-        } else {
-            Some(app.vuln_state.selected)
-        });
+        .with_offset(scroll_offset.saturating_sub(start))
+        .with_selected(relative_selected);
 
     frame.render_stateful_widget(table, area, &mut state);
-    app.vuln_state.scroll_offset = state.offset();
 
     // Scrollbar
     let visible_height = area.height.saturating_sub(3) as usize;
@@ -1061,18 +1109,36 @@ fn word_wrap(text: &str, max_width: usize) -> Vec<String> {
     lines
 }
 
-struct VulnRow {
-    vuln_id: String,
-    severity: String,
-    cvss: Option<f64>,
-    component_name: String,
+/// Cached vulnerability row data for display
+#[derive(Debug, Clone)]
+pub struct VulnRow {
+    pub vuln_id: String,
+    pub severity: String,
+    pub cvss: Option<f64>,
+    pub component_name: String,
     #[allow(dead_code)]
-    component_id: String,
-    description: Option<String>,
-    affected_count: usize,
-    affected_components: Vec<String>,
-    cwes: Vec<String>,
+    pub component_id: String,
+    pub description: Option<String>,
+    pub affected_count: usize,
+    pub affected_components: Vec<String>,
+    pub cwes: Vec<String>,
+    /// Cached display name (computed lazily from description)
+    pub display_name: Option<String>,
 }
+
+use std::sync::Arc;
+
+/// Cached vulnerability list with metadata (wrapped in Arc for cheap cloning)
+#[derive(Debug, Clone, Default)]
+pub struct VulnCache {
+    pub vulns: Vec<VulnRow>,
+    pub has_any_cvss: bool,
+    pub all_same_component: bool,
+    pub total_unfiltered: usize,
+}
+
+/// Arc-wrapped cache for zero-cost cloning during render
+pub type VulnCacheRef = Arc<VulnCache>;
 
 #[cfg(test)]
 mod tests {

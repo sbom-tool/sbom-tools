@@ -1316,6 +1316,17 @@ pub struct VulnExplorerState {
     pub filter_severity: Option<String>,
     /// When true, deduplicate vulnerabilities by CVE ID and show affected component count
     pub deduplicate: bool,
+    /// Cache key to detect when we need to rebuild the vulnerability list
+    cache_key: Option<VulnCacheKey>,
+    /// Cached vulnerability list for performance (Arc-wrapped for zero-cost cloning)
+    pub cached_data: Option<super::views::VulnCacheRef>,
+}
+
+/// Cache key for vulnerability list - rebuild when any of these change
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct VulnCacheKey {
+    filter_severity: Option<String>,
+    deduplicate: bool,
 }
 
 impl VulnExplorerState {
@@ -1328,7 +1339,34 @@ impl VulnExplorerState {
             sort_by: VulnSortBy::Severity,
             filter_severity: None,
             deduplicate: false,
+            cache_key: None,
+            cached_data: None,
         }
+    }
+
+    /// Get current cache key based on filter settings
+    fn current_cache_key(&self) -> VulnCacheKey {
+        VulnCacheKey {
+            filter_severity: self.filter_severity.clone(),
+            deduplicate: self.deduplicate,
+        }
+    }
+
+    /// Check if cache is valid
+    pub fn is_cache_valid(&self) -> bool {
+        self.cache_key.as_ref() == Some(&self.current_cache_key()) && self.cached_data.is_some()
+    }
+
+    /// Store cache with current settings (wraps in Arc for cheap cloning)
+    pub fn set_cache(&mut self, cache: super::views::VulnCache) {
+        self.cache_key = Some(self.current_cache_key());
+        self.cached_data = Some(std::sync::Arc::new(cache));
+    }
+
+    /// Invalidate the cache
+    pub fn invalidate_cache(&mut self) {
+        self.cache_key = None;
+        self.cached_data = None;
     }
 
     pub fn select_next(&mut self) {
