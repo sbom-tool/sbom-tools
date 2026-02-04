@@ -39,9 +39,6 @@ pub mod rule_engine;
 mod rules;
 mod traits;
 
-#[cfg(feature = "ml-matching")]
-mod embedding;
-
 pub use adaptive::{
     AdaptiveMatching, AdaptiveMethod, AdaptiveThreshold, AdaptiveThresholdConfig,
     AdaptiveThresholdResult, ScoreStats,

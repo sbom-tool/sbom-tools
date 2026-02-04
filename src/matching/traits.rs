@@ -65,9 +65,6 @@ pub enum MatchTier {
     Fuzzy,
     /// Match via custom user rules
     CustomRule,
-    /// Match via ML embedding similarity
-    #[cfg(feature = "ml-matching")]
-    Embedding,
 }
 
 impl MatchTier {
@@ -80,8 +77,6 @@ impl MatchTier {
             MatchTier::EcosystemRule => 0.90,
             MatchTier::CustomRule => 0.92,
             MatchTier::Fuzzy => 0.80,
-            #[cfg(feature = "ml-matching")]
-            MatchTier::Embedding => 0.85,
         }
     }
 }

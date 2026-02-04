@@ -1,6 +1,6 @@
 [package]
 name = "sbom-tools"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 rust-version = "1.86"
 description = "Semantic SBOM diff and analysis tool"
@@ -53,14 +53,8 @@ dirs = "6.0.0"
 unicode-width = "0.2"
 schemars = "1.2"
 
-# Optional: ML-based matching
-[dependencies.candle-core]
-version = "0.9"
-optional = true
-
 [features]
 default = ["enrichment"]
-ml-matching = ["candle-core"]
 enrichment = ["reqwest", "sha2"]
 
 [dev-dependencies]
