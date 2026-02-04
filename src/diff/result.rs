@@ -140,13 +140,20 @@ impl DiffResult {
 
     /// Build an index of component IDs to their changes for fast lookup
     pub fn build_component_id_index(&self) -> HashMap<String, &ComponentChange> {
-        self.components
-            .added
-            .iter()
-            .chain(self.components.removed.iter())
-            .chain(self.components.modified.iter())
-            .map(|c| (c.id.clone(), c))
-            .collect()
+        let capacity = self.components.added.len()
+            + self.components.removed.len()
+            + self.components.modified.len();
+        let mut index = HashMap::with_capacity(capacity);
+        for c in self.components.added.iter() {
+            index.insert(c.id.clone(), c);
+        }
+        for c in self.components.removed.iter() {
+            index.insert(c.id.clone(), c);
+        }
+        for c in self.components.modified.iter() {
+            index.insert(c.id.clone(), c);
+        }
+        index
     }
 
     /// Filter vulnerabilities by minimum severity level
@@ -622,7 +629,8 @@ pub struct VulnerabilityChanges {
 impl VulnerabilityChanges {
     /// Count vulnerabilities by severity
     pub fn introduced_by_severity(&self) -> HashMap<String, usize> {
-        let mut counts = HashMap::new();
+        // Pre-allocate for typical severity levels (critical, high, medium, low, unknown)
+        let mut counts = HashMap::with_capacity(5);
         for vuln in &self.introduced {
             *counts.entry(vuln.severity.clone()).or_insert(0) += 1;
         }

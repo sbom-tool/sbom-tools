@@ -24,11 +24,12 @@ impl Default for VulnerabilityChangeComputer {
 /// Compute component depths from SBOM dependency edges using BFS.
 /// Returns a map of component ID -> depth (1 = direct, 2+ = transitive).
 fn compute_depths(sbom: &NormalizedSbom) -> HashMap<CanonicalId, u32> {
-    let mut depths = HashMap::new();
+    let mut depths = HashMap::with_capacity(sbom.components.len());
 
     // Build forward edge map: parent -> [children]
-    let mut edges: HashMap<&CanonicalId, Vec<&CanonicalId>> = HashMap::new();
-    let mut has_parents: HashSet<&CanonicalId> = HashSet::new();
+    let mut edges: HashMap<&CanonicalId, Vec<&CanonicalId>> =
+        HashMap::with_capacity(sbom.components.len());
+    let mut has_parents: HashSet<&CanonicalId> = HashSet::with_capacity(sbom.components.len());
 
     for edge in &sbom.edges {
         edges.entry(&edge.from).or_default().push(&edge.to);
@@ -89,8 +90,13 @@ impl ChangeComputer for VulnerabilityChangeComputer {
         let old_depths = compute_depths(old);
         let new_depths = compute_depths(new);
 
+        // Estimate vulnerability counts for pre-allocation
+        let old_vuln_count: usize = old.components.values().map(|c| c.vulnerabilities.len()).sum();
+        let new_vuln_count: usize = new.components.values().map(|c| c.vulnerabilities.len()).sum();
+
         // Collect old vulnerabilities with depth info
-        let mut old_vulns: HashMap<String, VulnerabilityDetail> = HashMap::new();
+        let mut old_vulns: HashMap<String, VulnerabilityDetail> =
+            HashMap::with_capacity(old_vuln_count);
         for (id, comp) in &old.components {
             let depth = old_depths.get(id).copied();
             for vuln in &comp.vulnerabilities {
@@ -100,7 +106,8 @@ impl ChangeComputer for VulnerabilityChangeComputer {
         }
 
         // Collect new vulnerabilities with depth info
-        let mut new_vulns: HashMap<String, VulnerabilityDetail> = HashMap::new();
+        let mut new_vulns: HashMap<String, VulnerabilityDetail> =
+            HashMap::with_capacity(new_vuln_count);
         for (id, comp) in &new.components {
             let depth = new_depths.get(id).copied();
             for vuln in &comp.vulnerabilities {

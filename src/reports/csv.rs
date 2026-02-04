@@ -6,6 +6,7 @@
 use super::{ReportConfig, ReportError, ReportFormat, ReportGenerator};
 use crate::diff::{DiffResult, SlaStatus, VulnerabilityDetail};
 use crate::model::NormalizedSbom;
+use std::fmt::Write;
 
 /// CSV report generator.
 pub struct CsvReporter;
@@ -30,40 +31,28 @@ impl ReportGenerator for CsvReporter {
         _new_sbom: &NormalizedSbom,
         _config: &ReportConfig,
     ) -> Result<String, ReportError> {
-        let mut content = String::new();
+        // Pre-allocate based on estimated output size
+        let estimated_lines = result.components.total()
+            + result.vulnerabilities.introduced.len()
+            + result.vulnerabilities.resolved.len()
+            + result.vulnerabilities.persistent.len()
+            + 10; // headers
+        let mut content = String::with_capacity(estimated_lines * 100);
 
         // Components CSV
         content.push_str("# Components\n");
         content.push_str("Change,Name,Old Version,New Version,Ecosystem\n");
 
         for comp in &result.components.added {
-            content.push_str(&format!(
-                "Added,\"{}\",\"{}\",\"{}\",\"{}\"\n",
-                escape_csv(&comp.name),
-                comp.old_version.as_deref().unwrap_or("-"),
-                comp.new_version.as_deref().unwrap_or("-"),
-                comp.ecosystem.as_deref().unwrap_or("-")
-            ));
+            write_component_line(&mut content, "Added", comp);
         }
 
         for comp in &result.components.removed {
-            content.push_str(&format!(
-                "Removed,\"{}\",\"{}\",\"{}\",\"{}\"\n",
-                escape_csv(&comp.name),
-                comp.old_version.as_deref().unwrap_or("-"),
-                comp.new_version.as_deref().unwrap_or("-"),
-                comp.ecosystem.as_deref().unwrap_or("-")
-            ));
+            write_component_line(&mut content, "Removed", comp);
         }
 
         for comp in &result.components.modified {
-            content.push_str(&format!(
-                "Modified,\"{}\",\"{}\",\"{}\",\"{}\"\n",
-                escape_csv(&comp.name),
-                comp.old_version.as_deref().unwrap_or("-"),
-                comp.new_version.as_deref().unwrap_or("-"),
-                comp.ecosystem.as_deref().unwrap_or("-")
-            ));
+            write_component_line(&mut content, "Modified", comp);
         }
 
         // Vulnerabilities CSV
@@ -90,7 +79,8 @@ impl ReportGenerator for CsvReporter {
         sbom: &NormalizedSbom,
         _config: &ReportConfig,
     ) -> Result<String, ReportError> {
-        let mut content = String::new();
+        // Pre-allocate based on component count
+        let mut content = String::with_capacity(sbom.components.len() * 150 + 100);
 
         content.push_str("Name,Version,Ecosystem,Type,PURL,Licenses,Vulnerabilities\n");
 
@@ -103,20 +93,23 @@ impl ReportGenerator for CsvReporter {
                 .collect::<Vec<_>>()
                 .join("; ");
             let vuln_count = comp.vulnerabilities.len();
+            let ecosystem = comp
+                .ecosystem
+                .as_ref()
+                .map(|e| format!("{:?}", e))
+                .unwrap_or_else(|| "-".to_string());
 
-            content.push_str(&format!(
-                "\"{}\",\"{}\",\"{}\",\"{:?}\",\"{}\",\"{}\",{}\n",
+            let _ = writeln!(
+                content,
+                "\"{}\",\"{}\",\"{}\",\"{:?}\",\"{}\",\"{}\",{}",
                 escape_csv(&comp.name),
                 comp.version.as_deref().unwrap_or("-"),
-                comp.ecosystem
-                    .as_ref()
-                    .map(|e| format!("{:?}", e))
-                    .unwrap_or_else(|| "-".to_string()),
+                ecosystem,
                 comp.component_type,
                 comp.identifiers.purl.as_deref().unwrap_or("-"),
                 escape_csv(&licenses),
                 vuln_count
-            ));
+            );
         }
 
         Ok(content)
@@ -127,6 +120,23 @@ impl ReportGenerator for CsvReporter {
     }
 }
 
+/// Write a component line using write! macro to avoid format! allocation.
+fn write_component_line(
+    content: &mut String,
+    change_type: &str,
+    comp: &crate::diff::ComponentChange,
+) {
+    let _ = writeln!(
+        content,
+        "{},\"{}\",\"{}\",\"{}\",\"{}\"",
+        change_type,
+        escape_csv(&comp.name),
+        comp.old_version.as_deref().unwrap_or("-"),
+        comp.new_version.as_deref().unwrap_or("-"),
+        comp.ecosystem.as_deref().unwrap_or("-")
+    );
+}
+
 fn write_vuln_line(content: &mut String, status: &str, vuln: &VulnerabilityDetail) {
     let depth_label = match vuln.component_depth {
         Some(1) => "Direct",
@@ -134,19 +144,23 @@ fn write_vuln_line(content: &mut String, status: &str, vuln: &VulnerabilityDetai
         None => "-",
     };
     let sla_display = format_sla_csv(vuln);
-    content.push_str(&format!(
-        "{},\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"\n",
+    let desc = vuln
+        .description
+        .as_deref()
+        .map(escape_csv)
+        .unwrap_or_default();
+
+    let _ = writeln!(
+        content,
+        "{},\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"",
         status,
         escape_csv(&vuln.id),
         escape_csv(&vuln.severity),
         depth_label,
         sla_display,
         escape_csv(&vuln.component_name),
-        vuln.description
-            .as_deref()
-            .map(escape_csv)
-            .unwrap_or_default()
-    ));
+        desc
+    );
 }
 
 /// Escape a string for CSV embedding: double-quote escaping per RFC 4180,
