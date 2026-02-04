@@ -516,8 +516,9 @@ fn render_vuln_table_panel(
                         Style::default().fg(scheme.primary),
                     )));
                 } else {
-                    // Try to extract meaningful name from path
-                    let display_name = extract_component_display_name(&v.component_name);
+                    // Try to extract meaningful name from path or description
+                    let display_name =
+                        extract_component_display_name(&v.component_name, v.description.as_deref());
                     cells.push(Cell::from(Span::styled(
                         truncate_str(&display_name, 20),
                         Style::default().fg(scheme.primary),
@@ -667,7 +668,7 @@ fn render_vuln_detail_panel(
         )));
         // Show first few
         for (i, comp) in v.affected_components.iter().take(5).enumerate() {
-            let display = extract_component_display_name(comp);
+            let display = extract_component_display_name(comp, v.description.as_deref());
             lines.push(Line::from(Span::styled(
                 format!("  {}. {}", i + 1, display),
                 Style::default().fg(scheme.text),
@@ -680,7 +681,7 @@ fn render_vuln_detail_panel(
             )));
         }
     } else {
-        let display = extract_component_display_name(&v.component_name);
+        let display = extract_component_display_name(&v.component_name, v.description.as_deref());
         lines.push(Line::from(Span::styled(
             format!("  {}", display),
             Style::default().fg(scheme.primary),
@@ -745,20 +746,74 @@ fn render_vuln_detail_panel(
     frame.render_widget(para, area);
 }
 
-/// Extract a meaningful display name from a component path
-fn extract_component_display_name(name: &str) -> String {
-    // If it looks like a file path, try to extract something meaningful
+/// Extract a meaningful display name from a component path and/or description
+fn extract_component_display_name(name: &str, description: Option<&str>) -> String {
+    // First, check if the component name is already meaningful
+    let is_cryptic = is_cryptic_name(name);
+
+    if !is_cryptic {
+        // Name looks good, use it (possibly cleaned up)
+        return clean_component_name(name);
+    }
+
+    // Name is cryptic - try to extract from description
+    if let Some(desc) = description {
+        if let Some(pkg_name) = extract_package_from_description(desc) {
+            return pkg_name;
+        }
+    }
+
+    // Fall back to cleaning up the file path
+    clean_component_name(name)
+}
+
+/// Check if a component name is cryptic (hash-like, numeric, or uninformative)
+fn is_cryptic_name(name: &str) -> bool {
+    // Get the base name (last component of path)
+    let base = name.rsplit('/').next().unwrap_or(name);
+
+    // Remove common extensions
+    let clean = base
+        .trim_end_matches(".squ")
+        .trim_end_matches(".squashfs")
+        .trim_end_matches(".img")
+        .trim_end_matches(".bin")
+        .trim_end_matches(".so")
+        .trim_end_matches(".a");
+
+    // Check if it's mostly hex digits and dashes (hash-like)
+    if clean.chars().all(|c| c.is_ascii_hexdigit() || c == '-' || c == '_') && clean.len() > 8 {
+        return true;
+    }
+
+    // Check if it's mostly numeric
+    let digit_count = clean.chars().filter(|c| c.is_ascii_digit()).count();
+    if digit_count > clean.len() / 2 && clean.len() > 6 {
+        return true;
+    }
+
+    // Check if it starts with ./ which often indicates extracted files
+    if name.starts_with("./") {
+        // But allow if the filename itself is meaningful
+        let has_letters = clean.chars().filter(|c| c.is_alphabetic()).count() > 3;
+        if !has_letters {
+            return true;
+        }
+    }
+
+    false
+}
+
+/// Clean up a component name (remove path prefixes, extensions)
+fn clean_component_name(name: &str) -> String {
     if name.starts_with("./") || name.starts_with("/") || name.contains('/') {
-        // Get the filename
         if let Some(filename) = name.rsplit('/').next() {
-            // Remove common extensions
             let clean = filename
                 .trim_end_matches(".squ")
                 .trim_end_matches(".squashfs")
                 .trim_end_matches(".img")
                 .trim_end_matches(".bin");
 
-            // If it's still a hash-like name, try to be more helpful
             if clean.chars().all(|c| c.is_ascii_hexdigit() || c == '-') {
                 return format!("file:{}", truncate_str(clean, 12));
             }
@@ -766,6 +821,216 @@ fn extract_component_display_name(name: &str) -> String {
         }
     }
     name.to_string()
+}
+
+/// Extract package name from CVE description
+/// CVE descriptions often mention the affected package early in the text
+fn extract_package_from_description(description: &str) -> Option<String> {
+    // Common patterns in CVE descriptions:
+    // "BusyBox through 1.35.0 allows..."
+    // "In BusyBox before 1.35.0, ..."
+    // "A vulnerability in PCRE allows..."
+    // "The libpcre library in PCRE 8.x..."
+    // "An issue was discovered in OpenSSL..."
+    // "Buffer overflow in zlib before 1.2.12..."
+
+    // List of known package names to look for (common embedded/system packages)
+    const KNOWN_PACKAGES: &[&str] = &[
+        // Libraries
+        "busybox", "glibc", "musl", "uclibc", "openssl", "libssl", "libcrypto",
+        "zlib", "bzip2", "xz", "lzma", "lz4", "zstd",
+        "pcre", "pcre2", "libpcre", "libpcre2",
+        "curl", "libcurl", "wget",
+        "sqlite", "sqlite3", "libsqlite",
+        "expat", "libexpat", "libxml2", "libxslt",
+        "libjpeg", "libpng", "libtiff", "libwebp", "giflib",
+        "freetype", "fontconfig", "harfbuzz",
+        "openldap", "libldap",
+        "libssh", "libssh2", "openssh",
+        "gnutls", "mbedtls", "wolfssl", "libressl",
+        "dbus", "systemd", "udev",
+        "linux", "kernel", "linux-kernel",
+        "bash", "dash", "ash", "sh",
+        "python", "perl", "ruby", "php", "lua",
+        "nginx", "apache", "httpd", "lighttpd",
+        "libuv", "libevent", "libev",
+        "protobuf", "grpc", "flatbuffers",
+        "boost", "poco", "qt",
+        "ncurses", "readline",
+        "icu", "libicu",
+        "libidn", "libidn2",
+        "nettle", "libgcrypt", "libsodium",
+        "nss", "nspr",
+        "krb5", "libkrb5",
+        "cyrus-sasl", "libsasl",
+        "pam", "libpam",
+        "audit", "libaudit",
+        "selinux", "libselinux",
+        "acl", "libacl", "attr", "libattr",
+        "cap", "libcap",
+        "util-linux", "coreutils", "findutils",
+        "binutils", "gcc", "llvm", "clang",
+        "dropbear", "dnsmasq", "hostapd", "wpa_supplicant",
+        "iptables", "nftables", "iproute2",
+        "tcpdump", "libpcap",
+        "snmp", "net-snmp",
+        "ntp", "chrony",
+        "samba", "cifs",
+        // Firmware/embedded specific
+        "u-boot", "grub", "barebox",
+        "mtd-utils", "squashfs", "jffs2", "ubifs",
+        "openwrt", "buildroot", "yocto",
+    ];
+
+    let desc_lower = description.to_lowercase();
+
+    // Strategy 1: Look for known package names at word boundaries
+    for &pkg in KNOWN_PACKAGES {
+        // Check various patterns where the package might appear
+        let patterns = [
+            format!("{} ", pkg),           // "busybox allows..."
+            format!(" {} ", pkg),          // "in busybox before..."
+            format!("in {}", pkg),         // "vulnerability in busybox"
+            format!("{} before", pkg),     // "busybox before 1.35"
+            format!("{} through", pkg),    // "busybox through 1.35"
+            format!("{} prior", pkg),      // "busybox prior to"
+            format!("lib{}", pkg),         // "libcurl" when looking for "curl"
+        ];
+
+        for pattern in &patterns {
+            if desc_lower.contains(pattern) {
+                // Return the properly capitalized version
+                return Some(capitalize_package_name(pkg));
+            }
+        }
+    }
+
+    // Strategy 2: Look for patterns like "X before/through/prior to VERSION"
+    // This catches packages not in our known list
+    let version_patterns = [
+        " before ", " through ", " prior to ", " up to ", " <= ", " < ",
+    ];
+
+    for pattern in version_patterns {
+        if let Some(pos) = desc_lower.find(pattern) {
+            // Look backwards from the pattern to find the package name
+            let prefix = &description[..pos];
+            if let Some(pkg) = extract_word_before(prefix) {
+                // Validate it looks like a package name (not "vulnerability", "issue", etc.)
+                let pkg_lower = pkg.to_lowercase();
+                if !is_noise_word(&pkg_lower) && pkg.len() >= 2 && pkg.len() <= 30 {
+                    return Some(pkg.to_string());
+                }
+            }
+        }
+    }
+
+    // Strategy 3: Look for "in X," or "in X " early in the description
+    if let Some(in_pos) = desc_lower.find(" in ") {
+        if in_pos < 50 {
+            // Only look near the start
+            let after_in = &description[in_pos + 4..];
+            if let Some(pkg) = extract_first_word(after_in) {
+                let pkg_lower = pkg.to_lowercase();
+                if !is_noise_word(&pkg_lower) && pkg.len() >= 2 && pkg.len() <= 30 {
+                    return Some(pkg.to_string());
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Capitalize package name appropriately
+fn capitalize_package_name(name: &str) -> String {
+    // Some packages have specific capitalization
+    match name {
+        "busybox" => "BusyBox".to_string(),
+        "openssl" => "OpenSSL".to_string(),
+        "libssl" => "libssl".to_string(),
+        "libcrypto" => "libcrypto".to_string(),
+        "openssh" => "OpenSSH".to_string(),
+        "sqlite" | "sqlite3" => "SQLite".to_string(),
+        "mysql" => "MySQL".to_string(),
+        "postgresql" => "PostgreSQL".to_string(),
+        "libxml2" => "libxml2".to_string(),
+        "libxslt" => "libxslt".to_string(),
+        "libjpeg" => "libjpeg".to_string(),
+        "libpng" => "libpng".to_string(),
+        "systemd" => "systemd".to_string(),
+        "linux" | "kernel" | "linux-kernel" => "Linux kernel".to_string(),
+        "glibc" => "glibc".to_string(),
+        "musl" => "musl".to_string(),
+        "pcre" | "pcre2" => "PCRE".to_string(),
+        "libpcre" | "libpcre2" => "libpcre".to_string(),
+        "zlib" => "zlib".to_string(),
+        "curl" | "libcurl" => "cURL".to_string(),
+        "u-boot" => "U-Boot".to_string(),
+        _ => {
+            // Default: capitalize first letter
+            let mut chars = name.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(first) => first.to_uppercase().chain(chars).collect(),
+            }
+        }
+    }
+}
+
+/// Extract the word immediately before a position
+fn extract_word_before(text: &str) -> Option<&str> {
+    let trimmed = text.trim_end();
+    let last_space = trimmed.rfind(|c: char| c.is_whitespace() || c == '(' || c == ',')?;
+    let word = &trimmed[last_space + 1..];
+    if word.is_empty() {
+        None
+    } else {
+        Some(word)
+    }
+}
+
+/// Extract the first word from text
+fn extract_first_word(text: &str) -> Option<&str> {
+    let trimmed = text.trim_start();
+    let end = trimmed.find(|c: char| c.is_whitespace() || c == ',' || c == ';' || c == '.')?;
+    let word = &trimmed[..end];
+    if word.is_empty() {
+        None
+    } else {
+        Some(word)
+    }
+}
+
+/// Check if a word is likely not a package name
+fn is_noise_word(word: &str) -> bool {
+    const NOISE: &[&str] = &[
+        "a", "an", "the", "this", "that", "these", "those",
+        "is", "are", "was", "were", "be", "been", "being",
+        "have", "has", "had", "do", "does", "did",
+        "will", "would", "could", "should", "may", "might", "must",
+        "vulnerability", "vulnerabilities", "issue", "issues", "flaw", "flaws",
+        "bug", "bugs", "error", "errors", "problem", "problems",
+        "attack", "attacker", "attackers", "remote", "local",
+        "user", "users", "function", "functions", "method", "methods",
+        "file", "files", "memory", "buffer", "heap", "stack",
+        "overflow", "underflow", "corruption", "leak", "injection",
+        "code", "execution", "denial", "service", "access", "control",
+        "certain", "some", "all", "any", "many", "multiple",
+        "allows", "allow", "allowed", "enabling", "enables", "enable",
+        "causes", "cause", "caused", "leading", "leads", "lead",
+        "via", "through", "using", "when", "where", "which", "what",
+        "version", "versions", "release", "releases",
+        "component", "components", "module", "modules", "package", "packages",
+        "application", "applications", "program", "programs", "software",
+        "system", "systems", "server", "servers", "client", "clients",
+        "library", "libraries", "framework", "frameworks",
+        "and", "or", "but", "not", "with", "without", "for", "from", "to",
+        "of", "on", "at", "by", "as", "if", "so", "than",
+        "discovered", "found", "identified", "reported", "fixed",
+        "cve", "nvd", "cwe",
+    ];
+    NOISE.contains(&word)
 }
 
 /// Simple word wrapping
@@ -807,4 +1072,101 @@ struct VulnRow {
     affected_count: usize,
     affected_components: Vec<String>,
     cwes: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_package_from_description_busybox() {
+        let desc = "BusyBox through 1.35.0 allows remote attackers to execute arbitrary code";
+        assert_eq!(
+            extract_package_from_description(desc),
+            Some("BusyBox".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_package_from_description_in_pattern() {
+        let desc = "A vulnerability in OpenSSL allows denial of service";
+        assert_eq!(
+            extract_package_from_description(desc),
+            Some("OpenSSL".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_package_from_description_before_pattern() {
+        let desc = "zlib before 1.2.12 allows memory corruption";
+        assert_eq!(
+            extract_package_from_description(desc),
+            Some("zlib".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_package_from_description_pcre() {
+        let desc = "PCRE before 8.45 has a buffer overflow in pcre_compile";
+        assert_eq!(
+            extract_package_from_description(desc),
+            Some("PCRE".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_package_from_description_libcurl() {
+        let desc = "An issue was discovered in curl before 7.83.1";
+        assert_eq!(
+            extract_package_from_description(desc),
+            Some("cURL".to_string())
+        );
+    }
+
+    #[test]
+    fn test_is_cryptic_name_hash() {
+        assert!(is_cryptic_name("./6488064-48136192.squ"));
+        assert!(is_cryptic_name("a1b2c3d4e5f6-7890abcd"));
+    }
+
+    #[test]
+    fn test_is_cryptic_name_numeric() {
+        assert!(is_cryptic_name("./12345678.img"));
+    }
+
+    #[test]
+    fn test_is_cryptic_name_meaningful() {
+        assert!(!is_cryptic_name("busybox"));
+        assert!(!is_cryptic_name("libssl.so"));
+        assert!(!is_cryptic_name("openssl-1.1.1"));
+    }
+
+    #[test]
+    fn test_extract_component_display_name_with_description() {
+        let name = "./6488064-48136192.squ";
+        let desc = Some("BusyBox through 1.35.0 allows remote attackers");
+        assert_eq!(
+            extract_component_display_name(name, desc),
+            "BusyBox".to_string()
+        );
+    }
+
+    #[test]
+    fn test_extract_component_display_name_meaningful_name() {
+        let name = "openssl-1.1.1";
+        let desc = Some("OpenSSL has a vulnerability");
+        // Should use the component name since it's meaningful
+        assert_eq!(
+            extract_component_display_name(name, desc),
+            "openssl-1.1.1".to_string()
+        );
+    }
+
+    #[test]
+    fn test_clean_component_name() {
+        assert_eq!(clean_component_name("./path/to/busybox.squ"), "busybox");
+        // Hash-like names get prefixed with "file:" and truncated
+        let result = clean_component_name("./abc123-def456.squashfs");
+        assert!(result.starts_with("file:"));
+    }
 }
