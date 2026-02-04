@@ -161,7 +161,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
         None => "All".to_string(),
     };
 
-    let _group_label = match app.vuln_state.group_by {
+    let group_label = match app.vuln_state.group_by {
         VulnGroupBy::Severity => "Severity",
         VulnGroupBy::Component => "Component",
         VulnGroupBy::Flat => "Flat",
@@ -183,6 +183,15 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
                 .bold(),
         ),
         Span::raw("  "),
+        Span::styled("Sort: ", Style::default().fg(scheme.muted)),
+        Span::styled(
+            format!(" {} ", app.vuln_state.sort_by.label()),
+            Style::default()
+                .fg(scheme.badge_fg_dark)
+                .bg(scheme.primary)
+                .bold(),
+        ),
+        Span::raw("  "),
         Span::styled("Dedupe: ", Style::default().fg(scheme.muted)),
         Span::styled(
             format!(" {} ", dedupe_label),
@@ -195,18 +204,42 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
                 })
                 .bold(),
         ),
+        Span::raw("  "),
+        Span::styled("Group: ", Style::default().fg(scheme.muted)),
+        Span::styled(
+            format!(" {} ", group_label),
+            Style::default()
+                .fg(scheme.badge_fg_dark)
+                .bg(scheme.secondary)
+                .bold(),
+        ),
         Span::raw("  │  "),
         Span::styled("[f]", Style::default().fg(scheme.accent)),
         Span::raw(" filter  "),
+        Span::styled("[s]", Style::default().fg(scheme.accent)),
+        Span::raw(" sort  "),
         Span::styled("[d]", Style::default().fg(scheme.accent)),
         Span::raw(" dedupe  "),
-        Span::styled("[p]", Style::default().fg(scheme.accent)),
-        Span::raw(" panel  "),
+        Span::styled("[g]", Style::default().fg(scheme.accent)),
+        Span::raw(" group  "),
+        Span::styled("[/]", Style::default().fg(scheme.accent)),
+        Span::raw(" search"),
     ];
 
-    if !app.vuln_state.deduplicate {
-        spans.push(Span::styled("[Enter]", Style::default().fg(scheme.accent)));
-        spans.push(Span::raw(" jump"));
+    // Show active search query
+    if app.vuln_state.search_active {
+        spans.push(Span::raw("  "));
+        spans.push(Span::styled(
+            format!("/{}", app.vuln_state.search_query),
+            Style::default().fg(scheme.accent).bold(),
+        ));
+        spans.push(Span::styled("█", Style::default().fg(scheme.accent)));
+    } else if !app.vuln_state.search_query.is_empty() {
+        spans.push(Span::raw("  "));
+        spans.push(Span::styled(
+            format!("\"{}\"", app.vuln_state.search_query),
+            Style::default().fg(scheme.accent),
+        ));
     }
 
     let para = Paragraph::new(Line::from(spans));
@@ -256,8 +289,15 @@ fn render_vuln_content(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
         return;
     }
 
-    // Update total and clamp selection (vulns are pre-sorted in cache)
-    app.vuln_state.total = cache.vulns.len();
+    // Build display items (flat or grouped)
+    let display_items = build_display_items(
+        &cache.vulns,
+        &app.vuln_state.group_by,
+        &app.vuln_state.expanded_groups,
+    );
+
+    // Update total and clamp selection based on display items
+    app.vuln_state.total = display_items.len();
     app.vuln_state.clamp_selection();
 
     // Split into table and detail panel
@@ -276,19 +316,57 @@ fn render_vuln_content(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
         frame,
         chunks[0],
         &cache.vulns,
+        &display_items,
         app,
         has_any_cvss,
         all_same_component,
         is_left_focused,
     );
 
-    // Render detail panel
-    let selected_vuln = cache.vulns.get(app.vuln_state.selected);
+    // Render detail panel - resolve selected vuln from display items
+    let selected_vuln = display_items
+        .get(app.vuln_state.selected)
+        .and_then(|item| match item {
+            VulnDisplayItem::Vuln(idx) => cache.vulns.get(*idx),
+            VulnDisplayItem::GroupHeader { .. } => None,
+        });
     render_vuln_detail_panel(frame, chunks[1], selected_vuln, !is_left_focused);
+}
+
+/// Resolve severity: use explicit severity, fall back to CVSS score, then "Unknown"
+fn resolve_severity(vuln: &crate::model::VulnerabilityRef) -> String {
+    if let Some(sev) = &vuln.severity {
+        let s = sev.to_string();
+        if s != "Unknown" {
+            return s;
+        }
+    }
+    // Fall back to CVSS-derived severity
+    if let Some(score) = vuln.max_cvss_score() {
+        return crate::model::Severity::from_cvss(score).to_string();
+    }
+    "Unknown".to_string()
+}
+
+/// Group affected component names by extracted package name for smart display.
+/// Returns (package_display_name, count) pairs.
+fn group_affected_components(components: &[String], description: Option<&str>) -> Vec<(String, usize)> {
+    use std::collections::HashMap;
+    let mut groups: HashMap<String, usize> = HashMap::new();
+
+    for comp in components {
+        let display = extract_component_display_name(comp, description);
+        *groups.entry(display).or_insert(0) += 1;
+    }
+
+    let mut sorted: Vec<_> = groups.into_iter().collect();
+    sorted.sort_by(|a, b| b.1.cmp(&a.1)); // Most frequent first
+    sorted
 }
 
 /// Build the vulnerability cache from SBOM data
 fn build_vuln_cache(app: &ViewApp) -> VulnCache {
+    use crate::tui::view::app::VulnSortBy;
     use std::collections::HashMap;
 
     let mut vulns: Vec<VulnRow> = Vec::new();
@@ -297,6 +375,9 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
     let mut all_same_component = true;
     let mut first_component: Option<String> = None;
 
+    let search_query = app.vuln_state.search_query.to_lowercase();
+    let has_search = !search_query.is_empty();
+
     // If deduplicating, collect by CVE ID first
     if app.vuln_state.deduplicate {
         let mut vuln_map: HashMap<String, VulnRow> = HashMap::new();
@@ -304,15 +385,21 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
         for (comp_id, comp) in &app.sbom.components {
             for vuln in &comp.vulnerabilities {
                 total_unfiltered += 1;
-                let sev = vuln
-                    .severity
-                    .as_ref()
-                    .map(|s| s.to_string())
-                    .unwrap_or_else(|| "Unknown".to_string());
+                let sev = resolve_severity(vuln);
 
-                // Apply filter
+                // Apply severity filter
                 if let Some(ref filter) = app.vuln_state.filter_severity {
                     if sev.to_lowercase() != *filter {
+                        continue;
+                    }
+                }
+
+                // Apply search filter
+                if has_search {
+                    let matches = vuln.id.to_lowercase().contains(&search_query)
+                        || comp.name.to_lowercase().contains(&search_query)
+                        || vuln.description.as_ref().is_some_and(|d| d.to_lowercase().contains(&search_query));
+                    if !matches {
                         continue;
                     }
                 }
@@ -333,6 +420,12 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                                 existing.cvss = Some(new_cvss);
                             }
                         }
+                        // Merge affected versions
+                        for v in &vuln.affected_versions {
+                            if !existing.affected_versions.contains(v) {
+                                existing.affected_versions.push(v.clone());
+                            }
+                        }
                     })
                     .or_insert(VulnRow {
                         vuln_id: vuln.id.clone(),
@@ -345,24 +438,42 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                         affected_components: vec![comp.name.clone()],
                         cwes: vuln.cwes.clone(),
                         display_name: None,
+                        published: vuln.published,
+                        affected_versions: vuln.affected_versions.clone(),
+                        source: vuln.source.to_string(),
+                        is_kev: vuln.is_kev,
+                        grouped_components: Vec::new(),
                     });
             }
         }
 
-        vulns = vuln_map.into_values().collect();
+        // Build smart component groupings for each deduped vuln
+        vulns = vuln_map.into_values().map(|mut v| {
+            v.grouped_components = group_affected_components(
+                &v.affected_components,
+                v.description.as_deref(),
+            );
+            v
+        }).collect();
     } else {
         for (comp_id, comp) in &app.sbom.components {
             for vuln in &comp.vulnerabilities {
                 total_unfiltered += 1;
-                let sev = vuln
-                    .severity
-                    .as_ref()
-                    .map(|s| s.to_string())
-                    .unwrap_or_else(|| "Unknown".to_string());
+                let sev = resolve_severity(vuln);
 
-                // Apply filter
+                // Apply severity filter
                 if let Some(ref filter) = app.vuln_state.filter_severity {
                     if sev.to_lowercase() != *filter {
+                        continue;
+                    }
+                }
+
+                // Apply search filter
+                if has_search {
+                    let matches = vuln.id.to_lowercase().contains(&search_query)
+                        || comp.name.to_lowercase().contains(&search_query)
+                        || vuln.description.as_ref().is_some_and(|d| d.to_lowercase().contains(&search_query));
+                    if !matches {
                         continue;
                     }
                 }
@@ -392,29 +503,52 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                     affected_components: vec![comp.name.clone()],
                     cwes: vuln.cwes.clone(),
                     display_name: None,
+                    published: vuln.published,
+                    affected_versions: vuln.affected_versions.clone(),
+                    source: vuln.source.to_string(),
+                    is_kev: vuln.is_kev,
+                    grouped_components: Vec::new(),
                 });
             }
         }
     }
 
-    // Sort by severity then CVSS (done once at cache build time)
-    vulns.sort_by(|a, b| {
-        let sev_order = |s: &str| match s.to_lowercase().as_str() {
-            "critical" => 4,
-            "high" => 3,
+    // Sort based on user selection
+    let sev_order = |s: &str| -> u8 {
+        match s.to_lowercase().as_str() {
+            "critical" => 0,
+            "high" => 1,
             "medium" => 2,
-            "low" => 1,
-            _ => 0,
-        };
-        let ord = sev_order(&b.severity).cmp(&sev_order(&a.severity));
-        if ord == std::cmp::Ordering::Equal {
-            b.cvss
-                .partial_cmp(&a.cvss)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        } else {
-            ord
+            "low" => 3,
+            "info" => 4,
+            "none" => 5,
+            _ => 6, // Unknown
         }
-    });
+    };
+
+    match app.vuln_state.sort_by {
+        VulnSortBy::Severity => {
+            vulns.sort_by(|a, b| {
+                let ord = sev_order(&a.severity).cmp(&sev_order(&b.severity));
+                if ord == std::cmp::Ordering::Equal {
+                    b.cvss.partial_cmp(&a.cvss).unwrap_or(std::cmp::Ordering::Equal)
+                } else {
+                    ord
+                }
+            });
+        }
+        VulnSortBy::Cvss => {
+            vulns.sort_by(|a, b| {
+                b.cvss.partial_cmp(&a.cvss).unwrap_or(std::cmp::Ordering::Equal)
+            });
+        }
+        VulnSortBy::CveId => {
+            vulns.sort_by(|a, b| a.vuln_id.cmp(&b.vuln_id));
+        }
+        VulnSortBy::Component => {
+            vulns.sort_by(|a, b| a.component_name.cmp(&b.component_name));
+        }
+    }
 
     VulnCache {
         vulns,
@@ -424,10 +558,12 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_vuln_table_panel(
     frame: &mut Frame,
     area: Rect,
     vulns: &[VulnRow],
+    display_items: &[VulnDisplayItem],
     app: &mut ViewApp,
     has_any_cvss: bool,
     all_same_component: bool,
@@ -441,56 +577,60 @@ fn render_vuln_table_panel(
     let show_component = !all_same_component || is_dedupe;
 
     // Build dynamic column widths and headers
-    let (widths, headers): (Vec<Constraint>, Vec<&str>) = if show_cvss && show_component {
-        (
-            vec![
-                Constraint::Length(3),
-                Constraint::Length(16),
-                Constraint::Length(5),
-                Constraint::Length(20),
-                Constraint::Min(15),
-            ],
-            if is_dedupe {
-                vec!["", "CVE ID", "CVSS", "Affected", "Description"]
-            } else {
-                vec!["", "CVE ID", "CVSS", "Component", "Description"]
-            },
-        )
-    } else if show_cvss {
-        (
-            vec![
-                Constraint::Length(3),
-                Constraint::Length(16),
-                Constraint::Length(5),
-                Constraint::Min(20),
-            ],
-            vec!["", "CVE ID", "CVSS", "Description"],
-        )
-    } else if show_component {
-        (
-            vec![
-                Constraint::Length(3),
-                Constraint::Length(16),
-                Constraint::Length(20),
-                Constraint::Min(20),
-            ],
-            if is_dedupe {
-                vec!["", "CVE ID", "Affected", "Description"]
-            } else {
-                vec!["", "CVE ID", "Component", "Description"]
-            },
-        )
-    } else {
-        // No CVSS, all same component - maximize description
-        (
-            vec![
-                Constraint::Length(3),
-                Constraint::Length(16),
-                Constraint::Min(30),
-            ],
-            vec!["", "CVE ID", "Description"],
-        )
-    };
+    let (widths, headers, num_columns): (Vec<Constraint>, Vec<&str>, usize) =
+        if show_cvss && show_component {
+            (
+                vec![
+                    Constraint::Length(3),
+                    Constraint::Length(16),
+                    Constraint::Length(5),
+                    Constraint::Length(20),
+                    Constraint::Min(15),
+                ],
+                if is_dedupe {
+                    vec!["", "CVE ID", "CVSS", "Affected", "Description"]
+                } else {
+                    vec!["", "CVE ID", "CVSS", "Component", "Description"]
+                },
+                5,
+            )
+        } else if show_cvss {
+            (
+                vec![
+                    Constraint::Length(3),
+                    Constraint::Length(16),
+                    Constraint::Length(5),
+                    Constraint::Min(20),
+                ],
+                vec!["", "CVE ID", "CVSS", "Description"],
+                4,
+            )
+        } else if show_component {
+            (
+                vec![
+                    Constraint::Length(3),
+                    Constraint::Length(16),
+                    Constraint::Length(20),
+                    Constraint::Min(20),
+                ],
+                if is_dedupe {
+                    vec!["", "CVE ID", "Affected", "Description"]
+                } else {
+                    vec!["", "CVE ID", "Component", "Description"]
+                },
+                4,
+            )
+        } else {
+            (
+                vec![
+                    Constraint::Length(3),
+                    Constraint::Length(16),
+                    Constraint::Min(30),
+                ],
+                vec!["", "CVE ID", "Description"],
+                3,
+            )
+        };
 
     // Calculate available width for description
     let desc_width = area.width.saturating_sub(
@@ -505,15 +645,13 @@ fn render_vuln_table_panel(
     ) as usize;
 
     // VIRTUALIZATION: Only render visible rows for performance
-    // Calculate visible window (header=1, borders=2, so content height = area.height - 3)
     let visible_height = area.height.saturating_sub(3) as usize;
-    let total_items = vulns.len();
+    let total_items = display_items.len();
 
     // Ensure scroll offset keeps selection visible
     let selected = app.vuln_state.selected;
     let mut scroll_offset = app.vuln_state.scroll_offset;
 
-    // Adjust scroll to keep selection in view
     if selected < scroll_offset {
         scroll_offset = selected;
     } else if selected >= scroll_offset + visible_height {
@@ -521,65 +659,104 @@ fn render_vuln_table_panel(
     }
     app.vuln_state.scroll_offset = scroll_offset;
 
-    // Calculate the range of items to render (with a small buffer)
-    let buffer = 2; // Render a few extra rows for smooth scrolling
+    let buffer = 2;
     let start = scroll_offset.saturating_sub(buffer);
     let end = (scroll_offset + visible_height + buffer).min(total_items);
 
-    // Build rows only for visible window
-    let rows: Vec<Row> = vulns[start..end]
+    // Build rows from display items
+    let rows: Vec<Row> = display_items[start..end]
         .iter()
-        .map(|v| {
-            let sev_color = SeverityBadge::fg_color(&v.severity);
+        .map(|item| match item {
+            VulnDisplayItem::GroupHeader {
+                label,
+                count,
+                expanded,
+            } => {
+                let arrow = if *expanded { "▼" } else { "▶" };
+                let sev_color = SeverityBadge::fg_color(label);
+                let is_severity_group =
+                    matches!(app.vuln_state.group_by, crate::tui::view::app::VulnGroupBy::Severity);
 
-            let mut cells = vec![
-                Cell::from(Span::styled(
-                    SeverityBadge::indicator(&v.severity),
-                    Style::default()
-                        .fg(scheme.severity_badge_fg(&v.severity))
-                        .bg(sev_color)
-                        .bold(),
-                )),
-                Cell::from(Span::styled(
-                    truncate_str(&v.vuln_id, 16),
-                    Style::default().fg(sev_color).bold(),
-                )),
-            ];
-
-            if show_cvss {
-                cells.push(Cell::from(
-                    v.cvss
-                        .map(|c| format!("{:.1}", c))
-                        .unwrap_or_else(|| "-".to_string()),
-                ));
-            }
-
-            if show_component {
-                if is_dedupe {
-                    cells.push(Cell::from(Span::styled(
-                        format!("{} comp", v.affected_count),
-                        Style::default().fg(scheme.primary),
-                    )));
-                } else {
-                    // Try to extract meaningful name from path or description
-                    let display_name =
-                        extract_component_display_name(&v.component_name, v.description.as_deref());
-                    cells.push(Cell::from(Span::styled(
-                        truncate_str(&display_name, 20),
-                        Style::default().fg(scheme.primary),
-                    )));
+                let mut cells = vec![
+                    Cell::from(Span::styled(
+                        arrow,
+                        Style::default().fg(scheme.accent).bold(),
+                    )),
+                    Cell::from(Span::styled(
+                        format!(
+                            "{} ({})",
+                            label,
+                            count
+                        ),
+                        Style::default()
+                            .fg(if is_severity_group {
+                                sev_color
+                            } else {
+                                scheme.accent
+                            })
+                            .bold(),
+                    )),
+                ];
+                // Fill remaining columns with empty cells
+                for _ in 2..num_columns {
+                    cells.push(Cell::from(""));
                 }
+                Row::new(cells)
             }
+            VulnDisplayItem::Vuln(idx) => {
+                let v = &vulns[*idx];
+                let sev_color = SeverityBadge::fg_color(&v.severity);
 
-            cells.push(Cell::from(Span::styled(
-                v.description
-                    .as_ref()
-                    .map(|d| truncate_str(d, desc_width.max(15)))
-                    .unwrap_or_else(|| "-".to_string()),
-                Style::default().fg(scheme.text),
-            )));
+                let mut cells = vec![
+                    Cell::from(Span::styled(
+                        SeverityBadge::indicator(&v.severity),
+                        Style::default()
+                            .fg(scheme.severity_badge_fg(&v.severity))
+                            .bg(sev_color)
+                            .bold(),
+                    )),
+                    Cell::from(Span::styled(
+                        truncate_str(&v.vuln_id, 16),
+                        Style::default().fg(sev_color).bold(),
+                    )),
+                ];
 
-            Row::new(cells)
+                if show_cvss {
+                    cells.push(Cell::from(
+                        v.cvss
+                            .map(|c| format!("{:.1}", c))
+                            .unwrap_or_else(|| "-".to_string()),
+                    ));
+                }
+
+                if show_component {
+                    if is_dedupe {
+                        cells.push(Cell::from(Span::styled(
+                            format!("{} comp", v.affected_count),
+                            Style::default().fg(scheme.primary),
+                        )));
+                    } else {
+                        let display_name = extract_component_display_name(
+                            &v.component_name,
+                            v.description.as_deref(),
+                        );
+                        cells.push(Cell::from(Span::styled(
+                            truncate_str(&display_name, 20),
+                            Style::default().fg(scheme.primary),
+                        )));
+                    }
+                }
+
+                cells.push(Cell::from(Span::styled(
+                    v.description
+                        .as_ref()
+                        .map(|d| truncate_str(d, desc_width.max(15)))
+                        .unwrap_or_else(|| "-".to_string()),
+                    Style::default().fg(scheme.text),
+                )));
+
+                Row::new(cells)
+            }
         })
         .collect();
 
@@ -593,18 +770,19 @@ fn render_vuln_table_panel(
         scheme.border
     };
 
-    // Adjust selected index relative to the visible window
     let relative_selected = if selected >= start && selected < end {
         Some(selected - start)
     } else {
         None
     };
 
+    // Count actual vulns for the title
+    let vuln_count = vulns.len();
     let table = Table::new(rows, widths)
         .header(header)
         .block(
             Block::default()
-                .title(format!(" Vulnerabilities ({}) ", vulns.len()))
+                .title(format!(" Vulnerabilities ({}) ", vuln_count))
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(border_color)),
         )
@@ -615,7 +793,6 @@ fn render_vuln_table_panel(
         )
         .highlight_symbol("▶");
 
-    // Use relative offset within the visible window
     let mut state = TableState::default()
         .with_offset(scroll_offset.saturating_sub(start))
         .with_selected(relative_selected);
@@ -624,13 +801,13 @@ fn render_vuln_table_panel(
 
     // Scrollbar
     let visible_height = area.height.saturating_sub(3) as usize;
-    if vulns.len() > visible_height {
+    if total_items > visible_height {
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .thumb_style(Style::default().fg(scheme.high))
             .track_style(Style::default().fg(scheme.muted));
 
         let mut scrollbar_state =
-            ScrollbarState::new(vulns.len()).position(app.vuln_state.selected);
+            ScrollbarState::new(total_items).position(app.vuln_state.selected);
 
         frame.render_stateful_widget(
             scrollbar,
@@ -684,58 +861,119 @@ fn render_vuln_detail_panel(
         ),
         Span::raw(" "),
         Span::styled(&v.vuln_id, Style::default().fg(sev_color).bold()),
+        if v.is_kev {
+            Span::styled(
+                " KEV",
+                Style::default()
+                    .fg(scheme.kev_badge_fg())
+                    .bg(scheme.kev())
+                    .bold(),
+            )
+        } else {
+            Span::raw("")
+        },
     ]));
-    lines.push(Line::from(""));
 
-    // Severity
-    lines.push(Line::from(vec![
+    // Severity + CVSS on one line
+    let mut sev_spans = vec![
         Span::styled("Severity: ", Style::default().fg(scheme.muted)),
         Span::styled(&v.severity, Style::default().fg(sev_color).bold()),
-    ]));
-
-    // CVSS
+    ];
     if let Some(cvss) = v.cvss {
+        sev_spans.push(Span::styled("  CVSS: ", Style::default().fg(scheme.muted)));
+        sev_spans.push(Span::styled(
+            format!("{:.1}", cvss),
+            Style::default().fg(scheme.text).bold(),
+        ));
+    }
+    lines.push(Line::from(sev_spans));
+
+    // Source + Published date on one line
+    let mut meta_spans = vec![
+        Span::styled("Source: ", Style::default().fg(scheme.muted)),
+        Span::styled(&v.source, Style::default().fg(scheme.primary)),
+    ];
+    if let Some(pub_date) = v.published {
+        let age_days = (chrono::Utc::now() - pub_date).num_days();
+        meta_spans.push(Span::styled("  Published: ", Style::default().fg(scheme.muted)));
+        meta_spans.push(Span::styled(
+            format!("{} ({} days ago)", pub_date.format("%Y-%m-%d"), age_days),
+            Style::default().fg(scheme.text),
+        ));
+    }
+    lines.push(Line::from(meta_spans));
+
+    // Affected versions
+    if !v.affected_versions.is_empty() {
+        let versions_str = v.affected_versions.iter().take(3).cloned().collect::<Vec<_>>().join(", ");
+        let suffix = if v.affected_versions.len() > 3 {
+            format!(" +{} more", v.affected_versions.len() - 3)
+        } else {
+            String::new()
+        };
         lines.push(Line::from(vec![
-            Span::styled("CVSS:     ", Style::default().fg(scheme.muted)),
-            Span::styled(format!("{:.1}", cvss), Style::default().fg(scheme.text).bold()),
+            Span::styled("Versions: ", Style::default().fg(scheme.muted)),
+            Span::styled(format!("{}{}", versions_str, suffix), Style::default().fg(scheme.text)),
         ]));
     }
 
     lines.push(Line::from(""));
 
-    // Component(s)
-    lines.push(Line::from(Span::styled(
-        "Component:",
-        Style::default().fg(scheme.muted),
-    )));
-
+    // Component(s) - use smart grouping when available
     if v.affected_count > 1 {
-        lines.push(Line::from(Span::styled(
-            format!("  {} components affected", v.affected_count),
-            Style::default().fg(scheme.primary),
-        )));
-        // Show first few
-        for (i, comp) in v.affected_components.iter().take(5).enumerate() {
-            let display = extract_component_display_name(comp, v.description.as_deref());
-            lines.push(Line::from(Span::styled(
-                format!("  {}. {}", i + 1, display),
-                Style::default().fg(scheme.text),
-            )));
-        }
-        if v.affected_count > 5 {
-            lines.push(Line::from(Span::styled(
-                format!("  ... and {} more", v.affected_count - 5),
-                Style::default().fg(scheme.muted),
-            )));
+        lines.push(Line::from(vec![
+            Span::styled("Components: ", Style::default().fg(scheme.muted)),
+            Span::styled(
+                format!("{} affected", v.affected_count),
+                Style::default().fg(scheme.primary),
+            ),
+        ]));
+        // Show smart-grouped components
+        if !v.grouped_components.is_empty() {
+            for (name, count) in v.grouped_components.iter().take(6) {
+                if *count > 1 {
+                    lines.push(Line::from(Span::styled(
+                        format!("  {} (x{})", name, count),
+                        Style::default().fg(scheme.text),
+                    )));
+                } else {
+                    lines.push(Line::from(Span::styled(
+                        format!("  {}", name),
+                        Style::default().fg(scheme.text),
+                    )));
+                }
+            }
+            let total_shown: usize = v.grouped_components.iter().take(6).map(|(_, c)| c).sum();
+            if total_shown < v.affected_count {
+                lines.push(Line::from(Span::styled(
+                    format!("  ... and {} more", v.affected_count - total_shown),
+                    Style::default().fg(scheme.muted),
+                )));
+            }
+        } else {
+            // Fallback: show raw component names
+            for (i, comp) in v.affected_components.iter().take(5).enumerate() {
+                let display = extract_component_display_name(comp, v.description.as_deref());
+                lines.push(Line::from(Span::styled(
+                    format!("  {}. {}", i + 1, display),
+                    Style::default().fg(scheme.text),
+                )));
+            }
+            if v.affected_count > 5 {
+                lines.push(Line::from(Span::styled(
+                    format!("  ... and {} more", v.affected_count - 5),
+                    Style::default().fg(scheme.muted),
+                )));
+            }
         }
     } else {
         let display = extract_component_display_name(&v.component_name, v.description.as_deref());
-        lines.push(Line::from(Span::styled(
-            format!("  {}", display),
-            Style::default().fg(scheme.primary),
-        )));
-        // Show full path if different
-        if display != v.component_name {
+        let show_raw = display != v.component_name;
+        lines.push(Line::from(vec![
+            Span::styled("Component: ", Style::default().fg(scheme.muted)),
+            Span::styled(display, Style::default().fg(scheme.primary)),
+        ]));
+        if show_raw {
             lines.push(Line::from(Span::styled(
                 format!("  ({})", truncate_str(&v.component_name, 40)),
                 Style::default().fg(scheme.muted).dim(),
@@ -743,22 +981,16 @@ fn render_vuln_detail_panel(
         }
     }
 
-    lines.push(Line::from(""));
-
-    // CWEs
+    // CWEs (inline)
     if !v.cwes.is_empty() {
-        lines.push(Line::from(Span::styled(
-            "CWEs:",
-            Style::default().fg(scheme.muted),
-        )));
-        for cwe in v.cwes.iter().take(5) {
-            lines.push(Line::from(Span::styled(
-                format!("  {}", cwe),
-                Style::default().fg(scheme.warning),
-            )));
-        }
-        lines.push(Line::from(""));
+        let cwe_list = v.cwes.iter().take(5).cloned().collect::<Vec<_>>().join(", ");
+        lines.push(Line::from(vec![
+            Span::styled("CWEs: ", Style::default().fg(scheme.muted)),
+            Span::styled(cwe_list, Style::default().fg(scheme.warning)),
+        ]));
     }
+
+    lines.push(Line::from(""));
 
     // Description
     lines.push(Line::from(Span::styled(
@@ -767,7 +999,6 @@ fn render_vuln_detail_panel(
     )));
 
     if let Some(desc) = &v.description {
-        // Word wrap the description
         let max_width = area.width.saturating_sub(4) as usize;
         for wrapped_line in word_wrap(desc, max_width) {
             lines.push(Line::from(Span::styled(
@@ -780,6 +1011,26 @@ fn render_vuln_detail_panel(
             "  No description available",
             Style::default().fg(scheme.muted).italic(),
         )));
+    }
+
+    // Reference URL hint
+    lines.push(Line::from(""));
+    if v.vuln_id.starts_with("CVE-") {
+        lines.push(Line::from(vec![
+            Span::styled("[o]", Style::default().fg(scheme.accent)),
+            Span::styled(
+                format!(" nvd.nist.gov/vuln/detail/{}", v.vuln_id),
+                Style::default().fg(scheme.muted),
+            ),
+        ]));
+    } else if v.vuln_id.starts_with("GHSA-") {
+        lines.push(Line::from(vec![
+            Span::styled("[o]", Style::default().fg(scheme.accent)),
+            Span::styled(
+                format!(" github.com/advisories/{}", v.vuln_id),
+                Style::default().fg(scheme.muted),
+            ),
+        ]));
     }
 
     let block = Block::default()
@@ -1124,9 +1375,99 @@ pub struct VulnRow {
     pub cwes: Vec<String>,
     /// Cached display name (computed lazily from description)
     pub display_name: Option<String>,
+    /// Published date
+    pub published: Option<chrono::DateTime<chrono::Utc>>,
+    /// Affected version ranges
+    pub affected_versions: Vec<String>,
+    /// Source database
+    pub source: String,
+    /// Whether in KEV catalog
+    pub is_kev: bool,
+    /// Grouped display names for affected components (dedupe smart grouping)
+    pub grouped_components: Vec<(String, usize)>,
 }
 
+use std::collections::HashSet;
 use std::sync::Arc;
+
+/// A display item in the vulnerability list (either a group header or a vuln row).
+#[derive(Debug, Clone)]
+pub enum VulnDisplayItem {
+    GroupHeader {
+        label: String,
+        count: usize,
+        expanded: bool,
+    },
+    Vuln(usize), // index into VulnCache.vulns
+}
+
+/// Build display items from cached vulns based on grouping mode and expansion state.
+pub fn build_display_items(
+    vulns: &[VulnRow],
+    group_by: &VulnGroupBy,
+    expanded: &HashSet<String>,
+) -> Vec<VulnDisplayItem> {
+    if matches!(group_by, VulnGroupBy::Flat) {
+        return vulns
+            .iter()
+            .enumerate()
+            .map(|(i, _)| VulnDisplayItem::Vuln(i))
+            .collect();
+    }
+
+    // Group vulns by the grouping key, preserving insertion order
+    let mut groups: indexmap::IndexMap<String, Vec<usize>> = indexmap::IndexMap::new();
+    for (i, v) in vulns.iter().enumerate() {
+        let key = match group_by {
+            VulnGroupBy::Severity => v.severity.clone(),
+            VulnGroupBy::Component => {
+                if v.affected_count > 1 {
+                    // Use smart grouped name if available
+                    v.grouped_components
+                        .first()
+                        .map(|(name, _)| name.clone())
+                        .unwrap_or_else(|| v.component_name.clone())
+                } else {
+                    extract_component_display_name(&v.component_name, v.description.as_deref())
+                }
+            }
+            VulnGroupBy::Flat => unreachable!(),
+        };
+        groups.entry(key).or_default().push(i);
+    }
+
+    // For severity grouping, sort by severity order
+    if matches!(group_by, VulnGroupBy::Severity) {
+        let sev_order = |s: &str| -> u8 {
+            match s.to_lowercase().as_str() {
+                "critical" => 0,
+                "high" => 1,
+                "medium" => 2,
+                "low" => 3,
+                "info" => 4,
+                "none" => 5,
+                _ => 6,
+            }
+        };
+        groups.sort_by(|a, _, b, _| sev_order(a).cmp(&sev_order(b)));
+    }
+
+    let mut items = Vec::new();
+    for (label, indices) in &groups {
+        let is_expanded = expanded.contains(label);
+        items.push(VulnDisplayItem::GroupHeader {
+            label: label.clone(),
+            count: indices.len(),
+            expanded: is_expanded,
+        });
+        if is_expanded {
+            for &idx in indices {
+                items.push(VulnDisplayItem::Vuln(idx));
+            }
+        }
+    }
+    items
+}
 
 /// Cached vulnerability list with metadata (wrapped in Arc for cheap cloning)
 #[derive(Debug, Clone, Default)]

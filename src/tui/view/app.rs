@@ -680,6 +680,28 @@ impl ViewApp {
                 }
             }
             ViewTab::Vulnerabilities => {
+                // In grouped mode, check if we're on a group header
+                if self.vuln_state.group_by != VulnGroupBy::Flat {
+                    if let Some(cache) = &self.vuln_state.cached_data {
+                        let items = super::views::build_display_items(
+                            &cache.vulns,
+                            &self.vuln_state.group_by,
+                            &self.vuln_state.expanded_groups,
+                        );
+                        if let Some(item) = items.get(self.vuln_state.selected) {
+                            match item {
+                                super::views::VulnDisplayItem::GroupHeader { label, .. } => {
+                                    let label = label.clone();
+                                    self.vuln_state.toggle_vuln_group(&label);
+                                    return;
+                                }
+                                super::views::VulnDisplayItem::Vuln(_) => {
+                                    // Fall through to normal navigation
+                                }
+                            }
+                        }
+                    }
+                }
                 // Select vulnerability's component - push breadcrumb for back navigation
                 if let Some((comp_id, vuln)) = self.vuln_state.get_selected(&self.sbom) {
                     // Push breadcrumb so we can go back
@@ -1444,6 +1466,12 @@ pub struct VulnExplorerState {
     pub filter_severity: Option<String>,
     /// When true, deduplicate vulnerabilities by CVE ID and show affected component count
     pub deduplicate: bool,
+    /// Local search/filter query for vulnerability list
+    pub search_query: String,
+    /// Whether search input mode is active
+    pub search_active: bool,
+    /// Expanded group IDs for grouped view (severity labels or component names)
+    pub expanded_groups: HashSet<String>,
     /// Cache key to detect when we need to rebuild the vulnerability list
     cache_key: Option<VulnCacheKey>,
     /// Cached vulnerability list for performance (Arc-wrapped for zero-cost cloning)
@@ -1455,6 +1483,8 @@ pub struct VulnExplorerState {
 struct VulnCacheKey {
     filter_severity: Option<String>,
     deduplicate: bool,
+    sort_by: VulnSortBy,
+    search_query: String,
 }
 
 impl VulnExplorerState {
@@ -1466,7 +1496,10 @@ impl VulnExplorerState {
             group_by: VulnGroupBy::Severity,
             sort_by: VulnSortBy::Severity,
             filter_severity: None,
-            deduplicate: false,
+            deduplicate: true,
+            search_query: String::new(),
+            search_active: false,
+            expanded_groups: HashSet::new(),
             cache_key: None,
             cached_data: None,
         }
@@ -1477,6 +1510,8 @@ impl VulnExplorerState {
         VulnCacheKey {
             filter_severity: self.filter_severity.clone(),
             deduplicate: self.deduplicate,
+            sort_by: self.sort_by,
+            search_query: self.search_query.clone(),
         }
     }
 
@@ -1525,21 +1560,76 @@ impl VulnExplorerState {
             VulnGroupBy::Flat => VulnGroupBy::Severity,
         };
         self.selected = 0;
+        self.expanded_groups.clear();
+        self.invalidate_cache();
+    }
+
+    /// Toggle expansion of a vulnerability group header.
+    pub fn toggle_vuln_group(&mut self, group_id: &str) {
+        if self.expanded_groups.contains(group_id) {
+            self.expanded_groups.remove(group_id);
+        } else {
+            self.expanded_groups.insert(group_id.to_string());
+        }
     }
 
     pub fn toggle_filter(&mut self) {
         self.filter_severity = match &self.filter_severity {
             None => Some("critical".to_string()),
             Some(s) if s == "critical" => Some("high".to_string()),
-            Some(s) if s == "high" => None,
+            Some(s) if s == "high" => Some("medium".to_string()),
+            Some(s) if s == "medium" => Some("low".to_string()),
+            Some(s) if s == "low" => Some("unknown".to_string()),
+            Some(s) if s == "unknown" => None,
             _ => None,
         };
         self.selected = 0;
+        self.invalidate_cache();
+    }
+
+    pub fn toggle_sort(&mut self) {
+        self.sort_by = self.sort_by.next();
+        self.selected = 0;
+        self.invalidate_cache();
     }
 
     pub fn toggle_deduplicate(&mut self) {
         self.deduplicate = !self.deduplicate;
         self.selected = 0;
+        self.invalidate_cache();
+    }
+
+    /// Start local search mode for vulnerability list
+    pub fn start_vuln_search(&mut self) {
+        self.search_active = true;
+        self.search_query.clear();
+    }
+
+    /// Stop search mode (keep query for filtering)
+    pub fn stop_vuln_search(&mut self) {
+        self.search_active = false;
+    }
+
+    /// Clear search completely
+    pub fn clear_vuln_search(&mut self) {
+        self.search_active = false;
+        self.search_query.clear();
+        self.selected = 0;
+        self.invalidate_cache();
+    }
+
+    /// Push a character to search query
+    pub fn search_push(&mut self, c: char) {
+        self.search_query.push(c);
+        self.selected = 0;
+        self.invalidate_cache();
+    }
+
+    /// Pop a character from search query
+    pub fn search_pop(&mut self) {
+        self.search_query.pop();
+        self.selected = 0;
+        self.invalidate_cache();
     }
 
     /// Get the selected vulnerability.
@@ -1671,7 +1761,28 @@ pub enum VulnGroupBy {
 pub enum VulnSortBy {
     Severity,
     Cvss,
+    CveId,
     Component,
+}
+
+impl VulnSortBy {
+    pub fn next(self) -> Self {
+        match self {
+            Self::Severity => Self::Cvss,
+            Self::Cvss => Self::CveId,
+            Self::CveId => Self::Component,
+            Self::Component => Self::Severity,
+        }
+    }
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Severity => "Severity",
+            Self::Cvss => "CVSS",
+            Self::CveId => "CVE ID",
+            Self::Component => "Component",
+        }
+    }
 }
 
 /// State for license view.

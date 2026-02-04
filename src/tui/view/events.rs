@@ -97,6 +97,26 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
         return;
     }
 
+    // Handle vulnerability-local search input
+    if app.active_tab == ViewTab::Vulnerabilities && app.vuln_state.search_active {
+        match key.code {
+            KeyCode::Esc => {
+                app.vuln_state.clear_vuln_search();
+            }
+            KeyCode::Enter => {
+                app.vuln_state.stop_vuln_search();
+            }
+            KeyCode::Backspace => {
+                app.vuln_state.search_pop();
+            }
+            KeyCode::Char(c) => {
+                app.vuln_state.search_push(c);
+            }
+            _ => {}
+        }
+        return;
+    }
+
     // Handle tree search input
     if app.active_tab == ViewTab::Tree && app.tree_search_active {
         match key.code {
@@ -222,6 +242,8 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
                 app.source_state.start_search();
             } else if app.active_tab == ViewTab::Tree {
                 app.start_tree_search();
+            } else if app.active_tab == ViewTab::Vulnerabilities {
+                app.vuln_state.start_vuln_search();
             } else {
                 app.start_search();
             }
@@ -362,6 +384,11 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
             ViewTab::Vulnerabilities => app.vuln_state.toggle_filter(),
             _ => {}
         },
+        KeyCode::Char('s') => {
+            if app.active_tab == ViewTab::Vulnerabilities {
+                app.vuln_state.toggle_sort();
+            }
+        }
         KeyCode::Char('d') => {
             if app.active_tab == ViewTab::Vulnerabilities {
                 app.vuln_state.toggle_deduplicate();
