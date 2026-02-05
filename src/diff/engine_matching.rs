@@ -289,7 +289,7 @@ fn match_with_component_index(
                             .collect();
 
                         // Cross-ecosystem candidates (secondary, with penalty)
-                        if let (Some(ref db), Some(ref old_eco)) =
+                        if let (Some(db), Some(old_eco)) =
                             (&cross_eco_db, &old_comp.ecosystem)
                         {
                             let cross_matches = find_cross_ecosystem_candidates(
@@ -338,7 +338,7 @@ fn match_with_component_index(
                 }
 
                 // Cross-ecosystem candidates (secondary, with penalty)
-                if let (Some(ref db), Some(ref old_eco)) = (&cross_eco_db, &old_comp.ecosystem) {
+                if let (Some(db), Some(old_eco)) = (&cross_eco_db, &old_comp.ecosystem) {
                     let cross_matches = find_cross_ecosystem_candidates(
                         old_id,
                         old_comp,

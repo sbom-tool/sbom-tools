@@ -202,7 +202,7 @@ impl DiffEngine {
             .map(|mut change| {
                 // Add match explanation for modified components
                 // Use stored canonical IDs directly instead of reconstructing from name+version
-                if let (Some(ref old_id), Some(ref new_id)) =
+                if let (Some(old_id), Some(new_id)) =
                     (&change.old_canonical_id, &change.canonical_id)
                 {
                     if let (Some(old_comp), Some(new_comp)) =

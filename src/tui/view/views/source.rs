@@ -720,7 +720,7 @@ fn render_context(
     }
 
     // Component context
-    if let (Some(ref section), Some(idx)) = (&section_name, array_idx) {
+    if let (Some(section), Some(idx)) = (&section_name, array_idx) {
         if section == "components" {
             if let Some(comp) = app.sbom.components.values().nth(idx) {
                 let is_primary = app

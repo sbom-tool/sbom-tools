@@ -336,7 +336,7 @@ impl App {
 
         let result = match self.mode {
             AppMode::Diff => {
-                if let (Some(ref diff_result), Some(ref old_sbom), Some(ref new_sbom)) =
+                if let (Some(diff_result), Some(old_sbom), Some(new_sbom)) =
                     (&self.data.diff_result, &self.data.old_sbom, &self.data.new_sbom)
                 {
                     export_diff(format, diff_result, old_sbom, new_sbom, None)

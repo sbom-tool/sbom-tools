@@ -658,7 +658,7 @@ impl BatchCandidateGenerator {
 
         // 3. Cross-ecosystem candidates
         let cross_ecosystem_candidates: Vec<CanonicalId> =
-            if let (Some(ref db), Some(ref eco)) =
+            if let (Some(db), Some(eco)) =
                 (&self.cross_ecosystem_db, &source_component.ecosystem)
             {
                 let candidates: Vec<_> = db

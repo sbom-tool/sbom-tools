@@ -1,7 +1,7 @@
 [package]
 name = "sbom-tools"
 version = "0.1.7"
-edition = "2021"
+edition = "2024"
 rust-version = "1.86"
 description = "Semantic SBOM diff and analysis tool"
 license = "MIT"

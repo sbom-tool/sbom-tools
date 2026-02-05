@@ -441,7 +441,7 @@ impl IncrementalDiffEngine {
                 .read()
                 .expect("last_new_hashes lock poisoned");
 
-            if let (Some(ref prev_old), Some(ref prev_new)) = (&*last_old, &*last_new) {
+            if let (Some(prev_old), Some(prev_new)) = (&*last_old, &*last_new) {
                 // Check what changed since last computation
                 let old_changed = old_hashes != *prev_old;
                 let new_changed = new_hashes != *prev_new;
