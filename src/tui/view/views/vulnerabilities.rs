@@ -258,6 +258,7 @@ fn render_vuln_content(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     let cache = app.vuln_state.cached_data.clone().unwrap();
     let has_any_cvss = cache.has_any_cvss;
     let all_same_component = cache.all_same_component;
+    let has_multi_affected = cache.has_multi_affected;
     let total_unfiltered = cache.total_unfiltered;
 
     // Handle empty states
@@ -320,6 +321,7 @@ fn render_vuln_content(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
         app,
         has_any_cvss,
         all_same_component,
+        has_multi_affected,
         is_left_focused,
     );
 
@@ -455,6 +457,12 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
             );
             v
         }).collect();
+
+        // Compute all_same_component for dedup path
+        if let Some(first) = vulns.first() {
+            let first_name = &first.component_name;
+            all_same_component = vulns.iter().all(|v| &v.component_name == first_name);
+        }
     } else {
         for (comp_id, comp) in &app.sbom.components {
             for vuln in &comp.vulnerabilities {
@@ -550,10 +558,13 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
         }
     }
 
+    let has_multi_affected = vulns.iter().any(|v| v.affected_count > 1);
+
     VulnCache {
         vulns,
         has_any_cvss,
         all_same_component,
+        has_multi_affected,
         total_unfiltered,
     }
 }
@@ -567,6 +578,7 @@ fn render_vuln_table_panel(
     app: &mut ViewApp,
     has_any_cvss: bool,
     all_same_component: bool,
+    has_multi_affected: bool,
     is_focused: bool,
 ) {
     let scheme = colors();
@@ -574,7 +586,14 @@ fn render_vuln_table_panel(
 
     // Determine which columns to show
     let show_cvss = has_any_cvss;
-    let show_component = !all_same_component || is_dedupe;
+    // Show component column when components differ, or when dedup has multi-affected vulns
+    let show_component = !all_same_component || (is_dedupe && has_multi_affected);
+    // Column label: "Affected" only when there are multi-component vulns
+    let component_header = if is_dedupe && has_multi_affected {
+        "Affected"
+    } else {
+        "Component"
+    };
 
     // Build dynamic column widths and headers
     let (widths, headers, num_columns): (Vec<Constraint>, Vec<&str>, usize) =
@@ -587,11 +606,7 @@ fn render_vuln_table_panel(
                     Constraint::Length(20),
                     Constraint::Min(15),
                 ],
-                if is_dedupe {
-                    vec!["", "CVE ID", "CVSS", "Affected", "Description"]
-                } else {
-                    vec!["", "CVE ID", "CVSS", "Component", "Description"]
-                },
+                vec!["", "CVE ID", "CVSS", component_header, "Description"],
                 5,
             )
         } else if show_cvss {
@@ -613,11 +628,7 @@ fn render_vuln_table_panel(
                     Constraint::Length(20),
                     Constraint::Min(20),
                 ],
-                if is_dedupe {
-                    vec!["", "CVE ID", "Affected", "Description"]
-                } else {
-                    vec!["", "CVE ID", "Component", "Description"]
-                },
+                vec!["", "CVE ID", component_header, "Description"],
                 4,
             )
         } else {
@@ -730,12 +741,14 @@ fn render_vuln_table_panel(
                 }
 
                 if show_component {
-                    if is_dedupe {
+                    if is_dedupe && v.affected_count > 1 {
+                        // Multiple components: show count
                         cells.push(Cell::from(Span::styled(
                             format!("{} comp", v.affected_count),
                             Style::default().fg(scheme.primary),
                         )));
                     } else {
+                        // Single component or non-dedup: show name
                         let display_name = extract_component_display_name(
                             &v.component_name,
                             v.description.as_deref(),
@@ -1475,6 +1488,8 @@ pub struct VulnCache {
     pub vulns: Vec<VulnRow>,
     pub has_any_cvss: bool,
     pub all_same_component: bool,
+    /// Whether any vuln affects multiple components (for column header decision)
+    pub has_multi_affected: bool,
     pub total_unfiltered: usize,
 }
 
