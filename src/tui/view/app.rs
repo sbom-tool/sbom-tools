@@ -758,7 +758,13 @@ impl ViewApp {
                     }
                 }
             }
-            ViewTab::Licenses | ViewTab::Overview | ViewTab::Quality => {}
+            ViewTab::Quality => {
+                if self.quality_state.view_mode == QualityViewMode::Summary {
+                    // Jump to Recommendations view preserving selection
+                    self.quality_state.view_mode = QualityViewMode::Recommendations;
+                }
+            }
+            ViewTab::Licenses | ViewTab::Overview => {}
         }
     }
 

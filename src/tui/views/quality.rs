@@ -54,7 +54,7 @@ fn render_view_quality(frame: &mut Frame, area: Rect, app: &App) {
     };
 
     match app.tabs.quality.view_mode {
-        QualityViewMode::Summary => shared::render_quality_summary(frame, area, report),
+        QualityViewMode::Summary => shared::render_quality_summary(frame, area, report, 0),
         QualityViewMode::Breakdown => shared::render_score_breakdown(frame, area, report),
         QualityViewMode::Metrics => shared::render_quality_metrics(frame, area, report),
         QualityViewMode::Recommendations => shared::render_quality_recommendations(

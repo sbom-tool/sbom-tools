@@ -326,21 +326,28 @@ pub fn score_bar_style(score: f32) -> Style {
     }
 }
 
-/// Grade-based bar color with 5 tiers for better differentiation.
+/// Continuous RGB gradient bar color for better visual differentiation.
+/// Score 0 → dark red, 50 → yellow, 100 → green.
 fn bar_grade_style(score: f32) -> Style {
-    let scheme = colors();
-    let color = if score >= 90.0 {
-        scheme.success
-    } else if score >= 80.0 {
-        scheme.primary
-    } else if score >= 70.0 {
-        scheme.warning
-    } else if score >= 60.0 {
-        scheme.high
+    let t = score.clamp(0.0, 100.0) / 100.0;
+    let (r, g, b) = if t < 0.5 {
+        // 0..50: dark red (180,40,40) → yellow (220,180,0)
+        let s = t / 0.5;
+        (
+            180.0 + (220.0 - 180.0) * s,
+            40.0 + (180.0 - 40.0) * s,
+            40.0 + (0.0 - 40.0) * s,
+        )
     } else {
-        scheme.error
+        // 50..100: yellow (220,180,0) → green (40,200,40)
+        let s = (t - 0.5) / 0.5;
+        (
+            220.0 + (40.0 - 220.0) * s,
+            180.0 + (200.0 - 180.0) * s,
+            0.0 + (40.0 - 0.0) * s,
+        )
     };
-    Style::default().fg(color)
+    Style::default().fg(Color::Rgb(r as u8, g as u8, b as u8))
 }
 
 pub fn score_color(score: f32) -> Color {
@@ -362,18 +369,24 @@ pub fn score_style(score: f32) -> Style {
 // Rendering functions
 // ---------------------------------------------------------------------------
 
-pub fn render_quality_summary(frame: &mut Frame, area: Rect, report: &QualityReport) {
+pub fn render_quality_summary(
+    frame: &mut Frame,
+    area: Rect,
+    report: &QualityReport,
+    selected_rec: usize,
+) {
     let scheme = colors();
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(5),  // Gauge
+            Constraint::Length(4),  // Compact header
             Constraint::Length(12), // Bar chart + checklist
-            Constraint::Min(8),    // Explanation + top recs
+            Constraint::Min(8),    // Full-width recommendations
         ])
         .split(area);
 
-    render_score_gauge(frame, chunks[0], report, "SBOM Quality Score");
+    // --- Compact header (items 2+3) ---
+    render_compact_header(frame, chunks[0], report);
 
     // Middle row: bar chart (left) + checklist (right)
     let mid_chunks = Layout::default()
@@ -381,11 +394,11 @@ pub fn render_quality_summary(frame: &mut Frame, area: Rect, report: &QualityRep
         .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
         .split(chunks[1]);
 
-    // Bar chart with 5 category scores
+    // Bar chart with 5 category scores (items 6+8: threshold title + text values)
     let bar_chart = BarChart::default()
         .block(
             Block::default()
-                .title(" Category Scores ")
+                .title(" Category Scores (passing: 70) ")
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(scheme.muted)),
         )
@@ -396,47 +409,115 @@ pub fn render_quality_summary(frame: &mut Frame, area: Rect, report: &QualityRep
                 Bar::default()
                     .value(report.completeness_score as u64)
                     .label(Line::from("Compl"))
-                    .style(bar_grade_style(report.completeness_score)),
+                    .style(bar_grade_style(report.completeness_score))
+                    .text_value(format!("{}%", report.completeness_score as u64)),
                 Bar::default()
                     .value(report.identifier_score as u64)
                     .label(Line::from("IDs"))
-                    .style(bar_grade_style(report.identifier_score)),
+                    .style(bar_grade_style(report.identifier_score))
+                    .text_value(format!("{}%", report.identifier_score as u64)),
                 Bar::default()
                     .value(report.license_score as u64)
                     .label(Line::from("Lic"))
-                    .style(bar_grade_style(report.license_score)),
+                    .style(bar_grade_style(report.license_score))
+                    .text_value(format!("{}%", report.license_score as u64)),
                 Bar::default()
                     .value(report.vulnerability_score as u64)
                     .label(Line::from("Vulns"))
-                    .style(bar_grade_style(report.vulnerability_score)),
+                    .style(bar_grade_style(report.vulnerability_score))
+                    .text_value(format!("{}%", report.vulnerability_score as u64)),
                 Bar::default()
                     .value(report.dependency_score as u64)
                     .label(Line::from("Deps"))
-                    .style(bar_grade_style(report.dependency_score)),
+                    .style(bar_grade_style(report.dependency_score))
+                    .text_value(format!("{}%", report.dependency_score as u64)),
             ]),
         );
     frame.render_widget(bar_chart, mid_chunks[0]);
 
     render_completeness_checklist(frame, mid_chunks[1], report);
 
-    // Bottom row: explanation (left) + top recommendations (right)
-    let bot_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
-        .split(chunks[2]);
+    // Bottom row: full-width recommendations (items 4+7)
+    render_top_recommendations(frame, chunks[2], report, selected_rec);
+}
 
-    let explanation = generate_score_explanation(report);
-    let explanation_widget = Paragraph::new(explanation)
-        .block(
-            Block::default()
-                .title(" Score Summary ")
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(scheme.info)),
-        )
-        .wrap(ratatui::widgets::Wrap { trim: true });
-    frame.render_widget(explanation_widget, bot_chunks[0]);
+/// Render a compact 4-line header with grade, inline bar, score, profile, and strongest/weakest.
+fn render_compact_header(frame: &mut Frame, area: Rect, report: &QualityReport) {
+    let scheme = colors();
+    let score = report.overall_score as u16;
+    let (gauge_color, grade_label) = grade_color_and_label(&report.grade);
 
-    render_top_recommendations(frame, bot_chunks[1], report);
+    // Build inline gauge bar using block characters
+    // Use area width minus borders and padding for bar width
+    let bar_max = 20usize;
+    let filled = ((score.min(100) as f32 / 100.0) * bar_max as f32).round() as usize;
+    let empty = bar_max.saturating_sub(filled);
+    let bar_str: String = "\u{2588}".repeat(filled) + &"\u{2591}".repeat(empty);
+
+    // Identify strongest and weakest
+    let scores = [
+        ("Completeness", report.completeness_score),
+        ("Identifiers", report.identifier_score),
+        ("Licenses", report.license_score),
+        ("Vulnerabilities", report.vulnerability_score),
+        ("Dependencies", report.dependency_score),
+    ];
+    let strongest = scores
+        .iter()
+        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+        .unwrap();
+    let weakest = scores
+        .iter()
+        .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+        .unwrap();
+
+    // Line 1: grade + label + bar + score + profile
+    let line1 = Line::from(vec![
+        Span::styled(
+            format!(" {} ", report.grade.letter()),
+            Style::default().fg(gauge_color).bold(),
+        ),
+        Span::styled(
+            format!("{} ", grade_label),
+            Style::default().fg(scheme.text),
+        ),
+        Span::styled(bar_str, Style::default().fg(gauge_color)),
+        Span::styled(
+            format!(" {}/100", score),
+            Style::default().fg(scheme.text).bold(),
+        ),
+        Span::styled("  Profile: ", Style::default().fg(scheme.muted)),
+        Span::styled(
+            format!("{:?}", report.profile),
+            Style::default().fg(scheme.primary),
+        ),
+    ]);
+
+    // Line 2: strongest + weakest
+    let mut line2_spans = vec![
+        Span::styled(" Best: ", Style::default().fg(scheme.success)),
+        Span::styled(
+            format!("{} ({:.0}%)", strongest.0, strongest.1),
+            Style::default().fg(scheme.text),
+        ),
+    ];
+    if weakest.1 < 70.0 {
+        line2_spans.push(Span::styled("  Focus: ", Style::default().fg(scheme.warning)));
+        line2_spans.push(Span::styled(
+            format!("{} ({:.0}%)", weakest.0, weakest.1),
+            Style::default().fg(scheme.text),
+        ));
+    }
+    let line2 = Line::from(line2_spans);
+
+    let widget = Paragraph::new(vec![line1, line2]).block(
+        Block::default()
+            .title(" SBOM Quality Score ")
+            .title_style(Style::default().bold().fg(scheme.text))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(gauge_color)),
+    );
+    frame.render_widget(widget, area);
 }
 
 fn render_completeness_checklist(frame: &mut Frame, area: Rect, report: &QualityReport) {
@@ -480,12 +561,12 @@ fn render_completeness_checklist(frame: &mut Frame, area: Rect, report: &Quality
     ]));
     lines.push(Line::from(""));
 
-    // Component field coverage bars
-    lines.push(pct_bar("Versions", m.components_with_version, 10));
-    lines.push(pct_bar("PURLs", m.components_with_purl, 10));
-    lines.push(pct_bar("Licenses", m.components_with_licenses, 10));
-    lines.push(pct_bar("Suppliers", m.components_with_supplier, 10));
-    lines.push(pct_bar("Hashes", m.components_with_hashes, 10));
+    // Component field coverage bars (wider for better visual resolution)
+    lines.push(pct_bar("Versions", m.components_with_version, 15));
+    lines.push(pct_bar("PURLs", m.components_with_purl, 15));
+    lines.push(pct_bar("Licenses", m.components_with_licenses, 15));
+    lines.push(pct_bar("Suppliers", m.components_with_supplier, 15));
+    lines.push(pct_bar("Hashes", m.components_with_hashes, 15));
 
     let widget = Paragraph::new(lines).block(
         Block::default()
@@ -496,7 +577,12 @@ fn render_completeness_checklist(frame: &mut Frame, area: Rect, report: &Quality
     frame.render_widget(widget, area);
 }
 
-fn render_top_recommendations(frame: &mut Frame, area: Rect, report: &QualityReport) {
+fn render_top_recommendations(
+    frame: &mut Frame,
+    area: Rect,
+    report: &QualityReport,
+    selected_rec: usize,
+) {
     let scheme = colors();
     let mut lines: Vec<Line> = vec![];
 
@@ -515,16 +601,29 @@ fn render_top_recommendations(frame: &mut Frame, area: Rect, report: &QualityRep
             ),
         ]));
     } else {
-        for rec in report.recommendations.iter().take(5) {
+        for (i, rec) in report.recommendations.iter().take(5).enumerate() {
+            let is_selected = i == selected_rec;
+            let prefix = if is_selected { "> " } else { "  " };
+            let msg_style = if is_selected {
+                Style::default().fg(scheme.text).bold()
+            } else {
+                Style::default().fg(scheme.text)
+            };
+
             lines.push(Line::from(vec![
+                Span::styled(prefix, Style::default().fg(scheme.primary)),
                 Span::styled(
-                    format!("  [P{}] ", rec.priority),
+                    format!("[P{}] ", rec.priority),
                     priority_style(rec.priority),
                 ),
-                Span::styled(&rec.message, Style::default().fg(scheme.text)),
+                Span::styled(
+                    format!("[{}] ", rec.category.name()),
+                    Style::default().fg(scheme.info),
+                ),
+                Span::styled(&rec.message, msg_style),
             ]));
             lines.push(Line::from(vec![
-                Span::raw("       "),
+                Span::raw(if is_selected { "       " } else { "       " }),
                 Span::styled(
                     format!("{} affected", rec.affected_count),
                     Style::default().fg(scheme.muted),
@@ -538,12 +637,18 @@ fn render_top_recommendations(frame: &mut Frame, area: Rect, report: &QualityRep
         }
     }
 
+    let title = if report.recommendations.is_empty() {
+        " Top Recommendations (0) ".to_string()
+    } else {
+        format!(
+            " Top Recommendations ({}) [\u{2191}\u{2193} select, Enter\u{2192}detail] ",
+            report.recommendations.len()
+        )
+    };
+
     let widget = Paragraph::new(lines).block(
         Block::default()
-            .title(format!(
-                " Top Recommendations ({}) ",
-                report.recommendations.len()
-            ))
+            .title(title)
             .borders(Borders::ALL)
             .border_style(Style::default().fg(scheme.warning)),
     );
