@@ -1470,6 +1470,8 @@ pub struct VulnExplorerState {
     pub search_query: String,
     /// Whether search input mode is active
     pub search_active: bool,
+    /// Scroll offset for the detail panel (right side)
+    pub detail_scroll: u16,
     /// Expanded group IDs for grouped view (severity labels or component names)
     pub expanded_groups: HashSet<String>,
     /// Cache key to detect when we need to rebuild the vulnerability list
@@ -1499,6 +1501,7 @@ impl VulnExplorerState {
             deduplicate: true,
             search_query: String::new(),
             search_active: false,
+            detail_scroll: 0,
             expanded_groups: HashSet::new(),
             cache_key: None,
             cached_data: None,
@@ -1535,13 +1538,25 @@ impl VulnExplorerState {
     pub fn select_next(&mut self) {
         if self.total > 0 && self.selected < self.total.saturating_sub(1) {
             self.selected += 1;
+            self.detail_scroll = 0;
         }
     }
 
     pub fn select_prev(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
+            self.detail_scroll = 0;
         }
+    }
+
+    /// Scroll detail panel down
+    pub fn detail_scroll_down(&mut self) {
+        self.detail_scroll = self.detail_scroll.saturating_add(1);
+    }
+
+    /// Scroll detail panel up
+    pub fn detail_scroll_up(&mut self) {
+        self.detail_scroll = self.detail_scroll.saturating_sub(1);
     }
 
     /// Ensure selected index is within bounds

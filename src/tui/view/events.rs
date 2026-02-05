@@ -186,6 +186,25 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
         }
     }
 
+    // Handle Vulnerabilities detail panel scrolling when right panel is focused
+    if app.focus_panel == FocusPanel::Right && app.active_tab == ViewTab::Vulnerabilities {
+        match key.code {
+            KeyCode::Up | KeyCode::Char('k') => {
+                app.vuln_state.detail_scroll_up();
+                return;
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                app.vuln_state.detail_scroll_down();
+                return;
+            }
+            KeyCode::Char('p') => {
+                app.toggle_focus();
+                return;
+            }
+            _ => {}
+        }
+    }
+
     // Handle Source tab map panel navigation when map is focused
     if app.focus_panel == FocusPanel::Right && app.active_tab == ViewTab::Source {
         match key.code {

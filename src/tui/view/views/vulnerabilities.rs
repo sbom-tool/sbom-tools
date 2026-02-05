@@ -332,7 +332,13 @@ fn render_vuln_content(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
             VulnDisplayItem::Vuln(idx) => cache.vulns.get(*idx),
             VulnDisplayItem::GroupHeader { .. } => None,
         });
-    render_vuln_detail_panel(frame, chunks[1], selected_vuln, !is_left_focused);
+    render_vuln_detail_panel(
+        frame,
+        chunks[1],
+        selected_vuln,
+        !is_left_focused,
+        &mut app.vuln_state.detail_scroll,
+    );
 }
 
 /// Resolve severity: use explicit severity, fall back to CVSS score, then "Unknown"
@@ -838,6 +844,7 @@ fn render_vuln_detail_panel(
     area: Rect,
     vuln: Option<&VulnRow>,
     is_focused: bool,
+    detail_scroll: &mut u16,
 ) {
     let scheme = colors();
     let border_color = if is_focused {
@@ -847,6 +854,7 @@ fn render_vuln_detail_panel(
     };
 
     let Some(v) = vuln else {
+        *detail_scroll = 0;
         let block = Block::default()
             .title(" Details ")
             .borders(Borders::ALL)
@@ -1046,16 +1054,48 @@ fn render_vuln_detail_panel(
         ]));
     }
 
+    // Clamp scroll offset so it doesn't exceed content
+    let content_height = area.height.saturating_sub(2) as u16; // borders
+    let total_lines = lines.len() as u16;
+    let max_scroll = total_lines.saturating_sub(content_height);
+    if *detail_scroll > max_scroll {
+        *detail_scroll = max_scroll;
+    }
+
     let block = Block::default()
-        .title(" Details ")
+        .title(if is_focused {
+            " Details [↑↓ scroll] "
+        } else {
+            " Details "
+        })
         .borders(Borders::ALL)
         .border_style(Style::default().fg(border_color));
 
     let para = Paragraph::new(lines)
         .block(block)
-        .wrap(Wrap { trim: false });
+        .wrap(Wrap { trim: false })
+        .scroll((*detail_scroll, 0));
 
     frame.render_widget(para, area);
+
+    // Scrollbar when content overflows
+    if total_lines > content_height {
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .thumb_style(Style::default().fg(scheme.accent))
+            .track_style(Style::default().fg(scheme.muted));
+
+        let mut scrollbar_state =
+            ScrollbarState::new(total_lines as usize).position(*detail_scroll as usize);
+
+        frame.render_stateful_widget(
+            scrollbar,
+            area.inner(Margin {
+                vertical: 1,
+                horizontal: 0,
+            }),
+            &mut scrollbar_state,
+        );
+    }
 }
 
 /// Extract a meaningful display name from a component path and/or description
