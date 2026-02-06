@@ -8,6 +8,7 @@ use thiserror::Error;
 
 /// Main error type for sbom-tools operations.
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum SbomDiffError {
     /// Errors during SBOM parsing
     #[error("Failed to parse SBOM: {context}")]
@@ -69,6 +70,7 @@ pub enum SbomDiffError {
 
 /// Specific parse error kinds
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum ParseErrorKind {
     #[error("Unknown SBOM format - expected CycloneDX or SPDX markers")]
     UnknownFormat,
@@ -100,6 +102,7 @@ pub enum ParseErrorKind {
 
 /// Specific diff error kinds
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum DiffErrorKind {
     #[error("Component matching failed: {0}")]
     MatchingFailed(String),
@@ -116,6 +119,7 @@ pub enum DiffErrorKind {
 
 /// Specific report error kinds
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum ReportErrorKind {
     #[error("Template rendering failed: {0}")]
     TemplateError(String),
@@ -132,6 +136,7 @@ pub enum ReportErrorKind {
 
 /// Specific matching error kinds
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum MatchingErrorKind {
     #[error("Alias table not found: {0}")]
     AliasTableNotFound(String),
@@ -145,6 +150,7 @@ pub enum MatchingErrorKind {
 
 /// Specific enrichment error kinds
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum EnrichmentErrorKind {
     #[error("API request failed: {0}")]
     ApiError(String),
@@ -204,7 +210,7 @@ impl SbomDiffError {
     /// Create an IO error with path context
     pub fn io(path: impl Into<PathBuf>, source: std::io::Error) -> Self {
         let path = path.into();
-        let message = format!("{}", source);
+        let message = format!("{source}");
         Self::Io {
             path: Some(path),
             message,
@@ -255,7 +261,7 @@ impl From<std::io::Error> for SbomDiffError {
     fn from(err: std::io::Error) -> Self {
         Self::Io {
             path: None,
-            message: format!("{}", err),
+            message: format!("{err}"),
             source: err,
         }
     }
@@ -393,7 +399,7 @@ fn chain_context(new: &str, existing: &str) -> String {
     if existing.is_empty() {
         new.to_string()
     } else {
-        format!("{}: {}", new, existing)
+        format!("{new}: {existing}")
     }
 }
 

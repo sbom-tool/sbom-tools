@@ -69,26 +69,6 @@ impl VulnerabilitiesState {
         self.expanded_groups.contains(component_id)
     }
 
-    pub fn select_next(&mut self) {
-        if self.total > 0 && self.selected < self.total - 1 {
-            self.selected += 1;
-        }
-    }
-
-    pub fn select_prev(&mut self) {
-        if self.selected > 0 {
-            self.selected -= 1;
-        }
-    }
-
-    pub fn clamp_selection(&mut self) {
-        if self.total == 0 {
-            self.selected = 0;
-        } else if self.selected >= self.total {
-            self.selected = self.total.saturating_sub(1);
-        }
-    }
-
     pub fn toggle_filter(&mut self) {
         self.filter = self.filter.next();
         self.selected = 0;
@@ -140,30 +120,30 @@ pub enum VulnFilter {
 impl VulnFilter {
     pub fn label(&self) -> &'static str {
         match self {
-            VulnFilter::All => "All",
-            VulnFilter::Introduced => "Introduced",
-            VulnFilter::Resolved => "Resolved",
-            VulnFilter::Critical => "Critical",
-            VulnFilter::High => "High",
-            VulnFilter::Kev => "KEV",
-            VulnFilter::Direct => "Direct",
-            VulnFilter::Transitive => "Transitive",
-            VulnFilter::VexActionable => "VEX Actionable",
+            Self::All => "All",
+            Self::Introduced => "Introduced",
+            Self::Resolved => "Resolved",
+            Self::Critical => "Critical",
+            Self::High => "High",
+            Self::Kev => "KEV",
+            Self::Direct => "Direct",
+            Self::Transitive => "Transitive",
+            Self::VexActionable => "VEX Actionable",
         }
     }
 
     /// Cycle to next filter option
     pub fn next(self) -> Self {
         match self {
-            VulnFilter::All => VulnFilter::Introduced,
-            VulnFilter::Introduced => VulnFilter::Resolved,
-            VulnFilter::Resolved => VulnFilter::Critical,
-            VulnFilter::Critical => VulnFilter::High,
-            VulnFilter::High => VulnFilter::Kev,
-            VulnFilter::Kev => VulnFilter::Direct,
-            VulnFilter::Direct => VulnFilter::Transitive,
-            VulnFilter::Transitive => VulnFilter::VexActionable,
-            VulnFilter::VexActionable => VulnFilter::All,
+            Self::All => Self::Introduced,
+            Self::Introduced => Self::Resolved,
+            Self::Resolved => Self::Critical,
+            Self::Critical => Self::High,
+            Self::High => Self::Kev,
+            Self::Kev => Self::Direct,
+            Self::Direct => Self::Transitive,
+            Self::Transitive => Self::VexActionable,
+            Self::VexActionable => Self::All,
         }
     }
 }
@@ -216,9 +196,9 @@ pub enum DiffVulnStatus {
 impl DiffVulnStatus {
     pub fn label(&self) -> &'static str {
         match self {
-            DiffVulnStatus::Introduced => "Introduced",
-            DiffVulnStatus::Resolved => "Resolved",
-            DiffVulnStatus::Persistent => "Persistent",
+            Self::Introduced => "Introduced",
+            Self::Resolved => "Resolved",
+            Self::Persistent => "Persistent",
         }
     }
 }

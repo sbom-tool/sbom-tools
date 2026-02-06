@@ -30,12 +30,12 @@ pub enum JsonTreeNode {
     Object {
         key: String,
         index: Option<usize>,
-        children: Vec<JsonTreeNode>,
+        children: Vec<Self>,
     },
     Array {
         key: String,
         index: Option<usize>,
-        children: Vec<JsonTreeNode>,
+        children: Vec<Self>,
         len: usize,
     },
     Leaf {
@@ -53,9 +53,9 @@ impl JsonTreeNode {
             serde_json::Value::Object(map) => {
                 let children = map
                     .iter()
-                    .map(|(k, v)| JsonTreeNode::from_value(k.clone(), None, v))
+                    .map(|(k, v)| Self::from_value(k.clone(), None, v))
                     .collect();
-                JsonTreeNode::Object {
+                Self::Object {
                     key,
                     index,
                     children,
@@ -65,34 +65,34 @@ impl JsonTreeNode {
                 let children = arr
                     .iter()
                     .enumerate()
-                    .map(|(i, v)| JsonTreeNode::from_value(String::new(), Some(i), v))
+                    .map(|(i, v)| Self::from_value(String::new(), Some(i), v))
                     .collect();
-                JsonTreeNode::Array {
+                Self::Array {
                     key,
                     index,
                     children,
                     len: arr.len(),
                 }
             }
-            serde_json::Value::String(s) => JsonTreeNode::Leaf {
+            serde_json::Value::String(s) => Self::Leaf {
                 key,
                 index,
                 value: format!("\"{}\"", truncate_value(s, 120)),
                 value_type: JsonValueType::String,
             },
-            serde_json::Value::Number(n) => JsonTreeNode::Leaf {
+            serde_json::Value::Number(n) => Self::Leaf {
                 key,
                 index,
                 value: n.to_string(),
                 value_type: JsonValueType::Number,
             },
-            serde_json::Value::Bool(b) => JsonTreeNode::Leaf {
+            serde_json::Value::Bool(b) => Self::Leaf {
                 key,
                 index,
                 value: b.to_string(),
                 value_type: JsonValueType::Boolean,
             },
-            serde_json::Value::Null => JsonTreeNode::Leaf {
+            serde_json::Value::Null => Self::Leaf {
                 key,
                 index,
                 value: "null".to_string(),
@@ -104,11 +104,11 @@ impl JsonTreeNode {
     /// Unique path-based ID for expand/collapse tracking.
     pub fn node_id(&self, parent_path: &str) -> String {
         let key_part = match self {
-            JsonTreeNode::Object { key, index, .. }
-            | JsonTreeNode::Array { key, index, .. }
-            | JsonTreeNode::Leaf { key, index, .. } => {
+            Self::Object { key, index, .. }
+            | Self::Array { key, index, .. }
+            | Self::Leaf { key, index, .. } => {
                 if let Some(i) = index {
-                    format!("[{}]", i)
+                    format!("[{i}]")
                 } else {
                     key.clone()
                 }
@@ -117,45 +117,45 @@ impl JsonTreeNode {
         if parent_path.is_empty() {
             key_part
         } else {
-            format!("{}.{}", parent_path, key_part)
+            format!("{parent_path}.{key_part}")
         }
     }
 
     pub fn is_expandable(&self) -> bool {
         matches!(
             self,
-            JsonTreeNode::Object { .. } | JsonTreeNode::Array { .. }
+            Self::Object { .. } | Self::Array { .. }
         )
     }
 
-    pub fn children(&self) -> Option<&[JsonTreeNode]> {
+    pub fn children(&self) -> Option<&[Self]> {
         match self {
-            JsonTreeNode::Object { children, .. } | JsonTreeNode::Array { children, .. } => {
+            Self::Object { children, .. } | Self::Array { children, .. } => {
                 Some(children)
             }
-            JsonTreeNode::Leaf { .. } => None,
+            Self::Leaf { .. } => None,
         }
     }
 
     pub fn child_count_label(&self) -> String {
         match self {
-            JsonTreeNode::Object { children, .. } => {
+            Self::Object { children, .. } => {
                 format!("{{}} ({} keys)", children.len())
             }
-            JsonTreeNode::Array { len, .. } => {
-                format!("[] ({} items)", len)
+            Self::Array { len, .. } => {
+                format!("[] ({len} items)")
             }
-            JsonTreeNode::Leaf { .. } => String::new(),
+            Self::Leaf { .. } => String::new(),
         }
     }
 
     pub fn display_key(&self) -> String {
         match self {
-            JsonTreeNode::Object { key, index, .. }
-            | JsonTreeNode::Array { key, index, .. }
-            | JsonTreeNode::Leaf { key, index, .. } => {
+            Self::Object { key, index, .. }
+            | Self::Array { key, index, .. }
+            | Self::Leaf { key, index, .. } => {
                 if let Some(i) = index {
-                    format!("[{}]", i)
+                    format!("[{i}]")
                 } else {
                     key.clone()
                 }
@@ -230,12 +230,12 @@ impl SourcePanelState {
                 let tree = JsonTreeNode::from_value("root".to_string(), None, &value);
                 let pretty = serde_json::to_string_pretty(&value)
                     .unwrap_or_else(|_| raw_content.to_string());
-                let lines: Vec<String> = pretty.lines().map(|l| l.to_string()).collect();
+                let lines: Vec<String> = pretty.lines().map(std::string::ToString::to_string).collect();
                 (Some(tree), lines)
             }
             Err(_) => {
                 // Not valid JSON (e.g. XML, tag-value) — raw mode only
-                let lines: Vec<String> = raw_content.lines().map(|l| l.to_string()).collect();
+                let lines: Vec<String> = raw_content.lines().map(std::string::ToString::to_string).collect();
                 (None, lines)
             }
         };

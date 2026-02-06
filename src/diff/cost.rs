@@ -123,3 +123,118 @@ impl CostModel {
         (score as i32 + reward) as f64
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_cost_model() {
+        let model = CostModel::default();
+        assert_eq!(model.component_added, 10);
+        assert_eq!(model.component_removed, 10);
+        assert_eq!(model.version_patch, 2);
+        assert_eq!(model.version_minor, 4);
+        assert_eq!(model.version_major, 7);
+        assert_eq!(model.license_changed, 6);
+        assert_eq!(model.vulnerability_introduced, 15);
+        assert_eq!(model.vulnerability_resolved, -3);
+        assert_eq!(model.hash_mismatch, 8);
+    }
+
+    #[test]
+    fn test_security_focused_model() {
+        let model = CostModel::security_focused();
+        let default = CostModel::default();
+        assert!(model.vulnerability_introduced > default.vulnerability_introduced);
+        assert!(model.hash_mismatch > default.hash_mismatch);
+        assert!(model.vulnerability_resolved < default.vulnerability_resolved);
+    }
+
+    #[test]
+    fn test_compliance_focused_model() {
+        let model = CostModel::compliance_focused();
+        let default = CostModel::default();
+        assert!(model.license_changed > default.license_changed);
+        assert!(model.supplier_changed > default.supplier_changed);
+    }
+
+    fn ver(major: u64, minor: u64, patch: u64) -> semver::Version {
+        semver::Version::new(major, minor, patch)
+    }
+
+    #[test]
+    fn test_version_change_cost_major() {
+        let model = CostModel::default();
+        let old = Some(ver(1, 0, 0));
+        let new = Some(ver(2, 0, 0));
+        assert_eq!(model.version_change_cost(&old, &new), model.version_major);
+    }
+
+    #[test]
+    fn test_version_change_cost_minor() {
+        let model = CostModel::default();
+        let old = Some(ver(1, 0, 0));
+        let new = Some(ver(1, 1, 0));
+        assert_eq!(model.version_change_cost(&old, &new), model.version_minor);
+    }
+
+    #[test]
+    fn test_version_change_cost_patch() {
+        let model = CostModel::default();
+        let old = Some(ver(1, 0, 0));
+        let new = Some(ver(1, 0, 1));
+        assert_eq!(model.version_change_cost(&old, &new), model.version_patch);
+    }
+
+    #[test]
+    fn test_version_change_cost_same() {
+        let model = CostModel::default();
+        let old = Some(ver(1, 2, 3));
+        let new = Some(ver(1, 2, 3));
+        assert_eq!(model.version_change_cost(&old, &new), 0);
+    }
+
+    #[test]
+    fn test_version_change_cost_none_to_some() {
+        let model = CostModel::default();
+        let new = Some(ver(1, 0, 0));
+        assert_eq!(model.version_change_cost(&None, &new), model.version_minor);
+    }
+
+    #[test]
+    fn test_version_change_cost_some_to_none() {
+        let model = CostModel::default();
+        let old = Some(ver(1, 0, 0));
+        assert_eq!(model.version_change_cost(&old, &None), model.version_minor);
+    }
+
+    #[test]
+    fn test_version_change_cost_none_none() {
+        let model = CostModel::default();
+        assert_eq!(model.version_change_cost(&None, &None), 0);
+    }
+
+    #[test]
+    fn test_semantic_score_zero() {
+        let model = CostModel::default();
+        let score = model.calculate_semantic_score(0, 0, 0, 0, 0, 0, 0, 0);
+        assert_eq!(score, 0.0);
+    }
+
+    #[test]
+    fn test_semantic_score_basic() {
+        let model = CostModel::default();
+        // 2 added (10 each) + 1 removed (10) + 1 version change (4) = 34
+        let score = model.calculate_semantic_score(2, 1, 1, 0, 0, 0, 0, 0);
+        assert_eq!(score, 34.0);
+    }
+
+    #[test]
+    fn test_semantic_score_with_resolved() {
+        let model = CostModel::default();
+        // 1 vuln introduced (15) + 2 resolved (2 * -3 = -6) = 9
+        let score = model.calculate_semantic_score(0, 0, 0, 0, 1, 2, 0, 0);
+        assert_eq!(score, 9.0);
+    }
+}

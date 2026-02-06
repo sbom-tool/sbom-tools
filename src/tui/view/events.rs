@@ -395,7 +395,7 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
         KeyCode::Char('J') => {
             if app.active_tab == ViewTab::Licenses {
                 // Calculate visible count based on typical panel height
-                app.license_state.scroll_components_down(10);
+                app.license_state.scroll_components_down(crate::tui::constants::PAGE_SIZE);
             }
         }
         KeyCode::Char('f') => match app.active_tab {

@@ -229,12 +229,12 @@ pub enum LicenseFamily {
 impl fmt::Display for LicenseFamily {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LicenseFamily::Permissive => write!(f, "Permissive"),
-            LicenseFamily::Copyleft => write!(f, "Copyleft"),
-            LicenseFamily::WeakCopyleft => write!(f, "Weak Copyleft"),
-            LicenseFamily::Proprietary => write!(f, "Proprietary"),
-            LicenseFamily::PublicDomain => write!(f, "Public Domain"),
-            LicenseFamily::Other => write!(f, "Other"),
+            Self::Permissive => write!(f, "Permissive"),
+            Self::Copyleft => write!(f, "Copyleft"),
+            Self::WeakCopyleft => write!(f, "Weak Copyleft"),
+            Self::Proprietary => write!(f, "Proprietary"),
+            Self::PublicDomain => write!(f, "Public Domain"),
+            Self::Other => write!(f, "Other"),
         }
     }
 }
@@ -276,7 +276,7 @@ impl LicenseInfo {
     /// and another declares proprietary terms. Note that a single expression like
     /// "MIT OR GPL-2.0" is NOT a conflict — it offers a choice.
     pub fn has_conflicts(&self) -> bool {
-        let families: Vec<LicenseFamily> = self.declared.iter().map(|l| l.family()).collect();
+        let families: Vec<LicenseFamily> = self.declared.iter().map(LicenseExpression::family).collect();
 
         let has_copyleft = families.contains(&LicenseFamily::Copyleft);
         let has_proprietary = families.contains(&LicenseFamily::Proprietary);

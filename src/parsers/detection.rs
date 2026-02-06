@@ -24,8 +24,8 @@ impl ParserKind {
     /// Get the human-readable name for this parser.
     pub fn name(&self) -> &'static str {
         match self {
-            ParserKind::CycloneDx => "CycloneDX",
-            ParserKind::Spdx => "SPDX",
+            Self::CycloneDx => "CycloneDX",
+            Self::Spdx => "SPDX",
         }
     }
 }

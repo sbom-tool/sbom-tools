@@ -265,15 +265,15 @@ impl App {
             AppMode::Diff => {
                 self.data.old_sbom
                     .as_ref()
-                    .map(|s| s.component_count())
+                    .map(crate::model::NormalizedSbom::component_count)
                     .unwrap_or(0)
                     + self.data
                         .new_sbom
                         .as_ref()
-                        .map(|s| s.component_count())
+                        .map(crate::model::NormalizedSbom::component_count)
                         .unwrap_or(0)
             }
-            AppMode::View => self.data.sbom.as_ref().map(|s| s.component_count()).unwrap_or(0),
+            AppMode::View => self.data.sbom.as_ref().map(crate::model::NormalizedSbom::component_count).unwrap_or(0),
             _ => 0,
         };
 
@@ -536,13 +536,11 @@ impl App {
 
         if passes {
             self.set_status_message(format!(
-                "{} - COMPLIANT (score: {})",
-                policy_name, score
+                "{policy_name} - COMPLIANT (score: {score})"
             ));
         } else {
             self.set_status_message(format!(
-                "{} - NON-COMPLIANT ({} violations, score: {})",
-                policy_name, violation_count, score
+                "{policy_name} - NON-COMPLIANT ({violation_count} violations, score: {score})"
             ));
         }
     }
@@ -561,7 +559,7 @@ impl App {
                             .licenses
                             .declared
                             .iter()
-                            .map(|l| l.to_string())
+                            .map(std::string::ToString::to_string)
                             .collect();
                         let vulns: Vec<(String, String)> = comp
                             .vulnerabilities
@@ -570,7 +568,7 @@ impl App {
                                 let severity = v
                                     .severity
                                     .as_ref()
-                                    .map(|s| s.to_string())
+                                    .map(std::string::ToString::to_string)
                                     .unwrap_or_else(|| "Unknown".to_string());
                                 (v.id.clone(), severity)
                             })
@@ -591,7 +589,7 @@ impl App {
                             .licenses
                             .declared
                             .iter()
-                            .map(|l| l.to_string())
+                            .map(std::string::ToString::to_string)
                             .collect();
                         let vulns: Vec<(String, String)> = comp
                             .vulnerabilities
@@ -600,7 +598,7 @@ impl App {
                                 let severity = v
                                     .severity
                                     .as_ref()
-                                    .map(|s| s.to_string())
+                                    .map(std::string::ToString::to_string)
                                     .unwrap_or_else(|| "Unknown".to_string());
                                 (v.id.clone(), severity)
                             })
@@ -765,16 +763,16 @@ pub enum TabKind {
 impl TabKind {
     pub fn title(&self) -> &'static str {
         match self {
-            TabKind::Summary => "Summary",
-            TabKind::Components => "Components",
-            TabKind::Dependencies => "Dependencies",
-            TabKind::Licenses => "Licenses",
-            TabKind::Vulnerabilities => "Vulnerabilities",
-            TabKind::Quality => "Quality",
-            TabKind::Compliance => "Compliance",
-            TabKind::SideBySide => "Side-by-Side",
-            TabKind::GraphChanges => "Graph",
-            TabKind::Source => "Source",
+            Self::Summary => "Summary",
+            Self::Components => "Components",
+            Self::Dependencies => "Dependencies",
+            Self::Licenses => "Licenses",
+            Self::Vulnerabilities => "Vulnerabilities",
+            Self::Quality => "Quality",
+            Self::Compliance => "Compliance",
+            Self::SideBySide => "Side-by-Side",
+            Self::GraphChanges => "Graph",
+            Self::Source => "Source",
         }
     }
 }

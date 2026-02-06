@@ -14,7 +14,7 @@ pub enum TreeNode {
     Group {
         id: String,
         label: String,
-        children: Vec<TreeNode>,
+        children: Vec<Self>,
         item_count: usize,
         vuln_count: usize,
     },
@@ -32,22 +32,22 @@ pub enum TreeNode {
 }
 
 impl TreeNode {
-    pub fn id(&self) -> &str {
+    pub(crate) fn id(&self) -> &str {
         match self {
-            TreeNode::Group { id, .. } => id,
-            TreeNode::Component { id, .. } => id,
+            Self::Group { id, .. } => id,
+            Self::Component { id, .. } => id,
         }
     }
 
-    pub fn label(&self) -> String {
+    pub(crate) fn label(&self) -> String {
         match self {
-            TreeNode::Group {
+            Self::Group {
                 label, item_count, ..
-            } => format!("{} ({})", label, item_count),
-            TreeNode::Component { name, version, .. } => {
+            } => format!("{label} ({item_count})"),
+            Self::Component { name, version, .. } => {
                 let display_name = extract_display_name(name);
                 if let Some(v) = version {
-                    format!("{}@{}", display_name, v)
+                    format!("{display_name}@{v}")
                 } else {
                     display_name
                 }
@@ -55,49 +55,34 @@ impl TreeNode {
         }
     }
 
-    /// Get the raw name (full path) for display in details
-    pub fn raw_name(&self) -> Option<&str> {
+    pub(crate) fn vuln_count(&self) -> usize {
         match self {
-            TreeNode::Component { name, .. } => Some(name),
+            Self::Group { vuln_count, .. } => *vuln_count,
+            Self::Component { vuln_count, .. } => *vuln_count,
+        }
+    }
+
+    pub(crate) fn max_severity(&self) -> Option<&str> {
+        match self {
+            Self::Component { max_severity, .. } => max_severity.as_deref(),
             _ => None,
         }
     }
 
-    pub fn vuln_count(&self) -> usize {
-        match self {
-            TreeNode::Group { vuln_count, .. } => *vuln_count,
-            TreeNode::Component { vuln_count, .. } => *vuln_count,
-        }
+    pub(crate) fn is_group(&self) -> bool {
+        matches!(self, Self::Group { .. })
     }
 
-    pub fn max_severity(&self) -> Option<&str> {
+    pub(crate) fn children(&self) -> Option<&[Self]> {
         match self {
-            TreeNode::Component { max_severity, .. } => max_severity.as_deref(),
-            _ => None,
-        }
-    }
-
-    pub fn component_type(&self) -> Option<&str> {
-        match self {
-            TreeNode::Component { component_type, .. } => component_type.as_deref(),
-            _ => None,
-        }
-    }
-
-    pub fn is_group(&self) -> bool {
-        matches!(self, TreeNode::Group { .. })
-    }
-
-    pub fn children(&self) -> Option<&[TreeNode]> {
-        match self {
-            TreeNode::Group { children, .. } => Some(children),
-            TreeNode::Component { .. } => None,
+            Self::Group { children, .. } => Some(children),
+            Self::Component { .. } => None,
         }
     }
 }
 
 /// Extract a meaningful display name from a component path
-pub fn extract_display_name(name: &str) -> String {
+pub(crate) fn extract_display_name(name: &str) -> String {
     // If it's a clean package name (no path separators, reasonable length), use it as-is
     if !name.contains('/') && !name.starts_with('.') && name.len() <= 40 {
         return name.to_string();
@@ -147,9 +132,9 @@ fn is_hash_like(name: &str) -> bool {
     if name.len() < 8 {
         return false;
     }
-    let clean = name.replace('-', "").replace('_', "");
+    let clean = name.replace(['-', '_'], "");
     clean.chars().all(|c| c.is_ascii_hexdigit())
-        || (clean.chars().filter(|c| c.is_ascii_digit()).count() > clean.len() / 2)
+        || (clean.chars().filter(char::is_ascii_digit).count() > clean.len() / 2)
 }
 
 /// Truncate a name with ellipsis
@@ -162,7 +147,7 @@ fn truncate_name(name: &str, max_len: usize) -> String {
 }
 
 /// Get component type from path/name
-pub fn detect_component_type(name: &str) -> &'static str {
+pub(crate) fn detect_component_type(name: &str) -> &'static str {
     let lower = name.to_lowercase();
 
     if lower.ends_with(".so") || lower.contains(".so.") {
@@ -206,11 +191,11 @@ pub struct TreeState {
 }
 
 impl TreeState {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::default()
     }
 
-    pub fn toggle_expand(&mut self, node_id: &str) {
+    pub(crate) fn toggle_expand(&mut self, node_id: &str) {
         if self.expanded.contains(node_id) {
             self.expanded.remove(node_id);
         } else {
@@ -218,53 +203,45 @@ impl TreeState {
         }
     }
 
-    pub fn expand(&mut self, node_id: &str) {
+    pub(crate) fn expand(&mut self, node_id: &str) {
         self.expanded.insert(node_id.to_string());
     }
 
-    pub fn collapse(&mut self, node_id: &str) {
+    pub(crate) fn collapse(&mut self, node_id: &str) {
         self.expanded.remove(node_id);
     }
 
-    pub fn is_expanded(&self, node_id: &str) -> bool {
+    pub(crate) fn is_expanded(&self, node_id: &str) -> bool {
         self.expanded.contains(node_id)
     }
 
-    pub fn select_next(&mut self) {
+    pub(crate) fn select_next(&mut self) {
         if self.visible_count > 0 && self.selected < self.visible_count - 1 {
             self.selected += 1;
         }
     }
 
-    pub fn select_prev(&mut self) {
+    pub(crate) fn select_prev(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
         }
     }
 
-    pub fn select_first(&mut self) {
+    pub(crate) fn select_first(&mut self) {
         self.selected = 0;
     }
 
-    pub fn select_last(&mut self) {
+    pub(crate) fn select_last(&mut self) {
         if self.visible_count > 0 {
             self.selected = self.visible_count - 1;
         }
     }
 
-    pub fn page_down(&mut self, page_size: usize) {
-        self.selected = (self.selected + page_size).min(self.visible_count.saturating_sub(1));
-    }
-
-    pub fn page_up(&mut self, page_size: usize) {
-        self.selected = self.selected.saturating_sub(page_size);
-    }
 }
 
 /// A flattened tree item for rendering.
 #[derive(Debug, Clone)]
-pub struct FlattenedItem {
-    pub node_id: String,
+pub(crate) struct FlattenedItem {
     pub label: String,
     pub depth: usize,
     pub is_group: bool,
@@ -274,12 +251,10 @@ pub struct FlattenedItem {
     pub ancestors_last: Vec<bool>,
     /// Maximum severity for components with vulnerabilities
     pub max_severity: Option<String>,
-    /// Component type (lib, bin, cert, file, etc.)
-    pub component_type: Option<String>,
 }
 
 /// The tree widget.
-pub struct Tree<'a> {
+pub(crate) struct Tree<'a> {
     roots: &'a [TreeNode],
     block: Option<Block<'a>>,
     highlight_style: Style,
@@ -289,7 +264,7 @@ pub struct Tree<'a> {
 }
 
 impl<'a> Tree<'a> {
-    pub fn new(roots: &'a [TreeNode]) -> Self {
+    pub(crate) fn new(roots: &'a [TreeNode]) -> Self {
         let scheme = colors();
         Self {
             roots,
@@ -303,18 +278,13 @@ impl<'a> Tree<'a> {
         }
     }
 
-    pub fn block(mut self, block: Block<'a>) -> Self {
+    pub(crate) fn block(mut self, block: Block<'a>) -> Self {
         self.block = Some(block);
         self
     }
 
-    pub fn highlight_style(mut self, style: Style) -> Self {
+    pub(crate) fn highlight_style(mut self, style: Style) -> Self {
         self.highlight_style = style;
-        self
-    }
-
-    pub fn highlight_symbol(mut self, symbol: &'a str) -> Self {
-        self.highlight_symbol = symbol;
         self
     }
 
@@ -341,7 +311,6 @@ impl<'a> Tree<'a> {
             current_ancestors.push(is_last);
 
             items.push(FlattenedItem {
-                node_id: node.id().to_string(),
                 label: node.label(),
                 depth,
                 is_group: node.is_group(),
@@ -349,8 +318,7 @@ impl<'a> Tree<'a> {
                 is_last_sibling: is_last,
                 vuln_count: node.vuln_count(),
                 ancestors_last: current_ancestors.clone(),
-                max_severity: node.max_severity().map(|s| s.to_string()),
-                component_type: node.component_type().map(|s| s.to_string()),
+                max_severity: node.max_severity().map(std::string::ToString::to_string),
             });
 
             // Recursively add children if expanded
@@ -566,28 +534,6 @@ impl<'a> StatefulWidget for Tree<'a> {
                 .track_style(Style::default().fg(scheme.muted));
             let mut scrollbar_state = ScrollbarState::new(items.len()).position(state.selected);
             scrollbar.render(area, buf, &mut scrollbar_state);
-        }
-    }
-}
-
-/// Get the currently selected node ID.
-pub fn get_selected_node<'a>(roots: &'a [TreeNode], state: &TreeState) -> Option<&'a TreeNode> {
-    let mut items = Vec::new();
-    flatten_for_selection(roots, state, &mut items);
-    items.get(state.selected).copied()
-}
-
-fn flatten_for_selection<'a>(
-    nodes: &'a [TreeNode],
-    state: &TreeState,
-    items: &mut Vec<&'a TreeNode>,
-) {
-    for node in nodes {
-        items.push(node);
-        if state.is_expanded(node.id()) {
-            if let Some(children) = node.children() {
-                flatten_for_selection(children, state, items);
-            }
         }
     }
 }

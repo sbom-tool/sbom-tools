@@ -16,7 +16,7 @@ pub(super) fn handle_vulnerabilities_keys(app: &mut App, key: KeyEvent) {
             } else {
                 "list"
             };
-            app.set_status_message(format!("Vulnerabilities: {} view", mode));
+            app.set_status_message(format!("Vulnerabilities: {mode} view"));
         }
         KeyCode::Char('E') => {
             // Expand all groups (in grouped mode)
@@ -184,7 +184,7 @@ fn resolve_grouped_selection(app: &mut App, selected: usize) -> GroupedSelection
                             &it.1
                                 .severity
                                 .as_ref()
-                                .map(|s| s.to_string())
+                                .map(std::string::ToString::to_string)
                                 .unwrap_or_default(),
                         )
                     })
@@ -199,7 +199,7 @@ fn resolve_grouped_selection(app: &mut App, selected: usize) -> GroupedSelection
                             &it.1
                                 .severity
                                 .as_ref()
-                                .map(|s| s.to_string())
+                                .map(std::string::ToString::to_string)
                                 .unwrap_or_default(),
                         )
                     })

@@ -41,26 +41,6 @@ impl ComponentsState {
         self.focus_detail = !self.focus_detail;
     }
 
-    pub fn select_next(&mut self) {
-        if self.total > 0 && self.selected < self.total - 1 {
-            self.selected += 1;
-        }
-    }
-
-    pub fn select_prev(&mut self) {
-        if self.selected > 0 {
-            self.selected -= 1;
-        }
-    }
-
-    pub fn clamp_selection(&mut self) {
-        if self.total == 0 {
-            self.selected = 0;
-        } else if self.selected >= self.total {
-            self.selected = self.total.saturating_sub(1);
-        }
-    }
-
     pub fn toggle_filter(&mut self) {
         self.filter = match self.filter {
             ComponentFilter::All => ComponentFilter::Added,
@@ -147,10 +127,10 @@ pub enum ComponentFilter {
 impl ComponentFilter {
     pub fn label(&self) -> &'static str {
         match self {
-            ComponentFilter::All => "All",
-            ComponentFilter::Added => "Added",
-            ComponentFilter::Removed => "Removed",
-            ComponentFilter::Modified => "Modified",
+            Self::All => "All",
+            Self::Added => "Added",
+            Self::Removed => "Removed",
+            Self::Modified => "Modified",
         }
     }
 }

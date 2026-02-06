@@ -152,7 +152,7 @@ impl NormalizedSbom {
             .values()
             .filter_map(|c| c.ecosystem.as_ref())
             .collect();
-        ecosystems.sort_by_key(|a| a.to_string());
+        ecosystems.sort_by_key(std::string::ToString::to_string);
         ecosystems.dedup();
         ecosystems
     }
@@ -318,6 +318,7 @@ impl VulnerabilityCounts {
 
 /// Staleness level classification for dependencies
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum StalenessLevel {
     /// Updated within 6 months
     Fresh,
@@ -337,46 +338,46 @@ impl StalenessLevel {
     /// Create from age in days
     pub fn from_days(days: u32) -> Self {
         match days {
-            0..=182 => StalenessLevel::Fresh,      // ~6 months
-            183..=365 => StalenessLevel::Aging,    // 6-12 months
-            366..=730 => StalenessLevel::Stale,    // 1-2 years
-            _ => StalenessLevel::Abandoned,        // >2 years
+            0..=182 => Self::Fresh,      // ~6 months
+            183..=365 => Self::Aging,    // 6-12 months
+            366..=730 => Self::Stale,    // 1-2 years
+            _ => Self::Abandoned,        // >2 years
         }
     }
 
     /// Get display label
     pub fn label(&self) -> &'static str {
         match self {
-            StalenessLevel::Fresh => "Fresh",
-            StalenessLevel::Aging => "Aging",
-            StalenessLevel::Stale => "Stale",
-            StalenessLevel::Abandoned => "Abandoned",
-            StalenessLevel::Deprecated => "Deprecated",
-            StalenessLevel::Archived => "Archived",
+            Self::Fresh => "Fresh",
+            Self::Aging => "Aging",
+            Self::Stale => "Stale",
+            Self::Abandoned => "Abandoned",
+            Self::Deprecated => "Deprecated",
+            Self::Archived => "Archived",
         }
     }
 
     /// Get icon for TUI display
     pub fn icon(&self) -> &'static str {
         match self {
-            StalenessLevel::Fresh => "✓",
-            StalenessLevel::Aging => "⏳",
-            StalenessLevel::Stale => "⚠",
-            StalenessLevel::Abandoned => "⛔",
-            StalenessLevel::Deprecated => "⊘",
-            StalenessLevel::Archived => "📦",
+            Self::Fresh => "✓",
+            Self::Aging => "⏳",
+            Self::Stale => "⚠",
+            Self::Abandoned => "⛔",
+            Self::Deprecated => "⊘",
+            Self::Archived => "📦",
         }
     }
 
     /// Get severity weight (higher = worse)
     pub fn severity(&self) -> u8 {
         match self {
-            StalenessLevel::Fresh => 0,
-            StalenessLevel::Aging => 1,
-            StalenessLevel::Stale => 2,
-            StalenessLevel::Abandoned => 3,
-            StalenessLevel::Deprecated => 4,
-            StalenessLevel::Archived => 4,
+            Self::Fresh => 0,
+            Self::Aging => 1,
+            Self::Stale => 2,
+            Self::Abandoned => 3,
+            Self::Deprecated => 4,
+            Self::Archived => 4,
         }
     }
 }

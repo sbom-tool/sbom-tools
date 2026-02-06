@@ -189,8 +189,8 @@ fn render_tabs(frame: &mut Frame, area: Rect, app: &ViewApp) {
             };
 
             Line::from(vec![
-                Span::styled(format!("[{}]", key), key_style),
-                Span::styled(format!(" {} ", title), title_style),
+                Span::styled(format!("[{key}]"), key_style),
+                Span::styled(format!(" {title} "), title_style),
             ])
         })
         .collect();
@@ -398,7 +398,7 @@ fn render_help_overlay(frame: &mut Frame, area: Rect) {
         Line::from(vec![
             Span::styled("  PgUp/PgDown    ", Style::default().fg(colors().accent)),
             Span::styled(
-                "Page up/down (10 items)",
+                "Page up/down (page)",
                 Style::default().fg(colors().text),
             ),
         ]),
@@ -562,9 +562,9 @@ fn render_search_overlay(frame: &mut Frame, area: Rect, app: &ViewApp) {
                         ),
                         Span::styled("[C] ", style.fg(colors().primary)),
                         Span::styled(name, style.fg(colors().text)),
-                        Span::styled(format!("@{}", ver), style.fg(colors().text_muted)),
+                        Span::styled(format!("@{ver}"), style.fg(colors().text_muted)),
                         Span::styled(
-                            format!(" (matched: {})", match_field),
+                            format!(" (matched: {match_field})"),
                             style.fg(colors().text_muted),
                         ),
                     ])
@@ -584,9 +584,9 @@ fn render_search_overlay(frame: &mut Frame, area: Rect, app: &ViewApp) {
                         ),
                         Span::styled("[V] ", style.fg(colors().high)),
                         Span::styled(id, style.fg(sev_color).bold()),
-                        Span::styled(format!(" [{}]", sev), style.fg(sev_color)),
+                        Span::styled(format!(" [{sev}]"), style.fg(sev_color)),
                         Span::styled(
-                            format!(" in {}", component_name),
+                            format!(" in {component_name}"),
                             style.fg(colors().text_muted),
                         ),
                     ])

@@ -507,10 +507,10 @@ impl ReportGenerator for SideBySideReporter {
             out.push_str(&self.format_section_header("Vulnerabilities"));
 
             for (comp, vuln) in vulns {
-                let severity: String = vuln
+                let severity = vuln
                     .severity
                     .as_ref()
-                    .map(|s| s.to_string())
+                    .map(std::string::ToString::to_string)
                     .unwrap_or_else(|| "Unknown".to_string());
                 out.push_str(&self.format_vulnerability_row(&vuln.id, &severity, &comp.name, true));
             }

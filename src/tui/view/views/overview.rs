@@ -179,14 +179,14 @@ fn render_vuln_breakdown(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
         let scheme = colors();
 
         lines.push(Line::from(vec![
-            Span::styled(format!("{:>10} ", label), Style::default().fg(color).bold()),
+            Span::styled(format!("{label:>10} "), Style::default().fg(color).bold()),
             Span::styled("█".repeat(filled), Style::default().fg(color)),
             Span::styled(
                 "░".repeat(bar_width - filled),
                 Style::default().fg(scheme.muted),
             ),
             Span::styled(
-                format!(" {:>5} ({:>2}%)", count, pct),
+                format!(" {count:>5} ({pct:>2}%)"),
                 Style::default().fg(scheme.text),
             ),
         ]));
@@ -243,7 +243,7 @@ fn render_ecosystem_dist(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
                 Style::default().fg(scheme.muted),
             ),
             Span::styled(
-                format!(" {:>5} ({:>2}%)", count, pct),
+                format!(" {count:>5} ({pct:>2}%)"),
                 Style::default().fg(scheme.text),
             ),
         ]));
@@ -257,7 +257,7 @@ fn render_ecosystem_dist(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
                 Style::default().fg(scheme.muted),
             ),
             Span::styled(
-                format!("{} more", remaining),
+                format!("{remaining} more"),
                 Style::default().fg(scheme.muted),
             ),
         ]));
@@ -446,6 +446,6 @@ impl ComponentExt for crate::model::Component {
                 };
                 order(a).cmp(&order(b))
             })
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
     }
 }

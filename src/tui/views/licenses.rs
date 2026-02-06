@@ -2,6 +2,7 @@
 
 use crate::tui::app::{App, AppMode, LicenseGroupBy, LicenseRiskFilter, LicenseSort};
 use crate::tui::license_conflicts::{ConflictDetector, ConflictSeverity};
+use crate::tui::state::ListNavigation;
 use crate::tui::license_utils::{
     analyze_license_compatibility, LicenseCategory, LicenseInfo, LicenseStats, RiskLevel,
     SpdxExpression,
@@ -14,7 +15,7 @@ use ratatui::{
 };
 use std::collections::HashMap;
 
-pub fn render_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
+pub(crate) fn render_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(3), Constraint::Min(5)])
@@ -70,7 +71,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
     let mut spans = vec![
         Span::styled("Group: ", Style::default().fg(scheme.text_muted)),
         Span::styled(
-            format!(" {} ", group_label),
+            format!(" {group_label} "),
             Style::default()
                 .fg(scheme.badge_fg_dark)
                 .bg(scheme.primary)
@@ -82,7 +83,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
         Span::styled("  │  ", Style::default().fg(scheme.border)),
         Span::styled("Risk: ", Style::default().fg(scheme.text_muted)),
         Span::styled(
-            format!(" {} ", risk_filter_label),
+            format!(" {risk_filter_label} "),
             Style::default()
                 .fg(scheme.badge_fg_dark)
                 .bg(if app.tabs.licenses.risk_filter.is_some() {
@@ -95,7 +96,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
         Span::styled("  │  ", Style::default().fg(scheme.border)),
         Span::styled("Compat: ", Style::default().fg(scheme.text_muted)),
         Span::styled(
-            format!(" {} ", compat_label),
+            format!(" {compat_label} "),
             Style::default()
                 .fg(scheme.badge_fg_dark)
                 .bg(if app.tabs.licenses.show_compatibility {
@@ -117,7 +118,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
         spans.push(Span::styled("  │  ", Style::default().fg(scheme.border)));
         spans.push(Span::styled("Focus: ", Style::default().fg(scheme.text_muted)));
         spans.push(Span::styled(
-            format!(" {} ", focus_label),
+            format!(" {focus_label} "),
             Style::default()
                 .fg(scheme.badge_fg_dark)
                 .bg(if app.tabs.licenses.focus_left {
@@ -325,13 +326,7 @@ fn render_compatibility_panel(frame: &mut Frame, area: Rect, app: &App) {
 
     for cat in category_order {
         if let Some(licenses) = report.categories.get(&cat) {
-            let cat_color = match cat {
-                LicenseCategory::Permissive | LicenseCategory::PublicDomain => scheme.success,
-                LicenseCategory::WeakCopyleft => scheme.info,
-                LicenseCategory::StrongCopyleft => scheme.warning,
-                LicenseCategory::NetworkCopyleft | LicenseCategory::Proprietary => scheme.error,
-                LicenseCategory::Unknown => scheme.text_muted,
-            };
+            let cat_color = crate::tui::shared::licenses::category_color(&cat);
 
             lines.push(Line::from(vec![
                 Span::styled("  • ", Style::default().fg(scheme.text_muted)),
@@ -363,7 +358,7 @@ fn render_compatibility_panel(frame: &mut Frame, area: Rect, app: &App) {
             };
 
             lines.push(Line::from(vec![
-                Span::styled(format!("  {} ", icon), Style::default().fg(color)),
+                Span::styled(format!("  {icon} "), Style::default().fg(color)),
                 Span::raw(widgets::truncate_str(&issue.message, area.width as usize - 6)),
             ]));
         }
@@ -420,7 +415,7 @@ fn render_compatibility_panel(frame: &mut Frame, area: Rect, app: &App) {
             };
 
             lines.push(Line::from(vec![
-                Span::styled(format!("  {} ", icon), Style::default().fg(color)),
+                Span::styled(format!("  {icon} "), Style::default().fg(color)),
                 Span::styled(
                     format!("{} + {}", conflict.license_a, conflict.license_b),
                     Style::default().fg(color).bold(),
@@ -650,17 +645,7 @@ fn render_license_table(
             let rows: Vec<Row> = licenses
                 .iter()
                 .map(|entry| {
-                    let cat_color = match entry.category {
-                        LicenseCategory::Permissive | LicenseCategory::PublicDomain => {
-                            scheme.success
-                        }
-                        LicenseCategory::WeakCopyleft => scheme.info,
-                        LicenseCategory::StrongCopyleft => scheme.warning,
-                        LicenseCategory::NetworkCopyleft | LicenseCategory::Proprietary => {
-                            scheme.error
-                        }
-                        LicenseCategory::Unknown => scheme.text_muted,
-                    };
+                    let cat_color = crate::tui::shared::licenses::category_color(&entry.category);
 
                     let license_display = if entry.is_dual_licensed {
                         format!("{} ⊕", widgets::truncate_str(&entry.license, 18))
@@ -722,139 +707,44 @@ fn render_license_details(
     let scheme = colors();
 
     let Some(entry) = entry else {
-        let empty = Paragraph::new(vec![
-            Line::from(""),
-            Line::styled(
-                "Select a license to view details",
-                Style::default().fg(scheme.text_muted),
-            ),
-        ])
-        .block(
-            Block::default()
-                .title(" License Details ")
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(scheme.border)),
-        )
-        .alignment(Alignment::Center);
-
-        frame.render_widget(empty, area);
+        crate::tui::shared::components::render_empty_detail_panel(
+            frame,
+            area,
+            " License Details ",
+            "",
+            "Select a license to view details",
+            &[],
+            false,
+        );
         return;
     };
 
-    let mut lines = vec![];
-
-    // License name with dual-license indicator
-    let title = if entry.is_dual_licensed {
-        format!("{} (Dual/Multi License)", entry.license)
-    } else {
-        entry.license.clone()
-    };
-
-    lines.push(Line::from(vec![Span::styled(
-        title,
-        Style::default().fg(scheme.text).bold(),
-    )]));
-
-    lines.push(Line::from(""));
-
-    // Status badge
+    // Status badge (diff-specific, before metadata)
     let (status_text, status_color) = if is_new {
         ("+ NEW LICENSE", scheme.added)
     } else {
         ("- REMOVED LICENSE", scheme.removed)
     };
 
-    lines.push(Line::from(vec![Span::styled(
+    let mut lines = vec![Line::from(vec![Span::styled(
         status_text,
         Style::default().fg(status_color).bold(),
-    )]));
+    )])];
 
-    lines.push(Line::from(""));
-
-    // Category and Risk in a row
-    let cat_color = match entry.category {
-        LicenseCategory::Permissive | LicenseCategory::PublicDomain => scheme.success,
-        LicenseCategory::WeakCopyleft => scheme.info,
-        LicenseCategory::StrongCopyleft => scheme.warning,
-        LicenseCategory::NetworkCopyleft | LicenseCategory::Proprietary => scheme.error,
-        LicenseCategory::Unknown => scheme.text_muted,
-    };
-
-    let risk_color = match entry.risk_level {
-        RiskLevel::Low => scheme.success,
-        RiskLevel::Medium => scheme.info,
-        RiskLevel::High => scheme.warning,
-        RiskLevel::Critical => scheme.error,
-    };
-
-    lines.push(Line::from(vec![
-        Span::styled("Category: ", Style::default().fg(scheme.text_muted)),
-        Span::styled(entry.category.as_str(), Style::default().fg(cat_color).bold()),
-        Span::raw("  "),
-        Span::styled("Risk: ", Style::default().fg(scheme.text_muted)),
-        Span::styled(
-            entry.risk_level.as_str(),
-            Style::default().fg(risk_color).bold(),
-        ),
-    ]));
-
-    // Family
-    lines.push(Line::from(vec![
-        Span::styled("Family: ", Style::default().fg(scheme.text_muted)),
-        Span::styled(&entry.family, Style::default().fg(scheme.accent)),
-    ]));
-
-    // Component count
-    lines.push(Line::from(vec![
-        Span::styled("Components: ", Style::default().fg(scheme.text_muted)),
-        Span::styled(
-            entry.components.len().to_string(),
-            Style::default().fg(scheme.primary),
-        ),
-    ]));
-
-    lines.push(Line::from(""));
-
-    // License characteristics
-    let info = LicenseInfo::from_spdx(&entry.license);
-
-    lines.push(Line::styled(
-        "Characteristics:",
-        Style::default().fg(scheme.primary).bold(),
+    lines.extend(crate::tui::shared::licenses::render_license_metadata_lines(
+        &entry.license,
+        &entry.category,
+        &entry.risk_level,
+        &entry.family,
+        entry.components.len(),
+        entry.is_dual_licensed,
     ));
 
-    let characteristics = [
-        ("Commercial use", true),
-        ("Modification", true),
-        ("Distribution", true),
-        ("Patent grant", info.patent_grant),
-        ("Source disclosure", !info.requires_source_disclosure),
-        ("Copyleft", !info.same_license_for_derivatives),
-    ];
+    lines.push(Line::from(""));
 
-    for (desc, allowed) in characteristics {
-        let (icon, color) = if allowed {
-            ("✓", scheme.success)
-        } else {
-            ("✗", scheme.error)
-        };
-        lines.push(Line::from(vec![
-            Span::styled(format!("  {} ", icon), Style::default().fg(color)),
-            Span::raw(desc),
-        ]));
-    }
-
-    // Special warnings
-    if info.network_copyleft {
-        lines.push(Line::from(""));
-        lines.push(Line::from(vec![
-            Span::styled("⚠ ", Style::default().fg(scheme.warning)),
-            Span::styled(
-                "Network copyleft (AGPL-style)",
-                Style::default().fg(scheme.warning),
-            ),
-        ]));
-    }
+    lines.extend(crate::tui::shared::licenses::render_license_characteristics_lines(
+        &entry.license,
+    ));
 
     lines.push(Line::from(""));
 
@@ -1022,20 +912,9 @@ fn render_view_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
     let rows: Vec<Row> = licenses
         .iter()
         .map(|entry| {
-            let cat_color = match entry.category {
-                LicenseCategory::Permissive | LicenseCategory::PublicDomain => scheme.success,
-                LicenseCategory::WeakCopyleft => scheme.info,
-                LicenseCategory::StrongCopyleft => scheme.warning,
-                LicenseCategory::NetworkCopyleft | LicenseCategory::Proprietary => scheme.error,
-                LicenseCategory::Unknown => scheme.text_muted,
-            };
+            let cat_color = crate::tui::shared::licenses::category_color(&entry.category);
 
-            let risk_color = match entry.risk_level {
-                RiskLevel::Low => scheme.success,
-                RiskLevel::Medium => scheme.info,
-                RiskLevel::High => scheme.warning,
-                RiskLevel::Critical => scheme.error,
-            };
+            let risk_color = crate::tui::shared::licenses::risk_level_color(&entry.risk_level);
 
             let license_display = if entry.is_dual_licensed {
                 format!("{} ⊕", widgets::truncate_str(&entry.license, 28))
@@ -1155,13 +1034,7 @@ fn render_view_stats_panel(frame: &mut Frame, area: Rect, licenses: &[LicenseEnt
         let bar_width = (area.width as usize).saturating_sub(25);
         let filled = (bar_width as f64 * (*count as f64 / total)) as usize;
 
-        let cat_color = match cat {
-            LicenseCategory::Permissive | LicenseCategory::PublicDomain => scheme.success,
-            LicenseCategory::WeakCopyleft => scheme.info,
-            LicenseCategory::StrongCopyleft => scheme.warning,
-            LicenseCategory::NetworkCopyleft | LicenseCategory::Proprietary => scheme.error,
-            LicenseCategory::Unknown => scheme.text_muted,
-        };
+        let cat_color = crate::tui::shared::licenses::category_color(cat);
 
         lines.push(Line::from(vec![
             Span::styled(
@@ -1177,7 +1050,7 @@ fn render_view_stats_panel(frame: &mut Frame, area: Rect, licenses: &[LicenseEnt
                 Style::default().fg(scheme.border),
             ),
             Span::styled(
-                format!(" {}%", pct),
+                format!(" {pct}%"),
                 Style::default().fg(scheme.text_muted),
             ),
         ]));
@@ -1202,7 +1075,7 @@ fn render_view_stats_panel(frame: &mut Frame, area: Rect, licenses: &[LicenseEnt
         lines.push(Line::from(vec![
             Span::styled("  • ", Style::default().fg(scheme.text_muted)),
             Span::styled(risk.as_str(), Style::default().fg(risk_color)),
-            Span::styled(format!(": {}", count), Style::default().fg(scheme.text)),
+            Span::styled(format!(": {count}"), Style::default().fg(scheme.text)),
         ]));
     }
 
@@ -1237,125 +1110,32 @@ fn render_view_license_details(frame: &mut Frame, area: Rect, entry: Option<&Lic
     let scheme = colors();
 
     let Some(entry) = entry else {
-        let empty = Paragraph::new(vec![
-            Line::from(""),
-            Line::styled(
-                "Select a license to view details",
-                Style::default().fg(scheme.text_muted),
-            ),
-        ])
-        .block(
-            Block::default()
-                .title(" License Details ")
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(scheme.border)),
-        )
-        .alignment(Alignment::Center);
-
-        frame.render_widget(empty, area);
+        crate::tui::shared::components::render_empty_detail_panel(
+            frame,
+            area,
+            " License Details ",
+            "",
+            "Select a license to view details",
+            &[],
+            false,
+        );
         return;
     };
 
-    let mut lines = vec![];
-
-    // License name with dual-license indicator
-    let title = if entry.is_dual_licensed {
-        format!("{} (Dual/Multi License)", entry.license)
-    } else {
-        entry.license.clone()
-    };
-
-    lines.push(Line::from(vec![Span::styled(
-        title,
-        Style::default().fg(scheme.text).bold(),
-    )]));
+    let mut lines = crate::tui::shared::licenses::render_license_metadata_lines(
+        &entry.license,
+        &entry.category,
+        &entry.risk_level,
+        &entry.family,
+        entry.components.len(),
+        entry.is_dual_licensed,
+    );
 
     lines.push(Line::from(""));
 
-    // Category and Risk
-    let cat_color = match entry.category {
-        LicenseCategory::Permissive | LicenseCategory::PublicDomain => scheme.success,
-        LicenseCategory::WeakCopyleft => scheme.info,
-        LicenseCategory::StrongCopyleft => scheme.warning,
-        LicenseCategory::NetworkCopyleft | LicenseCategory::Proprietary => scheme.error,
-        LicenseCategory::Unknown => scheme.text_muted,
-    };
-
-    let risk_color = match entry.risk_level {
-        RiskLevel::Low => scheme.success,
-        RiskLevel::Medium => scheme.info,
-        RiskLevel::High => scheme.warning,
-        RiskLevel::Critical => scheme.error,
-    };
-
-    lines.push(Line::from(vec![
-        Span::styled("Category: ", Style::default().fg(scheme.text_muted)),
-        Span::styled(entry.category.as_str(), Style::default().fg(cat_color).bold()),
-    ]));
-
-    lines.push(Line::from(vec![
-        Span::styled("Risk: ", Style::default().fg(scheme.text_muted)),
-        Span::styled(
-            entry.risk_level.as_str(),
-            Style::default().fg(risk_color).bold(),
-        ),
-    ]));
-
-    lines.push(Line::from(vec![
-        Span::styled("Family: ", Style::default().fg(scheme.text_muted)),
-        Span::styled(&entry.family, Style::default().fg(scheme.accent)),
-    ]));
-
-    lines.push(Line::from(vec![
-        Span::styled("Components: ", Style::default().fg(scheme.text_muted)),
-        Span::styled(
-            entry.components.len().to_string(),
-            Style::default().fg(scheme.primary),
-        ),
-    ]));
-
-    lines.push(Line::from(""));
-
-    // License characteristics
-    let info = LicenseInfo::from_spdx(&entry.license);
-
-    lines.push(Line::styled(
-        "Characteristics:",
-        Style::default().fg(scheme.primary).bold(),
+    lines.extend(crate::tui::shared::licenses::render_license_characteristics_lines(
+        &entry.license,
     ));
-
-    let characteristics = [
-        ("Commercial use", true),
-        ("Modification", true),
-        ("Distribution", true),
-        ("Patent grant", info.patent_grant),
-        ("Source disclosure", !info.requires_source_disclosure),
-        ("Copyleft", !info.same_license_for_derivatives),
-    ];
-
-    for (desc, allowed) in characteristics {
-        let (icon, color) = if allowed {
-            ("✓", scheme.success)
-        } else {
-            ("✗", scheme.error)
-        };
-        lines.push(Line::from(vec![
-            Span::styled(format!("  {} ", icon), Style::default().fg(color)),
-            Span::raw(desc),
-        ]));
-    }
-
-    // Special warnings
-    if info.network_copyleft {
-        lines.push(Line::from(""));
-        lines.push(Line::from(vec![
-            Span::styled("⚠ ", Style::default().fg(scheme.warning)),
-            Span::styled(
-                "Network copyleft (AGPL-style)",
-                Style::default().fg(scheme.warning),
-            ),
-        ]));
-    }
 
     lines.push(Line::from(""));
 
@@ -1393,42 +1173,6 @@ fn render_view_license_details(frame: &mut Frame, area: Rect, entry: Option<&Lic
 }
 
 /// Categorize a license by type (legacy function for compatibility)
-pub fn categorize_license(license: &str) -> String {
+pub(crate) fn categorize_license(license: &str) -> String {
     LicenseInfo::from_spdx(license).category.as_str().to_string()
-}
-
-/// Get license characteristics based on category (legacy function for compatibility)
-pub fn get_license_characteristics(license: &str) -> Vec<(&'static str, bool)> {
-    let info = LicenseInfo::from_spdx(license);
-
-    match info.category {
-        LicenseCategory::Permissive | LicenseCategory::PublicDomain => vec![
-            ("Commercial use allowed", true),
-            ("Modification allowed", true),
-            ("Distribution allowed", true),
-            ("Patent grant", info.patent_grant),
-            ("Copyleft/Share-alike", false),
-        ],
-        LicenseCategory::StrongCopyleft | LicenseCategory::NetworkCopyleft => vec![
-            ("Commercial use allowed", true),
-            ("Modification allowed", true),
-            ("Distribution allowed", true),
-            ("Copyleft/Share-alike", true),
-            ("Derivative work must be open", true),
-        ],
-        LicenseCategory::WeakCopyleft => vec![
-            ("Commercial use allowed", true),
-            ("Modification allowed", true),
-            ("Distribution allowed", true),
-            ("Copyleft/Share-alike", true),
-            ("Linking allowed", true),
-        ],
-        LicenseCategory::Proprietary => vec![
-            ("Commercial use allowed", false),
-            ("Modification allowed", false),
-            ("Distribution allowed", false),
-            ("Source access", false),
-        ],
-        LicenseCategory::Unknown => vec![("License terms unknown", false)],
-    }
 }

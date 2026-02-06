@@ -139,7 +139,7 @@ impl ScoreStats {
         let min = sorted[0];
         let max = sorted[sorted.len() - 1];
         let mean = scores.iter().sum::<f64>() / scores.len() as f64;
-        let median = if sorted.len().is_multiple_of(2) {
+        let median = if sorted.len() % 2 == 0 {
             (sorted[sorted.len() / 2 - 1] + sorted[sorted.len() / 2]) / 2.0
         } else {
             sorted[sorted.len() / 2]
@@ -394,14 +394,14 @@ impl AdaptiveMatching for FuzzyMatcher {
         new_sbom: &NormalizedSbom,
         base_config: FuzzyMatchConfig,
     ) -> (FuzzyMatcher, AdaptiveThresholdResult) {
-        let base_matcher = FuzzyMatcher::new(base_config.clone());
+        let base_matcher = Self::new(base_config.clone());
         let adjuster = AdaptiveThreshold::default();
         let result = adjuster.compute_threshold(old_sbom, new_sbom, &base_matcher);
 
         // Create new matcher with adapted threshold
         let mut adapted_config = base_config;
         adapted_config.threshold = result.threshold;
-        let adapted_matcher = FuzzyMatcher::new(adapted_config);
+        let adapted_matcher = Self::new(adapted_config);
 
         (adapted_matcher, result)
     }

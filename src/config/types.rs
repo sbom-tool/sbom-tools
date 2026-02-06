@@ -59,6 +59,7 @@ impl AppConfig {
 
 /// Builder for constructing AppConfig with fluent API.
 #[derive(Debug, Default)]
+#[must_use]
 pub struct AppConfigBuilder {
     config: AppConfig,
 }

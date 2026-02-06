@@ -20,14 +20,14 @@ impl OutputTarget {
     /// Create output target from optional path
     pub fn from_option(path: Option<PathBuf>) -> Self {
         match path {
-            Some(p) => OutputTarget::File(p),
-            None => OutputTarget::Stdout,
+            Some(p) => Self::File(p),
+            None => Self::Stdout,
         }
     }
 
     /// Check if output is to a terminal
     pub fn is_terminal(&self) -> bool {
-        matches!(self, OutputTarget::Stdout) && std::io::stdout().is_terminal()
+        matches!(self, Self::Stdout) && std::io::stdout().is_terminal()
     }
 }
 
@@ -57,12 +57,12 @@ pub fn should_use_color(no_color_flag: bool) -> bool {
 pub fn write_output(content: &str, target: &OutputTarget, quiet: bool) -> Result<()> {
     match target {
         OutputTarget::Stdout => {
-            println!("{}", content);
+            println!("{content}");
             Ok(())
         }
         OutputTarget::File(path) => {
             std::fs::write(path, content)
-                .with_context(|| format!("Failed to write output to {:?}", path))?;
+                .with_context(|| format!("Failed to write output to {path:?}"))?;
             if !quiet {
                 tracing::info!("Report written to {:?}", path);
             }

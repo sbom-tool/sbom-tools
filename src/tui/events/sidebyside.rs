@@ -68,12 +68,12 @@ pub(super) fn handle_sidebyside_keys(app: &mut App, key: KeyEvent) {
         KeyCode::Char('n') | KeyCode::Char(']') => {
             app.tabs.side_by_side.next_change();
             let pos = app.tabs.side_by_side.change_position();
-            app.set_status_message(format!("Change {}", pos));
+            app.set_status_message(format!("Change {pos}"));
         }
         KeyCode::Char('N') | KeyCode::Char('[') => {
             app.tabs.side_by_side.prev_change();
             let pos = app.tabs.side_by_side.change_position();
-            app.set_status_message(format!("Change {}", pos));
+            app.set_status_message(format!("Change {pos}"));
         }
 
         // Filter toggles
@@ -141,7 +141,7 @@ pub(super) fn handle_sidebyside_search_input(app: &mut App, key: KeyEvent) {
             app.tabs.side_by_side.confirm_search();
             if !app.tabs.side_by_side.search_matches.is_empty() {
                 let pos = app.tabs.side_by_side.match_position();
-                app.set_status_message(format!("Match {}", pos));
+                app.set_status_message(format!("Match {pos}"));
             }
         }
         KeyCode::Backspace => {

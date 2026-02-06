@@ -15,7 +15,7 @@ use ratatui::{
 
 /// An aligned row for side-by-side comparison
 #[derive(Debug, Clone)]
-pub struct AlignedRow {
+pub(crate) struct AlignedRow {
     /// Left side component (old SBOM)
     pub left_name: Option<String>,
     pub left_version: Option<String>,
@@ -30,20 +30,20 @@ pub struct AlignedRow {
 
 /// Inline diff span for character-level highlighting
 #[derive(Debug, Clone)]
-pub struct DiffSpan {
+pub(crate) struct DiffSpan {
     pub text: String,
     pub style: DiffSpanStyle,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DiffSpanStyle {
+pub(crate) enum DiffSpanStyle {
     Unchanged,
     Removed,
     Added,
 }
 
 /// Render side-by-side diff view
-pub fn render_sidebyside(frame: &mut Frame, area: Rect, app: &mut App) {
+pub(crate) fn render_sidebyside(frame: &mut Frame, area: Rect, app: &mut App) {
     match app.mode {
         AppMode::Diff => render_diff_sidebyside(frame, area, app),
         AppMode::View => render_view_placeholder(frame, area),
@@ -223,7 +223,7 @@ fn render_aligned_mode(frame: &mut Frame, area: Rect, app: &mut App) {
 
     let left_panel = Paragraph::new(left_lines).block(
         Block::default()
-            .title(format!(" {} (Old) ", old_name))
+            .title(format!(" {old_name} (Old) "))
             .title_style(Style::default().fg(scheme.removed).bold())
             .borders(Borders::ALL)
             .border_style(left_border_style),
@@ -242,7 +242,7 @@ fn render_aligned_mode(frame: &mut Frame, area: Rect, app: &mut App) {
 
     let right_panel = Paragraph::new(right_lines).block(
         Block::default()
-            .title(format!(" {} (New) ", new_name))
+            .title(format!(" {new_name} (New) "))
             .title_style(Style::default().fg(scheme.added).bold())
             .borders(Borders::ALL)
             .border_style(right_border_style),
@@ -466,7 +466,7 @@ fn highlight_search_matches<'a>(
 }
 
 /// Compute inline diff between two version strings
-pub fn compute_inline_diff(old: &str, new: &str) -> (Vec<DiffSpan>, Vec<DiffSpan>) {
+pub(crate) fn compute_inline_diff(old: &str, new: &str) -> (Vec<DiffSpan>, Vec<DiffSpan>) {
     if old == new {
         return (
             vec![DiffSpan {
@@ -736,7 +736,7 @@ fn render_old_panel(frame: &mut Frame, area: Rect, app: &App, name: &str, focuse
                 lines.push(Line::from(vec![
                     Span::styled("- ", Style::default().fg(scheme.removed).bold()),
                     Span::styled(&comp.name, Style::default().fg(scheme.removed)),
-                    Span::styled(format!(" {}", version), Style::default().fg(scheme.muted)),
+                    Span::styled(format!(" {version}"), Style::default().fg(scheme.muted)),
                 ]));
             }
             lines.push(Line::raw(""));
@@ -813,7 +813,7 @@ fn render_old_panel(frame: &mut Frame, area: Rect, app: &App, name: &str, focuse
     let panel = Paragraph::new(lines)
         .block(
             Block::default()
-                .title(format!(" {} (Old){} ", name, title_suffix))
+                .title(format!(" {name} (Old){title_suffix} "))
                 .title_style(Style::default().fg(scheme.removed).bold())
                 .borders(Borders::ALL)
                 .border_style(border_style),
@@ -858,7 +858,7 @@ fn render_new_panel(frame: &mut Frame, area: Rect, app: &App, name: &str, focuse
                 lines.push(Line::from(vec![
                     Span::styled("+ ", Style::default().fg(scheme.added).bold()),
                     Span::styled(&comp.name, Style::default().fg(scheme.added)),
-                    Span::styled(format!(" {}", version), Style::default().fg(scheme.muted)),
+                    Span::styled(format!(" {version}"), Style::default().fg(scheme.muted)),
                 ]));
             }
             lines.push(Line::raw(""));
@@ -935,7 +935,7 @@ fn render_new_panel(frame: &mut Frame, area: Rect, app: &App, name: &str, focuse
     let panel = Paragraph::new(lines)
         .block(
             Block::default()
-                .title(format!(" {} (New){} ", name, title_suffix))
+                .title(format!(" {name} (New){title_suffix} "))
                 .title_style(Style::default().fg(scheme.added).bold())
                 .borders(Borders::ALL)
                 .border_style(border_style),
@@ -1000,7 +1000,7 @@ fn render_with_search_input(frame: &mut Frame, area: Rect, app: &mut App) {
         String::new()
     };
 
-    let search_text = format!("/{}{}", query, match_info);
+    let search_text = format!("/{query}{match_info}");
     let search_input = Paragraph::new(search_text)
         .style(Style::default().fg(scheme.text))
         .block(

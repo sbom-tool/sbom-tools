@@ -90,7 +90,7 @@ pub fn apply_view_filters(sbom: &mut NormalizedSbom, config: &ViewConfig) -> usi
                 let comp_eco = comp
                     .ecosystem
                     .as_ref()
-                    .map(|e| format!("{:?}", e).to_lowercase())
+                    .map(|e| format!("{e:?}").to_lowercase())
                     .unwrap_or_default();
                 if !comp_eco.contains(eco_filter) {
                     return Some(key.clone());

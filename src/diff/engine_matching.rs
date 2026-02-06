@@ -64,12 +64,10 @@ pub fn match_components(
     // Phase 1: Exact matches by canonical ID (fast, highest priority)
     for old_id in old.components.keys() {
         if new.components.contains_key(old_id) {
-            result.matches.insert(old_id.clone(), Some(old_id.clone()));
-            // Exact matches get score 1.0
-            result
-                .pairs
-                .insert((old_id.clone(), old_id.clone()), 1.0);
-            used_new_ids.insert(old_id.clone());
+            let id = old_id.clone();
+            result.pairs.insert((id.clone(), id.clone()), 1.0);
+            result.matches.insert(id.clone(), Some(id.clone()));
+            used_new_ids.insert(id);
         }
     }
 
@@ -116,8 +114,8 @@ pub fn match_components(
     // Apply assignment results
     for (old_id, new_id, score) in assignment {
         if !used_new_ids.contains(&new_id) {
-            result.matches.insert(old_id.clone(), Some(new_id.clone()));
-            result.pairs.insert((old_id, new_id.clone()), score);
+            result.pairs.insert((old_id.clone(), new_id.clone()), score);
+            result.matches.insert(old_id, Some(new_id.clone()));
             used_new_ids.insert(new_id);
         }
     }
@@ -240,9 +238,9 @@ fn match_with_component_index(
 
     // Build ecosystem index for cross-ecosystem lookups
     let new_by_ecosystem: HashMap<_, Vec<_>> = if cross_eco_db.is_some() {
-        let mut map: HashMap<_, Vec<_>> = HashMap::new();
+        let mut map: HashMap<crate::model::Ecosystem, Vec<_>> = HashMap::new();
         for (id, comp) in &new.components {
-            if let Some(ref eco) = comp.ecosystem {
+            if let Some(eco) = &comp.ecosystem {
                 map.entry(eco.clone()).or_default().push((id.clone(), comp));
             }
         }
@@ -538,9 +536,9 @@ fn greedy_assignment(candidates: &[(CanonicalId, CanonicalId, f64)]) -> Vec<(Can
 
     for (old_id, new_id, score) in sorted {
         if !used_old.contains(&old_id) && !used_new.contains(&new_id) {
-            result.push((old_id.clone(), new_id.clone(), score));
-            used_old.insert(old_id);
-            used_new.insert(new_id);
+            used_old.insert(old_id.clone());
+            used_new.insert(new_id.clone());
+            result.push((old_id, new_id, score));
         }
     }
 

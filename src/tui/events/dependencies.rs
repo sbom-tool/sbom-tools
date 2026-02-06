@@ -1,5 +1,6 @@
 //! Dependencies tab event handlers.
 
+use crate::tui::state::ListNavigation;
 use crate::tui::{App, AppMode};
 use crossterm::event::{KeyCode, KeyEvent};
 

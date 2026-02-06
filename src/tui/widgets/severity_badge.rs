@@ -5,26 +5,14 @@ use ratatui::{prelude::*, widgets::Widget};
 
 /// A styled badge showing vulnerability severity.
 #[derive(Debug, Clone)]
-pub struct SeverityBadge {
+pub(crate) struct SeverityBadge {
     severity: String,
     compact: bool,
 }
 
 impl SeverityBadge {
-    pub fn new(severity: impl Into<String>) -> Self {
-        Self {
-            severity: severity.into(),
-            compact: false,
-        }
-    }
-
-    pub fn compact(mut self) -> Self {
-        self.compact = true;
-        self
-    }
-
     /// Get the style for a severity level (uses theme colors).
-    pub fn style_for(severity: &str) -> Style {
+    pub(crate) fn style_for(severity: &str) -> Style {
         let scheme = colors();
         let bg_color = scheme.severity_color(severity);
         let fg_color = scheme.severity_badge_fg(severity);
@@ -37,12 +25,12 @@ impl SeverityBadge {
     }
 
     /// Get just the foreground color for a severity level (uses theme colors).
-    pub fn fg_color(severity: &str) -> Color {
+    pub(crate) fn fg_color(severity: &str) -> Color {
         colors().severity_color(severity)
     }
 
     /// Get a single-char indicator for severity.
-    pub fn indicator(severity: &str) -> &'static str {
+    pub(crate) fn indicator(severity: &str) -> &'static str {
         match severity.to_lowercase().as_str() {
             "critical" => "C",
             "high" => "H",
@@ -55,16 +43,6 @@ impl SeverityBadge {
         }
     }
 
-    /// Convert to a Span for inline use.
-    pub fn to_span(&self) -> Span<'static> {
-        let text = if self.compact {
-            format!(" {} ", Self::indicator(&self.severity))
-        } else {
-            format!(" {} ", self.severity.to_uppercase())
-        };
-
-        Span::styled(text, Self::style_for(&self.severity))
-    }
 }
 
 impl Widget for SeverityBadge {
@@ -78,7 +56,7 @@ impl Widget for SeverityBadge {
         } else {
             let label = self.severity.to_uppercase();
             if area.width as usize >= label.len() + 2 {
-                format!(" {} ", label)
+                format!(" {label} ")
             } else {
                 format!(" {} ", Self::indicator(&self.severity))
             }
@@ -99,7 +77,7 @@ impl Widget for SeverityBadge {
 }
 
 /// Render a severity distribution bar.
-pub struct SeverityBar {
+pub(crate) struct SeverityBar {
     pub critical: usize,
     pub high: usize,
     pub medium: usize,
@@ -107,7 +85,7 @@ pub struct SeverityBar {
 }
 
 impl SeverityBar {
-    pub fn new(critical: usize, high: usize, medium: usize, low: usize) -> Self {
+    pub(crate) fn new(critical: usize, high: usize, medium: usize, low: usize) -> Self {
         Self {
             critical,
             high,
@@ -116,7 +94,7 @@ impl SeverityBar {
         }
     }
 
-    pub fn total(&self) -> usize {
+    pub(crate) fn total(&self) -> usize {
         self.critical + self.high + self.medium + self.low
     }
 }

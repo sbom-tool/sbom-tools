@@ -69,22 +69,21 @@ impl AliasTable {
         self.alias_to_canonical
             .insert(canonical_lower.clone(), canonical_lower.clone());
 
-        // Initialize alias set if needed
-        self.canonical_to_aliases
+        // Initialize alias set and insert canonical name
+        let alias_set = self
+            .canonical_to_aliases
             .entry(canonical_lower.clone())
-            .or_default()
-            .insert(canonical_lower.clone());
+            .or_default();
+        alias_set.insert(canonical_lower.clone());
 
         // Add all aliases
         for alias in aliases {
             let alias_lower = alias.to_lowercase();
             self.alias_to_canonical
                 .insert(alias_lower.clone(), canonical_lower.clone());
-            // Use entry API to avoid unwrap - entry was created above but this is safer
-            self.canonical_to_aliases
-                .entry(canonical_lower.clone())
-                .or_default()
-                .insert(alias_lower);
+            if let Some(set) = self.canonical_to_aliases.get_mut(&canonical_lower) {
+                set.insert(alias_lower);
+            }
         }
     }
 
@@ -114,7 +113,7 @@ impl AliasTable {
     pub fn load_json(&mut self, json: &str) -> Result<(), serde_json::Error> {
         let entries: Vec<AliasEntry> = serde_json::from_str(json)?;
         for entry in entries {
-            let aliases: Vec<&str> = entry.aliases.iter().map(|s| s.as_str()).collect();
+            let aliases: Vec<&str> = entry.aliases.iter().map(std::string::String::as_str).collect();
             self.add_aliases(&entry.canonical, &aliases);
         }
         Ok(())

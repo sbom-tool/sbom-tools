@@ -34,6 +34,7 @@ impl CraPhase {
 
 /// Compliance level/profile
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum ComplianceLevel {
     /// Minimum viable SBOM (basic identification)
     Minimum,
@@ -79,7 +80,7 @@ impl ComplianceLevel {
     }
 
     /// Get all compliance levels
-    pub fn all() -> &'static [ComplianceLevel] {
+    pub fn all() -> &'static [Self] {
         &[
             Self::Minimum,
             Self::Standard,
@@ -349,8 +350,7 @@ impl ComplianceChecker {
                                 severity: ViolationSeverity::Warning,
                                 category: ViolationCategory::DocumentMetadata,
                                 message: format!(
-                                    "[CRA Art. 13(15)] Manufacturer email '{}' appears invalid",
-                                    email
+                                    "[CRA Art. 13(15)] Manufacturer email '{email}' appears invalid"
                                 ),
                                 element: None,
                                 requirement: "CRA Art. 13(15): Valid contact information".to_string(),
@@ -952,8 +952,7 @@ impl ComplianceChecker {
                 severity: ViolationSeverity::Info,
                 category: ViolationCategory::FormatSpecific,
                 message: format!(
-                    "CycloneDX {} is outdated, consider upgrading to 1.5+",
-                    version
+                    "CycloneDX {version} is outdated, consider upgrading to 1.5+"
                 ),
                 element: None,
                 requirement: "Current CycloneDX version".to_string(),
@@ -984,7 +983,7 @@ impl ComplianceChecker {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::FormatSpecific,
-                message: format!("Unknown SPDX version: {}", version),
+                message: format!("Unknown SPDX version: {version}"),
                 element: None,
                 requirement: "Valid SPDX version".to_string(),
             });

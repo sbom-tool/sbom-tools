@@ -14,7 +14,7 @@ use ratatui::{
 };
 
 /// Render the multi-diff dashboard
-pub fn render_multi_dashboard(
+pub(crate) fn render_multi_dashboard(
     f: &mut Frame,
     area: Rect,
     result: &MultiDiffResult,

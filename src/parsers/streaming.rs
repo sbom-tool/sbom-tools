@@ -179,7 +179,7 @@ impl StreamingParser {
     /// Parse a file and return an iterator of events
     pub fn parse_file(&self, path: &Path) -> Result<StreamingIterator, ParseError> {
         let file = std::fs::File::open(path)
-            .map_err(|e| ParseError::IoError(format!("Failed to open file: {}", e)))?;
+            .map_err(|e| ParseError::IoError(format!("Failed to open file: {e}")))?;
 
         let total_bytes = file.metadata().map(|m| m.len()).ok();
         let reader = BufReader::with_capacity(self.config.chunk_size, file);
@@ -367,7 +367,7 @@ impl StreamingIterator {
                 if component_index < components.len() {
                     let comp = components[component_index].clone();
                     self.progress.components_parsed += 1;
-                    if self.progress.components_parsed.is_multiple_of(100) {
+                    if self.progress.components_parsed % 100 == 0 {
                         self.report_progress();
                     }
                     self.state = StreamingState::Emitting {
@@ -420,7 +420,7 @@ impl Iterator for StreamingIterator {
 /// progress reporting and memory allocation.
 pub fn estimate_component_count(path: &Path) -> Result<ComponentEstimate, ParseError> {
     let file = std::fs::File::open(path)
-        .map_err(|e| ParseError::IoError(format!("Failed to open file: {}", e)))?;
+        .map_err(|e| ParseError::IoError(format!("Failed to open file: {e}")))?;
 
     let file_size = file.metadata().map(|m| m.len()).unwrap_or(0);
 

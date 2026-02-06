@@ -5,5 +5,8 @@
 //! delegate to common code.
 
 pub mod compliance;
+pub mod components;
+pub mod licenses;
 pub mod quality;
 pub mod source;
+pub mod vulnerabilities;

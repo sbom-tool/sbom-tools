@@ -27,22 +27,22 @@ impl ConfigPreset {
     /// Get the preset name as a string.
     pub fn name(&self) -> &'static str {
         match self {
-            ConfigPreset::Default => "default",
-            ConfigPreset::Security => "security",
-            ConfigPreset::CiCd => "ci-cd",
-            ConfigPreset::Permissive => "permissive",
-            ConfigPreset::Strict => "strict",
+            Self::Default => "default",
+            Self::Security => "security",
+            Self::CiCd => "ci-cd",
+            Self::Permissive => "permissive",
+            Self::Strict => "strict",
         }
     }
 
     /// Parse a preset from a string name.
     pub fn from_name(name: &str) -> Option<Self> {
         match name.to_lowercase().as_str() {
-            "default" | "balanced" => Some(ConfigPreset::Default),
-            "security" | "security-focused" => Some(ConfigPreset::Security),
-            "ci-cd" | "ci" | "cd" | "pipeline" => Some(ConfigPreset::CiCd),
-            "permissive" | "loose" => Some(ConfigPreset::Permissive),
-            "strict" | "exact" => Some(ConfigPreset::Strict),
+            "default" | "balanced" => Some(Self::Default),
+            "security" | "security-focused" => Some(Self::Security),
+            "ci-cd" | "ci" | "cd" | "pipeline" => Some(Self::CiCd),
+            "permissive" | "loose" => Some(Self::Permissive),
+            "strict" | "exact" => Some(Self::Strict),
             _ => None,
         }
     }
@@ -50,24 +50,24 @@ impl ConfigPreset {
     /// Get a description of this preset.
     pub fn description(&self) -> &'static str {
         match self {
-            ConfigPreset::Default => "Balanced settings suitable for most SBOM comparisons",
-            ConfigPreset::Security => {
+            Self::Default => "Balanced settings suitable for most SBOM comparisons",
+            Self::Security => {
                 "Strict matching with vulnerability detection and CI failure modes"
             }
-            ConfigPreset::CiCd => "Machine-readable output optimized for CI/CD pipelines",
-            ConfigPreset::Permissive => "Loose matching for SBOMs with inconsistent naming",
-            ConfigPreset::Strict => "Exact matching for well-maintained, consistent SBOMs",
+            Self::CiCd => "Machine-readable output optimized for CI/CD pipelines",
+            Self::Permissive => "Loose matching for SBOMs with inconsistent naming",
+            Self::Strict => "Exact matching for well-maintained, consistent SBOMs",
         }
     }
 
     /// Get all available presets.
-    pub fn all() -> &'static [ConfigPreset] {
+    pub fn all() -> &'static [Self] {
         &[
-            ConfigPreset::Default,
-            ConfigPreset::Security,
-            ConfigPreset::CiCd,
-            ConfigPreset::Permissive,
-            ConfigPreset::Strict,
+            Self::Default,
+            Self::Security,
+            Self::CiCd,
+            Self::Permissive,
+            Self::Strict,
         ]
     }
 }

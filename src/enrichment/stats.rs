@@ -67,7 +67,7 @@ impl EnrichmentStats {
     }
 
     /// Merge stats from another enrichment operation
-    pub fn merge(&mut self, other: &EnrichmentStats) {
+    pub fn merge(&mut self, other: &Self) {
         self.components_queried += other.components_queried;
         self.components_with_vulns += other.components_with_vulns;
         self.total_vulns_found += other.total_vulns_found;
@@ -99,13 +99,13 @@ pub enum EnrichmentError {
 impl fmt::Display for EnrichmentError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            EnrichmentError::ApiError(msg) => write!(f, "API error: {}", msg),
-            EnrichmentError::RateLimitExceeded => write!(f, "Rate limit exceeded"),
-            EnrichmentError::CacheError(msg) => write!(f, "Cache error: {}", msg),
-            EnrichmentError::ParseError(msg) => write!(f, "Parse error: {}", msg),
-            EnrichmentError::Timeout => write!(f, "Request timeout"),
-            EnrichmentError::MissingIdentifiers(name) => {
-                write!(f, "Component '{}' missing identifiers for query", name)
+            Self::ApiError(msg) => write!(f, "API error: {msg}"),
+            Self::RateLimitExceeded => write!(f, "Rate limit exceeded"),
+            Self::CacheError(msg) => write!(f, "Cache error: {msg}"),
+            Self::ParseError(msg) => write!(f, "Parse error: {msg}"),
+            Self::Timeout => write!(f, "Request timeout"),
+            Self::MissingIdentifiers(name) => {
+                write!(f, "Component '{name}' missing identifiers for query")
             }
         }
     }

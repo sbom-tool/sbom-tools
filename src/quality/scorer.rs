@@ -14,6 +14,7 @@ use super::metrics::{
 
 /// Scoring profile determines weights and thresholds
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum ScoringProfile {
     /// Minimal requirements - basic identification
     Minimal,
@@ -103,6 +104,7 @@ struct ScoringWeights {
 
 /// Quality grade based on score
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum QualityGrade {
     /// Excellent: 90-100
     A,
@@ -168,6 +170,7 @@ pub struct Recommendation {
 
 /// Category for recommendations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum RecommendationCategory {
     Completeness,
     Identifiers,
@@ -192,6 +195,7 @@ impl RecommendationCategory {
 
 /// Complete quality report for an SBOM
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[must_use]
 pub struct QualityReport {
     /// Overall score (0-100)
     pub overall_score: f32,

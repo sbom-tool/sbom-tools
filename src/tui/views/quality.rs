@@ -13,7 +13,7 @@ use ratatui::{
     widgets::{Block, Borders, Gauge, Paragraph},
 };
 
-pub fn render_quality(frame: &mut Frame, area: Rect, app: &App) {
+pub(crate) fn render_quality(frame: &mut Frame, area: Rect, app: &App) {
     match app.mode {
         AppMode::Diff => render_diff_quality(frame, area, app),
         AppMode::View => render_view_quality(frame, area, app),
@@ -111,7 +111,7 @@ fn render_empty_gauge(frame: &mut Frame, area: Rect, title: &str) {
     let gauge = Gauge::default()
         .block(
             Block::default()
-                .title(format!(" {} ", title))
+                .title(format!(" {title} "))
                 .title_style(Style::default().fg(scheme.muted))
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(scheme.muted)),
@@ -198,7 +198,7 @@ fn render_metrics_panel_with_explanation(
     let table = ratatui::widgets::Table::new(rows, widths)
         .block(
             Block::default()
-                .title(format!(" {} - Score Factors ", label))
+                .title(format!(" {label} - Score Factors "))
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(scheme.info)),
         )
@@ -237,7 +237,7 @@ fn render_combined_recommendations(
             (
                 "↑",
                 scheme.added,
-                format!("Quality improved by {} points", score_diff),
+                format!("Quality improved by {score_diff} points"),
             )
         } else if score_diff < -5 {
             (
@@ -250,7 +250,7 @@ fn render_combined_recommendations(
         };
 
         lines.push(Line::from(vec![
-            Span::styled(format!(" {} ", icon), Style::default().fg(color).bold()),
+            Span::styled(format!(" {icon} "), Style::default().fg(color).bold()),
             Span::styled(text, Style::default().fg(color)),
         ]));
 
@@ -323,10 +323,10 @@ fn add_change_reasons(lines: &mut Vec<Line>, old: &QualityReport, new: &QualityR
                 ("↓", scheme.removed)
             };
             lines.push(Line::from(vec![
-                Span::styled(format!("   {} ", icon), Style::default().fg(color)),
-                Span::styled(format!("{}: ", name), Style::default().fg(scheme.text)),
+                Span::styled(format!("   {icon} "), Style::default().fg(color)),
+                Span::styled(format!("{name}: "), Style::default().fg(scheme.text)),
                 Span::styled(
-                    format!("{:.0}% → {:.0}%", old_score, new_score),
+                    format!("{old_score:.0}% → {new_score:.0}%"),
                     Style::default().fg(color),
                 ),
             ]));

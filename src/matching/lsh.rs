@@ -111,7 +111,7 @@ pub struct MinHashSignature {
 
 impl MinHashSignature {
     /// Compute the estimated Jaccard similarity between two signatures.
-    pub fn estimated_similarity(&self, other: &MinHashSignature) -> f64 {
+    pub fn estimated_similarity(&self, other: &Self) -> f64 {
         if self.values.len() != other.values.len() {
             return 0.0;
         }
@@ -254,19 +254,19 @@ impl LshIndex {
     /// Get statistics about the index.
     pub fn stats(&self) -> LshIndexStats {
         let total_components = self.signatures.len();
-        let total_buckets: usize = self.buckets.iter().map(|b| b.len()).sum();
+        let total_buckets: usize = self.buckets.iter().map(std::collections::HashMap::len).sum();
         let max_bucket_size = self
             .buckets
             .iter()
             .flat_map(|b| b.values())
-            .map(|v| v.len())
+            .map(std::vec::Vec::len)
             .max()
             .unwrap_or(0);
         let avg_bucket_size = if total_buckets > 0 {
             self.buckets
                 .iter()
                 .flat_map(|b| b.values())
-                .map(|v| v.len())
+                .map(std::vec::Vec::len)
                 .sum::<usize>() as f64
                 / total_buckets as f64
         } else {
@@ -290,7 +290,7 @@ impl LshIndex {
     /// and group tokens to improve candidate grouping.
     fn compute_shingles(&self, component: &Component) -> HashSet<u64> {
         // Get ecosystem for normalization
-        let ecosystem = component.ecosystem.as_ref().map(|e| e.to_string());
+        let ecosystem = component.ecosystem.as_ref().map(std::string::ToString::to_string);
         let ecosystem_str = ecosystem.as_deref();
 
         // Use ComponentIndex's normalization for consistency

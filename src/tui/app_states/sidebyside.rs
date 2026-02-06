@@ -14,16 +14,16 @@ impl AlignmentMode {
     /// Toggle to next mode
     pub fn toggle(&mut self) {
         *self = match self {
-            AlignmentMode::Grouped => AlignmentMode::Aligned,
-            AlignmentMode::Aligned => AlignmentMode::Grouped,
+            Self::Grouped => Self::Aligned,
+            Self::Aligned => Self::Grouped,
         };
     }
 
     /// Get display name
     pub fn name(&self) -> &'static str {
         match self {
-            AlignmentMode::Grouped => "Grouped",
-            AlignmentMode::Aligned => "Aligned",
+            Self::Grouped => "Grouped",
+            Self::Aligned => "Aligned",
         }
     }
 }
@@ -42,16 +42,16 @@ impl ScrollSyncMode {
     /// Toggle to next mode
     pub fn toggle(&mut self) {
         *self = match self {
-            ScrollSyncMode::Independent => ScrollSyncMode::Locked,
-            ScrollSyncMode::Locked => ScrollSyncMode::Independent,
+            Self::Independent => Self::Locked,
+            Self::Locked => Self::Independent,
         };
     }
 
     /// Get display name
     pub fn name(&self) -> &'static str {
         match self {
-            ScrollSyncMode::Independent => "Independent",
-            ScrollSyncMode::Locked => "Locked",
+            Self::Independent => "Independent",
+            Self::Locked => "Locked",
         }
     }
 }
@@ -236,7 +236,7 @@ impl SideBySideState {
 
     /// Page up on currently focused panel
     pub fn page_up(&mut self) {
-        let page_size = 10;
+        let page_size = crate::tui::constants::PAGE_SIZE;
         match self.sync_mode {
             ScrollSyncMode::Independent => {
                 if self.focus_right {
@@ -257,7 +257,7 @@ impl SideBySideState {
 
     /// Page down on currently focused panel
     pub fn page_down(&mut self) {
-        let page_size = 10;
+        let page_size = crate::tui::constants::PAGE_SIZE;
         match self.sync_mode {
             ScrollSyncMode::Independent => {
                 if self.focus_right {

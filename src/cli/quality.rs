@@ -94,8 +94,7 @@ fn parse_scoring_profile(profile_name: &str) -> Result<ScoringProfile> {
         "comprehensive" | "full" => Ok(ScoringProfile::Comprehensive),
         _ => {
             bail!(
-                "Unknown scoring profile: {}. Valid options: minimal, standard, security, license-compliance, cra, comprehensive",
-                profile_name
+                "Unknown scoring profile: {profile_name}. Valid options: minimal, standard, security, license-compliance, cra, comprehensive"
             );
         }
     }

@@ -4,6 +4,7 @@
 //! its key handling to this self-contained view state machine.
 
 use crate::tui::app_states::quality::{QualityState, QualityViewMode};
+use crate::tui::state::ListNavigation;
 use crate::tui::traits::{EventResult, Shortcut, ViewContext, ViewState};
 use crossterm::event::{KeyCode, KeyEvent, MouseEvent};
 
@@ -16,39 +17,29 @@ pub struct QualityView {
 }
 
 impl QualityView {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             inner: QualityState::new(),
         }
     }
 
-    pub fn with_recommendations(total: usize) -> Self {
-        Self {
-            inner: QualityState::with_recommendations(total),
-        }
-    }
-
-    pub fn view_mode(&self) -> QualityViewMode {
+    pub(crate) fn view_mode(&self) -> QualityViewMode {
         self.inner.view_mode
     }
 
-    pub fn selected_recommendation(&self) -> usize {
+    pub(crate) fn selected_recommendation(&self) -> usize {
         self.inner.selected_recommendation
     }
 
-    pub fn set_selected_recommendation(&mut self, idx: usize) {
+    pub(crate) fn set_selected_recommendation(&mut self, idx: usize) {
         self.inner.selected_recommendation = idx;
     }
 
-    pub fn total_recommendations(&self) -> usize {
-        self.inner.total_recommendations
-    }
-
-    pub fn set_total_recommendations(&mut self, total: usize) {
+    pub(crate) fn set_total_recommendations(&mut self, total: usize) {
         self.inner.total_recommendations = total;
     }
 
-    pub fn scroll_offset(&self) -> usize {
+    pub(crate) fn scroll_offset(&self) -> usize {
         self.inner.scroll_offset
     }
 }
@@ -165,7 +156,8 @@ mod tests {
 
     #[test]
     fn test_navigation() {
-        let mut view = QualityView::with_recommendations(5);
+        let mut view = QualityView::new();
+        view.set_total_recommendations(5);
         let mut ctx = make_ctx();
 
         assert_eq!(view.selected_recommendation(), 0);
@@ -189,7 +181,8 @@ mod tests {
 
     #[test]
     fn test_home_end() {
-        let mut view = QualityView::with_recommendations(10);
+        let mut view = QualityView::new();
+        view.set_total_recommendations(10);
         let mut ctx = make_ctx();
 
         // Go to end

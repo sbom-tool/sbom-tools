@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 /// Conflict rule defining an incompatibility
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConflictRule {
+pub(crate) struct ConflictRule {
     /// Pattern to match first license
     pub license_a_pattern: String,
     /// Pattern to match second license
@@ -25,7 +25,7 @@ pub struct ConflictRule {
 
 /// Type of license conflict
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum ConflictType {
+pub(crate) enum ConflictType {
     /// Licenses cannot coexist in same binary
     BinaryIncompatible,
     /// Licenses cannot be combined in same project
@@ -41,18 +41,18 @@ pub enum ConflictType {
 impl std::fmt::Display for ConflictType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ConflictType::BinaryIncompatible => write!(f, "Binary Incompatible"),
-            ConflictType::ProjectIncompatible => write!(f, "Project Incompatible"),
-            ConflictType::NetworkCopyleft => write!(f, "Network Copyleft"),
-            ConflictType::PatentConflict => write!(f, "Patent Conflict"),
-            ConflictType::CopyleftMismatch => write!(f, "Copyleft Mismatch"),
+            Self::BinaryIncompatible => write!(f, "Binary Incompatible"),
+            Self::ProjectIncompatible => write!(f, "Project Incompatible"),
+            Self::NetworkCopyleft => write!(f, "Network Copyleft"),
+            Self::PatentConflict => write!(f, "Patent Conflict"),
+            Self::CopyleftMismatch => write!(f, "Copyleft Mismatch"),
         }
     }
 }
 
 /// Severity of a conflict
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub enum ConflictSeverity {
+pub(crate) enum ConflictSeverity {
     /// Informational - may need review
     Info,
     /// Warning - should address
@@ -64,16 +64,16 @@ pub enum ConflictSeverity {
 impl std::fmt::Display for ConflictSeverity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ConflictSeverity::Info => write!(f, "Info"),
-            ConflictSeverity::Warning => write!(f, "Warning"),
-            ConflictSeverity::Error => write!(f, "Error"),
+            Self::Info => write!(f, "Info"),
+            Self::Warning => write!(f, "Warning"),
+            Self::Error => write!(f, "Error"),
         }
     }
 }
 
 /// A detected license conflict
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DetectedConflict {
+pub(crate) struct DetectedConflict {
     /// The rule that was matched
     pub rule: ConflictRule,
     /// First license involved
@@ -88,7 +88,7 @@ pub struct DetectedConflict {
 
 /// Context in which the conflict occurs
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ConflictContext {
+pub(crate) enum ConflictContext {
     /// In same linked binary
     SameBinary,
     /// In same project/codebase
@@ -100,46 +100,28 @@ pub enum ConflictContext {
 impl std::fmt::Display for ConflictContext {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ConflictContext::SameBinary => write!(f, "Same Binary"),
-            ConflictContext::SameProject => write!(f, "Same Project"),
-            ConflictContext::TransitiveDependency => write!(f, "Transitive Dependency"),
+            Self::SameBinary => write!(f, "Same Binary"),
+            Self::SameProject => write!(f, "Same Project"),
+            Self::TransitiveDependency => write!(f, "Transitive Dependency"),
         }
     }
 }
 
-/// Summary of detected conflicts
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct ConflictSummary {
-    /// Total conflicts
-    pub total_conflicts: usize,
-    /// Conflicts by severity
-    pub by_severity: HashMap<String, usize>,
-    /// Conflicts by type
-    pub by_type: HashMap<String, usize>,
-    /// Has blocking errors
-    pub has_errors: bool,
-}
-
 /// License conflict detector
-pub struct ConflictDetector {
+pub(crate) struct ConflictDetector {
     rules: Vec<ConflictRule>,
 }
 
 impl ConflictDetector {
     /// Create detector with default rules
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             rules: Self::default_rules(),
         }
     }
 
-    /// Create with custom rules
-    pub fn with_rules(rules: Vec<ConflictRule>) -> Self {
-        Self { rules }
-    }
-
     /// Get default conflict rules
-    pub fn default_rules() -> Vec<ConflictRule> {
+    pub(crate) fn default_rules() -> Vec<ConflictRule> {
         vec![
             // GPL + Proprietary
             ConflictRule {
@@ -263,7 +245,7 @@ impl ConflictDetector {
     }
 
     /// Detect conflicts in a set of licenses
-    pub fn detect_conflicts(
+    pub(crate) fn detect_conflicts(
         &self,
         license_map: &HashMap<String, Vec<String>>, // license -> components
     ) -> Vec<DetectedConflict> {
@@ -319,32 +301,6 @@ impl ConflictDetector {
         conflicts
     }
 
-    /// Generate summary of conflicts
-    pub fn summarize(&self, conflicts: &[DetectedConflict]) -> ConflictSummary {
-        let mut by_severity: HashMap<String, usize> = HashMap::new();
-        let mut by_type: HashMap<String, usize> = HashMap::new();
-        let mut has_errors = false;
-
-        for conflict in conflicts {
-            *by_severity
-                .entry(conflict.rule.severity.to_string())
-                .or_insert(0) += 1;
-            *by_type
-                .entry(conflict.rule.conflict_type.to_string())
-                .or_insert(0) += 1;
-
-            if conflict.rule.severity == ConflictSeverity::Error {
-                has_errors = true;
-            }
-        }
-
-        ConflictSummary {
-            total_conflicts: conflicts.len(),
-            by_severity,
-            by_type,
-            has_errors,
-        }
-    }
 }
 
 impl Default for ConflictDetector {
@@ -414,19 +370,4 @@ mod tests {
         assert!(conflicts.is_empty());
     }
 
-    #[test]
-    fn test_conflict_summary() {
-        let detector = ConflictDetector::new();
-
-        let mut license_map = HashMap::new();
-        license_map.insert("GPL-3.0".to_string(), vec!["dep1".to_string()]);
-        license_map.insert("Proprietary".to_string(), vec!["main".to_string()]);
-        license_map.insert("AGPL-3.0".to_string(), vec!["dep2".to_string()]);
-
-        let conflicts = detector.detect_conflicts(&license_map);
-        let summary = detector.summarize(&conflicts);
-
-        assert!(summary.total_conflicts > 0);
-        assert!(summary.has_errors);
-    }
 }

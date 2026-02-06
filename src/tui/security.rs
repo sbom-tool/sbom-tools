@@ -6,7 +6,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 /// Component compliance data: (name, version, licenses, vulns\[(id, severity)\]).
-pub type ComplianceComponentData = (String, Option<String>, Vec<String>, Vec<(String, String)>);
+pub(crate) type ComplianceComponentData = (String, Option<String>, Vec<String>, Vec<(String, String)>);
 
 /// Blast radius analysis result for a component
 #[derive(Debug, Clone, Default)]
@@ -24,21 +24,6 @@ pub struct BlastRadius {
 }
 
 impl BlastRadius {
-    /// Total number of affected components
-    pub fn total_affected(&self) -> usize {
-        self.transitive_dependents.len()
-    }
-
-    /// Compute blast radius impact description
-    pub fn impact_description(&self) -> &'static str {
-        match self.transitive_dependents.len() {
-            0 => "No downstream impact",
-            1..=5 => "Limited impact",
-            6..=20 => "Moderate impact",
-            21..=50 => "Significant impact",
-            _ => "Critical impact - affects many components",
-        }
-    }
 }
 
 /// Risk level for a component
@@ -51,25 +36,6 @@ pub enum RiskLevel {
     Critical,
 }
 
-impl RiskLevel {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            RiskLevel::Low => "Low",
-            RiskLevel::Medium => "Medium",
-            RiskLevel::High => "High",
-            RiskLevel::Critical => "Critical",
-        }
-    }
-
-    pub fn symbol(&self) -> &'static str {
-        match self {
-            RiskLevel::Low => "○",
-            RiskLevel::Medium => "◐",
-            RiskLevel::High => "●",
-            RiskLevel::Critical => "◉",
-        }
-    }
-}
 
 /// Risk indicators for a component
 #[derive(Debug, Clone, Default)]
@@ -94,61 +60,6 @@ pub struct RiskIndicators {
     pub risk_level: RiskLevel,
 }
 
-impl RiskIndicators {
-    /// Calculate risk score based on various factors
-    pub fn calculate_risk_score(&mut self) {
-        let mut score: u32 = 0;
-
-        // Vulnerability contribution (0-40 points)
-        score += match self.vuln_count {
-            0 => 0,
-            1 => 15,
-            2..=5 => 25,
-            _ => 40,
-        };
-
-        // Severity contribution (0-30 points)
-        if let Some(ref sev) = self.highest_severity {
-            let sev_lower = sev.to_lowercase();
-            score += if sev_lower.contains("critical") {
-                30
-            } else if sev_lower.contains("high") {
-                20
-            } else if sev_lower.contains("medium") {
-                10
-            } else {
-                5
-            };
-        }
-
-        // Blast radius contribution (0-20 points)
-        score += match self.transitive_dependent_count {
-            0 => 0,
-            1..=5 => 5,
-            6..=20 => 10,
-            21..=50 => 15,
-            _ => 20,
-        };
-
-        // License risk contribution (0-10 points)
-        score += match self.license_risk {
-            LicenseRisk::None => 0,
-            LicenseRisk::Low => 2,
-            LicenseRisk::Medium => 5,
-            LicenseRisk::High => 10,
-        };
-
-        self.risk_score = score.min(100) as u8;
-
-        // Determine risk level
-        self.risk_level = match self.risk_score {
-            0..=25 => RiskLevel::Low,
-            26..=50 => RiskLevel::Medium,
-            51..=75 => RiskLevel::High,
-            _ => RiskLevel::Critical,
-        };
-    }
-}
 
 /// License risk level
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -161,7 +72,7 @@ pub enum LicenseRisk {
 }
 
 impl LicenseRisk {
-    pub fn from_license(license: &str) -> Self {
+    pub(crate) fn from_license(license: &str) -> Self {
         let lower = license.to_lowercase();
 
         if lower.contains("unlicense")
@@ -171,22 +82,22 @@ impl LicenseRisk {
             || lower.contains("isc")
             || lower.contains("cc0")
         {
-            LicenseRisk::Low
+            Self::Low
         } else if lower.contains("lgpl") || lower.contains("mpl") || lower.contains("cddl") {
-            LicenseRisk::Medium
+            Self::Medium
         } else if lower.contains("gpl") || lower.contains("agpl") || lower.contains("unknown") {
-            LicenseRisk::High
+            Self::High
         } else {
-            LicenseRisk::None
+            Self::None
         }
     }
 
-    pub fn as_str(&self) -> &'static str {
+    pub(crate) fn as_str(&self) -> &'static str {
         match self {
-            LicenseRisk::None => "Unknown",
-            LicenseRisk::Low => "Permissive",
-            LicenseRisk::Medium => "Weak Copyleft",
-            LicenseRisk::High => "Copyleft/Unknown",
+            Self::None => "Unknown",
+            Self::Low => "Permissive",
+            Self::Medium => "Weak Copyleft",
+            Self::High => "Copyleft/Unknown",
         }
     }
 }
@@ -218,73 +129,12 @@ pub struct SecurityAnalysisCache {
 }
 
 impl SecurityAnalysisCache {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::default()
     }
 
-    /// Compute blast radius for a component using reverse dependency graph
-    pub fn compute_blast_radius(
-        &mut self,
-        component_id: &str,
-        reverse_graph: &HashMap<String, Vec<String>>,
-    ) -> &BlastRadius {
-        if self.blast_radius_cache.contains_key(component_id) {
-            return &self.blast_radius_cache[component_id];
-        }
-
-        let mut blast = BlastRadius::default();
-
-        // Direct dependents
-        if let Some(direct) = reverse_graph.get(component_id) {
-            blast.direct_dependents = direct.clone();
-        }
-
-        // BFS to find all transitive dependents
-        let mut visited: HashSet<String> = HashSet::new();
-        let mut queue: VecDeque<(String, usize)> = VecDeque::new();
-        let mut max_depth = 0usize;
-
-        // Start with direct dependents
-        for dep in &blast.direct_dependents {
-            queue.push_back((dep.clone(), 1));
-        }
-
-        while let Some((node, depth)) = queue.pop_front() {
-            if visited.contains(&node) {
-                continue;
-            }
-            visited.insert(node.clone());
-            blast.transitive_dependents.insert(node.clone());
-            max_depth = max_depth.max(depth);
-
-            // Add this node's dependents
-            if let Some(dependents) = reverse_graph.get(&node) {
-                for dep in dependents {
-                    if !visited.contains(dep) {
-                        queue.push_back((dep.clone(), depth + 1));
-                    }
-                }
-            }
-        }
-
-        blast.max_depth = max_depth;
-
-        // Determine risk level based on blast radius
-        blast.risk_level = match blast.transitive_dependents.len() {
-            0 => RiskLevel::Low,
-            1..=5 => RiskLevel::Low,
-            6..=20 => RiskLevel::Medium,
-            21..=50 => RiskLevel::High,
-            _ => RiskLevel::Critical,
-        };
-
-        self.blast_radius_cache
-            .insert(component_id.to_string(), blast);
-        &self.blast_radius_cache[component_id]
-    }
-
     /// Flag a component for follow-up
-    pub fn flag_component(&mut self, component_id: &str, reason: &str) {
+    pub(crate) fn flag_component(&mut self, component_id: &str, reason: &str) {
         if !self.flagged_set.contains(component_id) {
             self.flagged_items.push(FlaggedItem {
                 component_id: component_id.to_string(),
@@ -297,14 +147,14 @@ impl SecurityAnalysisCache {
     }
 
     /// Unflag a component
-    pub fn unflag_component(&mut self, component_id: &str) {
+    pub(crate) fn unflag_component(&mut self, component_id: &str) {
         self.flagged_items
             .retain(|item| item.component_id != component_id);
         self.flagged_set.remove(component_id);
     }
 
     /// Toggle flag status
-    pub fn toggle_flag(&mut self, component_id: &str, reason: &str) {
+    pub(crate) fn toggle_flag(&mut self, component_id: &str, reason: &str) {
         if self.flagged_set.contains(component_id) {
             self.unflag_component(component_id);
         } else {
@@ -313,12 +163,12 @@ impl SecurityAnalysisCache {
     }
 
     /// Check if a component is flagged
-    pub fn is_flagged(&self, component_id: &str) -> bool {
+    pub(crate) fn is_flagged(&self, component_id: &str) -> bool {
         self.flagged_set.contains(component_id)
     }
 
     /// Add note to a flagged component
-    pub fn add_note(&mut self, component_id: &str, note: &str) {
+    pub(crate) fn add_note(&mut self, component_id: &str, note: &str) {
         for item in &mut self.flagged_items {
             if item.component_id == component_id {
                 item.note = Some(note.to_string());
@@ -327,20 +177,8 @@ impl SecurityAnalysisCache {
         }
     }
 
-    /// Clear all caches
-    pub fn clear(&mut self) {
-        self.blast_radius_cache.clear();
-        self.risk_indicators_cache.clear();
-    }
-
-    /// Invalidate cache for a specific component
-    pub fn invalidate(&mut self, component_id: &str) {
-        self.blast_radius_cache.remove(component_id);
-        self.risk_indicators_cache.remove(component_id);
-    }
-
     /// Get note for a flagged component
-    pub fn get_note(&self, component_id: &str) -> Option<&str> {
+    pub(crate) fn get_note(&self, component_id: &str) -> Option<&str> {
         self.flagged_items
             .iter()
             .find(|item| item.component_id == component_id)
@@ -352,57 +190,8 @@ impl SecurityAnalysisCache {
 // Vulnerability Prioritization
 // ============================================================================
 
-/// Vulnerability priority information for sorting
-#[derive(Debug, Clone)]
-pub struct VulnPriority {
-    /// Parsed CVSS score (0.0-10.0)
-    pub cvss_score: f32,
-    /// Severity level as numeric value (for sorting)
-    pub severity_rank: u8,
-    /// Fix urgency score (0-100)
-    pub fix_urgency: u8,
-    /// Blast radius of affected component
-    pub blast_radius: usize,
-    /// Whether this is a known exploited vulnerability
-    pub is_known_exploited: bool,
-}
-
-impl Default for VulnPriority {
-    fn default() -> Self {
-        Self {
-            cvss_score: 0.0,
-            severity_rank: 0,
-            fix_urgency: 0,
-            blast_radius: 0,
-            is_known_exploited: false,
-        }
-    }
-}
-
-/// Parse CVSS score from a string (e.g., "9.8", "CVSS:3.1/AV:N/AC:L/...")
-pub fn parse_cvss_score(score_str: &str) -> f32 {
-    // Try direct float parse first
-    if let Ok(score) = score_str.parse::<f32>() {
-        return score.clamp(0.0, 10.0);
-    }
-
-    // Try to extract from CVSS vector string
-    if score_str.contains("CVSS:") {
-        // Look for base score at the end or extract from metrics
-        // Common format: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" (no score)
-        // or with score appended
-        if let Some(last_part) = score_str.split('/').next_back() {
-            if let Ok(score) = last_part.parse::<f32>() {
-                return score.clamp(0.0, 10.0);
-            }
-        }
-    }
-
-    0.0
-}
-
 /// Convert severity string to numeric rank for sorting
-pub fn severity_to_rank(severity: &str) -> u8 {
+pub(crate) fn severity_to_rank(severity: &str) -> u8 {
     let s = severity.to_lowercase();
     if s.contains("critical") {
         4
@@ -418,7 +207,7 @@ pub fn severity_to_rank(severity: &str) -> u8 {
 }
 
 /// Calculate fix urgency score (0-100) based on severity and blast radius
-pub fn calculate_fix_urgency(severity_rank: u8, blast_radius: usize, cvss_score: f32) -> u8 {
+pub(crate) fn calculate_fix_urgency(severity_rank: u8, blast_radius: usize, cvss_score: f32) -> u8 {
     // Base score from severity (0-40)
     let severity_score = (severity_rank as u32) * 10;
 
@@ -436,33 +225,13 @@ pub fn calculate_fix_urgency(severity_rank: u8, blast_radius: usize, cvss_score:
     (severity_score + cvss_contribution + blast_score).min(100) as u8
 }
 
-/// Check if a vulnerability ID might be a known exploited vulnerability (KEV)
-/// This is a heuristic - real KEV checking would need an API call
-pub fn is_likely_known_exploited(vuln_id: &str, severity: &str) -> bool {
-    // Critical CVEs with certain patterns are more likely to be exploited
-    let is_critical = severity.to_lowercase().contains("critical");
-    let is_recent_cve = vuln_id.starts_with("CVE-202"); // 2020+
-
-    // Known high-profile vulnerabilities (simplified check)
-    let known_patterns = [
-        "CVE-2021-44228", // Log4Shell
-        "CVE-2021-45046", // Log4j
-        "CVE-2022-22965", // Spring4Shell
-        "CVE-2023-44487", // HTTP/2 Rapid Reset
-        "CVE-2024-3094",  // XZ Utils
-    ];
-
-    known_patterns.iter().any(|p| vuln_id.contains(p))
-        || (is_critical && is_recent_cve)
-}
-
 // ============================================================================
 // Version Downgrade Detection
 // ============================================================================
 
 /// Result of version comparison for downgrade detection
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum VersionChange {
+pub(crate) enum VersionChange {
     /// Version increased (normal upgrade)
     Upgrade,
     /// Version decreased (potential attack)
@@ -474,7 +243,7 @@ pub enum VersionChange {
 }
 
 /// Detect if a version change is a downgrade (potential supply chain attack)
-pub fn detect_version_downgrade(old_version: &str, new_version: &str) -> VersionChange {
+pub(crate) fn detect_version_downgrade(old_version: &str, new_version: &str) -> VersionChange {
     if old_version == new_version {
         return VersionChange::NoChange;
     }
@@ -532,17 +301,8 @@ fn parse_version_parts(version: &str) -> Option<Vec<u32>> {
     }
 }
 
-/// Check if a component change represents a security concern
-#[derive(Debug, Clone)]
-pub struct DowngradeWarning {
-    pub component_name: String,
-    pub old_version: String,
-    pub new_version: String,
-    pub severity: DowngradeSeverity,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DowngradeSeverity {
+pub(crate) enum DowngradeSeverity {
     /// Minor version downgrade (e.g., 1.2.3 -> 1.2.2)
     Minor,
     /// Major version downgrade (e.g., 2.0.0 -> 1.9.0)
@@ -551,18 +311,8 @@ pub enum DowngradeSeverity {
     Suspicious,
 }
 
-impl DowngradeSeverity {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Self::Minor => "Minor Downgrade",
-            Self::Major => "Major Downgrade",
-            Self::Suspicious => "Suspicious",
-        }
-    }
-}
-
 /// Analyze a version change for downgrade severity
-pub fn analyze_downgrade(old_version: &str, new_version: &str) -> Option<DowngradeSeverity> {
+pub(crate) fn analyze_downgrade(old_version: &str, new_version: &str) -> Option<DowngradeSeverity> {
     if detect_version_downgrade(old_version, new_version) != VersionChange::Downgrade {
         return None;
     }
@@ -601,19 +351,19 @@ fn sanitize_vuln_id(id: &str) -> String {
 }
 
 /// Format a CVE ID as a URL for opening in browser
-pub fn cve_url(cve_id: &str) -> String {
+pub(crate) fn cve_url(cve_id: &str) -> String {
     let safe_id = sanitize_vuln_id(cve_id);
     if safe_id.to_uppercase().starts_with("CVE-") {
         format!("https://nvd.nist.gov/vuln/detail/{}", safe_id.to_uppercase())
     } else if safe_id.to_uppercase().starts_with("GHSA-") {
         format!("https://github.com/advisories/{}", safe_id.to_uppercase())
     } else if safe_id.starts_with("RUSTSEC-") {
-        format!("https://rustsec.org/advisories/{}", safe_id)
+        format!("https://rustsec.org/advisories/{safe_id}")
     } else if safe_id.starts_with("PYSEC-") {
-        format!("https://osv.dev/vulnerability/{}", safe_id)
+        format!("https://osv.dev/vulnerability/{safe_id}")
     } else {
         // Generic OSV lookup
-        format!("https://osv.dev/vulnerability/{}", safe_id)
+        format!("https://osv.dev/vulnerability/{safe_id}")
     }
 }
 
@@ -633,7 +383,7 @@ fn is_safe_url(url: &str) -> bool {
 }
 
 /// Open a URL in the default browser
-pub fn open_in_browser(url: &str) -> Result<(), String> {
+pub(crate) fn open_in_browser(url: &str) -> Result<(), String> {
     if !is_safe_url(url) {
         return Err("URL contains unsafe characters".to_string());
     }
@@ -643,7 +393,7 @@ pub fn open_in_browser(url: &str) -> Result<(), String> {
         std::process::Command::new("open")
             .arg(url)
             .spawn()
-            .map_err(|e| format!("Failed to open browser: {}", e))?;
+            .map_err(|e| format!("Failed to open browser: {e}"))?;
     }
 
     #[cfg(target_os = "linux")]
@@ -670,23 +420,23 @@ pub fn open_in_browser(url: &str) -> Result<(), String> {
 }
 
 /// Copy text to system clipboard
-pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
+pub(crate) fn copy_to_clipboard(text: &str) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
         use std::io::Write;
         let mut child = std::process::Command::new("pbcopy")
             .stdin(std::process::Stdio::piped())
             .spawn()
-            .map_err(|e| format!("Failed to copy to clipboard: {}", e))?;
+            .map_err(|e| format!("Failed to copy to clipboard: {e}"))?;
 
         if let Some(stdin) = child.stdin.as_mut() {
             stdin
                 .write_all(text.as_bytes())
-                .map_err(|e| format!("Failed to write to clipboard: {}", e))?;
+                .map_err(|e| format!("Failed to write to clipboard: {e}"))?;
         }
         child
             .wait()
-            .map_err(|e| format!("Clipboard command failed: {}", e))?;
+            .map_err(|e| format!("Clipboard command failed: {e}"))?;
     }
 
     #[cfg(target_os = "linux")]
@@ -745,13 +495,9 @@ pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
 
 /// An attack path from an entry point to a vulnerable component
 #[derive(Debug, Clone)]
-pub struct AttackPath {
+pub(crate) struct AttackPath {
     /// The path of component names from entry point to target
     pub path: Vec<String>,
-    /// The entry point (root component)
-    pub entry_point: String,
-    /// The vulnerable component (target)
-    pub target: String,
     /// Path length (number of hops)
     pub depth: usize,
     /// Risk score based on path characteristics
@@ -760,12 +506,12 @@ pub struct AttackPath {
 
 impl AttackPath {
     /// Format the path as a readable string
-    pub fn format(&self) -> String {
+    pub(crate) fn format(&self) -> String {
         self.path.join(" → ")
     }
 
     /// Get a short description of the path
-    pub fn description(&self) -> String {
+    pub(crate) fn description(&self) -> String {
         if self.depth == 1 {
             "Direct dependency".to_string()
         } else {
@@ -775,7 +521,7 @@ impl AttackPath {
 }
 
 /// Find attack paths from root components to a vulnerable component
-pub fn find_attack_paths(
+pub(crate) fn find_attack_paths(
     target: &str,
     forward_graph: &HashMap<String, Vec<String>>,
     root_components: &[String],
@@ -790,8 +536,6 @@ pub fn find_attack_paths(
             // Direct hit - root is the vulnerable component
             paths.push(AttackPath {
                 path: vec![root.clone()],
-                entry_point: root.clone(),
-                target: target.to_string(),
                 depth: 0,
                 risk_score: 100, // Highest risk - direct exposure
             });
@@ -829,8 +573,6 @@ pub fn find_attack_paths(
 
                         paths.push(AttackPath {
                             path: full_path,
-                            entry_point: root.clone(),
-                            target: target.to_string(),
                             depth,
                             risk_score,
                         });
@@ -861,7 +603,7 @@ pub fn find_attack_paths(
 }
 
 /// Identify root components (components with no dependents)
-pub fn find_root_components(
+pub(crate) fn find_root_components(
     all_components: &[String],
     reverse_graph: &HashMap<String, Vec<String>>,
 ) -> Vec<String> {
@@ -870,7 +612,7 @@ pub fn find_root_components(
         .filter(|comp| {
             reverse_graph
                 .get(*comp)
-                .map(|deps| deps.is_empty())
+                .map(std::vec::Vec::is_empty)
                 .unwrap_or(true)
         })
         .cloned()
@@ -883,26 +625,15 @@ pub fn find_root_components(
 
 /// A policy rule for compliance checking
 #[derive(Debug, Clone)]
-pub enum PolicyRule {
+pub(crate) enum PolicyRule {
     /// Ban specific licenses (e.g., GPL in proprietary projects)
     BannedLicense {
         pattern: String,
         reason: String,
     },
-    /// Require specific licenses
-    RequiredLicense {
-        allowed: Vec<String>,
-        reason: String,
-    },
     /// Ban specific components by name pattern
     BannedComponent {
         pattern: String,
-        reason: String,
-    },
-    /// Minimum version requirement for a component
-    MinimumVersion {
-        component_pattern: String,
-        min_version: String,
         reason: String,
     },
     /// No pre-release versions (0.x.x)
@@ -914,35 +645,24 @@ pub enum PolicyRule {
         max_severity: String,
         reason: String,
     },
-    /// Require SBOM completeness (minimum fields)
-    RequireFields {
-        fields: Vec<String>,
-        reason: String,
-    },
 }
 
 impl PolicyRule {
-    pub fn name(&self) -> &'static str {
+    pub(crate) fn name(&self) -> &'static str {
         match self {
-            PolicyRule::BannedLicense { .. } => "Banned License",
-            PolicyRule::RequiredLicense { .. } => "License Allowlist",
-            PolicyRule::BannedComponent { .. } => "Banned Component",
-            PolicyRule::MinimumVersion { .. } => "Minimum Version",
-            PolicyRule::NoPreRelease { .. } => "No Pre-Release",
-            PolicyRule::MaxVulnerabilitySeverity { .. } => "Max Vulnerability Severity",
-            PolicyRule::RequireFields { .. } => "Required Fields",
+            Self::BannedLicense { .. } => "Banned License",
+            Self::BannedComponent { .. } => "Banned Component",
+            Self::NoPreRelease { .. } => "No Pre-Release",
+            Self::MaxVulnerabilitySeverity { .. } => "Max Vulnerability Severity",
         }
     }
 
-    pub fn severity(&self) -> PolicySeverity {
+    pub(crate) fn severity(&self) -> PolicySeverity {
         match self {
-            PolicyRule::BannedLicense { .. } => PolicySeverity::High,
-            PolicyRule::RequiredLicense { .. } => PolicySeverity::Medium,
-            PolicyRule::BannedComponent { .. } => PolicySeverity::Critical,
-            PolicyRule::MinimumVersion { .. } => PolicySeverity::Medium,
-            PolicyRule::NoPreRelease { .. } => PolicySeverity::Low,
-            PolicyRule::MaxVulnerabilitySeverity { .. } => PolicySeverity::High,
-            PolicyRule::RequireFields { .. } => PolicySeverity::Low,
+            Self::BannedLicense { .. } => PolicySeverity::High,
+            Self::BannedComponent { .. } => PolicySeverity::Critical,
+            Self::NoPreRelease { .. } => PolicySeverity::Low,
+            Self::MaxVulnerabilitySeverity { .. } => PolicySeverity::High,
         }
     }
 }
@@ -956,25 +676,6 @@ pub enum PolicySeverity {
     Critical,
 }
 
-impl PolicySeverity {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            PolicySeverity::Low => "Low",
-            PolicySeverity::Medium => "Medium",
-            PolicySeverity::High => "High",
-            PolicySeverity::Critical => "Critical",
-        }
-    }
-
-    pub fn symbol(&self) -> &'static str {
-        match self {
-            PolicySeverity::Low => "○",
-            PolicySeverity::Medium => "◐",
-            PolicySeverity::High => "●",
-            PolicySeverity::Critical => "◉",
-        }
-    }
-}
 
 /// A policy violation
 #[derive(Debug, Clone)]
@@ -993,7 +694,7 @@ pub struct PolicyViolation {
 
 /// Security policy configuration
 #[derive(Debug, Clone, Default)]
-pub struct SecurityPolicy {
+pub(crate) struct SecurityPolicy {
     /// Name of this policy
     pub name: String,
     /// Policy rules
@@ -1002,7 +703,7 @@ pub struct SecurityPolicy {
 
 impl SecurityPolicy {
     /// Create a default enterprise security policy
-    pub fn enterprise_default() -> Self {
+    pub(crate) fn enterprise_default() -> Self {
         Self {
             name: "Enterprise Security Policy".to_string(),
             rules: vec![
@@ -1027,7 +728,7 @@ impl SecurityPolicy {
     }
 
     /// Create a strict security policy
-    pub fn strict() -> Self {
+    pub(crate) fn strict() -> Self {
         Self {
             name: "Strict Security Policy".to_string(),
             rules: vec![
@@ -1059,7 +760,7 @@ impl SecurityPolicy {
     }
 
     /// Create a permissive policy (minimal checks)
-    pub fn permissive() -> Self {
+    pub(crate) fn permissive() -> Self {
         Self {
             name: "Permissive Policy".to_string(),
             rules: vec![PolicyRule::MaxVulnerabilitySeverity {
@@ -1087,32 +788,17 @@ pub struct ComplianceResult {
 
 impl ComplianceResult {
     /// Count violations by severity
-    pub fn count_by_severity(&self, severity: PolicySeverity) -> usize {
+    pub(crate) fn count_by_severity(&self, severity: PolicySeverity) -> usize {
         self.violations
             .iter()
             .filter(|v| v.severity == severity)
             .count()
     }
 
-    /// Get summary of violations
-    pub fn summary(&self) -> String {
-        if self.violations.is_empty() {
-            "All checks passed".to_string()
-        } else {
-            let critical = self.count_by_severity(PolicySeverity::Critical);
-            let high = self.count_by_severity(PolicySeverity::High);
-            let medium = self.count_by_severity(PolicySeverity::Medium);
-            let low = self.count_by_severity(PolicySeverity::Low);
-            format!(
-                "{} critical, {} high, {} medium, {} low",
-                critical, high, medium, low
-            )
-        }
-    }
 }
 
 /// Check compliance of components against a policy
-pub fn check_compliance(
+pub(crate) fn check_compliance(
     policy: &SecurityPolicy,
     components: &[ComplianceComponentData],
 ) -> ComplianceResult {
@@ -1135,36 +821,13 @@ pub fn check_compliance(
                                 severity: rule.severity(),
                                 component: Some(name.clone()),
                                 description: format!(
-                                    "License '{}' matches banned pattern '{}'",
-                                    license, pattern
+                                    "License '{license}' matches banned pattern '{pattern}'"
                                 ),
                                 remediation: format!(
-                                    "Replace with component using permissive license. {}",
-                                    reason
+                                    "Replace with component using permissive license. {reason}"
                                 ),
                             });
                         }
-                    }
-                }
-                PolicyRule::RequiredLicense { allowed, reason } => {
-                    let has_allowed = licenses
-                        .iter()
-                        .any(|l| allowed.iter().any(|a| l.to_uppercase().contains(&a.to_uppercase())));
-                    if !licenses.is_empty() && !has_allowed {
-                        result.violations.push(PolicyViolation {
-                            rule_name: rule.name().to_string(),
-                            severity: rule.severity(),
-                            component: Some(name.clone()),
-                            description: format!(
-                                "License '{}' not in allowed list",
-                                licenses.join(", ")
-                            ),
-                            remediation: format!(
-                                "Use component with allowed license: {}. {}",
-                                allowed.join(", "),
-                                reason
-                            ),
-                        });
                     }
                 }
                 PolicyRule::BannedComponent { pattern, reason } => {
@@ -1174,44 +837,10 @@ pub fn check_compliance(
                             severity: rule.severity(),
                             component: Some(name.clone()),
                             description: format!(
-                                "Component '{}' matches banned pattern '{}'",
-                                name, pattern
+                                "Component '{name}' matches banned pattern '{pattern}'"
                             ),
                             remediation: reason.clone(),
                         });
-                    }
-                }
-                PolicyRule::MinimumVersion {
-                    component_pattern,
-                    min_version,
-                    reason,
-                } => {
-                    if name.to_lowercase().contains(&component_pattern.to_lowercase()) {
-                        if let Some(ver) = version {
-                            if let (Some(current), Some(min)) =
-                                (parse_version_parts(ver), parse_version_parts(min_version))
-                            {
-                                let is_below = current
-                                    .iter()
-                                    .zip(min.iter())
-                                    .any(|(c, m)| c < m);
-                                if is_below {
-                                    result.violations.push(PolicyViolation {
-                                        rule_name: rule.name().to_string(),
-                                        severity: rule.severity(),
-                                        component: Some(name.clone()),
-                                        description: format!(
-                                            "Version '{}' below minimum '{}'",
-                                            ver, min_version
-                                        ),
-                                        remediation: format!(
-                                            "Upgrade to version {} or higher. {}",
-                                            min_version, reason
-                                        ),
-                                    });
-                                }
-                            }
-                        }
                     }
                 }
                 PolicyRule::NoPreRelease { reason } => {
@@ -1222,10 +851,9 @@ pub fn check_compliance(
                                     rule_name: rule.name().to_string(),
                                     severity: rule.severity(),
                                     component: Some(name.clone()),
-                                    description: format!("Pre-release version '{}' (0.x.x)", ver),
+                                    description: format!("Pre-release version '{ver}' (0.x.x)"),
                                     remediation: format!(
-                                        "Upgrade to stable version (1.0+). {}",
-                                        reason
+                                        "Upgrade to stable version (1.0+). {reason}"
                                     ),
                                 });
                             }
@@ -1242,20 +870,14 @@ pub fn check_compliance(
                                 severity: PolicySeverity::Critical,
                                 component: Some(name.clone()),
                                 description: format!(
-                                    "{} has {} severity (max allowed: {})",
-                                    vuln_id, vuln_sev, max_severity
+                                    "{vuln_id} has {vuln_sev} severity (max allowed: {max_severity})"
                                 ),
                                 remediation: format!(
-                                    "Remediate {} or upgrade component. {}",
-                                    vuln_id, reason
+                                    "Remediate {vuln_id} or upgrade component. {reason}"
                                 ),
                             });
                         }
                     }
-                }
-                PolicyRule::RequireFields { .. } => {
-                    // This would check SBOM-level fields, not per-component
-                    // Handled separately
                 }
             }
         }
@@ -1283,32 +905,6 @@ pub fn check_compliance(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_blast_radius_impact_description() {
-        let mut blast = BlastRadius::default();
-        assert_eq!(blast.impact_description(), "No downstream impact");
-
-        blast.transitive_dependents.insert("a".to_string());
-        assert_eq!(blast.impact_description(), "Limited impact");
-
-        for i in 0..25 {
-            blast.transitive_dependents.insert(format!("comp_{}", i));
-        }
-        assert_eq!(blast.impact_description(), "Significant impact");
-    }
-
-    #[test]
-    fn test_risk_indicators_score() {
-        let mut indicators = RiskIndicators::default();
-        indicators.vuln_count = 3;
-        indicators.highest_severity = Some("High".to_string());
-        indicators.transitive_dependent_count = 15;
-        indicators.calculate_risk_score();
-
-        assert!(indicators.risk_score > 0);
-        assert!(indicators.risk_level != RiskLevel::Low);
-    }
 
     #[test]
     fn test_license_risk() {

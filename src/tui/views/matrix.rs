@@ -14,7 +14,7 @@ use ratatui::{
 };
 
 /// Render the matrix comparison view
-pub fn render_matrix(f: &mut Frame, area: Rect, result: &MatrixResult, state: &MatrixState) {
+pub(crate) fn render_matrix(f: &mut Frame, area: Rect, result: &MatrixResult, state: &MatrixState) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -397,7 +397,7 @@ fn render_clustering(f: &mut Frame, area: Rect, result: &MatrixResult, state: &M
             };
 
             lines.push(Line::from(vec![
-                Span::styled(format!("{}: ", cluster_label), label_style),
+                Span::styled(format!("{cluster_label}: "), label_style),
                 Span::styled(members.join(", "), Style::default().fg(scheme.text)),
                 Span::raw(" "),
                 Span::styled(
@@ -728,7 +728,7 @@ fn render_clustering_detail_modal(
                 .label
                 .clone()
                 .unwrap_or(format!("Cluster {}", i + 1));
-            lines.push(Line::from(vec![Span::styled(format!("{}:", label), style)]));
+            lines.push(Line::from(vec![Span::styled(format!("{label}:"), style)]));
             lines.push(Line::from(vec![
                 Span::styled("  Similarity: ", Style::default().fg(scheme.text_muted)),
                 Span::styled(

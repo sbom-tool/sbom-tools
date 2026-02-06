@@ -111,7 +111,7 @@ impl<'w, W: Write> StreamingJsonWriter<'w, W> {
     ) -> Result<(), ReportError> {
         self.write_newline()?;
         self.write_indent()?;
-        self.write_raw(&format!("\"{}\":", key))?;
+        self.write_raw(&format!("\"{key}\":"))?;
         if self.pretty {
             self.write_raw(" ")?;
         }
@@ -142,7 +142,7 @@ impl<'w, W: Write> StreamingJsonWriter<'w, W> {
     fn write_key_array_start(&mut self, key: &str) -> Result<(), ReportError> {
         self.write_newline()?;
         self.write_indent()?;
-        self.write_raw(&format!("\"{}\":", key))?;
+        self.write_raw(&format!("\"{key}\":"))?;
         if self.pretty {
             self.write_raw(" ")?;
         }
@@ -178,7 +178,7 @@ impl<'w, W: Write> StreamingJsonWriter<'w, W> {
         }
 
         self.items_written += 1;
-        if self.items_written.is_multiple_of(self.flush_interval) {
+        if self.items_written % self.flush_interval == 0 {
             self.writer.flush()?;
         }
 
@@ -413,7 +413,7 @@ impl<'w, W: Write> NdjsonWriter<'w, W> {
         self.writer.write_all(b"\n")?;
 
         self.items_written += 1;
-        if self.items_written.is_multiple_of(self.flush_interval) {
+        if self.items_written % self.flush_interval == 0 {
             self.writer.flush()?;
         }
 
@@ -665,7 +665,7 @@ impl WriterReporter for NdjsonReporter {
                 type_: "component",
                 name: &comp.name,
                 version: comp.version.as_deref(),
-                ecosystem: comp.ecosystem.as_ref().map(|e| e.to_string()),
+                ecosystem: comp.ecosystem.as_ref().map(std::string::ToString::to_string),
             };
             ndjson.write_item(&line)?;
         }

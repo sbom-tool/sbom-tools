@@ -21,50 +21,38 @@ pub enum ExportFormat {
 
 impl ExportFormat {
     /// Get file extension for this format
-    pub fn extension(&self) -> &'static str {
+    pub(crate) fn extension(&self) -> &'static str {
         match self {
-            ExportFormat::Json => "json",
-            ExportFormat::Markdown => "md",
-            ExportFormat::Html => "html",
-            ExportFormat::Sarif => "sarif.json",
-            ExportFormat::Csv => "csv",
-        }
-    }
-
-    /// Get human-readable name
-    pub fn name(&self) -> &'static str {
-        match self {
-            ExportFormat::Json => "JSON",
-            ExportFormat::Markdown => "Markdown",
-            ExportFormat::Html => "HTML",
-            ExportFormat::Sarif => "SARIF",
-            ExportFormat::Csv => "CSV",
+            Self::Json => "json",
+            Self::Markdown => "md",
+            Self::Html => "html",
+            Self::Sarif => "sarif.json",
+            Self::Csv => "csv",
         }
     }
 
     /// Convert to report format (where applicable)
     fn to_report_format(self) -> Option<ReportFormat> {
         match self {
-            ExportFormat::Json => Some(ReportFormat::Json),
-            ExportFormat::Markdown => Some(ReportFormat::Markdown),
-            ExportFormat::Html => Some(ReportFormat::Html),
-            ExportFormat::Sarif => Some(ReportFormat::Sarif),
-            ExportFormat::Csv => Some(ReportFormat::Csv),
+            Self::Json => Some(ReportFormat::Json),
+            Self::Markdown => Some(ReportFormat::Markdown),
+            Self::Html => Some(ReportFormat::Html),
+            Self::Sarif => Some(ReportFormat::Sarif),
+            Self::Csv => Some(ReportFormat::Csv),
         }
     }
 }
 
 /// Result of an export operation
 #[derive(Debug)]
-pub struct ExportResult {
+pub(crate) struct ExportResult {
     pub path: PathBuf,
-    pub format: ExportFormat,
     pub success: bool,
     pub message: String,
 }
 
 /// Export diff results to a file
-pub fn export_diff(
+pub(crate) fn export_diff(
     format: ExportFormat,
     result: &DiffResult,
     old_sbom: &NormalizedSbom,
@@ -79,11 +67,10 @@ pub fn export_diff(
     };
 
     if let Some(report_format) = format.to_report_format() {
-        export_with_reporter(format, report_format, result, old_sbom, new_sbom, &path)
+        export_with_reporter(report_format, result, old_sbom, new_sbom, &path)
     } else {
         ExportResult {
             path,
-            format,
             success: false,
             message: "Unsupported format".to_string(),
         }
@@ -91,7 +78,7 @@ pub fn export_diff(
 }
 
 /// Export single SBOM to a file (view mode)
-pub fn export_view(
+pub(crate) fn export_view(
     format: ExportFormat,
     sbom: &NormalizedSbom,
     output_dir: Option<&str>,
@@ -104,11 +91,10 @@ pub fn export_view(
     };
 
     if let Some(report_format) = format.to_report_format() {
-        export_view_with_reporter(format, report_format, sbom, &path)
+        export_view_with_reporter(report_format, sbom, &path)
     } else {
         ExportResult {
             path,
-            format,
             success: false,
             message: "Unsupported format".to_string(),
         }
@@ -116,7 +102,6 @@ pub fn export_view(
 }
 
 fn export_with_reporter(
-    format: ExportFormat,
     report_format: ReportFormat,
     result: &DiffResult,
     old_sbom: &NormalizedSbom,
@@ -130,28 +115,24 @@ fn export_with_reporter(
         Ok(content) => match write_to_file(path, &content) {
             Ok(()) => ExportResult {
                 path: path.clone(),
-                format,
                 success: true,
                 message: format!("Exported to {}", path.display()),
             },
             Err(e) => ExportResult {
                 path: path.clone(),
-                format,
                 success: false,
-                message: format!("Failed to write file: {}", e),
+                message: format!("Failed to write file: {e}"),
             },
         },
         Err(e) => ExportResult {
             path: path.clone(),
-            format,
             success: false,
-            message: format!("Failed to generate report: {}", e),
+            message: format!("Failed to generate report: {e}"),
         },
     }
 }
 
 fn export_view_with_reporter(
-    format: ExportFormat,
     report_format: ReportFormat,
     sbom: &NormalizedSbom,
     path: &PathBuf,
@@ -163,29 +144,26 @@ fn export_view_with_reporter(
         Ok(content) => match write_to_file(path, &content) {
             Ok(()) => ExportResult {
                 path: path.clone(),
-                format,
                 success: true,
                 message: format!("Exported to {}", path.display()),
             },
             Err(e) => ExportResult {
                 path: path.clone(),
-                format,
                 success: false,
-                message: format!("Failed to write file: {}", e),
+                message: format!("Failed to write file: {e}"),
             },
         },
         Err(e) => ExportResult {
             path: path.clone(),
-            format,
             success: false,
-            message: format!("Failed to generate report: {}", e),
+            message: format!("Failed to generate report: {e}"),
         },
     }
 }
 
 
 /// Export compliance results to a file (JSON or SARIF)
-pub fn export_compliance(
+pub(crate) fn export_compliance(
     format: ExportFormat,
     results: &[crate::quality::ComplianceResult],
     selected_standard: usize,
@@ -206,7 +184,6 @@ pub fn export_compliance(
         _ => {
             return ExportResult {
                 path: PathBuf::new(),
-                format,
                 success: false,
                 message: "Compliance export supports JSON and SARIF only".to_string(),
             };
@@ -216,7 +193,7 @@ pub fn export_compliance(
     let level_name = result
         .map(|r| r.level.name().to_lowercase().replace(' ', "_"))
         .unwrap_or_else(|| "all".to_string());
-    let filename = format!("compliance_{}_{}.{}", level_name, timestamp, ext);
+    let filename = format!("compliance_{level_name}_{timestamp}.{ext}");
     let path = match output_dir {
         Some(dir) => PathBuf::from(dir).join(&filename),
         None => PathBuf::from(&filename),
@@ -225,15 +202,13 @@ pub fn export_compliance(
     match write_to_file(&path, &content) {
         Ok(()) => ExportResult {
             path: path.clone(),
-            format,
             success: true,
             message: format!("Compliance exported to {}", path.display()),
         },
         Err(e) => ExportResult {
             path,
-            format,
             success: false,
-            message: format!("Failed to write: {}", e),
+            message: format!("Failed to write: {e}"),
         },
     }
 }

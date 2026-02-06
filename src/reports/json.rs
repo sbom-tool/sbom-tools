@@ -176,7 +176,7 @@ impl ReportGenerator for JsonReporter {
             summary: ViewSummary {
                 total_components: sbom.component_count(),
                 total_dependencies: sbom.edges.len(),
-                ecosystems: sbom.ecosystems().iter().map(|e| e.to_string()).collect(),
+                ecosystems: sbom.ecosystems().iter().map(std::string::ToString::to_string).collect(),
                 vulnerability_counts: sbom.vulnerability_counts(),
             },
             compliance,
@@ -186,7 +186,7 @@ impl ReportGenerator for JsonReporter {
                 .map(|c| ComponentView {
                     name: c.name.clone(),
                     version: c.version.clone(),
-                    ecosystem: c.ecosystem.as_ref().map(|e| e.to_string()),
+                    ecosystem: c.ecosystem.as_ref().map(std::string::ToString::to_string),
                     licenses: c
                         .licenses
                         .declared

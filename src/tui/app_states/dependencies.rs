@@ -1,5 +1,6 @@
 //! Dependencies state types.
 
+use crate::tui::state::{ListNavigation, TreeNavigation};
 use std::collections::{HashMap, HashSet};
 
 /// State for dependencies view
@@ -106,8 +107,8 @@ impl DependenciesState {
             selected: 0,
             total: 0,
             visible_nodes: Vec::new(),
-            max_depth: 5,
-            max_roots: 50,
+            max_depth: crate::tui::constants::DEFAULT_TREE_MAX_DEPTH,
+            max_roots: crate::tui::constants::DEFAULT_TREE_MAX_ROOTS,
             show_cycles: true,
             detected_cycles: Vec::new(),
             graph_hash: 0,
@@ -205,9 +206,9 @@ impl DependenciesState {
         }
     }
 
-    /// Increase max depth (up to 10)
+    /// Increase max depth (up to MAX_TREE_DEPTH)
     pub fn increase_depth(&mut self) {
-        if self.max_depth < 10 {
+        if self.max_depth < crate::tui::constants::MAX_TREE_DEPTH {
             self.max_depth += 1;
         }
     }
@@ -219,17 +220,19 @@ impl DependenciesState {
         }
     }
 
-    /// Increase max roots (up to 100)
+    /// Increase max roots (up to MAX_TREE_ROOTS)
     pub fn increase_roots(&mut self) {
-        if self.max_roots < 100 {
-            self.max_roots += 10;
+        use crate::tui::constants::{MAX_TREE_ROOTS, TREE_ROOTS_STEP};
+        if self.max_roots < MAX_TREE_ROOTS {
+            self.max_roots += TREE_ROOTS_STEP;
         }
     }
 
-    /// Decrease max roots (down to 10)
+    /// Decrease max roots (down to MIN_TREE_ROOTS)
     pub fn decrease_roots(&mut self) {
-        if self.max_roots > 10 {
-            self.max_roots -= 10;
+        use crate::tui::constants::{MIN_TREE_ROOTS, TREE_ROOTS_STEP};
+        if self.max_roots > MIN_TREE_ROOTS {
+            self.max_roots -= TREE_ROOTS_STEP;
         }
     }
 
@@ -265,7 +268,7 @@ impl DependenciesState {
 
     /// Get all components that depend on this node (reverse lookup)
     pub fn get_dependents(&self, node_id: &str) -> Option<&[String]> {
-        self.cached_reverse_graph.get(node_id).map(|v| v.as_slice())
+        self.cached_reverse_graph.get(node_id).map(std::vec::Vec::as_slice)
     }
 
     /// Get the cached depth of a node (0 = root)
@@ -309,20 +312,27 @@ impl DependenciesState {
             .collect();
 
         while let Some((node, depth)) = queue.pop_front() {
-            if let Some(existing_depth) = self.cached_depths.get(&node) {
-                if *existing_depth <= depth {
+            if let Some(&existing_depth) = self.cached_depths.get(node.as_str()) {
+                if existing_depth <= depth {
                     continue; // Already visited with smaller or equal depth
                 }
             }
-            self.cached_depths.insert(node.clone(), depth);
 
-            if let Some(children) = self.cached_graph.get(&node) {
+            // Enqueue children before consuming node
+            if let Some(children) = self.cached_graph.get(node.as_str()) {
                 for child in children {
-                    if !self.cached_depths.contains_key(child) || self.cached_depths[child] > depth + 1 {
+                    let dominated = self
+                        .cached_depths
+                        .get(child.as_str())
+                        .is_none_or(|&d| d > depth + 1);
+                    if dominated {
                         queue.push_back((child.clone(), depth + 1));
                     }
                 }
             }
+
+            // Consume node directly — no clone needed
+            self.cached_depths.insert(node, depth);
         }
 
         // Build forward graph by inverting reverse graph
@@ -341,7 +351,7 @@ impl DependenciesState {
     pub fn get_dependent_count(&self, node_id: &str) -> usize {
         self.cached_reverse_graph
             .get(node_id)
-            .map(|v| v.len())
+            .map(std::vec::Vec::len)
             .unwrap_or(0)
     }
 
@@ -365,21 +375,9 @@ impl DependenciesState {
         self.expanded_nodes.remove(node_id);
     }
 
-    pub fn select_prev(&mut self) {
-        if self.selected > 0 {
-            self.selected -= 1;
-        }
-    }
-
-    pub fn select_next(&mut self) {
-        if self.total > 0 && self.selected < self.total - 1 {
-            self.selected += 1;
-        }
-    }
-
     /// Get the node ID for the currently selected item
     pub fn get_selected_node_id(&self) -> Option<&str> {
-        self.visible_nodes.get(self.selected).map(|s| s.as_str())
+        self.visible_nodes.get(self.selected).map(std::string::String::as_str)
     }
 
     /// Set the visible nodes and update total (called during rendering)
@@ -605,6 +603,54 @@ impl DependenciesState {
         let mut sorted: Vec<String> = names.into_iter().collect();
         sorted.sort();
         sorted
+    }
+}
+
+impl ListNavigation for DependenciesState {
+    fn selected(&self) -> usize {
+        self.selected
+    }
+
+    fn set_selected(&mut self, idx: usize) {
+        self.selected = idx;
+    }
+
+    fn total(&self) -> usize {
+        self.total
+    }
+
+    fn set_total(&mut self, total: usize) {
+        self.total = total;
+        self.clamp_selection();
+    }
+}
+
+impl TreeNavigation for DependenciesState {
+    fn is_expanded(&self, node_id: &str) -> bool {
+        self.expanded_nodes.contains(node_id)
+    }
+
+    fn expand(&mut self, node_id: &str) {
+        self.expanded_nodes.insert(node_id.to_string());
+    }
+
+    fn collapse(&mut self, node_id: &str) {
+        self.expanded_nodes.remove(node_id);
+    }
+
+    fn expand_all(&mut self) {
+        for root in &self.cached_roots {
+            self.expanded_nodes.insert(root.clone());
+        }
+        for (node, children) in &self.cached_graph {
+            if !children.is_empty() {
+                self.expanded_nodes.insert(node.clone());
+            }
+        }
+    }
+
+    fn collapse_all(&mut self) {
+        self.expanded_nodes.clear();
     }
 }
 

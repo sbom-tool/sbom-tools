@@ -3,6 +3,7 @@
 use crate::diff::SlaStatus;
 use crate::model::{Component, VulnerabilityRef};
 use crate::tui::app::{App, AppMode, DiffVulnItem, DiffVulnStatus, VulnFilter, VulnSort};
+use crate::tui::state::ListNavigation;
 use crate::tui::theme::colors;
 use crate::tui::widgets;
 use ratatui::{
@@ -28,13 +29,13 @@ enum VulnRenderItem {
 
 /// Pre-built vulnerability list to avoid rebuilding on each render call.
 /// Built once per frame in render_vulnerabilities and passed to sub-functions.
-pub enum VulnListData<'a> {
+pub(crate) enum VulnListData<'a> {
     Diff(Vec<DiffVulnItem<'a>>),
     View(Vec<(&'a Component, &'a VulnerabilityRef)>),
     Empty,
 }
 
-pub fn render_vulnerabilities(frame: &mut Frame, area: Rect, app: &mut App) {
+pub(crate) fn render_vulnerabilities(frame: &mut Frame, area: Rect, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -228,7 +229,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
         Span::styled("  │  ", Style::default().fg(colors().border)),
         Span::styled("View: ", Style::default().fg(colors().text_muted)),
         Span::styled(
-            format!(" {} ", grouped_label),
+            format!(" {grouped_label} "),
             Style::default()
                 .fg(colors().badge_fg_dark)
                 .bg(if app.tabs.vulnerabilities.group_by_component {
@@ -274,7 +275,7 @@ fn filter_badge(filter: &VulnFilter) -> Span<'static> {
     };
 
     Span::styled(
-        format!(" {} ", label),
+        format!(" {label} "),
         Style::default().fg(colors().badge_fg_dark).bg(color).bold(),
     )
 }
@@ -423,10 +424,10 @@ fn build_grouped_render_items(
             let mut sorted_groups: Vec<_> = groups.into_iter().collect();
             sorted_groups.sort_by(|a, b| {
                 let max_sev_a = a.1.iter().filter_map(|&i| view_items.get(i)).map(|it| {
-                    severity_rank(&it.1.severity.as_ref().map(|s| s.to_string()).unwrap_or_default())
+                    severity_rank(&it.1.severity.as_ref().map(std::string::ToString::to_string).unwrap_or_default())
                 }).min().unwrap_or(99);
                 let max_sev_b = b.1.iter().filter_map(|&i| view_items.get(i)).map(|it| {
-                    severity_rank(&it.1.severity.as_ref().map(|s| s.to_string()).unwrap_or_default())
+                    severity_rank(&it.1.severity.as_ref().map(std::string::ToString::to_string).unwrap_or_default())
                 }).min().unwrap_or(99);
                 max_sev_a.cmp(&max_sev_b)
             });
@@ -438,7 +439,7 @@ fn build_grouped_render_items(
                     .map(|it| {
                         it.1.severity
                             .as_ref()
-                            .map(|s| s.to_string())
+                            .map(std::string::ToString::to_string)
                             .unwrap_or_else(|| "Unknown".to_string())
                     })
                     .min_by_key(|s| severity_rank(s))
@@ -465,17 +466,7 @@ fn build_grouped_render_items(
     items
 }
 
-/// Severity rank for sorting (lower = more severe)
-fn severity_rank(severity: &str) -> u8 {
-    match severity.to_lowercase().as_str() {
-        "critical" => 0,
-        "high" => 1,
-        "medium" | "moderate" => 2,
-        "low" => 3,
-        "info" | "informational" | "none" => 4,
-        _ => 5,
-    }
-}
+use crate::tui::shared::vulnerabilities::severity_rank;
 
 /// Build table rows for grouped mode.
 fn build_grouped_rows<'a>(
@@ -509,7 +500,7 @@ fn build_grouped_rows<'a>(
                     )),
                     Cell::from(Line::from(vec![
                         Span::styled(
-                            format!("{} ", arrow),
+                            format!("{arrow} "),
                             Style::default().fg(scheme.accent),
                         ),
                         Span::styled(
@@ -519,7 +510,7 @@ fn build_grouped_rows<'a>(
                     ])),
                     Cell::from(""),
                     Cell::from(Span::styled(
-                        format!("{} CVEs", vuln_count),
+                        format!("{vuln_count} CVEs"),
                         Style::default().fg(scheme.text_muted),
                     )),
                     Cell::from(""),
@@ -576,32 +567,10 @@ fn build_single_diff_row(
     let vuln = item.vuln;
 
     // Build ID cell with KEV and DIR/TRN badges
+    use crate::tui::shared::vulnerabilities::{render_kev_badge_spans, render_depth_badge_spans};
     let mut id_spans: Vec<Span<'_>> = Vec::new();
-    if vuln.is_kev {
-        id_spans.push(Span::styled(
-            "KEV",
-            Style::default()
-                .fg(scheme.kev_badge_fg())
-                .bg(scheme.kev())
-                .bold(),
-        ));
-        id_spans.push(Span::raw(" "));
-    }
-    if let Some(depth) = vuln.component_depth {
-        let (label, bg_color) = if depth == 1 {
-            ("DIR", scheme.direct_dep())
-        } else {
-            ("TRN", scheme.transitive_dep())
-        };
-        id_spans.push(Span::styled(
-            label,
-            Style::default()
-                .fg(scheme.badge_fg_dark)
-                .bg(bg_color)
-                .bold(),
-        ));
-        id_spans.push(Span::raw(" "));
-    }
+    id_spans.extend(render_kev_badge_spans(vuln.is_kev, scheme));
+    id_spans.extend(render_depth_badge_spans(vuln.component_depth.map(|d| d as usize), scheme));
     id_spans.push(Span::raw(vuln.id.clone()));
 
     let sla_cell = format_sla_cell(
@@ -624,7 +593,7 @@ fn build_single_diff_row(
         Cell::from(Line::from(id_spans)),
         Cell::from(
             vuln.cvss_score
-                .map(|s| format!("{:.1}", s))
+                .map(|s| format!("{s:.1}"))
                 .unwrap_or_else(|| "-".to_string()),
         ),
         sla_cell,
@@ -643,37 +612,16 @@ fn build_single_view_row(
     let severity = vuln
         .severity
         .as_ref()
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .unwrap_or_else(|| "Unknown".to_string());
     let sev_color = scheme.severity_color(&severity);
 
+    use crate::tui::shared::vulnerabilities::{render_kev_badge_spans, render_depth_badge_spans};
     let mut id_spans: Vec<Span<'_>> = Vec::new();
-    if vuln.is_kev {
-        id_spans.push(Span::styled(
-            "KEV",
-            Style::default()
-                .fg(scheme.kev_badge_fg())
-                .bg(scheme.kev())
-                .bold(),
-        ));
-        id_spans.push(Span::raw(" "));
-    }
+    id_spans.extend(render_kev_badge_spans(vuln.is_kev, scheme));
     let comp_id = comp.canonical_id.to_string();
-    if let Some(&depth) = cached_depths.get(&comp_id) {
-        let (label, bg_color) = if depth == 1 {
-            ("DIR", scheme.direct_dep())
-        } else {
-            ("TRN", scheme.transitive_dep())
-        };
-        id_spans.push(Span::styled(
-            label,
-            Style::default()
-                .fg(scheme.badge_fg_dark)
-                .bg(bg_color)
-                .bold(),
-        ));
-        id_spans.push(Span::raw(" "));
-    }
+    let depth = cached_depths.get(&comp_id).copied();
+    id_spans.extend(render_depth_badge_spans(depth, scheme));
     id_spans.push(Span::raw(vuln.id.clone()));
 
     let sla_cell = format_view_vuln_sla_cell(vuln, &severity, scheme);
@@ -690,7 +638,7 @@ fn build_single_view_row(
         Cell::from(Line::from(id_spans)),
         Cell::from(
             vuln.max_cvss_score()
-                .map(|s| format!("{:.1}", s))
+                .map(|s| format!("{s:.1}"))
                 .unwrap_or_else(|| "-".to_string()),
         ),
         sla_cell,
@@ -719,7 +667,7 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
                     max_severity.clone(),
                     None,
                     name.clone(),
-                    Some(format!("{} vulnerabilities in this component", vuln_count)),
+                    Some(format!("{vuln_count} vulnerabilities in this component")),
                     Vec::new(),
                     String::new(),
                 ))
@@ -738,13 +686,7 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
         let scheme = colors();
         let sev_color = scheme.severity_color(&severity);
 
-        // Determine source badge color
-        let source_color = match source.to_uppercase().as_str() {
-            "OSV" => scheme.accent,
-            "NVD" => scheme.highlight,
-            "GHSA" => scheme.info,
-            _ => scheme.text_muted,
-        };
+        let source_color = crate::tui::shared::vulnerabilities::source_color(&source, &scheme);
 
         let mut lines = vec![
             // Severity badge
@@ -757,12 +699,12 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
                         .bold(),
                 ),
                 Span::styled(
-                    format!(" {} ", severity),
+                    format!(" {severity} "),
                     Style::default().fg(sev_color).bold(),
                 ),
                 if let Some(score) = cvss {
                     Span::styled(
-                        format!("  CVSS: {:.1}", score),
+                        format!("  CVSS: {score:.1}"),
                         Style::default().fg(colors().text),
                     )
                 } else {
@@ -779,7 +721,7 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
             Line::from(vec![
                 Span::styled("Source: ", Style::default().fg(colors().text_muted)),
                 Span::styled(
-                    format!("[{}]", source),
+                    format!("[{source}]"),
                     Style::default().fg(source_color).bold(),
                 ),
             ]),
@@ -802,22 +744,16 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
                 Span::styled("Description: ", Style::default().fg(colors().text_muted)),
             ]));
             let max_width = area.width.saturating_sub(4) as usize;
-            for chunk in desc.chars().collect::<Vec<_>>().chunks(max_width) {
+            for wrapped_line in crate::tui::shared::vulnerabilities::word_wrap(&desc, max_width) {
                 lines.push(Line::styled(
-                    chunk.iter().collect::<String>(),
+                    wrapped_line,
                     Style::default().fg(colors().text).italic(),
                 ));
             }
         }
 
         // CWEs (inline label)
-        if !cwes.is_empty() {
-            let cwe_list = cwes.iter().take(3).cloned().collect::<Vec<_>>().join(", ");
-            lines.push(Line::from(vec![
-                Span::styled("CWEs: ", Style::default().fg(colors().text_muted)),
-                Span::styled(cwe_list, Style::default().fg(colors().accent)),
-            ]));
-        }
+        lines.extend(crate::tui::shared::vulnerabilities::render_vuln_cwe_lines(&cwes, 3));
 
         // Attack Paths (show how to reach this vulnerable component from entry points)
         if matches!(app.mode, AppMode::Diff | AppMode::View) {
@@ -922,38 +858,19 @@ fn status_span(status: &str) -> Span<'static> {
         _ => (colors().text, "•"),
     };
 
-    Span::styled(format!("{} {}", symbol, status), Style::default().fg(color))
+    Span::styled(format!("{symbol} {status}"), Style::default().fg(color))
 }
 
 fn render_empty_detail(frame: &mut Frame, area: Rect) {
-    let text = vec![
-        Line::from(""),
-        Line::styled("⚠", Style::default().fg(colors().text_muted)),
-        Line::from(""),
-        Line::styled(
-            "Select a vulnerability to view details",
-            Style::default().fg(colors().text),
-        ),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("[↑↓]", Style::default().fg(colors().accent)),
-            Span::styled(" navigate  ", Style::default().fg(colors().text_muted)),
-            Span::styled("[Enter]", Style::default().fg(colors().accent)),
-            Span::styled(" expand", Style::default().fg(colors().text_muted)),
-        ]),
-    ];
-
-    let detail = Paragraph::new(text)
-        .block(
-            Block::default()
-                .title(" Vulnerability Details ")
-                .title_style(Style::default().fg(colors().text_muted))
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(colors().border)),
-        )
-        .alignment(Alignment::Center);
-
-    frame.render_widget(detail, area);
+    crate::tui::shared::components::render_empty_detail_panel(
+        frame,
+        area,
+        " Vulnerability Details ",
+        "⚠",
+        "Select a vulnerability to view details",
+        &[("[↑↓]", " navigate  "), ("[Enter]", " expand")],
+        false,
+    );
 }
 
 // Returns: (status, id, severity, cvss, component, description, cwes, source)
@@ -997,10 +914,10 @@ fn collect_view_vulns(
                 VulnFilter::All => true,
                 VulnFilter::Introduced | VulnFilter::Resolved => true, // These are diff-mode only
                 VulnFilter::Critical => {
-                    vuln.severity.as_ref().map(|s| s.to_string()) == Some("Critical".to_string())
+                    vuln.severity.as_ref().map(std::string::ToString::to_string) == Some("Critical".to_string())
                 }
                 VulnFilter::High => {
-                    let sev = vuln.severity.as_ref().map(|s| s.to_string());
+                    let sev = vuln.severity.as_ref().map(std::string::ToString::to_string);
                     sev == Some("Critical".to_string()) || sev == Some("High".to_string())
                 }
                 VulnFilter::Kev => vuln.is_kev,
@@ -1031,7 +948,7 @@ fn collect_view_vulns(
             vulns.sort_by(|a, b| {
                 let sev_order = |s: &Option<crate::model::Severity>| match s
                     .as_ref()
-                    .map(|sv| sv.to_string())
+                    .map(std::string::ToString::to_string)
                     .as_deref()
                 {
                     Some("Critical") => 0,
@@ -1069,8 +986,8 @@ fn collect_view_vulns(
         VulnSort::SlaUrgency => {
             // Sort by SLA urgency (most overdue first)
             vulns.sort_by(|a, b| {
-                let severity_a = a.1.severity.as_ref().map(|s| s.to_string()).unwrap_or_default();
-                let severity_b = b.1.severity.as_ref().map(|s| s.to_string()).unwrap_or_default();
+                let severity_a = a.1.severity.as_ref().map(std::string::ToString::to_string).unwrap_or_default();
+                let severity_b = b.1.severity.as_ref().map(std::string::ToString::to_string).unwrap_or_default();
                 let sla_a = calculate_view_vuln_sla_sort_key(a.1, &severity_a);
                 let sla_b = calculate_view_vuln_sla_sort_key(b.1, &severity_b);
                 sla_a.cmp(&sla_b)
@@ -1090,7 +1007,7 @@ fn get_view_vuln_at(
         let severity = vuln
             .severity
             .as_ref()
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .unwrap_or_else(|| "Unknown".to_string());
         (
             "Present".to_string(),
@@ -1107,99 +1024,7 @@ fn get_view_vuln_at(
 
 fn get_diff_vuln_rows(items: &[crate::tui::app::DiffVulnItem<'_>]) -> Vec<Row<'static>> {
     let scheme = colors();
-    items
-        .iter()
-        .map(|item| {
-            let (status_label, status_bg, status_fg, row_style) = match item.status {
-                DiffVulnStatus::Introduced => (
-                    " + NEW ",
-                    scheme.removed,
-                    scheme.badge_fg_light,
-                    Style::default().fg(scheme.text),
-                ),
-                DiffVulnStatus::Resolved => (
-                    " - FIX ",
-                    scheme.added,
-                    scheme.badge_fg_dark,
-                    Style::default().fg(scheme.added),
-                ),
-                DiffVulnStatus::Persistent => (
-                    " = OLD ",
-                    scheme.modified,
-                    scheme.badge_fg_dark,
-                    Style::default().fg(scheme.text),
-                ),
-            };
-
-            let vuln = item.vuln;
-
-            // Build ID cell with KEV and DIR/TRN badges if applicable
-            let mut id_spans: Vec<Span<'_>> = Vec::new();
-
-            // KEV badge
-            if vuln.is_kev {
-                id_spans.push(Span::styled(
-                    "KEV",
-                    Style::default()
-                        .fg(scheme.kev_badge_fg())
-                        .bg(scheme.kev())
-                        .bold(),
-                ));
-                id_spans.push(Span::raw(" "));
-            }
-
-            // DIR/TRN badge based on component depth
-            if let Some(depth) = vuln.component_depth {
-                let (label, bg_color) = if depth == 1 {
-                    ("DIR", scheme.direct_dep())
-                } else {
-                    ("TRN", scheme.transitive_dep())
-                };
-                id_spans.push(Span::styled(
-                    label,
-                    Style::default()
-                        .fg(scheme.badge_fg_dark)
-                        .bg(bg_color)
-                        .bold(),
-                ));
-                id_spans.push(Span::raw(" "));
-            }
-
-            // Vulnerability ID
-            id_spans.push(Span::raw(vuln.id.clone()));
-            let id_cell = Cell::from(Line::from(id_spans));
-
-            // SLA cell with color-coded status
-            let sla_cell = format_sla_cell(
-                vuln.sla_status(),
-                vuln.days_since_published,
-                &scheme,
-            );
-
-            // Subtle row background tint based on severity
-            let bg_tint = if item.status == DiffVulnStatus::Resolved {
-                Color::Reset
-            } else {
-                scheme.severity_bg_tint(&vuln.severity)
-            };
-
-            Row::new(vec![
-                Cell::from(Span::styled(
-                    status_label,
-                    Style::default().fg(status_fg).bg(status_bg).bold(),
-                )),
-                id_cell,
-                Cell::from(
-                    vuln.cvss_score
-                        .map(|s| format!("{:.1}", s))
-                        .unwrap_or_else(|| "-".to_string()),
-                ),
-                sla_cell,
-                Cell::from(widgets::truncate_str(&vuln.component_name, 30)),
-            ])
-            .style(row_style.bg(bg_tint))
-        })
-        .collect()
+    items.iter().map(|item| build_single_diff_row(item, &scheme)).collect()
 }
 
 fn get_view_vuln_rows(
@@ -1207,79 +1032,7 @@ fn get_view_vuln_rows(
     cached_depths: &std::collections::HashMap<String, usize>,
 ) -> Vec<Row<'static>> {
     let scheme = colors();
-    items
-        .iter()
-        .map(|(comp, vuln)| {
-            let severity = vuln
-                .severity
-                .as_ref()
-                .map(|s| s.to_string())
-                .unwrap_or_else(|| "Unknown".to_string());
-            let sev_color = scheme.severity_color(&severity);
-
-            // Build ID cell with KEV and DIR/TRN badges if applicable
-            let mut id_spans: Vec<Span<'_>> = Vec::new();
-
-            // KEV badge
-            if vuln.is_kev {
-                id_spans.push(Span::styled(
-                    "KEV",
-                    Style::default()
-                        .fg(scheme.kev_badge_fg())
-                        .bg(scheme.kev())
-                        .bold(),
-                ));
-                id_spans.push(Span::raw(" "));
-            }
-
-            // DIR/TRN badge based on component depth (from cached_depths)
-            let comp_id = comp.canonical_id.to_string();
-            if let Some(&depth) = cached_depths.get(&comp_id) {
-                let (label, bg_color) = if depth == 1 {
-                    ("DIR", scheme.direct_dep())
-                } else {
-                    ("TRN", scheme.transitive_dep())
-                };
-                id_spans.push(Span::styled(
-                    label,
-                    Style::default()
-                        .fg(scheme.badge_fg_dark)
-                        .bg(bg_color)
-                        .bold(),
-                ));
-                id_spans.push(Span::raw(" "));
-            }
-
-            // Vulnerability ID
-            id_spans.push(Span::raw(vuln.id.clone()));
-            let id_cell = Cell::from(Line::from(id_spans));
-
-            // Calculate SLA for view mode (from VulnerabilityRef dates)
-            let sla_cell = format_view_vuln_sla_cell(vuln, &severity, &scheme);
-
-            // Subtle row background tint based on severity
-            let bg_tint = scheme.severity_bg_tint(&severity);
-
-            Row::new(vec![
-                Cell::from(Span::styled(
-                    format!(" {} ", severity.chars().next().unwrap_or('?')),
-                    Style::default()
-                        .fg(scheme.severity_badge_fg(&severity))
-                        .bg(sev_color)
-                        .bold(),
-                )),
-                id_cell,
-                Cell::from(
-                    vuln.max_cvss_score()
-                        .map(|s| format!("{:.1}", s))
-                        .unwrap_or_else(|| "-".to_string()),
-                ),
-                sla_cell,
-                Cell::from(widgets::truncate_str(&comp.name, 30)),
-            ])
-            .style(Style::default().fg(scheme.text).bg(bg_tint))
-        })
-        .collect()
+    items.iter().map(|item| build_single_view_row(item, cached_depths, &scheme)).collect()
 }
 
 /// Format SLA cell for diff mode (using VulnerabilityDetail)
@@ -1290,21 +1043,21 @@ fn format_sla_cell(
 ) -> Cell<'static> {
     match sla_status {
         SlaStatus::Overdue(days) => Cell::from(Span::styled(
-            format!("{}d late", days),
+            format!("{days}d late"),
             Style::default().fg(scheme.critical).bold(),
         )),
         SlaStatus::DueSoon(days) => Cell::from(Span::styled(
-            format!("{}d left", days),
+            format!("{days}d left"),
             Style::default().fg(scheme.high),
         )),
         SlaStatus::OnTrack(days) => Cell::from(Span::styled(
-            format!("{}d left", days),
+            format!("{days}d left"),
             Style::default().fg(scheme.text_muted),
         )),
         SlaStatus::NoDueDate => {
             if let Some(age) = days_since_published {
                 Cell::from(Span::styled(
-                    format!("{}d old", age),
+                    format!("{age}d old"),
                     Style::default().fg(scheme.text_muted),
                 ))
             } else {
@@ -1327,7 +1080,7 @@ fn format_view_vuln_sla_cell(
     });
 
     // Get KEV due date info (days_until_due returns i64, wrap in Some)
-    let days_until_due = vuln.kev_info.as_ref().map(|kev| kev.days_until_due());
+    let days_until_due = vuln.kev_info.as_ref().map(crate::model::KevInfo::days_until_due);
 
     // Calculate SLA status
     let sla_status = calculate_sla_status(days_until_due, days_since_published, severity);
@@ -1383,13 +1136,13 @@ fn calculate_view_vuln_sla_sort_key(vuln: &VulnerabilityRef, severity: &str) -> 
     });
 
     // Get KEV due date info
-    let days_until_due = vuln.kev_info.as_ref().map(|kev| kev.days_until_due());
+    let days_until_due = vuln.kev_info.as_ref().map(crate::model::KevInfo::days_until_due);
 
     // Calculate SLA status
     let sla_status = calculate_sla_status(days_until_due, days_since_published, severity);
 
     match sla_status {
-        SlaStatus::Overdue(days) => -(days + 10000), // Most urgent (negative, very low)
+        SlaStatus::Overdue(days) => -(days + crate::tui::constants::SLA_OVERDUE_SORT_OFFSET), // Most urgent (negative, very low)
         SlaStatus::DueSoon(days) => days,
         SlaStatus::OnTrack(days) => days,
         SlaStatus::NoDueDate => i64::MAX,
@@ -1407,7 +1160,7 @@ fn calculate_view_vuln_urgency(
     let severity = vuln
         .severity
         .as_ref()
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .unwrap_or_else(|| "Unknown".to_string());
     let severity_rank = severity_to_rank(&severity);
     let cvss_score = vuln.max_cvss_score().unwrap_or(0.0);

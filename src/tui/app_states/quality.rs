@@ -1,5 +1,7 @@
 //! Quality state types.
 
+use crate::tui::state::ListNavigation;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum QualityViewMode {
     #[default]
@@ -12,10 +14,10 @@ pub enum QualityViewMode {
 impl QualityViewMode {
     pub fn label(&self) -> &'static str {
         match self {
-            QualityViewMode::Summary => "Summary",
-            QualityViewMode::Breakdown => "Score Breakdown",
-            QualityViewMode::Metrics => "Detailed Metrics",
-            QualityViewMode::Recommendations => "Recommendations",
+            Self::Summary => "Summary",
+            Self::Breakdown => "Score Breakdown",
+            Self::Metrics => "Detailed Metrics",
+            Self::Recommendations => "Recommendations",
         }
     }
 }
@@ -57,24 +59,30 @@ impl QualityState {
         self.scroll_offset = 0;
     }
 
-    pub fn select_next(&mut self) {
-        if self.selected_recommendation < self.total_recommendations.saturating_sub(1) {
-            self.selected_recommendation += 1;
-        }
-    }
-
-    pub fn select_prev(&mut self) {
-        if self.selected_recommendation > 0 {
-            self.selected_recommendation -= 1;
-        }
-    }
-
     pub fn scroll_down(&mut self) {
         self.scroll_offset = self.scroll_offset.saturating_add(1);
     }
 
     pub fn scroll_up(&mut self) {
         self.scroll_offset = self.scroll_offset.saturating_sub(1);
+    }
+}
+
+impl ListNavigation for QualityState {
+    fn selected(&self) -> usize {
+        self.selected_recommendation
+    }
+
+    fn set_selected(&mut self, idx: usize) {
+        self.selected_recommendation = idx;
+    }
+
+    fn total(&self) -> usize {
+        self.total_recommendations
+    }
+
+    fn set_total(&mut self, total: usize) {
+        self.total_recommendations = total;
     }
 }
 

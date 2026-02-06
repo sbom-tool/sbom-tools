@@ -17,6 +17,7 @@ use crate::model::NormalizedSbom;
 use std::borrow::Cow;
 
 /// Semantic diff engine for comparing SBOMs.
+#[must_use]
 pub struct DiffEngine {
     cost_model: CostModel,
     fuzzy_config: FuzzyMatchConfig,
@@ -110,6 +111,7 @@ impl DiffEngine {
     }
 
     /// Compare two SBOMs and return the diff result
+    #[must_use = "diff result contains all changes and should not be discarded"]
     pub fn diff(&self, old: &NormalizedSbom, new: &NormalizedSbom) -> Result<DiffResult, SbomDiffError> {
         let mut result = DiffResult::new();
 

@@ -73,12 +73,12 @@ pub enum EventResult {
 impl EventResult {
     /// Create a status message result
     pub fn status(msg: impl Into<String>) -> Self {
-        EventResult::StatusMessage(msg.into())
+        Self::StatusMessage(msg.into())
     }
 
     /// Create a navigation result
     pub fn navigate(target: TabTarget) -> Self {
-        EventResult::NavigateTo(target)
+        Self::NavigateTo(target)
     }
 }
 
@@ -105,34 +105,34 @@ impl TabTarget {
     /// Convert to TabKind if this is a simple tab navigation
     pub fn to_tab_kind(&self) -> Option<super::app::TabKind> {
         match self {
-            TabTarget::Summary => Some(super::app::TabKind::Summary),
-            TabTarget::Components => Some(super::app::TabKind::Components),
-            TabTarget::Dependencies => Some(super::app::TabKind::Dependencies),
-            TabTarget::Licenses => Some(super::app::TabKind::Licenses),
-            TabTarget::Vulnerabilities => Some(super::app::TabKind::Vulnerabilities),
-            TabTarget::Quality => Some(super::app::TabKind::Quality),
-            TabTarget::Compliance => Some(super::app::TabKind::Compliance),
-            TabTarget::SideBySide => Some(super::app::TabKind::SideBySide),
-            TabTarget::GraphChanges => Some(super::app::TabKind::GraphChanges),
-            TabTarget::Source => Some(super::app::TabKind::Source),
-            TabTarget::ComponentByName(_) => Some(super::app::TabKind::Components),
-            TabTarget::VulnerabilityById(_) => Some(super::app::TabKind::Vulnerabilities),
+            Self::Summary => Some(super::app::TabKind::Summary),
+            Self::Components => Some(super::app::TabKind::Components),
+            Self::Dependencies => Some(super::app::TabKind::Dependencies),
+            Self::Licenses => Some(super::app::TabKind::Licenses),
+            Self::Vulnerabilities => Some(super::app::TabKind::Vulnerabilities),
+            Self::Quality => Some(super::app::TabKind::Quality),
+            Self::Compliance => Some(super::app::TabKind::Compliance),
+            Self::SideBySide => Some(super::app::TabKind::SideBySide),
+            Self::GraphChanges => Some(super::app::TabKind::GraphChanges),
+            Self::Source => Some(super::app::TabKind::Source),
+            Self::ComponentByName(_) => Some(super::app::TabKind::Components),
+            Self::VulnerabilityById(_) => Some(super::app::TabKind::Vulnerabilities),
         }
     }
 
     /// Convert from TabKind
     pub fn from_tab_kind(kind: super::app::TabKind) -> Self {
         match kind {
-            super::app::TabKind::Summary => TabTarget::Summary,
-            super::app::TabKind::Components => TabTarget::Components,
-            super::app::TabKind::Dependencies => TabTarget::Dependencies,
-            super::app::TabKind::Licenses => TabTarget::Licenses,
-            super::app::TabKind::Vulnerabilities => TabTarget::Vulnerabilities,
-            super::app::TabKind::Quality => TabTarget::Quality,
-            super::app::TabKind::Compliance => TabTarget::Compliance,
-            super::app::TabKind::SideBySide => TabTarget::SideBySide,
-            super::app::TabKind::GraphChanges => TabTarget::GraphChanges,
-            super::app::TabKind::Source => TabTarget::Source,
+            super::app::TabKind::Summary => Self::Summary,
+            super::app::TabKind::Components => Self::Components,
+            super::app::TabKind::Dependencies => Self::Dependencies,
+            super::app::TabKind::Licenses => Self::Licenses,
+            super::app::TabKind::Vulnerabilities => Self::Vulnerabilities,
+            super::app::TabKind::Quality => Self::Quality,
+            super::app::TabKind::Compliance => Self::Compliance,
+            super::app::TabKind::SideBySide => Self::SideBySide,
+            super::app::TabKind::GraphChanges => Self::GraphChanges,
+            super::app::TabKind::Source => Self::Source,
         }
     }
 }
@@ -225,11 +225,11 @@ impl ViewMode {
     /// Convert from the legacy AppMode enum
     pub fn from_app_mode(mode: super::app::AppMode) -> Self {
         match mode {
-            super::app::AppMode::Diff => ViewMode::Diff,
-            super::app::AppMode::View => ViewMode::View,
-            super::app::AppMode::MultiDiff => ViewMode::MultiDiff,
-            super::app::AppMode::Timeline => ViewMode::Timeline,
-            super::app::AppMode::Matrix => ViewMode::Matrix,
+            super::app::AppMode::Diff => Self::Diff,
+            super::app::AppMode::View => Self::View,
+            super::app::AppMode::MultiDiff => Self::MultiDiff,
+            super::app::AppMode::Timeline => Self::Timeline,
+            super::app::AppMode::Matrix => Self::Matrix,
         }
     }
 }
@@ -338,17 +338,19 @@ pub trait ListViewState: ViewState {
 
     /// Move selection down by a page.
     fn page_down(&mut self) {
+        use super::constants::PAGE_SIZE;
         let total = self.total();
         let selected = self.selected();
         if total > 0 {
-            self.set_selected((selected + 10).min(total.saturating_sub(1)));
+            self.set_selected((selected + PAGE_SIZE).min(total.saturating_sub(1)));
         }
     }
 
     /// Move selection up by a page.
     fn page_up(&mut self) {
+        use super::constants::PAGE_SIZE;
         let selected = self.selected();
-        self.set_selected(selected.saturating_sub(10));
+        self.set_selected(selected.saturating_sub(PAGE_SIZE));
     }
 
     /// Move to the first item.
@@ -409,12 +411,12 @@ pub trait ListViewState: ViewState {
 impl fmt::Display for EventResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            EventResult::Consumed => write!(f, "Consumed"),
-            EventResult::Ignored => write!(f, "Ignored"),
-            EventResult::NavigateTo(target) => write!(f, "NavigateTo({:?})", target),
-            EventResult::Exit => write!(f, "Exit"),
-            EventResult::ShowOverlay(kind) => write!(f, "ShowOverlay({:?})", kind),
-            EventResult::StatusMessage(msg) => write!(f, "StatusMessage({})", msg),
+            Self::Consumed => write!(f, "Consumed"),
+            Self::Ignored => write!(f, "Ignored"),
+            Self::NavigateTo(target) => write!(f, "NavigateTo({target:?})"),
+            Self::Exit => write!(f, "Exit"),
+            Self::ShowOverlay(kind) => write!(f, "ShowOverlay({kind:?})"),
+            Self::StatusMessage(msg) => write!(f, "StatusMessage({msg})"),
         }
     }
 }

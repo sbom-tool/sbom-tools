@@ -30,6 +30,7 @@ use std::collections::HashMap;
 /// - Components by lowercased name
 /// - Pre-computed sort keys to avoid repeated string allocations
 #[derive(Debug, Clone)]
+#[must_use]
 pub struct NormalizedSbomIndex {
     /// Edge indices by source component ID (for fast dependency lookup)
     edges_by_source: HashMap<CanonicalId, Vec<usize>>,
@@ -151,7 +152,7 @@ impl NormalizedSbomIndex {
     pub fn dependency_indices(&self, id: &CanonicalId) -> &[usize] {
         self.edges_by_source
             .get(id)
-            .map(|v| v.as_slice())
+            .map(std::vec::Vec::as_slice)
             .unwrap_or(&[])
     }
 
@@ -162,7 +163,7 @@ impl NormalizedSbomIndex {
     pub fn dependent_indices(&self, id: &CanonicalId) -> &[usize] {
         self.edges_by_target
             .get(id)
-            .map(|v| v.as_slice())
+            .map(std::vec::Vec::as_slice)
             .unwrap_or(&[])
     }
 
@@ -200,7 +201,7 @@ impl NormalizedSbomIndex {
     pub fn find_by_name_lower(&self, name_lower: &str) -> &[CanonicalId] {
         self.by_name_lower
             .get(name_lower)
-            .map(|v| v.as_slice())
+            .map(std::vec::Vec::as_slice)
             .unwrap_or(&[])
     }
 
@@ -248,13 +249,13 @@ impl NormalizedSbomIndex {
     pub fn dependency_count(&self, id: &CanonicalId) -> usize {
         self.edges_by_source
             .get(id)
-            .map(|v| v.len())
+            .map(std::vec::Vec::len)
             .unwrap_or(0)
     }
 
     /// Get count of dependents for a component.
     pub fn dependent_count(&self, id: &CanonicalId) -> usize {
-        self.edges_by_target.get(id).map(|v| v.len()).unwrap_or(0)
+        self.edges_by_target.get(id).map(std::vec::Vec::len).unwrap_or(0)
     }
 
     /// Get total component count.
@@ -292,6 +293,7 @@ impl NormalizedSbomIndex {
 
 /// Builder for creating indexes with optional features.
 #[derive(Debug, Default)]
+#[must_use]
 pub struct SbomIndexBuilder {
     /// Whether to build name index
     index_names: bool,

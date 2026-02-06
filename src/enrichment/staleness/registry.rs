@@ -141,13 +141,13 @@ impl RegistryClient {
 
     /// Get cache key for a package
     fn cache_key(&self, ecosystem: &str, name: &str) -> String {
-        format!("{}:{}", ecosystem, name)
+        format!("{ecosystem}:{name}")
     }
 
     /// Get cache file path
     fn cache_file(&self, key: &str) -> PathBuf {
         let safe_key = key.replace(['/', ':'], "_");
-        self.config.cache_dir.join(format!("{}.json", safe_key))
+        self.config.cache_dir.join(format!("{safe_key}.json"))
     }
 
     /// Check if cache is valid
@@ -200,7 +200,7 @@ impl RegistryClient {
     /// Query npm registry
     #[cfg(feature = "enrichment")]
     fn query_npm(&self, name: &str) -> Result<Option<PackageMetadata>, EnrichmentError> {
-        let url = format!("https://registry.npmjs.org/{}", name);
+        let url = format!("https://registry.npmjs.org/{name}");
 
         let client = reqwest::blocking::Client::builder()
             .timeout(self.config.timeout)
@@ -220,7 +220,7 @@ impl RegistryClient {
                     .get("dist-tags")
                     .and_then(|d| d.get("latest"))
                     .and_then(|l| l.as_str())
-                    .map(|s| s.to_string());
+                    .map(std::string::ToString::to_string);
 
                 let last_published = time
                     .and_then(|t| latest_version.as_ref().and_then(|v| t.get(v.as_str())))
@@ -232,13 +232,13 @@ impl RegistryClient {
                 let deprecation_message = json
                     .get("deprecated")
                     .and_then(|d| d.as_str())
-                    .map(|s| s.to_string());
+                    .map(std::string::ToString::to_string);
 
                 let repository_url = json
                     .get("repository")
                     .and_then(|r| r.get("url"))
                     .and_then(|u| u.as_str())
-                    .map(|s| s.to_string());
+                    .map(std::string::ToString::to_string);
 
                 Ok(Some(PackageMetadata {
                     name: name.to_string(),
@@ -263,7 +263,7 @@ impl RegistryClient {
     /// Query PyPI registry
     #[cfg(feature = "enrichment")]
     fn query_pypi(&self, name: &str) -> Result<Option<PackageMetadata>, EnrichmentError> {
-        let url = format!("https://pypi.org/pypi/{}/json", name);
+        let url = format!("https://pypi.org/pypi/{name}/json");
 
         let client = reqwest::blocking::Client::builder()
             .timeout(self.config.timeout)
@@ -282,7 +282,7 @@ impl RegistryClient {
                 let latest_version = info
                     .and_then(|i| i.get("version"))
                     .and_then(|v| v.as_str())
-                    .map(|s| s.to_string());
+                    .map(std::string::ToString::to_string);
 
                 // Get release dates
                 let releases = json.get("releases").and_then(|r| r.as_object());
@@ -320,7 +320,7 @@ impl RegistryClient {
                             .or(u.get("Homepage"))
                     })
                     .and_then(|u| u.as_str())
-                    .map(|s| s.to_string());
+                    .map(std::string::ToString::to_string);
 
                 Ok(Some(PackageMetadata {
                     name: name.to_string(),
@@ -345,7 +345,7 @@ impl RegistryClient {
     /// Query crates.io registry
     #[cfg(feature = "enrichment")]
     fn query_crates_io(&self, name: &str) -> Result<Option<PackageMetadata>, EnrichmentError> {
-        let url = format!("https://crates.io/api/v1/crates/{}", name);
+        let url = format!("https://crates.io/api/v1/crates/{name}");
 
         let client = reqwest::blocking::Client::builder()
             .timeout(self.config.timeout)
@@ -365,7 +365,7 @@ impl RegistryClient {
                 let latest_version = krate
                     .and_then(|c| c.get("newest_version"))
                     .and_then(|v| v.as_str())
-                    .map(|s| s.to_string());
+                    .map(std::string::ToString::to_string);
 
                 let last_published = krate
                     .and_then(|c| c.get("updated_at"))
@@ -376,7 +376,7 @@ impl RegistryClient {
                 let repository_url = krate
                     .and_then(|c| c.get("repository"))
                     .and_then(|r| r.as_str())
-                    .map(|s| s.to_string());
+                    .map(std::string::ToString::to_string);
 
                 Ok(Some(PackageMetadata {
                     name: name.to_string(),

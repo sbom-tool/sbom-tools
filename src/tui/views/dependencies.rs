@@ -21,7 +21,7 @@ fn compute_graph_hash(edges: &[(String, String)]) -> u64 {
 }
 
 /// Update the graph cache if needed (call before rendering)
-pub fn update_graph_cache(app: &mut App) {
+pub(crate) fn update_graph_cache(app: &mut App) {
     match app.mode {
         AppMode::View => update_view_mode_cache(app),
         AppMode::Diff => update_diff_mode_cache(app),
@@ -137,7 +137,7 @@ fn update_diff_mode_cache(app: &mut App) {
 struct TreeNode {
     id: String,
     label: String,
-    children: Vec<TreeNode>,
+    children: Vec<Self>,
     change_type: ChangeType,
     depth: usize,
 }
@@ -150,7 +150,7 @@ enum ChangeType {
     Removed,
 }
 
-pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
+pub(crate) fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
     let scheme = colors();
 
     // Update cache before rendering (only recomputes if data changed)
@@ -248,14 +248,14 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
         Span::styled("[+/-]", Style::default().fg(scheme.accent)),
         Span::raw(" Depth: "),
         Span::styled(
-            format!("{}", max_depth),
+            format!("{max_depth}"),
             Style::default().fg(scheme.primary).bold(),
         ),
         Span::styled("  ", Style::default().fg(scheme.border)),
         Span::styled("[</>]", Style::default().fg(scheme.accent)),
         Span::raw(" Roots: "),
         Span::styled(
-            format!("{}", max_roots),
+            format!("{max_roots}"),
             Style::default().fg(scheme.primary).bold(),
         ),
         Span::styled("  ", Style::default().fg(scheme.border)),
@@ -288,7 +288,7 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
         Style::default().fg(scheme.text_muted),
     ));
     line3.push(Span::styled(
-        format!("{}", expanded_count),
+        format!("{expanded_count}"),
         if expanded_count > 0 {
             Style::default().fg(scheme.success)
         } else {
@@ -299,7 +299,7 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
     if vuln_count > 0 {
         line3.push(Span::styled("  │  ", Style::default().fg(scheme.border)));
         line3.push(Span::styled(
-            format!("⚠ {} vuln", vuln_count),
+            format!("⚠ {vuln_count} vuln"),
             Style::default().fg(scheme.critical).bold(),
         ));
     }
@@ -307,7 +307,7 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
     if show_cycles && cycle_count > 0 {
         line3.push(Span::styled("  │  ", Style::default().fg(scheme.border)));
         line3.push(Span::styled(
-            format!("⟳ {} cycles", cycle_count),
+            format!("⟳ {cycle_count} cycles"),
             Style::default().fg(scheme.warning).bold(),
         ));
     }
@@ -320,7 +320,7 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
         ));
         if root_overflow > 0 {
             line3.push(Span::styled(
-                format!("roots +{}", root_overflow),
+                format!("roots +{root_overflow}"),
                 Style::default().fg(scheme.warning).bold(),
             ));
         }
@@ -329,7 +329,7 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
         }
         if depth_limited {
             line3.push(Span::styled(
-                format!("depth >{}", max_depth),
+                format!("depth >{max_depth}"),
                 Style::default().fg(scheme.warning).bold(),
             ));
         }
@@ -356,7 +356,7 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
         if !query.is_empty() {
             search_spans.push(Span::styled("  │  ", Style::default().fg(scheme.border)));
             search_spans.push(Span::styled(
-                format!("{} matches", match_count),
+                format!("{match_count} matches"),
                 if match_count > 0 {
                     Style::default().fg(scheme.success)
                 } else {
@@ -393,9 +393,9 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
         let mut search_spans = vec![
             Span::styled("[/]", Style::default().fg(scheme.accent)),
             Span::styled(" Search: ", Style::default().fg(scheme.text_muted)),
-            Span::styled(format!("\"{}\"", query), Style::default().fg(scheme.text_muted)),
+            Span::styled(format!("\"{query}\""), Style::default().fg(scheme.text_muted)),
             Span::styled(
-                format!(" ({} matches)", match_count),
+                format!(" ({match_count} matches)"),
                 Style::default().fg(scheme.text_muted),
             ),
         ];
@@ -602,12 +602,12 @@ fn render_diff_tree(
         lines.push(Line::from(vec![
             Span::styled("Changes: ", Style::default().fg(scheme.text).bold()),
             Span::styled(
-                format!("+{}", added_count),
+                format!("+{added_count}"),
                 Style::default().fg(scheme.added).bold(),
             ),
             Span::raw(" added, "),
             Span::styled(
-                format!("-{}", removed_count),
+                format!("-{removed_count}"),
                 Style::default().fg(scheme.removed).bold(),
             ),
             Span::raw(" removed"),
@@ -656,7 +656,7 @@ fn render_diff_tree(
             let added = added_by_source.get(**source);
             let removed = removed_by_source.get(**source);
 
-            let child_count = added.map_or(0, |v| v.len()) + removed.map_or(0, |v| v.len());
+            let child_count = added.map_or(0, std::vec::Vec::len) + removed.map_or(0, std::vec::Vec::len);
             let is_expanded = expanded.contains(**source);
             let is_last = idx == sources_to_show.len() - 1;
 
@@ -688,7 +688,7 @@ fn render_diff_tree(
                 Span::raw(" "),
                 Span::styled(short_source, source_style.bold()),
                 Span::styled(
-                    format!(" ({})", child_count),
+                    format!(" ({child_count})"),
                     Style::default().fg(scheme.text_muted),
                 ),
             ];
@@ -936,7 +936,7 @@ fn render_view_node(
     path: &mut Vec<String>,
 ) {
     let children = by_source.get(node_id);
-    let child_count = children.map_or(0, |v| v.len());
+    let child_count = children.map_or(0, std::vec::Vec::len);
     let is_expanded = expanded.contains(node_id);
 
     render_view_node_line(
@@ -969,7 +969,7 @@ fn render_view_node(
             let is_cycle_ref = path.iter().any(|ancestor| ancestor == child);
 
             if is_cycle_ref {
-                let grand_child_count = by_source.get(child).map_or(0, |v| v.len());
+                let grand_child_count = by_source.get(child).map_or(0, std::vec::Vec::len);
                 render_view_node_line(
                     lines,
                     visible_nodes,
@@ -1079,7 +1079,7 @@ fn render_view_node_line(
 
     if child_count > 0 && !cycle_ref {
         spans.push(Span::styled(
-            format!(" ({})", child_count),
+            format!(" ({child_count})"),
             Style::default().fg(scheme.text_muted),
         ));
     }
@@ -1122,12 +1122,12 @@ fn render_diff_tree_cached(
         lines.push(Line::from(vec![
             Span::styled("Changes: ", Style::default().fg(scheme.text).bold()),
             Span::styled(
-                format!("+{}", added_count),
+                format!("+{added_count}"),
                 Style::default().fg(scheme.added).bold(),
             ),
             Span::raw(" added, "),
             Span::styled(
-                format!("-{}", removed_count),
+                format!("-{removed_count}"),
                 Style::default().fg(scheme.removed).bold(),
             ),
             Span::raw(" removed"),
@@ -1170,7 +1170,7 @@ fn render_diff_tree_cached(
             let added = added_by_source.get(source_str);
             let removed = removed_by_source.get(source_str);
 
-            let child_count = added.map_or(0, |v| v.len()) + removed.map_or(0, |v| v.len());
+            let child_count = added.map_or(0, std::vec::Vec::len) + removed.map_or(0, std::vec::Vec::len);
             let is_expanded = expanded.contains(*source);
             let is_last = idx == sources_to_show.len() - 1;
 
@@ -1198,7 +1198,7 @@ fn render_diff_tree_cached(
                 Span::raw(" "),
                 Span::styled(short_source, source_style.bold()),
                 Span::styled(
-                    format!(" ({})", child_count),
+                    format!(" ({child_count})"),
                     Style::default().fg(scheme.text_muted),
                 ),
             ];
@@ -1238,7 +1238,7 @@ fn render_diff_tree_cached(
                         }
 
                         lines.push(Line::from(dep_spans));
-                        visible_nodes.push(format!("{}:+:{}", source, dep));
+                        visible_nodes.push(format!("{source}:+:{dep}"));
                     }
                 }
 
@@ -1266,7 +1266,7 @@ fn render_diff_tree_cached(
                         }
 
                         lines.push(Line::from(dep_spans));
-                        visible_nodes.push(format!("{}:-:{}", source, dep));
+                        visible_nodes.push(format!("{source}:-:{dep}"));
                     }
                 }
             }
@@ -1319,7 +1319,7 @@ fn render_view_tree_cached(
     lines.push(Line::from(vec![
         Span::styled("Total: ", Style::default().fg(scheme.text).bold()),
         Span::styled(
-            format!("{} dependencies", edge_count),
+            format!("{edge_count} dependencies"),
             Style::default().fg(scheme.primary).bold(),
         ),
         if show_cycles && !cycles_in_deps.is_empty() {
@@ -1393,8 +1393,8 @@ fn render_view_tree_cached(
         }
         DependencySort::DependentCount => {
             roots.sort_by(|a, b| {
-                let count_a = cached_reverse_graph.get(a).map(|v| v.len()).unwrap_or(0);
-                let count_b = cached_reverse_graph.get(b).map(|v| v.len()).unwrap_or(0);
+                let count_a = cached_reverse_graph.get(a).map(std::vec::Vec::len).unwrap_or(0);
+                let count_b = cached_reverse_graph.get(b).map(std::vec::Vec::len).unwrap_or(0);
                 // Sort by most dependents first, then by name
                 count_b.cmp(&count_a).then_with(|| a.cmp(b))
             });
@@ -1461,7 +1461,7 @@ fn render_view_node_cached(
     path: &mut Vec<String>,
 ) {
     let children = by_source.get(node_id);
-    let child_count = children.map_or(0, |v| v.len());
+    let child_count = children.map_or(0, std::vec::Vec::len);
     let is_expanded = expanded.contains(node_id);
 
     // When show_transitive is false, adjust child_count display for non-root nodes
@@ -1513,7 +1513,7 @@ fn render_view_node_cached(
             let is_cycle_ref = path.iter().any(|ancestor| ancestor == child);
 
             if is_cycle_ref {
-                let grand_child_count = by_source.get(child).map_or(0, |v| v.len());
+                let grand_child_count = by_source.get(child).map_or(0, std::vec::Vec::len);
                 render_view_node_line(
                     lines,
                     visible_nodes,
@@ -1635,15 +1635,16 @@ fn depth_exceeds_limit(
         if depth > max_depth {
             return true;
         }
-        if seen_depth.get(&node).is_some_and(|seen| *seen >= depth) {
+        if seen_depth.get(node.as_str()).is_some_and(|&seen| seen >= depth) {
             continue;
         }
-        seen_depth.insert(node.clone(), depth);
-        if let Some(children) = by_source.get(&node) {
+        // Enqueue children before consuming node
+        if let Some(children) = by_source.get(node.as_str()) {
             for child in children {
                 stack.push((child.clone(), depth + 1));
             }
         }
+        seen_depth.insert(node, depth);
     }
 
     false

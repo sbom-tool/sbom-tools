@@ -201,23 +201,19 @@ impl ReportGenerator for SarifReporter {
 
         // Report vulnerabilities in the SBOM
         for (comp, vuln) in sbom.all_vulnerabilities() {
+            let severity_str = vuln
+                .severity
+                .as_ref()
+                .map(std::string::ToString::to_string)
+                .unwrap_or_else(|| "Unknown".to_string());
             results.push(SarifResult {
                 rule_id: "SBOM-VIEW-001".to_string(),
-                level: severity_to_level(
-                    &vuln
-                        .severity
-                        .as_ref()
-                        .map(|s| s.to_string())
-                        .unwrap_or_else(|| "Unknown".to_string()),
-                ),
+                level: severity_to_level(&severity_str),
                 message: SarifMessage {
                     text: format!(
                         "Vulnerability {} ({}) in {} {}",
                         vuln.id,
-                        vuln.severity
-                            .as_ref()
-                            .map(|s| s.to_string())
-                            .unwrap_or_else(|| "Unknown".to_string()),
+                        severity_str,
                         comp.name,
                         comp.version.as_deref().unwrap_or("")
                     ),
@@ -290,12 +286,12 @@ fn severity_to_level(severity: &str) -> SarifLevel {
 /// Format SLA status for SARIF message
 fn format_sla_label(vuln: &VulnerabilityDetail) -> String {
     match vuln.sla_status() {
-        SlaStatus::Overdue(days) => format!(" [SLA: {}d late]", days),
-        SlaStatus::DueSoon(days) => format!(" [SLA: {}d left]", days),
-        SlaStatus::OnTrack(days) => format!(" [SLA: {}d left]", days),
+        SlaStatus::Overdue(days) => format!(" [SLA: {days}d late]"),
+        SlaStatus::DueSoon(days) => format!(" [SLA: {days}d left]"),
+        SlaStatus::OnTrack(days) => format!(" [SLA: {days}d left]"),
         SlaStatus::NoDueDate => vuln
             .days_since_published
-            .map(|d| format!(" [Age: {}d]", d))
+            .map(|d| format!(" [Age: {d}d]"))
             .unwrap_or_default(),
     }
 }
@@ -335,7 +331,7 @@ fn violation_to_rule_id(requirement: &str) -> &'static str {
 }
 
 fn compliance_results_to_sarif(result: &ComplianceResult, label: Option<&str>) -> Vec<SarifResult> {
-    let prefix = label.map(|l| format!("{} - ", l)).unwrap_or_default();
+    let prefix = label.map(|l| format!("{l} - ")).unwrap_or_default();
     result
         .violations
         .iter()

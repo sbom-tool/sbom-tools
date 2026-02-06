@@ -123,7 +123,7 @@ impl ChangeComputer for ComponentChangeComputer {
         matches: &ComponentMatches,
     ) -> ComponentChangeSet {
         let mut result = ComponentChangeSet::new();
-        let matched_new_ids: HashSet<_> = matches.values().filter_map(|v| v.clone()).collect();
+        let matched_new_ids: HashSet<_> = matches.values().filter_map(std::clone::Clone::clone).collect();
 
         // Find removed components
         for (old_id, new_id_opt) in matches {

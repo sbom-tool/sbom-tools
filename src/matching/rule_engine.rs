@@ -72,7 +72,7 @@ impl RuleEngine {
                     if let Some(re) = regex {
                         Regex::new(re)
                             .map(Some)
-                            .map_err(|e| format!("Invalid exclusion regex '{}': {}", re, e))
+                            .map_err(|e| format!("Invalid exclusion regex '{re}': {e}"))
                     } else {
                         Ok(None)
                     }
@@ -109,7 +109,7 @@ impl RuleEngine {
                             if let Some(re) = regex {
                                 Regex::new(re)
                                     .map(Some)
-                                    .map_err(|e| format!("Invalid alias regex '{}': {}", re, e))
+                                    .map_err(|e| format!("Invalid alias regex '{re}': {e}"))
                             } else {
                                 Ok(None)
                             }
@@ -179,7 +179,7 @@ impl RuleEngine {
                     component_id: id.clone(),
                     component_name: component.name.clone(),
                     rule_type: AppliedRuleType::Exclusion {
-                        reason: rule.get_reason().map(|s| s.to_string()),
+                        reason: rule.get_reason().map(std::string::ToString::to_string),
                     },
                     rule_index: idx,
                     rule_name: None,
@@ -260,7 +260,7 @@ impl RuleEngine {
                     || self
                         .compiled_exclusion_regexes
                         .get(rule_idx)
-                        .map(|r| r.is_some())
+                        .map(std::option::Option::is_some)
                         .unwrap_or(false)
             }
         }
@@ -418,8 +418,8 @@ fn compile_glob(pattern: &str) -> Result<Regex, String> {
         .replace('*', ".*")
         .replace('?', ".");
 
-    Regex::new(&format!("^{}$", regex_pattern))
-        .map_err(|e| format!("Invalid glob pattern '{}': {}", pattern, e))
+    Regex::new(&format!("^{regex_pattern}$"))
+        .map_err(|e| format!("Invalid glob pattern '{pattern}': {e}"))
 }
 
 /// Simple glob pattern matching (supports * and ?) - used only in tests

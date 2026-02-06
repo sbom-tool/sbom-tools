@@ -10,12 +10,12 @@ use crate::model::NormalizedSbom;
 fn ansi_color(text: &str, color: &str, colored: bool) -> String {
     if colored {
         match color {
-            "red" => format!("\x1b[31m{}\x1b[0m", text),
-            "green" => format!("\x1b[32m{}\x1b[0m", text),
-            "yellow" => format!("\x1b[33m{}\x1b[0m", text),
-            "cyan" => format!("\x1b[36m{}\x1b[0m", text),
-            "bold" => format!("\x1b[1m{}\x1b[0m", text),
-            "dim" => format!("\x1b[2m{}\x1b[0m", text),
+            "red" => format!("\x1b[31m{text}\x1b[0m"),
+            "green" => format!("\x1b[32m{text}\x1b[0m"),
+            "yellow" => format!("\x1b[33m{text}\x1b[0m"),
+            "cyan" => format!("\x1b[36m{text}\x1b[0m"),
+            "bold" => format!("\x1b[1m{text}\x1b[0m"),
+            "dim" => format!("\x1b[2m{text}\x1b[0m"),
             _ => text.to_string(),
         }
     } else {
@@ -84,7 +84,7 @@ impl ReportGenerator for SummaryReporter {
             new_sbom.component_count()
         ));
 
-        lines.push("".to_string());
+        lines.push(String::new());
 
         // Changes
         lines.push(self.color("Changes:", "bold"));
@@ -96,7 +96,7 @@ impl ReportGenerator for SummaryReporter {
         if added > 0 {
             lines.push(format!(
                 "  {} {} added",
-                self.color(&format!("+{}", added), "green"),
+                self.color(&format!("+{added}"), "green"),
                 if added == 1 {
                     "component"
                 } else {
@@ -107,7 +107,7 @@ impl ReportGenerator for SummaryReporter {
         if removed > 0 {
             lines.push(format!(
                 "  {} {} removed",
-                self.color(&format!("-{}", removed), "red"),
+                self.color(&format!("-{removed}"), "red"),
                 if removed == 1 {
                     "component"
                 } else {
@@ -118,7 +118,7 @@ impl ReportGenerator for SummaryReporter {
         if modified > 0 {
             lines.push(format!(
                 "  {} {} modified",
-                self.color(&format!("~{}", modified), "yellow"),
+                self.color(&format!("~{modified}"), "yellow"),
                 if modified == 1 {
                     "component"
                 } else {
@@ -135,13 +135,13 @@ impl ReportGenerator for SummaryReporter {
         let vulns_resolved = result.summary.vulnerabilities_resolved;
 
         if vulns_intro > 0 || vulns_resolved > 0 {
-            lines.push("".to_string());
+            lines.push(String::new());
             lines.push(self.color("Vulnerabilities:", "bold"));
 
             if vulns_intro > 0 {
                 lines.push(format!(
                     "  {} {} introduced",
-                    self.color(&format!("!{}", vulns_intro), "red"),
+                    self.color(&format!("!{vulns_intro}"), "red"),
                     if vulns_intro == 1 {
                         "vulnerability"
                     } else {
@@ -152,7 +152,7 @@ impl ReportGenerator for SummaryReporter {
             if vulns_resolved > 0 {
                 lines.push(format!(
                     "  {} {} resolved",
-                    self.color(&format!("✓{}", vulns_resolved), "green"),
+                    self.color(&format!("✓{vulns_resolved}"), "green"),
                     if vulns_resolved == 1 {
                         "vulnerability"
                     } else {
@@ -163,7 +163,7 @@ impl ReportGenerator for SummaryReporter {
         }
 
         // Score
-        lines.push("".to_string());
+        lines.push(String::new());
         let score = result.semantic_score;
         let score_color = if score > 90.0 {
             "green"
@@ -175,7 +175,7 @@ impl ReportGenerator for SummaryReporter {
         lines.push(format!(
             "{}  {}",
             self.color("Similarity:", "cyan"),
-            self.color(&format!("{:.1}%", score), score_color)
+            self.color(&format!("{score:.1}%"), score_color)
         ));
 
         Ok(lines.join("\n"))
@@ -213,7 +213,7 @@ impl ReportGenerator for SummaryReporter {
         ));
 
         // Ecosystems
-        let ecosystems: Vec<_> = sbom.ecosystems().iter().map(|e| e.to_string()).collect();
+        let ecosystems: Vec<_> = sbom.ecosystems().iter().map(std::string::ToString::to_string).collect();
         if !ecosystems.is_empty() {
             lines.push(format!(
                 "{}  {}",
@@ -226,7 +226,7 @@ impl ReportGenerator for SummaryReporter {
         let counts = sbom.vulnerability_counts();
         let total_vulns = counts.critical + counts.high + counts.medium + counts.low;
         if total_vulns > 0 {
-            lines.push("".to_string());
+            lines.push(String::new());
             lines.push(self.color("Vulnerabilities:", "bold"));
             if counts.critical > 0 {
                 lines.push(format!(
@@ -350,7 +350,7 @@ impl ReportGenerator for TableReporter {
 
         // Vulnerabilities section
         if !result.vulnerabilities.introduced.is_empty() {
-            lines.push("".to_string());
+            lines.push(String::new());
             lines.push(format!(
                 "{:<12} {:<20} {:<10} {:<40}",
                 self.color("VULNS", "bold"),
@@ -378,7 +378,7 @@ impl ReportGenerator for TableReporter {
         }
 
         // Summary footer
-        lines.push("".to_string());
+        lines.push(String::new());
         lines.push(format!(
             "Total: {} added, {} removed, {} modified | Vulns: {} new, {} resolved | Similarity: {:.1}%",
             result.summary.components_added,
@@ -445,7 +445,7 @@ impl ReportGenerator for TableReporter {
         }
 
         // Summary
-        lines.push("".to_string());
+        lines.push(String::new());
         let counts = sbom.vulnerability_counts();
         let unknown_str = if counts.unknown > 0 {
             format!(", {} unknown", counts.unknown)

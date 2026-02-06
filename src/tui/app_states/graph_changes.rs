@@ -1,5 +1,7 @@
 //! Graph Changes state types.
 
+use crate::tui::state::ListNavigation;
+
 pub struct GraphChangesState {
     pub selected: usize,
     pub total: usize,
@@ -15,34 +17,24 @@ impl GraphChangesState {
         }
     }
 
-    pub fn select_next(&mut self) {
-        if self.total > 0 && self.selected < self.total - 1 {
-            self.selected += 1;
-        }
+}
+
+impl ListNavigation for GraphChangesState {
+    fn selected(&self) -> usize {
+        self.selected
     }
 
-    pub fn select_prev(&mut self) {
-        if self.selected > 0 {
-            self.selected -= 1;
-        }
+    fn set_selected(&mut self, idx: usize) {
+        self.selected = idx;
     }
 
-    pub fn page_down(&mut self) {
-        let page_size = 10;
-        self.selected = (self.selected + page_size).min(self.total.saturating_sub(1));
+    fn total(&self) -> usize {
+        self.total
     }
 
-    pub fn page_up(&mut self) {
-        let page_size = 10;
-        self.selected = self.selected.saturating_sub(page_size);
-    }
-
-    pub fn set_total(&mut self, total: usize) {
+    fn set_total(&mut self, total: usize) {
         self.total = total;
-        // Clamp selection if out of bounds
-        if self.total > 0 && self.selected >= self.total {
-            self.selected = self.total - 1;
-        }
+        self.clamp_selection();
     }
 }
 

@@ -19,30 +19,30 @@ impl RiskLevel {
     /// Get display label
     pub fn label(&self) -> &'static str {
         match self {
-            RiskLevel::Low => "Low",
-            RiskLevel::Medium => "Medium",
-            RiskLevel::High => "High",
-            RiskLevel::Critical => "Critical",
+            Self::Low => "Low",
+            Self::Medium => "Medium",
+            Self::High => "High",
+            Self::Critical => "Critical",
         }
     }
 
     /// Get short label (single letter)
     pub fn short_label(&self) -> &'static str {
         match self {
-            RiskLevel::Low => "L",
-            RiskLevel::Medium => "M",
-            RiskLevel::High => "H",
-            RiskLevel::Critical => "C",
+            Self::Low => "L",
+            Self::Medium => "M",
+            Self::High => "H",
+            Self::Critical => "C",
         }
     }
 
     /// Get numeric value (higher = more risk)
     pub fn value(&self) -> u8 {
         match self {
-            RiskLevel::Low => 1,
-            RiskLevel::Medium => 2,
-            RiskLevel::High => 3,
-            RiskLevel::Critical => 4,
+            Self::Low => 1,
+            Self::Medium => 2,
+            Self::High => 3,
+            Self::Critical => 4,
         }
     }
 }
@@ -67,11 +67,11 @@ impl LicenseCategory {
     /// Get display label
     pub fn label(&self) -> &'static str {
         match self {
-            LicenseCategory::Permissive => "Permissive",
-            LicenseCategory::Copyleft => "Copyleft",
-            LicenseCategory::WeakCopyleft => "Weak Copyleft",
-            LicenseCategory::Proprietary => "Proprietary",
-            LicenseCategory::Unknown => "Unknown",
+            Self::Permissive => "Permissive",
+            Self::Copyleft => "Copyleft",
+            Self::WeakCopyleft => "Weak Copyleft",
+            Self::Proprietary => "Proprietary",
+            Self::Unknown => "Unknown",
         }
     }
 }
@@ -177,13 +177,13 @@ impl SecurityFilterCriteria {
                 parts.push("Has vulns".to_string());
             }
             if let Some(sev) = &self.vuln_severity {
-                parts.push(format!("{} vulns", sev));
+                parts.push(format!("{sev} vulns"));
             }
             if self.has_kev == Some(true) {
                 parts.push("KEV".to_string());
             }
             if let Some(lic) = &self.license_type {
-                parts.push(format!("{}", lic));
+                parts.push(format!("{lic}"));
             }
             if self.max_age_months.is_some() {
                 parts.push("Stale".to_string());
@@ -250,56 +250,56 @@ impl QuickFilter {
     /// Get display label
     pub fn label(&self) -> &'static str {
         match self {
-            QuickFilter::HighRisk => "High Risk",
-            QuickFilter::HasVulns => "Has Vulns",
-            QuickFilter::CriticalVulns => "Critical",
-            QuickFilter::HasKev => "KEV",
-            QuickFilter::Copyleft => "Copyleft",
-            QuickFilter::Flagged => "Flagged",
-            QuickFilter::Stale => "Stale",
-            QuickFilter::DirectDeps => "Direct",
+            Self::HighRisk => "High Risk",
+            Self::HasVulns => "Has Vulns",
+            Self::CriticalVulns => "Critical",
+            Self::HasKev => "KEV",
+            Self::Copyleft => "Copyleft",
+            Self::Flagged => "Flagged",
+            Self::Stale => "Stale",
+            Self::DirectDeps => "Direct",
         }
     }
 
     /// Get keyboard shortcut (1-8)
     pub fn shortcut(&self) -> &'static str {
         match self {
-            QuickFilter::HighRisk => "1",
-            QuickFilter::HasVulns => "2",
-            QuickFilter::CriticalVulns => "3",
-            QuickFilter::HasKev => "4",
-            QuickFilter::Copyleft => "5",
-            QuickFilter::Flagged => "6",
-            QuickFilter::Stale => "7",
-            QuickFilter::DirectDeps => "8",
+            Self::HighRisk => "1",
+            Self::HasVulns => "2",
+            Self::CriticalVulns => "3",
+            Self::HasKev => "4",
+            Self::Copyleft => "5",
+            Self::Flagged => "6",
+            Self::Stale => "7",
+            Self::DirectDeps => "8",
         }
     }
 
     /// Apply this quick filter to criteria
     pub fn apply(&self, criteria: &mut SecurityFilterCriteria) {
         match self {
-            QuickFilter::HighRisk => {
+            Self::HighRisk => {
                 criteria.min_risk = Some(RiskLevel::High);
             }
-            QuickFilter::HasVulns => {
+            Self::HasVulns => {
                 criteria.has_vulns = Some(true);
             }
-            QuickFilter::CriticalVulns => {
+            Self::CriticalVulns => {
                 criteria.vuln_severity = Some("Critical".to_string());
             }
-            QuickFilter::HasKev => {
+            Self::HasKev => {
                 criteria.has_kev = Some(true);
             }
-            QuickFilter::Copyleft => {
+            Self::Copyleft => {
                 criteria.license_type = Some(LicenseCategory::Copyleft);
             }
-            QuickFilter::Flagged => {
+            Self::Flagged => {
                 criteria.is_flagged = Some(true);
             }
-            QuickFilter::Stale => {
+            Self::Stale => {
                 criteria.max_age_months = Some(6);
             }
-            QuickFilter::DirectDeps => {
+            Self::DirectDeps => {
                 criteria.direct_deps_only = Some(true);
             }
         }
@@ -308,28 +308,28 @@ impl QuickFilter {
     /// Remove this quick filter from criteria
     pub fn unapply(&self, criteria: &mut SecurityFilterCriteria) {
         match self {
-            QuickFilter::HighRisk => {
+            Self::HighRisk => {
                 criteria.min_risk = None;
             }
-            QuickFilter::HasVulns => {
+            Self::HasVulns => {
                 criteria.has_vulns = None;
             }
-            QuickFilter::CriticalVulns => {
+            Self::CriticalVulns => {
                 criteria.vuln_severity = None;
             }
-            QuickFilter::HasKev => {
+            Self::HasKev => {
                 criteria.has_kev = None;
             }
-            QuickFilter::Copyleft => {
+            Self::Copyleft => {
                 criteria.license_type = None;
             }
-            QuickFilter::Flagged => {
+            Self::Flagged => {
                 criteria.is_flagged = None;
             }
-            QuickFilter::Stale => {
+            Self::Stale => {
                 criteria.max_age_months = None;
             }
-            QuickFilter::DirectDeps => {
+            Self::DirectDeps => {
                 criteria.direct_deps_only = None;
             }
         }
@@ -338,30 +338,30 @@ impl QuickFilter {
     /// Check if this quick filter is currently active
     pub fn is_active(&self, criteria: &SecurityFilterCriteria) -> bool {
         match self {
-            QuickFilter::HighRisk => criteria.min_risk.is_some(),
-            QuickFilter::HasVulns => criteria.has_vulns == Some(true),
-            QuickFilter::CriticalVulns => criteria.vuln_severity.is_some(),
-            QuickFilter::HasKev => criteria.has_kev == Some(true),
-            QuickFilter::Copyleft => {
+            Self::HighRisk => criteria.min_risk.is_some(),
+            Self::HasVulns => criteria.has_vulns == Some(true),
+            Self::CriticalVulns => criteria.vuln_severity.is_some(),
+            Self::HasKev => criteria.has_kev == Some(true),
+            Self::Copyleft => {
                 criteria.license_type == Some(LicenseCategory::Copyleft)
             }
-            QuickFilter::Flagged => criteria.is_flagged == Some(true),
-            QuickFilter::Stale => criteria.max_age_months.is_some(),
-            QuickFilter::DirectDeps => criteria.direct_deps_only == Some(true),
+            Self::Flagged => criteria.is_flagged == Some(true),
+            Self::Stale => criteria.max_age_months.is_some(),
+            Self::DirectDeps => criteria.direct_deps_only == Some(true),
         }
     }
 
     /// Get all available quick filters
-    pub fn all() -> &'static [QuickFilter] {
+    pub fn all() -> &'static [Self] {
         &[
-            QuickFilter::HighRisk,
-            QuickFilter::HasVulns,
-            QuickFilter::CriticalVulns,
-            QuickFilter::HasKev,
-            QuickFilter::Copyleft,
-            QuickFilter::Flagged,
-            QuickFilter::Stale,
-            QuickFilter::DirectDeps,
+            Self::HighRisk,
+            Self::HasVulns,
+            Self::CriticalVulns,
+            Self::HasKev,
+            Self::Copyleft,
+            Self::Flagged,
+            Self::Stale,
+            Self::DirectDeps,
         ]
     }
 }

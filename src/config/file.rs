@@ -110,11 +110,11 @@ pub enum ConfigFileError {
 impl std::fmt::Display for ConfigFileError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ConfigFileError::NotFound(path) => {
+            Self::NotFound(path) => {
                 write!(f, "Config file not found: {}", path.display())
             }
-            ConfigFileError::Io(e) => write!(f, "Failed to read config file: {}", e),
-            ConfigFileError::Parse(e) => write!(f, "Failed to parse config file: {}", e),
+            Self::Io(e) => write!(f, "Failed to read config file: {e}"),
+            Self::Parse(e) => write!(f, "Failed to parse config file: {e}"),
         }
     }
 }
@@ -122,22 +122,22 @@ impl std::fmt::Display for ConfigFileError {
 impl std::error::Error for ConfigFileError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            ConfigFileError::NotFound(_) => None,
-            ConfigFileError::Io(e) => Some(e),
-            ConfigFileError::Parse(e) => Some(e),
+            Self::NotFound(_) => None,
+            Self::Io(e) => Some(e),
+            Self::Parse(e) => Some(e),
         }
     }
 }
 
 impl From<std::io::Error> for ConfigFileError {
     fn from(err: std::io::Error) -> Self {
-        ConfigFileError::Io(err)
+        Self::Io(err)
     }
 }
 
 impl From<serde_yaml_ng::Error> for ConfigFileError {
     fn from(err: serde_yaml_ng::Error) -> Self {
-        ConfigFileError::Parse(err)
+        Self::Parse(err)
     }
 }
 
@@ -174,7 +174,7 @@ impl AppConfig {
     /// Merge another config into this one, with `other` taking precedence.
     ///
     /// This is useful for layering CLI args over file config.
-    pub fn merge(&mut self, other: &AppConfig) {
+    pub fn merge(&mut self, other: &Self) {
         // Matching config
         if other.matching.fuzzy_preset != "balanced" {
             self.matching.fuzzy_preset = other.matching.fuzzy_preset.clone();
@@ -260,7 +260,7 @@ impl AppConfig {
     /// Load from file and merge with CLI overrides.
     pub fn from_file_with_overrides(
         config_path: Option<&Path>,
-        cli_overrides: &AppConfig,
+        cli_overrides: &Self,
     ) -> (Self, Option<PathBuf>) {
         let (mut config, loaded_from) = load_or_default(config_path);
         config.merge(cli_overrides);

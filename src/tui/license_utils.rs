@@ -7,29 +7,29 @@ use std::collections::{HashMap, HashSet};
 
 /// Parsed SPDX expression
 #[derive(Debug, Clone, PartialEq)]
-pub enum SpdxExpression {
+pub(crate) enum SpdxExpression {
     /// Single license identifier
     License(String),
     /// License with exception (e.g., GPL-2.0 WITH Classpath-exception-2.0)
     WithException { license: String, exception: String },
     /// OR expression (choice of licenses)
-    Or(Box<SpdxExpression>, Box<SpdxExpression>),
+    Or(Box<Self>, Box<Self>),
     /// AND expression (must comply with all)
-    And(Box<SpdxExpression>, Box<SpdxExpression>),
+    And(Box<Self>, Box<Self>),
 }
 
 impl SpdxExpression {
     /// Parse an SPDX expression string
-    pub fn parse(expr: &str) -> Self {
+    pub(crate) fn parse(expr: &str) -> Self {
         let expr = expr.trim();
 
         // Handle OR operator (lowest precedence)
         if let Some(pos) = find_operator(expr, " OR ") {
             let left = &expr[..pos];
             let right = &expr[pos + 4..];
-            return SpdxExpression::Or(
-                Box::new(SpdxExpression::parse(left)),
-                Box::new(SpdxExpression::parse(right)),
+            return Self::Or(
+                Box::new(Self::parse(left)),
+                Box::new(Self::parse(right)),
             );
         }
 
@@ -37,9 +37,9 @@ impl SpdxExpression {
         if let Some(pos) = find_operator(expr, " AND ") {
             let left = &expr[..pos];
             let right = &expr[pos + 5..];
-            return SpdxExpression::And(
-                Box::new(SpdxExpression::parse(left)),
-                Box::new(SpdxExpression::parse(right)),
+            return Self::And(
+                Box::new(Self::parse(left)),
+                Box::new(Self::parse(right)),
             );
         }
 
@@ -47,47 +47,25 @@ impl SpdxExpression {
         if let Some(pos) = expr.to_uppercase().find(" WITH ") {
             let license = expr[..pos].trim().to_string();
             let exception = expr[pos + 6..].trim().to_string();
-            return SpdxExpression::WithException { license, exception };
+            return Self::WithException { license, exception };
         }
 
         // Handle parentheses
         let expr = expr.trim_start_matches('(').trim_end_matches(')').trim();
 
         // Single license
-        SpdxExpression::License(expr.to_string())
-    }
-
-    /// Get all license identifiers in the expression
-    pub fn licenses(&self) -> Vec<&str> {
-        match self {
-            SpdxExpression::License(l) => vec![l.as_str()],
-            SpdxExpression::WithException { license, .. } => vec![license.as_str()],
-            SpdxExpression::Or(left, right) | SpdxExpression::And(left, right) => {
-                let mut result = left.licenses();
-                result.extend(right.licenses());
-                result
-            }
-        }
+        Self::License(expr.to_string())
     }
 
     /// Check if this is a choice expression (contains OR)
-    pub fn is_choice(&self) -> bool {
+    pub(crate) fn is_choice(&self) -> bool {
         match self {
-            SpdxExpression::Or(_, _) => true,
-            SpdxExpression::And(left, right) => left.is_choice() || right.is_choice(),
+            Self::Or(_, _) => true,
+            Self::And(left, right) => left.is_choice() || right.is_choice(),
             _ => false,
         }
     }
 
-    /// Get a human-readable description of the expression type
-    pub fn expression_type(&self) -> &'static str {
-        match self {
-            SpdxExpression::License(_) => "Single License",
-            SpdxExpression::WithException { .. } => "License with Exception",
-            SpdxExpression::Or(_, _) => "Dual/Multi License (Choice)",
-            SpdxExpression::And(_, _) => "Combined License (All Apply)",
-        }
-    }
 }
 
 /// Find operator position, respecting parentheses
@@ -110,7 +88,7 @@ fn find_operator(expr: &str, op: &str) -> Option<usize> {
 
 /// License category for classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum LicenseCategory {
+pub(crate) enum LicenseCategory {
     Permissive,
     WeakCopyleft,
     StrongCopyleft,
@@ -121,34 +99,34 @@ pub enum LicenseCategory {
 }
 
 impl LicenseCategory {
-    pub fn as_str(&self) -> &'static str {
+    pub(crate) fn as_str(&self) -> &'static str {
         match self {
-            LicenseCategory::Permissive => "Permissive",
-            LicenseCategory::WeakCopyleft => "Weak Copyleft",
-            LicenseCategory::StrongCopyleft => "Copyleft",
-            LicenseCategory::NetworkCopyleft => "Network Copyleft",
-            LicenseCategory::Proprietary => "Proprietary",
-            LicenseCategory::PublicDomain => "Public Domain",
-            LicenseCategory::Unknown => "Unknown",
+            Self::Permissive => "Permissive",
+            Self::WeakCopyleft => "Weak Copyleft",
+            Self::StrongCopyleft => "Copyleft",
+            Self::NetworkCopyleft => "Network Copyleft",
+            Self::Proprietary => "Proprietary",
+            Self::PublicDomain => "Public Domain",
+            Self::Unknown => "Unknown",
         }
     }
 
     /// Get the copyleft strength (0 = none, 4 = strongest)
-    pub fn copyleft_strength(&self) -> u8 {
+    pub(crate) fn copyleft_strength(&self) -> u8 {
         match self {
-            LicenseCategory::PublicDomain | LicenseCategory::Permissive => 0,
-            LicenseCategory::WeakCopyleft => 1,
-            LicenseCategory::StrongCopyleft => 2,
-            LicenseCategory::NetworkCopyleft => 3,
-            LicenseCategory::Proprietary => 4, // Most restrictive
-            LicenseCategory::Unknown => 0,
+            Self::PublicDomain | Self::Permissive => 0,
+            Self::WeakCopyleft => 1,
+            Self::StrongCopyleft => 2,
+            Self::NetworkCopyleft => 3,
+            Self::Proprietary => 4, // Most restrictive
+            Self::Unknown => 0,
         }
     }
 }
 
 /// License risk level
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum RiskLevel {
+pub(crate) enum RiskLevel {
     Low,
     Medium,
     High,
@@ -156,35 +134,25 @@ pub enum RiskLevel {
 }
 
 impl RiskLevel {
-    pub fn as_str(&self) -> &'static str {
+    pub(crate) fn as_str(&self) -> &'static str {
         match self {
-            RiskLevel::Low => "Low",
-            RiskLevel::Medium => "Medium",
-            RiskLevel::High => "High",
-            RiskLevel::Critical => "Critical",
+            Self::Low => "Low",
+            Self::Medium => "Medium",
+            Self::High => "High",
+            Self::Critical => "Critical",
         }
     }
 }
 
 /// Detailed license information
 #[derive(Debug, Clone)]
-pub struct LicenseInfo {
-    /// SPDX identifier
-    pub spdx_id: String,
+pub(crate) struct LicenseInfo {
     /// License category
     pub category: LicenseCategory,
     /// Risk level for commercial use
     pub risk_level: RiskLevel,
-    /// Whether attribution is required
-    pub requires_attribution: bool,
-    /// Whether source disclosure is required
-    pub requires_source_disclosure: bool,
     /// Whether patent grant is included
     pub patent_grant: bool,
-    /// Whether modifications must be disclosed
-    pub modifications_must_be_disclosed: bool,
-    /// Whether derivatives must use same license
-    pub same_license_for_derivatives: bool,
     /// Whether network use triggers copyleft
     pub network_copyleft: bool,
     /// License family (e.g., "BSD", "GPL", "Apache")
@@ -193,7 +161,7 @@ pub struct LicenseInfo {
 
 impl LicenseInfo {
     /// Get detailed info for a known license
-    pub fn from_spdx(spdx_id: &str) -> Self {
+    pub(crate) fn from_spdx(spdx_id: &str) -> Self {
         let lower = spdx_id.to_lowercase();
 
         // MIT family
@@ -204,14 +172,9 @@ impl LicenseInfo {
         // Apache family
         if lower.contains("apache") {
             return Self {
-                spdx_id: spdx_id.to_string(),
                 category: LicenseCategory::Permissive,
                 risk_level: RiskLevel::Low,
-                requires_attribution: true,
-                requires_source_disclosure: false,
                 patent_grant: true,
-                modifications_must_be_disclosed: false,
-                same_license_for_derivatives: false,
                 network_copyleft: false,
                 family: "Apache",
             };
@@ -221,18 +184,13 @@ impl LicenseInfo {
         if lower.contains("bsd") {
             let has_advertising = lower.contains("4-clause") || lower.contains("original");
             return Self {
-                spdx_id: spdx_id.to_string(),
                 category: LicenseCategory::Permissive,
                 risk_level: if has_advertising {
                     RiskLevel::Medium
                 } else {
                     RiskLevel::Low
                 },
-                requires_attribution: true,
-                requires_source_disclosure: false,
                 patent_grant: false,
-                modifications_must_be_disclosed: false,
-                same_license_for_derivatives: false,
                 network_copyleft: false,
                 family: "BSD",
             };
@@ -253,18 +211,13 @@ impl LicenseInfo {
                 "Public Domain-like"
             };
             return Self {
-                spdx_id: spdx_id.to_string(),
                 category: if lower.contains("cc0") || lower.contains("unlicense") {
                     LicenseCategory::PublicDomain
                 } else {
                     LicenseCategory::Permissive
                 },
                 risk_level: RiskLevel::Low,
-                requires_attribution: !lower.contains("cc0") && !lower.contains("unlicense"),
-                requires_source_disclosure: false,
                 patent_grant: false,
-                modifications_must_be_disclosed: false,
-                same_license_for_derivatives: false,
                 network_copyleft: false,
                 family,
             };
@@ -273,14 +226,9 @@ impl LicenseInfo {
         // AGPL (network copyleft)
         if lower.contains("agpl") {
             return Self {
-                spdx_id: spdx_id.to_string(),
                 category: LicenseCategory::NetworkCopyleft,
                 risk_level: RiskLevel::Critical,
-                requires_attribution: true,
-                requires_source_disclosure: true,
                 patent_grant: lower.contains("3"),
-                modifications_must_be_disclosed: true,
-                same_license_for_derivatives: true,
                 network_copyleft: true,
                 family: "GPL",
             };
@@ -289,14 +237,9 @@ impl LicenseInfo {
         // LGPL (weak copyleft)
         if lower.contains("lgpl") {
             return Self {
-                spdx_id: spdx_id.to_string(),
                 category: LicenseCategory::WeakCopyleft,
                 risk_level: RiskLevel::Medium,
-                requires_attribution: true,
-                requires_source_disclosure: true,
                 patent_grant: lower.contains("3"),
-                modifications_must_be_disclosed: true,
-                same_license_for_derivatives: true, // Only for library modifications
                 network_copyleft: false,
                 family: "GPL",
             };
@@ -305,14 +248,9 @@ impl LicenseInfo {
         // GPL (strong copyleft)
         if lower.contains("gpl") {
             return Self {
-                spdx_id: spdx_id.to_string(),
                 category: LicenseCategory::StrongCopyleft,
                 risk_level: RiskLevel::High,
-                requires_attribution: true,
-                requires_source_disclosure: true,
                 patent_grant: lower.contains("3"),
-                modifications_must_be_disclosed: true,
-                same_license_for_derivatives: true,
                 network_copyleft: false,
                 family: "GPL",
             };
@@ -321,14 +259,9 @@ impl LicenseInfo {
         // MPL (weak copyleft)
         if lower.contains("mpl") || lower.contains("mozilla") {
             return Self {
-                spdx_id: spdx_id.to_string(),
                 category: LicenseCategory::WeakCopyleft,
                 risk_level: RiskLevel::Medium,
-                requires_attribution: true,
-                requires_source_disclosure: true,
                 patent_grant: true,
-                modifications_must_be_disclosed: true,
-                same_license_for_derivatives: false, // File-level copyleft
                 network_copyleft: false,
                 family: "MPL",
             };
@@ -337,14 +270,9 @@ impl LicenseInfo {
         // Eclipse (weak copyleft)
         if lower.contains("eclipse") || lower.contains("epl") {
             return Self {
-                spdx_id: spdx_id.to_string(),
                 category: LicenseCategory::WeakCopyleft,
                 risk_level: RiskLevel::Medium,
-                requires_attribution: true,
-                requires_source_disclosure: true,
                 patent_grant: true,
-                modifications_must_be_disclosed: true,
-                same_license_for_derivatives: false,
                 network_copyleft: false,
                 family: "Eclipse",
             };
@@ -353,14 +281,9 @@ impl LicenseInfo {
         // CDDL
         if lower.contains("cddl") {
             return Self {
-                spdx_id: spdx_id.to_string(),
                 category: LicenseCategory::WeakCopyleft,
                 risk_level: RiskLevel::Medium,
-                requires_attribution: true,
-                requires_source_disclosure: true,
                 patent_grant: true,
-                modifications_must_be_disclosed: true,
-                same_license_for_derivatives: false,
                 network_copyleft: false,
                 family: "CDDL",
             };
@@ -372,14 +295,9 @@ impl LicenseInfo {
             || lower.contains("private")
         {
             return Self {
-                spdx_id: spdx_id.to_string(),
                 category: LicenseCategory::Proprietary,
                 risk_level: RiskLevel::Critical,
-                requires_attribution: false,
-                requires_source_disclosure: false,
                 patent_grant: false,
-                modifications_must_be_disclosed: false,
-                same_license_for_derivatives: false,
                 network_copyleft: false,
                 family: "Proprietary",
             };
@@ -387,14 +305,9 @@ impl LicenseInfo {
 
         // Unknown
         Self {
-            spdx_id: spdx_id.to_string(),
             category: LicenseCategory::Unknown,
-            risk_level: RiskLevel::Medium, // Conservative default
-            requires_attribution: true,    // Safe assumption
-            requires_source_disclosure: false,
+            risk_level: RiskLevel::Medium,
             patent_grant: false,
-            modifications_must_be_disclosed: false,
-            same_license_for_derivatives: false,
             network_copyleft: false,
             family: "Unknown",
         }
@@ -402,14 +315,9 @@ impl LicenseInfo {
 
     fn permissive(family: &'static str, patent_grant: bool) -> Self {
         Self {
-            spdx_id: family.to_string(),
             category: LicenseCategory::Permissive,
             risk_level: RiskLevel::Low,
-            requires_attribution: true,
-            requires_source_disclosure: false,
             patent_grant,
-            modifications_must_be_disclosed: false,
-            same_license_for_derivatives: false,
             network_copyleft: false,
             family,
         }
@@ -418,19 +326,17 @@ impl LicenseInfo {
 
 /// License compatibility result
 #[derive(Debug, Clone)]
-pub struct CompatibilityResult {
+pub(crate) struct CompatibilityResult {
     /// Whether the licenses are compatible
     pub compatible: bool,
     /// Compatibility level (0-100)
     pub score: u8,
     /// Warning messages
     pub warnings: Vec<String>,
-    /// The resulting license requirements if combined
-    pub resulting_category: LicenseCategory,
 }
 
 /// Check compatibility between two licenses
-pub fn check_compatibility(license_a: &str, license_b: &str) -> CompatibilityResult {
+pub(crate) fn check_compatibility(license_a: &str, license_b: &str) -> CompatibilityResult {
     let info_a = LicenseInfo::from_spdx(license_a);
     let info_b = LicenseInfo::from_spdx(license_b);
 
@@ -511,24 +417,15 @@ pub fn check_compatibility(license_a: &str, license_b: &str) -> CompatibilityRes
         }
     }
 
-    // Determine resulting category (most restrictive)
-    let resulting_category =
-        if info_a.category.copyleft_strength() > info_b.category.copyleft_strength() {
-            info_a.category
-        } else {
-            info_b.category
-        };
-
     CompatibilityResult {
         compatible,
         score,
         warnings,
-        resulting_category,
     }
 }
 
 /// Analyze all licenses in an SBOM for compatibility issues
-pub fn analyze_license_compatibility(licenses: &[&str]) -> LicenseCompatibilityReport {
+pub(crate) fn analyze_license_compatibility(licenses: &[&str]) -> LicenseCompatibilityReport {
     let mut issues = Vec::new();
     let mut families: HashMap<&'static str, Vec<String>> = HashMap::new();
     let mut categories: HashMap<LicenseCategory, Vec<String>> = HashMap::new();
@@ -553,8 +450,6 @@ pub fn analyze_license_compatibility(licenses: &[&str]) -> LicenseCompatibilityR
             let result = check_compatibility(license_a, license_b);
             if !result.compatible || result.score < 70 {
                 issues.push(CompatibilityIssue {
-                    license_a: license_a.to_string(),
-                    license_b: license_b.to_string(),
                     severity: if !result.compatible {
                         IssueSeverity::Error
                     } else {
@@ -587,7 +482,7 @@ pub fn analyze_license_compatibility(licenses: &[&str]) -> LicenseCompatibilityR
 
 /// License compatibility report for an entire SBOM
 #[derive(Debug)]
-pub struct LicenseCompatibilityReport {
+pub(crate) struct LicenseCompatibilityReport {
     /// Overall compatibility score (0-100)
     pub overall_score: u8,
     /// Specific compatibility issues
@@ -600,22 +495,20 @@ pub struct LicenseCompatibilityReport {
 
 /// A specific compatibility issue
 #[derive(Debug, Clone)]
-pub struct CompatibilityIssue {
-    pub license_a: String,
-    pub license_b: String,
+pub(crate) struct CompatibilityIssue {
     pub severity: IssueSeverity,
     pub message: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IssueSeverity {
+pub(crate) enum IssueSeverity {
     Warning,
     Error,
 }
 
 /// License statistics for display
 #[derive(Debug, Default)]
-pub struct LicenseStats {
+pub(crate) struct LicenseStats {
     pub total_licenses: usize,
     pub unique_licenses: usize,
     pub by_category: HashMap<LicenseCategory, usize>,
@@ -626,8 +519,8 @@ pub struct LicenseStats {
 }
 
 impl LicenseStats {
-    pub fn from_licenses(licenses: &[&str]) -> Self {
-        let mut stats = LicenseStats {
+    pub(crate) fn from_licenses(licenses: &[&str]) -> Self {
+        let mut stats = Self {
             total_licenses: licenses.len(),
             unique_licenses: 0,
             by_category: HashMap::new(),

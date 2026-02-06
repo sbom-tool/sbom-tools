@@ -38,12 +38,12 @@ impl ChangeComputer for DependencyChangeComputer {
             let from = matches
                 .get(&edge.from)
                 .and_then(|v| v.as_ref())
-                .map(|id| id.to_string())
+                .map(std::string::ToString::to_string)
                 .unwrap_or_else(|| edge.from.to_string());
             let to = matches
                 .get(&edge.to)
                 .and_then(|v| v.as_ref())
-                .map(|id| id.to_string())
+                .map(std::string::ToString::to_string)
                 .unwrap_or_else(|| edge.to.to_string());
             normalized_old_edges.insert((from, to));
         }
@@ -68,12 +68,12 @@ impl ChangeComputer for DependencyChangeComputer {
             let from = matches
                 .get(&edge.from)
                 .and_then(|v| v.as_ref())
-                .map(|id| id.to_string())
+                .map(std::string::ToString::to_string)
                 .unwrap_or_else(|| edge.from.to_string());
             let to = matches
                 .get(&edge.to)
                 .and_then(|v| v.as_ref())
-                .map(|id| id.to_string())
+                .map(std::string::ToString::to_string)
                 .unwrap_or_else(|| edge.to.to_string());
 
             if !normalized_new_edges.contains(&(from, to)) {

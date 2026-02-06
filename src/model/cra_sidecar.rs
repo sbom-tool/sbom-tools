@@ -94,11 +94,11 @@ impl CraSidecarMetadata {
 
         // Try common sidecar naming patterns
         let patterns = [
-            format!("{}.cra.json", stem),
-            format!("{}.cra.yaml", stem),
-            format!("{}.cra.yml", stem),
-            format!("{}-cra.json", stem),
-            format!("{}-cra.yaml", stem),
+            format!("{stem}.cra.json"),
+            format!("{stem}.cra.yaml"),
+            format!("{stem}.cra.yml"),
+            format!("{stem}-cra.json"),
+            format!("{stem}-cra.yaml"),
         ];
 
         for pattern in &patterns {
@@ -150,10 +150,10 @@ pub enum CraSidecarError {
 impl std::fmt::Display for CraSidecarError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::IoError(e) => write!(f, "IO error reading sidecar file: {}", e),
-            Self::ParseError(e) => write!(f, "Parse error in sidecar file: {}", e),
+            Self::IoError(e) => write!(f, "IO error reading sidecar file: {e}"),
+            Self::ParseError(e) => write!(f, "Parse error in sidecar file: {e}"),
             Self::UnsupportedFormat(ext) => {
-                write!(f, "Unsupported sidecar file format: .{}", ext)
+                write!(f, "Unsupported sidecar file format: .{ext}")
             }
         }
     }

@@ -67,7 +67,7 @@ impl App {
         version: Option<&str>,
     ) -> Option<usize> {
         let name_lower = name.to_lowercase();
-        let version_lower = version.map(|v| v.to_lowercase());
+        let version_lower = version.map(str::to_lowercase);
 
         self.diff_component_items(ComponentFilter::All)
             .iter()
@@ -79,8 +79,8 @@ impl App {
                 });
                 let matches_name = comp.name.to_lowercase() == name_lower;
                 let matches_version = version_lower.as_ref().is_none_or(|v| {
-                    comp.new_version.as_deref().map(|nv| nv.to_lowercase()) == Some(v.clone())
-                        || comp.old_version.as_deref().map(|ov| ov.to_lowercase())
+                    comp.new_version.as_deref().map(str::to_lowercase) == Some(v.clone())
+                        || comp.old_version.as_deref().map(str::to_lowercase)
                             == Some(v.clone())
                 });
 
@@ -135,7 +135,7 @@ impl App {
 
     /// Count view-mode components (without building full list).
     pub fn view_component_count(&self) -> usize {
-        self.data.sbom.as_ref().map(|s| s.component_count()).unwrap_or(0)
+        self.data.sbom.as_ref().map(crate::model::NormalizedSbom::component_count).unwrap_or(0)
     }
 
     /// Build view-mode components list in the same order as the table.
@@ -452,7 +452,7 @@ fn calculate_vuln_urgency(
 /// Calculate SLA sort key for a vulnerability (lower = more urgent)
 fn sla_sort_key(vuln: &crate::diff::VulnerabilityDetail) -> i64 {
     match vuln.sla_status() {
-        SlaStatus::Overdue(days) => -(days + 10000), // Most urgent (very negative)
+        SlaStatus::Overdue(days) => -(days + crate::tui::constants::SLA_OVERDUE_SORT_OFFSET), // Most urgent (very negative)
         SlaStatus::DueSoon(days) => days,
         SlaStatus::OnTrack(days) => days,
         SlaStatus::NoDueDate => i64::MAX,

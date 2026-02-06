@@ -112,7 +112,7 @@ impl SectionHashes {
     }
 
     /// Check which sections differ between two hash sets.
-    pub fn changed_sections(&self, other: &SectionHashes) -> ChangedSections {
+    pub fn changed_sections(&self, other: &Self) -> ChangedSections {
         ChangedSections {
             components: self.components != other.components,
             dependencies: self.dependencies != other.dependencies,
@@ -517,8 +517,8 @@ impl IncrementalDiffEngine {
 
 impl ChangedSections {
     /// Combine two ChangedSections with OR logic.
-    fn or(&self, other: &ChangedSections) -> ChangedSections {
-        ChangedSections {
+    fn or(&self, other: &Self) -> Self {
+        Self {
             components: self.components || other.components,
             dependencies: self.dependencies || other.dependencies,
             licenses: self.licenses || other.licenses,

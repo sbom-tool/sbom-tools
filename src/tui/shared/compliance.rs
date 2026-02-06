@@ -9,7 +9,7 @@ use ratatui::{
 };
 
 /// Render a modal overlay showing violation details, centered on the given area.
-pub fn render_violation_detail_overlay(
+pub(crate) fn render_violation_detail_overlay(
     frame: &mut Frame,
     area: Rect,
     violation: &crate::quality::Violation,
@@ -101,7 +101,7 @@ pub fn render_violation_detail_overlay(
 }
 
 /// Simple text wrapping helper — splits text into lines of at most `max_width` characters.
-pub fn textwrap_simple(text: &str, max_width: usize) -> Vec<String> {
+pub(crate) fn textwrap_simple(text: &str, max_width: usize) -> Vec<String> {
     if max_width == 0 {
         return vec![text.to_string()];
     }

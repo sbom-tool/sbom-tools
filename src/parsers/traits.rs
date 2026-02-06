@@ -40,13 +40,13 @@ pub enum ParseError {
 
 impl From<std::io::Error> for ParseError {
     fn from(err: std::io::Error) -> Self {
-        ParseError::IoError(err.to_string())
+        Self::IoError(err.to_string())
     }
 }
 
 impl From<serde_json::Error> for ParseError {
     fn from(err: serde_json::Error) -> Self {
-        ParseError::JsonError(err.to_string())
+        Self::JsonError(err.to_string())
     }
 }
 

@@ -18,7 +18,7 @@ use crate::tui::shared::compliance as shared_compliance;
 use crate::tui::theme::colors;
 
 /// Get the count of violations shown in the current view mode (for navigation bounds).
-pub fn diff_compliance_violation_count(app: &App) -> usize {
+pub(crate) fn diff_compliance_violation_count(app: &App) -> usize {
     let idx = app.tabs.diff_compliance.selected_standard;
     let old_results = match app.data.old_compliance_results.as_ref() {
         Some(r) => r,
@@ -44,11 +44,11 @@ pub fn diff_compliance_violation_count(app: &App) -> usize {
 }
 
 /// Main render function for the diff compliance tab.
-pub fn render_diff_compliance(frame: &mut Frame, area: Rect, app: &mut App) {
+pub(crate) fn render_diff_compliance(frame: &mut Frame, area: Rect, app: &mut App) {
     app.ensure_compliance_results();
 
-    let old_empty = app.data.old_compliance_results.as_ref().is_none_or(|r| r.is_empty());
-    let new_empty = app.data.new_compliance_results.as_ref().is_none_or(|r| r.is_empty());
+    let old_empty = app.data.old_compliance_results.as_ref().is_none_or(std::vec::Vec::is_empty);
+    let new_empty = app.data.new_compliance_results.as_ref().is_none_or(std::vec::Vec::is_empty);
     if old_empty || new_empty {
         let msg = Paragraph::new("No compliance data available")
             .block(Block::default().borders(Borders::ALL).title(" Compliance "));
@@ -198,13 +198,13 @@ fn render_compliance_gauge(frame: &mut Frame, area: Rect, result: &ComplianceRes
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(status_color))
                 .title(Span::styled(
-                    format!(" {} [{}] ", label, status_text),
+                    format!(" {label} [{status_text}] "),
                     Style::default().fg(status_color),
                 )),
         )
         .gauge_style(Style::default().fg(status_color))
         .percent(pct)
-        .label(format!("{}%", pct));
+        .label(format!("{pct}%"));
     frame.render_widget(gauge, inner[0]);
 
     let counts = Line::from(vec![
@@ -312,7 +312,7 @@ fn render_overview(frame: &mut Frame, area: Rect, old: &ComplianceResult, new: &
     lines.push(Line::from(vec![
         Span::raw("    "),
         Span::styled(
-            format!("  = {} violation(s) persistent  ", persistent),
+            format!("  = {persistent} violation(s) persistent  "),
             Style::default().fg(colors().text_muted),
         ),
     ]));
@@ -324,9 +324,9 @@ fn render_overview(frame: &mut Frame, area: Rect, old: &ComplianceResult, new: &
     let new_errors = new.error_count;
     let error_delta = new_errors as i64 - old_errors as i64;
     let delta_str = if error_delta > 0 {
-        format!("+{}", error_delta)
+        format!("+{error_delta}")
     } else {
-        format!("{}", error_delta)
+        format!("{error_delta}")
     };
     let delta_color = if error_delta > 0 {
         colors().error
@@ -338,9 +338,9 @@ fn render_overview(frame: &mut Frame, area: Rect, old: &ComplianceResult, new: &
 
     lines.push(Line::from(vec![
         Span::raw("    Error count:  "),
-        Span::styled(format!("{}", old_errors), Style::default().fg(colors().text_muted)),
+        Span::styled(format!("{old_errors}"), Style::default().fg(colors().text_muted)),
         Span::raw(" → "),
-        Span::styled(format!("{}", new_errors), Style::default().fg(colors().text)),
+        Span::styled(format!("{new_errors}"), Style::default().fg(colors().text)),
         Span::raw("  ("),
         Span::styled(delta_str, Style::default().fg(delta_color)),
         Span::raw(")"),
@@ -412,7 +412,7 @@ fn render_violation_table(
             Block::default()
                 .borders(Borders::ALL)
                 .title(Span::styled(
-                    format!(" {} (0) ", title),
+                    format!(" {title} (0) "),
                     Style::default().fg(title_color),
                 )),
         );
@@ -500,7 +500,7 @@ fn render_help_bar(frame: &mut Frame, area: Rect, app: &App) {
         Span::styled(" switch standard  ", Style::default().fg(colors().text_muted)),
         Span::styled("Tab", Style::default().fg(colors().accent)),
         Span::styled(
-            format!(" cycle view [{}]  ", mode_name),
+            format!(" cycle view [{mode_name}]  "),
             Style::default().fg(colors().text_muted),
         ),
         Span::styled("j/k", Style::default().fg(colors().accent)),

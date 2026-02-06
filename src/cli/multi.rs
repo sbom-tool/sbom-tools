@@ -23,7 +23,7 @@ pub fn run_diff_multi(
 ) -> Result<()> {
     tracing::info!("Parsing baseline SBOM: {:?}", baseline_path);
     let baseline_sbom = parse_sbom(&baseline_path)
-        .with_context(|| format!("Failed to parse baseline SBOM: {:?}", baseline_path))?;
+        .with_context(|| format!("Failed to parse baseline SBOM: {baseline_path:?}"))?;
 
     let target_sboms = parse_multiple_sboms(&target_paths)?;
 
@@ -173,7 +173,7 @@ fn parse_multiple_sboms(paths: &[PathBuf]) -> Result<Vec<NormalizedSbom>> {
     let mut sboms = Vec::with_capacity(paths.len());
     for path in paths {
         tracing::info!("Parsing SBOM: {:?}", path);
-        let sbom = parse_sbom(path).with_context(|| format!("Failed to parse SBOM: {:?}", path))?;
+        let sbom = parse_sbom(path).with_context(|| format!("Failed to parse SBOM: {path:?}"))?;
         sboms.push(sbom);
     }
     Ok(sboms)

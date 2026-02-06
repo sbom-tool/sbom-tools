@@ -111,7 +111,7 @@ impl ComponentIndex {
         } else {
             // Try to infer ecosystem from component type or other fields
             // Convert Ecosystem enum to String for consistent comparison
-            (comp.ecosystem.as_ref().map(|e| e.to_string()), None)
+            (comp.ecosystem.as_ref().map(std::string::ToString::to_string), None)
         };
 
         // Normalize name
@@ -432,7 +432,7 @@ impl ComponentIndex {
     /// then find candidates for all components from the old SBOM.
     pub fn find_all_candidates_from(
         &self,
-        other: &ComponentIndex,
+        other: &Self,
         max_candidates: usize,
         max_length_diff: usize,
     ) -> Vec<(CanonicalId, Vec<CanonicalId>)> {
@@ -458,17 +458,17 @@ impl ComponentIndex {
         let prefixes = self.by_prefix.len();
         let trigrams = self.by_trigram.len();
         let avg_per_ecosystem = if ecosystems > 0 {
-            self.by_ecosystem.values().map(|v| v.len()).sum::<usize>() / ecosystems
+            self.by_ecosystem.values().map(std::vec::Vec::len).sum::<usize>() / ecosystems
         } else {
             0
         };
         let avg_per_prefix = if prefixes > 0 {
-            self.by_prefix.values().map(|v| v.len()).sum::<usize>() / prefixes
+            self.by_prefix.values().map(std::vec::Vec::len).sum::<usize>() / prefixes
         } else {
             0
         };
         let avg_per_trigram = if trigrams > 0 {
-            self.by_trigram.values().map(|v| v.len()).sum::<usize>() / trigrams
+            self.by_trigram.values().map(std::vec::Vec::len).sum::<usize>() / trigrams
         } else {
             0
         };
@@ -737,7 +737,7 @@ impl BatchCandidateGenerator {
         BatchCandidateStats {
             index_stats: self.component_index.stats(),
             lsh_enabled: self.lsh_index.is_some(),
-            lsh_stats: self.lsh_index.as_ref().map(|l| l.stats()),
+            lsh_stats: self.lsh_index.as_ref().map(super::lsh::LshIndex::stats),
             cross_ecosystem_enabled: self.cross_ecosystem_db.is_some(),
         }
     }

@@ -96,8 +96,8 @@ impl ReportGenerator for CsvReporter {
             let ecosystem = comp
                 .ecosystem
                 .as_ref()
-                .map(|e| format!("{:?}", e))
-                .unwrap_or_else(|| "-".to_string());
+                .map(|e| format!("{e:?}"));
+            let ecosystem = ecosystem.as_deref().unwrap_or("-");
 
             let _ = writeln!(
                 content,
@@ -171,12 +171,12 @@ fn escape_csv(s: &str) -> String {
 
 fn format_sla_csv(vuln: &VulnerabilityDetail) -> String {
     match vuln.sla_status() {
-        SlaStatus::Overdue(days) => format!("{}d late", days),
-        SlaStatus::DueSoon(days) => format!("{}d left", days),
-        SlaStatus::OnTrack(days) => format!("{}d left", days),
+        SlaStatus::Overdue(days) => format!("{days}d late"),
+        SlaStatus::DueSoon(days) => format!("{days}d left"),
+        SlaStatus::OnTrack(days) => format!("{days}d left"),
         SlaStatus::NoDueDate => vuln
             .days_since_published
-            .map(|d| format!("{}d old", d))
+            .map(|d| format!("{d}d old"))
             .unwrap_or_else(|| "-".to_string()),
     }
 }

@@ -104,14 +104,14 @@ fn extract_affected_versions(affected: &[OsvAffected]) -> Vec<String> {
             for event in &range.events {
                 if let Some(ref introduced) = event.introduced {
                     if introduced != "0" {
-                        versions.push(format!(">= {}", introduced));
+                        versions.push(format!(">= {introduced}"));
                     }
                 }
                 if let Some(ref fixed) = event.fixed {
-                    versions.push(format!("< {} (fixed)", fixed));
+                    versions.push(format!("< {fixed} (fixed)"));
                 }
                 if let Some(ref last) = event.last_affected {
-                    versions.push(format!("<= {}", last));
+                    versions.push(format!("<= {last}"));
                 }
             }
         }
@@ -129,7 +129,7 @@ fn extract_remediation(affected: &[OsvAffected]) -> Option<Remediation> {
                 if let Some(ref fixed) = event.fixed {
                     return Some(Remediation {
                         remediation_type: RemediationType::Upgrade,
-                        description: Some(format!("Upgrade to version {} or later", fixed)),
+                        description: Some(format!("Upgrade to version {fixed} or later")),
                         fixed_version: Some(fixed.clone()),
                     });
                 }

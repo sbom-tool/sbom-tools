@@ -44,7 +44,7 @@ impl CacheKey {
             self.purl, self.name, self.ecosystem, self.version
         ));
         let hash = hasher.finalize();
-        format!("{:x}.json", hash)
+        format!("{hash:x}.json")
     }
 
     /// Check if this key can be used for an OSV query.
@@ -172,4 +172,130 @@ pub struct CacheStats {
     pub expired_entries: usize,
     /// Total size in bytes
     pub total_size: u64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_key(purl: Option<&str>, name: &str, eco: Option<&str>, ver: Option<&str>) -> CacheKey {
+        CacheKey::new(
+            purl.map(String::from),
+            name.to_string(),
+            eco.map(String::from),
+            ver.map(String::from),
+        )
+    }
+
+    #[test]
+    fn test_cache_key_filename_deterministic() {
+        let key = make_key(Some("pkg:npm/foo@1.0"), "foo", Some("npm"), Some("1.0"));
+        let f1 = key.to_filename();
+        let f2 = key.to_filename();
+        assert_eq!(f1, f2);
+        assert!(f1.ends_with(".json"));
+    }
+
+    #[test]
+    fn test_cache_key_filename_different() {
+        let k1 = make_key(Some("pkg:npm/foo@1.0"), "foo", Some("npm"), Some("1.0"));
+        let k2 = make_key(Some("pkg:npm/bar@1.0"), "bar", Some("npm"), Some("1.0"));
+        assert_ne!(k1.to_filename(), k2.to_filename());
+    }
+
+    #[test]
+    fn test_cache_key_is_queryable_purl() {
+        let key = make_key(Some("pkg:npm/foo@1.0"), "foo", None, None);
+        assert!(key.is_queryable());
+    }
+
+    #[test]
+    fn test_cache_key_is_queryable_eco_ver() {
+        let key = make_key(None, "foo", Some("npm"), Some("1.0"));
+        assert!(key.is_queryable());
+    }
+
+    #[test]
+    fn test_cache_key_is_queryable_name_only() {
+        let key = make_key(None, "foo", None, None);
+        assert!(!key.is_queryable());
+    }
+
+    #[test]
+    fn test_file_cache_new_creates_dir() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache_dir = tmp.path().join("vuln_cache");
+        assert!(!cache_dir.exists());
+        let _cache = FileCache::new(cache_dir.clone(), Duration::from_secs(3600)).unwrap();
+        assert!(cache_dir.exists());
+    }
+
+    #[test]
+    fn test_file_cache_set_get_roundtrip() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = FileCache::new(tmp.path().to_path_buf(), Duration::from_secs(3600)).unwrap();
+        let key = make_key(Some("pkg:npm/foo@1.0"), "foo", Some("npm"), Some("1.0"));
+
+        let vulns = vec![VulnerabilityRef::new(
+            "CVE-2024-0001".to_string(),
+            crate::model::VulnerabilitySource::Osv,
+        )];
+
+        cache.set(&key, &vulns).unwrap();
+        let result = cache.get(&key);
+        assert!(result.is_some());
+        let retrieved = result.unwrap();
+        assert_eq!(retrieved.len(), 1);
+        assert_eq!(retrieved[0].id, "CVE-2024-0001");
+    }
+
+    #[test]
+    fn test_file_cache_get_miss() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = FileCache::new(tmp.path().to_path_buf(), Duration::from_secs(3600)).unwrap();
+        let key = make_key(Some("pkg:npm/nope@1.0"), "nope", Some("npm"), Some("1.0"));
+        assert!(cache.get(&key).is_none());
+    }
+
+    #[test]
+    fn test_file_cache_remove() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = FileCache::new(tmp.path().to_path_buf(), Duration::from_secs(3600)).unwrap();
+        let key = make_key(Some("pkg:npm/rm@1.0"), "rm", Some("npm"), Some("1.0"));
+
+        cache.set(&key, &[]).unwrap();
+        assert!(cache.get(&key).is_some());
+        cache.remove(&key).unwrap();
+        assert!(cache.get(&key).is_none());
+    }
+
+    #[test]
+    fn test_file_cache_clear() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = FileCache::new(tmp.path().to_path_buf(), Duration::from_secs(3600)).unwrap();
+
+        for i in 0..3 {
+            let key = make_key(None, &format!("pkg{i}"), Some("npm"), Some("1.0"));
+            cache.set(&key, &[]).unwrap();
+        }
+
+        assert_eq!(cache.stats().total_entries, 3);
+        cache.clear().unwrap();
+        assert_eq!(cache.stats().total_entries, 0);
+    }
+
+    #[test]
+    fn test_file_cache_stats_counts() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = FileCache::new(tmp.path().to_path_buf(), Duration::from_secs(3600)).unwrap();
+
+        for i in 0..3 {
+            let key = make_key(None, &format!("stats{i}"), Some("npm"), Some("1.0"));
+            cache.set(&key, &[]).unwrap();
+        }
+
+        let stats = cache.stats();
+        assert_eq!(stats.total_entries, 3);
+        assert_eq!(stats.expired_entries, 0);
+    }
 }

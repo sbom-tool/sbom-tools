@@ -1,5 +1,6 @@
 //! Dependencies view for ViewApp.
 
+use crate::tui::state::ListNavigation;
 use crate::tui::theme::colors;
 use crate::tui::view::app::ViewApp;
 use crate::tui::widgets::{self, truncate_str};
@@ -370,7 +371,7 @@ fn render_dependency_stats(
     lines.push(Line::from(""));
 
     let total_components = deps.names.len();
-    let total_edges = deps.edges.values().map(|v| v.len()).sum::<usize>();
+    let total_edges = deps.edges.values().map(std::vec::Vec::len).sum::<usize>();
     let root_count = deps.roots.len();
 
     lines.push(Line::from(vec![

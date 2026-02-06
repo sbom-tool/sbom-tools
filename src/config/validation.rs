@@ -80,7 +80,7 @@ impl Validatable for MatchingConfig {
             if !(0.0..=1.0).contains(&threshold) {
                 errors.push(ConfigError {
                     field: "matching.threshold".to_string(),
-                    message: format!("Threshold must be between 0.0 and 1.0, got {}", threshold),
+                    message: format!("Threshold must be between 0.0 and 1.0, got {threshold}"),
                 });
             }
         }
@@ -276,7 +276,7 @@ impl Validatable for MultiDiffConfig {
         for (i, target) in self.targets.iter().enumerate() {
             if !target.exists() {
                 errors.push(ConfigError {
-                    field: format!("targets[{}]", i),
+                    field: format!("targets[{i}]"),
                     message: format!("Target file not found: {}", target.display()),
                 });
             }
@@ -301,7 +301,7 @@ impl Validatable for TimelineConfig {
         for (i, path) in self.sbom_paths.iter().enumerate() {
             if !path.exists() {
                 errors.push(ConfigError {
-                    field: format!("sbom_paths[{}]", i),
+                    field: format!("sbom_paths[{i}]"),
                     message: format!("SBOM file not found: {}", path.display()),
                 });
             }
@@ -326,7 +326,7 @@ impl Validatable for MatrixConfig {
         for (i, path) in self.sbom_paths.iter().enumerate() {
             if !path.exists() {
                 errors.push(ConfigError {
-                    field: format!("sbom_paths[{}]", i),
+                    field: format!("sbom_paths[{i}]"),
                     message: format!("SBOM file not found: {}", path.display()),
                 });
             }

@@ -774,9 +774,9 @@ pub enum ConfigError {
 impl std::fmt::Display for ConfigError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Io(e) => write!(f, "IO error: {}", e),
-            Self::Yaml(e) => write!(f, "YAML parse error: {}", e),
-            Self::Json(e) => write!(f, "JSON parse error: {}", e),
+            Self::Io(e) => write!(f, "IO error: {e}"),
+            Self::Yaml(e) => write!(f, "YAML parse error: {e}"),
+            Self::Json(e) => write!(f, "JSON parse error: {e}"),
         }
     }
 }

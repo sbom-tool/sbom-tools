@@ -14,7 +14,7 @@ use ratatui::{
 // Helper functions
 // ---------------------------------------------------------------------------
 
-pub fn get_profile_weights(profile: &ScoringProfile) -> (f32, f32, f32, f32, f32) {
+pub(crate) fn get_profile_weights(profile: &ScoringProfile) -> (f32, f32, f32, f32, f32) {
     // (completeness, identifiers, licenses, vulnerabilities, dependencies)
     match profile {
         ScoringProfile::Minimal => (0.50, 0.20, 0.10, 0.10, 0.10),
@@ -26,7 +26,7 @@ pub fn get_profile_weights(profile: &ScoringProfile) -> (f32, f32, f32, f32, f32
     }
 }
 
-pub fn explain_completeness_score(report: &QualityReport) -> String {
+pub(crate) fn explain_completeness_score(report: &QualityReport) -> String {
     let m = &report.completeness_metrics;
     if m.components_with_version >= 90.0 && m.components_with_purl >= 80.0 {
         "Good coverage".to_string()
@@ -39,7 +39,7 @@ pub fn explain_completeness_score(report: &QualityReport) -> String {
     }
 }
 
-pub fn explain_identifier_score(report: &QualityReport) -> String {
+pub(crate) fn explain_identifier_score(report: &QualityReport) -> String {
     let m = &report.identifier_metrics;
     if m.invalid_purls > 0 || m.invalid_cpes > 0 {
         format!("{} invalid IDs", m.invalid_purls + m.invalid_cpes)
@@ -50,7 +50,7 @@ pub fn explain_identifier_score(report: &QualityReport) -> String {
     }
 }
 
-pub fn explain_license_score(report: &QualityReport) -> String {
+pub(crate) fn explain_license_score(report: &QualityReport) -> String {
     let m = &report.license_metrics;
     if m.noassertion_count > 0 {
         format!("{} NOASSERTION", m.noassertion_count)
@@ -63,7 +63,7 @@ pub fn explain_license_score(report: &QualityReport) -> String {
     }
 }
 
-pub fn explain_vulnerability_score(report: &QualityReport) -> String {
+pub(crate) fn explain_vulnerability_score(report: &QualityReport) -> String {
     let m = &report.vulnerability_metrics;
     if m.total_vulnerabilities == 0 {
         "No vulns tracked".to_string()
@@ -74,7 +74,7 @@ pub fn explain_vulnerability_score(report: &QualityReport) -> String {
     }
 }
 
-pub fn explain_dependency_score(report: &QualityReport) -> String {
+pub(crate) fn explain_dependency_score(report: &QualityReport) -> String {
     let m = &report.dependency_metrics;
     if m.total_dependencies == 0 {
         "No deps defined".to_string()
@@ -85,73 +85,7 @@ pub fn explain_dependency_score(report: &QualityReport) -> String {
     }
 }
 
-pub fn generate_score_explanation(report: &QualityReport) -> Vec<Line<'static>> {
-    let scheme = colors();
-    let mut lines = vec![];
-    let (_, grade_label) = grade_color_and_label(&report.grade);
-
-    lines.push(Line::from(vec![
-        Span::styled("Grade: ", Style::default().fg(scheme.text)),
-        Span::styled(
-            format!("{} ", report.grade.letter()),
-            Style::default().fg(grade_color(&report.grade)).bold(),
-        ),
-        Span::styled(
-            format!("({}) - ", grade_label),
-            Style::default().fg(scheme.muted),
-        ),
-        Span::styled(
-            grade_explanation(&report.grade),
-            Style::default().fg(scheme.text),
-        ),
-    ]));
-
-    lines.push(Line::from(""));
-
-    // Identify strongest and weakest areas
-    let scores = [
-        ("Completeness", report.completeness_score),
-        ("Identifiers", report.identifier_score),
-        ("Licenses", report.license_score),
-        ("Vulnerabilities", report.vulnerability_score),
-        ("Dependencies", report.dependency_score),
-    ];
-
-    let Some(strongest) = scores
-        .iter()
-        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
-    else {
-        return lines;
-    };
-    let Some(weakest) = scores
-        .iter()
-        .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
-    else {
-        return lines;
-    };
-
-    lines.push(Line::from(vec![
-        Span::styled("Strongest: ", Style::default().fg(scheme.success)),
-        Span::styled(
-            format!("{} ({:.0}%)", strongest.0, strongest.1),
-            Style::default().fg(scheme.text),
-        ),
-    ]));
-
-    if weakest.1 < 70.0 {
-        lines.push(Line::from(vec![
-            Span::styled("Focus area: ", Style::default().fg(scheme.warning)),
-            Span::styled(
-                format!("{} ({:.0}%)", weakest.0, weakest.1),
-                Style::default().fg(scheme.text),
-            ),
-        ]));
-    }
-
-    lines
-}
-
-pub fn generate_key_factors(report: &QualityReport) -> Vec<Line<'static>> {
+pub(crate) fn generate_key_factors(report: &QualityReport) -> Vec<Line<'static>> {
     let scheme = colors();
     let mut lines = vec![];
 
@@ -256,7 +190,7 @@ pub fn generate_key_factors(report: &QualityReport) -> Vec<Line<'static>> {
     lines
 }
 
-pub fn get_recommendation_reason(category: &RecommendationCategory) -> String {
+pub(crate) fn get_recommendation_reason(category: &RecommendationCategory) -> String {
     match category {
         RecommendationCategory::Completeness => {
             "Complete data enables accurate vulnerability scanning and license compliance"
@@ -280,7 +214,7 @@ pub fn get_recommendation_reason(category: &RecommendationCategory) -> String {
     }
 }
 
-pub fn grade_color_and_label(grade: &QualityGrade) -> (Color, &'static str) {
+pub(crate) fn grade_color_and_label(grade: &QualityGrade) -> (Color, &'static str) {
     let scheme = colors();
     match grade {
         QualityGrade::A => (scheme.success, "Excellent"),
@@ -291,38 +225,17 @@ pub fn grade_color_and_label(grade: &QualityGrade) -> (Color, &'static str) {
     }
 }
 
-pub fn grade_color(grade: &QualityGrade) -> Color {
+pub(crate) fn grade_color(grade: &QualityGrade) -> Color {
     grade_color_and_label(grade).0
 }
 
-pub fn grade_explanation(grade: &QualityGrade) -> &'static str {
-    match grade {
-        QualityGrade::A => "SBOM is comprehensive and ready for production use",
-        QualityGrade::B => "SBOM is good but has minor gaps to address",
-        QualityGrade::C => "SBOM is usable but needs improvement in key areas",
-        QualityGrade::D => "SBOM has significant gaps affecting usefulness",
-        QualityGrade::F => "SBOM needs major improvements before use",
-    }
-}
-
-pub fn priority_style(priority: u8) -> Style {
+pub(crate) fn priority_style(priority: u8) -> Style {
     let scheme = colors();
     match priority {
         1 => Style::default().fg(scheme.error).bold(),
         2 => Style::default().fg(scheme.warning),
         3 => Style::default().fg(scheme.primary),
         _ => Style::default().fg(scheme.muted),
-    }
-}
-
-pub fn score_bar_style(score: f32) -> Style {
-    let scheme = colors();
-    if score >= 0.8 {
-        Style::default().fg(scheme.success)
-    } else if score >= 0.5 {
-        Style::default().fg(scheme.warning)
-    } else {
-        Style::default().fg(scheme.error)
     }
 }
 
@@ -350,7 +263,7 @@ fn bar_grade_style(score: f32) -> Style {
     Style::default().fg(Color::Rgb(r as u8, g as u8, b as u8))
 }
 
-pub fn score_color(score: f32) -> Color {
+pub(crate) fn score_color(score: f32) -> Color {
     let scheme = colors();
     if score >= 80.0 {
         scheme.success
@@ -361,7 +274,7 @@ pub fn score_color(score: f32) -> Color {
     }
 }
 
-pub fn score_style(score: f32) -> Style {
+pub(crate) fn score_style(score: f32) -> Style {
     Style::default().fg(score_color(score))
 }
 
@@ -369,7 +282,7 @@ pub fn score_style(score: f32) -> Style {
 // Rendering functions
 // ---------------------------------------------------------------------------
 
-pub fn render_quality_summary(
+pub(crate) fn render_quality_summary(
     frame: &mut Frame,
     area: Rect,
     report: &QualityReport,
@@ -465,11 +378,11 @@ fn render_compact_header(frame: &mut Frame, area: Rect, report: &QualityReport) 
     let strongest = scores
         .iter()
         .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
-        .unwrap();
+        .unwrap_or(&scores[0]);
     let weakest = scores
         .iter()
         .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
-        .unwrap();
+        .unwrap_or(&scores[0]);
 
     // Line 1: grade + label + bar + score + profile
     let line1 = Line::from(vec![
@@ -478,12 +391,12 @@ fn render_compact_header(frame: &mut Frame, area: Rect, report: &QualityReport) 
             Style::default().fg(gauge_color).bold(),
         ),
         Span::styled(
-            format!("{} ", grade_label),
+            format!("{grade_label} "),
             Style::default().fg(scheme.text),
         ),
         Span::styled(bar_str, Style::default().fg(gauge_color)),
         Span::styled(
-            format!(" {}/100", score),
+            format!(" {score}/100"),
             Style::default().fg(scheme.text).bold(),
         ),
         Span::styled("  Profile: ", Style::default().fg(scheme.muted)),
@@ -538,11 +451,11 @@ fn render_completeness_checklist(frame: &mut Frame, area: Rect, report: &Quality
         let bar: String = "\u{2588}".repeat(filled) + &"\u{2591}".repeat(empty);
         Line::from(vec![
             Span::styled(
-                format!("  {:<10}", label),
+                format!("  {label:<10}"),
                 Style::default().fg(scheme.muted),
             ),
             Span::styled(
-                format!("{:>3.0}%  ", pct),
+                format!("{pct:>3.0}%  "),
                 score_style(pct),
             ),
             Span::styled(bar, score_style(pct)),
@@ -623,7 +536,7 @@ fn render_top_recommendations(
                 Span::styled(&rec.message, msg_style),
             ]));
             lines.push(Line::from(vec![
-                Span::raw(if is_selected { "       " } else { "       " }),
+                Span::raw("       "),
                 Span::styled(
                     format!("{} affected", rec.affected_count),
                     Style::default().fg(scheme.muted),
@@ -655,7 +568,7 @@ fn render_top_recommendations(
     frame.render_widget(widget, area);
 }
 
-pub fn render_score_gauge(frame: &mut Frame, area: Rect, report: &QualityReport, title: &str) {
+pub(crate) fn render_score_gauge(frame: &mut Frame, area: Rect, report: &QualityReport, title: &str) {
     let scheme = colors();
     let score = report.overall_score as u16;
     let (gauge_color, grade_label) = grade_color_and_label(&report.grade);
@@ -663,18 +576,18 @@ pub fn render_score_gauge(frame: &mut Frame, area: Rect, report: &QualityReport,
     let gauge = Gauge::default()
         .block(
             Block::default()
-                .title(format!(" {} ", title))
+                .title(format!(" {title} "))
                 .title_style(Style::default().bold().fg(scheme.text))
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(gauge_color)),
         )
         .gauge_style(Style::default().fg(gauge_color).bg(scheme.muted))
         .percent(score.min(100))
-        .label(format!("{}/100 - {}", score, grade_label));
+        .label(format!("{score}/100 - {grade_label}"));
     frame.render_widget(gauge, area);
 }
 
-pub fn render_score_breakdown(frame: &mut Frame, area: Rect, report: &QualityReport) {
+pub(crate) fn render_score_breakdown(frame: &mut Frame, area: Rect, report: &QualityReport) {
     let scheme = colors();
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -694,7 +607,7 @@ pub fn render_score_breakdown(frame: &mut Frame, area: Rect, report: &QualityRep
             Style::default().fg(grade_color(&report.grade)).bold(),
         ),
         Span::styled(
-            format!(" ({}) ", grade_label),
+            format!(" ({grade_label}) "),
             Style::default().fg(scheme.muted),
         ),
         Span::styled("| Profile: ", Style::default().fg(scheme.text)),
@@ -799,7 +712,7 @@ fn create_breakdown_row(name: &str, score: f32, weight: f32, explanation: &str) 
     .style(Style::default().fg(sc))
 }
 
-pub fn render_quality_metrics(frame: &mut Frame, area: Rect, report: &QualityReport) {
+pub(crate) fn render_quality_metrics(frame: &mut Frame, area: Rect, report: &QualityReport) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -814,7 +727,7 @@ pub fn render_quality_metrics(frame: &mut Frame, area: Rect, report: &QualityRep
     render_dependency_details(frame, chunks[2], report);
 }
 
-pub fn render_completeness_details(frame: &mut Frame, area: Rect, report: &QualityReport) {
+pub(crate) fn render_completeness_details(frame: &mut Frame, area: Rect, report: &QualityReport) {
     let scheme = colors();
     let m = &report.completeness_metrics;
     let total = m.total_components;
@@ -883,7 +796,7 @@ pub fn render_completeness_details(frame: &mut Frame, area: Rect, report: &Quali
     frame.render_widget(paragraph, area);
 }
 
-pub fn render_id_license_details(frame: &mut Frame, area: Rect, report: &QualityReport) {
+pub(crate) fn render_id_license_details(frame: &mut Frame, area: Rect, report: &QualityReport) {
     let scheme = colors();
     let id_m = &report.identifier_metrics;
     let lic_m = &report.license_metrics;
@@ -994,7 +907,7 @@ pub fn render_id_license_details(frame: &mut Frame, area: Rect, report: &Quality
     frame.render_widget(lic_widget, h_chunks[1]);
 }
 
-pub fn render_dependency_details(frame: &mut Frame, area: Rect, report: &QualityReport) {
+pub(crate) fn render_dependency_details(frame: &mut Frame, area: Rect, report: &QualityReport) {
     let scheme = colors();
     let d = &report.dependency_metrics;
     let v = &report.vulnerability_metrics;
@@ -1064,7 +977,7 @@ pub fn render_dependency_details(frame: &mut Frame, area: Rect, report: &Quality
     frame.render_widget(paragraph, area);
 }
 
-pub fn render_quality_recommendations(
+pub(crate) fn render_quality_recommendations(
     frame: &mut Frame,
     area: Rect,
     report: &QualityReport,

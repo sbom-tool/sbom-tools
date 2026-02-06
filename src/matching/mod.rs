@@ -37,6 +37,8 @@ pub mod lsh;
 mod purl;
 pub mod rule_engine;
 mod rules;
+pub mod scoring;
+pub mod string_similarity;
 mod traits;
 
 pub use adaptive::{
@@ -68,11 +70,13 @@ pub use traits::{
     CompositeMatcherBuilder, MatchExplanation, MatchMetadata, MatchResult, MatchTier,
     ScoreComponent,
 };
+pub use scoring::MultiFieldScoreResult;
 
 use crate::model::Component;
 use strsim::{jaro_winkler, levenshtein};
 
 /// Fuzzy matcher for component correlation.
+#[must_use]
 pub struct FuzzyMatcher {
     config: FuzzyMatchConfig,
     alias_table: AliasTable,
@@ -103,6 +107,7 @@ impl FuzzyMatcher {
     }
 
     /// Match two components and return a confidence score (0.0 - 1.0)
+    #[must_use]
     pub fn match_components(&self, a: &Component, b: &Component) -> f64 {
         // Layer 1: Exact PURL match
         if let (Some(purl_a), Some(purl_b)) = (&a.identifiers.purl, &b.identifiers.purl) {
@@ -251,188 +256,18 @@ impl FuzzyMatcher {
     }
 
     /// Compute token-based similarity using Jaccard index on name tokens.
-    ///
-    /// Splits names on common delimiters (-, _, ., @, /) and compares token sets.
-    /// This catches reordered names like "react-dom" ↔ "dom-react".
     fn compute_token_similarity(name_a: &str, name_b: &str) -> f64 {
-        use std::collections::HashSet;
-
-        let tokens_a: HashSet<&str> = name_a
-            .split(['-', '_', '.', '@', '/'])
-            .filter(|t| !t.is_empty())
-            .collect();
-
-        let tokens_b: HashSet<&str> = name_b
-            .split(['-', '_', '.', '@', '/'])
-            .filter(|t| !t.is_empty())
-            .collect();
-
-        if tokens_a.is_empty() && tokens_b.is_empty() {
-            return 1.0;
-        }
-        if tokens_a.is_empty() || tokens_b.is_empty() {
-            return 0.0;
-        }
-
-        let intersection = tokens_a.intersection(&tokens_b).count();
-        let union = tokens_a.union(&tokens_b).count();
-
-        if union > 0 {
-            intersection as f64 / union as f64
-        } else {
-            0.0
-        }
+        string_similarity::compute_token_similarity(name_a, name_b)
     }
 
     /// Compute version similarity with semantic awareness.
-    ///
-    /// Returns a boost value (0.0 - 0.1) based on how similar versions are:
-    /// - Exact match: 0.10
-    /// - Same major.minor: 0.07
-    /// - Same major: 0.04
-    /// - Both present but different: 0.0
-    /// - One or both missing: 0.0
     fn compute_version_similarity(va: &Option<String>, vb: &Option<String>) -> f64 {
-        match (va, vb) {
-            (Some(a), Some(b)) if a == b => 0.10, // Exact match
-            (Some(a), Some(b)) => {
-                // Parse semantic versions
-                let parts_a: Vec<&str> = a.split('.').collect();
-                let parts_b: Vec<&str> = b.split('.').collect();
-
-                // Extract major.minor.patch (handle non-numeric gracefully)
-                let major_a = parts_a.first().and_then(|s| s.parse::<u32>().ok());
-                let major_b = parts_b.first().and_then(|s| s.parse::<u32>().ok());
-                let minor_a = parts_a
-                    .get(1)
-                    .and_then(|s| s.split('-').next())
-                    .and_then(|s| s.parse::<u32>().ok());
-                let minor_b = parts_b
-                    .get(1)
-                    .and_then(|s| s.split('-').next())
-                    .and_then(|s| s.parse::<u32>().ok());
-
-                match (major_a, major_b, minor_a, minor_b) {
-                    (Some(ma), Some(mb), Some(mia), Some(mib)) if ma == mb && mia == mib => 0.07,
-                    (Some(ma), Some(mb), _, _) if ma == mb => 0.04,
-                    _ => 0.0,
-                }
-            }
-            _ => 0.0, // One or both missing
-        }
-    }
-
-    /// Compute Soundex code for phonetic matching.
-    ///
-    /// Soundex encodes names by their pronunciation, helping match:
-    /// - "color" ↔ "colour"
-    /// - "jason" ↔ "jayson"
-    /// - "smith" ↔ "smyth"
-    fn soundex(name: &str) -> String {
-        if name.is_empty() {
-            return String::new();
-        }
-
-        let name_upper: String = name
-            .to_uppercase()
-            .chars()
-            .filter(|c| c.is_ascii_alphabetic())
-            .collect();
-        if name_upper.is_empty() {
-            return String::new();
-        }
-
-        let mut chars = name_upper.chars();
-        let first_char = chars.next().expect("name_upper is non-empty after empty check above");
-        let mut code = String::with_capacity(4);
-        code.push(first_char);
-
-        let mut last_digit = Self::soundex_digit(first_char);
-
-        for c in chars {
-            let digit = Self::soundex_digit(c);
-            if digit != '0' && digit != last_digit {
-                code.push(digit);
-                if code.len() == 4 {
-                    break;
-                }
-            }
-            if digit != '0' {
-                last_digit = digit;
-            }
-        }
-
-        // Pad with zeros if needed
-        while code.len() < 4 {
-            code.push('0');
-        }
-
-        code
-    }
-
-    /// Get Soundex digit for a character.
-    fn soundex_digit(c: char) -> char {
-        match c {
-            'B' | 'F' | 'P' | 'V' => '1',
-            'C' | 'G' | 'J' | 'K' | 'Q' | 'S' | 'X' | 'Z' => '2',
-            'D' | 'T' => '3',
-            'L' => '4',
-            'M' | 'N' => '5',
-            'R' => '6',
-            _ => '0', // A, E, I, O, U, H, W, Y
-        }
+        string_similarity::compute_version_similarity(va, vb)
     }
 
     /// Compute phonetic similarity using Soundex.
-    ///
-    /// Returns 1.0 if Soundex codes match, 0.0 otherwise.
-    /// Also checks individual tokens for partial phonetic matches.
     pub fn compute_phonetic_similarity(name_a: &str, name_b: &str) -> f64 {
-        // Compare full name Soundex
-        let soundex_a = Self::soundex(name_a);
-        let soundex_b = Self::soundex(name_b);
-
-        if !soundex_a.is_empty() && soundex_a == soundex_b {
-            return 1.0;
-        }
-
-        // Compare token-by-token for compound names
-        let tokens_a: Vec<&str> = name_a
-            .split(|c: char| !c.is_alphanumeric())
-            .filter(|t| !t.is_empty())
-            .collect();
-        let tokens_b: Vec<&str> = name_b
-            .split(|c: char| !c.is_alphanumeric())
-            .filter(|t| !t.is_empty())
-            .collect();
-
-        if tokens_a.is_empty() || tokens_b.is_empty() {
-            return 0.0;
-        }
-
-        // Count matching Soundex codes between tokens
-        let mut matches = 0;
-        let total = tokens_a.len().max(tokens_b.len());
-
-        for ta in &tokens_a {
-            let sa = Self::soundex(ta);
-            if sa.is_empty() {
-                continue;
-            }
-            for tb in &tokens_b {
-                let sb = Self::soundex(tb);
-                if sa == sb {
-                    matches += 1;
-                    break;
-                }
-            }
-        }
-
-        if total == 0 {
-            0.0
-        } else {
-            matches as f64 / total as f64
-        }
+        string_similarity::compute_phonetic_similarity(name_a, name_b)
     }
 
     /// Compute multi-field weighted score.
@@ -443,10 +278,10 @@ impl FuzzyMatcher {
         a: &Component,
         b: &Component,
         weights: &config::MultiFieldWeights,
-    ) -> MultiFieldScoreResult {
+    ) -> scoring::MultiFieldScoreResult {
         use std::collections::HashSet;
 
-        let mut result = MultiFieldScoreResult::default();
+        let mut result = scoring::MultiFieldScoreResult::default();
 
         // 1. Name similarity (using fuzzy scoring)
         let name_score = self.compute_fuzzy_score(a, b);
@@ -455,7 +290,7 @@ impl FuzzyMatcher {
 
         // 2. Version match (graduated or binary scoring)
         let version_score = if weights.version_divergence_enabled {
-            compute_version_divergence_score(&a.version, &b.version, weights)
+            scoring::compute_version_divergence_score(&a.version, &b.version, weights)
         } else {
             // Legacy binary scoring
             match (&a.version, &b.version) {
@@ -528,114 +363,6 @@ impl FuzzyMatcher {
         result.total = result.total.clamp(0.0, 1.0);
 
         result
-    }
-}
-
-/// Compute version divergence score using semver distance.
-///
-/// Returns a graduated score based on how different the versions are:
-/// - Exact match: 1.0
-/// - Same major.minor: 0.8 - (patch_diff * 0.01), min 0.5
-/// - Same major: 0.5 - (minor_diff * minor_penalty), min 0.2
-/// - Different major: 0.3 - (major_diff * major_penalty), min 0.0
-fn compute_version_divergence_score(
-    version_a: &Option<String>,
-    version_b: &Option<String>,
-    weights: &config::MultiFieldWeights,
-) -> f64 {
-    match (version_a, version_b) {
-        (Some(va), Some(vb)) if va == vb => 1.0,
-        (None, None) => 0.5, // Both missing = neutral
-        (Some(va), Some(vb)) => {
-            // Parse semver components
-            let parts_a = parse_semver_parts(va);
-            let parts_b = parse_semver_parts(vb);
-
-            match (parts_a, parts_b) {
-                (Some((maj_a, min_a, patch_a)), Some((maj_b, min_b, patch_b))) => {
-                    if maj_a == maj_b && min_a == min_b {
-                        // Same major.minor - small penalty for patch difference
-                        let patch_diff = (patch_a as i64 - patch_b as i64).unsigned_abs() as f64;
-                        (0.8 - patch_diff * 0.01).max(0.5)
-                    } else if maj_a == maj_b {
-                        // Same major - moderate penalty for minor difference
-                        let minor_diff = (min_a as i64 - min_b as i64).unsigned_abs() as f64;
-                        (0.5 - minor_diff * weights.version_minor_penalty).max(0.2)
-                    } else {
-                        // Different major - larger penalty
-                        let major_diff = (maj_a as i64 - maj_b as i64).unsigned_abs() as f64;
-                        (0.3 - major_diff * weights.version_major_penalty).max(0.0)
-                    }
-                }
-                _ => {
-                    // Couldn't parse semver - fall back to string comparison
-                    // Give partial credit if versions share a common prefix
-                    let common_prefix_len = va
-                        .chars()
-                        .zip(vb.chars())
-                        .take_while(|(a, b)| a == b)
-                        .count();
-                    let max_len = va.len().max(vb.len());
-                    if max_len > 0 && common_prefix_len > 0 {
-                        (common_prefix_len as f64 / max_len as f64 * 0.5).min(0.4)
-                    } else {
-                        0.1 // Different versions with no common prefix
-                    }
-                }
-            }
-        }
-        _ => 0.0, // One missing
-    }
-}
-
-/// Parse a version string into semver components (major, minor, patch).
-/// Returns None if the version cannot be parsed.
-fn parse_semver_parts(version: &str) -> Option<(u32, u32, u32)> {
-    // Strip common prefixes like 'v' or 'V'
-    let version = version.trim_start_matches(['v', 'V']);
-
-    // Split on '.' and try to parse first three components
-    let mut parts = version.split(['.', '-', '+']);
-
-    let major: u32 = parts.next()?.parse().ok()?;
-    let minor: u32 = parts.next().and_then(|s| s.parse().ok()).unwrap_or(0);
-    let patch: u32 = parts.next().and_then(|s| s.parse().ok()).unwrap_or(0);
-
-    Some((major, minor, patch))
-}
-
-/// Result of multi-field scoring with per-field breakdown.
-#[derive(Debug, Clone, Default)]
-pub struct MultiFieldScoreResult {
-    /// Total weighted score (0.0 - 1.0)
-    pub total: f64,
-    /// Name similarity score
-    pub name_score: f64,
-    /// Version match score
-    pub version_score: f64,
-    /// Ecosystem match score
-    pub ecosystem_score: f64,
-    /// License overlap score (Jaccard)
-    pub license_score: f64,
-    /// Supplier match score
-    pub supplier_score: f64,
-    /// Group/namespace match score
-    pub group_score: f64,
-}
-
-impl MultiFieldScoreResult {
-    /// Get a human-readable summary of the score breakdown.
-    pub fn summary(&self) -> String {
-        format!(
-            "Total: {:.2} (name: {:.2}, version: {:.2}, ecosystem: {:.2}, licenses: {:.2}, supplier: {:.2}, group: {:.2})",
-            self.total,
-            self.name_score,
-            self.version_score,
-            self.ecosystem_score,
-            self.license_score,
-            self.supplier_score,
-            self.group_score
-        )
     }
 }
 
@@ -733,8 +460,7 @@ impl ComponentMatcher for FuzzyMatcher {
                     MatchTier::ExactIdentifier,
                     1.0,
                     format!(
-                        "Exact PURL match: '{}' equals '{}' after normalization",
-                        purl_a, purl_b
+                        "Exact PURL match: '{purl_a}' equals '{purl_b}' after normalization"
                     ),
                 )
                 .with_normalization("purl_normalized");
@@ -760,7 +486,7 @@ impl ComponentMatcher for FuzzyMatcher {
                 let ecosystem = a
                     .ecosystem
                     .as_ref()
-                    .map(|e| e.to_string())
+                    .map(std::string::ToString::to_string)
                     .unwrap_or_else(|| "unknown".to_string());
                 return MatchExplanation::matched(
                     MatchTier::EcosystemRule,
@@ -770,7 +496,7 @@ impl ComponentMatcher for FuzzyMatcher {
                         ecosystem, a.name, b.name
                     ),
                 )
-                .with_normalization(format!("{}_normalization", ecosystem));
+                .with_normalization(format!("{ecosystem}_normalization"));
             }
         }
 
@@ -823,7 +549,7 @@ impl ComponentMatcher for FuzzyMatcher {
                 weight: self.config.jaro_winkler_weight,
                 raw_score: jw_score,
                 weighted_score: jw_weighted,
-                description: format!("'{}' vs '{}' = {:.2}", name_a, name_b, jw_score),
+                description: format!("'{name_a}' vs '{name_b}' = {jw_score:.2}"),
             })
             .with_score_component(ScoreComponent {
                 name: "Levenshtein".to_string(),
@@ -831,8 +557,7 @@ impl ComponentMatcher for FuzzyMatcher {
                 raw_score: lev_score,
                 weighted_score: lev_weighted,
                 description: format!(
-                    "edit distance {} / max_len {} = {:.2}",
-                    lev_distance, max_len, lev_score
+                    "edit distance {lev_distance} / max_len {max_len} = {lev_score:.2}"
                 ),
             });
 
@@ -1069,21 +794,21 @@ mod tests {
 
     #[test]
     fn test_token_similarity_exact() {
-        let score = FuzzyMatcher::compute_token_similarity("react-dom", "react-dom");
+        let score = string_similarity::compute_token_similarity("react-dom", "react-dom");
         assert_eq!(score, 1.0);
     }
 
     #[test]
     fn test_token_similarity_reordered() {
         // Reordered tokens should have high similarity
-        let score = FuzzyMatcher::compute_token_similarity("react-dom", "dom-react");
+        let score = string_similarity::compute_token_similarity("react-dom", "dom-react");
         assert_eq!(score, 1.0, "Reordered tokens should match perfectly");
     }
 
     #[test]
     fn test_token_similarity_partial() {
         // Partial token overlap
-        let score = FuzzyMatcher::compute_token_similarity("react-dom-utils", "react-dom");
+        let score = string_similarity::compute_token_similarity("react-dom-utils", "react-dom");
         // Jaccard: 2 common / 3 total = 0.667
         assert!(
             (score - 0.667).abs() < 0.01,
@@ -1095,13 +820,13 @@ mod tests {
     #[test]
     fn test_token_similarity_different_delimiters() {
         // Different delimiters should still work
-        let score = FuzzyMatcher::compute_token_similarity("my_package_name", "my-package-name");
+        let score = string_similarity::compute_token_similarity("my_package_name", "my-package-name");
         assert_eq!(score, 1.0, "Different delimiters should match");
     }
 
     #[test]
     fn test_token_similarity_no_overlap() {
-        let score = FuzzyMatcher::compute_token_similarity("react", "angular");
+        let score = string_similarity::compute_token_similarity("react", "angular");
         assert_eq!(score, 0.0, "No common tokens should score 0");
     }
 
@@ -1207,27 +932,27 @@ mod tests {
     #[test]
     fn test_soundex_basic() {
         // Test basic Soundex encoding
-        assert_eq!(FuzzyMatcher::soundex("Robert"), "R163");
-        assert_eq!(FuzzyMatcher::soundex("Rupert"), "R163"); // Same as Robert
-        assert_eq!(FuzzyMatcher::soundex("Smith"), "S530");
-        assert_eq!(FuzzyMatcher::soundex("Smyth"), "S530"); // Same as Smith
+        assert_eq!(string_similarity::soundex("Robert"), "R163");
+        assert_eq!(string_similarity::soundex("Rupert"), "R163"); // Same as Robert
+        assert_eq!(string_similarity::soundex("Smith"), "S530");
+        assert_eq!(string_similarity::soundex("Smyth"), "S530"); // Same as Smith
     }
 
     #[test]
     fn test_soundex_empty() {
-        assert_eq!(FuzzyMatcher::soundex(""), "");
-        assert_eq!(FuzzyMatcher::soundex("123"), ""); // No letters
+        assert_eq!(string_similarity::soundex(""), "");
+        assert_eq!(string_similarity::soundex("123"), ""); // No letters
     }
 
     #[test]
     fn test_phonetic_similarity_exact() {
-        let score = FuzzyMatcher::compute_phonetic_similarity("color", "colour");
+        let score = string_similarity::compute_phonetic_similarity("color", "colour");
         assert_eq!(score, 1.0, "color and colour should match phonetically");
     }
 
     #[test]
     fn test_phonetic_similarity_different() {
-        let score = FuzzyMatcher::compute_phonetic_similarity("react", "angular");
+        let score = string_similarity::compute_phonetic_similarity("react", "angular");
         assert!(
             score < 0.5,
             "Different names should have low phonetic similarity"
@@ -1237,7 +962,7 @@ mod tests {
     #[test]
     fn test_phonetic_similarity_compound() {
         // Test compound names where tokens match phonetically
-        let score = FuzzyMatcher::compute_phonetic_similarity("json-parser", "jayson-parser");
+        let score = string_similarity::compute_phonetic_similarity("json-parser", "jayson-parser");
         assert!(
             score > 0.5,
             "Similar sounding compound names should match: {}",

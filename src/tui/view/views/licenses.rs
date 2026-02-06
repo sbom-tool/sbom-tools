@@ -2,7 +2,7 @@
 
 use crate::tui::theme::colors;
 use crate::tui::view::app::{LicenseGroupBy, ViewApp};
-use crate::tui::views::licenses::{categorize_license, get_license_characteristics};
+use crate::tui::views::licenses::categorize_license;
 use crate::tui::widgets::truncate_str;
 use ratatui::{
     prelude::*,
@@ -39,7 +39,7 @@ fn render_license_list(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     let filter_spans = vec![
         Span::styled("Group: ", Style::default().fg(scheme.muted)),
         Span::styled(
-            format!(" {} ", group_label),
+            format!(" {group_label} "),
             Style::default()
                 .fg(scheme.badge_fg_dark)
                 .bg(scheme.success)
@@ -121,7 +121,7 @@ fn render_license_details(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
         .license_state
         .selected
         .min(license_data.len().saturating_sub(1));
-    if let Some((license, count, category)) = license_data.get(selected_idx) {
+    if let Some((license, count, _category)) = license_data.get(selected_idx) {
         // Calculate available space for components
         // Header takes ~10 lines (title, category, count, characteristics ~6 lines, "Components:" header)
         let header_lines = 12;
@@ -130,46 +130,22 @@ fn render_license_details(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
         let components = get_components_with_license(app, license);
         app.license_state.component_total = components.len();
 
-        let mut lines = vec![];
+        let info = crate::tui::license_utils::LicenseInfo::from_spdx(license);
+        let is_dual = crate::tui::license_utils::SpdxExpression::parse(license).is_choice();
 
-        lines.push(Line::from(vec![Span::styled(
+        let mut lines = crate::tui::shared::licenses::render_license_metadata_lines(
             license,
-            Style::default().fg(scheme.text).bold(),
-        )]));
-
-        lines.push(Line::from(""));
-
-        let cat_color = scheme.license_color(category);
-
-        lines.push(Line::from(vec![
-            Span::styled("Category: ", Style::default().fg(scheme.muted)),
-            Span::styled(category, Style::default().fg(cat_color).bold()),
-        ]));
-
-        lines.push(Line::from(vec![
-            Span::styled("Components: ", Style::default().fg(scheme.muted)),
-            Span::styled(count.to_string(), Style::default().fg(scheme.primary)),
-        ]));
+            &info.category,
+            &info.risk_level,
+            info.family,
+            *count,
+            is_dual,
+        );
 
         lines.push(Line::from(""));
 
         // License characteristics
-        lines.push(Line::styled(
-            "Characteristics:",
-            Style::default().fg(scheme.primary).bold(),
-        ));
-
-        let characteristics = get_license_characteristics(license);
-        for char in characteristics {
-            let (icon, color) = match char.1 {
-                true => ("✓", scheme.success),
-                false => ("✗", scheme.error),
-            };
-            lines.push(Line::from(vec![
-                Span::styled(format!("  {} ", icon), Style::default().fg(color)),
-                Span::raw(char.0),
-            ]));
-        }
+        lines.extend(crate::tui::shared::licenses::render_license_characteristics_lines(license));
 
         lines.push(Line::from(""));
 
@@ -178,7 +154,7 @@ fn render_license_details(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
         let page_info = if components.len() > visible_components {
             let current_page = scroll_offset / visible_components + 1;
             let total_pages = components.len().div_ceil(visible_components);
-            format!(" ({}/{}) [Ctrl+↑↓]", current_page, total_pages)
+            format!(" ({current_page}/{total_pages}) [Ctrl+↑↓]")
         } else {
             String::new()
         };
@@ -242,22 +218,15 @@ fn render_license_details(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
             frame.render_stateful_widget(scrollbar, scrollbar_area, &mut scrollbar_state);
         }
     } else {
-        let empty = Paragraph::new(vec![
-            Line::from(""),
-            Line::styled(
-                "Select a license to view details",
-                Style::default().fg(scheme.muted),
-            ),
-        ])
-        .block(
-            Block::default()
-                .title(" License Details ")
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(scheme.muted)),
-        )
-        .alignment(Alignment::Center);
-
-        frame.render_widget(empty, area);
+        crate::tui::shared::components::render_empty_detail_panel(
+            frame,
+            area,
+            " License Details ",
+            "",
+            "Select a license to view details",
+            &[],
+            false,
+        );
     }
 }
 

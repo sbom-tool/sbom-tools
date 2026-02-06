@@ -7,6 +7,7 @@ use crate::model::Component;
 
 /// Result of matching two components.
 #[derive(Debug, Clone)]
+#[must_use]
 pub struct MatchResult {
     /// The matching confidence score (0.0 - 1.0)
     pub score: f64,
@@ -52,6 +53,7 @@ impl MatchResult {
 
 /// The tier/level at which a match was found.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum MatchTier {
     /// No match found
     None,
@@ -71,12 +73,12 @@ impl MatchTier {
     /// Get the default confidence score for this tier
     pub fn default_score(&self) -> f64 {
         match self {
-            MatchTier::None => 0.0,
-            MatchTier::ExactIdentifier => 1.0,
-            MatchTier::Alias => 0.95,
-            MatchTier::EcosystemRule => 0.90,
-            MatchTier::CustomRule => 0.92,
-            MatchTier::Fuzzy => 0.80,
+            Self::None => 0.0,
+            Self::ExactIdentifier => 1.0,
+            Self::Alias => 0.95,
+            Self::EcosystemRule => 0.90,
+            Self::CustomRule => 0.92,
+            Self::Fuzzy => 0.80,
         }
     }
 }
@@ -342,7 +344,7 @@ impl CacheKey {
             (b_id, a_id)
         };
 
-        let combined = format!("{}|{}", first, second);
+        let combined = format!("{first}|{second}");
         Self {
             hash: xxh3_64(combined.as_bytes()),
         }
@@ -538,6 +540,7 @@ impl<M: ComponentMatcher> ComponentMatcher for CachedMatcher<M> {
 }
 
 /// A composite matcher that tries multiple strategies in order.
+#[must_use]
 pub struct CompositeMatcherBuilder {
     matchers: Vec<Box<dyn ComponentMatcher>>,
 }

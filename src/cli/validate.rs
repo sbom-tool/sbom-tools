@@ -28,7 +28,7 @@ pub fn run_validate(
             write_compliance_output(&result, output, output_file)?;
         }
         _ => {
-            bail!("Unknown validation standard: {}", standard);
+            bail!("Unknown validation standard: {standard}");
         }
     }
 
@@ -44,7 +44,7 @@ fn write_compliance_output(
 
     let content = match output {
         ReportFormat::Json => serde_json::to_string_pretty(result)
-            .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {}", e))?,
+            .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
         ReportFormat::Sarif => generate_compliance_sarif(result)?,
         _ => format_compliance_text(result),
     };
@@ -139,7 +139,7 @@ pub fn validate_ntia_elements(sbom: &NormalizedSbom) -> Result<()> {
         tracing::warn!("SBOM has {} NTIA validation issues", issues.len());
         println!("NTIA Validation: FAILED");
         for issue in &issues {
-            println!("  - {}", issue);
+            println!("  - {issue}");
         }
     }
 
@@ -157,9 +157,9 @@ enum FdaSeverity {
 impl std::fmt::Display for FdaSeverity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FdaSeverity::Error => write!(f, "ERROR"),
-            FdaSeverity::Warning => write!(f, "WARNING"),
-            FdaSeverity::Info => write!(f, "INFO"),
+            Self::Error => write!(f, "ERROR"),
+            Self::Warning => write!(f, "WARNING"),
+            Self::Info => write!(f, "INFO"),
         }
     }
 }
@@ -408,8 +408,7 @@ fn validate_fda_relationships(sbom: &NormalizedSbom, issues: &mut Vec<FdaIssue>)
             severity: FdaSeverity::Error,
             category: "Dependency",
             message: format!(
-                "No dependency relationships defined for {} components",
-                total
+                "No dependency relationships defined for {total} components"
             ),
         });
     }
@@ -432,8 +431,7 @@ fn validate_fda_relationships(sbom: &NormalizedSbom, issues: &mut Vec<FdaIssue>)
                 severity: FdaSeverity::Warning,
                 category: "Dependency",
                 message: format!(
-                    "{}/{} components have no dependency relationships (orphaned)",
-                    orphan_count, total
+                    "{orphan_count}/{total} components have no dependency relationships (orphaned)"
                 ),
             });
         }
@@ -457,8 +455,7 @@ fn validate_fda_vulnerabilities(sbom: &NormalizedSbom, issues: &mut Vec<FdaIssue
                 severity: FdaSeverity::Warning,
                 category: "Security",
                 message: format!(
-                    "SBOM contains {} critical and {} high severity vulnerabilities",
-                    critical_vulns, high_vulns
+                    "SBOM contains {critical_vulns} critical and {high_vulns} high severity vulnerabilities"
                 ),
             });
         }
@@ -509,13 +506,11 @@ fn output_fda_results(sbom: &NormalizedSbom, issues: &mut [FdaIssue], _stats: &C
     } else {
         if error_count > 0 {
             println!(
-                "FAILED - {} error(s), {} warning(s), {} info",
-                error_count, warning_count, info_count
+                "FAILED - {error_count} error(s), {warning_count} warning(s), {info_count} info"
             );
         } else {
             println!(
-                "PASSED with warnings - {} warning(s), {} info",
-                warning_count, info_count
+                "PASSED with warnings - {warning_count} warning(s), {info_count} info"
             );
         }
         println!();
@@ -529,7 +524,7 @@ fn output_fda_results(sbom: &NormalizedSbom, issues: &mut [FdaIssue], _stats: &C
             .collect();
 
         for category in categories {
-            println!("--- {} ---", category);
+            println!("--- {category} ---");
             for issue in issues.iter().filter(|i| i.category == category) {
                 let symbol = match issue.severity {
                     FdaSeverity::Error => "X",

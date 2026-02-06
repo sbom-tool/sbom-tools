@@ -8,7 +8,7 @@ use ratatui::{
     widgets::{Bar, BarChart, BarGroup, Block, Borders, Gauge, Paragraph},
 };
 
-pub fn render_summary(frame: &mut Frame, area: Rect, app: &App) {
+pub(crate) fn render_summary(frame: &mut Frame, area: Rect, app: &App) {
     match app.mode {
         AppMode::Diff => render_diff_summary(frame, area, app),
         AppMode::View => render_view_summary(frame, area, app),
@@ -24,12 +24,12 @@ fn render_diff_summary(frame: &mut Frame, area: Rect, app: &App) {
     let old_count = app
         .data.old_sbom
         .as_ref()
-        .map(|s| s.component_count())
+        .map(crate::model::NormalizedSbom::component_count)
         .unwrap_or(0);
     let new_count = app
         .data.new_sbom
         .as_ref()
-        .map(|s| s.component_count())
+        .map(crate::model::NormalizedSbom::component_count)
         .unwrap_or(0);
 
     // Main layout: top row (score + stats), compliance, middle row (charts), bottom row (top changes)
@@ -100,7 +100,7 @@ fn render_semantic_score_gauge(frame: &mut Frame, area: Rect, score: f64) {
         )
         .gauge_style(Style::default().fg(gauge_color).bg(scheme.muted))
         .percent(score_percent)
-        .label(format!("{:.1} - {}", score, label_text));
+        .label(format!("{score:.1} - {label_text}"));
 
     frame.render_widget(gauge, area);
 }
@@ -126,7 +126,7 @@ fn render_components_card(
                     .bg(scheme.added)
                     .bold(),
             ),
-            Span::raw(format!("  {}", added)),
+            Span::raw(format!("  {added}")),
         ]),
         Line::from(vec![
             Span::styled(
@@ -136,7 +136,7 @@ fn render_components_card(
                     .bg(scheme.removed)
                     .bold(),
             ),
-            Span::raw(format!("  {}", removed)),
+            Span::raw(format!("  {removed}")),
         ]),
         Line::from(vec![
             Span::styled(
@@ -146,12 +146,12 @@ fn render_components_card(
                     .bg(scheme.modified)
                     .bold(),
             ),
-            Span::raw(format!("  {}", modified)),
+            Span::raw(format!("  {modified}")),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Total: ", Style::default().fg(scheme.muted)),
-            Span::raw(format!("{} → {}", old_count, new_count)),
+            Span::raw(format!("{old_count} → {new_count}")),
         ]),
     ];
 
@@ -179,7 +179,7 @@ fn render_dependencies_card(frame: &mut Frame, area: Rect, result: &crate::diff:
                     .bg(scheme.added)
                     .bold(),
             ),
-            Span::raw(format!("  {}", added)),
+            Span::raw(format!("  {added}")),
         ]),
         Line::from(vec![
             Span::styled(
@@ -189,7 +189,7 @@ fn render_dependencies_card(frame: &mut Frame, area: Rect, result: &crate::diff:
                     .bg(scheme.removed)
                     .bold(),
             ),
-            Span::raw(format!("  {}", removed)),
+            Span::raw(format!("  {removed}")),
         ]),
         Line::from(""),
         Line::from(vec![
@@ -224,12 +224,12 @@ fn render_cra_card(frame: &mut Frame, area: Rect, app: &App) {
         Line::from(vec![
             Span::styled("Old: ", Style::default().fg(scheme.muted)),
             Span::styled(old_status, old_style),
-            Span::styled(format!(" {}", old_counts), Style::default().fg(scheme.muted)),
+            Span::styled(format!(" {old_counts}"), Style::default().fg(scheme.muted)),
         ]),
         Line::from(vec![
             Span::styled("New: ", Style::default().fg(scheme.muted)),
             Span::styled(new_status, new_style),
-            Span::styled(format!(" {}", new_counts), Style::default().fg(scheme.muted)),
+            Span::styled(format!(" {new_counts}"), Style::default().fg(scheme.muted)),
         ]),
         Line::from(""),
         Line::from(vec![
@@ -305,25 +305,25 @@ fn render_policy_compliance(frame: &mut Frame, area: Rect, app: &App) {
 
         if critical > 0 {
             spans.push(Span::styled(
-                format!("●{} ", critical),
+                format!("●{critical} "),
                 Style::default().fg(scheme.critical).bold(),
             ));
         }
         if high > 0 {
             spans.push(Span::styled(
-                format!("●{} ", high),
+                format!("●{high} "),
                 Style::default().fg(scheme.high),
             ));
         }
         if medium > 0 {
             spans.push(Span::styled(
-                format!("●{} ", medium),
+                format!("●{medium} "),
                 Style::default().fg(scheme.medium),
             ));
         }
         if low > 0 {
             spans.push(Span::styled(
-                format!("○{} ", low),
+                format!("○{low} "),
                 Style::default().fg(scheme.low),
             ));
         }
@@ -413,7 +413,7 @@ fn render_vulnerabilities_card(frame: &mut Frame, area: Rect, result: &crate::di
                     .bg(scheme.removed)
                     .bold(),
             ),
-            Span::raw(format!("  {}", introduced)),
+            Span::raw(format!("  {introduced}")),
         ]),
         Line::from(vec![
             Span::styled(
@@ -423,7 +423,7 @@ fn render_vulnerabilities_card(frame: &mut Frame, area: Rect, result: &crate::di
                     .bg(scheme.added)
                     .bold(),
             ),
-            Span::raw(format!("  {}", resolved)),
+            Span::raw(format!("  {resolved}")),
         ]),
         Line::from(vec![
             Span::styled(
@@ -433,14 +433,14 @@ fn render_vulnerabilities_card(frame: &mut Frame, area: Rect, result: &crate::di
                     .bg(scheme.modified)
                     .bold(),
             ),
-            Span::raw(format!("  {}", persistent)),
+            Span::raw(format!("  {persistent}")),
         ]),
         Line::from(""),
         Line::from(vec![
             Span::styled("Critical: ", Style::default().fg(scheme.critical).bold()),
-            Span::raw(format!("{}  ", critical)),
+            Span::raw(format!("{critical}  ")),
             Span::styled("High: ", Style::default().fg(scheme.high)),
-            Span::raw(format!("{}", high)),
+            Span::raw(format!("{high}")),
         ]),
     ];
 
@@ -601,7 +601,7 @@ fn render_top_changes(frame: &mut Frame, area: Rect, app: &App) {
         };
 
         lines.push(Line::from(vec![
-            Span::styled(format!(" {} ", icon), style.bold()),
+            Span::styled(format!(" {icon} "), style.bold()),
             Span::styled(&comp.name, style),
             Span::styled(
                 format!(" {}", comp.new_version.as_deref().unwrap_or("")),
@@ -769,7 +769,7 @@ fn render_view_summary(frame: &mut Frame, area: Rect, app: &App) {
             let ecosystem = comp
                 .ecosystem
                 .as_ref()
-                .map(|e| e.to_string())
+                .map(std::string::ToString::to_string)
                 .unwrap_or_else(|| "unknown".to_string());
             *ecosystem_counts.entry(ecosystem).or_insert(0) += 1;
         }
@@ -782,7 +782,7 @@ fn render_view_summary(frame: &mut Frame, area: Rect, app: &App) {
             .take(4)
             .map(|(name, count)| {
                 Line::from(vec![
-                    Span::styled(format!("{}: ", name), Style::default().fg(scheme.primary)),
+                    Span::styled(format!("{name}: "), Style::default().fg(scheme.primary)),
                     Span::raw(count.to_string()),
                 ])
             })
@@ -872,7 +872,7 @@ fn render_view_summary(frame: &mut Frame, area: Rect, app: &App) {
             let severity = vuln
                 .severity
                 .as_ref()
-                .map(|s| s.to_string())
+                .map(std::string::ToString::to_string)
                 .unwrap_or_else(|| "Unknown".to_string());
             let severity_color = scheme.severity_color(&severity);
             let severity_style = match severity.to_lowercase().as_str() {
@@ -881,7 +881,7 @@ fn render_view_summary(frame: &mut Frame, area: Rect, app: &App) {
             };
 
             vuln_lines.push(Line::from(vec![
-                Span::styled(format!("[{}] ", severity), severity_style),
+                Span::styled(format!("[{severity}] "), severity_style),
                 Span::styled(&vuln.id, Style::default().bold()),
                 Span::styled(" in ", Style::default().fg(scheme.muted)),
                 Span::raw(&comp.name),

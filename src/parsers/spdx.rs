@@ -290,7 +290,7 @@ impl SpdxParser {
                         "SpdxDocument" => {
                             in_document = true;
                             // Extract document namespace from rdf:about attribute
-                            for attr in e.attributes().filter_map(|a| a.ok()) {
+                            for attr in e.attributes().filter_map(std::result::Result::ok) {
                                 let attr_name = Self::local_name(attr.key.as_ref());
                                 if attr_name == "about" {
                                     doc.document_namespace =
@@ -318,7 +318,7 @@ impl SpdxParser {
                                 description: None,
                             };
                             // Extract package URI from rdf:about attribute for SPDX ID
-                            for attr in e.attributes().filter_map(|a| a.ok()) {
+                            for attr in e.attributes().filter_map(std::result::Result::ok) {
                                 let attr_name = Self::local_name(attr.key.as_ref());
                                 if attr_name == "about" {
                                     let uri = String::from_utf8_lossy(&attr.value).to_string();
@@ -361,7 +361,7 @@ impl SpdxParser {
                     // Handle empty elements with rdf:resource attributes
                     match local_name.as_str() {
                         "dataLicense" => {
-                            for attr in e.attributes().filter_map(|a| a.ok()) {
+                            for attr in e.attributes().filter_map(std::result::Result::ok) {
                                 let attr_name = Self::local_name(attr.key.as_ref());
                                 if attr_name == "resource" {
                                     let uri = String::from_utf8_lossy(&attr.value).to_string();
@@ -376,7 +376,7 @@ impl SpdxParser {
                         }
                         "spdxElementId" | "relatedSpdxElement" => {
                             if let Some(ref mut rel) = current_relationship {
-                                for attr in e.attributes().filter_map(|a| a.ok()) {
+                                for attr in e.attributes().filter_map(std::result::Result::ok) {
                                     let attr_name = Self::local_name(attr.key.as_ref());
                                     if attr_name == "resource" {
                                         let uri = String::from_utf8_lossy(&attr.value).to_string();
@@ -392,7 +392,7 @@ impl SpdxParser {
                         }
                         "licenseConcluded" | "licenseDeclared" => {
                             if let Some(ref mut pkg) = current_package {
-                                for attr in e.attributes().filter_map(|a| a.ok()) {
+                                for attr in e.attributes().filter_map(std::result::Result::ok) {
                                     let attr_name = Self::local_name(attr.key.as_ref());
                                     if attr_name == "resource" {
                                         let uri = String::from_utf8_lossy(&attr.value).to_string();
@@ -408,7 +408,7 @@ impl SpdxParser {
                         }
                         "algorithm" => {
                             if let Some(ref mut checksum) = current_checksum {
-                                for attr in e.attributes().filter_map(|a| a.ok()) {
+                                for attr in e.attributes().filter_map(std::result::Result::ok) {
                                     let attr_name = Self::local_name(attr.key.as_ref());
                                     if attr_name == "resource" {
                                         let uri = String::from_utf8_lossy(&attr.value).to_string();
@@ -426,7 +426,7 @@ impl SpdxParser {
                         }
                         "referenceCategory" => {
                             if let Some(ref mut ext_ref) = current_external_ref {
-                                for attr in e.attributes().filter_map(|a| a.ok()) {
+                                for attr in e.attributes().filter_map(std::result::Result::ok) {
                                     let attr_name = Self::local_name(attr.key.as_ref());
                                     if attr_name == "resource" {
                                         let uri = String::from_utf8_lossy(&attr.value).to_string();

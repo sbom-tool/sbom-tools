@@ -120,7 +120,7 @@ fn render_severity_card(
 
     let lines = vec![
         Line::from(vec![Span::styled(
-            format!(" {} ", label),
+            format!(" {label} "),
             Style::default()
                 .fg(scheme.severity_badge_fg(label))
                 .bg(color)
@@ -176,7 +176,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let mut spans = vec![
         Span::styled("Filter: ", Style::default().fg(scheme.muted)),
         Span::styled(
-            format!(" {} ", filter_label),
+            format!(" {filter_label} "),
             Style::default()
                 .fg(scheme.badge_fg_dark)
                 .bg(scheme.accent)
@@ -194,7 +194,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
         Span::raw("  "),
         Span::styled("Dedupe: ", Style::default().fg(scheme.muted)),
         Span::styled(
-            format!(" {} ", dedupe_label),
+            format!(" {dedupe_label} "),
             Style::default()
                 .fg(scheme.badge_fg_dark)
                 .bg(if app.vuln_state.deduplicate {
@@ -207,7 +207,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
         Span::raw("  "),
         Span::styled("Group: ", Style::default().fg(scheme.muted)),
         Span::styled(
-            format!(" {} ", group_label),
+            format!(" {group_label} "),
             Style::default()
                 .fg(scheme.badge_fg_dark)
                 .bg(scheme.secondary)
@@ -255,7 +255,9 @@ fn render_vuln_content(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     }
 
     // Clone cache data to avoid borrow conflicts (cache is already computed, clone is cheap for metadata)
-    let cache = app.vuln_state.cached_data.clone().unwrap();
+    let Some(cache) = app.vuln_state.cached_data.clone() else {
+        return;
+    };
     let has_any_cvss = cache.has_any_cvss;
     let all_same_component = cache.all_same_component;
     let has_multi_affected = cache.has_multi_affected;
@@ -424,7 +426,7 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                         existing.affected_components.push(comp.name.clone());
                         // Keep the highest CVSS score
                         if let Some(new_cvss) = cvss {
-                            if existing.cvss.map_or(true, |c| new_cvss > c) {
+                            if existing.cvss.is_none_or(|c| new_cvss > c) {
                                 existing.cvss = Some(new_cvss);
                             }
                         }
@@ -528,22 +530,12 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
     }
 
     // Sort based on user selection
-    let sev_order = |s: &str| -> u8 {
-        match s.to_lowercase().as_str() {
-            "critical" => 0,
-            "high" => 1,
-            "medium" => 2,
-            "low" => 3,
-            "info" => 4,
-            "none" => 5,
-            _ => 6, // Unknown
-        }
-    };
+    use crate::tui::shared::vulnerabilities::severity_rank;
 
     match app.vuln_state.sort_by {
         VulnSortBy::Severity => {
             vulns.sort_by(|a, b| {
-                let ord = sev_order(&a.severity).cmp(&sev_order(&b.severity));
+                let ord = severity_rank(&a.severity).cmp(&severity_rank(&b.severity));
                 if ord == std::cmp::Ordering::Equal {
                     b.cvss.partial_cmp(&a.cvss).unwrap_or(std::cmp::Ordering::Equal)
                 } else {
@@ -701,9 +693,7 @@ fn render_vuln_table_panel(
                     )),
                     Cell::from(Span::styled(
                         format!(
-                            "{} ({})",
-                            label,
-                            count
+                            "{label} ({count})"
                         ),
                         Style::default()
                             .fg(if is_severity_group {
@@ -741,7 +731,7 @@ fn render_vuln_table_panel(
                 if show_cvss {
                     cells.push(Cell::from(
                         v.cvss
-                            .map(|c| format!("{:.1}", c))
+                            .map(|c| format!("{c:.1}"))
                             .unwrap_or_else(|| "-".to_string()),
                     ));
                 }
@@ -801,7 +791,7 @@ fn render_vuln_table_panel(
         .header(header)
         .block(
             Block::default()
-                .title(format!(" Vulnerabilities ({}) ", vuln_count))
+                .title(format!(" Vulnerabilities ({vuln_count}) "))
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(border_color)),
         )
@@ -903,7 +893,7 @@ fn render_vuln_detail_panel(
     if let Some(cvss) = v.cvss {
         sev_spans.push(Span::styled("  CVSS: ", Style::default().fg(scheme.muted)));
         sev_spans.push(Span::styled(
-            format!("{:.1}", cvss),
+            format!("{cvss:.1}"),
             Style::default().fg(scheme.text).bold(),
         ));
     }
@@ -934,7 +924,7 @@ fn render_vuln_detail_panel(
         };
         lines.push(Line::from(vec![
             Span::styled("Versions: ", Style::default().fg(scheme.muted)),
-            Span::styled(format!("{}{}", versions_str, suffix), Style::default().fg(scheme.text)),
+            Span::styled(format!("{versions_str}{suffix}"), Style::default().fg(scheme.text)),
         ]));
     }
 
@@ -954,12 +944,12 @@ fn render_vuln_detail_panel(
             for (name, count) in v.grouped_components.iter().take(6) {
                 if *count > 1 {
                     lines.push(Line::from(Span::styled(
-                        format!("  {} (x{})", name, count),
+                        format!("  {name} (x{count})"),
                         Style::default().fg(scheme.text),
                     )));
                 } else {
                     lines.push(Line::from(Span::styled(
-                        format!("  {}", name),
+                        format!("  {name}"),
                         Style::default().fg(scheme.text),
                     )));
                 }
@@ -1003,13 +993,7 @@ fn render_vuln_detail_panel(
     }
 
     // CWEs (inline)
-    if !v.cwes.is_empty() {
-        let cwe_list = v.cwes.iter().take(5).cloned().collect::<Vec<_>>().join(", ");
-        lines.push(Line::from(vec![
-            Span::styled("CWEs: ", Style::default().fg(scheme.muted)),
-            Span::styled(cwe_list, Style::default().fg(scheme.warning)),
-        ]));
-    }
+    lines.extend(crate::tui::shared::vulnerabilities::render_vuln_cwe_lines(&v.cwes, 5));
 
     lines.push(Line::from(""));
 
@@ -1021,9 +1005,9 @@ fn render_vuln_detail_panel(
 
     if let Some(desc) = &v.description {
         let max_width = area.width.saturating_sub(4) as usize;
-        for wrapped_line in word_wrap(desc, max_width) {
+        for wrapped_line in crate::tui::shared::vulnerabilities::word_wrap(desc, max_width) {
             lines.push(Line::from(Span::styled(
-                format!("  {}", wrapped_line),
+                format!("  {wrapped_line}"),
                 Style::default().fg(scheme.text),
             )));
         }
@@ -1055,7 +1039,7 @@ fn render_vuln_detail_panel(
     }
 
     // Clamp scroll offset so it doesn't exceed content
-    let content_height = area.height.saturating_sub(2) as u16; // borders
+    let content_height = area.height.saturating_sub(2); // borders
     let total_lines = lines.len() as u16;
     let max_scroll = total_lines.saturating_sub(content_height);
     if *detail_scroll > max_scroll {
@@ -1139,7 +1123,7 @@ fn is_cryptic_name(name: &str) -> bool {
     }
 
     // Check if it's mostly numeric
-    let digit_count = clean.chars().filter(|c| c.is_ascii_digit()).count();
+    let digit_count = clean.chars().filter(char::is_ascii_digit).count();
     if digit_count > clean.len() / 2 && clean.len() > 6 {
         return true;
     }
@@ -1240,13 +1224,13 @@ fn extract_package_from_description(description: &str) -> Option<String> {
     for &pkg in KNOWN_PACKAGES {
         // Check various patterns where the package might appear
         let patterns = [
-            format!("{} ", pkg),           // "busybox allows..."
-            format!(" {} ", pkg),          // "in busybox before..."
-            format!("in {}", pkg),         // "vulnerability in busybox"
-            format!("{} before", pkg),     // "busybox before 1.35"
-            format!("{} through", pkg),    // "busybox through 1.35"
-            format!("{} prior", pkg),      // "busybox prior to"
-            format!("lib{}", pkg),         // "libcurl" when looking for "curl"
+            format!("{pkg} "),           // "busybox allows..."
+            format!(" {pkg} "),          // "in busybox before..."
+            format!("in {pkg}"),         // "vulnerability in busybox"
+            format!("{pkg} before"),     // "busybox before 1.35"
+            format!("{pkg} through"),    // "busybox through 1.35"
+            format!("{pkg} prior"),      // "busybox prior to"
+            format!("lib{pkg}"),         // "libcurl" when looking for "curl"
         ];
 
         for pattern in &patterns {
@@ -1385,34 +1369,6 @@ fn is_noise_word(word: &str) -> bool {
     NOISE.contains(&word)
 }
 
-/// Simple word wrapping
-fn word_wrap(text: &str, max_width: usize) -> Vec<String> {
-    let mut lines = Vec::new();
-    let mut current_line = String::new();
-
-    for word in text.split_whitespace() {
-        if current_line.is_empty() {
-            current_line = word.to_string();
-        } else if current_line.len() + 1 + word.len() <= max_width {
-            current_line.push(' ');
-            current_line.push_str(word);
-        } else {
-            lines.push(current_line);
-            current_line = word.to_string();
-        }
-    }
-
-    if !current_line.is_empty() {
-        lines.push(current_line);
-    }
-
-    if lines.is_empty() {
-        lines.push(String::new());
-    }
-
-    lines
-}
-
 /// Cached vulnerability row data for display
 #[derive(Debug, Clone)]
 pub struct VulnRow {
@@ -1491,18 +1447,8 @@ pub fn build_display_items(
 
     // For severity grouping, sort by severity order
     if matches!(group_by, VulnGroupBy::Severity) {
-        let sev_order = |s: &str| -> u8 {
-            match s.to_lowercase().as_str() {
-                "critical" => 0,
-                "high" => 1,
-                "medium" => 2,
-                "low" => 3,
-                "info" => 4,
-                "none" => 5,
-                _ => 6,
-            }
-        };
-        groups.sort_by(|a, _, b, _| sev_order(a).cmp(&sev_order(b)));
+        use crate::tui::shared::vulnerabilities::severity_rank;
+        groups.sort_by(|a, _, b, _| severity_rank(a).cmp(&severity_rank(b)));
     }
 
     let mut items = Vec::new();

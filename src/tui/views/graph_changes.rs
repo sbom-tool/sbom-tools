@@ -4,6 +4,7 @@ use crate::diff::{
     DependencyChangeType, DependencyGraphChange, GraphChangeImpact, GraphChangeSummary,
 };
 use crate::tui::app::App;
+use crate::tui::state::ListNavigation;
 use crate::tui::theme::colors;
 use crate::tui::widgets;
 use ratatui::{
@@ -14,7 +15,7 @@ use ratatui::{
     },
 };
 
-pub fn render_graph_changes(frame: &mut Frame, area: Rect, app: &mut App) {
+pub(crate) fn render_graph_changes(frame: &mut Frame, area: Rect, app: &mut App) {
     let Some(result) = &app.data.diff_result else {
         render_no_data(frame, area);
         return;
@@ -319,7 +320,7 @@ fn details_cell(change: &DependencyChangeType) -> Cell<'static> {
             } else {
                 "↓ demoted"
             };
-            format!("Depth {} → {} ({})", old_depth, new_depth, direction)
+            format!("Depth {old_depth} → {new_depth} ({direction})")
         }
     };
     Cell::from(text).style(Style::default().fg(colors().text))

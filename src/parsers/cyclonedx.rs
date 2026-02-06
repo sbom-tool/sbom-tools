@@ -93,10 +93,11 @@ impl CycloneDxParser {
                     .bom_ref
                     .clone()
                     .unwrap_or_else(|| comp.name.clone());
-                id_map.insert(bom_ref.clone(), comp.canonical_id.clone());
+                let canonical_id = comp.canonical_id.clone();
+                id_map.insert(bom_ref, canonical_id.clone());
 
                 // Set as primary component
-                sbom.set_primary_component(comp.canonical_id.clone());
+                sbom.set_primary_component(canonical_id);
 
                 // Extract security contact from primary component's external references
                 for ext_ref in &comp.external_refs {
@@ -140,13 +141,10 @@ impl CycloneDxParser {
         if let Some(components) = cdx.components {
             for cdx_comp in components {
                 let comp = self.convert_component(&cdx_comp)?;
-                id_map.insert(
-                    cdx_comp
-                        .bom_ref
-                        .clone()
-                        .unwrap_or_else(|| comp.name.clone()),
-                    comp.canonical_id.clone(),
-                );
+                let bom_ref = cdx_comp
+                    .bom_ref
+                    .unwrap_or_else(|| comp.name.clone());
+                id_map.insert(bom_ref, comp.canonical_id.clone());
                 sbom.add_component(comp);
             }
         }
@@ -416,7 +414,7 @@ impl CycloneDxParser {
 
         // Parse CWEs
         if let Some(cwes) = &vuln.cwes {
-            vuln_ref.cwes = cwes.iter().map(|c| format!("CWE-{}", c)).collect();
+            vuln_ref.cwes = cwes.iter().map(|c| format!("CWE-{c}")).collect();
         }
 
         // Parse remediation

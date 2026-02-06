@@ -21,9 +21,9 @@ pub enum VulnGroupStatus {
 impl std::fmt::Display for VulnGroupStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            VulnGroupStatus::Introduced => write!(f, "Introduced"),
-            VulnGroupStatus::Resolved => write!(f, "Resolved"),
-            VulnGroupStatus::Persistent => write!(f, "Persistent"),
+            Self::Introduced => write!(f, "Introduced"),
+            Self::Resolved => write!(f, "Resolved"),
+            Self::Persistent => write!(f, "Persistent"),
         }
     }
 }
@@ -119,7 +119,7 @@ impl VulnerabilityGroup {
         let version_str = self
             .component_version
             .as_ref()
-            .map(|v| format!("@{}", v))
+            .map(|v| format!("@{v}"))
             .unwrap_or_default();
 
         let severity_badges: Vec<String> = ["Critical", "High", "Medium", "Low"]
@@ -225,9 +225,9 @@ impl VulnerabilityGroupedView {
 
     /// Get total vulnerability count across all groups
     pub fn total_vulns(&self) -> usize {
-        self.introduced_groups.iter().map(|g| g.vuln_count()).sum::<usize>()
-            + self.resolved_groups.iter().map(|g| g.vuln_count()).sum::<usize>()
-            + self.persistent_groups.iter().map(|g| g.vuln_count()).sum::<usize>()
+        self.introduced_groups.iter().map(VulnerabilityGroup::vuln_count).sum::<usize>()
+            + self.resolved_groups.iter().map(VulnerabilityGroup::vuln_count).sum::<usize>()
+            + self.persistent_groups.iter().map(VulnerabilityGroup::vuln_count).sum::<usize>()
     }
 
     /// Check if any group has KEV vulnerabilities

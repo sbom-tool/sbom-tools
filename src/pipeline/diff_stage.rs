@@ -50,7 +50,7 @@ pub fn compute_diff(
     if let Some(rules) = matching_rules {
         if !config.rules.dry_run {
             let rule_engine = crate::matching::RuleEngine::new(rules)
-                .map_err(|e| anyhow::anyhow!("Failed to initialize matching rule engine: {}", e))?;
+                .map_err(|e| anyhow::anyhow!("Failed to initialize matching rule engine: {e}"))?;
             engine = engine.with_rule_engine(rule_engine);
         }
     }

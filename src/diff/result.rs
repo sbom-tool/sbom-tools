@@ -20,6 +20,7 @@ fn severity_rank(s: &str) -> u8 {
 
 /// Complete result of an SBOM diff operation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[must_use]
 pub struct DiffResult {
     /// Summary statistics
     pub summary: DiffSummary,
@@ -81,6 +82,7 @@ impl DiffResult {
     }
 
     /// Check if there are any changes
+    #[must_use]
     pub fn has_changes(&self) -> bool {
         self.summary.total_changes > 0
             || !self.dependencies.is_empty()
@@ -139,21 +141,15 @@ impl DiffResult {
     }
 
     /// Build an index of component IDs to their changes for fast lookup
+    #[must_use]
     pub fn build_component_id_index(&self) -> HashMap<String, &ComponentChange> {
-        let capacity = self.components.added.len()
-            + self.components.removed.len()
-            + self.components.modified.len();
-        let mut index = HashMap::with_capacity(capacity);
-        for c in self.components.added.iter() {
-            index.insert(c.id.clone(), c);
-        }
-        for c in self.components.removed.iter() {
-            index.insert(c.id.clone(), c);
-        }
-        for c in self.components.modified.iter() {
-            index.insert(c.id.clone(), c);
-        }
-        index
+        self.components
+            .added
+            .iter()
+            .chain(&self.components.removed)
+            .chain(&self.components.modified)
+            .map(|c| (c.id.clone(), c))
+            .collect()
     }
 
     /// Filter vulnerabilities by minimum severity level
@@ -180,13 +176,13 @@ impl DiffResult {
     pub fn filter_by_vex(&mut self) {
         self.vulnerabilities
             .introduced
-            .retain(|v| v.is_vex_actionable());
+            .retain(VulnerabilityDetail::is_vex_actionable);
         self.vulnerabilities
             .resolved
-            .retain(|v| v.is_vex_actionable());
+            .retain(VulnerabilityDetail::is_vex_actionable);
         self.vulnerabilities
             .persistent
-            .retain(|v| v.is_vex_actionable());
+            .retain(VulnerabilityDetail::is_vex_actionable);
 
         self.calculate_summary();
     }
@@ -380,7 +376,7 @@ impl ComponentChange {
             name: component.name.clone(),
             old_version: None,
             new_version: component.version.clone(),
-            ecosystem: component.ecosystem.as_ref().map(|e| e.to_string()),
+            ecosystem: component.ecosystem.as_ref().map(std::string::ToString::to_string),
             change_type: ChangeType::Added,
             field_changes: Vec::new(),
             cost,
@@ -398,7 +394,7 @@ impl ComponentChange {
             name: component.name.clone(),
             old_version: component.version.clone(),
             new_version: None,
-            ecosystem: component.ecosystem.as_ref().map(|e| e.to_string()),
+            ecosystem: component.ecosystem.as_ref().map(std::string::ToString::to_string),
             change_type: ChangeType::Removed,
             field_changes: Vec::new(),
             cost,
@@ -421,7 +417,7 @@ impl ComponentChange {
             name: new.name.clone(),
             old_version: old.version.clone(),
             new_version: new.version.clone(),
-            ecosystem: new.ecosystem.as_ref().map(|e| e.to_string()),
+            ecosystem: new.ecosystem.as_ref().map(std::string::ToString::to_string),
             change_type: ChangeType::Modified,
             field_changes,
             cost,
@@ -445,7 +441,7 @@ impl ComponentChange {
             name: new.name.clone(),
             old_version: old.version.clone(),
             new_version: new.version.clone(),
-            ecosystem: new.ecosystem.as_ref().map(|e| e.to_string()),
+            ecosystem: new.ecosystem.as_ref().map(std::string::ToString::to_string),
             change_type: ChangeType::Modified,
             field_changes,
             cost,
@@ -663,12 +659,12 @@ impl SlaStatus {
     /// Format for display (e.g., "3d late", "2d left", "45d old")
     pub fn display(&self, days_since_published: Option<i64>) -> String {
         match self {
-            SlaStatus::Overdue(days) => format!("{}d late", days),
-            SlaStatus::DueSoon(days) => format!("{}d left", days),
-            SlaStatus::OnTrack(days) => format!("{}d left", days),
-            SlaStatus::NoDueDate => {
+            Self::Overdue(days) => format!("{days}d late"),
+            Self::DueSoon(days) => format!("{days}d left"),
+            Self::OnTrack(days) => format!("{days}d left"),
+            Self::NoDueDate => {
                 if let Some(age) = days_since_published {
-                    format!("{}d old", age)
+                    format!("{age}d old")
                 } else {
                     "-".to_string()
                 }
@@ -678,12 +674,12 @@ impl SlaStatus {
 
     /// Check if this is an overdue status
     pub fn is_overdue(&self) -> bool {
-        matches!(self, SlaStatus::Overdue(_))
+        matches!(self, Self::Overdue(_))
     }
 
     /// Check if this is due soon (approaching deadline)
     pub fn is_due_soon(&self) -> bool {
-        matches!(self, SlaStatus::DueSoon(_))
+        matches!(self, Self::DueSoon(_))
     }
 }
 
@@ -778,7 +774,7 @@ impl VulnerabilityDetail {
             severity: vuln
                 .severity
                 .as_ref()
-                .map(|s| s.to_string())
+                .map(std::string::ToString::to_string)
                 .unwrap_or_else(|| "Unknown".to_string()),
             cvss_score: vuln.max_cvss_score(),
             component_id: component.canonical_id.to_string(),

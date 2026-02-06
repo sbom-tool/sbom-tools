@@ -616,7 +616,7 @@ pub fn status_badge(status: &str) -> Span<'static> {
     };
 
     Span::styled(
-        format!(" {} {} ", symbol, label),
+        format!(" {symbol} {label} "),
         Style::default()
             .fg(scheme.change_badge_fg())
             .bg(color)
@@ -644,7 +644,7 @@ pub fn severity_badge(severity: &str) -> Span<'static> {
         Style::default().fg(fg_color).bg(bg_color).bold()
     };
 
-    Span::styled(format!(" {} ", label), style)
+    Span::styled(format!(" {label} "), style)
 }
 
 /// Render a compact severity indicator (single char)
@@ -667,14 +667,14 @@ pub fn severity_indicator(severity: &str) -> Span<'static> {
         Style::default().fg(fg_color).bg(bg_color).bold()
     };
 
-    Span::styled(format!(" {} ", symbol), style)
+    Span::styled(format!(" {symbol} "), style)
 }
 
 /// Render a count badge
 pub fn count_badge(count: usize, bg_color: Color) -> Span<'static> {
     let scheme = colors();
     Span::styled(
-        format!(" {} ", count),
+        format!(" {count} "),
         Style::default()
             .fg(scheme.badge_fg_dark)
             .bg(bg_color)
@@ -687,11 +687,11 @@ pub fn filter_badge(label: &str, value: &str) -> Vec<Span<'static>> {
     let scheme = colors();
     vec![
         Span::styled(
-            format!("{}: ", label),
+            format!("{label}: "),
             Style::default().fg(scheme.text_muted),
         ),
         Span::styled(
-            format!(" {} ", value),
+            format!(" {value} "),
             Style::default()
                 .fg(scheme.badge_fg_dark)
                 .bg(scheme.accent)
@@ -841,7 +841,7 @@ pub fn render_footer_hints(hints: &[(&str, &str)]) -> Vec<Span<'static>> {
         if i > 0 {
             spans.push(Span::raw(" "));
         }
-        spans.push(Span::styled(format!("[{}]", key), Styles::shortcut_key()));
+        spans.push(Span::styled(format!("[{key}]"), Styles::shortcut_key()));
         spans.push(Span::styled(desc.to_string(), Styles::shortcut_desc()));
     }
 

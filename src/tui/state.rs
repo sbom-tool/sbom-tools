@@ -48,18 +48,20 @@ pub trait ListNavigation {
         }
     }
 
-    /// Move selection up by a page (default 10 items).
+    /// Move selection up by a page.
     fn page_up(&mut self) {
+        use super::constants::PAGE_SIZE;
         let selected = self.selected();
-        self.set_selected(selected.saturating_sub(10));
+        self.set_selected(selected.saturating_sub(PAGE_SIZE));
     }
 
-    /// Move selection down by a page (default 10 items).
+    /// Move selection down by a page.
     fn page_down(&mut self) {
+        use super::constants::PAGE_SIZE;
         let total = self.total();
         let selected = self.selected();
         if total > 0 {
-            self.set_selected((selected + 10).min(total.saturating_sub(1)));
+            self.set_selected((selected + PAGE_SIZE).min(total.saturating_sub(1)));
         }
     }
 

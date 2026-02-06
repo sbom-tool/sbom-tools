@@ -94,7 +94,7 @@ impl EcosystemRules {
             for migration in &eco_config.group_migrations {
                 // Convert glob pattern to regex
                 let regex_pattern = migration.from.replace('.', r"\.").replace('*', ".*");
-                if let Ok(re) = Regex::new(&format!("^{}$", regex_pattern)) {
+                if let Ok(re) = Regex::new(&format!("^{regex_pattern}$")) {
                     compiled.push((re, migration.to.clone()));
                 }
             }
@@ -123,7 +123,7 @@ impl EcosystemRules {
                     if member.contains('*') {
                         // Convert glob pattern to regex
                         let regex_pattern = member.replace('.', r"\.").replace('*', ".*");
-                        if let Ok(re) = Regex::new(&format!("^{}$", regex_pattern)) {
+                        if let Ok(re) = Regex::new(&format!("^{regex_pattern}$")) {
                             compiled.push(re);
                         }
                     }
@@ -307,7 +307,7 @@ impl EcosystemRules {
         self.config
             .ecosystems
             .get(&eco_key)
-            .map(|c| c.strip_suffixes.iter().map(|s| s.as_str()).collect())
+            .map(|c| c.strip_suffixes.iter().map(std::string::String::as_str).collect())
             .unwrap_or_default()
     }
 
@@ -318,7 +318,7 @@ impl EcosystemRules {
         self.config
             .ecosystems
             .get(&eco_key)
-            .map(|c| c.strip_prefixes.iter().map(|s| s.as_str()).collect())
+            .map(|c| c.strip_prefixes.iter().map(std::string::String::as_str).collect())
             .unwrap_or_default()
     }
 

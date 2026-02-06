@@ -184,7 +184,7 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
                 .as_ref()
                 .and_then(|s| s.document.name.clone())
                 .unwrap_or_else(|| "SBOM B".to_string());
-            ("diff", format!("{} ⟷ {}", old_name, new_name))
+            ("diff", format!("{old_name} ⟷ {new_name}"))
         }
         AppMode::View => {
             let name = app
@@ -259,8 +259,8 @@ fn render_tabs(frame: &mut Frame, area: Rect, app: &App) {
             };
 
             Line::from(vec![
-                Span::styled(format!("[{}]", key), key_style),
-                Span::styled(format!(" {} ", title), title_style),
+                Span::styled(format!("[{key}]"), key_style),
+                Span::styled(format!(" {title} "), title_style),
             ])
         })
         .collect();
@@ -313,7 +313,7 @@ fn render_status_bar(frame: &mut Frame, area: Rect, app: &App) {
         }
         AppMode::View => {
             let sbom = app.data.sbom.as_ref();
-            let comp = sbom.map(|s| s.component_count()).unwrap_or(0);
+            let comp = sbom.map(crate::model::NormalizedSbom::component_count).unwrap_or(0);
             let vuln = sbom.map(|s| s.all_vulnerabilities().len()).unwrap_or(0);
             (comp, vuln, None)
         }
@@ -361,7 +361,7 @@ fn render_status_bar(frame: &mut Frame, area: Rect, app: &App) {
 
     if critical_count > 0 {
         spans.push(Span::styled(
-            format!(" ({} Critical)", critical_count),
+            format!(" ({critical_count} Critical)"),
             Style::default().fg(colors().critical).bold(),
         ));
     }
@@ -382,7 +382,7 @@ fn render_status_bar(frame: &mut Frame, area: Rect, app: &App) {
             colors().error
         };
         spans.push(Span::styled(
-            format!("{:.1}", s),
+            format!("{s:.1}"),
             Style::default().fg(score_color).bold(),
         ));
     }
@@ -477,7 +477,7 @@ fn render_help_overlay(frame: &mut Frame, area: Rect) {
         Line::from(vec![
             Span::styled("  PgUp/PgDown    ", Style::default().fg(colors().accent)),
             Span::styled(
-                "Page up/down (10 items)",
+                "Page up/down (page)",
                 Style::default().fg(colors().text),
             ),
         ]),
@@ -684,7 +684,7 @@ fn render_search_overlay(frame: &mut Frame, area: Rect, search_state: &DiffSearc
                         ),
                         if let Some(v) = version {
                             Span::styled(
-                                format!(" @ {}", v),
+                                format!(" @ {v}"),
                                 Style::default().fg(colors().text_muted),
                             )
                         } else {
@@ -723,7 +723,7 @@ fn render_search_overlay(frame: &mut Frame, area: Rect, search_state: &DiffSearc
                             },
                         ),
                         Span::styled(
-                            format!(" in {}", component_name),
+                            format!(" in {component_name}"),
                             Style::default().fg(colors().text_muted),
                         ),
                     ])
@@ -753,7 +753,7 @@ fn render_search_overlay(frame: &mut Frame, area: Rect, search_state: &DiffSearc
                             },
                         ),
                         Span::styled(
-                            format!(" ({})", component_name),
+                            format!(" ({component_name})"),
                             Style::default().fg(colors().text_muted),
                         ),
                     ])

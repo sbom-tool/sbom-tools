@@ -16,7 +16,7 @@ use ratatui::{
 };
 
 /// Render the view switcher overlay
-pub fn render_view_switcher(f: &mut Frame, state: &ViewSwitcherState) {
+pub(crate) fn render_view_switcher(f: &mut Frame, state: &ViewSwitcherState) {
     if !state.visible {
         return;
     }
@@ -90,7 +90,7 @@ pub fn render_view_switcher(f: &mut Frame, state: &ViewSwitcherState) {
 }
 
 /// Render the keyboard shortcuts overlay
-pub fn render_shortcuts_overlay(f: &mut Frame, state: &ShortcutsOverlayState) {
+pub(crate) fn render_shortcuts_overlay(f: &mut Frame, state: &ShortcutsOverlayState) {
     if !state.visible {
         return;
     }
@@ -137,7 +137,7 @@ pub fn render_shortcuts_overlay(f: &mut Frame, state: &ShortcutsOverlayState) {
         for (key, description) in section.items {
             lines.push(Line::from(vec![
                 Span::styled(
-                    format!("{:>12}", key),
+                    format!("{key:>12}"),
                     Style::default()
                         .fg(scheme.primary)
                         .add_modifier(Modifier::BOLD),
@@ -165,7 +165,7 @@ pub fn render_shortcuts_overlay(f: &mut Frame, state: &ShortcutsOverlayState) {
 }
 
 /// Render the component deep dive modal
-pub fn render_component_deep_dive(f: &mut Frame, state: &ComponentDeepDiveState) {
+pub(crate) fn render_component_deep_dive(f: &mut Frame, state: &ComponentDeepDiveState) {
     if !state.visible {
         return;
     }
@@ -231,7 +231,7 @@ fn render_deep_dive_tabs(f: &mut Frame, area: Rect, state: &ComponentDeepDiveSta
             let is_selected = i == state.active_section;
             if is_selected {
                 Span::styled(
-                    format!(" {} ", label),
+                    format!(" {label} "),
                     Style::default()
                         .bg(scheme.accent)
                         .fg(scheme.badge_fg_dark)
@@ -239,7 +239,7 @@ fn render_deep_dive_tabs(f: &mut Frame, area: Rect, state: &ComponentDeepDiveSta
                 )
             } else {
                 Span::styled(
-                    format!(" {} ", label),
+                    format!(" {label} "),
                     Style::default().fg(scheme.text_muted),
                 )
             }
@@ -375,7 +375,7 @@ fn render_deep_dive_content(f: &mut Frame, area: Rect, state: &ComponentDeepDive
                 lines.push(Line::from("  (none)"));
             } else {
                 for dep in data.dependencies.iter().take(10) {
-                    lines.push(Line::from(format!("  - {}", dep)));
+                    lines.push(Line::from(format!("  - {dep}")));
                 }
             }
 
@@ -388,7 +388,7 @@ fn render_deep_dive_content(f: &mut Frame, area: Rect, state: &ComponentDeepDive
                 lines.push(Line::from("  (none)"));
             } else {
                 for dep in data.dependents.iter().take(10) {
-                    lines.push(Line::from(format!("  - {}", dep)));
+                    lines.push(Line::from(format!("  - {dep}")));
                 }
             }
             lines
@@ -437,28 +437,6 @@ fn render_deep_dive_content(f: &mut Frame, area: Rect, state: &ComponentDeepDive
     };
 
     let paragraph = Paragraph::new(lines).wrap(Wrap { trim: true });
-    f.render_widget(paragraph, area);
-}
-
-/// Render breadcrumbs bar at the top of the view
-pub fn render_breadcrumbs(f: &mut Frame, area: Rect, breadcrumbs: &[String]) {
-    if breadcrumbs.is_empty() {
-        return;
-    }
-
-    let scheme = colors();
-
-    let mut spans = vec![Span::styled("< ", Style::default().fg(scheme.text_muted))];
-
-    for (i, crumb) in breadcrumbs.iter().enumerate() {
-        if i > 0 {
-            spans.push(Span::styled(" > ", Style::default().fg(scheme.text_muted)));
-        }
-        spans.push(Span::styled(crumb, Style::default().fg(scheme.accent)));
-    }
-
-    let line = Line::from(spans);
-    let paragraph = Paragraph::new(line);
     f.render_widget(paragraph, area);
 }
 
@@ -613,7 +591,7 @@ impl Default for ThresholdTuningState {
 
 impl ThresholdTuningState {
     /// Create a new threshold tuning state with initial values.
-    pub fn new(threshold: f64, total_components: usize) -> Self {
+    pub(crate) fn new(threshold: f64, total_components: usize) -> Self {
         Self {
             visible: true,
             threshold,
@@ -625,37 +603,37 @@ impl ThresholdTuningState {
     }
 
     /// Increase threshold (stricter matching).
-    pub fn increase(&mut self) {
+    pub(crate) fn increase(&mut self) {
         self.threshold = (self.threshold + self.step).min(0.99);
     }
 
     /// Decrease threshold (more permissive matching).
-    pub fn decrease(&mut self) {
+    pub(crate) fn decrease(&mut self) {
         self.threshold = (self.threshold - self.step).max(0.50);
     }
 
     /// Fine increase (smaller step).
-    pub fn fine_increase(&mut self) {
+    pub(crate) fn fine_increase(&mut self) {
         self.threshold = (self.threshold + 0.01).min(0.99);
     }
 
     /// Fine decrease (smaller step).
-    pub fn fine_decrease(&mut self) {
+    pub(crate) fn fine_decrease(&mut self) {
         self.threshold = (self.threshold - 0.01).max(0.50);
     }
 
     /// Reset to original value.
-    pub fn reset(&mut self) {
+    pub(crate) fn reset(&mut self) {
         self.threshold = self.original_threshold;
     }
 
     /// Update the estimated matches preview.
-    pub fn set_estimated_matches(&mut self, matches: usize) {
+    pub(crate) fn set_estimated_matches(&mut self, matches: usize) {
         self.estimated_matches = matches;
     }
 
     /// Get the match ratio as a percentage.
-    pub fn match_percentage(&self) -> f64 {
+    pub(crate) fn match_percentage(&self) -> f64 {
         if self.total_components == 0 {
             0.0
         } else {
@@ -667,7 +645,7 @@ impl ThresholdTuningState {
 /// Render the threshold tuning overlay.
 ///
 /// Shows current threshold, estimated matches, and keyboard shortcuts.
-pub fn render_threshold_tuning(f: &mut Frame, state: &ThresholdTuningState) {
+pub(crate) fn render_threshold_tuning(f: &mut Frame, state: &ThresholdTuningState) {
     if !state.visible {
         return;
     }

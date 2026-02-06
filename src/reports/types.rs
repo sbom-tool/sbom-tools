@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// Output format for reports
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum, Serialize, Deserialize, JsonSchema)]
+#[non_exhaustive]
 pub enum ReportFormat {
     /// Auto-detect: TUI if TTY, summary otherwise
     #[default]
@@ -34,16 +35,16 @@ pub enum ReportFormat {
 impl std::fmt::Display for ReportFormat {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ReportFormat::Auto => write!(f, "auto"),
-            ReportFormat::Tui => write!(f, "tui"),
-            ReportFormat::SideBySide => write!(f, "side-by-side"),
-            ReportFormat::Json => write!(f, "json"),
-            ReportFormat::Sarif => write!(f, "sarif"),
-            ReportFormat::Markdown => write!(f, "markdown"),
-            ReportFormat::Html => write!(f, "html"),
-            ReportFormat::Summary => write!(f, "summary"),
-            ReportFormat::Table => write!(f, "table"),
-            ReportFormat::Csv => write!(f, "csv"),
+            Self::Auto => write!(f, "auto"),
+            Self::Tui => write!(f, "tui"),
+            Self::SideBySide => write!(f, "side-by-side"),
+            Self::Json => write!(f, "json"),
+            Self::Sarif => write!(f, "sarif"),
+            Self::Markdown => write!(f, "markdown"),
+            Self::Html => write!(f, "html"),
+            Self::Summary => write!(f, "summary"),
+            Self::Table => write!(f, "table"),
+            Self::Csv => write!(f, "csv"),
         }
     }
 }
@@ -90,10 +91,10 @@ impl MinSeverity {
     /// Check if a severity string meets this minimum threshold
     pub fn meets_threshold(&self, severity: &str) -> bool {
         let sev = match severity.to_lowercase().as_str() {
-            "critical" => MinSeverity::Critical,
-            "high" => MinSeverity::High,
-            "medium" => MinSeverity::Medium,
-            "low" => MinSeverity::Low,
+            "critical" => Self::Critical,
+            "high" => Self::High,
+            "medium" => Self::Medium,
+            "low" => Self::Low,
             _ => return true, // Unknown severities are included
         };
         sev >= *self

@@ -29,7 +29,7 @@ pub struct FlatJsonItem {
 }
 
 /// Flatten the JSON tree into a list respecting expand/collapse state.
-pub fn flatten_json_tree(
+pub(crate) fn flatten_json_tree(
     node: &JsonTreeNode,
     parent_path: &str,
     depth: usize,
@@ -85,7 +85,7 @@ pub fn flatten_json_tree(
 }
 
 /// Render a source panel (dispatches to tree or raw based on view mode).
-pub fn render_source_panel(
+pub(crate) fn render_source_panel(
     frame: &mut Frame,
     area: Rect,
     state: &mut SourcePanelState,
@@ -124,7 +124,7 @@ fn render_source_tree(
         String::new()
     };
     let block = Block::default()
-        .title(format!(" {} [Tree]{}{}", title, node_info, mode_hint))
+        .title(format!(" {title} [Tree]{node_info}{mode_hint}"))
         .title_style(Style::default().fg(border_color).bold())
         .borders(Borders::ALL)
         .border_style(Style::default().fg(border_color));
@@ -167,7 +167,7 @@ fn render_source_tree(
             let bc_width = inner.width as usize;
             let bc_display = if UnicodeWidthStr::width(breadcrumb.as_str()) > bc_width {
                 let trimmed = &breadcrumb[breadcrumb.len().saturating_sub(bc_width.saturating_sub(3))..];
-                format!("...{}", trimmed)
+                format!("...{trimmed}")
             } else {
                 breadcrumb
             };
@@ -394,7 +394,7 @@ fn render_source_raw(
         let is_selected = state.scroll_offset + i == state.selected;
 
         // Line number gutter
-        let num_str = format!("{:>width$} │ ", line_num, width = gutter_width);
+        let num_str = format!("{line_num:>gutter_width$} │ ");
         render_str(
             frame.buffer_mut(),
             inner.x,

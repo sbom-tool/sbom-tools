@@ -2,6 +2,7 @@
 
 use super::app::{App, AppMode, TabKind};
 use super::app_states::ComponentFilter;
+use super::state::ListNavigation;
 
 impl App {
     /// Switch to next tab
@@ -102,9 +103,9 @@ impl App {
     /// Move selection to first item
     pub fn select_first(&mut self) {
         match self.active_tab {
-            TabKind::Components => self.tabs.components.selected = 0,
-            TabKind::Vulnerabilities => self.tabs.vulnerabilities.selected = 0,
-            TabKind::Licenses => self.tabs.licenses.selected = 0,
+            TabKind::Components => self.tabs.components.go_first(),
+            TabKind::Vulnerabilities => self.tabs.vulnerabilities.go_first(),
+            TabKind::Licenses => self.tabs.licenses.go_first(),
             TabKind::Source => self.tabs.source.active_panel_mut().select_first(),
             _ => {}
         }
@@ -113,16 +114,8 @@ impl App {
     /// Move selection to last item
     pub fn select_last(&mut self) {
         match self.active_tab {
-            TabKind::Components => {
-                if self.tabs.components.total > 0 {
-                    self.tabs.components.selected = self.tabs.components.total - 1;
-                }
-            }
-            TabKind::Vulnerabilities => {
-                if self.tabs.vulnerabilities.total > 0 {
-                    self.tabs.vulnerabilities.selected = self.tabs.vulnerabilities.total - 1;
-                }
-            }
+            TabKind::Components => self.tabs.components.go_last(),
+            TabKind::Vulnerabilities => self.tabs.vulnerabilities.go_last(),
             TabKind::Source => self.tabs.source.active_panel_mut().select_last(),
             _ => {}
         }
@@ -130,18 +123,9 @@ impl App {
 
     /// Page up
     pub fn page_up(&mut self) {
-        let page_size = 10;
         match self.active_tab {
-            TabKind::Components => {
-                self.tabs.components.selected =
-                    self.tabs.components.selected.saturating_sub(page_size);
-            }
-            TabKind::Vulnerabilities => {
-                self.tabs.vulnerabilities.selected = self
-                    .tabs.vulnerabilities
-                    .selected
-                    .saturating_sub(page_size);
-            }
+            TabKind::Components => self.tabs.components.page_up(),
+            TabKind::Vulnerabilities => self.tabs.vulnerabilities.page_up(),
             TabKind::Source => self.tabs.source.active_panel_mut().page_up(),
             _ => {}
         }
@@ -149,17 +133,9 @@ impl App {
 
     /// Page down
     pub fn page_down(&mut self) {
-        let page_size = 10;
         match self.active_tab {
-            TabKind::Components => {
-                self.tabs.components.selected = (self.tabs.components.selected + page_size)
-                    .min(self.tabs.components.total.saturating_sub(1));
-            }
-            TabKind::Vulnerabilities => {
-                self.tabs.vulnerabilities.selected = (self.tabs.vulnerabilities.selected
-                    + page_size)
-                    .min(self.tabs.vulnerabilities.total.saturating_sub(1));
-            }
+            TabKind::Components => self.tabs.components.page_down(),
+            TabKind::Vulnerabilities => self.tabs.vulnerabilities.page_down(),
             TabKind::Source => self.tabs.source.active_panel_mut().page_down(),
             _ => {}
         }

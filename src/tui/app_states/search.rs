@@ -84,9 +84,9 @@ pub enum ChangeType {
 impl ChangeType {
     pub fn label(&self) -> &'static str {
         match self {
-            ChangeType::Added => "added",
-            ChangeType::Removed => "removed",
-            ChangeType::Modified => "modified",
+            Self::Added => "added",
+            Self::Removed => "removed",
+            Self::Modified => "modified",
         }
     }
 }
@@ -101,9 +101,9 @@ pub enum VulnChangeType {
 impl VulnChangeType {
     pub fn label(&self) -> &'static str {
         match self {
-            VulnChangeType::Introduced => "introduced",
-            VulnChangeType::Resolved => "resolved",
-            VulnChangeType::Persistent => "persistent",
+            Self::Introduced => "introduced",
+            Self::Resolved => "resolved",
+            Self::Persistent => "persistent",
         }
     }
 }

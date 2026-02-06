@@ -51,23 +51,23 @@ impl IdSource {
     pub fn is_stable(&self) -> bool {
         matches!(
             self,
-            IdSource::Purl
-                | IdSource::Cpe
-                | IdSource::Swid
-                | IdSource::NameVersion
-                | IdSource::Synthetic
+            Self::Purl
+                | Self::Cpe
+                | Self::Swid
+                | Self::NameVersion
+                | Self::Synthetic
         )
     }
 
     /// Returns the reliability rank (lower is better)
     pub fn reliability_rank(&self) -> u8 {
         match self {
-            IdSource::Purl => 0,
-            IdSource::Cpe => 1,
-            IdSource::Swid => 2,
-            IdSource::NameVersion => 3,
-            IdSource::Synthetic => 4,
-            IdSource::FormatSpecific => 5,
+            Self::Purl => 0,
+            Self::Cpe => 1,
+            Self::Swid => 2,
+            Self::NameVersion => 3,
+            Self::Synthetic => 4,
+            Self::FormatSpecific => 5,
         }
     }
 }
@@ -295,9 +295,8 @@ impl ComponentIdentifiers {
             return CanonicalIdResult {
                 id: CanonicalId::synthetic(group, name, version),
                 warning: Some(format!(
-                    "Component '{}' lacks PURL/CPE/SWID identifiers; using synthetic ID. \
-                     Consider enriching SBOM with package URLs for accurate diffing.",
-                    name
+                    "Component '{name}' lacks PURL/CPE/SWID identifiers; using synthetic ID. \
+                     Consider enriching SBOM with package URLs for accurate diffing."
                 )),
             };
         }
@@ -351,15 +350,16 @@ pub enum IdReliability {
 impl fmt::Display for IdReliability {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            IdReliability::High => write!(f, "high"),
-            IdReliability::Medium => write!(f, "medium"),
-            IdReliability::Low => write!(f, "low"),
+            Self::High => write!(f, "high"),
+            Self::Medium => write!(f, "medium"),
+            Self::Low => write!(f, "low"),
         }
     }
 }
 
 /// Ecosystem/package manager type
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum Ecosystem {
     Npm,
     PyPi,
@@ -389,28 +389,28 @@ impl Ecosystem {
     /// Parse ecosystem from PURL type
     pub fn from_purl_type(purl_type: &str) -> Self {
         match purl_type.to_lowercase().as_str() {
-            "npm" => Ecosystem::Npm,
-            "pypi" => Ecosystem::PyPi,
-            "cargo" => Ecosystem::Cargo,
-            "maven" => Ecosystem::Maven,
-            "golang" | "go" => Ecosystem::Golang,
-            "nuget" => Ecosystem::Nuget,
-            "gem" => Ecosystem::RubyGems,
-            "composer" => Ecosystem::Composer,
-            "cocoapods" => Ecosystem::CocoaPods,
-            "swift" => Ecosystem::Swift,
-            "hex" => Ecosystem::Hex,
-            "pub" => Ecosystem::Pub,
-            "hackage" => Ecosystem::Hackage,
-            "cpan" => Ecosystem::Cpan,
-            "cran" => Ecosystem::Cran,
-            "conda" => Ecosystem::Conda,
-            "conan" => Ecosystem::Conan,
-            "deb" => Ecosystem::Deb,
-            "rpm" => Ecosystem::Rpm,
-            "apk" => Ecosystem::Apk,
-            "generic" => Ecosystem::Generic,
-            other => Ecosystem::Unknown(other.to_string()),
+            "npm" => Self::Npm,
+            "pypi" => Self::PyPi,
+            "cargo" => Self::Cargo,
+            "maven" => Self::Maven,
+            "golang" | "go" => Self::Golang,
+            "nuget" => Self::Nuget,
+            "gem" => Self::RubyGems,
+            "composer" => Self::Composer,
+            "cocoapods" => Self::CocoaPods,
+            "swift" => Self::Swift,
+            "hex" => Self::Hex,
+            "pub" => Self::Pub,
+            "hackage" => Self::Hackage,
+            "cpan" => Self::Cpan,
+            "cran" => Self::Cran,
+            "conda" => Self::Conda,
+            "conan" => Self::Conan,
+            "deb" => Self::Deb,
+            "rpm" => Self::Rpm,
+            "apk" => Self::Apk,
+            "generic" => Self::Generic,
+            other => Self::Unknown(other.to_string()),
         }
     }
 }
@@ -418,28 +418,28 @@ impl Ecosystem {
 impl fmt::Display for Ecosystem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Ecosystem::Npm => write!(f, "npm"),
-            Ecosystem::PyPi => write!(f, "pypi"),
-            Ecosystem::Cargo => write!(f, "cargo"),
-            Ecosystem::Maven => write!(f, "maven"),
-            Ecosystem::Golang => write!(f, "golang"),
-            Ecosystem::Nuget => write!(f, "nuget"),
-            Ecosystem::RubyGems => write!(f, "gem"),
-            Ecosystem::Composer => write!(f, "composer"),
-            Ecosystem::CocoaPods => write!(f, "cocoapods"),
-            Ecosystem::Swift => write!(f, "swift"),
-            Ecosystem::Hex => write!(f, "hex"),
-            Ecosystem::Pub => write!(f, "pub"),
-            Ecosystem::Hackage => write!(f, "hackage"),
-            Ecosystem::Cpan => write!(f, "cpan"),
-            Ecosystem::Cran => write!(f, "cran"),
-            Ecosystem::Conda => write!(f, "conda"),
-            Ecosystem::Conan => write!(f, "conan"),
-            Ecosystem::Deb => write!(f, "deb"),
-            Ecosystem::Rpm => write!(f, "rpm"),
-            Ecosystem::Apk => write!(f, "apk"),
-            Ecosystem::Generic => write!(f, "generic"),
-            Ecosystem::Unknown(s) => write!(f, "{}", s),
+            Self::Npm => write!(f, "npm"),
+            Self::PyPi => write!(f, "pypi"),
+            Self::Cargo => write!(f, "cargo"),
+            Self::Maven => write!(f, "maven"),
+            Self::Golang => write!(f, "golang"),
+            Self::Nuget => write!(f, "nuget"),
+            Self::RubyGems => write!(f, "gem"),
+            Self::Composer => write!(f, "composer"),
+            Self::CocoaPods => write!(f, "cocoapods"),
+            Self::Swift => write!(f, "swift"),
+            Self::Hex => write!(f, "hex"),
+            Self::Pub => write!(f, "pub"),
+            Self::Hackage => write!(f, "hackage"),
+            Self::Cpan => write!(f, "cpan"),
+            Self::Cran => write!(f, "cran"),
+            Self::Conda => write!(f, "conda"),
+            Self::Conan => write!(f, "conan"),
+            Self::Deb => write!(f, "deb"),
+            Self::Rpm => write!(f, "rpm"),
+            Self::Apk => write!(f, "apk"),
+            Self::Generic => write!(f, "generic"),
+            Self::Unknown(s) => write!(f, "{s}"),
         }
     }
 }

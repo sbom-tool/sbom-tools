@@ -35,12 +35,12 @@ pub(super) fn handle_diff_compliance_keys(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::PageUp => {
-            for _ in 0..10 {
+            for _ in 0..crate::tui::constants::PAGE_SIZE {
                 app.tabs.diff_compliance.select_prev();
             }
         }
         KeyCode::PageDown => {
-            for _ in 0..10 {
+            for _ in 0..crate::tui::constants::PAGE_SIZE {
                 app.tabs.diff_compliance.select_next(max_violations);
             }
         }

@@ -406,7 +406,7 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
             format!("[{}]", section.child_count)
         };
         let match_str = if match_count > 0 {
-            format!("({})", match_count)
+            format!("({match_count})")
         } else {
             String::new()
         };
@@ -432,9 +432,9 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
         render_str(buf, x, y, &left, width, style);
 
         // Right side: " count match  badge marker" — right-aligned
-        let mut right = format!(" {}{}", count_str, match_str);
+        let mut right = format!(" {count_str}{match_str}");
         if !badge.is_empty() {
-            right.push_str(&format!("  {}", badge));
+            right.push_str(&format!("  {badge}"));
         }
         right.push_str(marker);
 
@@ -443,7 +443,7 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
             let rx = right_edge - right_len;
 
             // Render count portion
-            let count_full = format!(" {}", count_str);
+            let count_full = format!(" {count_str}");
             let count_style = if is_current {
                 Style::default().fg(scheme.accent)
             } else {
@@ -464,7 +464,7 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
 
             // Render badge in muted
             if !badge.is_empty() {
-                let bt = format!("  {}", badge);
+                let bt = format!("  {badge}");
                 render_str(
                     buf, cx, y, &bt, right_edge - cx,
                     Style::default().fg(scheme.muted),
@@ -745,11 +745,11 @@ fn render_context(
                 let eco_suffix = comp
                     .ecosystem
                     .as_ref()
-                    .map(|e| format!(" ({})", e))
+                    .map(|e| format!(" ({e})"))
                     .unwrap_or_default();
                 render_str(
                     buf, x, y,
-                    &format!("{}{}", name_ver, eco_suffix),
+                    &format!("{name_ver}{eco_suffix}"),
                     width,
                     Style::default().fg(scheme.primary),
                 );
@@ -857,7 +857,7 @@ fn render_context(
         if section == "vulnerabilities" {
             render_str(
                 buf, x, y,
-                &format!(" Vulnerability [{}]", idx),
+                &format!(" Vulnerability [{idx}]"),
                 width,
                 Style::default().fg(scheme.warning),
             );
@@ -871,7 +871,7 @@ fn render_context(
         let total = app.source_state.raw_lines.len();
         render_str(
             buf, x, y,
-            &format!(" Line {}/{}", line_num, total),
+            &format!(" Line {line_num}/{total}"),
             width,
             Style::default().fg(scheme.muted),
         );
@@ -886,7 +886,7 @@ fn render_context(
             if !preview.is_empty() {
                 render_str(
                     buf, x, y,
-                    &format!(" {}", preview),
+                    &format!(" {preview}"),
                     width,
                     Style::default().fg(scheme.text_muted),
                 );
@@ -935,7 +935,7 @@ fn render_context(
     if edge_count > 0 {
         render_str(
             buf, x, y,
-            &format!(" {} dependency edges", edge_count),
+            &format!(" {edge_count} dependency edges"),
             width,
             Style::default().fg(scheme.text_muted),
         );
@@ -965,7 +965,7 @@ fn render_progress_bar(
     let pct = (pos * 100) / total;
 
     // Right-aligned text: "  12/77  16%"
-    let right_text = format!("  {}/{}  {}%", pos, total, pct);
+    let right_text = format!("  {pos}/{total}  {pct}%");
     let right_len = right_text.len() as u16;
 
     // Bar takes remaining width
@@ -973,7 +973,7 @@ fn render_progress_bar(
 
     if bar_width < 3 {
         // No room for bar, just show numbers
-        let text = format!(" {}/{}  {}%", pos, total, pct);
+        let text = format!(" {pos}/{total}  {pct}%");
         render_str(
             buf, x, y, &text, width,
             Style::default().fg(scheme.text_muted),
@@ -1073,7 +1073,7 @@ fn render_non_json_map(
     let line_count = app.source_state.raw_lines.len();
     render_str(
         buf, x, y,
-        &format!(" {} lines (raw mode only)", line_count),
+        &format!(" {line_count} lines (raw mode only)"),
         width,
         Style::default().fg(scheme.text_muted),
     );

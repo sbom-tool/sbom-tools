@@ -488,7 +488,7 @@ fn render_vulnerabilities_tab(
             let sev = vuln
                 .severity
                 .as_ref()
-                .map(|s| s.to_string())
+                .map(std::string::ToString::to_string)
                 .unwrap_or_else(|| "?".to_string());
             let sev_color = SeverityBadge::fg_color(&sev);
 
@@ -500,7 +500,7 @@ fn render_vulnerabilities_tab(
 
             if let Some(cvss) = vuln.max_cvss_score() {
                 vuln_line.push(Span::styled(
-                    format!(" [CVSS: {:.1}]", cvss),
+                    format!(" [CVSS: {cvss:.1}]"),
                     Style::default().fg(sev_color),
                 ));
             }
@@ -603,7 +603,7 @@ fn render_dependencies_tab(
                 Span::styled("  → ", Style::default().fg(scheme.accent)),
                 Span::styled(&dep.name, Style::default().fg(scheme.text)),
                 Span::styled(
-                    format!(" {}", version),
+                    format!(" {version}"),
                     Style::default().fg(scheme.text_muted),
                 ),
                 Span::styled(vuln_indicator, Style::default().fg(vuln_color)),
@@ -638,7 +638,7 @@ fn render_dependencies_tab(
                 Span::styled("  ← ", Style::default().fg(scheme.highlight)),
                 Span::styled(&dep.name, Style::default().fg(scheme.text)),
                 Span::styled(
-                    format!(" {}", version),
+                    format!(" {version}"),
                     Style::default().fg(scheme.text_muted),
                 ),
             ]));
@@ -738,8 +738,8 @@ fn render_component_stats_panel(frame: &mut Frame, area: Rect, app: &ViewApp, bo
         };
         let bar = "█".repeat(bar_len);
         lines.push(Line::from(vec![
-            Span::styled(format!("  {:12}", label), Style::default().fg(*color)),
-            Span::styled(format!("{:>5} ", count), Style::default().fg(scheme.text)),
+            Span::styled(format!("  {label:12}"), Style::default().fg(*color)),
+            Span::styled(format!("{count:>5} "), Style::default().fg(scheme.text)),
             Span::styled(bar, Style::default().fg(*color)),
         ]));
     }
@@ -771,8 +771,8 @@ fn render_component_stats_panel(frame: &mut Frame, area: Rect, app: &ViewApp, bo
         };
         let bar = "█".repeat(bar_len);
         lines.push(Line::from(vec![
-            Span::styled(format!("  {:12}", label), Style::default().fg(*color)),
-            Span::styled(format!("{:>5} ", count), Style::default().fg(scheme.text)),
+            Span::styled(format!("  {label:12}"), Style::default().fg(*color)),
+            Span::styled(format!("{count:>5} "), Style::default().fg(scheme.text)),
             Span::styled(bar, Style::default().fg(*color)),
         ]));
     }

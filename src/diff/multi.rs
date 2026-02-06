@@ -167,10 +167,10 @@ pub enum SecurityImpact {
 impl SecurityImpact {
     pub fn label(&self) -> &'static str {
         match self {
-            SecurityImpact::Critical => "CRITICAL",
-            SecurityImpact::High => "high",
-            SecurityImpact::Medium => "medium",
-            SecurityImpact::Low => "low",
+            Self::Critical => "CRITICAL",
+            Self::High => "high",
+            Self::Medium => "medium",
+            Self::Low => "low",
         }
     }
 }
@@ -275,14 +275,14 @@ pub enum VersionChangeType {
 impl VersionChangeType {
     pub fn symbol(&self) -> &'static str {
         match self {
-            VersionChangeType::Initial => "●",
-            VersionChangeType::MajorUpgrade => "⬆",
-            VersionChangeType::MinorUpgrade => "↑",
-            VersionChangeType::PatchUpgrade => "↗",
-            VersionChangeType::Downgrade => "⬇",
-            VersionChangeType::Unchanged => "─",
-            VersionChangeType::Removed => "✗",
-            VersionChangeType::Absent => " ",
+            Self::Initial => "●",
+            Self::MajorUpgrade => "⬆",
+            Self::MinorUpgrade => "↑",
+            Self::PatchUpgrade => "↗",
+            Self::Downgrade => "⬇",
+            Self::Unchanged => "─",
+            Self::Removed => "✗",
+            Self::Absent => " ",
         }
     }
 }
@@ -461,6 +461,141 @@ impl IncrementalChange {
             components_modified: diff.summary.components_modified,
             vulnerabilities_introduced: diff.summary.vulnerabilities_introduced,
             vulnerabilities_resolved: diff.summary.vulnerabilities_resolved,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_security_impact_label() {
+        assert_eq!(SecurityImpact::Critical.label(), "CRITICAL");
+        assert_eq!(SecurityImpact::High.label(), "high");
+        assert_eq!(SecurityImpact::Medium.label(), "medium");
+        assert_eq!(SecurityImpact::Low.label(), "low");
+    }
+
+    #[test]
+    fn test_version_change_type_symbol() {
+        assert_eq!(VersionChangeType::Initial.symbol(), "●");
+        assert_eq!(VersionChangeType::MajorUpgrade.symbol(), "⬆");
+        assert_eq!(VersionChangeType::MinorUpgrade.symbol(), "↑");
+        assert_eq!(VersionChangeType::PatchUpgrade.symbol(), "↗");
+        assert_eq!(VersionChangeType::Downgrade.symbol(), "⬇");
+        assert_eq!(VersionChangeType::Unchanged.symbol(), "─");
+        assert_eq!(VersionChangeType::Removed.symbol(), "✗");
+        assert_eq!(VersionChangeType::Absent.symbol(), " ");
+    }
+
+    fn make_matrix(n: usize) -> MatrixResult {
+        let sboms = (0..n)
+            .map(|i| SbomInfo {
+                name: format!("sbom-{i}"),
+                file_path: format!("sbom-{i}.json"),
+                format: "CycloneDX".into(),
+                component_count: 10,
+                dependency_count: 5,
+                vulnerability_counts: VulnerabilityCounts::default(),
+                timestamp: None,
+            })
+            .collect::<Vec<_>>();
+        let num_pairs = n * (n - 1) / 2;
+        MatrixResult {
+            sboms,
+            diffs: vec![None; num_pairs],
+            similarity_scores: vec![0.5; num_pairs],
+            clustering: None,
+        }
+    }
+
+    #[test]
+    fn test_matrix_result_get_diff_self() {
+        let matrix = make_matrix(3);
+        assert!(matrix.get_diff(0, 0).is_none());
+        assert!(matrix.get_diff(1, 1).is_none());
+    }
+
+    #[test]
+    fn test_matrix_result_get_similarity_self() {
+        let matrix = make_matrix(3);
+        assert_eq!(matrix.get_similarity(0, 0), 1.0);
+        assert_eq!(matrix.get_similarity(2, 2), 1.0);
+    }
+
+    #[test]
+    fn test_matrix_result_get_similarity_symmetric() {
+        let matrix = make_matrix(3);
+        assert_eq!(matrix.get_similarity(0, 1), matrix.get_similarity(1, 0));
+        assert_eq!(matrix.get_similarity(0, 2), matrix.get_similarity(2, 0));
+    }
+
+    #[test]
+    fn test_matrix_result_num_pairs() {
+        assert_eq!(make_matrix(3).num_pairs(), 3);
+        assert_eq!(make_matrix(4).num_pairs(), 6);
+        assert_eq!(make_matrix(5).num_pairs(), 10);
+    }
+
+    #[test]
+    fn test_incremental_change_from_diff() {
+        let mut diff = DiffResult::new();
+        diff.summary.components_added = 5;
+        diff.summary.components_removed = 2;
+        diff.summary.components_modified = 3;
+        diff.summary.vulnerabilities_introduced = 1;
+        diff.summary.vulnerabilities_resolved = 4;
+
+        let change = IncrementalChange::from_diff(0, 1, "v1.0", "v2.0", &diff);
+        assert_eq!(change.from_index, 0);
+        assert_eq!(change.to_index, 1);
+        assert_eq!(change.from_name, "v1.0");
+        assert_eq!(change.to_name, "v2.0");
+        assert_eq!(change.components_added, 5);
+        assert_eq!(change.components_removed, 2);
+        assert_eq!(change.components_modified, 3);
+        assert_eq!(change.vulnerabilities_introduced, 1);
+        assert_eq!(change.vulnerabilities_resolved, 4);
+    }
+
+    #[test]
+    fn test_divergence_type_variants() {
+        // Ensure all variants are constructable and distinct
+        let variants = [
+            DivergenceType::VersionMismatch,
+            DivergenceType::Added,
+            DivergenceType::Removed,
+            DivergenceType::LicenseMismatch,
+            DivergenceType::SupplierMismatch,
+        ];
+        for (i, a) in variants.iter().enumerate() {
+            for (j, b) in variants.iter().enumerate() {
+                if i == j {
+                    assert_eq!(a, b);
+                } else {
+                    assert_ne!(a, b);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_license_change_type_variants() {
+        let variants = [
+            LicenseChangeType::MorePermissive,
+            LicenseChangeType::MoreRestrictive,
+            LicenseChangeType::Incompatible,
+            LicenseChangeType::Equivalent,
+        ];
+        for (i, a) in variants.iter().enumerate() {
+            for (j, b) in variants.iter().enumerate() {
+                if i == j {
+                    assert_eq!(a, b);
+                } else {
+                    assert_ne!(a, b);
+                }
+            }
         }
     }
 }

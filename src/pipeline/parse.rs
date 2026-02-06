@@ -66,9 +66,9 @@ pub fn parse_sbom_with_context(path: &Path, quiet: bool) -> Result<ParsedSbom> {
     }
 
     let raw_content = std::fs::read_to_string(path)
-        .with_context(|| format!("Failed to read SBOM file: {:?}", path))?;
+        .with_context(|| format!("Failed to read SBOM file: {path:?}"))?;
     let sbom = crate::parsers::parse_sbom_str(&raw_content)
-        .with_context(|| format!("Failed to parse SBOM: {:?}", path))?;
+        .with_context(|| format!("Failed to parse SBOM: {path:?}"))?;
 
     if !quiet {
         tracing::info!("Parsed {} components", sbom.component_count());

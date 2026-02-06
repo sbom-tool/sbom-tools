@@ -3,25 +3,26 @@
 use crate::diff::ComponentChange;
 use crate::model::Component;
 use crate::tui::app::{App, AppMode, ComponentFilter};
+use crate::tui::state::ListNavigation;
 use crate::tui::theme::colors;
 use crate::tui::widgets;
 use ratatui::{
     prelude::*,
     widgets::{
         Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
-        Table, TableState, Wrap,
+        Table, TableState,
     },
 };
 
 /// Pre-built component list to avoid rebuilding on each render call.
 /// Built once per frame in render_components and passed to sub-functions.
-pub enum ComponentListData<'a> {
+pub(crate) enum ComponentListData<'a> {
     Diff(Vec<&'a ComponentChange>),
     View(Vec<&'a Component>),
     Empty,
 }
 
-pub fn render_components(frame: &mut Frame, area: Rect, app: &mut App) {
+pub(crate) fn render_components(frame: &mut Frame, area: Rect, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(3), Constraint::Min(10)])
@@ -95,7 +96,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
         Span::raw("  "),
         Span::styled("Sort: ", Style::default().fg(colors().text_muted)),
         Span::styled(
-            format!("{:?}", sort),
+            format!("{sort:?}"),
             Style::default().fg(colors().accent).bold(),
         ),
     ];
@@ -104,7 +105,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
     if multi_select {
         filter_spans.push(Span::raw("  "));
         filter_spans.push(Span::styled(
-            format!(" ✓ SELECT: {} ", selection_count),
+            format!(" ✓ SELECT: {selection_count} "),
             Style::default()
                 .fg(colors().badge_fg_dark)
                 .bg(colors().secondary)
@@ -124,7 +125,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
             if quick_filter.is_active(&security_filter.criteria) {
                 let label = quick_filter.label();
                 filter_spans.push(Span::styled(
-                    format!(" {} ", label),
+                    format!(" {label} "),
                     Style::default()
                         .fg(colors().badge_fg_dark)
                         .bg(colors().accent)
@@ -176,7 +177,7 @@ fn filter_color(filter: &ComponentFilter) -> Color {
 
 fn status_badge(text: &str, color: Color) -> Span<'static> {
     Span::styled(
-        format!(" {} ", text),
+        format!(" {text} "),
         Style::default().fg(colors().badge_fg_dark).bg(color).bold(),
     )
 }
@@ -323,7 +324,7 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
             // Status badge with symbol for accessibility
             Line::from(vec![
                 Span::styled(
-                    format!(" {} {} ", status_symbol, status_text),
+                    format!(" {status_symbol} {status_text} "),
                     Style::default()
                         .fg(colors().badge_fg_dark)
                         .bg(status_color)
@@ -401,7 +402,7 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
                 };
                 lines.push(Line::from(vec![
                     Span::styled(
-                        format!(" {} ", warning_text),
+                        format!(" {warning_text} "),
                         Style::default().fg(colors().badge_fg_dark).bg(warning_color).bold(),
                     ),
                 ]));
@@ -473,120 +474,22 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
                 Span::styled(" ━━━", Style::default().fg(colors().border)),
             ]));
 
-            for vuln in related_vulns.iter().take(5) {
-                let sev_color = colors().severity_color(&vuln.severity);
-                lines.push(Line::from(vec![
-                    Span::styled("  ", Style::default()),
-                    Span::styled(
-                        format!(" {} ", &vuln.severity.chars().next().unwrap_or('?')),
-                        Style::default()
-                            .fg(colors().badge_fg_dark)
-                            .bg(sev_color)
-                            .bold(),
-                    ),
-                    Span::raw(" "),
-                    Span::styled(&vuln.id, Style::default().fg(sev_color).bold()),
-                ]));
-
-                if let Some(desc) = &vuln.description {
-                    lines.push(Line::from(vec![Span::styled(
-                        format!(
-                            "    {}",
-                            widgets::truncate_str(desc, area.width as usize - 6)
-                        ),
-                        Style::default().fg(colors().text_muted).italic(),
-                    )]));
-                }
-            }
-
-            if related_vulns.len() > 5 {
-                lines.push(Line::styled(
-                    format!("    ... and {} more", related_vulns.len() - 5),
-                    Style::default().fg(colors().text_muted),
-                ));
-            }
+            let vuln_entries: Vec<(&str, &str, Option<&str>)> = related_vulns
+                .iter()
+                .map(|v| (v.severity.as_str(), v.id.as_str(), v.description.as_deref()))
+                .collect();
+            lines.extend(crate::tui::shared::components::render_vulnerability_list_lines(
+                &vuln_entries,
+                5,
+                related_vulns.len(),
+                area.width,
+            ));
         }
 
         // Security Analysis section (Diff mode)
-        lines.push(Line::from(""));
-        lines.push(Line::from(vec![
-            Span::styled("━━━ ", Style::default().fg(colors().border)),
-            Span::styled("🛡 Security Analysis", Style::default().fg(colors().accent).bold()),
-            Span::styled(" ━━━", Style::default().fg(colors().border)),
-        ]));
-
-        // Blast radius from dependency cache
         let reverse_graph = &app.tabs.dependencies.cached_reverse_graph;
-        let direct_deps = reverse_graph.get(&comp.name).map(|v| v.len()).unwrap_or(0);
-
-        // Calculate transitive dependents
-        let mut transitive_count = 0usize;
-        if direct_deps > 0 {
-            let mut visited = std::collections::HashSet::new();
-            let mut queue = std::collections::VecDeque::new();
-            if let Some(deps) = reverse_graph.get(&comp.name) {
-                for d in deps {
-                    queue.push_back(d.clone());
-                }
-            }
-            while let Some(node) = queue.pop_front() {
-                if visited.insert(node.clone()) {
-                    transitive_count += 1;
-                    if let Some(deps) = reverse_graph.get(&node) {
-                        for d in deps {
-                            if !visited.contains(d) {
-                                queue.push_back(d.clone());
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Risk level
-        let vuln_count = related_vulns.len();
-        let risk_color = if vuln_count > 0 && transitive_count > 10 {
-            colors().critical
-        } else if vuln_count > 0 || transitive_count > 20 {
-            colors().high
-        } else if transitive_count > 5 {
-            colors().medium
-        } else {
-            colors().low
-        };
-
-        let risk_level = if vuln_count > 0 && transitive_count > 10 {
-            "Critical"
-        } else if vuln_count > 0 || transitive_count > 20 {
-            "High"
-        } else if transitive_count > 5 {
-            "Medium"
-        } else {
-            "Low"
-        };
-
-        lines.push(Line::from(vec![
-            Span::styled("  Risk Level: ", Style::default().fg(colors().text_muted)),
-            Span::styled(
-                format!(" {} ", risk_level),
-                Style::default().fg(colors().badge_fg_dark).bg(risk_color).bold(),
-            ),
-        ]));
-
-        lines.push(Line::from(vec![
-            Span::styled("  Blast Radius: ", Style::default().fg(colors().text_muted)),
-            Span::styled(
-                format!("{} direct", direct_deps),
-                Style::default().fg(if direct_deps > 5 { colors().warning } else { colors().text }),
-            ),
-            Span::styled(", ", Style::default().fg(colors().text_muted)),
-            Span::styled(
-                format!("{} transitive", transitive_count),
-                Style::default().fg(if transitive_count > 10 { colors().warning } else { colors().text }),
-            ),
-        ]));
-
-        // License risk (get from new_sbom if available)
+        let (direct_deps, transitive_count) =
+            crate::tui::shared::components::compute_blast_radius(&comp.name, reverse_graph);
         let license_text = app.data.new_sbom.as_ref()
             .and_then(|sbom| {
                 let canonical_id = crate::model::CanonicalId::from_format_id(&comp.id);
@@ -595,74 +498,31 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
             .and_then(|c| c.licenses.declared.first())
             .map(|l| l.expression.as_str())
             .unwrap_or("Unknown");
-        let license_risk = crate::tui::security::LicenseRisk::from_license(license_text);
-        let license_risk_color = match license_risk {
-            crate::tui::security::LicenseRisk::High => colors().high,
-            crate::tui::security::LicenseRisk::Medium => colors().medium,
-            crate::tui::security::LicenseRisk::Low => colors().permissive,
-            crate::tui::security::LicenseRisk::None => colors().text_muted,
-        };
-        lines.push(Line::from(vec![
-            Span::styled("  License Risk: ", Style::default().fg(colors().text_muted)),
-            Span::styled(license_risk.as_str(), Style::default().fg(license_risk_color)),
-        ]));
+        lines.extend(crate::tui::shared::components::render_security_analysis_lines(
+            related_vulns.len(),
+            direct_deps,
+            transitive_count,
+            license_text,
+        ));
 
         // Flagged indicator and analyst notes
         let is_flagged = app.security_cache.is_flagged(&comp.name);
-        if is_flagged {
-            lines.push(Line::from(vec![
-                Span::styled("  ", Style::default()),
-                Span::styled(" 🚩 FLAGGED ", Style::default().fg(colors().badge_fg_dark).bg(colors().warning).bold()),
-            ]));
-            // Display analyst note if exists
-            if let Some(note) = app.security_cache.get_note(&comp.name) {
-                lines.push(Line::from(vec![
-                    Span::styled("  Note: ", Style::default().fg(colors().text_muted)),
-                    Span::styled(
-                        widgets::truncate_str(note, area.width as usize - 10),
-                        Style::default().fg(colors().text).italic(),
-                    ),
-                ]));
-            }
-        }
+        lines.extend(crate::tui::shared::components::render_flagged_lines(
+            is_flagged,
+            app.security_cache.get_note(&comp.name),
+            area.width,
+            "",
+        ));
 
-        // Quick actions hint
-        lines.push(Line::from(""));
-        lines.push(Line::from(vec![
-            Span::styled("[y]", Style::default().fg(colors().accent)),
-            Span::styled(" copy  ", Style::default().fg(colors().text_muted)),
-            Span::styled("[F]", Style::default().fg(colors().accent)),
-            Span::styled(" flag  ", Style::default().fg(colors().text_muted)),
-            Span::styled("[n]", Style::default().fg(colors().accent)),
-            Span::styled(" note  ", Style::default().fg(colors().text_muted)),
-            Span::styled("[o]", Style::default().fg(colors().accent)),
-            Span::styled(" CVE", Style::default().fg(colors().text_muted)),
-        ]));
+        lines.extend(crate::tui::shared::components::render_quick_actions_hint());
 
-        let scheme = colors();
-        let detail_focused = app.tabs.components.focus_detail;
-        let detail_border_color = if detail_focused {
-            scheme.accent
-        } else {
-            scheme.border
-        };
-        let detail_title_style = if detail_focused {
-            Style::default().fg(scheme.accent).bold()
-        } else {
-            Style::default().fg(scheme.text_muted)
-        };
-
-        let detail = Paragraph::new(lines)
-            .block(
-                Block::default()
-                    .title(" Component Details ")
-                    .title_style(detail_title_style)
-                    .borders(Borders::ALL)
-                    .border_style(Style::default().fg(detail_border_color)),
-            )
-            .wrap(Wrap { trim: true });
-
-        frame.render_widget(detail, area);
+        crate::tui::shared::components::render_detail_block(
+            frame,
+            area,
+            lines,
+            " Component Details ",
+            app.tabs.components.focus_detail,
+        );
     } else {
         render_empty_detail(frame, area, app.tabs.components.focus_detail);
     }
@@ -753,33 +613,28 @@ fn render_view_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
                 ),
                 Span::styled(" ━━━", Style::default().fg(colors().border)),
             ]));
-            for vuln in comp.vulnerabilities.iter().take(5) {
-                let severity = vuln
-                    .severity
-                    .as_ref()
-                    .map(|s| s.to_string())
-                    .unwrap_or_else(|| "Unknown".to_string());
-                let sev_color = colors().severity_color(&severity);
-
-                lines.push(Line::from(vec![
-                    Span::styled("  ", Style::default()),
-                    Span::styled(
-                        format!(" {} ", severity.chars().next().unwrap_or('?')),
-                        Style::default()
-                            .fg(colors().badge_fg_dark)
-                            .bg(sev_color)
-                            .bold(),
-                    ),
-                    Span::raw(" "),
-                    Span::styled(&vuln.id, Style::default().fg(sev_color).bold()),
-                ]));
-            }
-            if comp.vulnerabilities.len() > 5 {
-                lines.push(Line::styled(
-                    format!("    ... and {} more", comp.vulnerabilities.len() - 5),
-                    Style::default().fg(colors().text_muted),
-                ));
-            }
+            let sev_strings: Vec<String> = comp
+                .vulnerabilities
+                .iter()
+                .map(|v| {
+                    v.severity
+                        .as_ref()
+                        .map(std::string::ToString::to_string)
+                        .unwrap_or_else(|| "Unknown".to_string())
+                })
+                .collect();
+            let vuln_entries: Vec<(&str, &str, Option<&str>)> = comp
+                .vulnerabilities
+                .iter()
+                .zip(sev_strings.iter())
+                .map(|(v, sev)| (sev.as_str(), v.id.as_str(), None))
+                .collect();
+            lines.extend(crate::tui::shared::components::render_vulnerability_list_lines(
+                &vuln_entries,
+                5,
+                comp.vulnerabilities.len(),
+                area.width,
+            ));
         }
 
         // Hashes
@@ -805,219 +660,52 @@ fn render_view_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
         }
 
         // Security Analysis section
-        lines.push(Line::from(""));
-        lines.push(Line::from(vec![
-            Span::styled("━━━ ", Style::default().fg(colors().border)),
-            Span::styled("🛡 Security Analysis", Style::default().fg(colors().accent).bold()),
-            Span::styled(" ━━━", Style::default().fg(colors().border)),
-        ]));
-
-        // Blast radius from dependency cache
         let reverse_graph = &app.tabs.dependencies.cached_reverse_graph;
-        let direct_deps = reverse_graph.get(&comp.name).map(|v| v.len()).unwrap_or(0);
-
-        // Calculate transitive dependents (simple BFS)
-        let mut transitive_count = 0usize;
-        if direct_deps > 0 {
-            let mut visited = std::collections::HashSet::new();
-            let mut queue = std::collections::VecDeque::new();
-            if let Some(deps) = reverse_graph.get(&comp.name) {
-                for d in deps {
-                    queue.push_back(d.clone());
-                }
-            }
-            while let Some(node) = queue.pop_front() {
-                if visited.insert(node.clone()) {
-                    transitive_count += 1;
-                    if let Some(deps) = reverse_graph.get(&node) {
-                        for d in deps {
-                            if !visited.contains(d) {
-                                queue.push_back(d.clone());
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Risk level based on vulns and blast radius
-        let vuln_count = comp.vulnerabilities.len();
-        let risk_color = if vuln_count > 0 && transitive_count > 10 {
-            colors().critical
-        } else if vuln_count > 0 || transitive_count > 20 {
-            colors().high
-        } else if transitive_count > 5 {
-            colors().medium
-        } else {
-            colors().low
-        };
-
-        let risk_level = if vuln_count > 0 && transitive_count > 10 {
-            "Critical"
-        } else if vuln_count > 0 || transitive_count > 20 {
-            "High"
-        } else if transitive_count > 5 {
-            "Medium"
-        } else {
-            "Low"
-        };
-
-        lines.push(Line::from(vec![
-            Span::styled("  Risk Level: ", Style::default().fg(colors().text_muted)),
-            Span::styled(
-                format!(" {} ", risk_level),
-                Style::default().fg(colors().badge_fg_dark).bg(risk_color).bold(),
-            ),
-        ]));
-
-        lines.push(Line::from(vec![
-            Span::styled("  Blast Radius: ", Style::default().fg(colors().text_muted)),
-            Span::styled(
-                format!("{} direct", direct_deps),
-                Style::default().fg(if direct_deps > 5 { colors().warning } else { colors().text }),
-            ),
-            Span::styled(", ", Style::default().fg(colors().text_muted)),
-            Span::styled(
-                format!("{} transitive", transitive_count),
-                Style::default().fg(if transitive_count > 10 { colors().warning } else { colors().text }),
-            ),
-        ]));
-
-        if transitive_count > 0 {
-            let impact = if transitive_count > 50 {
-                "Critical - affects many components"
-            } else if transitive_count > 20 {
-                "Significant impact"
-            } else if transitive_count > 5 {
-                "Moderate impact"
-            } else {
-                "Limited impact"
-            };
-            lines.push(Line::from(vec![
-                Span::styled("  Impact: ", Style::default().fg(colors().text_muted)),
-                Span::styled(impact, Style::default().fg(colors().text).italic()),
-            ]));
-        }
-
-        // License risk
+        let (direct_deps, transitive_count) =
+            crate::tui::shared::components::compute_blast_radius(&comp.name, reverse_graph);
         let license_text = comp.licenses.declared.first()
             .map(|l| l.expression.as_str())
             .unwrap_or("Unknown");
-        let license_risk = crate::tui::security::LicenseRisk::from_license(license_text);
-        let license_risk_color = match license_risk {
-            crate::tui::security::LicenseRisk::High => colors().high,
-            crate::tui::security::LicenseRisk::Medium => colors().medium,
-            crate::tui::security::LicenseRisk::Low => colors().permissive,
-            crate::tui::security::LicenseRisk::None => colors().text_muted,
-        };
-        lines.push(Line::from(vec![
-            Span::styled("  License Risk: ", Style::default().fg(colors().text_muted)),
-            Span::styled(license_risk.as_str(), Style::default().fg(license_risk_color)),
-        ]));
+        lines.extend(crate::tui::shared::components::render_security_analysis_lines(
+            comp.vulnerabilities.len(),
+            direct_deps,
+            transitive_count,
+            license_text,
+        ));
 
         // Flagged indicator and analyst notes
         let is_flagged = app.security_cache.is_flagged(&comp.name);
-        if is_flagged {
-            lines.push(Line::from(vec![
-                Span::styled("  ", Style::default()),
-                Span::styled(" 🚩 FLAGGED ", Style::default().fg(colors().badge_fg_dark).bg(colors().warning).bold()),
-                Span::styled(" for follow-up", Style::default().fg(colors().warning)),
-            ]));
-            // Display analyst note if exists
-            if let Some(note) = app.security_cache.get_note(&comp.name) {
-                lines.push(Line::from(vec![
-                    Span::styled("  Note: ", Style::default().fg(colors().text_muted)),
-                    Span::styled(
-                        crate::tui::widgets::truncate_str(note, area.width as usize - 10),
-                        Style::default().fg(colors().text).italic(),
-                    ),
-                ]));
-            }
-        }
+        lines.extend(crate::tui::shared::components::render_flagged_lines(
+            is_flagged,
+            app.security_cache.get_note(&comp.name),
+            area.width,
+            " for follow-up",
+        ));
 
-        // Quick actions hint
-        lines.push(Line::from(""));
-        lines.push(Line::from(vec![
-            Span::styled("[y]", Style::default().fg(colors().accent)),
-            Span::styled(" copy  ", Style::default().fg(colors().text_muted)),
-            Span::styled("[F]", Style::default().fg(colors().accent)),
-            Span::styled(" flag  ", Style::default().fg(colors().text_muted)),
-            Span::styled("[n]", Style::default().fg(colors().accent)),
-            Span::styled(" note  ", Style::default().fg(colors().text_muted)),
-            Span::styled("[o]", Style::default().fg(colors().accent)),
-            Span::styled(" CVE", Style::default().fg(colors().text_muted)),
-        ]));
+        lines.extend(crate::tui::shared::components::render_quick_actions_hint());
 
-        let scheme = colors();
-        let detail_focused = app.tabs.components.focus_detail;
-        let detail_border_color = if detail_focused {
-            scheme.accent
-        } else {
-            scheme.border
-        };
-        let detail_title_style = if detail_focused {
-            Style::default().fg(scheme.accent).bold()
-        } else {
-            Style::default().fg(scheme.text_muted)
-        };
-
-        let detail = Paragraph::new(lines)
-            .block(
-                Block::default()
-                    .title(" Component Details ")
-                    .title_style(detail_title_style)
-                    .borders(Borders::ALL)
-                    .border_style(Style::default().fg(detail_border_color)),
-            )
-            .wrap(Wrap { trim: true });
-
-        frame.render_widget(detail, area);
+        crate::tui::shared::components::render_detail_block(
+            frame,
+            area,
+            lines,
+            " Component Details ",
+            app.tabs.components.focus_detail,
+        );
     } else {
         render_empty_detail(frame, area, app.tabs.components.focus_detail);
     }
 }
 
 fn render_empty_detail(frame: &mut Frame, area: Rect, focused: bool) {
-    let scheme = colors();
-    let border_color = if focused {
-        scheme.accent
-    } else {
-        scheme.border
-    };
-    let title_style = if focused {
-        Style::default().fg(scheme.accent).bold()
-    } else {
-        Style::default().fg(scheme.text_muted)
-    };
-
-    let text = vec![
-        Line::from(""),
-        Line::styled("📦", Style::default().fg(scheme.text_muted)),
-        Line::from(""),
-        Line::styled(
-            "Select a component to view details",
-            Style::default().fg(scheme.text),
-        ),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("[↑↓]", Style::default().fg(scheme.accent)),
-            Span::styled(" navigate  ", Style::default().fg(scheme.text_muted)),
-            Span::styled("[p]", Style::default().fg(scheme.accent)),
-            Span::styled(" toggle focus", Style::default().fg(scheme.text_muted)),
-        ]),
-    ];
-
-    let detail = Paragraph::new(text)
-        .block(
-            Block::default()
-                .title(" Component Details ")
-                .title_style(title_style)
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(border_color)),
-        )
-        .alignment(Alignment::Center);
-
-    frame.render_widget(detail, area);
+    crate::tui::shared::components::render_empty_detail_panel(
+        frame,
+        area,
+        " Component Details ",
+        "📦",
+        "Select a component to view details",
+        &[("[↑↓]", " navigate  "), ("[p]", " toggle focus")],
+        focused,
+    );
 }
 
 fn get_diff_rows(app: &App, components: &[&ComponentChange]) -> Vec<Row<'static>> {
@@ -1074,7 +762,7 @@ fn get_diff_rows(app: &App, components: &[&ComponentChange]) -> Vec<Row<'static>
 
             Row::new(vec![
                 Cell::from(Span::styled(
-                    format!("{}{}", checkbox, label),
+                    format!("{checkbox}{label}"),
                     Style::default().fg(status_fg).bg(status_bg).bold(),
                 )),
                 Cell::from(comp.name.clone()),
@@ -1117,7 +805,7 @@ fn get_view_rows(app: &App, components: &[&crate::model::Component]) -> Vec<Row<
                 )
             } else {
                 Span::styled(
-                    format!("{} ✓ ", checkbox),
+                    format!("{checkbox} ✓ "),
                     Style::default().fg(scheme.success),
                 )
             };
@@ -1141,7 +829,7 @@ fn get_view_rows(app: &App, components: &[&crate::model::Component]) -> Vec<Row<
                         StalenessLevel::Archived => ("Archived", scheme.error),
                     };
                     Cell::from(Span::styled(
-                        format!(" {} ", label),
+                        format!(" {label} "),
                         Style::default()
                             .fg(if matches!(info.level, StalenessLevel::Fresh | StalenessLevel::Aging) {
                                 scheme.badge_fg_dark
@@ -1163,7 +851,7 @@ fn get_view_rows(app: &App, components: &[&crate::model::Component]) -> Vec<Row<
                 Cell::from(
                     comp.ecosystem
                         .as_ref()
-                        .map(|e| e.to_string())
+                        .map(std::string::ToString::to_string)
                         .unwrap_or_else(|| "-".to_string()),
                 ),
                 staleness_cell,

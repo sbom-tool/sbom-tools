@@ -80,9 +80,9 @@ pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
                 let was_flagged = app.security_cache.is_flagged(&comp_name);
                 app.security_cache.toggle_flag(&comp_name, "Flagged for review");
                 if was_flagged {
-                    app.status_message = Some(format!("Unflagged: {}", comp_name));
+                    app.status_message = Some(format!("Unflagged: {comp_name}"));
                 } else {
-                    app.status_message = Some(format!("Flagged: {}", comp_name));
+                    app.status_message = Some(format!("Flagged: {comp_name}"));
                 }
             }
         }
@@ -91,7 +91,7 @@ pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
             if let Some(vuln_id) = get_components_tab_selected_vuln(app) {
                 let url = crate::tui::security::cve_url(&vuln_id);
                 if crate::tui::security::open_in_browser(&url).is_ok() {
-                    app.status_message = Some(format!("Opened: {}", vuln_id));
+                    app.status_message = Some(format!("Opened: {vuln_id}"));
                 } else {
                     app.status_message = Some("Failed to open browser".to_string());
                 }
@@ -129,7 +129,7 @@ pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
                         }
                     };
                     app.security_cache.add_note(&comp_name, next_note);
-                    app.status_message = Some(format!("Note: {}", next_note));
+                    app.status_message = Some(format!("Note: {next_note}"));
                 } else {
                     app.status_message = Some("Flag component first with [F]".to_string());
                 }
@@ -185,7 +185,7 @@ pub(super) fn get_components_tab_clipboard_info(app: &App, comp_name: &str) -> S
                     "Component: {}\nVersion: {}\nEcosystem: {}\nVulnerabilities: {}",
                     comp.name,
                     comp.version.as_deref().unwrap_or("unknown"),
-                    comp.ecosystem.as_ref().map(|e| e.to_string()).unwrap_or_else(|| "unknown".to_string()),
+                    comp.ecosystem.as_ref().map(std::string::ToString::to_string).unwrap_or_else(|| "unknown".to_string()),
                     if vulns.is_empty() { "None".to_string() } else { vulns.join(", ") }
                 )
             } else {

@@ -116,7 +116,7 @@ impl AliasPattern {
     /// Get a description of this pattern for display
     pub fn description(&self) -> String {
         match self {
-            Self::Exact(purl) => format!("exact:{}", purl),
+            Self::Exact(purl) => format!("exact:{purl}"),
             Self::Pattern {
                 pattern,
                 regex,
@@ -125,16 +125,16 @@ impl AliasPattern {
             } => {
                 let mut parts = Vec::new();
                 if let Some(p) = pattern {
-                    parts.push(format!("pattern:{}", p));
+                    parts.push(format!("pattern:{p}"));
                 }
                 if let Some(r) = regex {
-                    parts.push(format!("regex:{}", r));
+                    parts.push(format!("regex:{r}"));
                 }
                 if let Some(e) = ecosystem {
-                    parts.push(format!("ecosystem:{}", e));
+                    parts.push(format!("ecosystem:{e}"));
                 }
                 if let Some(n) = name {
-                    parts.push(format!("name:{}", n));
+                    parts.push(format!("name:{n}"));
                 }
                 parts.join(", ")
             }
@@ -218,7 +218,7 @@ impl ExclusionRule {
     /// Get a description of this rule for display
     pub fn description(&self) -> String {
         match self {
-            Self::Exact(purl) => format!("exact:{}", purl),
+            Self::Exact(purl) => format!("exact:{purl}"),
             Self::Conditional {
                 pattern,
                 regex,
@@ -229,22 +229,22 @@ impl ExclusionRule {
             } => {
                 let mut parts = Vec::new();
                 if let Some(p) = pattern {
-                    parts.push(format!("pattern:{}", p));
+                    parts.push(format!("pattern:{p}"));
                 }
                 if let Some(r) = regex {
-                    parts.push(format!("regex:{}", r));
+                    parts.push(format!("regex:{r}"));
                 }
                 if let Some(e) = ecosystem {
-                    parts.push(format!("ecosystem:{}", e));
+                    parts.push(format!("ecosystem:{e}"));
                 }
                 if let Some(n) = name {
-                    parts.push(format!("name:{}", n));
+                    parts.push(format!("name:{n}"));
                 }
                 if let Some(s) = scope {
-                    parts.push(format!("scope:{}", s));
+                    parts.push(format!("scope:{s}"));
                 }
                 if let Some(r) = reason {
-                    parts.push(format!("reason:{}", r));
+                    parts.push(format!("reason:{r}"));
                 }
                 parts.join(", ")
             }

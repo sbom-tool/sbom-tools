@@ -63,10 +63,10 @@ impl AnalystReport {
 
         // Metadata
         if let Some(title) = &self.metadata.title {
-            let _ = writeln!(md, "**Analysis:** {}", title);
+            let _ = writeln!(md, "**Analysis:** {title}");
         }
         if let Some(analyst) = &self.metadata.analyst {
-            let _ = writeln!(md, "**Analyst:** {}", analyst);
+            let _ = writeln!(md, "**Analyst:** {analyst}");
         }
         let _ = writeln!(
             md,
@@ -118,7 +118,7 @@ impl AnalystReport {
             self.executive_summary.license_conflicts
         );
         if let Some(cra) = self.executive_summary.cra_compliance_score {
-            let _ = writeln!(md, "| CRA Compliance | {}% |", cra);
+            let _ = writeln!(md, "| CRA Compliance | {cra}% |");
         }
         md.push('\n');
 
@@ -258,7 +258,7 @@ impl AnalystReport {
                     );
                 }
                 if let Some(effort) = &rec.effort {
-                    let _ = writeln!(md, "**Estimated Effort:** {}\n", effort);
+                    let _ = writeln!(md, "**Estimated Effort:** {effort}\n");
                 }
             }
         }
@@ -355,20 +355,20 @@ impl RiskLevel {
     /// Calculate from risk score
     pub fn from_score(score: u8) -> Self {
         match score {
-            0..=25 => RiskLevel::Low,
-            26..=50 => RiskLevel::Medium,
-            51..=75 => RiskLevel::High,
-            _ => RiskLevel::Critical,
+            0..=25 => Self::Low,
+            26..=50 => Self::Medium,
+            51..=75 => Self::High,
+            _ => Self::Critical,
         }
     }
 
     /// Get display label
     pub fn label(&self) -> &'static str {
         match self {
-            RiskLevel::Low => "Low",
-            RiskLevel::Medium => "Medium",
-            RiskLevel::High => "High",
-            RiskLevel::Critical => "Critical",
+            Self::Low => "Low",
+            Self::Medium => "Medium",
+            Self::High => "High",
+            Self::Critical => "Critical",
         }
     }
 }
@@ -557,11 +557,11 @@ pub enum LicenseIssueType {
 impl std::fmt::Display for LicenseIssueType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LicenseIssueType::BinaryIncompatible => write!(f, "Binary Incompatible"),
-            LicenseIssueType::ProjectIncompatible => write!(f, "Project Incompatible"),
-            LicenseIssueType::NetworkCopyleft => write!(f, "Network Copyleft"),
-            LicenseIssueType::PatentConflict => write!(f, "Patent Conflict"),
-            LicenseIssueType::UnknownLicense => write!(f, "Unknown License"),
+            Self::BinaryIncompatible => write!(f, "Binary Incompatible"),
+            Self::ProjectIncompatible => write!(f, "Project Incompatible"),
+            Self::NetworkCopyleft => write!(f, "Network Copyleft"),
+            Self::PatentConflict => write!(f, "Patent Conflict"),
+            Self::UnknownLicense => write!(f, "Unknown License"),
         }
     }
 }
@@ -577,9 +577,9 @@ pub enum IssueSeverity {
 impl std::fmt::Display for IssueSeverity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            IssueSeverity::Error => write!(f, "Error"),
-            IssueSeverity::Warning => write!(f, "Warning"),
-            IssueSeverity::Info => write!(f, "Info"),
+            Self::Error => write!(f, "Error"),
+            Self::Warning => write!(f, "Warning"),
+            Self::Info => write!(f, "Info"),
         }
     }
 }
@@ -692,10 +692,10 @@ pub enum NoteTargetType {
 impl std::fmt::Display for NoteTargetType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            NoteTargetType::Vulnerability => write!(f, "Vulnerability"),
-            NoteTargetType::Component => write!(f, "Component"),
-            NoteTargetType::License => write!(f, "License"),
-            NoteTargetType::General => write!(f, "General"),
+            Self::Vulnerability => write!(f, "Vulnerability"),
+            Self::Component => write!(f, "Component"),
+            Self::License => write!(f, "License"),
+            Self::General => write!(f, "General"),
         }
     }
 }
@@ -748,10 +748,10 @@ pub enum RecommendationPriority {
 impl std::fmt::Display for RecommendationPriority {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RecommendationPriority::Critical => write!(f, "Critical"),
-            RecommendationPriority::High => write!(f, "High"),
-            RecommendationPriority::Medium => write!(f, "Medium"),
-            RecommendationPriority::Low => write!(f, "Low"),
+            Self::Critical => write!(f, "Critical"),
+            Self::High => write!(f, "High"),
+            Self::Medium => write!(f, "Medium"),
+            Self::Low => write!(f, "Low"),
         }
     }
 }
@@ -776,12 +776,12 @@ pub enum RecommendationCategory {
 impl std::fmt::Display for RecommendationCategory {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RecommendationCategory::Upgrade => write!(f, "Upgrade"),
-            RecommendationCategory::Replace => write!(f, "Replace"),
-            RecommendationCategory::Investigate => write!(f, "Investigate"),
-            RecommendationCategory::Monitor => write!(f, "Monitor"),
-            RecommendationCategory::AddInfo => write!(f, "Add Information"),
-            RecommendationCategory::Config => write!(f, "Configuration"),
+            Self::Upgrade => write!(f, "Upgrade"),
+            Self::Replace => write!(f, "Replace"),
+            Self::Investigate => write!(f, "Investigate"),
+            Self::Monitor => write!(f, "Monitor"),
+            Self::AddInfo => write!(f, "Add Information"),
+            Self::Config => write!(f, "Configuration"),
         }
     }
 }

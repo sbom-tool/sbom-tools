@@ -94,7 +94,7 @@ impl PackageFamily {
 
     /// Get all names for a specific ecosystem.
     pub fn names_for(&self, ecosystem: &Ecosystem) -> Option<&[String]> {
-        self.ecosystem_names.get(ecosystem).map(|v| v.as_slice())
+        self.ecosystem_names.get(ecosystem).map(std::vec::Vec::as_slice)
     }
 
     /// Get all ecosystems this family spans.

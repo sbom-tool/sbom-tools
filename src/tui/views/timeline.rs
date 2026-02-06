@@ -14,7 +14,7 @@ use ratatui::{
 };
 
 /// Render the timeline analysis view
-pub fn render_timeline(f: &mut Frame, area: Rect, result: &TimelineResult, state: &TimelineState) {
+pub(crate) fn render_timeline(f: &mut Frame, area: Rect, result: &TimelineResult, state: &TimelineState) {
     let chunks = if state.show_statistics {
         Layout::default()
             .direction(Direction::Vertical)
@@ -335,7 +335,7 @@ fn render_versions_list(f: &mut Frame, area: Rect, result: &TimelineResult, stat
             let change_str = if i == 0 {
                 "initial".to_string()
             } else {
-                format!("+{} -{}", added, removed)
+                format!("+{added} -{removed}")
             };
 
             let change_color = if added > removed {
@@ -707,7 +707,7 @@ fn render_version_diff_modal(
     ]));
 
     let block = Block::default()
-        .title(format!(" Version Diff: {} ↔ {} ", name_a, name_b))
+        .title(format!(" Version Diff: {name_a} ↔ {name_b} "))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(scheme.accent))
         .style(Style::default().bg(scheme.muted));

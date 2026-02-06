@@ -308,8 +308,9 @@ impl ReportGenerator for MarkdownReporter {
                         escape_markdown_table(&vuln.id),
                         escape_markdown_table(&vuln.severity),
                         vuln.cvss_score
-                            .map(|s| format!("{:.1}", s))
-                            .unwrap_or_else(|| "-".to_string()),
+                            .map(|s| format!("{s:.1}"))
+                            .as_deref()
+                            .unwrap_or("-"),
                         escape_markdown_table(&sla_display),
                         depth_label,
                         escape_markdown_table(&vuln.component_name),
@@ -404,8 +405,8 @@ impl ReportGenerator for MarkdownReporter {
                 .licenses
                 .declared
                 .first()
-                .map(|l| escape_markdown_table(&l.expression))
-                .unwrap_or_else(|| "-".to_string());
+                .map(|l| escape_markdown_table(&l.expression));
+            let license = license.as_deref().unwrap_or("-");
             writeln!(
                 md,
                 "| {} | {} | {} | {} | {} |",
@@ -414,7 +415,8 @@ impl ReportGenerator for MarkdownReporter {
                 comp.ecosystem
                     .as_ref()
                     .map(|e| escape_markdown_table(&e.to_string()))
-                    .unwrap_or_else(|| "-".to_string()),
+                    .as_deref()
+                    .unwrap_or("-"),
                 license,
                 comp.vulnerabilities.len()
             )?;
@@ -431,12 +433,12 @@ impl ReportGenerator for MarkdownReporter {
 /// Format SLA status for display in reports
 fn format_sla_display(vuln: &VulnerabilityDetail) -> String {
     match vuln.sla_status() {
-        SlaStatus::Overdue(days) => format!("{}d late", days),
-        SlaStatus::DueSoon(days) => format!("{}d left", days),
-        SlaStatus::OnTrack(days) => format!("{}d left", days),
+        SlaStatus::Overdue(days) => format!("{days}d late"),
+        SlaStatus::DueSoon(days) => format!("{days}d left"),
+        SlaStatus::OnTrack(days) => format!("{days}d left"),
         SlaStatus::NoDueDate => vuln
             .days_since_published
-            .map(|d| format!("{}d old", d))
+            .map(|d| format!("{d}d old"))
             .unwrap_or_else(|| "-".to_string()),
     }
 }

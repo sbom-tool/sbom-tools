@@ -120,7 +120,7 @@ impl ViewApp {
         // Pre-expand the first few ecosystems
         let mut tree_state = TreeState::new();
         for eco in stats.ecosystem_counts.keys().take(3) {
-            tree_state.expand(&format!("eco:{}", eco));
+            tree_state.expand(&format!("eco:{eco}"));
         }
 
         Self {
@@ -294,7 +294,7 @@ impl ViewApp {
                         id: vuln.id.clone(),
                         component_id: comp.canonical_id.to_string(),  // Store ID for navigation
                         component_name: comp.name.clone(),
-                        severity: vuln.severity.as_ref().map(|s| s.to_string()),
+                        severity: vuln.severity.as_ref().map(std::string::ToString::to_string),
                     });
                 }
             }
@@ -595,23 +595,25 @@ impl ViewApp {
         }
     }
 
-    /// Page up - move up by page size (10 items).
+    /// Page up - move up by page size.
     pub fn page_up(&mut self) {
+        use crate::tui::constants::PAGE_SIZE;
         if self.active_tab == ViewTab::Source {
             self.source_state.page_up();
         } else {
-            for _ in 0..10 {
+            for _ in 0..PAGE_SIZE {
                 self.navigate_up();
             }
         }
     }
 
-    /// Page down - move down by page size (10 items).
+    /// Page down - move down by page size.
     pub fn page_down(&mut self) {
+        use crate::tui::constants::PAGE_SIZE;
         if self.active_tab == ViewTab::Source {
             self.source_state.page_down();
         } else {
-            for _ in 0..10 {
+            for _ in 0..PAGE_SIZE {
                 self.navigate_down();
             }
         }
@@ -818,7 +820,7 @@ impl ViewApp {
                 };
                 // Search raw_lines for the top-level key
                 for (i, line) in self.source_state.raw_lines.iter().enumerate() {
-                    let search = format!("\"{}\":", key);
+                    let search = format!("\"{key}\":");
                     if line.contains(&search) && line.starts_with("  ") && !line.starts_with("    ") {
                         self.source_state.selected = i;
                         self.source_state.scroll_offset = i.saturating_sub(2);
@@ -963,7 +965,7 @@ impl ViewApp {
             let eco = comp
                 .ecosystem
                 .as_ref()
-                .map(|e| e.to_string())
+                .map(std::string::ToString::to_string)
                 .unwrap_or_else(|| "Unknown".to_string());
             ecosystem_map.entry(eco).or_default().push(comp);
         }
@@ -988,7 +990,7 @@ impl ViewApp {
                     .collect();
                 let count = children.len();
                 TreeNode::Group {
-                    id: format!("eco:{}", eco),
+                    id: format!("eco:{eco}"),
                     label: eco,
                     children,
                     item_count: count,
@@ -1045,7 +1047,7 @@ impl ViewApp {
                     .collect();
                 let count = children.len();
                 TreeNode::Group {
-                    id: format!("lic:{}", license),
+                    id: format!("lic:{license}"),
                     label: license,
                     children,
                     item_count: count,
@@ -1176,7 +1178,7 @@ impl ViewApp {
                     .collect();
                 let count = children.len();
                 groups.push(TreeNode::Group {
-                    id: format!("type:{}", type_key),
+                    id: format!("type:{type_key}"),
                     label: type_label.to_string(),
                     children,
                     item_count: count,
@@ -1261,9 +1263,9 @@ impl ViewApp {
                 let eco = comp
                     .ecosystem
                     .as_ref()
-                    .map(|e| e.to_string())
+                    .map(std::string::ToString::to_string)
                     .unwrap_or_else(|| "Unknown".to_string());
-                Some(format!("eco:{}", eco))
+                Some(format!("eco:{eco}"))
             }
             TreeGroupBy::License => {
                 let license = if comp.licenses.declared.is_empty() {
@@ -1271,7 +1273,7 @@ impl ViewApp {
                 } else {
                     comp.licenses.declared[0].expression.clone()
                 };
-                Some(format!("lic:{}", license))
+                Some(format!("lic:{license}"))
             }
             TreeGroupBy::VulnStatus => {
                 use super::severity::severity_category;
@@ -1285,7 +1287,7 @@ impl ViewApp {
             }
             TreeGroupBy::ComponentType => {
                 let comp_type = crate::tui::widgets::detect_component_type(&comp.name);
-                Some(format!("type:{}", comp_type))
+                Some(format!("type:{comp_type}"))
             }
             TreeGroupBy::Flat => None,
         }
@@ -1350,27 +1352,27 @@ pub enum ViewTab {
 impl ViewTab {
     pub fn title(&self) -> &'static str {
         match self {
-            ViewTab::Overview => "Overview",
-            ViewTab::Tree => "Components",
-            ViewTab::Vulnerabilities => "Vulnerabilities",
-            ViewTab::Licenses => "Licenses",
-            ViewTab::Dependencies => "Dependencies",
-            ViewTab::Quality => "Quality",
-            ViewTab::Compliance => "Compliance",
-            ViewTab::Source => "Source",
+            Self::Overview => "Overview",
+            Self::Tree => "Components",
+            Self::Vulnerabilities => "Vulnerabilities",
+            Self::Licenses => "Licenses",
+            Self::Dependencies => "Dependencies",
+            Self::Quality => "Quality",
+            Self::Compliance => "Compliance",
+            Self::Source => "Source",
         }
     }
 
     pub fn shortcut(&self) -> &'static str {
         match self {
-            ViewTab::Overview => "1",
-            ViewTab::Tree => "2",
-            ViewTab::Vulnerabilities => "3",
-            ViewTab::Licenses => "4",
-            ViewTab::Dependencies => "5",
-            ViewTab::Quality => "6",
-            ViewTab::Compliance => "7",
-            ViewTab::Source => "8",
+            Self::Overview => "1",
+            Self::Tree => "2",
+            Self::Vulnerabilities => "3",
+            Self::Licenses => "4",
+            Self::Dependencies => "5",
+            Self::Quality => "6",
+            Self::Compliance => "7",
+            Self::Source => "8",
         }
     }
 }
@@ -1388,11 +1390,11 @@ pub enum TreeGroupBy {
 impl TreeGroupBy {
     pub fn label(&self) -> &'static str {
         match self {
-            TreeGroupBy::Ecosystem => "Ecosystem",
-            TreeGroupBy::License => "License",
-            TreeGroupBy::VulnStatus => "Vuln Status",
-            TreeGroupBy::ComponentType => "Type",
-            TreeGroupBy::Flat => "Flat List",
+            Self::Ecosystem => "Ecosystem",
+            Self::License => "License",
+            Self::VulnStatus => "Vuln Status",
+            Self::ComponentType => "Type",
+            Self::Flat => "Flat List",
         }
     }
 }
@@ -1408,9 +1410,9 @@ pub enum TreeFilter {
 impl TreeFilter {
     pub fn label(&self) -> &'static str {
         match self {
-            TreeFilter::All => "All",
-            TreeFilter::HasVulnerabilities => "Has Vulns",
-            TreeFilter::Critical => "Critical",
+            Self::All => "All",
+            Self::HasVulnerabilities => "Has Vulns",
+            Self::Critical => "Critical",
         }
     }
 }
@@ -1428,28 +1430,28 @@ pub enum ComponentDetailTab {
 impl ComponentDetailTab {
     pub fn title(&self) -> &'static str {
         match self {
-            ComponentDetailTab::Overview => "Overview",
-            ComponentDetailTab::Identifiers => "Identifiers",
-            ComponentDetailTab::Vulnerabilities => "Vulnerabilities",
-            ComponentDetailTab::Dependencies => "Dependencies",
+            Self::Overview => "Overview",
+            Self::Identifiers => "Identifiers",
+            Self::Vulnerabilities => "Vulnerabilities",
+            Self::Dependencies => "Dependencies",
         }
     }
 
     pub fn shortcut(&self) -> &'static str {
         match self {
-            ComponentDetailTab::Overview => "1",
-            ComponentDetailTab::Identifiers => "2",
-            ComponentDetailTab::Vulnerabilities => "3",
-            ComponentDetailTab::Dependencies => "4",
+            Self::Overview => "1",
+            Self::Identifiers => "2",
+            Self::Vulnerabilities => "3",
+            Self::Dependencies => "4",
         }
     }
 
-    pub fn all() -> [ComponentDetailTab; 4] {
+    pub fn all() -> [Self; 4] {
         [
-            ComponentDetailTab::Overview,
-            ComponentDetailTab::Identifiers,
-            ComponentDetailTab::Vulnerabilities,
-            ComponentDetailTab::Dependencies,
+            Self::Overview,
+            Self::Identifiers,
+            Self::Vulnerabilities,
+            Self::Dependencies,
         ]
     }
 }
@@ -1740,26 +1742,30 @@ impl QualityViewState {
         self.scroll_offset = 0;
     }
 
-    pub fn select_next(&mut self) {
-        if self.total_recommendations > 0
-            && self.selected_recommendation < self.total_recommendations - 1
-        {
-            self.selected_recommendation += 1;
-        }
-    }
-
-    pub fn select_prev(&mut self) {
-        if self.selected_recommendation > 0 {
-            self.selected_recommendation -= 1;
-        }
-    }
-
     pub fn scroll_down(&mut self) {
         self.scroll_offset = self.scroll_offset.saturating_add(1);
     }
 
     pub fn scroll_up(&mut self) {
         self.scroll_offset = self.scroll_offset.saturating_sub(1);
+    }
+}
+
+impl ListNavigation for QualityViewState {
+    fn selected(&self) -> usize {
+        self.selected_recommendation
+    }
+
+    fn set_selected(&mut self, idx: usize) {
+        self.selected_recommendation = idx;
+    }
+
+    fn total(&self) -> usize {
+        self.total_recommendations
+    }
+
+    fn set_total(&mut self, total: usize) {
+        self.total_recommendations = total;
     }
 }
 
@@ -1939,18 +1945,6 @@ impl DependencyViewState {
         }
     }
 
-    pub fn select_next(&mut self) {
-        if self.total > 0 && self.selected < self.total.saturating_sub(1) {
-            self.selected += 1;
-        }
-    }
-
-    pub fn select_prev(&mut self) {
-        if self.selected > 0 {
-            self.selected -= 1;
-        }
-    }
-
     pub fn toggle_expand(&mut self, node_id: &str) {
         if self.expanded.contains(node_id) {
             self.expanded.remove(node_id);
@@ -1961,15 +1955,6 @@ impl DependencyViewState {
 
     pub fn is_expanded(&self, node_id: &str) -> bool {
         self.expanded.contains(node_id)
-    }
-
-    /// Ensure selected index is within bounds
-    pub fn clamp_selection(&mut self) {
-        if self.total == 0 {
-            self.selected = 0;
-        } else if self.selected >= self.total {
-            self.selected = self.total.saturating_sub(1);
-        }
     }
 }
 
@@ -2095,7 +2080,7 @@ impl SbomStats {
             let eco = comp
                 .ecosystem
                 .as_ref()
-                .map(|e| e.to_string())
+                .map(std::string::ToString::to_string)
                 .unwrap_or_else(|| "Unknown".to_string());
             *ecosystem_counts.entry(eco).or_insert(0) += 1;
 
@@ -2113,7 +2098,7 @@ impl SbomStats {
                 let sev = vuln
                     .severity
                     .as_ref()
-                    .map(|s| s.to_string())
+                    .map(std::string::ToString::to_string)
                     .unwrap_or_else(|| "Unknown".to_string());
                 *vuln_by_severity.entry(sev.clone()).or_insert(0) += 1;
 
