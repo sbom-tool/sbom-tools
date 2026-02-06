@@ -356,79 +356,80 @@ fn render_pair_details(f: &mut Frame, area: Rect, result: &MatrixResult, state: 
 
 fn render_clustering(f: &mut Frame, area: Rect, result: &MatrixResult, state: &MatrixState) {
     let scheme = colors();
-    let text = if let Some(ref clustering) = result.clustering {
-        let mut lines = vec![
-            Line::from(vec![
-                Span::styled("Algorithm: ", Style::default().fg(scheme.text_muted)),
-                Span::styled(&clustering.algorithm, Style::default().fg(scheme.text)),
-                Span::raw("  "),
-                Span::styled("Threshold: ", Style::default().fg(scheme.text_muted)),
-                Span::styled(
-                    format!("{:.0}%", clustering.threshold * 100.0),
-                    Style::default().fg(scheme.primary),
-                ),
-            ]),
-            Line::from(""),
-        ];
-
-        // Show clusters with selection highlighting
-        for (i, cluster) in clustering.clusters.iter().enumerate() {
-            let members: Vec<String> = cluster
-                .members
-                .iter()
-                .filter_map(|&idx| result.sboms.get(idx))
-                .map(|s| s.name.clone())
-                .collect();
-
-            let cluster_label = cluster
-                .label
-                .clone()
-                .unwrap_or(format!("Cluster {}", i + 1));
-            let is_selected = i == state.selected_cluster;
-
-            let label_style = if is_selected {
-                Style::default()
-                    .fg(scheme.accent)
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::default()
-                    .fg(scheme.critical)
-                    .add_modifier(Modifier::BOLD)
-            };
-
-            lines.push(Line::from(vec![
-                Span::styled(format!("{cluster_label}: "), label_style),
-                Span::styled(members.join(", "), Style::default().fg(scheme.text)),
-                Span::raw(" "),
-                Span::styled(
-                    format!("({:.0}% similarity)", cluster.internal_similarity * 100.0),
-                    Style::default().fg(scheme.text_muted),
-                ),
-            ]));
-        }
-
-        // Show outliers
-        if !clustering.outliers.is_empty() {
-            let outliers: Vec<String> = clustering
-                .outliers
-                .iter()
-                .filter_map(|&idx| result.sboms.get(idx))
-                .map(|s| s.name.clone())
-                .collect();
-
-            lines.push(Line::from(vec![
-                Span::styled("Outliers: ", Style::default().fg(scheme.removed)),
-                Span::styled(outliers.join(", "), Style::default().fg(scheme.text)),
-            ]));
-        }
-
-        lines
-    } else {
-        vec![Line::from(vec![Span::styled(
+    let text = result.clustering.as_ref().map_or_else(
+        || vec![Line::from(vec![Span::styled(
             "No clustering computed",
             Style::default().fg(scheme.text_muted),
-        )])]
-    };
+        )])],
+        |clustering| {
+            let mut lines = vec![
+                Line::from(vec![
+                    Span::styled("Algorithm: ", Style::default().fg(scheme.text_muted)),
+                    Span::styled(&clustering.algorithm, Style::default().fg(scheme.text)),
+                    Span::raw("  "),
+                    Span::styled("Threshold: ", Style::default().fg(scheme.text_muted)),
+                    Span::styled(
+                        format!("{:.0}%", clustering.threshold * 100.0),
+                        Style::default().fg(scheme.primary),
+                    ),
+                ]),
+                Line::from(""),
+            ];
+
+            // Show clusters with selection highlighting
+            for (i, cluster) in clustering.clusters.iter().enumerate() {
+                let members: Vec<String> = cluster
+                    .members
+                    .iter()
+                    .filter_map(|&idx| result.sboms.get(idx))
+                    .map(|s| s.name.clone())
+                    .collect();
+
+                let cluster_label = cluster
+                    .label
+                    .clone()
+                    .unwrap_or(format!("Cluster {}", i + 1));
+                let is_selected = i == state.selected_cluster;
+
+                let label_style = if is_selected {
+                    Style::default()
+                        .fg(scheme.accent)
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default()
+                        .fg(scheme.critical)
+                        .add_modifier(Modifier::BOLD)
+                };
+
+                lines.push(Line::from(vec![
+                    Span::styled(format!("{cluster_label}: "), label_style),
+                    Span::styled(members.join(", "), Style::default().fg(scheme.text)),
+                    Span::raw(" "),
+                    Span::styled(
+                        format!("({:.0}% similarity)", cluster.internal_similarity * 100.0),
+                        Style::default().fg(scheme.text_muted),
+                    ),
+                ]));
+            }
+
+            // Show outliers
+            if !clustering.outliers.is_empty() {
+                let outliers: Vec<String> = clustering
+                    .outliers
+                    .iter()
+                    .filter_map(|&idx| result.sboms.get(idx))
+                    .map(|s| s.name.clone())
+                    .collect();
+
+                lines.push(Line::from(vec![
+                    Span::styled("Outliers: ", Style::default().fg(scheme.removed)),
+                    Span::styled(outliers.join(", "), Style::default().fg(scheme.text)),
+                ]));
+            }
+
+            lines
+        },
+    );
 
     let block = Block::default()
         .title(format!(

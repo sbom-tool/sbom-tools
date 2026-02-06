@@ -604,11 +604,10 @@ impl SpdxParser {
                             if let Some(ref mut rel) = current_relationship {
                                 // Handle URI or direct value
                                 let rel_type = if current_text.contains('#') {
-                                    if let Some(idx) = current_text.rfind('#') {
-                                        current_text[idx + 1..].to_string()
-                                    } else {
-                                        current_text.clone()
-                                    }
+                                    current_text.rfind('#').map_or_else(
+                                        || current_text.clone(),
+                                        |idx| current_text[idx + 1..].to_string(),
+                                    )
                                 } else if current_text.contains("relationshipType_") {
                                     current_text.replace("relationshipType_", "").to_uppercase()
                                 } else {
@@ -666,22 +665,15 @@ impl SpdxParser {
     /// Extract local name from qualified XML name (strips namespace prefix)
     fn local_name(name: &[u8]) -> String {
         let name_str = String::from_utf8_lossy(name);
-        if let Some(idx) = name_str.rfind(':') {
-            name_str[idx + 1..].to_string()
-        } else {
-            name_str.to_string()
-        }
+        name_str.rfind(':').map_or_else(|| name_str.to_string(), |idx| name_str[idx + 1..].to_string())
     }
 
     /// Extract SPDX ID from URI (e.g., "http://example.org#SPDXRef-Package" -> "SPDXRef-Package")
     fn extract_spdx_id_from_uri(uri: &str) -> String {
-        if let Some(idx) = uri.rfind('#') {
-            uri[idx + 1..].to_string()
-        } else if let Some(idx) = uri.rfind('/') {
-            uri[idx + 1..].to_string()
-        } else {
-            uri.to_string()
-        }
+        uri.rfind('#').map_or_else(
+            || uri.rfind('/').map_or_else(|| uri.to_string(), |idx| uri[idx + 1..].to_string()),
+            |idx| uri[idx + 1..].to_string(),
+        )
     }
 
     /// Extract license identifier from URI
@@ -693,13 +685,10 @@ impl SpdxParser {
             return "NONE".to_string();
         }
         // Try to extract license ID from URL like http://spdx.org/licenses/MIT
-        if let Some(idx) = uri.rfind('/') {
-            uri[idx + 1..].to_string()
-        } else if let Some(idx) = uri.rfind('#') {
-            uri[idx + 1..].to_string()
-        } else {
-            uri.to_string()
-        }
+        uri.rfind('/').map_or_else(
+            || uri.rfind('#').map_or_else(|| uri.to_string(), |idx| uri[idx + 1..].to_string()),
+            |idx| uri[idx + 1..].to_string(),
+        )
     }
 
     /// Convert SPDX document to normalized representation
@@ -808,16 +797,19 @@ impl SpdxParser {
         if let Some(creation_info) = &spdx.creation_info {
             for creator_str in &creation_info.creators {
                 // Parse creator type and name from SPDX format "Type: Name"
-                let (creator_type, name) = if let Some(name) = creator_str.strip_prefix("Tool:") {
-                    (CreatorType::Tool, name.trim())
-                } else if let Some(name) = creator_str.strip_prefix("Organization:") {
-                    (CreatorType::Organization, name.trim())
-                } else if let Some(name) = creator_str.strip_prefix("Person:") {
-                    (CreatorType::Person, name.trim())
-                } else {
-                    // Unknown format, treat as tool
-                    (CreatorType::Tool, creator_str.as_str())
-                };
+                let (creator_type, name) = creator_str.strip_prefix("Tool:").map_or_else(
+                    || creator_str.strip_prefix("Organization:").map_or_else(
+                        || creator_str.strip_prefix("Person:").map_or_else(
+                            || {
+                                // Unknown format, treat as tool
+                                (CreatorType::Tool, creator_str.as_str())
+                            },
+                            |name| (CreatorType::Person, name.trim()),
+                        ),
+                        |name| (CreatorType::Organization, name.trim()),
+                    ),
+                    |name| (CreatorType::Tool, name.trim()),
+                );
 
                 creators.push(Creator {
                     creator_type,

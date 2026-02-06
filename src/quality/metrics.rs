@@ -431,7 +431,7 @@ impl VulnerabilityMetrics {
         let cwe_ratio = self.with_cwe as f32 / self.total_vulnerabilities as f32;
         let remediation_ratio = self.with_remediation as f32 / self.total_vulnerabilities as f32;
 
-        (cvss_ratio * 40.0 + cwe_ratio * 30.0 + remediation_ratio * 30.0).min(100.0)
+        remediation_ratio.mul_add(30.0, cvss_ratio.mul_add(40.0, cwe_ratio * 30.0)).min(100.0)
     }
 }
 

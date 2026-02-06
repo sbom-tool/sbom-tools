@@ -171,17 +171,18 @@ pub(super) fn update_timeline_search_matches(app: &mut App) {
         return;
     }
 
-    let matches: Vec<usize> = if let Some(ref result) = app.data.timeline_result {
-        result
-            .sboms
-            .iter()
-            .enumerate()
-            .filter(|(_, sbom)| sbom.name.to_lowercase().contains(&query))
-            .map(|(i, _)| i)
-            .collect()
-    } else {
-        vec![]
-    };
+    let matches: Vec<usize> = app.data.timeline_result.as_ref().map_or_else(
+        Vec::new,
+        |result| {
+            result
+                .sboms
+                .iter()
+                .enumerate()
+                .filter(|(_, sbom)| sbom.name.to_lowercase().contains(&query))
+                .map(|(i, _)| i)
+                .collect()
+        },
+    );
 
     app.tabs.timeline.search.update_matches(matches);
 }

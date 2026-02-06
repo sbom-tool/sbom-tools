@@ -114,29 +114,30 @@ pub fn compute_diff(
 fn load_matching_rules(config: &DiffConfig) -> Result<Option<MatchingRulesConfig>> {
     let quiet = config.behavior.quiet;
 
-    if let Some(ref rules_path) = config.rules.rules_file {
-        if !quiet {
-            tracing::info!("Loading matching rules from {:?}", rules_path);
-        }
-        match MatchingRulesConfig::from_file(rules_path) {
-            Ok(rules) => {
-                let summary = rules.summary();
-                if !quiet {
-                    tracing::info!("Loaded {}", summary);
-                }
-                if config.rules.dry_run {
-                    tracing::info!("Dry-run mode: rules will be shown but not applied");
-                }
-                Ok(Some(rules))
+    config.rules.rules_file.as_ref().map_or_else(
+        || Ok(None),
+        |rules_path| {
+            if !quiet {
+                tracing::info!("Loading matching rules from {:?}", rules_path);
             }
-            Err(e) => {
-                tracing::warn!("Failed to load matching rules: {}", e);
-                Ok(None)
+            match MatchingRulesConfig::from_file(rules_path) {
+                Ok(rules) => {
+                    let summary = rules.summary();
+                    if !quiet {
+                        tracing::info!("Loaded {}", summary);
+                    }
+                    if config.rules.dry_run {
+                        tracing::info!("Dry-run mode: rules will be shown but not applied");
+                    }
+                    Ok(Some(rules))
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to load matching rules: {}", e);
+                    Ok(None)
+                }
             }
-        }
-    } else {
-        Ok(None)
-    }
+        },
+    )
 }
 
 /// Print match explanations for modified components to stdout.

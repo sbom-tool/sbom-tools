@@ -157,11 +157,7 @@ fn semantic_breadcrumb(node_id: &str, sbom: &NormalizedSbom) -> String {
             if let Ok(idx) = part[1..part.len() - 1].parse::<usize>() {
                 let label = match prev_section {
                     "components" => sbom.components.values().nth(idx).map(|c| {
-                        if let Some(ref v) = c.version {
-                            format!("{}@{}", c.name, v)
-                        } else {
-                            c.name.clone()
-                        }
+                        c.version.as_ref().map_or_else(|| c.name.clone(), |v| format!("{}@{}", c.name, v))
                     }),
                     _ => None,
                 };
@@ -277,10 +273,10 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
     let current_section = get_current_section(app, &sections);
 
     // Pre-compute search match counts per section
-    let section_match_counts = if !app.source_state.search_matches.is_empty() {
-        compute_section_match_counts(&app.source_state, &sections)
-    } else {
+    let section_match_counts = if app.source_state.search_matches.is_empty() {
         HashMap::new()
+    } else {
+        compute_section_match_counts(&app.source_state, &sections)
     };
 
     // Compute effective total for progress bar
@@ -675,13 +671,14 @@ fn render_context(
     // Get selected node info (uses cached flat items, already warm from render_source_panel)
     let (section_name, array_idx, node_id_full) = match app.source_state.view_mode {
         SourceViewMode::Tree => {
-            if let Some(item) = app.source_state.cached_flat_items.get(app.source_state.selected) {
-                let section = current_section_from_node_id(&item.node_id);
-                let idx = extract_array_index(&item.node_id);
-                (section, idx, Some(item.node_id.clone()))
-            } else {
-                (None, None, None)
-            }
+            app.source_state.cached_flat_items.get(app.source_state.selected).map_or(
+                (None, None, None),
+                |item| {
+                    let section = current_section_from_node_id(&item.node_id);
+                    let idx = extract_array_index(&item.node_id);
+                    (section, idx, Some(item.node_id.clone()))
+                },
+            )
         }
         SourceViewMode::Raw => {
             let section = current_section_for_raw_line(app.source_state.selected, sections);
@@ -690,18 +687,17 @@ fn render_context(
     };
 
     // Semantic breadcrumb
-    let breadcrumb = if let Some(ref nid) = node_id_full {
-        let bc = semantic_breadcrumb(nid, &app.sbom);
-        if bc.is_empty() {
-            "root".to_string()
-        } else {
-            bc
-        }
-    } else if let Some(ref s) = section_name {
-        s.clone()
-    } else {
-        "root".to_string()
-    };
+    let breadcrumb = node_id_full.as_ref().map_or_else(
+        || section_name.as_ref().map_or_else(|| "root".to_string(), String::clone),
+        |nid| {
+            let bc = semantic_breadcrumb(nid, &app.sbom);
+            if bc.is_empty() {
+                "root".to_string()
+            } else {
+                bc
+            }
+        },
+    );
     render_str(
         buf, x, y,
         &format!(
@@ -727,17 +723,18 @@ fn render_context(
                     .is_some_and(|pid| pid == &comp.canonical_id);
 
                 // Name + version + ecosystem
-                let name_ver = if let Some(ref v) = comp.version {
-                    if is_primary {
+                let name_ver = comp.version.as_ref().map_or_else(
+                    || if is_primary {
+                        format!(" \u{2605} {}", comp.name)
+                    } else {
+                        format!(" {}", comp.name)
+                    },
+                    |v| if is_primary {
                         format!(" \u{2605} {}@{}", comp.name, v)
                     } else {
                         format!(" {}@{}", comp.name, v)
-                    }
-                } else if is_primary {
-                    format!(" \u{2605} {}", comp.name)
-                } else {
-                    format!(" {}", comp.name)
-                };
+                    },
+                );
                 let eco_suffix = comp
                     .ecosystem
                     .as_ref()

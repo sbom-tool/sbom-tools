@@ -118,7 +118,7 @@ pub enum VulnFilter {
 }
 
 impl VulnFilter {
-    pub fn label(&self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::All => "All",
             Self::Introduced => "Introduced",
@@ -163,7 +163,7 @@ pub enum VulnSort {
 }
 
 impl VulnSort {
-    pub fn next(&self) -> Self {
+    pub fn next(self) -> Self {
         match self {
             Self::Severity => Self::FixUrgency,
             Self::FixUrgency => Self::CvssScore,
@@ -174,7 +174,7 @@ impl VulnSort {
         }
     }
 
-    pub fn label(&self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::Severity => "Severity",
             Self::FixUrgency => "Fix Urgency",
@@ -194,7 +194,7 @@ pub enum DiffVulnStatus {
 }
 
 impl DiffVulnStatus {
-    pub fn label(&self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::Introduced => "Introduced",
             Self::Resolved => "Resolved",

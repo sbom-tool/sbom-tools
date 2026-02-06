@@ -148,15 +148,15 @@ fn render_statistics_panel(f: &mut Frame, area: Rect, result: &TimelineResult) {
         .map(|d| d.summary.components_modified)
         .sum();
 
-    let avg_components: usize = if !result.sboms.is_empty() {
+    let avg_components: usize = if result.sboms.is_empty() {
+        0
+    } else {
         result
             .sboms
             .iter()
             .map(|s| s.component_count)
             .sum::<usize>()
             / result.sboms.len()
-    } else {
-        0
     };
 
     // Compliance trend summary: count how many versions pass CRA Phase 2

@@ -97,11 +97,7 @@ impl AliasTable {
         let canonical_lower = canonical.to_lowercase();
         let name_lower = name.to_lowercase();
 
-        if let Some(aliases) = self.canonical_to_aliases.get(&canonical_lower) {
-            aliases.contains(&name_lower)
-        } else {
-            false
-        }
+        self.canonical_to_aliases.get(&canonical_lower).is_some_and(|aliases| aliases.contains(&name_lower))
     }
 
     /// Get all aliases for a canonical name

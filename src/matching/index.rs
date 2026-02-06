@@ -104,15 +104,18 @@ impl ComponentIndex {
     /// Normalize a component for indexing.
     pub fn normalize_component(comp: &Component) -> NormalizedEntry {
         // Extract ecosystem from PURL
-        let (ecosystem, normalized_purl) = if let Some(ref purl) = comp.identifiers.purl {
-            let eco = Self::extract_ecosystem(purl);
-            let normalized = Self::normalize_purl(purl);
-            (eco, Some(normalized))
-        } else {
-            // Try to infer ecosystem from component type or other fields
-            // Convert Ecosystem enum to String for consistent comparison
-            (comp.ecosystem.as_ref().map(std::string::ToString::to_string), None)
-        };
+        let (ecosystem, normalized_purl) = comp.identifiers.purl.as_ref().map_or_else(
+            || {
+                // Try to infer ecosystem from component type or other fields
+                // Convert Ecosystem enum to String for consistent comparison
+                (comp.ecosystem.as_ref().map(std::string::ToString::to_string), None)
+            },
+            |purl| {
+                let eco = Self::extract_ecosystem(purl);
+                let normalized = Self::normalize_purl(purl);
+                (eco, Some(normalized))
+            },
+        );
 
         // Normalize name
         let normalized_name = Self::normalize_name(&comp.name, ecosystem.as_deref());
@@ -622,12 +625,13 @@ impl BatchCandidateGenerator {
         let mut seen: HashSet<CanonicalId> = HashSet::new();
 
         // Get normalized entry for the source
-        let source_entry = if let Some(entry) = self.component_index.get_entry(source_id) {
-            entry.clone()
-        } else {
-            // Build entry on the fly if not in our index (source from different SBOM)
-            ComponentIndex::normalize_component(source_component)
-        };
+        let source_entry = self.component_index.get_entry(source_id).map_or_else(
+            || {
+                // Build entry on the fly if not in our index (source from different SBOM)
+                ComponentIndex::normalize_component(source_component)
+            },
+            NormalizedEntry::clone,
+        );
 
         // 1. Component index candidates
         let index_candidates = self.component_index.find_candidates(
@@ -641,20 +645,21 @@ impl BatchCandidateGenerator {
         }
 
         // 2. LSH candidates (additional ones not found by component index)
-        let lsh_candidates: Vec<CanonicalId> = if let Some(ref lsh) = self.lsh_index {
-            let candidates: Vec<_> = lsh
-                .find_candidates(source_component)
-                .into_iter()
-                .filter(|id| id != source_id && !seen.contains(id))
-                .take(self.config.max_candidates / 2) // Limit LSH additions
-                .collect();
-            for id in &candidates {
-                seen.insert(id.clone());
-            }
-            candidates
-        } else {
-            Vec::new()
-        };
+        let lsh_candidates: Vec<CanonicalId> = self.lsh_index.as_ref().map_or_else(
+            Vec::new,
+            |lsh| {
+                let candidates: Vec<_> = lsh
+                    .find_candidates(source_component)
+                    .into_iter()
+                    .filter(|id| id != source_id && !seen.contains(id))
+                    .take(self.config.max_candidates / 2) // Limit LSH additions
+                    .collect();
+                for id in &candidates {
+                    seen.insert(id.clone());
+                }
+                candidates
+            },
+        );
 
         // 3. Cross-ecosystem candidates
         let cross_ecosystem_candidates: Vec<CanonicalId> =
@@ -792,12 +797,13 @@ impl LazyComponentIndex {
     /// be built once.
     pub fn get(&self) -> &ComponentIndex {
         self.index.get_or_init(|| {
-            if let Some(ref sbom) = self.sbom {
-                ComponentIndex::build(sbom)
-            } else {
-                // Empty index as fallback (shouldn't happen in normal use)
-                ComponentIndex::build(&NormalizedSbom::default())
-            }
+            self.sbom.as_ref().map_or_else(
+                || {
+                    // Empty index as fallback (shouldn't happen in normal use)
+                    ComponentIndex::build(&NormalizedSbom::default())
+                },
+                |sbom| ComponentIndex::build(sbom),
+            )
         })
     }
 

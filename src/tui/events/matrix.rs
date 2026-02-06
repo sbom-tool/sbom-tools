@@ -146,10 +146,10 @@ pub(super) fn handle_matrix_keys(app: &mut App, key: KeyEvent) {
 
         // Launch diff for selected pair
         KeyCode::Enter | KeyCode::Char('d') => {
-            if app.tabs.matrix.selected_row != app.tabs.matrix.selected_col {
-                app.tabs.matrix.toggle_pair_diff();
-            } else {
+            if app.tabs.matrix.selected_row == app.tabs.matrix.selected_col {
                 app.set_status_message("Cannot diff same SBOM".to_string());
+            } else {
+                app.tabs.matrix.toggle_pair_diff();
             }
         }
 
@@ -203,17 +203,18 @@ pub(super) fn update_matrix_search_matches(app: &mut App) {
         return;
     }
 
-    let matches: Vec<usize> = if let Some(ref result) = app.data.matrix_result {
-        result
-            .sboms
-            .iter()
-            .enumerate()
-            .filter(|(_, sbom)| sbom.name.to_lowercase().contains(&query))
-            .map(|(i, _)| i)
-            .collect()
-    } else {
-        vec![]
-    };
+    let matches: Vec<usize> = app.data.matrix_result.as_ref().map_or_else(
+        Vec::new,
+        |result| {
+            result
+                .sboms
+                .iter()
+                .enumerate()
+                .filter(|(_, sbom)| sbom.name.to_lowercase().contains(&query))
+                .map(|(i, _)| i)
+                .collect()
+        },
+    );
 
     app.tabs.matrix.search.update_matches(matches);
 }

@@ -99,7 +99,7 @@ pub(crate) enum LicenseCategory {
 }
 
 impl LicenseCategory {
-    pub(crate) fn as_str(&self) -> &'static str {
+    pub(crate) fn as_str(self) -> &'static str {
         match self {
             Self::Permissive => "Permissive",
             Self::WeakCopyleft => "Weak Copyleft",
@@ -112,7 +112,7 @@ impl LicenseCategory {
     }
 
     /// Get the copyleft strength (0 = none, 4 = strongest)
-    pub(crate) fn copyleft_strength(&self) -> u8 {
+    pub(crate) fn copyleft_strength(self) -> u8 {
         match self {
             Self::PublicDomain | Self::Permissive | Self::Unknown => 0,
             Self::WeakCopyleft => 1,
@@ -133,7 +133,7 @@ pub(crate) enum RiskLevel {
 }
 
 impl RiskLevel {
-    pub(crate) fn as_str(&self) -> &'static str {
+    pub(crate) fn as_str(self) -> &'static str {
         match self {
             Self::Low => "Low",
             Self::Medium => "Medium",
@@ -449,10 +449,10 @@ pub(crate) fn analyze_license_compatibility(licenses: &[&str]) -> LicenseCompati
             let result = check_compatibility(license_a, license_b);
             if !result.compatible || result.score < 70 {
                 issues.push(CompatibilityIssue {
-                    severity: if !result.compatible {
-                        IssueSeverity::Error
-                    } else {
+                    severity: if result.compatible {
                         IssueSeverity::Warning
+                    } else {
+                        IssueSeverity::Error
                     },
                     message: result.warnings.join("; "),
                 });

@@ -678,14 +678,13 @@ fn render_search_overlay(frame: &mut Frame, area: Rect, search_state: &DiffSearc
                                 Style::default().fg(colors().text)
                             },
                         ),
-                        if let Some(v) = version {
-                            Span::styled(
+                        version.as_ref().map_or_else(
+                            || Span::raw(""),
+                            |v| Span::styled(
                                 format!(" @ {v}"),
                                 Style::default().fg(colors().text_muted),
-                            )
-                        } else {
-                            Span::raw("")
-                        },
+                            ),
+                        ),
                     ])
                 }
                 DiffSearchResult::Vulnerability {

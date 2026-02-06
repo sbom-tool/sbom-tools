@@ -18,8 +18,9 @@ impl PurlNormalizer {
 
     fn normalize_internal(&self, purl: &str) -> String {
         // Detect ecosystem from PURL
-        if let Some(ecosystem) = self.detect_ecosystem(purl) {
-            match ecosystem {
+        self.detect_ecosystem(purl).map_or_else(
+            || purl.to_lowercase(),
+            |ecosystem| match ecosystem {
                 Ecosystem::PyPi => self.normalize_pypi(purl),
                 Ecosystem::Npm => self.normalize_npm(purl),
                 Ecosystem::Cargo => self.normalize_cargo(purl),
@@ -27,10 +28,8 @@ impl PurlNormalizer {
                 Ecosystem::Golang => self.normalize_golang(purl),
                 Ecosystem::Nuget => self.normalize_nuget(purl),
                 _ => purl.to_lowercase(),
-            }
-        } else {
-            purl.to_lowercase()
-        }
+            },
+        )
     }
 
     /// Detect ecosystem from PURL

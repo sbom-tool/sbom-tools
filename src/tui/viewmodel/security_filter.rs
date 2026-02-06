@@ -201,24 +201,28 @@ impl SecurityFilterCriteria {
     }
 
     /// Set minimum risk level
+    #[must_use]
     pub fn with_min_risk(mut self, level: RiskLevel) -> Self {
         self.min_risk = Some(level);
         self
     }
 
     /// Filter to components with vulnerabilities
+    #[must_use]
     pub fn with_vulns(mut self) -> Self {
         self.has_vulns = Some(true);
         self
     }
 
     /// Filter to KEV components
+    #[must_use]
     pub fn with_kev(mut self) -> Self {
         self.has_kev = Some(true);
         self
     }
 
     /// Filter by license category
+    #[must_use]
     pub fn with_license(mut self, category: LicenseCategory) -> Self {
         self.license_type = Some(category);
         self

@@ -19,10 +19,7 @@ pub enum OutputTarget {
 impl OutputTarget {
     /// Create output target from optional path
     pub fn from_option(path: Option<PathBuf>) -> Self {
-        match path {
-            Some(p) => Self::File(p),
-            None => Self::Stdout,
-        }
+        path.map_or(Self::Stdout, Self::File)
     }
 
     /// Check if output is to a terminal

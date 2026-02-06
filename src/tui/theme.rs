@@ -437,6 +437,7 @@ impl Theme {
     }
 
     /// Get the next theme in the rotation
+    #[must_use]
     pub fn next(&self) -> Self {
         match self.name {
             "dark" => Self::light(),

@@ -12,7 +12,7 @@ pub enum QualityViewMode {
 }
 
 impl QualityViewMode {
-    pub fn label(&self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::Summary => "Summary",
             Self::Breakdown => "Score Breakdown",

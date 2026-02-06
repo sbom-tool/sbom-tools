@@ -8,7 +8,7 @@ use crate::tui::theme::colors;
 use ratatui::prelude::*;
 
 /// Map a `LicenseCategory` to a theme color.
-pub(crate) fn category_color(category: &LicenseCategory) -> Color {
+pub(crate) fn category_color(category: LicenseCategory) -> Color {
     let scheme = colors();
     match category {
         LicenseCategory::Permissive | LicenseCategory::PublicDomain => scheme.success,
@@ -20,7 +20,7 @@ pub(crate) fn category_color(category: &LicenseCategory) -> Color {
 }
 
 /// Map a `RiskLevel` to a theme color.
-pub(crate) fn risk_level_color(risk: &RiskLevel) -> Color {
+pub(crate) fn risk_level_color(risk: RiskLevel) -> Color {
     let scheme = colors();
     match risk {
         RiskLevel::Low => scheme.success,
@@ -34,8 +34,8 @@ pub(crate) fn risk_level_color(risk: &RiskLevel) -> Color {
 /// risk badge, family, and component count.
 pub(crate) fn render_license_metadata_lines(
     license: &str,
-    category: &LicenseCategory,
-    risk_level: &RiskLevel,
+    category: LicenseCategory,
+    risk_level: RiskLevel,
     family: &str,
     component_count: usize,
     is_dual_licensed: bool,

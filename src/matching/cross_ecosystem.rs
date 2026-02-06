@@ -48,6 +48,7 @@ impl PackageFamily {
     }
 
     /// Add a name mapping for an ecosystem.
+    #[must_use]
     pub fn with_name(mut self, ecosystem: Ecosystem, name: impl Into<String>) -> Self {
         self.ecosystem_names
             .entry(ecosystem)
@@ -57,6 +58,7 @@ impl PackageFamily {
     }
 
     /// Add multiple names for an ecosystem.
+    #[must_use]
     pub fn with_names(mut self, ecosystem: Ecosystem, names: &[&str]) -> Self {
         for name in names {
             self.ecosystem_names
@@ -68,18 +70,21 @@ impl PackageFamily {
     }
 
     /// Set the description.
+    #[must_use]
     pub fn with_description(mut self, desc: impl Into<String>) -> Self {
         self.description = Some(desc.into());
         self
     }
 
     /// Mark as verified.
+    #[must_use]
     pub fn verified(mut self) -> Self {
         self.verified = true;
         self
     }
 
     /// Set the category.
+    #[must_use]
     pub fn with_category(mut self, category: impl Into<String>) -> Self {
         self.category = Some(category.into());
         self

@@ -30,15 +30,15 @@ pub fn compute_version_divergence_score(
                     if maj_a == maj_b && min_a == min_b {
                         // Same major.minor - small penalty for patch difference
                         let patch_diff = (patch_a as i64 - patch_b as i64).unsigned_abs() as f64;
-                        (0.8 - patch_diff * 0.01).max(0.5)
+                        patch_diff.mul_add(-0.01, 0.8).max(0.5)
                     } else if maj_a == maj_b {
                         // Same major - moderate penalty for minor difference
                         let minor_diff = (min_a as i64 - min_b as i64).unsigned_abs() as f64;
-                        (0.5 - minor_diff * weights.version_minor_penalty).max(0.2)
+                        minor_diff.mul_add(-weights.version_minor_penalty, 0.5).max(0.2)
                     } else {
                         // Different major - larger penalty
                         let major_diff = (maj_a as i64 - maj_b as i64).unsigned_abs() as f64;
-                        (0.3 - major_diff * weights.version_major_penalty).max(0.0)
+                        major_diff.mul_add(-weights.version_major_penalty, 0.3).max(0.0)
                     }
                 }
                 _ => {

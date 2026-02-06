@@ -670,6 +670,7 @@ impl AnalystNote {
     }
 
     /// Mark as false positive
+    #[must_use]
     pub fn mark_false_positive(mut self) -> Self {
         self.false_positive = true;
         self

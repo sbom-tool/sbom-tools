@@ -215,7 +215,7 @@ fn render_changes_table(
     let rows: Vec<Row> = changes
         .iter()
         .map(|change| {
-            let impact_cell = impact_cell(&change.impact);
+            let impact_cell = impact_cell(change.impact);
             let type_cell = change_type_cell(&change.change);
             let component_cell = Cell::from(truncate(&change.component_name, 30))
                 .style(Style::default().fg(colors().text));
@@ -259,7 +259,7 @@ fn render_changes_table(
     );
 }
 
-fn impact_cell(impact: &GraphChangeImpact) -> Cell<'static> {
+fn impact_cell(impact: GraphChangeImpact) -> Cell<'static> {
     let scheme = colors();
     let (text, style) = match impact {
         GraphChangeImpact::Critical => ("CRITICAL", Style::default().fg(scheme.critical).bold()),

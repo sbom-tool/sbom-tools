@@ -251,7 +251,7 @@ fn collect_all_group_names(app: &mut App) -> Vec<String> {
             names
         }
         AppMode::View => {
-            if let Some(sbom) = &app.data.sbom {
+            app.data.sbom.as_ref().map_or_else(Vec::new, |sbom| {
                 let mut seen = std::collections::HashSet::new();
                 let mut names = Vec::new();
                 for (comp, _) in sbom.all_vulnerabilities() {
@@ -260,9 +260,7 @@ fn collect_all_group_names(app: &mut App) -> Vec<String> {
                     }
                 }
                 names
-            } else {
-                Vec::new()
-            }
+            })
         }
         _ => Vec::new(),
     }

@@ -14,7 +14,7 @@ use ratatui::{
 // Helper functions
 // ---------------------------------------------------------------------------
 
-pub(crate) fn get_profile_weights(profile: &ScoringProfile) -> (f32, f32, f32, f32, f32) {
+pub(crate) fn get_profile_weights(profile: ScoringProfile) -> (f32, f32, f32, f32, f32) {
     // (completeness, identifiers, licenses, vulnerabilities, dependencies)
     match profile {
         ScoringProfile::Minimal => (0.50, 0.20, 0.10, 0.10, 0.10),
@@ -190,7 +190,7 @@ pub(crate) fn generate_key_factors(report: &QualityReport) -> Vec<Line<'static>>
     lines
 }
 
-pub(crate) fn get_recommendation_reason(category: &RecommendationCategory) -> String {
+pub(crate) fn get_recommendation_reason(category: RecommendationCategory) -> String {
     match category {
         RecommendationCategory::Completeness => {
             "Complete data enables accurate vulnerability scanning and license compliance"
@@ -214,7 +214,7 @@ pub(crate) fn get_recommendation_reason(category: &RecommendationCategory) -> St
     }
 }
 
-pub(crate) fn grade_color_and_label(grade: &QualityGrade) -> (Color, &'static str) {
+pub(crate) fn grade_color_and_label(grade: QualityGrade) -> (Color, &'static str) {
     let scheme = colors();
     match grade {
         QualityGrade::A => (scheme.success, "Excellent"),
@@ -225,7 +225,7 @@ pub(crate) fn grade_color_and_label(grade: &QualityGrade) -> (Color, &'static st
     }
 }
 
-pub(crate) fn grade_color(grade: &QualityGrade) -> Color {
+pub(crate) fn grade_color(grade: QualityGrade) -> Color {
     grade_color_and_label(grade).0
 }
 
@@ -247,17 +247,17 @@ fn bar_grade_style(score: f32) -> Style {
         // 0..50: dark red (180,40,40) → yellow (220,180,0)
         let s = t / 0.5;
         (
-            180.0 + (220.0 - 180.0) * s,
-            40.0 + (180.0 - 40.0) * s,
-            40.0 + (0.0 - 40.0) * s,
+            40.0_f32.mul_add(s, 180.0),
+            140.0_f32.mul_add(s, 40.0),
+            (-40.0_f32).mul_add(s, 40.0),
         )
     } else {
         // 50..100: yellow (220,180,0) → green (40,200,40)
         let s = (t - 0.5) / 0.5;
         (
-            220.0 + (40.0 - 220.0) * s,
-            180.0 + (200.0 - 180.0) * s,
-            0.0 + (40.0 - 0.0) * s,
+            (-180.0_f32).mul_add(s, 220.0),
+            20.0_f32.mul_add(s, 180.0),
+            40.0_f32.mul_add(s, 0.0),
         )
     };
     Style::default().fg(Color::Rgb(r as u8, g as u8, b as u8))
@@ -358,7 +358,7 @@ pub(crate) fn render_quality_summary(
 fn render_compact_header(frame: &mut Frame, area: Rect, report: &QualityReport) {
     let scheme = colors();
     let score = report.overall_score as u16;
-    let (gauge_color, grade_label) = grade_color_and_label(&report.grade);
+    let (gauge_color, grade_label) = grade_color_and_label(report.grade);
 
     // Build inline gauge bar using block characters
     // Use area width minus borders and padding for bar width
@@ -571,7 +571,7 @@ fn render_top_recommendations(
 pub(crate) fn render_score_gauge(frame: &mut Frame, area: Rect, report: &QualityReport, title: &str) {
     let scheme = colors();
     let score = report.overall_score as u16;
-    let (gauge_color, grade_label) = grade_color_and_label(&report.grade);
+    let (gauge_color, grade_label) = grade_color_and_label(report.grade);
 
     let gauge = Gauge::default()
         .block(
@@ -599,12 +599,12 @@ pub(crate) fn render_score_breakdown(frame: &mut Frame, area: Rect, report: &Qua
         .split(area);
 
     // Header with overall score
-    let (_, grade_label) = grade_color_and_label(&report.grade);
+    let (_, grade_label) = grade_color_and_label(report.grade);
     let header = Paragraph::new(Line::from(vec![
         Span::styled("Overall Score: ", Style::default().fg(scheme.text)),
         Span::styled(
             format!("{:.0}/100", report.overall_score),
-            Style::default().fg(grade_color(&report.grade)).bold(),
+            Style::default().fg(grade_color(report.grade)).bold(),
         ),
         Span::styled(
             format!(" ({grade_label}) "),
@@ -625,7 +625,7 @@ pub(crate) fn render_score_breakdown(frame: &mut Frame, area: Rect, report: &Qua
     frame.render_widget(header, chunks[0]);
 
     // Weighted breakdown table
-    let weights = get_profile_weights(&report.profile);
+    let weights = get_profile_weights(report.profile);
     let rows = vec![
         create_breakdown_row(
             "Completeness",
@@ -1059,7 +1059,7 @@ pub(crate) fn render_quality_recommendations(
                     Span::raw("      "),
                     Span::styled("Why: ", Style::default().fg(scheme.accent)),
                     Span::styled(
-                        get_recommendation_reason(&rec.category),
+                        get_recommendation_reason(rec.category),
                         Style::default().fg(scheme.text_muted),
                     ),
                 ]));

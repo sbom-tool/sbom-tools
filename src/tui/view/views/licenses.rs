@@ -135,8 +135,8 @@ fn render_license_details(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
 
         let mut lines = crate::tui::shared::licenses::render_license_metadata_lines(
             license,
-            &info.category,
-            &info.risk_level,
+            info.category,
+            info.risk_level,
             info.family,
             *count,
             is_dual,
@@ -269,11 +269,7 @@ fn get_components_with_license(app: &ViewApp, license: &str) -> Vec<String> {
         };
 
         if has_license {
-            let name = if let Some(v) = &comp.version {
-                format!("{}@{}", comp.name, v)
-            } else {
-                comp.name.clone()
-            };
+            let name = comp.version.as_ref().map_or_else(|| comp.name.clone(), |v| format!("{}@{}", comp.name, v));
             components.push(name);
         }
     }

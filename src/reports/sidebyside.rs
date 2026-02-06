@@ -43,12 +43,14 @@ impl SideBySideReporter {
     }
 
     /// Set terminal width
+    #[must_use]
     pub fn width(mut self, width: usize) -> Self {
         self.width = width;
         self
     }
 
     /// Disable colors
+    #[must_use]
     pub fn no_colors(mut self) -> Self {
         self.use_colors = false;
         self

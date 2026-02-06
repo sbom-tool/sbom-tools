@@ -586,10 +586,10 @@ fn render_dependencies_tab(
     } else {
         for dep in direct_deps.iter().take(10) {
             let version = dep.version.as_deref().unwrap_or("");
-            let vuln_indicator = if !dep.vulnerabilities.is_empty() {
-                format!(" [{}]", dep.vulnerabilities.len())
-            } else {
+            let vuln_indicator = if dep.vulnerabilities.is_empty() {
                 String::new()
+            } else {
+                format!(" [{}]", dep.vulnerabilities.len())
             };
             let vuln_color = if dep.vulnerabilities.is_empty() {
                 scheme.text_muted

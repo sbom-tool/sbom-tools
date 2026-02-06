@@ -150,12 +150,13 @@ impl EcosystemRules {
     pub fn normalize_name(&self, name: &str, ecosystem: &Ecosystem) -> String {
         let eco_key = Self::ecosystem_key(ecosystem);
 
-        if let Some(eco_config) = self.config.ecosystems.get(&eco_key) {
-            self.apply_normalization(name, eco_config)
-        } else {
-            // Fallback to basic normalization
-            name.to_lowercase()
-        }
+        self.config.ecosystems.get(&eco_key).map_or_else(
+            || {
+                // Fallback to basic normalization
+                name.to_lowercase()
+            },
+            |eco_config| self.apply_normalization(name, eco_config),
+        )
     }
 
     /// Apply normalization rules from config
@@ -201,13 +202,14 @@ impl EcosystemRules {
         match norm.scope_handling {
             ScopeHandling::Lowercase => name.to_lowercase(),
             ScopeHandling::PreserveScopeCase => {
-                if let Some(slash_pos) = name.find('/') {
-                    let scope = &name[..slash_pos];
-                    let pkg_name = &name[slash_pos + 1..];
-                    format!("{}/{}", scope.to_lowercase(), pkg_name.to_lowercase())
-                } else {
-                    name.to_lowercase()
-                }
+                name.find('/').map_or_else(
+                    || name.to_lowercase(),
+                    |slash_pos| {
+                        let scope = &name[..slash_pos];
+                        let pkg_name = &name[slash_pos + 1..];
+                        format!("{}/{}", scope.to_lowercase(), pkg_name.to_lowercase())
+                    },
+                )
             }
             ScopeHandling::PreserveCase => name.to_string(),
         }
@@ -371,11 +373,7 @@ impl EcosystemRules {
 
         let eco_key = Self::ecosystem_key(ecosystem);
 
-        if let Some(patterns) = self.suspicious_patterns.get(&eco_key) {
-            patterns.iter().any(|re| re.is_match(name))
-        } else {
-            false
-        }
+        self.suspicious_patterns.get(&eco_key).is_some_and(|patterns| patterns.iter().any(|re| re.is_match(name)))
     }
 
     /// Check if a package is a known malicious package
@@ -387,15 +385,13 @@ impl EcosystemRules {
         let eco_key = Self::ecosystem_key(ecosystem);
         let name_lower = name.to_lowercase();
 
-        if let Some(eco_config) = self.config.ecosystems.get(&eco_key) {
+        self.config.ecosystems.get(&eco_key).is_some_and(|eco_config| {
             eco_config
                 .security
                 .known_malicious
                 .iter()
                 .any(|m| m.to_lowercase() == name_lower)
-        } else {
-            false
-        }
+        })
     }
 
     /// Get the migrated group ID (for Maven javax -> jakarta, etc.)

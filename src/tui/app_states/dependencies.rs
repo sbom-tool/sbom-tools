@@ -15,7 +15,7 @@ pub enum DependencySort {
 }
 
 impl DependencySort {
-    pub fn next(&self) -> Self {
+    pub fn next(self) -> Self {
         match self {
             Self::Name => Self::Depth,
             Self::Depth => Self::VulnCount,

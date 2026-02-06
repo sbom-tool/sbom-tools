@@ -154,16 +154,16 @@ pub fn load_config_file(path: &Path) -> Result<AppConfig, ConfigFileError> {
 
 /// Load config from discovered file, or return default.
 pub fn load_or_default(explicit_path: Option<&Path>) -> (AppConfig, Option<PathBuf>) {
-    match discover_config_file(explicit_path) {
-        Some(path) => match load_config_file(&path) {
+    discover_config_file(explicit_path).map_or_else(
+        || (AppConfig::default(), None),
+        |path| match load_config_file(&path) {
             Ok(config) => (config, Some(path)),
             Err(e) => {
                 tracing::warn!("Failed to load config from {}: {}", path.display(), e);
                 (AppConfig::default(), None)
             }
         },
-        None => (AppConfig::default(), None),
-    }
+    )
 }
 
 // ============================================================================

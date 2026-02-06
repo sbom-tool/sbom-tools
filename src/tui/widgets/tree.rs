@@ -334,13 +334,11 @@ impl<'a> StatefulWidget for Tree<'a> {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         // Handle block separately to avoid borrow issues
-        let inner_area = if let Some(ref b) = self.block {
+        let inner_area = self.block.as_ref().map_or(area, |b| {
             let inner = b.inner(area);
             b.clone().render(area, buf);
             inner
-        } else {
-            area
-        };
+        });
 
         if inner_area.width < 4 || inner_area.height < 1 {
             return;
@@ -467,7 +465,7 @@ impl<'a> StatefulWidget for Tree<'a> {
             // Vulnerability indicator with severity badge
             if item.vuln_count > 0 {
                 // Get severity color
-                let (sev_char, sev_color) = if let Some(ref sev) = item.max_severity {
+                let (sev_char, sev_color) = item.max_severity.as_ref().map_or(('?', scheme.muted), |sev| {
                     match sev.to_lowercase().as_str() {
                         "critical" => ('C', scheme.critical),
                         "high" => ('H', scheme.high),
@@ -475,9 +473,7 @@ impl<'a> StatefulWidget for Tree<'a> {
                         "low" => ('L', scheme.low),
                         _ => ('?', scheme.muted),
                     }
-                } else {
-                    ('?', scheme.muted)
-                };
+                });
 
                 // Space before indicator
                 if x < area.x + area.width {

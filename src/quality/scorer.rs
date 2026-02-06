@@ -43,7 +43,7 @@ impl ScoringProfile {
     }
 
     /// Get weights for this profile
-    fn weights(&self) -> ScoringWeights {
+    fn weights(self) -> ScoringWeights {
         match self {
             Self::Minimal => ScoringWeights {
                 completeness: 0.5,
@@ -247,6 +247,7 @@ impl QualityScorer {
     }
 
     /// Set custom completeness weights
+    #[must_use]
     pub fn with_completeness_weights(mut self, weights: CompletenessWeights) -> Self {
         self.completeness_weights = weights;
         self
@@ -272,12 +273,17 @@ impl QualityScorer {
 
         // Calculate weighted overall score
         let weights = self.profile.weights();
-        let overall_score = (completeness_score * weights.completeness
-            + identifier_score * weights.identifiers
-            + license_score * weights.licenses
-            + vulnerability_score * weights.vulnerabilities
-            + dependency_score * weights.dependencies)
-            .min(100.0);
+        let overall_score = dependency_score.mul_add(
+            weights.dependencies,
+            vulnerability_score.mul_add(
+                weights.vulnerabilities,
+                license_score.mul_add(
+                    weights.licenses,
+                    completeness_score.mul_add(weights.completeness, identifier_score * weights.identifiers),
+                ),
+            ),
+        )
+        .min(100.0);
 
         // Run compliance check
         let compliance_checker = ComplianceChecker::new(self.profile.compliance_level());

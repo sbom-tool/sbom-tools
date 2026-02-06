@@ -1418,7 +1418,7 @@ pub enum ComponentDetailTab {
 }
 
 impl ComponentDetailTab {
-    pub fn title(&self) -> &'static str {
+    pub fn title(self) -> &'static str {
         match self {
             Self::Overview => "Overview",
             Self::Identifiers => "Identifiers",
@@ -1427,7 +1427,7 @@ impl ComponentDetailTab {
         }
     }
 
-    pub fn shortcut(&self) -> &'static str {
+    pub fn shortcut(self) -> &'static str {
         match self {
             Self::Overview => "1",
             Self::Identifiers => "2",
@@ -1792,7 +1792,7 @@ impl VulnSortBy {
         }
     }
 
-    pub fn label(&self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::Severity => "Severity",
             Self::Cvss => "CVSS",

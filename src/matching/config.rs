@@ -211,12 +211,14 @@ impl FuzzyMatchConfig {
     }
 
     /// Enable multi-field scoring with the given weights.
+    #[must_use]
     pub fn with_multi_field(mut self, weights: MultiFieldWeights) -> Self {
         self.field_weights = Some(weights);
         self
     }
 
     /// Set a custom threshold value.
+    #[must_use]
     pub fn with_threshold(mut self, threshold: f64) -> Self {
         self.threshold = threshold;
         self

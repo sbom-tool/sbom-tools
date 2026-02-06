@@ -8,7 +8,7 @@ use super::app_states::{
 use crate::diff::SlaStatus;
 
 /// Check whether a vulnerability matches the active filter.
-fn matches_vuln_filter(vuln: &crate::diff::VulnerabilityDetail, filter: &VulnFilter) -> bool {
+fn matches_vuln_filter(vuln: &crate::diff::VulnerabilityDetail, filter: VulnFilter) -> bool {
     match filter {
         VulnFilter::Critical => vuln.severity == "Critical",
         VulnFilter::High => vuln.severity == "High" || vuln.severity == "Critical",
@@ -22,7 +22,7 @@ fn matches_vuln_filter(vuln: &crate::diff::VulnerabilityDetail, filter: &VulnFil
 
 /// Determine which vulnerability categories (introduced, resolved, persistent)
 /// should be included for a given filter.
-fn vuln_category_includes(filter: &VulnFilter) -> (bool, bool, bool) {
+fn vuln_category_includes(filter: VulnFilter) -> (bool, bool, bool) {
     let introduced = matches!(
         filter,
         VulnFilter::All
@@ -151,7 +151,7 @@ impl App {
         let Some(diff) = self.data.diff_result.as_ref() else {
             return Vec::new();
         };
-        let filter = &self.tabs.vulnerabilities.filter;
+        let filter = self.tabs.vulnerabilities.filter;
         let sort = &self.tabs.vulnerabilities.sort_by;
         let mut all_vulns: Vec<DiffVulnItem<'_>> = Vec::new();
 
@@ -260,27 +260,26 @@ impl App {
 
         // Cache miss: compute full list, extract stable indices, then drop items
         let items = self.diff_vulnerability_items();
-        let indices: Vec<(DiffVulnStatus, usize)> = if let Some(diff) =
-            self.data.diff_result.as_ref()
-        {
-            items
-                .iter()
-                .filter_map(|item| {
-                    let list = match item.status {
-                        DiffVulnStatus::Introduced => &diff.vulnerabilities.introduced,
-                        DiffVulnStatus::Resolved => &diff.vulnerabilities.resolved,
-                        DiffVulnStatus::Persistent => &diff.vulnerabilities.persistent,
-                    };
-                    // Find the index by pointer identity
-                    let ptr = item.vuln as *const crate::diff::VulnerabilityDetail;
-                    list.iter()
-                        .position(|v| std::ptr::eq(v, ptr))
-                        .map(|idx| (item.status, idx))
-                })
-                .collect()
-        } else {
-            Vec::new()
-        };
+        let indices: Vec<(DiffVulnStatus, usize)> = self.data.diff_result.as_ref().map_or_else(
+            Vec::new,
+            |diff| {
+                items
+                    .iter()
+                    .filter_map(|item| {
+                        let list = match item.status {
+                            DiffVulnStatus::Introduced => &diff.vulnerabilities.introduced,
+                            DiffVulnStatus::Resolved => &diff.vulnerabilities.resolved,
+                            DiffVulnStatus::Persistent => &diff.vulnerabilities.persistent,
+                        };
+                        // Find the index by pointer identity
+                        let ptr = item.vuln as *const crate::diff::VulnerabilityDetail;
+                        list.iter()
+                            .position(|v| std::ptr::eq(v, ptr))
+                            .map(|idx| (item.status, idx))
+                    })
+                    .collect()
+            },
+        );
         drop(items);
 
         self.tabs.vulnerabilities.cached_key = Some(current_key);
@@ -319,7 +318,7 @@ impl App {
         let Some(diff) = self.data.diff_result.as_ref() else {
             return 0;
         };
-        let filter = &self.tabs.vulnerabilities.filter;
+        let filter = self.tabs.vulnerabilities.filter;
 
         let (include_introduced, include_resolved, include_persistent) =
             vuln_category_includes(filter);

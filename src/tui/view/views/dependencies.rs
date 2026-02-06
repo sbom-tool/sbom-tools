@@ -497,11 +497,7 @@ fn build_dependency_graph(app: &mut ViewApp) -> DependencyGraph {
     // Build name mapping and vuln counts
     for (id, comp) in &app.sbom.components {
         let id_str = id.value().to_string();
-        let display_name = if let Some(v) = &comp.version {
-            format!("{}@{}", comp.name, v)
-        } else {
-            comp.name.clone()
-        };
+        let display_name = comp.version.as_ref().map_or_else(|| comp.name.clone(), |v| format!("{}@{}", comp.name, v));
         names.insert(id_str.clone(), display_name);
         vuln_counts.insert(id_str, comp.vulnerabilities.len());
     }
@@ -543,15 +539,13 @@ fn calculate_max_depth(deps: &DependencyGraph) -> usize {
         }
         visited.insert(node.to_string());
 
-        let child_depth = if let Some(children) = deps.edges.get(node) {
+        let child_depth = deps.edges.get(node).map_or(0, |children| {
             children
                 .iter()
                 .map(|c| depth_of(c, deps, visited))
                 .max()
                 .unwrap_or(0)
-        } else {
-            0
-        };
+        });
 
         visited.remove(node);
         child_depth + 1

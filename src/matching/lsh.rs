@@ -232,11 +232,7 @@ impl LshIndex {
     ///
     /// Useful for diffing: build index from new SBOM, query with old SBOM components.
     pub fn find_candidates_for_id(&self, id: &CanonicalId) -> Vec<CanonicalId> {
-        if let Some(signature) = self.signatures.get(id) {
-            self.find_candidates_by_signature(signature)
-        } else {
-            Vec::new()
-        }
+        self.signatures.get(id).map_or_else(Vec::new, |signature| self.find_candidates_by_signature(signature))
     }
 
     /// Get the MinHash signature for a component.

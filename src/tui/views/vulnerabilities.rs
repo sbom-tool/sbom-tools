@@ -110,8 +110,8 @@ pub(crate) fn render_vulnerabilities(frame: &mut Frame, area: Rect, app: &mut Ap
 }
 
 fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
-    let filter = &app.tabs.vulnerabilities.filter;
-    let sort = &app.tabs.vulnerabilities.sort_by;
+    let filter = app.tabs.vulnerabilities.filter;
+    let sort = app.tabs.vulnerabilities.sort_by;
 
     let sort_label = sort.label();
 
@@ -259,7 +259,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(paragraph, area);
 }
 
-fn filter_badge(filter: &VulnFilter) -> Span<'static> {
+fn filter_badge(filter: VulnFilter) -> Span<'static> {
     let (label, color) = match filter {
         VulnFilter::All => ("All", colors().primary),
         VulnFilter::Introduced => ("Introduced", colors().removed),
@@ -515,18 +515,16 @@ fn build_grouped_rows<'a>(
             }
             VulnRenderItem::VulnRow(idx) => match vuln_data {
                 VulnListData::Diff(items) => {
-                    if let Some(row) = items.get(*idx) {
-                        build_single_diff_row(row, &scheme)
-                    } else {
-                        Row::new(vec![Cell::from("")])
-                    }
+                    items.get(*idx).map_or_else(
+                        || Row::new(vec![Cell::from("")]),
+                        |row| build_single_diff_row(row, &scheme),
+                    )
                 }
                 VulnListData::View(items) => {
-                    if let Some(item) = items.get(*idx) {
-                        build_single_view_row(item, cached_depths, &scheme)
-                    } else {
-                        Row::new(vec![Cell::from("")])
-                    }
+                    items.get(*idx).map_or_else(
+                        || Row::new(vec![Cell::from("")]),
+                        |item| build_single_view_row(item, cached_depths, &scheme),
+                    )
                 }
                 VulnListData::Empty => Row::new(vec![Cell::from("")]),
             },
@@ -692,14 +690,13 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
                     format!(" {severity} "),
                     Style::default().fg(sev_color).bold(),
                 ),
-                if let Some(score) = cvss {
-                    Span::styled(
+                cvss.map_or_else(
+                    || Span::raw(""),
+                    |score| Span::styled(
                         format!("  CVSS: {score:.1}"),
                         Style::default().fg(colors().text),
-                    )
-                } else {
-                    Span::raw("")
-                },
+                    ),
+                ),
             ]),
             Line::from(""),
             // Vulnerability ID
@@ -1040,14 +1037,13 @@ fn format_sla_cell(
             Style::default().fg(scheme.text_muted),
         )),
         SlaStatus::NoDueDate => {
-            if let Some(age) = days_since_published {
-                Cell::from(Span::styled(
+            days_since_published.map_or_else(
+                || Cell::from("-".to_string()),
+                |age| Cell::from(Span::styled(
                     format!("{age}d old"),
                     Style::default().fg(scheme.text_muted),
-                ))
-            } else {
-                Cell::from("-".to_string())
-            }
+                )),
+            )
         }
     }
 }

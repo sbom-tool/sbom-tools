@@ -36,6 +36,7 @@ impl SummaryReporter {
     }
 
     /// Disable colored output
+    #[must_use]
     pub fn no_color(mut self) -> Self {
         self.colored = false;
         self
@@ -275,6 +276,7 @@ impl TableReporter {
     }
 
     /// Disable colored output
+    #[must_use]
     pub fn no_color(mut self) -> Self {
         self.colored = false;
         self

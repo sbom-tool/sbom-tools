@@ -69,13 +69,12 @@ impl RuleEngine {
             .map(|rule| match rule {
                 ExclusionRule::Exact(_) => Ok(None),
                 ExclusionRule::Conditional { regex, .. } => {
-                    if let Some(re) = regex {
-                        Regex::new(re)
+                    regex.as_ref().map_or_else(
+                        || Ok(None),
+                        |re| Regex::new(re)
                             .map(Some)
-                            .map_err(|e| format!("Invalid exclusion regex '{re}': {e}"))
-                    } else {
-                        Ok(None)
-                    }
+                            .map_err(|e| format!("Invalid exclusion regex '{re}': {e}")),
+                    )
                 }
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -87,11 +86,7 @@ impl RuleEngine {
             .map(|rule| match rule {
                 ExclusionRule::Exact(_) => Ok(None),
                 ExclusionRule::Conditional { pattern, .. } => {
-                    if let Some(pat) = pattern {
-                        compile_glob(pat).map(Some)
-                    } else {
-                        Ok(None)
-                    }
+                    pattern.as_ref().map_or_else(|| Ok(None), |pat| compile_glob(pat).map(Some))
                 }
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -106,13 +101,12 @@ impl RuleEngine {
                     .map(|alias| match alias {
                         AliasPattern::Exact(_) => Ok(None),
                         AliasPattern::Pattern { regex, .. } => {
-                            if let Some(re) = regex {
-                                Regex::new(re)
+                            regex.as_ref().map_or_else(
+                                || Ok(None),
+                                |re| Regex::new(re)
                                     .map(Some)
-                                    .map_err(|e| format!("Invalid alias regex '{re}': {e}"))
-                            } else {
-                                Ok(None)
-                            }
+                                    .map_err(|e| format!("Invalid alias regex '{re}': {e}")),
+                            )
                         }
                     })
                     .collect::<Result<Vec<_>, _>>()
@@ -129,11 +123,7 @@ impl RuleEngine {
                     .map(|alias| match alias {
                         AliasPattern::Exact(_) => Ok(None),
                         AliasPattern::Pattern { pattern, .. } => {
-                            if let Some(pat) = pattern {
-                                compile_glob(pat).map(Some)
-                            } else {
-                                Ok(None)
-                            }
+                            pattern.as_ref().map_or_else(|| Ok(None), |pat| compile_glob(pat).map(Some))
                         }
                     })
                     .collect::<Result<Vec<_>, _>>()

@@ -373,8 +373,13 @@ fn format_compliance_line(
     result: Option<&ComplianceResult>,
     scheme: &crate::tui::theme::ColorScheme,
 ) -> (String, Style, String) {
-    match result {
-        Some(r) => {
+    result.map_or_else(
+        || (
+            "N/A".to_string(),
+            Style::default().fg(scheme.muted),
+            String::new(),
+        ),
+        |r| {
             let status = if r.is_compliant { "OK" } else { "FAIL" };
             let style = if r.is_compliant {
                 Style::default().fg(scheme.success).bold()
@@ -383,13 +388,8 @@ fn format_compliance_line(
             };
             let counts = format!("E{} W{} I{}", r.error_count, r.warning_count, r.info_count);
             (status.to_string(), style, counts)
-        }
-        None => (
-            "N/A".to_string(),
-            Style::default().fg(scheme.muted),
-            String::new(),
-        ),
-    }
+        },
+    )
 }
 
 fn render_vulnerabilities_card(frame: &mut Frame, area: Rect, result: &crate::diff::DiffResult) {

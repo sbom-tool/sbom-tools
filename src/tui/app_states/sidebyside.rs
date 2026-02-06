@@ -20,7 +20,7 @@ impl AlignmentMode {
     }
 
     /// Get display name
-    pub fn name(&self) -> &'static str {
+    pub fn name(self) -> &'static str {
         match self {
             Self::Grouped => "Grouped",
             Self::Aligned => "Aligned",
@@ -48,7 +48,7 @@ impl ScrollSyncMode {
     }
 
     /// Get display name
-    pub fn name(&self) -> &'static str {
+    pub fn name(self) -> &'static str {
         match self {
             Self::Independent => "Independent",
             Self::Locked => "Locked",
@@ -495,10 +495,10 @@ impl SideBySideState {
         if self.change_indices.is_empty() {
             return "0/0".to_string();
         }
-        match self.current_change_idx {
-            Some(idx) => format!("{}/{}", idx + 1, self.change_indices.len()),
-            None => format!("-/{}", self.change_indices.len()),
-        }
+        self.current_change_idx.map_or_else(
+            || format!("-/{}", self.change_indices.len()),
+            |idx| format!("{}/{}", idx + 1, self.change_indices.len()),
+        )
     }
 
     /// Get current search match position string

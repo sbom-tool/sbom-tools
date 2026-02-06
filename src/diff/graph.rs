@@ -170,11 +170,7 @@ impl<'a> DependencyGraph<'a> {
             .components
             .get(component_id)
             .map(|c| {
-                if let Some(v) = &c.version {
-                    format!("{}@{}", c.name, v)
-                } else {
-                    c.name.clone()
-                }
+                c.version.as_ref().map_or_else(|| c.name.clone(), |v| format!("{}@{}", c.name, v))
             })
             .unwrap_or_else(|| component_id.to_string())
     }
@@ -335,10 +331,7 @@ fn detect_reparenting(
                 // Check if the parents are different (accounting for component matching)
                 let old_parent_matched = matches.get(old_parent).and_then(|opt| opt.as_ref());
 
-                let is_reparented = match old_parent_matched {
-                    Some(old_parent_in_new) => old_parent_in_new != new_parent,
-                    None => true, // Old parent doesn't exist in new SBOM
-                };
+                let is_reparented = !old_parent_matched.is_some_and(|old_parent_in_new| old_parent_in_new == new_parent);
 
                 if is_reparented {
                     let component_name = new_graph.get_component_name(new_id);

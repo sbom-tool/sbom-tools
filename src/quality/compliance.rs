@@ -17,14 +17,14 @@ pub enum CraPhase {
 }
 
 impl CraPhase {
-    pub fn name(&self) -> &'static str {
+    pub fn name(self) -> &'static str {
         match self {
             Self::Phase1 => "Phase 1 (2027)",
             Self::Phase2 => "Phase 2 (2029)",
         }
     }
 
-    pub fn deadline(&self) -> &'static str {
+    pub fn deadline(self) -> &'static str {
         match self {
             Self::Phase1 => "11 December 2027",
             Self::Phase2 => "11 December 2029",

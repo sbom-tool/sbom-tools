@@ -154,12 +154,14 @@ impl MatchExplanation {
     }
 
     /// Add a score component to the breakdown.
+    #[must_use]
     pub fn with_score_component(mut self, component: ScoreComponent) -> Self {
         self.score_breakdown.push(component);
         self
     }
 
     /// Add a normalization that was applied.
+    #[must_use]
     pub fn with_normalization(mut self, normalization: impl Into<String>) -> Self {
         self.normalizations_applied.push(normalization.into());
         self

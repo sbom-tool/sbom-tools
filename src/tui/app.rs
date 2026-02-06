@@ -296,9 +296,9 @@ impl App {
 
             // Simple estimation: lower threshold = more matches, higher = fewer
             let ratio = if threshold < base_threshold {
-                1.0 + (base_threshold - threshold) * 2.0
+                (base_threshold - threshold).mul_add(2.0, 1.0)
             } else {
-                1.0 - (threshold - base_threshold) * 1.5
+                (threshold - base_threshold).mul_add(-1.5, 1.0)
             };
             ((current_matches as f64 * ratio).max(0.0)) as usize
         } else {
@@ -376,22 +376,22 @@ impl App {
             if !results.is_empty() {
                 (results, self.tabs.diff_compliance.selected_standard)
             } else if let Some(ref old_results) = self.data.old_compliance_results {
-                if !old_results.is_empty() {
-                    (old_results, self.tabs.diff_compliance.selected_standard)
-                } else {
+                if old_results.is_empty() {
                     self.set_status_message("No compliance results to export");
                     return;
+                } else {
+                    (old_results, self.tabs.diff_compliance.selected_standard)
                 }
             } else {
                 self.set_status_message("No compliance results to export");
                 return;
             }
         } else if let Some(ref old_results) = self.data.old_compliance_results {
-            if !old_results.is_empty() {
-                (old_results, self.tabs.diff_compliance.selected_standard)
-            } else {
+            if old_results.is_empty() {
                 self.set_status_message("No compliance results to export");
                 return;
+            } else {
+                (old_results, self.tabs.diff_compliance.selected_standard)
             }
         } else {
             self.set_status_message("No compliance results to export");

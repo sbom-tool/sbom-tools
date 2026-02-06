@@ -111,6 +111,7 @@ impl App {
     }
 
     /// Set enrichment statistics for the diff mode
+    #[must_use]
     #[cfg(feature = "enrichment")]
     pub fn with_enrichment_stats(
         mut self,

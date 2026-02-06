@@ -65,6 +65,7 @@ impl<'w, W: Write> StreamingJsonWriter<'w, W> {
     }
 
     /// Set the flush interval (number of items between flushes).
+    #[must_use]
     pub fn with_flush_interval(mut self, interval: usize) -> Self {
         self.flush_interval = interval.max(1);
         self
@@ -400,6 +401,7 @@ impl<'w, W: Write> NdjsonWriter<'w, W> {
     }
 
     /// Set the flush interval.
+    #[must_use]
     pub fn with_flush_interval(mut self, interval: usize) -> Self {
         self.flush_interval = interval.max(1);
         self

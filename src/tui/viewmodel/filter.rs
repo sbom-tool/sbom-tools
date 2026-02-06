@@ -48,9 +48,11 @@
 /// ```
 pub trait CycleFilter: Clone + Copy + Default {
     /// Get the next filter in the cycle.
+    #[must_use]
     fn next(&self) -> Self;
 
     /// Get the previous filter in the cycle.
+    #[must_use]
     fn prev(&self) -> Self;
 
     /// Get a display name for the filter.

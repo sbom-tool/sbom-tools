@@ -84,10 +84,7 @@ impl CanonicalId {
 
     /// Create a new canonical ID from name and version
     pub fn from_name_version(name: &str, version: Option<&str>) -> Self {
-        let value = match version {
-            Some(v) => format!("{}@{}", name.to_lowercase(), v),
-            None => name.to_lowercase(),
-        };
+        let value = version.map_or_else(|| name.to_lowercase(), |v| format!("{}@{}", name.to_lowercase(), v));
         Self {
             value,
             source: IdSource::NameVersion,
@@ -238,15 +235,20 @@ impl ComponentIdentifiers {
     /// generate synthetic IDs from component metadata.
     pub fn canonical_id(&self) -> CanonicalId {
         // Tiered fallback: PURL → CPE → SWID → format_id
-        if let Some(purl) = &self.purl {
-            CanonicalId::from_purl(purl)
-        } else if let Some(cpe) = self.cpe.first() {
-            CanonicalId::from_cpe(cpe)
-        } else if let Some(swid) = &self.swid {
-            CanonicalId::from_swid(swid)
-        } else {
-            CanonicalId::from_format_id(&self.format_id)
-        }
+        self.purl.as_ref().map_or_else(
+            || {
+                self.cpe.first().map_or_else(
+                    || {
+                        self.swid.as_ref().map_or_else(
+                            || CanonicalId::from_format_id(&self.format_id),
+                            |swid| CanonicalId::from_swid(swid),
+                        )
+                    },
+                    |cpe| CanonicalId::from_cpe(cpe),
+                )
+            },
+            |purl| CanonicalId::from_purl(purl),
+        )
     }
 
     /// Get the best available canonical ID with component context for stable fallback
@@ -303,15 +305,15 @@ impl ComponentIdentifiers {
 
         // Tier 5: Format-specific (least stable - may be UUID)
         let id = CanonicalId::from_format_id(&self.format_id);
-        let warning = if !id.is_stable() {
+        let warning = if id.is_stable() {
             Some(format!(
-                "Component uses unstable format-specific ID '{}'. \
-                 This may cause inaccurate diff results across SBOM regenerations.",
+                "Component uses format-specific ID '{}' without standard identifiers.",
                 self.format_id
             ))
         } else {
             Some(format!(
-                "Component uses format-specific ID '{}' without standard identifiers.",
+                "Component uses unstable format-specific ID '{}'. \
+                 This may cause inaccurate diff results across SBOM regenerations.",
                 self.format_id
             ))
         };
@@ -521,10 +523,7 @@ impl ComponentRef {
 
     /// Get display string with version if available
     pub fn display_with_version(&self) -> String {
-        match &self.version {
-            Some(v) => format!("{}@{}", self.name, v),
-            None => self.name.clone(),
-        }
+        self.version.as_ref().map_or_else(|| self.name.clone(), |v| format!("{}@{}", self.name, v))
     }
 
     /// Check if this ref matches a given ID

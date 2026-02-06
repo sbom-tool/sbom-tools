@@ -156,10 +156,7 @@ fn render_severity_card(
 
 fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let scheme = colors();
-    let filter_label = match &app.vuln_state.filter_severity {
-        Some(s) => s.to_uppercase(),
-        None => "All".to_string(),
-    };
+    let filter_label = app.vuln_state.filter_severity.as_ref().map_or_else(|| "All".to_string(), |s| s.to_uppercase());
 
     let group_label = match app.vuln_state.group_by {
         VulnGroupBy::Severity => "Severity",
@@ -934,7 +931,22 @@ fn render_vuln_detail_panel(
             ),
         ]));
         // Show smart-grouped components
-        if !v.grouped_components.is_empty() {
+        if v.grouped_components.is_empty() {
+            // Fallback: show raw component names
+            for (i, comp) in v.affected_components.iter().take(5).enumerate() {
+                let display = extract_component_display_name(comp, v.description.as_deref());
+                lines.push(Line::from(Span::styled(
+                    format!("  {}. {}", i + 1, display),
+                    Style::default().fg(scheme.text),
+                )));
+            }
+            if v.affected_count > 5 {
+                lines.push(Line::from(Span::styled(
+                    format!("  ... and {} more", v.affected_count - 5),
+                    Style::default().fg(scheme.muted),
+                )));
+            }
+        } else {
             for (name, count) in v.grouped_components.iter().take(6) {
                 if *count > 1 {
                     lines.push(Line::from(Span::styled(
@@ -952,21 +964,6 @@ fn render_vuln_detail_panel(
             if total_shown < v.affected_count {
                 lines.push(Line::from(Span::styled(
                     format!("  ... and {} more", v.affected_count - total_shown),
-                    Style::default().fg(scheme.muted),
-                )));
-            }
-        } else {
-            // Fallback: show raw component names
-            for (i, comp) in v.affected_components.iter().take(5).enumerate() {
-                let display = extract_component_display_name(comp, v.description.as_deref());
-                lines.push(Line::from(Span::styled(
-                    format!("  {}. {}", i + 1, display),
-                    Style::default().fg(scheme.text),
-                )));
-            }
-            if v.affected_count > 5 {
-                lines.push(Line::from(Span::styled(
-                    format!("  ... and {} more", v.affected_count - 5),
                     Style::default().fg(scheme.muted),
                 )));
             }
@@ -1300,10 +1297,7 @@ fn capitalize_package_name(name: &str) -> String {
         _ => {
             // Default: capitalize first letter
             let mut chars = name.chars();
-            match chars.next() {
-                None => String::new(),
-                Some(first) => first.to_uppercase().chain(chars).collect(),
-            }
+            chars.next().map_or_else(String::new, |first| first.to_uppercase().chain(chars).collect())
         }
     }
 }

@@ -450,6 +450,7 @@ impl ComponentChange {
     }
 
     /// Add match information to an existing change
+    #[must_use]
     pub fn with_match_info(mut self, match_info: MatchInfo) -> Self {
         self.match_info = Some(match_info);
         self
@@ -513,6 +514,7 @@ impl MatchInfo {
     }
 
     /// Create a match info with a custom confidence interval
+    #[must_use]
     pub fn with_confidence_interval(mut self, ci: ConfidenceInterval) -> Self {
         self.confidence_interval = Some(ci);
         self
@@ -662,11 +664,7 @@ impl SlaStatus {
             Self::Overdue(days) => format!("{days}d late"),
             Self::DueSoon(days) | Self::OnTrack(days) => format!("{days}d left"),
             Self::NoDueDate => {
-                if let Some(age) = days_since_published {
-                    format!("{age}d old")
-                } else {
-                    "-".to_string()
-                }
+                days_since_published.map_or_else(|| "-".to_string(), |age| format!("{age}d old"))
             }
         }
     }
@@ -758,14 +756,13 @@ impl VulnerabilityDetail {
         let published_date = vuln.published.map(|dt| dt.format("%Y-%m-%d").to_string());
 
         // Get KEV info if present
-        let (kev_due_date, days_until_due) = if let Some(kev) = &vuln.kev_info {
-            (
+        let (kev_due_date, days_until_due) = vuln.kev_info.as_ref().map_or(
+            (None, None),
+            |kev| (
                 Some(kev.due_date.format("%Y-%m-%d").to_string()),
                 Some(kev.days_until_due()),
-            )
-        } else {
-            (None, None)
-        };
+            ),
+        );
 
         Self {
             id: vuln.id.clone(),

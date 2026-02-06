@@ -19,6 +19,7 @@ impl SarifReporter {
     }
 
     /// Set whether to include informational results
+    #[must_use]
     pub fn include_info(mut self, include: bool) -> Self {
         self.include_info = include;
         self

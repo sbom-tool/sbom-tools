@@ -100,7 +100,7 @@ pub enum MultiViewFilterPreset {
 }
 
 impl MultiViewFilterPreset {
-    pub fn label(&self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::All => "All",
             Self::HighDeviation => "High Deviation",
@@ -111,7 +111,7 @@ impl MultiViewFilterPreset {
         }
     }
 
-    pub fn next(&self) -> Self {
+    pub fn next(self) -> Self {
         match self {
             Self::All => Self::HighDeviation,
             Self::HighDeviation => Self::ChangesOnly,
@@ -135,7 +135,7 @@ pub enum MultiViewSortBy {
 }
 
 impl MultiViewSortBy {
-    pub fn label(&self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::Name => "Name",
             Self::Deviation => "Deviation",
@@ -145,7 +145,7 @@ impl MultiViewSortBy {
         }
     }
 
-    pub fn next(&self) -> Self {
+    pub fn next(self) -> Self {
         match self {
             Self::Name => Self::Deviation,
             Self::Deviation => Self::Changes,
@@ -172,7 +172,7 @@ impl SortDirection {
         };
     }
 
-    pub fn indicator(&self) -> &'static str {
+    pub fn indicator(self) -> &'static str {
         match self {
             Self::Ascending => "↑",
             Self::Descending => "↓",

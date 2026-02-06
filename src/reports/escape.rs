@@ -167,18 +167,12 @@ pub fn escape_markdown_list(s: &str) -> String {
 
 /// Helper to escape an Option<&str> for HTML, returning "-" for None.
 pub fn escape_html_opt(s: Option<&str>) -> String {
-    match s {
-        Some(v) => escape_html(v),
-        None => "-".to_string(),
-    }
+    s.map_or_else(|| "-".to_string(), escape_html)
 }
 
 /// Helper to escape an Option<&str> for Markdown tables, returning "-" for None.
 pub fn escape_md_opt(s: Option<&str>) -> String {
-    match s {
-        Some(v) => escape_markdown_table(v),
-        None => "-".to_string(),
-    }
+    s.map_or_else(|| "-".to_string(), escape_markdown_table)
 }
 
 #[cfg(test)]

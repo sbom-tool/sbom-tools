@@ -200,13 +200,16 @@ impl AdaptiveThreshold {
         let stats = ScoreStats::from_scores(&scores);
 
         // Choose method based on config
-        let (threshold, method) = if let Some(target_ratio) = self.config.target_match_ratio {
-            let t = self.binary_search_threshold(&scores, target_ratio);
-            (t, AdaptiveMethod::TargetRatio)
-        } else {
-            let t = self.otsu_threshold(&scores);
-            (t, AdaptiveMethod::Otsu)
-        };
+        let (threshold, method) = self.config.target_match_ratio.map_or_else(
+            || {
+                let t = self.otsu_threshold(&scores);
+                (t, AdaptiveMethod::Otsu)
+            },
+            |target_ratio| {
+                let t = self.binary_search_threshold(&scores, target_ratio);
+                (t, AdaptiveMethod::TargetRatio)
+            },
+        );
 
         // Clamp to configured bounds
         let threshold = threshold.clamp(self.config.min_threshold, self.config.max_threshold);

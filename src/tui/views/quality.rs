@@ -150,7 +150,7 @@ fn render_metrics_panel_with_explanation(
     label: &str,
 ) {
     let scheme = colors();
-    let weights = shared::get_profile_weights(&report.profile);
+    let weights = shared::get_profile_weights(report.profile);
 
     let rows = vec![
         ratatui::widgets::Row::new(vec![

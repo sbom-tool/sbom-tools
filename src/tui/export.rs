@@ -21,7 +21,7 @@ pub enum ExportFormat {
 
 impl ExportFormat {
     /// Get file extension for this format
-    pub(crate) fn extension(&self) -> &'static str {
+    pub(crate) fn extension(self) -> &'static str {
         match self {
             Self::Json => "json",
             Self::Markdown => "md",
@@ -61,10 +61,7 @@ pub(crate) fn export_diff(
 ) -> ExportResult {
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
     let filename = format!("sbom_tools_{}.{}", timestamp, format.extension());
-    let path = match output_dir {
-        Some(dir) => PathBuf::from(dir).join(&filename),
-        None => PathBuf::from(&filename),
-    };
+    let path = output_dir.map_or_else(|| PathBuf::from(&filename), |dir| PathBuf::from(dir).join(&filename));
 
     if let Some(report_format) = format.to_report_format() {
         export_with_reporter(report_format, result, old_sbom, new_sbom, &path)
@@ -85,10 +82,7 @@ pub(crate) fn export_view(
 ) -> ExportResult {
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
     let filename = format!("sbom_report_{}.{}", timestamp, format.extension());
-    let path = match output_dir {
-        Some(dir) => PathBuf::from(dir).join(&filename),
-        None => PathBuf::from(&filename),
-    };
+    let path = output_dir.map_or_else(|| PathBuf::from(&filename), |dir| PathBuf::from(dir).join(&filename));
 
     if let Some(report_format) = format.to_report_format() {
         export_view_with_reporter(report_format, sbom, &path)
@@ -192,10 +186,7 @@ pub(crate) fn export_compliance(
 
     let level_name = result.map_or_else(|| "all".to_string(), |r| r.level.name().to_lowercase().replace(' ', "_"));
     let filename = format!("compliance_{level_name}_{timestamp}.{ext}");
-    let path = match output_dir {
-        Some(dir) => PathBuf::from(dir).join(&filename),
-        None => PathBuf::from(&filename),
-    };
+    let path = output_dir.map_or_else(|| PathBuf::from(&filename), |dir| PathBuf::from(dir).join(&filename));
 
     match write_to_file(&path, &content) {
         Ok(()) => ExportResult {
@@ -243,12 +234,13 @@ fn compliance_to_json(
         })
     };
 
-    let output = if let Some(result) = results.get(selected) {
-        to_value(result)
-    } else {
-        let all: Vec<Value> = results.iter().map(to_value).collect();
-        json!({ "standards": all })
-    };
+    let output = results.get(selected).map_or_else(
+        || {
+            let all: Vec<Value> = results.iter().map(to_value).collect();
+            json!({ "standards": all })
+        },
+        to_value,
+    );
 
     serde_json::to_string_pretty(&output).unwrap_or_default()
 }

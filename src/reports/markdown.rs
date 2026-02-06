@@ -19,6 +19,7 @@ impl MarkdownReporter {
     }
 
     /// Set whether to include table of contents
+    #[must_use]
     pub fn include_toc(mut self, include: bool) -> Self {
         self.include_toc = include;
         self

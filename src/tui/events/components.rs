@@ -162,32 +162,32 @@ pub(super) fn get_components_tab_clipboard_info(app: &App, comp_name: &str) -> S
     match app.mode {
         AppMode::Diff => {
             let items = app.diff_component_items(app.tabs.components.filter);
-            if let Some(comp) = items.get(selected) {
-                format!(
+            items.get(selected).map_or_else(
+                || comp_name.to_string(),
+                |comp| format!(
                     "Component: {}\nID: {}\nVersion: {}\nEcosystem: {}",
                     comp.name,
                     comp.id,
                     comp.new_version.as_deref().or(comp.old_version.as_deref()).unwrap_or("unknown"),
                     comp.ecosystem.as_deref().unwrap_or("unknown")
-                )
-            } else {
-                comp_name.to_string()
-            }
+                ),
+            )
         }
         AppMode::View => {
             let items = app.view_component_items();
-            if let Some(comp) = items.get(selected) {
-                let vulns: Vec<_> = comp.vulnerabilities.iter().map(|v| v.id.as_str()).collect();
-                format!(
-                    "Component: {}\nVersion: {}\nEcosystem: {}\nVulnerabilities: {}",
-                    comp.name,
-                    comp.version.as_deref().unwrap_or("unknown"),
-                    comp.ecosystem.as_ref().map_or_else(|| "unknown".to_string(), std::string::ToString::to_string),
-                    if vulns.is_empty() { "None".to_string() } else { vulns.join(", ") }
-                )
-            } else {
-                comp_name.to_string()
-            }
+            items.get(selected).map_or_else(
+                || comp_name.to_string(),
+                |comp| {
+                    let vulns: Vec<_> = comp.vulnerabilities.iter().map(|v| v.id.as_str()).collect();
+                    format!(
+                        "Component: {}\nVersion: {}\nEcosystem: {}\nVulnerabilities: {}",
+                        comp.name,
+                        comp.version.as_deref().unwrap_or("unknown"),
+                        comp.ecosystem.as_ref().map_or_else(|| "unknown".to_string(), std::string::ToString::to_string),
+                        if vulns.is_empty() { "None".to_string() } else { vulns.join(", ") }
+                    )
+                },
+            )
         }
         _ => comp_name.to_string(),
     }

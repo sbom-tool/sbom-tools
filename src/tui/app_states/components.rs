@@ -125,7 +125,7 @@ pub enum ComponentFilter {
 }
 
 impl ComponentFilter {
-    pub fn label(&self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::All => "All",
             Self::Added => "Added",

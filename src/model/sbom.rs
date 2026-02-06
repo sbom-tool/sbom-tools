@@ -518,6 +518,7 @@ impl Component {
     }
 
     /// Set the PURL and update canonical ID
+    #[must_use]
     pub fn with_purl(mut self, purl: String) -> Self {
         self.identifiers.purl = Some(purl);
         self.canonical_id = self.identifiers.canonical_id();
@@ -536,6 +537,7 @@ impl Component {
     }
 
     /// Set the version and try to parse as semver
+    #[must_use]
     pub fn with_version(mut self, version: String) -> Self {
         self.semver = semver::Version::parse(&version).ok();
         self.version = Some(version);
@@ -577,10 +579,7 @@ impl Component {
 
     /// Get display name with version
     pub fn display_name(&self) -> String {
-        match &self.version {
-            Some(v) => format!("{}@{}", self.name, v),
-            None => self.name.clone(),
-        }
+        self.version.as_ref().map_or_else(|| self.name.clone(), |v| format!("{}@{}", self.name, v))
     }
 }
 

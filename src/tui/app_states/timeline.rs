@@ -257,7 +257,7 @@ pub enum TimelineSortBy {
 }
 
 impl TimelineSortBy {
-    pub fn label(&self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::Chronological => "Chronological",
             Self::Changes => "Changes",
@@ -266,7 +266,7 @@ impl TimelineSortBy {
         }
     }
 
-    pub fn next(&self) -> Self {
+    pub fn next(self) -> Self {
         match self {
             Self::Chronological => Self::Changes,
             Self::Changes => Self::ComponentCount,
@@ -288,7 +288,7 @@ pub enum TimelineComponentFilter {
 }
 
 impl TimelineComponentFilter {
-    pub fn label(&self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::All => "All",
             Self::Added => "Added",
@@ -298,7 +298,7 @@ impl TimelineComponentFilter {
         }
     }
 
-    pub fn next(&self) -> Self {
+    pub fn next(self) -> Self {
         match self {
             Self::All => Self::Added,
             Self::Added => Self::Removed,

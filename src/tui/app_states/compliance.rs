@@ -16,7 +16,7 @@ pub enum PolicyPreset {
 }
 
 impl PolicyPreset {
-    pub fn next(&self) -> Self {
+    pub fn next(self) -> Self {
         match self {
             Self::Enterprise => Self::Strict,
             Self::Strict => Self::Permissive,
@@ -27,7 +27,7 @@ impl PolicyPreset {
         }
     }
 
-    pub fn label(&self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::Enterprise => "Enterprise",
             Self::Strict => "Strict",
@@ -38,7 +38,7 @@ impl PolicyPreset {
         }
     }
 
-    pub fn description(&self) -> &'static str {
+    pub fn description(self) -> &'static str {
         match self {
             Self::Enterprise => "Standard enterprise security policy",
             Self::Strict => "Maximum security, minimal risk tolerance",
@@ -50,12 +50,12 @@ impl PolicyPreset {
     }
 
     /// Whether this preset delegates to the standards-based compliance checker.
-    pub fn is_standards_based(&self) -> bool {
+    pub fn is_standards_based(self) -> bool {
         matches!(self, Self::Cra | Self::Ntia | Self::Fda)
     }
 
     /// Get the corresponding ComplianceLevel for standards-based presets.
-    pub fn compliance_level(&self) -> Option<crate::quality::ComplianceLevel> {
+    pub fn compliance_level(self) -> Option<crate::quality::ComplianceLevel> {
         match self {
             Self::Cra => Some(crate::quality::ComplianceLevel::CraPhase2),
             Self::Ntia => Some(crate::quality::ComplianceLevel::NtiaMinimum),

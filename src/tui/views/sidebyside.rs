@@ -214,10 +214,10 @@ fn render_aligned_mode(frame: &mut Frame, area: Rect, app: &mut App) {
 
     // Render left panel
     let focus_right = app.tabs.side_by_side.focus_right;
-    let left_border_style = if !focus_right {
-        Style::default().fg(scheme.removed).bold()
-    } else {
+    let left_border_style = if focus_right {
         Style::default().fg(scheme.muted)
+    } else {
+        Style::default().fg(scheme.removed).bold()
     };
 
     let left_panel = Paragraph::new(left_lines).block(
@@ -316,8 +316,12 @@ fn render_aligned_row<'a>(
     };
 
     // Left side
-    let left_line = match &row.left_name {
-        Some(name) => {
+    let left_line = row.left_name.as_ref().map_or_else(
+        || Line::styled(
+            "  ...",
+            base_style.fg(scheme.muted).add_modifier(Modifier::DIM),
+        ),
+        |name| {
             let version = row.left_version.as_deref().unwrap_or("");
             let (name_spans, version_spans) =
                 highlight_with_search(name, version, search_query, scheme, row.change_type, false);
@@ -332,16 +336,16 @@ fn render_aligned_row<'a>(
             spans.extend(version_spans);
 
             Line::from(spans)
-        }
-        None => Line::styled(
+        },
+    );
+
+    // Right side
+    let right_line = row.right_name.as_ref().map_or_else(
+        || Line::styled(
             "  ...",
             base_style.fg(scheme.muted).add_modifier(Modifier::DIM),
         ),
-    };
-
-    // Right side
-    let right_line = match &row.right_name {
-        Some(name) => {
+        |name| {
             let version = row.right_version.as_deref().unwrap_or("");
             let (name_spans, version_spans) =
                 highlight_with_search(name, version, search_query, scheme, row.change_type, true);
@@ -356,12 +360,8 @@ fn render_aligned_row<'a>(
             spans.extend(version_spans);
 
             Line::from(spans)
-        }
-        None => Line::styled(
-            "  ...",
-            base_style.fg(scheme.muted).add_modifier(Modifier::DIM),
-        ),
-    };
+        },
+    );
 
     (left_line, right_line)
 }
@@ -387,21 +387,22 @@ fn highlight_with_search<'a>(
         ChangeType::Unchanged => scheme.text,
     };
 
-    let name_spans = if let Some(query) = search_query {
-        if !query.is_empty() {
-            highlight_search_matches(name, query, name_color, scheme.search_highlight_bg)
-        } else {
-            vec![Span::styled(
-                name.to_string(),
-                Style::default().fg(name_color),
-            )]
-        }
-    } else {
-        vec![Span::styled(
+    let name_spans = search_query.as_ref().map_or_else(
+        || vec![Span::styled(
             name.to_string(),
             Style::default().fg(name_color),
-        )]
-    };
+        )],
+        |query| {
+            if query.is_empty() {
+                vec![Span::styled(
+                    name.to_string(),
+                    Style::default().fg(name_color),
+                )]
+            } else {
+                highlight_search_matches(name, query, name_color, scheme.search_highlight_bg)
+            }
+        },
+    );
 
     let version_spans = vec![Span::styled(
         version.to_string(),
@@ -605,7 +606,9 @@ fn render_sidebyside_context_bar(frame: &mut Frame, area: Rect, app: &App) {
         "Focus: ",
         Style::default().fg(scheme.text_muted),
     ));
-    if !state.focus_right {
+    if state.focus_right {
+        spans.push(Span::styled(" Old ", Style::default().fg(scheme.removed)));
+    } else {
         spans.push(Span::styled(
             " ◄ Old ",
             Style::default()
@@ -613,8 +616,6 @@ fn render_sidebyside_context_bar(frame: &mut Frame, area: Rect, app: &App) {
                 .bg(scheme.removed)
                 .bold(),
         ));
-    } else {
-        spans.push(Span::styled(" Old ", Style::default().fg(scheme.removed)));
     }
     spans.push(Span::styled("│", Style::default().fg(scheme.muted)));
     if state.focus_right {

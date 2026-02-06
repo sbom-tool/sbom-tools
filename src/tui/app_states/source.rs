@@ -107,11 +107,7 @@ impl JsonTreeNode {
             Self::Object { key, index, .. }
             | Self::Array { key, index, .. }
             | Self::Leaf { key, index, .. } => {
-                if let Some(i) = index {
-                    format!("[{i}]")
-                } else {
-                    key.clone()
-                }
+                index.as_ref().map_or_else(|| key.clone(), |i| format!("[{i}]"))
             }
         };
         if parent_path.is_empty() {
@@ -154,11 +150,7 @@ impl JsonTreeNode {
             Self::Object { key, index, .. }
             | Self::Array { key, index, .. }
             | Self::Leaf { key, index, .. } => {
-                if let Some(i) = index {
-                    format!("[{i}]")
-                } else {
-                    key.clone()
-                }
+                index.as_ref().map_or_else(|| key.clone(), |i| format!("[{i}]"))
             }
         }
     }
@@ -225,20 +217,20 @@ pub struct SourcePanelState {
 impl SourcePanelState {
     /// Create a new panel state by parsing raw SBOM content.
     pub fn new(raw_content: &str) -> Self {
-        let (json_tree, raw_lines) = match serde_json::from_str::<serde_json::Value>(raw_content) {
-            Ok(value) => {
+        let (json_tree, raw_lines) = serde_json::from_str::<serde_json::Value>(raw_content).map_or_else(
+            |_| {
+                // Not valid JSON (e.g. XML, tag-value) — raw mode only
+                let lines: Vec<String> = raw_content.lines().map(std::string::ToString::to_string).collect();
+                (None, lines)
+            },
+            |value| {
                 let tree = JsonTreeNode::from_value("root".to_string(), None, &value);
                 let pretty = serde_json::to_string_pretty(&value)
                     .unwrap_or_else(|_| raw_content.to_string());
                 let lines: Vec<String> = pretty.lines().map(std::string::ToString::to_string).collect();
                 (Some(tree), lines)
-            }
-            Err(_) => {
-                // Not valid JSON (e.g. XML, tag-value) — raw mode only
-                let lines: Vec<String> = raw_content.lines().map(std::string::ToString::to_string).collect();
-                (None, lines)
-            }
-        };
+            },
+        );
 
         // Auto-expand root in tree mode
         let mut expanded = HashSet::new();

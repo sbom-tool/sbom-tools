@@ -242,7 +242,7 @@ pub enum SimilarityThreshold {
 }
 
 impl SimilarityThreshold {
-    pub fn label(&self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::None => "All",
             Self::High => ">= 90%",
@@ -252,7 +252,7 @@ impl SimilarityThreshold {
         }
     }
 
-    pub fn next(&self) -> Self {
+    pub fn next(self) -> Self {
         match self {
             Self::None => Self::High,
             Self::High => Self::Medium,
@@ -273,7 +273,7 @@ pub enum MatrixSortBy {
 }
 
 impl MatrixSortBy {
-    pub fn label(&self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::Name => "Name",
             Self::AvgSimilarity => "Avg Similarity",
@@ -282,7 +282,7 @@ impl MatrixSortBy {
         }
     }
 
-    pub fn next(&self) -> Self {
+    pub fn next(self) -> Self {
         match self {
             Self::Name => Self::AvgSimilarity,
             Self::AvgSimilarity => Self::ComponentCount,

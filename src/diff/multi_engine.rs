@@ -35,6 +35,7 @@ impl MultiDiffEngine {
     }
 
     /// Configure fuzzy matching
+    #[must_use]
     pub fn with_fuzzy_config(mut self, config: FuzzyMatchConfig) -> Self {
         self.fuzzy_config = Some(config);
         self.incremental = None;
@@ -42,6 +43,7 @@ impl MultiDiffEngine {
     }
 
     /// Include unchanged components
+    #[must_use]
     pub fn include_unchanged(mut self, include: bool) -> Self {
         self.include_unchanged = include;
         self.incremental = None;

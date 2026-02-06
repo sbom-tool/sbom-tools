@@ -157,11 +157,7 @@ fn render_source_tree(
 
     // Render JSON path breadcrumb
     let inner = if inner.height > 3 {
-        let breadcrumb = if let Some(selected_item) = state.cached_flat_items.get(state.selected) {
-            breadcrumb_from_node_id(&selected_item.node_id)
-        } else {
-            String::new()
-        };
+        let breadcrumb = state.cached_flat_items.get(state.selected).map_or_else(String::new, |selected_item| breadcrumb_from_node_id(&selected_item.node_id));
         if !breadcrumb.is_empty() {
             let bc_style = Style::default().fg(scheme.text_muted).italic();
             let bc_width = inner.width as usize;
@@ -309,7 +305,7 @@ fn render_source_tree(
     }
 
     // Search bar
-    render_search_bar(frame, &inner, state, &scheme);
+    render_search_bar(frame, inner, state, &scheme);
 
     // Scrollbar
     if item_count > visible_height {
@@ -460,7 +456,7 @@ fn render_source_raw(
     }
 
     // Search bar
-    render_search_bar(frame, &inner, state, &scheme);
+    render_search_bar(frame, inner, state, &scheme);
 
     // Scrollbar
     if state.raw_lines.len() > visible_height {
@@ -612,7 +608,7 @@ fn json_looks_like_null(chars: &[char], i: usize) -> bool {
 /// Render search bar at the bottom of the panel.
 fn render_search_bar(
     frame: &mut Frame,
-    inner: &Rect,
+    inner: Rect,
     state: &SourcePanelState,
     scheme: &crate::tui::theme::ColorScheme,
 ) {

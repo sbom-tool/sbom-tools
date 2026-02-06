@@ -84,7 +84,7 @@ pub(crate) fn render_components(frame: &mut Frame, area: Rect, app: &mut App) {
 }
 
 fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
-    let filter = &app.tabs.components.filter;
+    let filter = app.tabs.components.filter;
     let sort = &app.tabs.components.sort_by;
     let multi_select = app.tabs.components.multi_select_mode;
     let selection_count = app.tabs.components.selection_count();
@@ -165,7 +165,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(paragraph, area);
 }
 
-fn filter_color(filter: &ComponentFilter) -> Color {
+fn filter_color(filter: ComponentFilter) -> Color {
     match filter {
         ComponentFilter::All => colors().primary,
         ComponentFilter::Added => colors().added,
@@ -790,18 +790,18 @@ fn get_view_rows(app: &App, components: &[&crate::model::Component]) -> Vec<Row<
             };
 
             let scheme = colors();
-            let vuln_indicator = if !comp.vulnerabilities.is_empty() {
+            let vuln_indicator = if comp.vulnerabilities.is_empty() {
+                Span::styled(
+                    format!("{checkbox} ✓ "),
+                    Style::default().fg(scheme.success),
+                )
+            } else {
                 Span::styled(
                     format!("{} ⚠ {} ", checkbox, comp.vulnerabilities.len()),
                     Style::default()
                         .fg(scheme.badge_fg_light)
                         .bg(scheme.high)
                         .bold(),
-                )
-            } else {
-                Span::styled(
-                    format!("{checkbox} ✓ "),
-                    Style::default().fg(scheme.success),
                 )
             };
 
@@ -812,8 +812,9 @@ fn get_view_rows(app: &App, components: &[&crate::model::Component]) -> Vec<Row<
             };
 
             // Build staleness cell
-            let staleness_cell = match &comp.staleness {
-                Some(info) => {
+            let staleness_cell = comp.staleness.as_ref().map_or_else(
+                || Cell::from("-"),
+                |info| {
                     use crate::model::StalenessLevel;
                     let (label, color) = match info.level {
                         StalenessLevel::Fresh => ("Fresh", scheme.success),
@@ -834,9 +835,8 @@ fn get_view_rows(app: &App, components: &[&crate::model::Component]) -> Vec<Row<
                             .bg(color)
                             .bold(),
                     ))
-                }
-                None => Cell::from("-"),
-            };
+                },
+            );
 
             Row::new(vec![
                 Cell::from(vuln_indicator),

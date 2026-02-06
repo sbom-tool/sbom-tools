@@ -20,7 +20,7 @@ pub enum MultiViewType {
 }
 
 impl MultiViewType {
-    pub fn label(&self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             Self::MultiDiff => "Multi-Diff Dashboard",
             Self::Timeline => "Timeline View",
@@ -28,7 +28,7 @@ impl MultiViewType {
         }
     }
 
-    pub fn shortcut(&self) -> &'static str {
+    pub fn shortcut(self) -> &'static str {
         match self {
             Self::MultiDiff => "1",
             Self::Timeline => "2",
@@ -36,7 +36,7 @@ impl MultiViewType {
         }
     }
 
-    pub fn icon(&self) -> &'static str {
+    pub fn icon(self) -> &'static str {
         match self {
             Self::MultiDiff => "◆",
             Self::Timeline => "◇",

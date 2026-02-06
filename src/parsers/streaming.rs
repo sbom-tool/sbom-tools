@@ -62,10 +62,7 @@ impl ParseProgress {
 
     /// Check if progress is complete
     pub fn is_complete(&self) -> bool {
-        match self.total_bytes {
-            Some(total) => self.bytes_read >= total,
-            None => false,
-        }
+        self.total_bytes.is_some_and(|total| self.bytes_read >= total)
     }
 }
 
@@ -101,18 +98,21 @@ impl Default for StreamingConfig {
 
 impl StreamingConfig {
     /// Set chunk size for reading
+    #[must_use]
     pub fn with_chunk_size(mut self, size: usize) -> Self {
         self.chunk_size = size.max(1024); // Minimum 1KB
         self
     }
 
     /// Set component buffer size
+    #[must_use]
     pub fn with_buffer_size(mut self, size: usize) -> Self {
         self.component_buffer_size = size.max(10);
         self
     }
 
     /// Set progress callback
+    #[must_use]
     pub fn with_progress_callback<F>(mut self, callback: F) -> Self
     where
         F: Fn(&ParseProgress) + Send + Sync + 'static,
@@ -122,12 +122,14 @@ impl StreamingConfig {
     }
 
     /// Enable/disable validation during parsing
+    #[must_use]
     pub fn with_validation(mut self, validate: bool) -> Self {
         self.validate_during_parse = validate;
         self
     }
 
     /// Enable/disable skipping malformed components
+    #[must_use]
     pub fn with_skip_malformed(mut self, skip: bool) -> Self {
         self.skip_malformed = skip;
         self

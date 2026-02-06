@@ -146,17 +146,18 @@ pub(super) fn update_multi_diff_search_matches(app: &mut App) {
         return;
     }
 
-    let matches: Vec<usize> = if let Some(ref result) = app.data.multi_diff_result {
-        result
-            .comparisons
-            .iter()
-            .enumerate()
-            .filter(|(_, comp)| comp.target.name.to_lowercase().contains(&query))
-            .map(|(i, _)| i)
-            .collect()
-    } else {
-        vec![]
-    };
+    let matches: Vec<usize> = app.data.multi_diff_result.as_ref().map_or_else(
+        Vec::new,
+        |result| {
+            result
+                .comparisons
+                .iter()
+                .enumerate()
+                .filter(|(_, comp)| comp.target.name.to_lowercase().contains(&query))
+                .map(|(i, _)| i)
+                .collect()
+        },
+    );
 
     app.tabs.multi_diff.search.update_matches(matches);
 }

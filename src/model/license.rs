@@ -50,23 +50,26 @@ impl LicenseExpression {
     /// one branch is permissive (the licensee can choose the permissive option).
     /// Falls back to substring matching for non-parseable expressions.
     pub fn is_permissive(&self) -> bool {
-        if let Ok(expr) = spdx::Expression::parse_mode(&self.expression, spdx::ParseMode::LAX) {
-            expr.requirements().any(|req| {
-                if let spdx::LicenseItem::Spdx { id, .. } = req.req.license {
-                    !id.is_copyleft() && (id.is_osi_approved() || id.is_fsf_free_libre())
-                } else {
-                    false
-                }
-            })
-        } else {
-            // Fallback for non-standard expressions
-            let expr_lower = self.expression.to_lowercase();
-            expr_lower.contains("mit")
-                || expr_lower.contains("apache")
-                || expr_lower.contains("bsd")
-                || expr_lower.contains("isc")
-                || expr_lower.contains("unlicense")
-        }
+        spdx::Expression::parse_mode(&self.expression, spdx::ParseMode::LAX).map_or_else(
+            |_| {
+                // Fallback for non-standard expressions
+                let expr_lower = self.expression.to_lowercase();
+                expr_lower.contains("mit")
+                    || expr_lower.contains("apache")
+                    || expr_lower.contains("bsd")
+                    || expr_lower.contains("isc")
+                    || expr_lower.contains("unlicense")
+            },
+            |expr| {
+                expr.requirements().any(|req| {
+                    if let spdx::LicenseItem::Spdx { id, .. } = req.req.license {
+                        !id.is_copyleft() && (id.is_osi_approved() || id.is_fsf_free_libre())
+                    } else {
+                        false
+                    }
+                })
+            },
+        )
     }
 
     /// Check if this expression requires copyleft compliance.
@@ -74,21 +77,24 @@ impl LicenseExpression {
     /// Returns true if any license term in the expression is copyleft.
     /// Falls back to substring matching for non-parseable expressions.
     pub fn is_copyleft(&self) -> bool {
-        if let Ok(expr) = spdx::Expression::parse_mode(&self.expression, spdx::ParseMode::LAX) {
-            expr.requirements().any(|req| {
-                if let spdx::LicenseItem::Spdx { id, .. } = req.req.license {
-                    id.is_copyleft()
-                } else {
-                    false
-                }
-            })
-        } else {
-            let expr_lower = self.expression.to_lowercase();
-            expr_lower.contains("gpl")
-                || expr_lower.contains("agpl")
-                || expr_lower.contains("lgpl")
-                || expr_lower.contains("mpl")
-        }
+        spdx::Expression::parse_mode(&self.expression, spdx::ParseMode::LAX).map_or_else(
+            |_| {
+                let expr_lower = self.expression.to_lowercase();
+                expr_lower.contains("gpl")
+                    || expr_lower.contains("agpl")
+                    || expr_lower.contains("lgpl")
+                    || expr_lower.contains("mpl")
+            },
+            |expr| {
+                expr.requirements().any(|req| {
+                    if let spdx::LicenseItem::Spdx { id, .. } = req.req.license {
+                        id.is_copyleft()
+                    } else {
+                        false
+                    }
+                })
+            },
+        )
     }
 
     /// Get the license family classification.

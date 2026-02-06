@@ -181,16 +181,13 @@ fn parse_multiple_sboms(paths: &[PathBuf]) -> Result<Vec<NormalizedSbom>> {
 
 /// Get fuzzy matching config from preset name
 fn get_fuzzy_config(preset: &str) -> FuzzyMatchConfig {
-    match FuzzyMatchConfig::from_preset(preset) {
-        Some(config) => config,
-        None => {
-            tracing::warn!(
-                "Unknown fuzzy preset '{}', using 'balanced'. Valid options: strict, balanced, permissive",
-                preset
-            );
-            FuzzyMatchConfig::balanced()
-        }
-    }
+    FuzzyMatchConfig::from_preset(preset).unwrap_or_else(|| {
+        tracing::warn!(
+            "Unknown fuzzy preset '{}', using 'balanced'. Valid options: strict, balanced, permissive",
+            preset
+        );
+        FuzzyMatchConfig::balanced()
+    })
 }
 
 /// Get SBOM name from path

@@ -242,8 +242,7 @@ impl FuzzyMatcher {
         let phonetic_score = Self::compute_phonetic_similarity(&name_a, &name_b);
 
         // Weighted combination of character-based scores
-        let char_score = (jw_score * self.config.jaro_winkler_weight)
-            + (lev_score * self.config.levenshtein_weight);
+        let char_score = jw_score.mul_add(self.config.jaro_winkler_weight, lev_score * self.config.levenshtein_weight);
 
         // Use the MAXIMUM of character, token, and phonetic scores
         // This allows each method to catch different types of variations
@@ -310,7 +309,7 @@ impl FuzzyMatcher {
             _ => (0.0, 0.0), // One missing = no match but no penalty
         };
         result.ecosystem_score = ecosystem_score;
-        result.total += ecosystem_score * weights.ecosystem + ecosystem_penalty;
+        result.total += ecosystem_score.mul_add(weights.ecosystem, ecosystem_penalty);
 
         // 4. License overlap (Jaccard similarity on declared licenses)
         let licenses_a: HashSet<_> = a

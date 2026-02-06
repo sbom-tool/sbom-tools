@@ -123,18 +123,21 @@ impl FormatDetection {
     }
 
     /// Set the detected variant
+    #[must_use]
     pub fn variant(mut self, variant: &str) -> Self {
         self.variant = Some(variant.to_string());
         self
     }
 
     /// Set the detected version
+    #[must_use]
     pub fn version(mut self, version: &str) -> Self {
         self.version = Some(version.to_string());
         self
     }
 
     /// Add a warning
+    #[must_use]
     pub fn warning(mut self, warning: &str) -> Self {
         self.warnings.push(warning.to_string());
         self

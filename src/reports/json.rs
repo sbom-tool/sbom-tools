@@ -33,6 +33,7 @@ impl JsonReporter {
     }
 
     /// Set pretty printing
+    #[must_use]
     pub fn pretty(mut self, pretty: bool) -> Self {
         self.pretty = pretty;
         self

@@ -135,14 +135,11 @@ impl DiffEngine {
             };
 
         // Build component mappings using the configured matcher
-        let default_matcher;
-        let matcher: &dyn ComponentMatcher = match &self.custom_matcher {
-            Some(m) => m.as_ref(),
-            None => {
-                default_matcher = FuzzyMatcher::new(self.fuzzy_config.clone());
-                &default_matcher
-            }
-        };
+        let default_matcher = FuzzyMatcher::new(self.fuzzy_config.clone());
+        let matcher: &dyn ComponentMatcher = self
+            .custom_matcher
+            .as_ref()
+            .map_or(&default_matcher as &dyn ComponentMatcher, |m| m.as_ref());
 
         let mut component_matches = match_components(
             &old_filtered,

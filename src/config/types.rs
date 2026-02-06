@@ -398,10 +398,7 @@ impl StreamingConfig {
         if is_stdin && self.stream_stdin {
             return true;
         }
-        match file_size {
-            Some(size) => size >= self.threshold_bytes,
-            None => self.stream_stdin, // Unknown size (e.g., stdin)
-        }
+        file_size.map_or(self.stream_stdin, |size| size >= self.threshold_bytes)
     }
 
     /// Create a streaming config that always streams.
@@ -421,6 +418,7 @@ impl StreamingConfig {
     }
 
     /// Set the threshold in megabytes.
+    #[must_use]
     pub fn with_threshold_mb(mut self, mb: u64) -> Self {
         self.threshold_bytes = mb * 1024 * 1024;
         self
@@ -600,24 +598,28 @@ impl EnrichmentConfig {
     }
 
     /// Create an enabled enrichment config with custom settings.
+    #[must_use]
     pub fn with_cache_dir(mut self, dir: std::path::PathBuf) -> Self {
         self.cache_dir = Some(dir);
         self
     }
 
     /// Set the cache TTL in hours.
+    #[must_use]
     pub fn with_cache_ttl_hours(mut self, hours: u64) -> Self {
         self.cache_ttl_hours = hours;
         self
     }
 
     /// Enable cache bypass (refresh).
+    #[must_use]
     pub fn with_bypass_cache(mut self) -> Self {
         self.bypass_cache = true;
         self
     }
 
     /// Set the API timeout in seconds.
+    #[must_use]
     pub fn with_timeout_secs(mut self, secs: u64) -> Self {
         self.timeout_secs = secs;
         self
@@ -648,86 +650,103 @@ impl DiffConfigBuilder {
         Self::default()
     }
 
+    #[must_use]
     pub fn old_path(mut self, path: PathBuf) -> Self {
         self.old = Some(path);
         self
     }
 
+    #[must_use]
     pub fn new_path(mut self, path: PathBuf) -> Self {
         self.new = Some(path);
         self
     }
 
+    #[must_use]
     pub fn output_format(mut self, format: ReportFormat) -> Self {
         self.output.format = format;
         self
     }
 
+    #[must_use]
     pub fn output_file(mut self, file: Option<PathBuf>) -> Self {
         self.output.file = file;
         self
     }
 
+    #[must_use]
     pub fn report_types(mut self, types: ReportType) -> Self {
         self.output.report_types = types;
         self
     }
 
+    #[must_use]
     pub fn no_color(mut self, no_color: bool) -> Self {
         self.output.no_color = no_color;
         self
     }
 
+    #[must_use]
     pub fn fuzzy_preset(mut self, preset: String) -> Self {
         self.matching.fuzzy_preset = preset;
         self
     }
 
+    #[must_use]
     pub fn matching_threshold(mut self, threshold: Option<f64>) -> Self {
         self.matching.threshold = threshold;
         self
     }
 
+    #[must_use]
     pub fn include_unchanged(mut self, include: bool) -> Self {
         self.matching.include_unchanged = include;
         self
     }
 
+    #[must_use]
     pub fn only_changes(mut self, only: bool) -> Self {
         self.filtering.only_changes = only;
         self
     }
 
+    #[must_use]
     pub fn min_severity(mut self, severity: Option<String>) -> Self {
         self.filtering.min_severity = severity;
         self
     }
 
+    #[must_use]
     pub fn fail_on_vuln(mut self, fail: bool) -> Self {
         self.behavior.fail_on_vuln = fail;
         self
     }
 
+    #[must_use]
     pub fn fail_on_change(mut self, fail: bool) -> Self {
         self.behavior.fail_on_change = fail;
         self
     }
 
+    #[must_use]
     pub fn quiet(mut self, quiet: bool) -> Self {
         self.behavior.quiet = quiet;
         self
     }
 
+    #[must_use]
     pub fn explain_matches(mut self, explain: bool) -> Self {
         self.behavior.explain_matches = explain;
         self
     }
 
+    #[must_use]
     pub fn recommend_threshold(mut self, recommend: bool) -> Self {
         self.behavior.recommend_threshold = recommend;
         self
     }
 
+    #[must_use]
     pub fn graph_diff(mut self, enabled: bool) -> Self {
         self.graph_diff = if enabled {
             GraphAwareDiffConfig::enabled()
@@ -737,36 +756,43 @@ impl DiffConfigBuilder {
         self
     }
 
+    #[must_use]
     pub fn matching_rules_file(mut self, file: Option<PathBuf>) -> Self {
         self.rules.rules_file = file;
         self
     }
 
+    #[must_use]
     pub fn dry_run_rules(mut self, dry_run: bool) -> Self {
         self.rules.dry_run = dry_run;
         self
     }
 
+    #[must_use]
     pub fn ecosystem_rules_file(mut self, file: Option<PathBuf>) -> Self {
         self.ecosystem_rules.config_file = file;
         self
     }
 
+    #[must_use]
     pub fn disable_ecosystem_rules(mut self, disabled: bool) -> Self {
         self.ecosystem_rules.disabled = disabled;
         self
     }
 
+    #[must_use]
     pub fn detect_typosquats(mut self, detect: bool) -> Self {
         self.ecosystem_rules.detect_typosquats = detect;
         self
     }
 
+    #[must_use]
     pub fn enrichment(mut self, config: EnrichmentConfig) -> Self {
         self.enrichment = config;
         self
     }
 
+    #[must_use]
     pub fn enable_enrichment(mut self, enabled: bool) -> Self {
         self.enrichment.enabled = enabled;
         self

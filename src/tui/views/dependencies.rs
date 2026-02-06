@@ -820,13 +820,13 @@ fn render_view_tree(
                 format!("{} dependencies", sbom.edges.len()),
                 Style::default().fg(scheme.primary).bold(),
             ),
-            if !cycles_in_deps.is_empty() {
+            if cycles_in_deps.is_empty() {
+                Span::raw("")
+            } else {
                 Span::styled(
                     format!("  (⟳ {} in cycles)", cycles_in_deps.len()),
                     Style::default().fg(scheme.warning),
                 )
-            } else {
-                Span::raw("")
             },
         ]));
         visible_nodes.push("__header__".to_string());

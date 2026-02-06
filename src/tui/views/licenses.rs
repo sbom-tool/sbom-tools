@@ -198,9 +198,9 @@ fn render_diff_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
     let risk_filter = app.tabs.licenses.risk_filter;
 
     // Build sorted and filtered license data
-    let new_licenses = build_license_list(&result.licenses.new_licenses, &sort, &group, &risk_filter);
+    let new_licenses = build_license_list(&result.licenses.new_licenses, sort, group, risk_filter);
     let removed_licenses =
-        build_license_list(&result.licenses.removed_licenses, &sort, &group, &risk_filter);
+        build_license_list(&result.licenses.removed_licenses, sort, group, risk_filter);
 
     // Update total based on focus
     app.tabs.licenses.total = if app.tabs.licenses.focus_left {
@@ -224,7 +224,7 @@ fn render_diff_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
             None
         },
         &mut app.tabs.licenses.scroll_offset_new,
-        &group,
+        group,
     );
 
     // Render removed licenses table
@@ -235,13 +235,13 @@ fn render_diff_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
         " - Removed Licenses ",
         false,
         !app.tabs.licenses.focus_left,
-        if !app.tabs.licenses.focus_left {
-            Some(app.tabs.licenses.selected)
-        } else {
+        if app.tabs.licenses.focus_left {
             None
+        } else {
+            Some(app.tabs.licenses.selected)
         },
         &mut app.tabs.licenses.scroll_offset_removed,
-        &group,
+        group,
     );
 
     // Detail panel (only when compatibility is off)
@@ -325,7 +325,7 @@ fn render_compatibility_panel(frame: &mut Frame, area: Rect, app: &App) {
 
     for cat in category_order {
         if let Some(licenses) = report.categories.get(&cat) {
-            let cat_color = crate::tui::shared::licenses::category_color(&cat);
+            let cat_color = crate::tui::shared::licenses::category_color(cat);
 
             lines.push(Line::from(vec![
                 Span::styled("  • ", Style::default().fg(scheme.text_muted)),
@@ -339,7 +339,16 @@ fn render_compatibility_panel(frame: &mut Frame, area: Rect, app: &App) {
     }
 
     // Issues
-    if !report.issues.is_empty() {
+    if report.issues.is_empty() {
+        lines.push(Line::from(""));
+        lines.push(Line::from(vec![
+            Span::styled("✓ ", Style::default().fg(scheme.success)),
+            Span::styled(
+                "No compatibility issues detected",
+                Style::default().fg(scheme.success),
+            ),
+        ]));
+    } else {
         lines.push(Line::from(""));
         lines.push(Line::styled(
             "Compatibility Issues:",
@@ -368,15 +377,6 @@ fn render_compatibility_panel(frame: &mut Frame, area: Rect, app: &App) {
                 Style::default().fg(scheme.text_muted),
             )]));
         }
-    } else {
-        lines.push(Line::from(""));
-        lines.push(Line::from(vec![
-            Span::styled("✓ ", Style::default().fg(scheme.success)),
-            Span::styled(
-                "No compatibility issues detected",
-                Style::default().fg(scheme.success),
-            ),
-        ]));
     }
 
     // Conflict Detection using the enhanced ConflictDetector
@@ -486,9 +486,9 @@ struct LicenseEntry {
 
 fn build_license_list(
     licenses: &[crate::diff::LicenseChange],
-    sort: &LicenseSort,
-    group: &LicenseGroupBy,
-    risk_filter: &Option<LicenseRiskFilter>,
+    sort: LicenseSort,
+    group: LicenseGroupBy,
+    risk_filter: Option<LicenseRiskFilter>,
 ) -> Vec<LicenseEntry> {
     let mut entries: Vec<LicenseEntry> = licenses
         .iter()
@@ -565,7 +565,7 @@ fn render_license_table(
     is_focused: bool,
     selected: Option<usize>,
     scroll_offset: &mut usize,
-    group: &LicenseGroupBy,
+    group: LicenseGroupBy,
 ) {
     let scheme = colors();
     let border_color = if is_new { scheme.added } else { scheme.removed };
@@ -644,7 +644,7 @@ fn render_license_table(
             let rows: Vec<Row> = licenses
                 .iter()
                 .map(|entry| {
-                    let cat_color = crate::tui::shared::licenses::category_color(&entry.category);
+                    let cat_color = crate::tui::shared::licenses::category_color(entry.category);
 
                     let license_display = if entry.is_dual_licensed {
                         format!("{} ⊕", widgets::truncate_str(&entry.license, 18))
@@ -732,8 +732,8 @@ fn render_license_details(
 
     lines.extend(crate::tui::shared::licenses::render_license_metadata_lines(
         &entry.license,
-        &entry.category,
-        &entry.risk_level,
+        entry.category,
+        entry.risk_level,
         &entry.family,
         entry.components.len(),
         entry.is_dual_licensed,
@@ -909,9 +909,9 @@ fn render_view_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
     let rows: Vec<Row> = licenses
         .iter()
         .map(|entry| {
-            let cat_color = crate::tui::shared::licenses::category_color(&entry.category);
+            let cat_color = crate::tui::shared::licenses::category_color(entry.category);
 
-            let risk_color = crate::tui::shared::licenses::risk_level_color(&entry.risk_level);
+            let risk_color = crate::tui::shared::licenses::risk_level_color(entry.risk_level);
 
             let license_display = if entry.is_dual_licensed {
                 format!("{} ⊕", widgets::truncate_str(&entry.license, 28))
@@ -1031,7 +1031,7 @@ fn render_view_stats_panel(frame: &mut Frame, area: Rect, licenses: &[LicenseEnt
         let bar_width = (area.width as usize).saturating_sub(25);
         let filled = (bar_width as f64 * (*count as f64 / total)) as usize;
 
-        let cat_color = crate::tui::shared::licenses::category_color(cat);
+        let cat_color = crate::tui::shared::licenses::category_color(*cat);
 
         lines.push(Line::from(vec![
             Span::styled(
@@ -1121,8 +1121,8 @@ fn render_view_license_details(frame: &mut Frame, area: Rect, entry: Option<&Lic
 
     let mut lines = crate::tui::shared::licenses::render_license_metadata_lines(
         &entry.license,
-        &entry.category,
-        &entry.risk_level,
+        entry.category,
+        entry.risk_level,
         &entry.family,
         entry.components.len(),
         entry.is_dual_licensed,
