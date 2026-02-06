@@ -37,9 +37,8 @@ pub fn render_compliance(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     render_standard_selector(frame, chunks[0], app);
 
     // Get compliance result for selected standard
-    let results = match app.compliance_results.as_ref() {
-        Some(r) => r,
-        None => return,
+    let Some(results) = app.compliance_results.as_ref() else {
+        return;
     };
     let result = &results[selected_standard];
 
@@ -66,9 +65,8 @@ pub fn render_compliance(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
 
 fn render_standard_selector(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let scheme = colors();
-    let compliance_results = match app.compliance_results.as_ref() {
-        Some(r) => r,
-        None => return,
+    let Some(compliance_results) = app.compliance_results.as_ref() else {
+        return;
     };
 
     let standards: Vec<Line> = ComplianceLevel::all()

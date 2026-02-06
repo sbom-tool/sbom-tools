@@ -175,7 +175,7 @@ fn render_vuln_breakdown(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     let add_severity_line = |lines: &mut Vec<Line>, label: &str, count: usize, color: Color| {
         let pct = (count as f64 / total as f64 * 100.0) as usize;
         let bar_width = 20;
-        let filled = (count * bar_width / total.max(1)).max(if count > 0 { 1 } else { 0 });
+        let filled = (count * bar_width / total.max(1)).max(usize::from(count > 0));
         let scheme = colors();
 
         lines.push(Line::from(vec![
@@ -229,7 +229,7 @@ fn render_ecosystem_dist(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     for (i, (eco, count)) in ecosystems.iter().take(6).enumerate() {
         let pct = (**count as f64 / total as f64 * 100.0) as usize;
         let bar_width = 25;
-        let filled = (**count * bar_width / total).max(if **count > 0 { 1 } else { 0 });
+        let filled = (**count * bar_width / total).max(usize::from(**count > 0));
         let color = palette[i % palette.len()];
 
         lines.push(Line::from(vec![

@@ -518,8 +518,7 @@ fn render_dependency_tree(frame: &mut Frame, area: Rect, app: &mut App) {
         .map(|(idx, line)| {
             let node_id = visible_nodes.get(idx);
             let is_match = node_id
-                .map(|id| has_search && search_matches.contains(id))
-                .unwrap_or(false);
+                .is_some_and(|id| has_search && search_matches.contains(id));
 
             if idx == selected {
                 // Highlight selected line with selection background
@@ -807,7 +806,7 @@ fn render_view_tree(
         // Detect cycles if enabled
         let cycles_in_deps: HashSet<String> = if show_cycles {
             let cycles = detect_cycles(&by_source);
-            app.tabs.dependencies.detected_cycles = cycles.clone();
+            app.tabs.dependencies.detected_cycles.clone_from(&cycles);
             cycles.into_iter().flatten().collect()
         } else {
             app.tabs.dependencies.detected_cycles.clear();
@@ -1313,7 +1312,7 @@ fn render_view_tree_cached(
     }
 
     // Get edge count from SBOM for summary
-    let edge_count = app.data.sbom.as_ref().map(|s| s.edges.len()).unwrap_or(0);
+    let edge_count = app.data.sbom.as_ref().map_or(0, |s| s.edges.len());
 
     // Summary
     lines.push(Line::from(vec![
@@ -1385,16 +1384,16 @@ fn render_view_tree_cached(
         }
         DependencySort::VulnCount => {
             roots.sort_by(|a, b| {
-                let vuln_a = if vuln_components.contains(a) { 1 } else { 0 };
-                let vuln_b = if vuln_components.contains(b) { 1 } else { 0 };
+                let vuln_a = i32::from(vuln_components.contains(a));
+                let vuln_b = i32::from(vuln_components.contains(b));
                 // Sort vulnerable first (descending), then by name
                 vuln_b.cmp(&vuln_a).then_with(|| a.cmp(b))
             });
         }
         DependencySort::DependentCount => {
             roots.sort_by(|a, b| {
-                let count_a = cached_reverse_graph.get(a).map(std::vec::Vec::len).unwrap_or(0);
-                let count_b = cached_reverse_graph.get(b).map(std::vec::Vec::len).unwrap_or(0);
+                let count_a = cached_reverse_graph.get(a).map_or(0, std::vec::Vec::len);
+                let count_b = cached_reverse_graph.get(b).map_or(0, std::vec::Vec::len);
                 // Sort by most dependents first, then by name
                 count_b.cmp(&count_a).then_with(|| a.cmp(b))
             });

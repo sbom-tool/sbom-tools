@@ -313,8 +313,7 @@ fn flatten_node(
     let has_children = deps
         .edges
         .get(node_id)
-        .map(|c| !c.is_empty())
-        .unwrap_or(false);
+        .is_some_and(|c| !c.is_empty());
     let is_expanded = expanded.contains(node_id);
     let vuln_count = deps.vuln_counts.get(node_id).copied().unwrap_or(0);
 

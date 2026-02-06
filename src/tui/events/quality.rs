@@ -16,9 +16,8 @@ use crate::tui::App;
 use crossterm::event::KeyEvent;
 
 pub(super) fn handle_quality_keys(app: &mut App, key: KeyEvent) {
-    let quality_view = match app.quality_view.as_mut() {
-        Some(v) => v,
-        None => return,
+    let Some(quality_view) = app.quality_view.as_mut() else {
+        return;
     };
 
     // One-way sync: tabs.quality → quality_view (rendering may have updated total)

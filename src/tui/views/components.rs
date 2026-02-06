@@ -38,8 +38,7 @@ pub(crate) fn render_components(frame: &mut Frame, area: Rect, app: &mut App) {
             app.tabs.components.total = app.diff_component_count(app.tabs.components.filter);
             app.data.diff_result
                 .as_ref()
-                .map(|r| r.components.total())
-                .unwrap_or(0)
+                .map_or(0, |r| r.components.total())
         }
         AppMode::View => {
             app.tabs.components.total = app.view_component_count();
@@ -496,8 +495,7 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
                 sbom.components.get(&canonical_id)
             })
             .and_then(|c| c.licenses.declared.first())
-            .map(|l| l.expression.as_str())
-            .unwrap_or("Unknown");
+            .map_or("Unknown", |l| l.expression.as_str());
         lines.extend(crate::tui::shared::components::render_security_analysis_lines(
             related_vulns.len(),
             direct_deps,
@@ -618,9 +616,7 @@ fn render_view_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
                 .iter()
                 .map(|v| {
                     v.severity
-                        .as_ref()
-                        .map(std::string::ToString::to_string)
-                        .unwrap_or_else(|| "Unknown".to_string())
+                        .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string)
                 })
                 .collect();
             let vuln_entries: Vec<(&str, &str, Option<&str>)> = comp
@@ -664,8 +660,7 @@ fn render_view_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
         let (direct_deps, transitive_count) =
             crate::tui::shared::components::compute_blast_radius(&comp.name, reverse_graph);
         let license_text = comp.licenses.declared.first()
-            .map(|l| l.expression.as_str())
-            .unwrap_or("Unknown");
+            .map_or("Unknown", |l| l.expression.as_str());
         lines.extend(crate::tui::shared::components::render_security_analysis_lines(
             comp.vulnerabilities.len(),
             direct_deps,
@@ -850,9 +845,7 @@ fn get_view_rows(app: &App, components: &[&crate::model::Component]) -> Vec<Row<
                 Cell::from("-"),
                 Cell::from(
                     comp.ecosystem
-                        .as_ref()
-                        .map(std::string::ToString::to_string)
-                        .unwrap_or_else(|| "-".to_string()),
+                        .as_ref().map_or_else(|| "-".to_string(), std::string::ToString::to_string),
                 ),
                 staleness_cell,
             ])

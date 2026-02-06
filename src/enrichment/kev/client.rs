@@ -238,8 +238,7 @@ impl KevClient {
     pub fn is_kev(&self, cve_id: &str) -> bool {
         self.catalog
             .as_ref()
-            .map(|c| c.contains(cve_id))
-            .unwrap_or(false)
+            .is_some_and(|c| c.contains(cve_id))
     }
 
     /// Enrich vulnerabilities with KEV information

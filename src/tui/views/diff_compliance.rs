@@ -20,13 +20,11 @@ use crate::tui::theme::colors;
 /// Get the count of violations shown in the current view mode (for navigation bounds).
 pub(crate) fn diff_compliance_violation_count(app: &App) -> usize {
     let idx = app.tabs.diff_compliance.selected_standard;
-    let old_results = match app.data.old_compliance_results.as_ref() {
-        Some(r) => r,
-        None => return 0,
+    let Some(old_results) = app.data.old_compliance_results.as_ref() else {
+        return 0;
     };
-    let new_results = match app.data.new_compliance_results.as_ref() {
-        Some(r) => r,
-        None => return 0,
+    let Some(new_results) = app.data.new_compliance_results.as_ref() else {
+        return 0;
     };
     if idx >= old_results.len() || idx >= new_results.len() {
         return 0;
@@ -82,13 +80,11 @@ pub(crate) fn render_diff_compliance(frame: &mut Frame, area: Rect, app: &mut Ap
 fn render_standard_selector(frame: &mut Frame, area: Rect, app: &App) {
     let levels = ComplianceLevel::all();
     let selected = app.tabs.diff_compliance.selected_standard;
-    let old_results = match app.data.old_compliance_results.as_ref() {
-        Some(r) => r,
-        None => return,
+    let Some(old_results) = app.data.old_compliance_results.as_ref() else {
+        return;
     };
-    let new_results = match app.data.new_compliance_results.as_ref() {
-        Some(r) => r,
-        None => return,
+    let Some(new_results) = app.data.new_compliance_results.as_ref() else {
+        return;
     };
 
     let titles: Vec<Line> = levels
@@ -97,12 +93,10 @@ fn render_standard_selector(frame: &mut Frame, area: Rect, app: &App) {
         .map(|(i, level)| {
             let old_ok = old_results
                 .get(i)
-                .map(|r| r.is_compliant)
-                .unwrap_or(false);
+                .is_some_and(|r| r.is_compliant);
             let new_ok = new_results
                 .get(i)
-                .map(|r| r.is_compliant)
-                .unwrap_or(false);
+                .is_some_and(|r| r.is_compliant);
 
             let indicator = match (old_ok, new_ok) {
                 (true, true) => ("✓", colors().success),
@@ -227,13 +221,11 @@ fn render_compliance_gauge(frame: &mut Frame, area: Rect, result: &ComplianceRes
 
 fn render_violations_panel(frame: &mut Frame, area: Rect, app: &mut App) {
     let idx = app.tabs.diff_compliance.selected_standard;
-    let old = match app.data.old_compliance_results.as_ref().and_then(|r| r.get(idx)) {
-        Some(r) => r,
-        None => return,
+    let Some(old) = app.data.old_compliance_results.as_ref().and_then(|r| r.get(idx)) else {
+        return;
     };
-    let new = match app.data.new_compliance_results.as_ref().and_then(|r| r.get(idx)) {
-        Some(r) => r,
-        None => return,
+    let Some(new) = app.data.new_compliance_results.as_ref().and_then(|r| r.get(idx)) else {
+        return;
     };
 
     let mode = app.tabs.diff_compliance.view_mode;

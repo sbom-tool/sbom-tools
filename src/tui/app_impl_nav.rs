@@ -10,8 +10,7 @@ impl App {
         let has_graph_changes = self
             .data.diff_result
             .as_ref()
-            .map(|r| !r.graph_changes.is_empty())
-            .unwrap_or(false);
+            .is_some_and(|r| !r.graph_changes.is_empty());
 
         self.active_tab = match self.active_tab {
             TabKind::Summary => TabKind::Components,
@@ -44,8 +43,7 @@ impl App {
         let has_graph_changes = self
             .data.diff_result
             .as_ref()
-            .map(|r| !r.graph_changes.is_empty())
-            .unwrap_or(false);
+            .is_some_and(|r| !r.graph_changes.is_empty());
 
         self.active_tab = match self.active_tab {
             TabKind::Summary => {

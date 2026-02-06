@@ -319,15 +319,14 @@ impl ViewApp {
     /// Jump tree selection to a component, expanding its group if needed.
     pub fn jump_to_component_in_tree(&mut self, component_id: &str) -> bool {
         let group_id = {
-            let comp = match self
+            let Some(comp) = self
                 .sbom
                 .components
                 .iter()
                 .find(|(id, _)| id.value() == component_id)
                 .map(|(_, comp)| comp)
-            {
-                Some(comp) => comp,
-                None => return false,
+            else {
+                return false;
             };
             self.tree_group_id_for_component(comp)
         };
@@ -586,8 +585,7 @@ impl ViewApp {
                 self.ensure_compliance_results();
                 let max = self.compliance_results.as_ref()
                     .and_then(|r| r.get(self.compliance_state.selected_standard))
-                    .map(|r| r.violations.len())
-                    .unwrap_or(0);
+                    .map_or(0, |r| r.violations.len());
                 self.compliance_state.select_next(max);
             }
             ViewTab::Source => self.source_state.select_next(),
@@ -654,8 +652,7 @@ impl ViewApp {
                 self.ensure_compliance_results();
                 let max = self.compliance_results.as_ref()
                     .and_then(|r| r.get(self.compliance_state.selected_standard))
-                    .map(|r| r.violations.len())
-                    .unwrap_or(0);
+                    .map_or(0, |r| r.violations.len());
                 self.compliance_state.selected_violation = max.saturating_sub(1);
             }
             ViewTab::Source => self.source_state.select_last(),
@@ -731,8 +728,7 @@ impl ViewApp {
                 let has_violations = self
                     .compliance_results.as_ref()
                     .and_then(|r| r.get(idx))
-                    .map(|r| !r.violations.is_empty())
-                    .unwrap_or(false);
+                    .is_some_and(|r| !r.violations.is_empty());
                 if has_violations {
                     self.compliance_state.show_detail = !self.compliance_state.show_detail;
                 }
@@ -773,13 +769,11 @@ impl ViewApp {
     /// Jump the source panel to the section selected in the map.
     pub fn handle_source_map_enter(&mut self) {
         // Build sections from JSON tree root children
-        let tree = match &self.source_state.json_tree {
-            Some(t) => t,
-            None => return,
+        let Some(tree) = &self.source_state.json_tree else {
+            return;
         };
-        let children = match tree.children() {
-            Some(c) => c,
-            None => return,
+        let Some(children) = tree.children() else {
+            return;
         };
 
         // Find the Nth expandable section
@@ -964,9 +958,7 @@ impl ViewApp {
             }
             let eco = comp
                 .ecosystem
-                .as_ref()
-                .map(std::string::ToString::to_string)
-                .unwrap_or_else(|| "Unknown".to_string());
+                .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
             ecosystem_map.entry(eco).or_default().push(comp);
         }
 
@@ -1262,9 +1254,7 @@ impl ViewApp {
             TreeGroupBy::Ecosystem => {
                 let eco = comp
                     .ecosystem
-                    .as_ref()
-                    .map(std::string::ToString::to_string)
-                    .unwrap_or_else(|| "Unknown".to_string());
+                    .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
                 Some(format!("eco:{eco}"))
             }
             TreeGroupBy::License => {
@@ -2079,9 +2069,7 @@ impl SbomStats {
             // Count ecosystems
             let eco = comp
                 .ecosystem
-                .as_ref()
-                .map(std::string::ToString::to_string)
-                .unwrap_or_else(|| "Unknown".to_string());
+                .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
             *ecosystem_counts.entry(eco).or_insert(0) += 1;
 
             // Count licenses
@@ -2097,9 +2085,7 @@ impl SbomStats {
                 vuln_count += 1;
                 let sev = vuln
                     .severity
-                    .as_ref()
-                    .map(std::string::ToString::to_string)
-                    .unwrap_or_else(|| "Unknown".to_string());
+                    .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
                 *vuln_by_severity.entry(sev.clone()).or_insert(0) += 1;
 
                 match sev.to_lowercase().as_str() {

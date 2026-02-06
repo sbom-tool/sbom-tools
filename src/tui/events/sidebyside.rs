@@ -65,12 +65,12 @@ pub(super) fn handle_sidebyside_keys(app: &mut App, key: KeyEvent) {
         }
 
         // Navigate to next/previous change
-        KeyCode::Char('n') | KeyCode::Char(']') => {
+        KeyCode::Char('n' | ']') => {
             app.tabs.side_by_side.next_change();
             let pos = app.tabs.side_by_side.change_position();
             app.set_status_message(format!("Change {pos}"));
         }
-        KeyCode::Char('N') | KeyCode::Char('[') => {
+        KeyCode::Char('N' | '[') => {
             app.tabs.side_by_side.prev_change();
             let pos = app.tabs.side_by_side.change_position();
             app.set_status_message(format!("Change {pos}"));

@@ -362,8 +362,7 @@ impl ReportGenerator for TableReporter {
 
             for vuln in &result.vulnerabilities.introduced {
                 let severity_colored = match vuln.severity.to_lowercase().as_str() {
-                    "critical" => self.color(&vuln.severity, "red"),
-                    "high" => self.color(&vuln.severity, "red"),
+                    "critical" | "high" => self.color(&vuln.severity, "red"),
                     "medium" => self.color(&vuln.severity, "yellow"),
                     _ => vuln.severity.clone(),
                 };
@@ -419,8 +418,7 @@ impl ReportGenerator for TableReporter {
                 .licenses
                 .declared
                 .first()
-                .map(|l| l.expression.as_str())
-                .unwrap_or("-");
+                .map_or("-", |l| l.expression.as_str());
             let vulns = comp.vulnerabilities.len();
             let vuln_display = if vulns > 0 {
                 self.color(&vulns.to_string(), "red")

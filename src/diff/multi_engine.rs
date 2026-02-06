@@ -197,7 +197,7 @@ impl MultiDiffEngine {
                     })
                     .unwrap_or_else(|| comp_id.clone());
 
-                let baseline_version = versions.get(&baseline_info.name.to_string()).cloned();
+                let baseline_version = versions.get(&baseline_info.name.clone()).cloned();
                 let all_versions_vec: Vec<_> = unique_versions.into_iter().cloned().collect();
 
                 // Calculate major version spread
@@ -445,7 +445,7 @@ impl MultiDiffEngine {
                         ct
                     };
                     last_seen = Some(i);
-                    prev_version = ver.clone();
+                    prev_version.clone_from(&ver);
                     (ver, change)
                 } else if first_seen.is_some() {
                     (None, VersionChangeType::Removed)

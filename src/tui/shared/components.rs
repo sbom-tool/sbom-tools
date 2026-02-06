@@ -19,8 +19,7 @@ pub(crate) fn compute_blast_radius(
 ) -> (usize, usize) {
     let direct_deps = reverse_graph
         .get(component_name)
-        .map(std::vec::Vec::len)
-        .unwrap_or(0);
+        .map_or(0, std::vec::Vec::len);
 
     let mut transitive_count = 0usize;
     if direct_deps > 0 {

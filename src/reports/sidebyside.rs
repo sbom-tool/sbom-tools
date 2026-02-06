@@ -182,14 +182,14 @@ impl SideBySideReporter {
                     line_num,
                     self.col(colors::RESET)
                 ),
-                truncate(old_text.unwrap_or(""), half_width).to_string(),
+                truncate(old_text.unwrap_or(""), half_width).clone(),
                 format!(
                     "{}{:>num_width$}{}",
                     self.col(colors::LINE_NUM),
                     line_num,
                     self.col(colors::RESET)
                 ),
-                truncate(new_text.unwrap_or(""), half_width).to_string(),
+                truncate(new_text.unwrap_or(""), half_width).clone(),
             ),
         };
 
@@ -509,9 +509,7 @@ impl ReportGenerator for SideBySideReporter {
             for (comp, vuln) in vulns {
                 let severity = vuln
                     .severity
-                    .as_ref()
-                    .map(std::string::ToString::to_string)
-                    .unwrap_or_else(|| "Unknown".to_string());
+                    .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
                 out.push_str(&self.format_vulnerability_row(&vuln.id, &severity, &comp.name, true));
             }
         }

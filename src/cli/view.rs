@@ -127,9 +127,7 @@ pub fn severity_meets_minimum(severity: &Severity, minimum: &Severity) -> bool {
         Severity::High => 3,
         Severity::Medium => 2,
         Severity::Low => 1,
-        Severity::Info => 0,
-        Severity::None => 0,
-        Severity::Unknown => 0,
+        Severity::Info | Severity::None | Severity::Unknown => 0,
     };
 
     severity_order(severity) >= severity_order(minimum)

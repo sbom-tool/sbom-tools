@@ -93,9 +93,8 @@ impl App {
         &self,
         filter: ComponentFilter,
     ) -> Vec<&crate::diff::ComponentChange> {
-        let diff = match self.data.diff_result.as_ref() {
-            Some(result) => result,
-            None => return Vec::new(),
+        let Some(diff) = self.data.diff_result.as_ref() else {
+            return Vec::new();
         };
 
         let mut items = Vec::new();
@@ -116,9 +115,8 @@ impl App {
     /// Count diff-mode components matching the filter (without building full list).
     /// More efficient than diff_component_items().len() for just getting a count.
     pub fn diff_component_count(&self, filter: ComponentFilter) -> usize {
-        let diff = match self.data.diff_result.as_ref() {
-            Some(result) => result,
-            None => return 0,
+        let Some(diff) = self.data.diff_result.as_ref() else {
+            return 0;
         };
 
         match filter {
@@ -135,14 +133,13 @@ impl App {
 
     /// Count view-mode components (without building full list).
     pub fn view_component_count(&self) -> usize {
-        self.data.sbom.as_ref().map(crate::model::NormalizedSbom::component_count).unwrap_or(0)
+        self.data.sbom.as_ref().map_or(0, crate::model::NormalizedSbom::component_count)
     }
 
     /// Build view-mode components list in the same order as the table.
     pub fn view_component_items(&self) -> Vec<&crate::model::Component> {
-        let sbom = match self.data.sbom.as_ref() {
-            Some(sbom) => sbom,
-            None => return Vec::new(),
+        let Some(sbom) = self.data.sbom.as_ref() else {
+            return Vec::new();
         };
         let mut items: Vec<_> = sbom.components.values().collect();
         sort_components(&mut items, self.tabs.components.sort_by);
@@ -151,9 +148,8 @@ impl App {
 
     /// Build diff-mode vulnerabilities list in the same order as the table.
     pub fn diff_vulnerability_items(&self) -> Vec<DiffVulnItem<'_>> {
-        let diff = match self.data.diff_result.as_ref() {
-            Some(result) => result,
-            None => return Vec::new(),
+        let Some(diff) = self.data.diff_result.as_ref() else {
+            return Vec::new();
         };
         let filter = &self.tabs.vulnerabilities.filter;
         let sort = &self.tabs.vulnerabilities.sort_by;
@@ -296,9 +292,8 @@ impl App {
     /// Panics if the cache has not been populated. Call `ensure_vulnerability_cache()`
     /// first.
     pub fn diff_vulnerability_items_from_cache(&self) -> Vec<DiffVulnItem<'_>> {
-        let diff = match self.data.diff_result.as_ref() {
-            Some(result) => result,
-            None => return Vec::new(),
+        let Some(diff) = self.data.diff_result.as_ref() else {
+            return Vec::new();
         };
         self.tabs
             .vulnerabilities
@@ -321,9 +316,8 @@ impl App {
     /// Count diff-mode vulnerabilities matching the current filter (without building full list).
     /// More efficient than diff_vulnerability_items().len() for just getting a count.
     pub fn diff_vulnerability_count(&self) -> usize {
-        let diff = match self.data.diff_result.as_ref() {
-            Some(result) => result,
-            None => return 0,
+        let Some(diff) = self.data.diff_result.as_ref() else {
+            return 0;
         };
         let filter = &self.tabs.vulnerabilities.filter;
 
@@ -453,8 +447,7 @@ fn calculate_vuln_urgency(
 fn sla_sort_key(vuln: &crate::diff::VulnerabilityDetail) -> i64 {
     match vuln.sla_status() {
         SlaStatus::Overdue(days) => -(days + crate::tui::constants::SLA_OVERDUE_SORT_OFFSET), // Most urgent (very negative)
-        SlaStatus::DueSoon(days) => days,
-        SlaStatus::OnTrack(days) => days,
+        SlaStatus::DueSoon(days) | SlaStatus::OnTrack(days) => days,
         SlaStatus::NoDueDate => i64::MAX,
     }
 }

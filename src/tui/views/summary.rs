@@ -24,13 +24,11 @@ fn render_diff_summary(frame: &mut Frame, area: Rect, app: &App) {
     let old_count = app
         .data.old_sbom
         .as_ref()
-        .map(crate::model::NormalizedSbom::component_count)
-        .unwrap_or(0);
+        .map_or(0, crate::model::NormalizedSbom::component_count);
     let new_count = app
         .data.new_sbom
         .as_ref()
-        .map(crate::model::NormalizedSbom::component_count)
-        .unwrap_or(0);
+        .map_or(0, crate::model::NormalizedSbom::component_count);
 
     // Main layout: top row (score + stats), compliance, middle row (charts), bottom row (top changes)
     let main_chunks = Layout::default()
@@ -768,9 +766,7 @@ fn render_view_summary(frame: &mut Frame, area: Rect, app: &App) {
         for comp in sbom.components.values() {
             let ecosystem = comp
                 .ecosystem
-                .as_ref()
-                .map(std::string::ToString::to_string)
-                .unwrap_or_else(|| "unknown".to_string());
+                .as_ref().map_or_else(|| "unknown".to_string(), std::string::ToString::to_string);
             *ecosystem_counts.entry(ecosystem).or_insert(0) += 1;
         }
 
@@ -871,9 +867,7 @@ fn render_view_summary(frame: &mut Frame, area: Rect, app: &App) {
         for (comp, vuln) in vulns.iter().take(5) {
             let severity = vuln
                 .severity
-                .as_ref()
-                .map(std::string::ToString::to_string)
-                .unwrap_or_else(|| "Unknown".to_string());
+                .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
             let severity_color = scheme.severity_color(&severity);
             let severity_style = match severity.to_lowercase().as_str() {
                 "critical" | "high" => Style::default().fg(severity_color).bold(),

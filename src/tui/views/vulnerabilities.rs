@@ -55,12 +55,11 @@ pub(crate) fn render_vulnerabilities(frame: &mut Frame, area: Rect, app: &mut Ap
             app.tabs.vulnerabilities.total = app.diff_vulnerability_count();
             app.data.diff_result
                 .as_ref()
-                .map(|r| {
+                .map_or(0, |r| {
                     r.vulnerabilities.introduced.len()
                         + r.vulnerabilities.resolved.len()
                         + r.vulnerabilities.persistent.len()
                 })
-                .unwrap_or(0)
         }
         AppMode::View => {
             // For view mode, build list to count (filter logic is complex)
@@ -68,8 +67,7 @@ pub(crate) fn render_vulnerabilities(frame: &mut Frame, area: Rect, app: &mut Ap
             let total = app
                 .data.sbom
                 .as_ref()
-                .map(|s| s.all_vulnerabilities().len())
-                .unwrap_or(0);
+                .map_or(0, |s| s.all_vulnerabilities().len());
             app.tabs.vulnerabilities.total = items.len();
             total
         }
@@ -438,9 +436,7 @@ fn build_grouped_render_items(
                     .filter_map(|&i| view_items.get(i))
                     .map(|it| {
                         it.1.severity
-                            .as_ref()
-                            .map(std::string::ToString::to_string)
-                            .unwrap_or_else(|| "Unknown".to_string())
+                            .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string)
                     })
                     .min_by_key(|s| severity_rank(s))
                     .unwrap_or_else(|| "Unknown".to_string());
@@ -504,7 +500,7 @@ fn build_grouped_rows<'a>(
                             Style::default().fg(scheme.accent),
                         ),
                         Span::styled(
-                            name.to_string(),
+                            name.clone(),
                             Style::default().fg(scheme.text).bold(),
                         ),
                     ])),
@@ -592,9 +588,7 @@ fn build_single_diff_row(
         )),
         Cell::from(Line::from(id_spans)),
         Cell::from(
-            vuln.cvss_score
-                .map(|s| format!("{s:.1}"))
-                .unwrap_or_else(|| "-".to_string()),
+            vuln.cvss_score.map_or_else(|| "-".to_string(), |s| format!("{s:.1}")),
         ),
         sla_cell,
         Cell::from(widgets::truncate_str(&vuln.component_name, 30)),
@@ -611,9 +605,7 @@ fn build_single_view_row(
     let (comp, vuln) = item;
     let severity = vuln
         .severity
-        .as_ref()
-        .map(std::string::ToString::to_string)
-        .unwrap_or_else(|| "Unknown".to_string());
+        .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
     let sev_color = scheme.severity_color(&severity);
 
     use crate::tui::shared::vulnerabilities::{render_kev_badge_spans, render_depth_badge_spans};
@@ -637,9 +629,7 @@ fn build_single_view_row(
         )),
         Cell::from(Line::from(id_spans)),
         Cell::from(
-            vuln.max_cvss_score()
-                .map(|s| format!("{s:.1}"))
-                .unwrap_or_else(|| "-".to_string()),
+            vuln.max_cvss_score().map_or_else(|| "-".to_string(), |s| format!("{s:.1}")),
         ),
         sla_cell,
         Cell::from(widgets::truncate_str(&comp.name, 30)),
@@ -896,9 +886,8 @@ fn get_diff_vuln_at(
 fn collect_view_vulns(
     app: &App,
 ) -> Vec<(&crate::model::Component, &crate::model::VulnerabilityRef)> {
-    let sbom = match app.data.sbom.as_ref() {
-        Some(sbom) => sbom,
-        None => return Vec::new(),
+    let Some(sbom) = app.data.sbom.as_ref() else {
+        return Vec::new();
     };
     let filter = &app.tabs.vulnerabilities.filter;
     let sort = &app.tabs.vulnerabilities.sort_by;
@@ -911,8 +900,7 @@ fn collect_view_vulns(
         .into_iter()
         .filter(|(comp, vuln)| {
             match filter {
-                VulnFilter::All => true,
-                VulnFilter::Introduced | VulnFilter::Resolved => true, // These are diff-mode only
+                VulnFilter::All | VulnFilter::Introduced | VulnFilter::Resolved => true, // Introduced/Resolved are diff-mode only
                 VulnFilter::Critical => {
                     vuln.severity.as_ref().map(std::string::ToString::to_string) == Some("Critical".to_string())
                 }
@@ -935,8 +923,7 @@ fn collect_view_vulns(
                     // Exclude components with VEX status NotAffected or Fixed
                     !matches!(
                         comp.vex_status.as_ref().map(|v| &v.status),
-                        Some(crate::model::VexState::NotAffected)
-                            | Some(crate::model::VexState::Fixed)
+                        Some(crate::model::VexState::NotAffected | crate::model::VexState::Fixed)
                     )
                 }
             }
@@ -1006,9 +993,7 @@ fn get_view_vuln_at(
     items.get(index).map(|(comp, vuln)| {
         let severity = vuln
             .severity
-            .as_ref()
-            .map(std::string::ToString::to_string)
-            .unwrap_or_else(|| "Unknown".to_string());
+            .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
         (
             "Present".to_string(),
             vuln.id.clone(),
@@ -1143,8 +1128,7 @@ fn calculate_view_vuln_sla_sort_key(vuln: &VulnerabilityRef, severity: &str) -> 
 
     match sla_status {
         SlaStatus::Overdue(days) => -(days + crate::tui::constants::SLA_OVERDUE_SORT_OFFSET), // Most urgent (negative, very low)
-        SlaStatus::DueSoon(days) => days,
-        SlaStatus::OnTrack(days) => days,
+        SlaStatus::DueSoon(days) | SlaStatus::OnTrack(days) => days,
         SlaStatus::NoDueDate => i64::MAX,
     }
 }
@@ -1159,9 +1143,7 @@ fn calculate_view_vuln_urgency(
     let (comp, vuln) = vuln_data;
     let severity = vuln
         .severity
-        .as_ref()
-        .map(std::string::ToString::to_string)
-        .unwrap_or_else(|| "Unknown".to_string());
+        .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
     let severity_rank = severity_to_rank(&severity);
     let cvss_score = vuln.max_cvss_score().unwrap_or(0.0);
 

@@ -152,8 +152,7 @@ impl NormalizedSbomIndex {
     pub fn dependency_indices(&self, id: &CanonicalId) -> &[usize] {
         self.edges_by_source
             .get(id)
-            .map(std::vec::Vec::as_slice)
-            .unwrap_or(&[])
+            .map_or(&[], std::vec::Vec::as_slice)
     }
 
     /// Get edge indices for dependents of a component (incoming edges).
@@ -163,8 +162,7 @@ impl NormalizedSbomIndex {
     pub fn dependent_indices(&self, id: &CanonicalId) -> &[usize] {
         self.edges_by_target
             .get(id)
-            .map(std::vec::Vec::as_slice)
-            .unwrap_or(&[])
+            .map_or(&[], std::vec::Vec::as_slice)
     }
 
     /// Get dependencies of a component as edges.
@@ -201,8 +199,7 @@ impl NormalizedSbomIndex {
     pub fn find_by_name_lower(&self, name_lower: &str) -> &[CanonicalId] {
         self.by_name_lower
             .get(name_lower)
-            .map(std::vec::Vec::as_slice)
-            .unwrap_or(&[])
+            .map_or(&[], std::vec::Vec::as_slice)
     }
 
     /// Find component IDs whose name contains the query (case-insensitive).
@@ -233,29 +230,26 @@ impl NormalizedSbomIndex {
     pub fn has_dependencies(&self, id: &CanonicalId) -> bool {
         self.edges_by_source
             .get(id)
-            .map(|v| !v.is_empty())
-            .unwrap_or(false)
+            .is_some_and(|v| !v.is_empty())
     }
 
     /// Check if component has any dependents.
     pub fn has_dependents(&self, id: &CanonicalId) -> bool {
         self.edges_by_target
             .get(id)
-            .map(|v| !v.is_empty())
-            .unwrap_or(false)
+            .is_some_and(|v| !v.is_empty())
     }
 
     /// Get count of dependencies for a component.
     pub fn dependency_count(&self, id: &CanonicalId) -> usize {
         self.edges_by_source
             .get(id)
-            .map(std::vec::Vec::len)
-            .unwrap_or(0)
+            .map_or(0, std::vec::Vec::len)
     }
 
     /// Get count of dependents for a component.
     pub fn dependent_count(&self, id: &CanonicalId) -> usize {
-        self.edges_by_target.get(id).map(std::vec::Vec::len).unwrap_or(0)
+        self.edges_by_target.get(id).map_or(0, std::vec::Vec::len)
     }
 
     /// Get total component count.

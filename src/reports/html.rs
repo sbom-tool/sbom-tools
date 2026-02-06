@@ -239,8 +239,7 @@ fn write_view_component_table(html: &mut String, sbom: &NormalizedSbom) -> std::
             .licenses
             .declared
             .first()
-            .map(|l| l.expression.as_str())
-            .unwrap_or("-");
+            .map_or("-", |l| l.expression.as_str());
         let vuln_count = comp.vulnerabilities.len();
         let vuln_badge = if vuln_count > 0 {
             format!("<span class=\"badge badge-critical\">{vuln_count}</span>")
@@ -357,9 +356,7 @@ fn format_sla_html(vuln: &VulnerabilityDetail) -> (String, &'static str) {
         SlaStatus::OnTrack(days) => (format!("{days}d left"), "sla-on-track"),
         SlaStatus::NoDueDate => {
             let text = vuln
-                .days_since_published
-                .map(|d| format!("{d}d old"))
-                .unwrap_or_else(|| "-".to_string());
+                .days_since_published.map_or_else(|| "-".to_string(), |d| format!("{d}d old"));
             (text, "sla-unknown")
         }
     }

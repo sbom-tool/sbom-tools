@@ -303,14 +303,12 @@ impl RegistryClient {
                 let is_deprecated = info
                     .and_then(|i| i.get("classifiers"))
                     .and_then(|c| c.as_array())
-                    .map(|arr| {
+                    .is_some_and(|arr| {
                         arr.iter().any(|c| {
                             c.as_str()
-                                .map(|s| s.contains("Inactive") || s.contains("Obsolete"))
-                                .unwrap_or(false)
+                                .is_some_and(|s| s.contains("Inactive") || s.contains("Obsolete"))
                         })
-                    })
-                    .unwrap_or(false);
+                    });
 
                 let repository_url = info
                     .and_then(|i| i.get("project_urls"))
@@ -479,7 +477,7 @@ impl StalenessEnricher {
     fn is_supported(&self, ecosystem: &Option<Ecosystem>) -> bool {
         matches!(
             ecosystem,
-            Some(Ecosystem::Npm) | Some(Ecosystem::PyPi) | Some(Ecosystem::Cargo)
+            Some(Ecosystem::Npm | Ecosystem::PyPi | Ecosystem::Cargo)
         )
     }
 

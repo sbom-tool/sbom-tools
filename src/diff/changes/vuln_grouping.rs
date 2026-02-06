@@ -83,17 +83,17 @@ impl VulnerabilityGroup {
         let vuln_priority = severity_priority(&vuln.severity);
         let current_priority = severity_priority(&self.max_severity);
         if vuln_priority < current_priority {
-            self.max_severity = vuln.severity.clone();
+            self.max_severity.clone_from(&vuln.severity);
         }
 
         // Update max CVSS
         if let Some(score) = vuln.cvss_score {
-            self.max_cvss = Some(self.max_cvss.map(|c| c.max(score)).unwrap_or(score));
+            self.max_cvss = Some(self.max_cvss.map_or(score, |c| c.max(score)));
         }
 
         // Update version from first vulnerability with version
         if self.component_version.is_none() {
-            self.component_version = vuln.version.clone();
+            self.component_version.clone_from(&vuln.version);
         }
 
         self.vulnerabilities.push(vuln);

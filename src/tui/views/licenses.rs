@@ -157,9 +157,8 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
 }
 
 fn render_diff_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
-    let result = match app.data.diff_result.as_ref() {
-        Some(r) => r,
-        None => return,
+    let Some(result) = app.data.diff_result.as_ref() else {
+        return;
     };
 
     // Layout depends on whether compatibility panel is shown
@@ -758,14 +757,13 @@ fn render_license_details(
     for comp in entry.components.iter().take(max_components) {
         // Check if component has vulnerabilities
         let has_vulns = diff_result
-            .map(|r| {
+            .is_some_and(|r| {
                 r.vulnerabilities
                     .introduced
                     .iter()
                     .chain(r.vulnerabilities.resolved.iter())
                     .any(|v| v.component_name == *comp)
-            })
-            .unwrap_or(false);
+            });
 
         let vuln_indicator = if has_vulns {
             Span::styled(" ⚠", Style::default().fg(scheme.critical))
@@ -802,9 +800,8 @@ fn render_license_details(
 }
 
 fn render_view_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
-    let sbom = match app.data.sbom.as_ref() {
-        Some(s) => s,
-        None => return,
+    let Some(sbom) = app.data.sbom.as_ref() else {
+        return;
     };
     let sort = app.tabs.licenses.sort_by;
     let risk_filter = app.tabs.licenses.risk_filter;

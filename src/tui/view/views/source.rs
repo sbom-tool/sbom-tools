@@ -46,14 +46,12 @@ struct MapSection {
 fn build_map_sections(
     state: &crate::tui::app_states::source::SourcePanelState,
 ) -> Vec<MapSection> {
-    let tree = match &state.json_tree {
-        Some(t) => t,
-        None => return Vec::new(),
+    let Some(tree) = &state.json_tree else {
+        return Vec::new();
     };
 
-    let children = match tree.children() {
-        Some(c) => c,
-        None => return Vec::new(),
+    let Some(children) = tree.children() else {
+        return Vec::new();
     };
 
     let line_starts = compute_raw_line_starts(&state.raw_lines);
@@ -76,8 +74,7 @@ fn build_map_sections(
             let line_start = line_starts
                 .iter()
                 .find(|(k, _)| k == &key)
-                .map(|(_, l)| *l)
-                .unwrap_or(0);
+                .map_or(0, |(_, l)| *l);
 
             MapSection {
                 key,
@@ -303,7 +300,7 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
     let right_edge = x + width;
 
     // Reserve bottom rows for progress bar + hints
-    let hints_rows: u16 = if is_focused { 1 } else { 0 };
+    let hints_rows: u16 = u16::from(is_focused);
     let progress_y = max_y.saturating_sub(1 + hints_rows);
     let context_max_y = progress_y;
 
@@ -727,8 +724,7 @@ fn render_context(
                     .sbom
                     .primary_component_id
                     .as_ref()
-                    .map(|pid| pid == &comp.canonical_id)
-                    .unwrap_or(false);
+                    .is_some_and(|pid| pid == &comp.canonical_id);
 
                 // Name + version + ecosystem
                 let name_ver = if let Some(ref v) = comp.version {
@@ -1053,7 +1049,7 @@ fn render_non_json_map(
     let mut y = inner.y + 1;
 
     // Reserve bottom rows
-    let hints_rows: u16 = if is_focused { 1 } else { 0 };
+    let hints_rows: u16 = u16::from(is_focused);
     let progress_y = max_y.saturating_sub(1 + hints_rows);
 
     // Format info

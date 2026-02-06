@@ -434,11 +434,8 @@ impl ReportGenerator for MarkdownReporter {
 fn format_sla_display(vuln: &VulnerabilityDetail) -> String {
     match vuln.sla_status() {
         SlaStatus::Overdue(days) => format!("{days}d late"),
-        SlaStatus::DueSoon(days) => format!("{days}d left"),
-        SlaStatus::OnTrack(days) => format!("{days}d left"),
+        SlaStatus::DueSoon(days) | SlaStatus::OnTrack(days) => format!("{days}d left"),
         SlaStatus::NoDueDate => vuln
-            .days_since_published
-            .map(|d| format!("{d}d old"))
-            .unwrap_or_else(|| "-".to_string()),
+            .days_since_published.map_or_else(|| "-".to_string(), |d| format!("{d}d old")),
     }
 }

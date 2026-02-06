@@ -65,7 +65,7 @@ impl MatrixState {
     pub fn new_with_size(count: usize) -> Self {
         Self {
             selected_row: 0,
-            selected_col: if count > 1 { 1 } else { 0 },
+            selected_col: usize::from(count > 1),
             sbom_count: count,
             active_panel: MatrixPanel::Matrix,
             search: MultiViewSearchState::new(),
@@ -257,8 +257,7 @@ impl SimilarityThreshold {
             Self::None => Self::High,
             Self::High => Self::Medium,
             Self::Medium => Self::Low,
-            Self::Low => Self::None,
-            Self::Custom => Self::None,
+            Self::Low | Self::Custom => Self::None,
         }
     }
 }

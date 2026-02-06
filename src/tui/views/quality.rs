@@ -45,12 +45,9 @@ fn render_diff_quality(frame: &mut Frame, area: Rect, app: &App) {
 }
 
 fn render_view_quality(frame: &mut Frame, area: Rect, app: &App) {
-    let report = match &app.data.quality_report {
-        Some(r) => r,
-        None => {
-            render_no_quality_data(frame, area);
-            return;
-        }
+    let Some(report) = &app.data.quality_report else {
+        render_no_quality_data(frame, area);
+        return;
     };
 
     match app.tabs.quality.view_mode {

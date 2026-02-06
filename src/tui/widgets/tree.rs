@@ -34,8 +34,7 @@ pub enum TreeNode {
 impl TreeNode {
     pub(crate) fn id(&self) -> &str {
         match self {
-            Self::Group { id, .. } => id,
-            Self::Component { id, .. } => id,
+            Self::Group { id, .. } | Self::Component { id, .. } => id,
         }
     }
 
@@ -57,8 +56,7 @@ impl TreeNode {
 
     pub(crate) fn vuln_count(&self) -> usize {
         match self {
-            Self::Group { vuln_count, .. } => *vuln_count,
-            Self::Component { vuln_count, .. } => *vuln_count,
+            Self::Group { vuln_count, .. } | Self::Component { vuln_count, .. } => *vuln_count,
         }
     }
 

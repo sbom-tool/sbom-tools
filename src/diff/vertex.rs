@@ -117,15 +117,15 @@ impl DiffEdge {
     /// Get the cost of this edge
     pub fn cost(&self) -> i32 {
         match self {
-            Self::ComponentRemoved { cost, .. } => *cost as i32,
-            Self::ComponentAdded { cost, .. } => *cost as i32,
-            Self::VersionChanged { cost, .. } => *cost as i32,
-            Self::LicenseChanged { cost, .. } => *cost as i32,
-            Self::SupplierChanged { cost, .. } => *cost as i32,
-            Self::VulnerabilityIntroduced { cost, .. } => *cost as i32,
+            Self::ComponentRemoved { cost, .. }
+            | Self::ComponentAdded { cost, .. }
+            | Self::VersionChanged { cost, .. }
+            | Self::LicenseChanged { cost, .. }
+            | Self::SupplierChanged { cost, .. }
+            | Self::VulnerabilityIntroduced { cost, .. }
+            | Self::DependencyAdded { cost, .. }
+            | Self::DependencyRemoved { cost, .. } => *cost as i32,
             Self::VulnerabilityResolved { reward, .. } => *reward,
-            Self::DependencyAdded { cost, .. } => *cost as i32,
-            Self::DependencyRemoved { cost, .. } => *cost as i32,
             Self::ComponentUnchanged { .. } => 0,
         }
     }

@@ -106,17 +106,15 @@ impl TabTarget {
     pub fn to_tab_kind(&self) -> Option<super::app::TabKind> {
         match self {
             Self::Summary => Some(super::app::TabKind::Summary),
-            Self::Components => Some(super::app::TabKind::Components),
+            Self::Components | Self::ComponentByName(_) => Some(super::app::TabKind::Components),
             Self::Dependencies => Some(super::app::TabKind::Dependencies),
             Self::Licenses => Some(super::app::TabKind::Licenses),
-            Self::Vulnerabilities => Some(super::app::TabKind::Vulnerabilities),
+            Self::Vulnerabilities | Self::VulnerabilityById(_) => Some(super::app::TabKind::Vulnerabilities),
             Self::Quality => Some(super::app::TabKind::Quality),
             Self::Compliance => Some(super::app::TabKind::Compliance),
             Self::SideBySide => Some(super::app::TabKind::SideBySide),
             Self::GraphChanges => Some(super::app::TabKind::GraphChanges),
             Self::Source => Some(super::app::TabKind::Source),
-            Self::ComponentByName(_) => Some(super::app::TabKind::Components),
-            Self::VulnerabilityById(_) => Some(super::app::TabKind::Vulnerabilities),
         }
     }
 

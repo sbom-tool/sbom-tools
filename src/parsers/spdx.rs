@@ -415,10 +415,10 @@ impl SpdxParser {
                                         // Extract algorithm from URI like http://spdx.org/rdf/terms#checksumAlgorithm_sha256
                                         if let Some(idx) = uri.rfind("checksumAlgorithm_") {
                                             checksum.algorithm =
-                                                uri[idx + 18..].to_uppercase().to_string();
+                                                uri[idx + 18..].to_uppercase();
                                         } else if let Some(idx) = uri.rfind('#') {
                                             checksum.algorithm =
-                                                uri[idx + 1..].to_uppercase().to_string();
+                                                uri[idx + 1..].to_uppercase();
                                         }
                                     }
                                 }
@@ -445,9 +445,6 @@ impl SpdxParser {
                 }
                 Ok(Event::Text(ref e)) => {
                     current_text = e.decode().unwrap_or_default().to_string();
-                }
-                Ok(Event::GeneralRef(_)) => {
-                    // Entity references — handled by decoder
                 }
                 Ok(Event::End(ref e)) => {
                     let local_name = Self::local_name(e.name().as_ref());
@@ -491,28 +488,28 @@ impl SpdxParser {
                         // Document-level fields
                         "specVersion" | "spdxVersion" => {
                             if in_document && current_package.is_none() {
-                                doc.spdx_version = current_text.clone();
+                                doc.spdx_version.clone_from(&current_text);
                             }
                         }
                         "name" => {
                             if let Some(ref mut pkg) = current_package {
-                                pkg.name = current_text.clone();
+                                pkg.name.clone_from(&current_text);
                             } else if in_document {
-                                doc.name = current_text.clone();
+                                doc.name.clone_from(&current_text);
                             }
                         }
                         "spdxId" | "SPDXID" => {
                             if let Some(ref mut pkg) = current_package {
                                 if pkg.spdx_id.is_empty() {
-                                    pkg.spdx_id = current_text.clone();
+                                    pkg.spdx_id.clone_from(&current_text);
                                 }
                             } else if in_document {
-                                doc.spdx_id = current_text.clone();
+                                doc.spdx_id.clone_from(&current_text);
                             }
                         }
                         "dataLicense" => {
                             if doc.data_license.is_empty() {
-                                doc.data_license = current_text.clone();
+                                doc.data_license.clone_from(&current_text);
                             }
                         }
                         // Creation info fields
@@ -581,24 +578,24 @@ impl SpdxParser {
                         // Checksum fields
                         "checksumValue" => {
                             if let Some(ref mut checksum) = current_checksum {
-                                checksum.checksum_value = current_text.clone();
+                                checksum.checksum_value.clone_from(&current_text);
                             }
                         }
                         // External ref fields
                         "referenceType" => {
                             if let Some(ref mut ext_ref) = current_external_ref {
-                                ext_ref.reference_type = current_text.clone();
+                                ext_ref.reference_type.clone_from(&current_text);
                             }
                         }
                         "referenceLocator" => {
                             if let Some(ref mut ext_ref) = current_external_ref {
-                                ext_ref.reference_locator = current_text.clone();
+                                ext_ref.reference_locator.clone_from(&current_text);
                             }
                         }
                         "referenceCategory" => {
                             if let Some(ref mut ext_ref) = current_external_ref {
                                 if ext_ref.reference_category.is_empty() {
-                                    ext_ref.reference_category = current_text.clone();
+                                    ext_ref.reference_category.clone_from(&current_text);
                                 }
                             }
                         }
@@ -805,9 +802,7 @@ impl SpdxParser {
             .creation_info
             .as_ref()
             .and_then(|ci| ci.created.as_ref())
-            .and_then(|c| DateTime::parse_from_rfc3339(c).ok())
-            .map(|dt| dt.with_timezone(&Utc))
-            .unwrap_or_else(Utc::now);
+            .and_then(|c| DateTime::parse_from_rfc3339(c).ok()).map_or_else(Utc::now, |dt| dt.with_timezone(&Utc));
 
         let mut creators = Vec::new();
         if let Some(creation_info) = &spdx.creation_info {
@@ -939,8 +934,8 @@ impl SpdxParser {
         }
 
         // Set other fields
-        comp.description = pkg.description.clone();
-        comp.copyright = pkg.copyright_text.clone();
+        comp.description.clone_from(&pkg.description);
+        comp.copyright.clone_from(&pkg.copyright_text);
 
         comp.calculate_content_hash();
         Ok(comp)

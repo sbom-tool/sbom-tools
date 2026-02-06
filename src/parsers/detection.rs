@@ -138,7 +138,7 @@ impl FormatDetector {
         let first_char = peek.iter().find(|&&b| !b.is_ascii_whitespace());
 
         match first_char {
-            Some(b'{') | Some(b'<') => {
+            Some(b'{' | b'<') => {
                 // Convert peek to string for detection
                 let preview = String::from_utf8_lossy(peek);
 
@@ -272,7 +272,7 @@ impl FormatDetector {
                 // Check variant - tag-value and RDF need string-based parsing
                 let needs_string = matches!(
                     detection.variant.as_deref(),
-                    Some("tag-value") | Some("RDF")
+                    Some("tag-value" | "RDF")
                 );
                 if needs_string {
                     let mut content = String::new();

@@ -198,11 +198,10 @@ fn render_aligned_mode(frame: &mut Frame, area: Rect, app: &mut App) {
         let is_selected = idx == selected;
         let is_search_match = search_query
             .as_ref()
-            .map(|q| {
+            .is_some_and(|q| {
                 row.left_name.as_ref().is_some_and(|n| n.contains(q))
                     || row.right_name.as_ref().is_some_and(|n| n.contains(q))
-            })
-            .unwrap_or(false);
+            });
 
         let (left_line, right_line) =
             render_aligned_row(row, is_selected, is_search_match, &search_query, &scheme);

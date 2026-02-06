@@ -107,7 +107,7 @@ impl<'a> DependencyGraph<'a> {
         // Find roots (components with no parents)
         let roots: Vec<_> = all_components
             .iter()
-            .filter(|id| reverse_edges.get(*id).map(std::vec::Vec::is_empty).unwrap_or(true))
+            .filter(|id| reverse_edges.get(*id).is_none_or(std::vec::Vec::is_empty))
             .cloned()
             .collect();
 

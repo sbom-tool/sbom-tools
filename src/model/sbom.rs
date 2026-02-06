@@ -259,12 +259,13 @@ impl NormalizedSbom {
     pub fn apply_cra_sidecar(&mut self, sidecar: &super::CraSidecarMetadata) {
         // Only apply if SBOM doesn't already have the value
         if self.document.security_contact.is_none() {
-            self.document.security_contact = sidecar.security_contact.clone();
+            self.document.security_contact.clone_from(&sidecar.security_contact);
         }
 
         if self.document.vulnerability_disclosure_url.is_none() {
-            self.document.vulnerability_disclosure_url =
-                sidecar.vulnerability_disclosure_url.clone();
+            self.document
+                .vulnerability_disclosure_url
+                .clone_from(&sidecar.vulnerability_disclosure_url);
         }
 
         if self.document.support_end_date.is_none() {
@@ -272,7 +273,7 @@ impl NormalizedSbom {
         }
 
         if self.document.name.is_none() {
-            self.document.name = sidecar.product_name.clone();
+            self.document.name.clone_from(&sidecar.product_name);
         }
 
         // Add manufacturer as creator if not present
@@ -376,8 +377,7 @@ impl StalenessLevel {
             Self::Aging => 1,
             Self::Stale => 2,
             Self::Abandoned => 3,
-            Self::Deprecated => 4,
-            Self::Archived => 4,
+            Self::Deprecated | Self::Archived => 4,
         }
     }
 }

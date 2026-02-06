@@ -171,8 +171,7 @@ impl KevCatalog {
     /// Check if CVE is known to be used in ransomware
     pub fn is_ransomware_related(&self, cve_id: &str) -> bool {
         self.get(cve_id)
-            .map(|e| e.known_ransomware_use)
-            .unwrap_or(false)
+            .is_some_and(|e| e.known_ransomware_use)
     }
 
     /// Get all ransomware-related CVEs

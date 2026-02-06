@@ -35,9 +35,8 @@ impl ScoringProfile {
     pub fn compliance_level(&self) -> ComplianceLevel {
         match self {
             Self::Minimal => ComplianceLevel::Minimum,
-            Self::Standard => ComplianceLevel::Standard,
+            Self::Standard | Self::LicenseCompliance => ComplianceLevel::Standard,
             Self::Security => ComplianceLevel::NtiaMinimum,
-            Self::LicenseCompliance => ComplianceLevel::Standard,
             Self::Cra => ComplianceLevel::CraPhase2,
             Self::Comprehensive => ComplianceLevel::Comprehensive,
         }

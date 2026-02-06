@@ -485,9 +485,7 @@ impl ComponentMatcher for FuzzyMatcher {
             if score >= 0.90 {
                 let ecosystem = a
                     .ecosystem
-                    .as_ref()
-                    .map(std::string::ToString::to_string)
-                    .unwrap_or_else(|| "unknown".to_string());
+                    .as_ref().map_or_else(|| "unknown".to_string(), std::string::ToString::to_string);
                 return MatchExplanation::matched(
                     MatchTier::EcosystemRule,
                     score,

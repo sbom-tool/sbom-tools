@@ -167,7 +167,7 @@ impl DependenciesState {
 
     /// Update cached cycle nodes
     pub fn update_cycle_cache(&mut self, cycles: Vec<Vec<String>>) {
-        self.detected_cycles = cycles.clone();
+        self.detected_cycles.clone_from(&cycles);
         self.cached_cycle_nodes = cycles.into_iter().flatten().collect();
     }
 
@@ -351,8 +351,7 @@ impl DependenciesState {
     pub fn get_dependent_count(&self, node_id: &str) -> usize {
         self.cached_reverse_graph
             .get(node_id)
-            .map(std::vec::Vec::len)
-            .unwrap_or(0)
+            .map_or(0, std::vec::Vec::len)
     }
 
     pub fn toggle_node(&mut self, node_id: &str) {

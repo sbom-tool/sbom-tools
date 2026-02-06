@@ -202,25 +202,18 @@ pub fn create_reporter_with_options(
     use_color: bool,
 ) -> Box<dyn ReportGenerator> {
     match format {
-        ReportFormat::Auto => {
+        ReportFormat::Auto | ReportFormat::Summary => {
             if use_color {
                 Box::new(SummaryReporter::new())
             } else {
                 Box::new(SummaryReporter::new().no_color())
             }
         }
-        ReportFormat::Json => Box::new(JsonReporter::new()),
+        ReportFormat::Json | ReportFormat::Tui => Box::new(JsonReporter::new()), // TUI uses JSON internally
         ReportFormat::Sarif => Box::new(SarifReporter::new()),
         ReportFormat::Markdown => Box::new(MarkdownReporter::new()),
         ReportFormat::Html => Box::new(HtmlReporter::new()),
         ReportFormat::SideBySide => Box::new(SideBySideReporter::new()),
-        ReportFormat::Summary => {
-            if use_color {
-                Box::new(SummaryReporter::new())
-            } else {
-                Box::new(SummaryReporter::new().no_color())
-            }
-        }
         ReportFormat::Table => {
             if use_color {
                 Box::new(TableReporter::new())
@@ -229,6 +222,5 @@ pub fn create_reporter_with_options(
             }
         }
         ReportFormat::Csv => Box::new(CsvReporter::new()),
-        ReportFormat::Tui => Box::new(JsonReporter::new()), // TUI uses JSON internally
     }
 }

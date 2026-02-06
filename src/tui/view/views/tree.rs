@@ -487,9 +487,7 @@ fn render_vulnerabilities_tab(
         for vuln in &comp.vulnerabilities {
             let sev = vuln
                 .severity
-                .as_ref()
-                .map(std::string::ToString::to_string)
-                .unwrap_or_else(|| "?".to_string());
+                .as_ref().map_or_else(|| "?".to_string(), std::string::ToString::to_string);
             let sev_color = SeverityBadge::fg_color(&sev);
 
             // Vuln ID line

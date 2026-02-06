@@ -201,8 +201,7 @@ impl RuleEngine {
                 .identifiers
                 .purl
                 .as_ref()
-                .map(|p| p == purl)
-                .unwrap_or(false),
+                .is_some_and(|p| p == purl),
             ExclusionRule::Conditional {
                 pattern,
                 regex: _,
@@ -260,8 +259,7 @@ impl RuleEngine {
                     || self
                         .compiled_exclusion_regexes
                         .get(rule_idx)
-                        .map(std::option::Option::is_some)
-                        .unwrap_or(false)
+                        .is_some_and(std::option::Option::is_some)
             }
         }
     }

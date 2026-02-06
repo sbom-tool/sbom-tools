@@ -177,7 +177,7 @@ impl AppConfig {
     pub fn merge(&mut self, other: &Self) {
         // Matching config
         if other.matching.fuzzy_preset != "balanced" {
-            self.matching.fuzzy_preset = other.matching.fuzzy_preset.clone();
+            self.matching.fuzzy_preset.clone_from(&other.matching.fuzzy_preset);
         }
         if other.matching.threshold.is_some() {
             self.matching.threshold = other.matching.threshold;
@@ -191,7 +191,7 @@ impl AppConfig {
             self.output.format = other.output.format;
         }
         if other.output.file.is_some() {
-            self.output.file = other.output.file.clone();
+            self.output.file.clone_from(&other.output.file);
         }
         if other.output.no_color {
             self.output.no_color = true;
@@ -202,7 +202,7 @@ impl AppConfig {
             self.filtering.only_changes = true;
         }
         if other.filtering.min_severity.is_some() {
-            self.filtering.min_severity = other.filtering.min_severity.clone();
+            self.filtering.min_severity.clone_from(&other.filtering.min_severity);
         }
 
         // Behavior config (booleans - if set to true, override)
@@ -229,7 +229,7 @@ impl AppConfig {
 
         // Rules config
         if other.rules.rules_file.is_some() {
-            self.rules.rules_file = other.rules.rules_file.clone();
+            self.rules.rules_file.clone_from(&other.rules.rules_file);
         }
         if other.rules.dry_run {
             self.rules.dry_run = true;
@@ -237,7 +237,7 @@ impl AppConfig {
 
         // Ecosystem rules config
         if other.ecosystem_rules.config_file.is_some() {
-            self.ecosystem_rules.config_file = other.ecosystem_rules.config_file.clone();
+            self.ecosystem_rules.config_file.clone_from(&other.ecosystem_rules.config_file);
         }
         if other.ecosystem_rules.disabled {
             self.ecosystem_rules.disabled = true;
@@ -248,12 +248,12 @@ impl AppConfig {
 
         // TUI config
         if other.tui.theme != "dark" {
-            self.tui.theme = other.tui.theme.clone();
+            self.tui.theme.clone_from(&other.tui.theme);
         }
 
         // Enrichment config
         if other.enrichment.is_some() {
-            self.enrichment = other.enrichment.clone();
+            self.enrichment.clone_from(&other.enrichment);
         }
     }
 

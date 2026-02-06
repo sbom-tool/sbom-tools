@@ -43,7 +43,7 @@ pub fn handle_source_keys(app: &mut App, key: KeyEvent) {
         KeyCode::Char('v') => {
             app.tabs.source.active_panel_mut().toggle_view_mode();
         }
-        KeyCode::Char('w') | KeyCode::Char('\t') => {
+        KeyCode::Char('w' | '\t') => {
             // Tab or 'w' to switch active side
             app.tabs.source.toggle_side();
         }

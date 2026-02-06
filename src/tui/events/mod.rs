@@ -144,11 +144,10 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
     // Handle overlays (help, export, legend)
     if app.has_overlay() {
         match key.code {
-            KeyCode::Esc => app.close_overlays(),
+            KeyCode::Esc | KeyCode::Char('q') => app.close_overlays(),
             KeyCode::Char('?') if app.overlays.show_help => app.toggle_help(),
             KeyCode::Char('e') if app.overlays.show_export => app.toggle_export(),
             KeyCode::Char('l') if app.overlays.show_legend => app.toggle_legend(),
-            KeyCode::Char('q') => app.close_overlays(),
             // Export format selection in export dialog
             KeyCode::Char('j') if app.overlays.show_export => {
                 app.close_overlays();
@@ -166,7 +165,7 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
                 app.close_overlays();
                 app.export(super::export::ExportFormat::Sarif);
             }
-            KeyCode::Char('d') | KeyCode::Char('c') if app.overlays.show_export => {
+            KeyCode::Char('d' | 'c') if app.overlays.show_export => {
                 app.close_overlays();
                 app.export(super::export::ExportFormat::Csv);
             }

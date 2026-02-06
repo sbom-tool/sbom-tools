@@ -114,11 +114,11 @@ pub(super) fn handle_timeline_keys(app: &mut App, key: KeyEvent) {
         }
 
         // Chart zoom
-        KeyCode::Char('+') | KeyCode::Char('=') => {
+        KeyCode::Char('+' | '=') => {
             app.tabs.timeline.zoom_in();
             app.set_status_message(format!("Zoom: {}x", app.tabs.timeline.chart_zoom));
         }
-        KeyCode::Char('-') | KeyCode::Char('_') => {
+        KeyCode::Char('-' | '_') => {
             app.tabs.timeline.zoom_out();
             app.set_status_message(format!("Zoom: {}x", app.tabs.timeline.chart_zoom));
         }

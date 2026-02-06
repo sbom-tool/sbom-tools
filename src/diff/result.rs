@@ -660,8 +660,7 @@ impl SlaStatus {
     pub fn display(&self, days_since_published: Option<i64>) -> String {
         match self {
             Self::Overdue(days) => format!("{days}d late"),
-            Self::DueSoon(days) => format!("{days}d left"),
-            Self::OnTrack(days) => format!("{days}d left"),
+            Self::DueSoon(days) | Self::OnTrack(days) => format!("{days}d left"),
             Self::NoDueDate => {
                 if let Some(age) = days_since_published {
                     format!("{age}d old")
@@ -743,7 +742,7 @@ impl VulnerabilityDetail {
     pub fn is_vex_actionable(&self) -> bool {
         !matches!(
             self.vex_state,
-            Some(crate::model::VexState::NotAffected) | Some(crate::model::VexState::Fixed)
+            Some(crate::model::VexState::NotAffected | crate::model::VexState::Fixed)
         )
     }
 
@@ -773,9 +772,7 @@ impl VulnerabilityDetail {
             source: vuln.source.to_string(),
             severity: vuln
                 .severity
-                .as_ref()
-                .map(std::string::ToString::to_string)
-                .unwrap_or_else(|| "Unknown".to_string()),
+                .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string),
             cvss_score: vuln.max_cvss_score(),
             component_id: component.canonical_id.to_string(),
             component_canonical_id: Some(component.canonical_id.clone()),

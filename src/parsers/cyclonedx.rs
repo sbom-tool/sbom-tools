@@ -183,9 +183,7 @@ impl CycloneDxParser {
             .metadata
             .as_ref()
             .and_then(|m| m.timestamp.as_ref())
-            .and_then(|t| DateTime::parse_from_rfc3339(t).ok())
-            .map(|dt| dt.with_timezone(&Utc))
-            .unwrap_or_else(Utc::now);
+            .and_then(|t| DateTime::parse_from_rfc3339(t).ok()).map_or_else(Utc::now, |dt| dt.with_timezone(&Utc));
 
         let mut creators = Vec::new();
         if let Some(meta) = &cdx.metadata {
@@ -341,10 +339,10 @@ impl CycloneDxParser {
         }
 
         // Set description
-        comp.description = cdx.description.clone();
-        comp.group = cdx.group.clone();
-        comp.author = cdx.author.clone();
-        comp.copyright = cdx.copyright.clone();
+        comp.description.clone_from(&cdx.description);
+        comp.group.clone_from(&cdx.group);
+        comp.author.clone_from(&cdx.author);
+        comp.copyright.clone_from(&cdx.copyright);
 
         comp.calculate_content_hash();
         Ok(comp)
@@ -360,17 +358,16 @@ impl CycloneDxParser {
         let source = vuln
             .source
             .as_ref()
-            .map(|s| match s.name.to_lowercase().as_str() {
+            .map_or(VulnerabilitySource::Cve, |s| match s.name.to_lowercase().as_str() {
                 "nvd" => VulnerabilitySource::Nvd,
                 "ghsa" | "github" => VulnerabilitySource::Ghsa,
                 "osv" => VulnerabilitySource::Osv,
                 "snyk" => VulnerabilitySource::Snyk,
                 other => VulnerabilitySource::Other(other.to_string()),
-            })
-            .unwrap_or(VulnerabilitySource::Cve);
+            });
 
         let mut vuln_ref = VulnerabilityRef::new(vuln.id.clone(), source);
-        vuln_ref.description = vuln.description.clone();
+        vuln_ref.description.clone_from(&vuln.description);
 
         // Parse CVSS scores
         if let Some(ratings) = &vuln.ratings {
@@ -378,13 +375,12 @@ impl CycloneDxParser {
                 let version = match rating.method.as_deref() {
                     Some("CVSSv2") => CvssVersion::V2,
                     Some("CVSSv3") => CvssVersion::V3,
-                    Some("CVSSv31") => CvssVersion::V31,
                     Some("CVSSv4") => CvssVersion::V4,
                     _ => CvssVersion::V31,
                 };
                 if let Some(score) = rating.score {
                     let mut cvss = CvssScore::new(version, score);
-                    cvss.vector = rating.vector.clone();
+                    cvss.vector.clone_from(&rating.vector);
                     vuln_ref.cvss.push(cvss);
                 }
                 if vuln_ref.severity.is_none() {
@@ -432,7 +428,6 @@ impl CycloneDxParser {
                 Some("not_affected") => VexState::NotAffected,
                 Some("affected") => VexState::Affected,
                 Some("fixed") => VexState::Fixed,
-                Some("in_triage") | Some("under_investigation") => VexState::UnderInvestigation,
                 _ => VexState::UnderInvestigation,
             };
 
@@ -452,7 +447,6 @@ impl CycloneDxParser {
                 responses.first().map(|r| match r.as_str() {
                     "can_not_fix" => VexResponse::CanNotFix,
                     "will_not_fix" => VexResponse::WillNotFix,
-                    "update" => VexResponse::Update,
                     "rollback" => VexResponse::Rollback,
                     "workaround_available" => VexResponse::Workaround,
                     _ => VexResponse::Update,

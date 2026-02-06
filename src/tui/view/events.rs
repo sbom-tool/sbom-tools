@@ -151,7 +151,7 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
             KeyCode::Char('e') if app.show_export => app.toggle_export(),
             KeyCode::Char('l') if app.show_legend => app.toggle_legend(),
             // Export format selection
-            KeyCode::Char('j') | KeyCode::Char('m') | KeyCode::Char('c') | KeyCode::Char('v')
+            KeyCode::Char('j' | 'm' | 'c' | 'v')
                 if app.show_export =>
             {
                 handle_export_key(app, key);
@@ -732,17 +732,13 @@ fn handle_list_click(app: &mut ViewApp, clicked_index: usize, _x: u16) {
             app.ensure_compliance_results();
             let max = app.compliance_results.as_ref()
                 .and_then(|r| r.get(app.compliance_state.selected_standard))
-                .map(|r| r.violations.len())
-                .unwrap_or(0);
+                .map_or(0, |r| r.violations.len());
             if clicked_index < max {
                 app.compliance_state.selected_violation = clicked_index;
             }
         }
-        ViewTab::Source => {
-            // Source tab uses its own scrolling
-        }
-        ViewTab::Overview => {
-            // Overview doesn't have list navigation
+        ViewTab::Source | ViewTab::Overview => {
+            // Source uses its own scrolling; Overview has no list navigation
         }
     }
 }

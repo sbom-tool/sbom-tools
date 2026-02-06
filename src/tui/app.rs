@@ -265,15 +265,13 @@ impl App {
             AppMode::Diff => {
                 self.data.old_sbom
                     .as_ref()
-                    .map(crate::model::NormalizedSbom::component_count)
-                    .unwrap_or(0)
+                    .map_or(0, crate::model::NormalizedSbom::component_count)
                     + self.data
                         .new_sbom
                         .as_ref()
-                        .map(crate::model::NormalizedSbom::component_count)
-                        .unwrap_or(0)
+                        .map_or(0, crate::model::NormalizedSbom::component_count)
             }
-            AppMode::View => self.data.sbom.as_ref().map(crate::model::NormalizedSbom::component_count).unwrap_or(0),
+            AppMode::View => self.data.sbom.as_ref().map_or(0, crate::model::NormalizedSbom::component_count),
             _ => 0,
         };
 
@@ -469,9 +467,8 @@ impl App {
         use crate::quality::{ComplianceChecker, ViolationSeverity};
         use crate::tui::security::{ComplianceResult as PolicyResult, PolicySeverity, PolicyViolation};
 
-        let level = match preset.compliance_level() {
-            Some(l) => l,
-            None => return,
+        let Some(level) = preset.compliance_level() else {
+            return;
         };
 
         // Find the SBOM to check (prefer new_sbom in diff mode, sbom in view mode)
@@ -479,12 +476,9 @@ impl App {
             AppMode::Diff => self.data.new_sbom.as_ref(),
             _ => self.data.sbom.as_ref(),
         };
-        let sbom = match sbom {
-            Some(s) => s,
-            None => {
-                self.set_status_message("No SBOM loaded to check");
-                return;
-            }
+        let Some(sbom) = sbom else {
+            self.set_status_message("No SBOM loaded to check");
+            return;
         };
 
         let checker = ComplianceChecker::new(level);
@@ -567,9 +561,7 @@ impl App {
                             .map(|v| {
                                 let severity = v
                                     .severity
-                                    .as_ref()
-                                    .map(std::string::ToString::to_string)
-                                    .unwrap_or_else(|| "Unknown".to_string());
+                                    .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
                                 (v.id.clone(), severity)
                             })
                             .collect();
@@ -597,9 +589,7 @@ impl App {
                             .map(|v| {
                                 let severity = v
                                     .severity
-                                    .as_ref()
-                                    .map(std::string::ToString::to_string)
-                                    .unwrap_or_else(|| "Unknown".to_string());
+                                    .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
                                 (v.id.clone(), severity)
                             })
                             .collect();
@@ -649,11 +639,8 @@ impl App {
         use super::traits::EventResult;
 
         match result {
-            EventResult::Consumed => {
-                // Event was handled, nothing else to do
-            }
-            EventResult::Ignored => {
-                // Event was not handled, could try parent handlers
+            EventResult::Consumed | EventResult::Ignored => {
+                // Event was handled, or not handled -- nothing else to do
             }
             EventResult::NavigateTo(target) => {
                 self.navigate_to_target(target);

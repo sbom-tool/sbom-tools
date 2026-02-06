@@ -195,9 +195,7 @@ fn get_fuzzy_config(preset: &str) -> FuzzyMatchConfig {
 
 /// Get SBOM name from path
 fn get_sbom_name(path: &Path) -> String {
-    path.file_stem()
-        .map(|s| s.to_string_lossy().to_string())
-        .unwrap_or_else(|| "unknown".to_string())
+    path.file_stem().map_or_else(|| "unknown".to_string(), |s| s.to_string_lossy().to_string())
 }
 
 /// Prepare SBOM references with names and paths

@@ -203,9 +203,7 @@ impl ReportGenerator for SarifReporter {
         for (comp, vuln) in sbom.all_vulnerabilities() {
             let severity_str = vuln
                 .severity
-                .as_ref()
-                .map(std::string::ToString::to_string)
-                .unwrap_or_else(|| "Unknown".to_string());
+                .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
             results.push(SarifResult {
                 rule_id: "SBOM-VIEW-001".to_string(),
                 level: severity_to_level(&severity_str),
@@ -277,7 +275,6 @@ pub fn generate_compliance_sarif(result: &ComplianceResult) -> Result<String, Re
 fn severity_to_level(severity: &str) -> SarifLevel {
     match severity.to_lowercase().as_str() {
         "critical" | "high" => SarifLevel::Error,
-        "medium" => SarifLevel::Warning,
         "low" | "info" => SarifLevel::Note,
         _ => SarifLevel::Warning,
     }
@@ -287,8 +284,7 @@ fn severity_to_level(severity: &str) -> SarifLevel {
 fn format_sla_label(vuln: &VulnerabilityDetail) -> String {
     match vuln.sla_status() {
         SlaStatus::Overdue(days) => format!(" [SLA: {days}d late]"),
-        SlaStatus::DueSoon(days) => format!(" [SLA: {days}d left]"),
-        SlaStatus::OnTrack(days) => format!(" [SLA: {days}d left]"),
+        SlaStatus::DueSoon(days) | SlaStatus::OnTrack(days) => format!(" [SLA: {days}d left]"),
         SlaStatus::NoDueDate => vuln
             .days_since_published
             .map(|d| format!(" [Age: {d}d]"))

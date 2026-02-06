@@ -436,8 +436,7 @@ fn render_clustering(f: &mut Frame, area: Rect, result: &MatrixResult, state: &M
             result
                 .clustering
                 .as_ref()
-                .map(|c| c.clusters.len())
-                .unwrap_or(0)
+                .map_or(0, |c| c.clusters.len())
         ))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(scheme.critical));
@@ -498,9 +497,8 @@ fn render_pair_diff_modal(f: &mut Frame, area: Rect, result: &MatrixResult, stat
     let row = state.selected_row;
     let col = state.selected_col;
 
-    let (sbom_a, sbom_b) = match (result.sboms.get(row), result.sboms.get(col)) {
-        (Some(a), Some(b)) => (a, b),
-        _ => return,
+    let (Some(sbom_a), Some(sbom_b)) = (result.sboms.get(row), result.sboms.get(col)) else {
+        return;
     };
 
     let similarity = result.get_similarity(row, col);

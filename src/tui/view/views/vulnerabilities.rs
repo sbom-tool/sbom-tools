@@ -113,7 +113,7 @@ fn render_severity_card(
 
     let bar_width = (area.width.saturating_sub(4)) as usize;
     let filled = if total > 0 {
-        (count * bar_width / total).max(if count > 0 { 1 } else { 0 })
+        (count * bar_width / total).max(usize::from(count > 0))
     } else {
         0
     };
@@ -278,9 +278,7 @@ fn render_vuln_content(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
             let filter_label = app
                 .vuln_state
                 .filter_severity
-                .as_ref()
-                .map(|s| s.to_uppercase())
-                .unwrap_or_else(|| "current".to_string());
+                .as_ref().map_or_else(|| "current".to_string(), |s| s.to_uppercase());
             crate::tui::widgets::render_no_results_state(
                 frame,
                 area,
@@ -730,9 +728,7 @@ fn render_vuln_table_panel(
 
                 if show_cvss {
                     cells.push(Cell::from(
-                        v.cvss
-                            .map(|c| format!("{c:.1}"))
-                            .unwrap_or_else(|| "-".to_string()),
+                        v.cvss.map_or_else(|| "-".to_string(), |c| format!("{c:.1}")),
                     ));
                 }
 
@@ -758,9 +754,7 @@ fn render_vuln_table_panel(
 
                 cells.push(Cell::from(Span::styled(
                     v.description
-                        .as_ref()
-                        .map(|d| truncate_str(d, desc_width.max(15)))
-                        .unwrap_or_else(|| "-".to_string()),
+                        .as_ref().map_or_else(|| "-".to_string(), |d| truncate_str(d, desc_width.max(15))),
                     Style::default().fg(scheme.text),
                 )));
 
@@ -1433,9 +1427,7 @@ pub fn build_display_items(
                 if v.affected_count > 1 {
                     // Use smart grouped name if available
                     v.grouped_components
-                        .first()
-                        .map(|(name, _)| name.clone())
-                        .unwrap_or_else(|| v.component_name.clone())
+                        .first().map_or_else(|| v.component_name.clone(), |(name, _)| name.clone())
                 } else {
                     extract_component_display_name(&v.component_name, v.description.as_deref())
                 }

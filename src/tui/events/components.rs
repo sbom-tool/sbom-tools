@@ -59,9 +59,6 @@ pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
             app.tabs.components.security_filter.clear_all();
             app.set_status_message("All filters cleared");
         }
-        KeyCode::Enter => {
-            // Toggle expand/collapse of selected component detail
-        }
         // Quick actions for security analysis
         KeyCode::Char('y') => {
             // Copy component info to clipboard
@@ -185,7 +182,7 @@ pub(super) fn get_components_tab_clipboard_info(app: &App, comp_name: &str) -> S
                     "Component: {}\nVersion: {}\nEcosystem: {}\nVulnerabilities: {}",
                     comp.name,
                     comp.version.as_deref().unwrap_or("unknown"),
-                    comp.ecosystem.as_ref().map(std::string::ToString::to_string).unwrap_or_else(|| "unknown".to_string()),
+                    comp.ecosystem.as_ref().map_or_else(|| "unknown".to_string(), std::string::ToString::to_string),
                     if vulns.is_empty() { "None".to_string() } else { vulns.join(", ") }
                 )
             } else {

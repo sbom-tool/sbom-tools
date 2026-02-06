@@ -232,8 +232,7 @@ fn render_tabs(frame: &mut Frame, area: Rect, app: &App) {
     let has_graph_changes = app
         .data.diff_result
         .as_ref()
-        .map(|r| !r.graph_changes.is_empty())
-        .unwrap_or(false);
+        .is_some_and(|r| !r.graph_changes.is_empty());
     if has_graph_changes {
         tabs_data.push((TabKind::GraphChanges, "9", "Graph"));
     }
@@ -304,17 +303,16 @@ fn render_status_bar(frame: &mut Frame, area: Rect, app: &App) {
     let (comp_count, vuln_count, score) = match app.mode {
         AppMode::Diff => {
             let result = app.data.diff_result.as_ref();
-            let comp = result.map(|r| r.summary.total_changes).unwrap_or(0);
+            let comp = result.map_or(0, |r| r.summary.total_changes);
             let vuln = result
-                .map(|r| r.summary.vulnerabilities_introduced)
-                .unwrap_or(0);
-            let score = result.map(|r| r.semantic_score).unwrap_or(0.0);
+                .map_or(0, |r| r.summary.vulnerabilities_introduced);
+            let score = result.map_or(0.0, |r| r.semantic_score);
             (comp, vuln, Some(score))
         }
         AppMode::View => {
             let sbom = app.data.sbom.as_ref();
-            let comp = sbom.map(crate::model::NormalizedSbom::component_count).unwrap_or(0);
-            let vuln = sbom.map(|s| s.all_vulnerabilities().len()).unwrap_or(0);
+            let comp = sbom.map_or(0, crate::model::NormalizedSbom::component_count);
+            let vuln = sbom.map_or(0, |s| s.all_vulnerabilities().len());
             (comp, vuln, None)
         }
         // Multi-comparison modes use their own status bars
@@ -325,19 +323,17 @@ fn render_status_bar(frame: &mut Frame, area: Rect, app: &App) {
         AppMode::Diff => app
             .data.diff_result
             .as_ref()
-            .map(|r| {
+            .map_or(0, |r| {
                 r.vulnerabilities
                     .introduced
                     .iter()
                     .filter(|v| v.severity == "Critical")
                     .count()
-            })
-            .unwrap_or(0),
+            }),
         AppMode::View => app
             .data.sbom
             .as_ref()
-            .map(|s| s.vulnerability_counts().critical)
-            .unwrap_or(0),
+            .map_or(0, |s| s.vulnerability_counts().critical),
         AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => 0,
     };
 
@@ -705,8 +701,7 @@ fn render_search_overlay(frame: &mut Frame, area: Rect, search_state: &DiffSearc
                     };
                     let sev_color = severity
                         .as_ref()
-                        .map(|s| colors().severity_color(s))
-                        .unwrap_or(colors().text_muted);
+                        .map_or(colors().text_muted, |s| colors().severity_color(s));
 
                     Line::from(vec![
                         Span::styled(prefix, Style::default().fg(colors().accent)),

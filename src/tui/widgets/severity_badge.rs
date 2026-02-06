@@ -38,7 +38,6 @@ impl SeverityBadge {
             "low" => "L",
             "info" | "informational" => "I",
             "none" => "-",
-            "unknown" => "U",
             _ => "U",
         }
     }
@@ -112,9 +111,9 @@ impl Widget for SeverityBar {
 
         let scheme = colors();
         let width = area.width as usize;
-        let crit_w = (self.critical * width / total).max(if self.critical > 0 { 1 } else { 0 });
-        let high_w = (self.high * width / total).max(if self.high > 0 { 1 } else { 0 });
-        let med_w = (self.medium * width / total).max(if self.medium > 0 { 1 } else { 0 });
+        let crit_w = (self.critical * width / total).max(usize::from(self.critical > 0));
+        let high_w = (self.high * width / total).max(usize::from(self.high > 0));
+        let med_w = (self.medium * width / total).max(usize::from(self.medium > 0));
         let low_w = width.saturating_sub(crit_w + high_w + med_w);
 
         let mut x = area.x;

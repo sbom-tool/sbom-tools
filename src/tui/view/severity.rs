@@ -39,8 +39,7 @@ pub fn max_severity_from_vulns(vulns: &[VulnerabilityRef]) -> Option<String> {
 #[inline]
 pub fn severity_matches(severity: Option<&Severity>, target: &str) -> bool {
     severity
-        .map(|s| s.to_string().eq_ignore_ascii_case(target))
-        .unwrap_or(false)
+        .is_some_and(|s| s.to_string().eq_ignore_ascii_case(target))
 }
 
 /// Categorize severity into buckets for grouping.
@@ -60,7 +59,6 @@ pub fn severity_category(vulns: &[VulnerabilityRef]) -> &'static str {
         4 => "critical",
         3 => "high",
         2 => "medium",
-        1 => "low",
         // Unknown/Info/None severity with vulnerabilities -> treat as low
         _ => "low",
     }

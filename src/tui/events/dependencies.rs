@@ -75,7 +75,7 @@ pub(super) fn handle_dependencies_keys(app: &mut App, key: KeyEvent) {
 
     // Handle dependencies help overlay first
     if app.tabs.dependencies.show_deps_help {
-        if matches!(key.code, KeyCode::Esc | KeyCode::Char('?') | KeyCode::Char('q')) {
+        if matches!(key.code, KeyCode::Esc | KeyCode::Char('?' | 'q')) {
             app.tabs.dependencies.show_deps_help = false;
         }
         return;
@@ -118,19 +118,19 @@ pub(super) fn handle_dependencies_keys(app: &mut App, key: KeyEvent) {
             // Toggle breadcrumb display
             app.tabs.dependencies.toggle_breadcrumbs();
         }
-        KeyCode::Char('+') | KeyCode::Char('=') => {
+        KeyCode::Char('+' | '=') => {
             // Increase depth limit
             app.tabs.dependencies.increase_depth();
         }
-        KeyCode::Char('-') | KeyCode::Char('_') => {
+        KeyCode::Char('-' | '_') => {
             // Decrease depth limit
             app.tabs.dependencies.decrease_depth();
         }
-        KeyCode::Char('>') | KeyCode::Char('.') => {
+        KeyCode::Char('>' | '.') => {
             // Increase roots limit
             app.tabs.dependencies.increase_roots();
         }
-        KeyCode::Char('<') | KeyCode::Char(',') => {
+        KeyCode::Char('<' | ',') => {
             // Decrease roots limit
             app.tabs.dependencies.decrease_roots();
         }

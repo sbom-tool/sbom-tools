@@ -612,8 +612,7 @@ pub(crate) fn find_root_components(
         .filter(|comp| {
             reverse_graph
                 .get(*comp)
-                .map(std::vec::Vec::is_empty)
-                .unwrap_or(true)
+                .is_none_or(std::vec::Vec::is_empty)
         })
         .cloned()
         .collect()
@@ -659,10 +658,9 @@ impl PolicyRule {
 
     pub(crate) fn severity(&self) -> PolicySeverity {
         match self {
-            Self::BannedLicense { .. } => PolicySeverity::High,
+            Self::BannedLicense { .. } | Self::MaxVulnerabilitySeverity { .. } => PolicySeverity::High,
             Self::BannedComponent { .. } => PolicySeverity::Critical,
             Self::NoPreRelease { .. } => PolicySeverity::Low,
-            Self::MaxVulnerabilitySeverity { .. } => PolicySeverity::High,
         }
     }
 }

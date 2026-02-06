@@ -722,9 +722,8 @@ fn render_detail_modal(
     // Clear the area
     f.render_widget(Clear, modal_area);
 
-    let comp = match result.comparisons.get(state.selected_target) {
-        Some(c) => c,
-        None => return,
+    let Some(comp) = result.comparisons.get(state.selected_target) else {
+        return;
     };
 
     let deviation = result
@@ -861,13 +860,12 @@ fn render_variable_drill_down(
 
     f.render_widget(Clear, modal_area);
 
-    let vc = match result
+    let Some(vc) = result
         .summary
         .variable_components
         .get(state.selected_variable_component)
-    {
-        Some(v) => v,
-        None => return,
+    else {
+        return;
     };
 
     let mut lines = vec![

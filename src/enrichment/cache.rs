@@ -120,8 +120,7 @@ impl FileCache {
                 if entry
                     .path()
                     .extension()
-                    .map(|e| e == "json")
-                    .unwrap_or(false)
+                    .is_some_and(|e| e == "json")
                 {
                     let _ = fs::remove_file(entry.path());
                 }
@@ -139,8 +138,7 @@ impl FileCache {
                 if entry
                     .path()
                     .extension()
-                    .map(|e| e == "json")
-                    .unwrap_or(false)
+                    .is_some_and(|e| e == "json")
                 {
                     stats.total_entries += 1;
                     if let Ok(metadata) = entry.metadata() {

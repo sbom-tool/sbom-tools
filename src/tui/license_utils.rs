@@ -114,12 +114,11 @@ impl LicenseCategory {
     /// Get the copyleft strength (0 = none, 4 = strongest)
     pub(crate) fn copyleft_strength(&self) -> u8 {
         match self {
-            Self::PublicDomain | Self::Permissive => 0,
+            Self::PublicDomain | Self::Permissive | Self::Unknown => 0,
             Self::WeakCopyleft => 1,
             Self::StrongCopyleft => 2,
             Self::NetworkCopyleft => 3,
             Self::Proprietary => 4, // Most restrictive
-            Self::Unknown => 0,
         }
     }
 }

@@ -331,7 +331,6 @@ impl ColorScheme {
     pub fn severity_badge_fg(&self, severity: &str) -> Color {
         match severity.to_lowercase().as_str() {
             "critical" | "high" | "info" | "informational" => self.badge_fg_light,
-            "medium" | "moderate" | "low" => self.badge_fg_dark,
             _ => self.badge_fg_dark,
         }
     }
@@ -735,9 +734,6 @@ impl FooterHints {
         let mut hints = Self::global();
 
         match tab.to_lowercase().as_str() {
-            "summary" => {
-                // Summary has no tab-specific hints
-            }
             "components" => {
                 hints.insert(0, ("f", "filter: All→Added→Removed→Modified"));
                 hints.insert(1, ("s", "sort: Name→Version→Ecosystem"));
@@ -779,9 +775,6 @@ impl FooterHints {
         let mut hints = Self::global();
 
         match tab.to_lowercase().as_str() {
-            "overview" => {
-                // Overview has no tab-specific hints
-            }
             "tree" | "components" => {
                 hints.insert(0, ("g", "group: Eco→License→Vuln→Flat"));
                 hints.insert(1, ("f", "filter: All→HasVuln→Critical"));

@@ -114,16 +114,15 @@ impl PolicyComplianceState {
     pub fn violation_count(&self) -> usize {
         self.result
             .as_ref()
-            .map(|r| r.violations.len())
-            .unwrap_or(0)
+            .map_or(0, |r| r.violations.len())
     }
 
     pub fn passes(&self) -> bool {
-        self.result.as_ref().map(|r| r.passes).unwrap_or(true)
+        self.result.as_ref().is_none_or(|r| r.passes)
     }
 
     pub fn score(&self) -> u8 {
-        self.result.as_ref().map(|r| r.score).unwrap_or(100)
+        self.result.as_ref().map_or(100, |r| r.score)
     }
 }
 

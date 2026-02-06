@@ -153,9 +153,8 @@ fn resolve_grouped_selection(app: &mut App, selected: usize) -> GroupedSelection
         }
         AppMode::View => {
             // For view mode, we need sbom data
-            let sbom = match app.data.sbom.as_ref() {
-                Some(s) => s,
-                None => return GroupedSelection::None,
+            let Some(sbom) = app.data.sbom.as_ref() else {
+                return GroupedSelection::None;
             };
 
             let vulns = sbom.all_vulnerabilities();

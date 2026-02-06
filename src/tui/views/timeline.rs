@@ -84,8 +84,8 @@ pub(crate) fn render_timeline(f: &mut Frame, area: Rect, result: &TimelineResult
 
 fn render_header(f: &mut Frame, area: Rect, result: &TimelineResult, state: &TimelineState) {
     let scheme = colors();
-    let first = result.sboms.first().map(|s| s.name.as_str()).unwrap_or("?");
-    let last = result.sboms.last().map(|s| s.name.as_str()).unwrap_or("?");
+    let first = result.sboms.first().map_or("?", |s| s.name.as_str());
+    let last = result.sboms.last().map_or("?", |s| s.name.as_str());
 
     let title = format!(
         " Timeline: {} → {} ({} versions) ",
@@ -306,8 +306,7 @@ fn render_versions_list(f: &mut Frame, area: Rect, result: &TimelineResult, stat
                 result
                     .incremental_diffs
                     .get(i - 1)
-                    .map(|d| (d.summary.components_added, d.summary.components_removed))
-                    .unwrap_or((0, 0))
+                    .map_or((0, 0), |d| (d.summary.components_added, d.summary.components_removed))
             } else {
                 (sbom.component_count, 0)
             };
@@ -351,7 +350,7 @@ fn render_versions_list(f: &mut Frame, area: Rect, result: &TimelineResult, stat
                 .evolution_summary
                 .compliance_trend
                 .get(i)
-                .map(|snap| {
+                .map_or(("-", scheme.text_muted), |snap| {
                     // Find CRA Phase 2 score
                     let cra = snap.scores.iter().find(|s| s.standard.contains("CRA Phase 2"));
                     match cra {
@@ -360,8 +359,7 @@ fn render_versions_list(f: &mut Frame, area: Rect, result: &TimelineResult, stat
                         Some(_) => ("✗", scheme.error),
                         None => ("-", scheme.text_muted),
                     }
-                })
-                .unwrap_or(("-", scheme.text_muted));
+                });
 
             Row::new(vec![
                 Cell::from(format!("{}.", i + 1)).style(style),
@@ -799,8 +797,7 @@ fn render_component_history_modal(
                 VersionChangeType::PatchUpgrade => Style::default().fg(scheme.primary),
                 VersionChangeType::Downgrade => Style::default().fg(scheme.removed),
                 VersionChangeType::Unchanged => Style::default().fg(scheme.text_muted),
-                VersionChangeType::Removed => Style::default().fg(scheme.muted),
-                VersionChangeType::Absent => Style::default().fg(scheme.muted),
+                VersionChangeType::Removed | VersionChangeType::Absent => Style::default().fg(scheme.muted),
             };
 
             lines.push(Line::from(vec![

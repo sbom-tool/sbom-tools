@@ -246,7 +246,7 @@ impl SourcePanelState {
             expanded.insert("root".to_string());
         }
 
-        let total_node_count = json_tree.as_ref().map(count_tree_nodes).unwrap_or(0);
+        let total_node_count = json_tree.as_ref().map_or(0, count_tree_nodes);
 
         Self {
             view_mode: if json_tree.is_some() {

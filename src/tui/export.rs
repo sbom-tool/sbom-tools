@@ -190,9 +190,7 @@ pub(crate) fn export_compliance(
         }
     };
 
-    let level_name = result
-        .map(|r| r.level.name().to_lowercase().replace(' ', "_"))
-        .unwrap_or_else(|| "all".to_string());
+    let level_name = result.map_or_else(|| "all".to_string(), |r| r.level.name().to_lowercase().replace(' ', "_"));
     let filename = format!("compliance_{level_name}_{timestamp}.{ext}");
     let path = match output_dir {
         Some(dir) => PathBuf::from(dir).join(&filename),
@@ -260,9 +258,8 @@ fn compliance_to_sarif(
 ) -> String {
     use serde_json::{json, Value};
 
-    let result = match result {
-        Some(r) => r,
-        None => return json!({"error": "no compliance result"}).to_string(),
+    let Some(result) = result else {
+        return json!({"error": "no compliance result"}).to_string();
     };
 
     let results: Vec<Value> = result
