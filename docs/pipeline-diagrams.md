@@ -29,7 +29,7 @@ flowchart TD
 ```
 
 ## Matching Pipeline (FuzzyMatcher::match_components)
-Source: `src/matching/mod.rs`
+Source: `src/matching/mod.rs` (with submodules: `scoring.rs`, `string_similarity.rs`, `adaptive.rs`, `lsh.rs`)
 
 ```mermaid
 flowchart TD
@@ -50,6 +50,7 @@ flowchart TD
     G --> G1[Jaro-Winkler + Levenshtein]
     G1 --> G2[Apply weights]
     G2 --> G3[Version match boost]
+    G3 --> G4[Adaptive threshold adjustment]
 ```
 
 ## Reporting Pipeline (Reporter selection + generation)
@@ -58,14 +59,15 @@ Source: `src/reports/mod.rs`
 ```mermaid
 flowchart TD
     A[Report request] --> B{ReportFormat}
-    B -->|Auto| C[SummaryReporter (color-aware)]
+    B -->|Auto| C[SummaryReporter - color-aware]
     B -->|Summary| C
-    B -->|Table| D[TableReporter (color-aware)]
+    B -->|Table| D[TableReporter - color-aware]
     B -->|Json| E[JsonReporter]
     B -->|Sarif| F[SarifReporter]
     B -->|Markdown| G[MarkdownReporter]
     B -->|Html| H[HtmlReporter]
     B -->|SideBySide| I[SideBySideReporter]
+    B -->|Csv| L[CsvReporter]
     B -->|Tui| E
 
     C --> J[generate_diff_report / generate_view_report]
@@ -75,6 +77,7 @@ flowchart TD
     G --> J
     H --> J
     I --> J
+    L --> J
     J --> K[String output]
-    K --> L[write to file/stdout]
+    K --> M[write to file/stdout]
 ```

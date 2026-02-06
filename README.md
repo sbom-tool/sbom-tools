@@ -10,10 +10,12 @@ A semantic SBOM (Software Bill of Materials) diff and analysis tool. Compare, va
 
 - **Semantic Diffing** — Component-level change detection (added, removed, modified), dependency graph diffing, vulnerability tracking, and license change analysis
 - **Multi-Format Support** — CycloneDX (1.4–1.6) and SPDX (2.2–2.3) in JSON, XML, tag-value, and RDF/XML with automatic format detection
-- **Fuzzy Matching** — Multi-tier matching engine using exact PURL match, alias lookup, ecosystem-specific normalization, and string similarity (Jaro-Winkler, Levenshtein)
+- **Streaming Parser** — Memory-efficient parsing for very large SBOMs (>512MB) with progress reporting
+- **Fuzzy Matching** — Multi-tier matching engine using exact PURL match, alias lookup, ecosystem-specific normalization, and string similarity with adaptive thresholds and LSH indexing
 - **Vulnerability Enrichment** — Integration with OSV and KEV databases to track new and resolved vulnerabilities (feature-gated)
 - **Quality Assessment** — Score SBOMs against compliance standards including NTIA minimum elements, FDA, and CRA (Cyber Resilience Act)
 - **Fleet Comparison** — 1:N baseline comparison, timeline analysis across versions, and NxN matrix analysis
+- **Incremental Diff** — Track changes across SBOM versions with drift detection and divergence analysis
 - **Multiple Output Formats** — JSON, SARIF, HTML, Markdown, CSV, table, side-by-side, summary, and an interactive TUI
 - **Ecosystem-Aware** — Configurable per-ecosystem normalization rules, typosquat detection, and cross-ecosystem package correlation
 
@@ -21,7 +23,7 @@ A semantic SBOM (Software Bill of Materials) diff and analysis tool. Compare, va
 
 ### Prerequisites
 
-- Rust toolchain (1.70+)
+- Rust toolchain (1.86+)
 
 ### Build from source
 
@@ -31,9 +33,6 @@ cargo build --release
 
 # Without enrichment (lightweight build)
 cargo build --release --no-default-features
-
-# With ML-based matching (optional)
-cargo build --release --features ml-matching
 ```
 
 The binary is placed at `target/release/sbom-tools`.
@@ -52,6 +51,7 @@ sbom-tools diff old-sbom.json new-sbom.json
 |------|-------------|
 | `--fail-on-change` | Exit with code 1 if changes are detected |
 | `--fail-on-vuln` | Exit with code 2 if new vulnerabilities are introduced |
+| `--graph-diff` | Enable dependency graph structure diffing |
 | `--ecosystem-rules <path>` | Load custom per-ecosystem normalization rules |
 | `--fuzzy-preset <preset>` | Matching preset: `strict`, `balanced` (default), `permissive` |
 | `--enrich-vulns` | Query OSV/KEV databases for vulnerability data |
@@ -119,6 +119,12 @@ sbom-tools timeline v1.json v2.json v3.json
 
 ```sh
 sbom-tools matrix sbom1.json sbom2.json sbom3.json
+```
+
+### Export config schema
+
+```sh
+sbom-tools config-schema > schema.json
 ```
 
 ### Generate shell completions
