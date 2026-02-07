@@ -319,16 +319,24 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
             }
         }
         KeyCode::Char('9') => {
-            // Graph changes tab only when graph diff data is available
-            if let Some(ref result) = app.data.diff_result {
-                if !result.graph_changes.is_empty() {
-                    app.select_tab(super::TabKind::GraphChanges);
-                }
+            // Graph changes tab when graph diff data is available, otherwise Source
+            let has_graph = app
+                .data.diff_result
+                .as_ref()
+                .is_some_and(|r| !r.graph_changes.is_empty());
+            if has_graph {
+                app.select_tab(super::TabKind::GraphChanges);
+            } else if app.mode == super::AppMode::Diff {
+                app.select_tab(super::TabKind::Source);
             }
         }
         KeyCode::Char('0') => {
-            // Source tab only in diff mode
-            if app.mode == super::AppMode::Diff {
+            // Source tab as 10th tab (only when graph changes exist)
+            let has_graph = app
+                .data.diff_result
+                .as_ref()
+                .is_some_and(|r| !r.graph_changes.is_empty());
+            if has_graph && app.mode == super::AppMode::Diff {
                 app.select_tab(super::TabKind::Source);
             }
         }

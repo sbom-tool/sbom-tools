@@ -238,8 +238,10 @@ fn render_tabs(frame: &mut Frame, area: Rect, app: &App) {
     }
 
     // Source tab always available in diff mode
+    // Use [9] when it's the 9th tab (no graph changes), [0] when it's the 10th
     if app.mode == AppMode::Diff {
-        tabs_data.push((TabKind::Source, "0", "Source"));
+        let source_key = if has_graph_changes { "0" } else { "9" };
+        tabs_data.push((TabKind::Source, source_key, "Source"));
     }
 
     let titles: Vec<Line> = tabs_data
