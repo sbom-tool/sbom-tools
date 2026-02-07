@@ -57,9 +57,9 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
     let risk_filter_label = match app.tabs.licenses.risk_filter {
         None => "All",
         Some(LicenseRiskFilter::Low) => "Low+",
-        Some(LicenseRiskFilter::Medium) => "Med+",
+        Some(LicenseRiskFilter::Medium) => "Medium+",
         Some(LicenseRiskFilter::High) => "High+",
-        Some(LicenseRiskFilter::Critical) => "Crit",
+        Some(LicenseRiskFilter::Critical) => "Critical",
     };
 
     let compat_label = if app.tabs.licenses.show_compatibility {

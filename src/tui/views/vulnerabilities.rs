@@ -506,7 +506,7 @@ fn build_grouped_rows(
                     ])),
                     Cell::from(""),
                     Cell::from(Span::styled(
-                        format!("{vuln_count} CVEs"),
+                        format!("{vuln_count} {}", if *vuln_count == 1 { "CVE" } else { "CVEs" }),
                         Style::default().fg(scheme.text_muted),
                     )),
                     Cell::from(""),
@@ -547,13 +547,13 @@ fn build_single_diff_row(
             Style::default().fg(scheme.text),
         ),
         DiffVulnStatus::Resolved => (
-            " - FIX ",
+            " - FIXED ",
             scheme.added,
             scheme.badge_fg_dark,
             Style::default().fg(scheme.added),
         ),
         DiffVulnStatus::Persistent => (
-            " = OLD ",
+            " = PERSIST ",
             scheme.modified,
             scheme.badge_fg_dark,
             Style::default().fg(scheme.text),

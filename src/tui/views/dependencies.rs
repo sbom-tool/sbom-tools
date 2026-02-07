@@ -275,7 +275,7 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
     let mut line3 = Vec::new();
 
     line3.push(Span::styled(
-        "Item ",
+        "Dependency ",
         Style::default().fg(scheme.text_muted),
     ));
     line3.push(Span::styled(
@@ -299,7 +299,7 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
     if vuln_count > 0 {
         line3.push(Span::styled("  │  ", Style::default().fg(scheme.border)));
         line3.push(Span::styled(
-            format!("⚠ {vuln_count} vuln"),
+            format!("⚠ {vuln_count} {}", if vuln_count == 1 { "vulnerability" } else { "vulnerabilities" }),
             Style::default().fg(scheme.critical).bold(),
         ));
     }
@@ -320,7 +320,7 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
         ));
         if root_overflow > 0 {
             line3.push(Span::styled(
-                format!("roots +{root_overflow}"),
+                format!("+{root_overflow} roots hidden"),
                 Style::default().fg(scheme.warning).bold(),
             ));
         }
@@ -329,7 +329,7 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
         }
         if depth_limited {
             line3.push(Span::styled(
-                format!("depth >{max_depth}"),
+                format!("depth capped at {max_depth}"),
                 Style::default().fg(scheme.warning).bold(),
             ));
         }

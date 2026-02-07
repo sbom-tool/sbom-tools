@@ -203,15 +203,15 @@ fn render_compliance_gauge(frame: &mut Frame, area: Rect, result: &ComplianceRes
 
     let counts = Line::from(vec![
         Span::styled(
-            format!(" E:{} ", result.error_count),
+            format!(" Errors: {} ", result.error_count),
             Style::default().fg(colors().error),
         ),
         Span::styled(
-            format!("W:{} ", result.warning_count),
+            format!("Warnings: {} ", result.warning_count),
             Style::default().fg(colors().warning),
         ),
         Span::styled(
-            format!("I:{}", result.info_count),
+            format!("Info: {}", result.info_count),
             Style::default().fg(colors().info),
         ),
     ]);
@@ -280,7 +280,13 @@ fn render_overview(frame: &mut Frame, area: Rect, old: &ComplianceResult, new: &
     lines.push(Line::from(vec![
         Span::raw("    "),
         Span::styled(
-            format!("  + {} new violation(s) introduced  ", new_violations.len()),
+            if new_violations.is_empty() {
+                "  No new violations  ".to_string()
+            } else if new_violations.len() == 1 {
+                "  + 1 new violation introduced  ".to_string()
+            } else {
+                format!("  + {} new violations introduced  ", new_violations.len())
+            },
             Style::default().fg(new_color).add_modifier(Modifier::BOLD),
         ),
     ]));
@@ -294,7 +300,13 @@ fn render_overview(frame: &mut Frame, area: Rect, old: &ComplianceResult, new: &
     lines.push(Line::from(vec![
         Span::raw("    "),
         Span::styled(
-            format!("  - {} violation(s) resolved  ", resolved_violations.len()),
+            if resolved_violations.is_empty() {
+                "  No violations resolved  ".to_string()
+            } else if resolved_violations.len() == 1 {
+                "  - 1 violation resolved  ".to_string()
+            } else {
+                format!("  - {} violations resolved  ", resolved_violations.len())
+            },
             Style::default().fg(resolved_color).add_modifier(Modifier::BOLD),
         ),
     ]));
@@ -304,7 +316,11 @@ fn render_overview(frame: &mut Frame, area: Rect, old: &ComplianceResult, new: &
     lines.push(Line::from(vec![
         Span::raw("    "),
         Span::styled(
-            format!("  = {persistent} violation(s) persistent  "),
+            if persistent == 1 {
+                "  = 1 violation persistent  ".to_string()
+            } else {
+                format!("  = {persistent} violations persistent  ")
+            },
             Style::default().fg(colors().text_muted),
         ),
     ]));
