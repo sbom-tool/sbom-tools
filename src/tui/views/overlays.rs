@@ -16,7 +16,7 @@ use ratatui::{
 };
 
 /// Render the view switcher overlay
-pub(crate) fn render_view_switcher(f: &mut Frame, state: &ViewSwitcherState) {
+pub fn render_view_switcher(f: &mut Frame, state: &ViewSwitcherState) {
     if !state.visible {
         return;
     }
@@ -90,7 +90,7 @@ pub(crate) fn render_view_switcher(f: &mut Frame, state: &ViewSwitcherState) {
 }
 
 /// Render the keyboard shortcuts overlay
-pub(crate) fn render_shortcuts_overlay(f: &mut Frame, state: &ShortcutsOverlayState) {
+pub fn render_shortcuts_overlay(f: &mut Frame, state: &ShortcutsOverlayState) {
     if !state.visible {
         return;
     }
@@ -165,7 +165,7 @@ pub(crate) fn render_shortcuts_overlay(f: &mut Frame, state: &ShortcutsOverlaySt
 }
 
 /// Render the component deep dive modal
-pub(crate) fn render_component_deep_dive(f: &mut Frame, state: &ComponentDeepDiveState) {
+pub fn render_component_deep_dive(f: &mut Frame, state: &ComponentDeepDiveState) {
     if !state.visible {
         return;
     }
@@ -448,7 +448,7 @@ fn centered_rect(width: u16, height: u16, area: Rect) -> Rect {
     Rect::new(x, y, width.min(area.width), height.min(area.height))
 }
 
-fn context_name(context: ShortcutsContext) -> &'static str {
+const fn context_name(context: ShortcutsContext) -> &'static str {
     match context {
         ShortcutsContext::Global => "Global",
         ShortcutsContext::MultiDiff => "Multi-Diff",
@@ -591,7 +591,7 @@ impl Default for ThresholdTuningState {
 
 impl ThresholdTuningState {
     /// Create a new threshold tuning state with initial values.
-    pub(crate) fn new(threshold: f64, total_components: usize) -> Self {
+    pub(crate) const fn new(threshold: f64, total_components: usize) -> Self {
         Self {
             visible: true,
             threshold,
@@ -623,12 +623,12 @@ impl ThresholdTuningState {
     }
 
     /// Reset to original value.
-    pub(crate) fn reset(&mut self) {
+    pub(crate) const fn reset(&mut self) {
         self.threshold = self.original_threshold;
     }
 
     /// Update the estimated matches preview.
-    pub(crate) fn set_estimated_matches(&mut self, matches: usize) {
+    pub(crate) const fn set_estimated_matches(&mut self, matches: usize) {
         self.estimated_matches = matches;
     }
 
@@ -645,7 +645,7 @@ impl ThresholdTuningState {
 /// Render the threshold tuning overlay.
 ///
 /// Shows current threshold, estimated matches, and keyboard shortcuts.
-pub(crate) fn render_threshold_tuning(f: &mut Frame, state: &ThresholdTuningState) {
+pub fn render_threshold_tuning(f: &mut Frame, state: &ThresholdTuningState) {
     if !state.visible {
         return;
     }

@@ -6,7 +6,7 @@ use crate::tui::shared::source::render_source_panel;
 use ratatui::prelude::*;
 
 /// Render the source tab with side-by-side old/new SBOM panels.
-pub(crate) fn render_source(frame: &mut Frame, area: Rect, app: &mut App) {
+pub fn render_source(frame: &mut Frame, area: Rect, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])

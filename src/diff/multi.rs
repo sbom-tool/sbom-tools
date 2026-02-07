@@ -21,7 +21,7 @@ pub struct SbomInfo {
     pub name: String,
     /// File path
     pub file_path: String,
-    /// Format (CycloneDX, SPDX)
+    /// Format (`CycloneDX`, SPDX)
     pub format: String,
     /// Number of components
     pub component_count: usize,
@@ -34,6 +34,7 @@ pub struct SbomInfo {
 }
 
 impl SbomInfo {
+    #[must_use] 
     pub fn from_sbom(sbom: &NormalizedSbom, name: String, file_path: String) -> Self {
         Self {
             name,
@@ -82,7 +83,7 @@ pub struct DivergentComponent {
     pub name: String,
     pub baseline_version: Option<String>,
     pub target_version: String,
-    /// All versions across targets: target_name -> version
+    /// All versions across targets: `target_name` -> version
     pub versions_across_targets: HashMap<String, String>,
     pub divergence_type: DivergenceType,
 }
@@ -165,7 +166,8 @@ pub enum SecurityImpact {
 }
 
 impl SecurityImpact {
-    pub fn label(&self) -> &'static str {
+    #[must_use] 
+    pub const fn label(&self) -> &'static str {
         match self {
             Self::Critical => "CRITICAL",
             Self::High => "high",
@@ -223,7 +225,7 @@ pub struct EvolutionSummary {
     pub components_added: Vec<ComponentEvolution>,
     /// Components removed over the timeline
     pub components_removed: Vec<ComponentEvolution>,
-    /// Version progression for each component: component_id -> versions at each point
+    /// Version progression for each component: `component_id` -> versions at each point
     pub version_history: HashMap<String, Vec<VersionAtPoint>>,
     /// Vulnerability trend over time
     pub vulnerability_trend: Vec<VulnerabilitySnapshot>,
@@ -273,7 +275,8 @@ pub enum VersionChangeType {
 }
 
 impl VersionChangeType {
-    pub fn symbol(&self) -> &'static str {
+    #[must_use] 
+    pub const fn symbol(&self) -> &'static str {
         match self {
             Self::Initial => "●",
             Self::MajorUpgrade => "⬆",
@@ -292,7 +295,7 @@ impl VersionChangeType {
 pub struct ComplianceSnapshot {
     pub sbom_index: usize,
     pub sbom_name: String,
-    /// Compliance scores per standard: (standard_name, error_count, warning_count, is_compliant)
+    /// Compliance scores per standard: (`standard_name`, `error_count`, `warning_count`, `is_compliant`)
     pub scores: Vec<ComplianceScoreEntry>,
 }
 
@@ -355,7 +358,7 @@ pub struct MatrixResult {
     /// All SBOMs in comparison
     pub sboms: Vec<SbomInfo>,
     /// Upper-triangle matrix of diff results
-    /// Access with matrix[i * sboms.len() + j] where i < j
+    /// Access with matrix[i * `sboms.len()` + j] where i < j
     pub diffs: Vec<Option<DiffResult>>,
     /// Similarity scores (0.0 = completely different, 1.0 = identical)
     /// Same indexing as diffs
@@ -366,6 +369,7 @@ pub struct MatrixResult {
 
 impl MatrixResult {
     /// Get diff between sboms[i] and sboms[j]
+    #[must_use] 
     pub fn get_diff(&self, i: usize, j: usize) -> Option<&DiffResult> {
         if i == j {
             return None;
@@ -376,6 +380,7 @@ impl MatrixResult {
     }
 
     /// Get similarity between sboms[i] and sboms[j]
+    #[must_use] 
     pub fn get_similarity(&self, i: usize, j: usize) -> f64 {
         if i == j {
             return 1.0;
@@ -393,6 +398,7 @@ impl MatrixResult {
     }
 
     /// Number of pairs (n choose 2)
+    #[must_use] 
     pub fn num_pairs(&self) -> usize {
         let n = self.sboms.len();
         n * (n - 1) / 2
@@ -444,6 +450,7 @@ pub struct IncrementalChange {
 }
 
 impl IncrementalChange {
+    #[must_use] 
     pub fn from_diff(
         from_idx: usize,
         to_idx: usize,

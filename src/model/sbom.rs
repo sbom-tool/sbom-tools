@@ -12,7 +12,7 @@ use xxhash_rust::xxh3::xxh3_64;
 /// Normalized SBOM document - the canonical intermediate representation.
 ///
 /// This structure represents an SBOM in a format-agnostic way, allowing
-/// comparison between CycloneDX and SPDX documents.
+/// comparison between `CycloneDX` and SPDX documents.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NormalizedSbom {
     /// Document-level metadata
@@ -25,7 +25,7 @@ pub struct NormalizedSbom {
     pub extensions: FormatExtensions,
     /// Content hash for quick equality checks
     pub content_hash: u64,
-    /// Primary/root product component (CycloneDX metadata.component or SPDX documentDescribes)
+    /// Primary/root product component (`CycloneDX` metadata.component or SPDX documentDescribes)
     /// This identifies the main product that this SBOM describes, important for CRA compliance.
     pub primary_component_id: Option<CanonicalId>,
     /// Number of canonical ID collisions encountered during parsing
@@ -35,6 +35,7 @@ pub struct NormalizedSbom {
 
 impl NormalizedSbom {
     /// Create a new empty normalized SBOM
+    #[must_use] 
     pub fn new(document: DocumentMetadata) -> Self {
         Self {
             document,
@@ -86,16 +87,19 @@ impl NormalizedSbom {
     }
 
     /// Get a component by canonical ID
+    #[must_use] 
     pub fn get_component(&self, id: &CanonicalId) -> Option<&Component> {
         self.components.get(id)
     }
 
     /// Get dependencies of a component
+    #[must_use] 
     pub fn get_dependencies(&self, id: &CanonicalId) -> Vec<&DependencyEdge> {
         self.edges.iter().filter(|e| &e.from == id).collect()
     }
 
     /// Get dependents of a component
+    #[must_use] 
     pub fn get_dependents(&self, id: &CanonicalId) -> Vec<&DependencyEdge> {
         self.edges.iter().filter(|e| &e.to == id).collect()
     }
@@ -129,11 +133,13 @@ impl NormalizedSbom {
     }
 
     /// Get total component count
+    #[must_use] 
     pub fn component_count(&self) -> usize {
         self.components.len()
     }
 
     /// Get the primary/root product component if set
+    #[must_use] 
     pub fn primary_component(&self) -> Option<&Component> {
         self.primary_component_id
             .as_ref()
@@ -158,6 +164,7 @@ impl NormalizedSbom {
     }
 
     /// Get all vulnerabilities across all components
+    #[must_use] 
     pub fn all_vulnerabilities(&self) -> Vec<(&Component, &VulnerabilityRef)> {
         self.components
             .values()
@@ -166,6 +173,7 @@ impl NormalizedSbom {
     }
 
     /// Count vulnerabilities by severity
+    #[must_use] 
     pub fn vulnerability_counts(&self) -> VulnerabilityCounts {
         let mut counts = VulnerabilityCounts::default();
         for (_, vuln) in self.all_vulnerabilities() {
@@ -201,6 +209,7 @@ impl NormalizedSbom {
     /// Get dependencies using an index (O(k) instead of O(edges)).
     ///
     /// Use this when you have a prebuilt index for repeated lookups.
+    #[must_use] 
     pub fn get_dependencies_indexed<'a>(
         &'a self,
         id: &CanonicalId,
@@ -212,6 +221,7 @@ impl NormalizedSbom {
     /// Get dependents using an index (O(k) instead of O(edges)).
     ///
     /// Use this when you have a prebuilt index for repeated lookups.
+    #[must_use] 
     pub fn get_dependents_indexed<'a>(
         &'a self,
         id: &CanonicalId,
@@ -223,6 +233,7 @@ impl NormalizedSbom {
     /// Find components by name (case-insensitive) using an index.
     ///
     /// Returns components whose lowercased name exactly matches the query.
+    #[must_use] 
     pub fn find_by_name_indexed(
         &self,
         name: &str,
@@ -239,6 +250,7 @@ impl NormalizedSbom {
     /// Search components by name (case-insensitive substring) using an index.
     ///
     /// Returns components whose name contains the query substring.
+    #[must_use] 
     pub fn search_by_name_indexed(
         &self,
         query: &str,
@@ -312,7 +324,8 @@ pub struct VulnerabilityCounts {
 }
 
 impl VulnerabilityCounts {
-    pub fn total(&self) -> usize {
+    #[must_use] 
+    pub const fn total(&self) -> usize {
         self.critical + self.high + self.medium + self.low + self.unknown
     }
 }
@@ -337,7 +350,8 @@ pub enum StalenessLevel {
 
 impl StalenessLevel {
     /// Create from age in days
-    pub fn from_days(days: u32) -> Self {
+    #[must_use] 
+    pub const fn from_days(days: u32) -> Self {
         match days {
             0..=182 => Self::Fresh,      // ~6 months
             183..=365 => Self::Aging,    // 6-12 months
@@ -347,7 +361,8 @@ impl StalenessLevel {
     }
 
     /// Get display label
-    pub fn label(&self) -> &'static str {
+    #[must_use] 
+    pub const fn label(&self) -> &'static str {
         match self {
             Self::Fresh => "Fresh",
             Self::Aging => "Aging",
@@ -359,7 +374,8 @@ impl StalenessLevel {
     }
 
     /// Get icon for TUI display
-    pub fn icon(&self) -> &'static str {
+    #[must_use] 
+    pub const fn icon(&self) -> &'static str {
         match self {
             Self::Fresh => "✓",
             Self::Aging => "⏳",
@@ -371,7 +387,8 @@ impl StalenessLevel {
     }
 
     /// Get severity weight (higher = worse)
-    pub fn severity(&self) -> u8 {
+    #[must_use] 
+    pub const fn severity(&self) -> u8 {
         match self {
             Self::Fresh => 0,
             Self::Aging => 1,
@@ -409,7 +426,8 @@ pub struct StalenessInfo {
 
 impl StalenessInfo {
     /// Create new staleness info
-    pub fn new(level: StalenessLevel) -> Self {
+    #[must_use] 
+    pub const fn new(level: StalenessLevel) -> Self {
         Self {
             level,
             last_published: None,
@@ -422,6 +440,7 @@ impl StalenessInfo {
     }
 
     /// Create from last published date
+    #[must_use] 
     pub fn from_date(last_published: chrono::DateTime<chrono::Utc>) -> Self {
         let days = (chrono::Utc::now() - last_published).num_days() as u32;
         let level = StalenessLevel::from_days(days);
@@ -437,7 +456,8 @@ impl StalenessInfo {
     }
 
     /// Check if component needs attention (stale or worse)
-    pub fn needs_attention(&self) -> bool {
+    #[must_use] 
+    pub const fn needs_attention(&self) -> bool {
         self.level.severity() >= 2
     }
 }
@@ -489,6 +509,7 @@ pub struct Component {
 
 impl Component {
     /// Create a new component with minimal required fields
+    #[must_use] 
     pub fn new(name: String, format_id: String) -> Self {
         let identifiers = ComponentIdentifiers::new(format_id);
         let canonical_id = identifiers.canonical_id();
@@ -572,12 +593,14 @@ impl Component {
     }
 
     /// Check if this is an OSS (open source) component
+    #[must_use] 
     pub fn is_oss(&self) -> bool {
         // Check if any declared license is OSS
         self.licenses.declared.iter().any(|l| l.is_valid_spdx) || self.identifiers.purl.is_some()
     }
 
     /// Get display name with version
+    #[must_use] 
     pub fn display_name(&self) -> String {
         self.version.as_ref().map_or_else(|| self.name.clone(), |v| format!("{}@{}", self.name, v))
     }
@@ -598,7 +621,8 @@ pub struct DependencyEdge {
 
 impl DependencyEdge {
     /// Create a new dependency edge
-    pub fn new(from: CanonicalId, to: CanonicalId, relationship: DependencyType) -> Self {
+    #[must_use] 
+    pub const fn new(from: CanonicalId, to: CanonicalId, relationship: DependencyType) -> Self {
         Self {
             from,
             to,
@@ -608,7 +632,8 @@ impl DependencyEdge {
     }
 
     /// Check if this is a direct dependency
-    pub fn is_direct(&self) -> bool {
+    #[must_use] 
+    pub const fn is_direct(&self) -> bool {
         matches!(
             self.relationship,
             DependencyType::DependsOn

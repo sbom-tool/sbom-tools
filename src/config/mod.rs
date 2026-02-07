@@ -66,11 +66,12 @@ pub use file::{
     load_or_default, ConfigFileError,
 };
 
-/// Generate a JSON Schema for the AppConfig configuration format.
+/// Generate a JSON Schema for the `AppConfig` configuration format.
 ///
 /// This schema documents all configuration options that can be set in
 /// `.sbom-tools.yaml` config files. It can be used by editors for
 /// validation and autocompletion.
+#[must_use] 
 pub fn generate_json_schema() -> String {
     let schema = schemars::schema_for!(AppConfig);
     serde_json::to_string_pretty(&schema).expect("schema serialization should not fail")

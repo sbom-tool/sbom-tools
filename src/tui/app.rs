@@ -91,7 +91,7 @@ impl AppOverlays {
         }
     }
 
-    pub fn toggle_help(&mut self) {
+    pub const fn toggle_help(&mut self) {
         self.show_help = !self.show_help;
         if self.show_help {
             self.show_export = false;
@@ -99,7 +99,7 @@ impl AppOverlays {
         }
     }
 
-    pub fn toggle_export(&mut self) {
+    pub const fn toggle_export(&mut self) {
         self.show_export = !self.show_export;
         if self.show_export {
             self.show_help = false;
@@ -107,7 +107,7 @@ impl AppOverlays {
         }
     }
 
-    pub fn toggle_legend(&mut self) {
+    pub const fn toggle_legend(&mut self) {
         self.show_legend = !self.show_legend;
         if self.show_legend {
             self.show_help = false;
@@ -115,7 +115,7 @@ impl AppOverlays {
         }
     }
 
-    pub fn close_all(&mut self) {
+    pub const fn close_all(&mut self) {
         self.show_help = false;
         self.show_export = false;
         self.show_legend = false;
@@ -123,7 +123,7 @@ impl AppOverlays {
         self.threshold_tuning.visible = false;
     }
 
-    pub fn has_active(&self) -> bool {
+    pub const fn has_active(&self) -> bool {
         self.show_help
             || self.show_export
             || self.show_legend
@@ -188,10 +188,10 @@ pub struct App {
     pub security_cache: crate::tui::security::SecurityAnalysisCache,
     /// Compliance/policy checking state
     pub compliance_state: crate::tui::app_states::PolicyComplianceState,
-    /// Quality tab ViewState implementation (proof of concept).
+    /// Quality tab `ViewState` implementation (proof of concept).
     ///
     /// When present, quality tab key events are dispatched through this
-    /// ViewState instead of the direct handler. State is synced back to
+    /// `ViewState` instead of the direct handler. State is synced back to
     /// `tabs.quality` after each event for rendering compatibility.
     pub quality_view: Option<crate::tui::view_states::QualityView>,
 }
@@ -222,27 +222,28 @@ impl App {
     }
 
     /// Toggle help overlay
-    pub fn toggle_help(&mut self) {
+    pub const fn toggle_help(&mut self) {
         self.overlays.toggle_help();
     }
 
     /// Toggle export dialog
-    pub fn toggle_export(&mut self) {
+    pub const fn toggle_export(&mut self) {
         self.overlays.toggle_export();
     }
 
     /// Toggle legend overlay
-    pub fn toggle_legend(&mut self) {
+    pub const fn toggle_legend(&mut self) {
         self.overlays.toggle_legend();
     }
 
     /// Close all overlays
-    pub fn close_overlays(&mut self) {
+    pub const fn close_overlays(&mut self) {
         self.overlays.close_all();
     }
 
     /// Check if any overlay is open
-    pub fn has_overlay(&self) -> bool {
+    #[must_use] 
+    pub const fn has_overlay(&self) -> bool {
         self.overlays.has_active()
     }
 
@@ -379,9 +380,8 @@ impl App {
                 if old_results.is_empty() {
                     self.set_status_message("No compliance results to export");
                     return;
-                } else {
-                    (old_results, self.tabs.diff_compliance.selected_standard)
                 }
+                (old_results, self.tabs.diff_compliance.selected_standard)
             } else {
                 self.set_status_message("No compliance results to export");
                 return;
@@ -390,9 +390,8 @@ impl App {
             if old_results.is_empty() {
                 self.set_status_message("No compliance results to export");
                 return;
-            } else {
-                (old_results, self.tabs.diff_compliance.selected_standard)
             }
+            (old_results, self.tabs.diff_compliance.selected_standard)
         } else {
             self.set_status_message("No compliance results to export");
             return;
@@ -413,6 +412,8 @@ impl App {
 
     /// Run compliance check against the current policy
     pub fn run_compliance_check(&mut self) {
+        use crate::tui::security::{check_compliance, SecurityPolicy};
+
         let preset = self.compliance_state.policy_preset;
 
         // Standards-based presets delegate to the quality::ComplianceChecker
@@ -420,8 +421,6 @@ impl App {
             self.run_standards_compliance_check(preset);
             return;
         }
-
-        use crate::tui::security::{check_compliance, SecurityPolicy};
 
         let policy = match preset {
             super::app_states::PolicyPreset::Enterprise => SecurityPolicy::enterprise_default(),
@@ -462,7 +461,7 @@ impl App {
     }
 
     /// Run a standards-based compliance check (CRA, NTIA, FDA) and convert
-    /// the result into a PolicyViolation-based ComplianceResult for unified display.
+    /// the result into a PolicyViolation-based `ComplianceResult` for unified display.
     fn run_standards_compliance_check(&mut self, preset: super::app_states::PolicyPreset) {
         use crate::quality::{ComplianceChecker, ViolationSeverity};
         use crate::tui::security::{ComplianceResult as PolicyResult, PolicySeverity, PolicyViolation};
@@ -609,7 +608,7 @@ impl App {
     }
 
     /// Toggle compliance view details
-    pub fn toggle_compliance_details(&mut self) {
+    pub const fn toggle_compliance_details(&mut self) {
         self.compliance_state.toggle_details();
     }
 
@@ -626,12 +625,13 @@ impl App {
     // ViewState trait integration methods
     // ========================================================================
 
-    /// Get the current view mode for ViewContext
-    pub fn view_mode(&self) -> super::traits::ViewMode {
+    /// Get the current view mode for `ViewContext`
+    #[must_use] 
+    pub const fn view_mode(&self) -> super::traits::ViewMode {
         super::traits::ViewMode::from_app_mode(self.mode)
     }
 
-    /// Handle an EventResult from a view state
+    /// Handle an `EventResult` from a view state
     ///
     /// This method processes the result of a view's event handling,
     /// performing navigation, showing overlays, or setting status messages.
@@ -649,7 +649,7 @@ impl App {
                 self.should_quit = true;
             }
             EventResult::ShowOverlay(kind) => {
-                self.show_overlay_kind(kind);
+                self.show_overlay_kind(&kind);
             }
             EventResult::StatusMessage(msg) => {
                 self.set_status_message(msg);
@@ -658,7 +658,7 @@ impl App {
     }
 
     /// Show an overlay based on the kind
-    fn show_overlay_kind(&mut self, kind: super::traits::OverlayKind) {
+    fn show_overlay_kind(&mut self, kind: &super::traits::OverlayKind) {
         use super::traits::OverlayKind;
 
         // Close any existing overlays first
@@ -676,12 +676,14 @@ impl App {
         }
     }
 
-    /// Get the current tab as a TabTarget
-    pub fn current_tab_target(&self) -> super::traits::TabTarget {
+    /// Get the current tab as a `TabTarget`
+    #[must_use] 
+    pub const fn current_tab_target(&self) -> super::traits::TabTarget {
         super::traits::TabTarget::from_tab_kind(self.active_tab)
     }
 
     /// Get keyboard shortcuts for the current view
+    #[must_use] 
     pub fn current_shortcuts(&self) -> Vec<super::traits::Shortcut> {
         use super::traits::Shortcut;
 
@@ -748,7 +750,8 @@ pub enum TabKind {
 }
 
 impl TabKind {
-    pub fn title(&self) -> &'static str {
+    #[must_use] 
+    pub const fn title(&self) -> &'static str {
         match self {
             Self::Summary => "Summary",
             Self::Components => "Components",

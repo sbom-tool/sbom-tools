@@ -31,13 +31,14 @@ pub struct SummaryReporter {
 
 impl SummaryReporter {
     /// Create a new summary reporter
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self { colored: true }
     }
 
     /// Disable colored output
     #[must_use]
-    pub fn no_color(mut self) -> Self {
+    pub const fn no_color(mut self) -> Self {
         self.colored = false;
         self
     }
@@ -271,13 +272,14 @@ pub struct TableReporter {
 
 impl TableReporter {
     /// Create a new table reporter
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self { colored: true }
     }
 
     /// Disable colored output
     #[must_use]
-    pub fn no_color(mut self) -> Self {
+    pub const fn no_color(mut self) -> Self {
         self.colored = false;
         self
     }
@@ -471,7 +473,7 @@ impl ReportGenerator for TableReporter {
     }
 }
 
-/// Truncate a string to fit within max_len (UTF-8 safe)
+/// Truncate a string to fit within `max_len` (UTF-8 safe)
 fn truncate(s: &str, max_len: usize) -> String {
     if s.len() <= max_len {
         s.to_string()
@@ -485,7 +487,7 @@ fn truncate(s: &str, max_len: usize) -> String {
 }
 
 /// Find the largest byte index <= `index` that is a valid UTF-8 char boundary.
-fn floor_char_boundary(s: &str, index: usize) -> usize {
+const fn floor_char_boundary(s: &str, index: usize) -> usize {
     if index >= s.len() {
         s.len()
     } else {

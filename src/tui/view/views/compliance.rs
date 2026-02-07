@@ -1,4 +1,4 @@
-//! Compliance tab for ViewApp - SBOM compliance validation against standards.
+//! Compliance tab for `ViewApp` - SBOM compliance validation against standards.
 
 use crate::quality::{ComplianceChecker, ComplianceLevel, ComplianceResult, ViolationSeverity};
 use crate::tui::shared::compliance as shared_compliance;
@@ -376,18 +376,19 @@ impl Default for StandardComplianceState {
 }
 
 impl StandardComplianceState {
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn next_standard(&mut self) {
+    pub const fn next_standard(&mut self) {
         let max = ComplianceLevel::all().len();
         self.selected_standard = (self.selected_standard + 1) % max;
         self.selected_violation = 0;
         self.scroll_offset = 0;
     }
 
-    pub fn prev_standard(&mut self) {
+    pub const fn prev_standard(&mut self) {
         let max = ComplianceLevel::all().len();
         self.selected_standard = if self.selected_standard == 0 {
             max - 1
@@ -404,12 +405,12 @@ impl StandardComplianceState {
         }
     }
 
-    pub fn select_prev(&mut self) {
+    pub const fn select_prev(&mut self) {
         self.selected_violation = self.selected_violation.saturating_sub(1);
     }
 
-    /// Adjust scroll_offset to keep the selected violation visible within the viewport.
-    pub fn adjust_scroll(&mut self, viewport_height: usize) {
+    /// Adjust `scroll_offset` to keep the selected violation visible within the viewport.
+    pub const fn adjust_scroll(&mut self, viewport_height: usize) {
         if viewport_height == 0 {
             return;
         }
@@ -422,6 +423,7 @@ impl StandardComplianceState {
 }
 
 /// Compute compliance results for all standards
+#[must_use] 
 pub fn compute_compliance_results(sbom: &crate::model::NormalizedSbom) -> Vec<ComplianceResult> {
     ComplianceLevel::all()
         .iter()

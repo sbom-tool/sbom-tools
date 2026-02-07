@@ -21,7 +21,7 @@ fn compute_graph_hash(edges: &[(String, String)]) -> u64 {
 }
 
 /// Update the graph cache if needed (call before rendering)
-pub(crate) fn update_graph_cache(app: &mut App) {
+pub fn update_graph_cache(app: &mut App) {
     match app.mode {
         AppMode::View => update_view_mode_cache(app),
         AppMode::Diff => update_diff_mode_cache(app),
@@ -150,7 +150,7 @@ enum ChangeType {
     Removed,
 }
 
-pub(crate) fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
+pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
     let scheme = colors();
 
     // Update cache before rendering (only recomputes if data changed)
@@ -581,7 +581,7 @@ fn render_dependency_tree(frame: &mut Frame, area: Rect, app: &mut App) {
 fn render_diff_tree(
     lines: &mut Vec<Line>,
     visible_nodes: &mut Vec<String>,
-    app: &mut App,
+    app: &App,
     max_width: usize,
     vuln_components: &HashSet<String>,
     search_matches: &HashSet<String>,
@@ -589,7 +589,6 @@ fn render_diff_tree(
 ) {
     let scheme = colors();
     let max_roots = app.tabs.dependencies.max_roots;
-    let _max_depth = app.tabs.dependencies.max_depth;
     let highlight = app.tabs.dependencies.highlight_changes;
 
     if let Some(result) = &app.data.diff_result {
@@ -636,7 +635,7 @@ fn render_diff_tree(
         all_sources.extend(removed_by_source.keys());
 
         let mut sources: Vec<_> = all_sources.into_iter().collect();
-        sources.sort();
+        sources.sort_unstable();
 
         let expanded = &app.tabs.dependencies.expanded_nodes;
 
@@ -1098,11 +1097,11 @@ fn render_view_node_line(
 // === CACHED VERSIONS OF RENDER FUNCTIONS ===
 // These use the cached graph structure and avoid rebuilding on every frame
 
-/// Cached version of render_diff_tree - uses cached graph structure
+/// Cached version of `render_diff_tree` - uses cached graph structure
 fn render_diff_tree_cached(
     lines: &mut Vec<Line>,
     visible_nodes: &mut Vec<String>,
-    app: &mut App,
+    app: &App,
     max_width: usize,
     vuln_components: &HashSet<String>,
     search_matches: &HashSet<String>,
@@ -1281,11 +1280,11 @@ fn render_diff_tree_cached(
     }
 }
 
-/// Cached version of render_view_tree - uses cached graph and cycle nodes
+/// Cached version of `render_view_tree` - uses cached graph and cycle nodes
 fn render_view_tree_cached(
     lines: &mut Vec<Line>,
     visible_nodes: &mut Vec<String>,
-    app: &mut App,
+    app: &App,
     max_width: usize,
     vuln_components: &HashSet<String>,
     search_matches: &HashSet<String>,
@@ -1555,7 +1554,7 @@ fn render_view_node_cached(
     path.pop();
 }
 
-/// Cached version of dependency_limit_info - uses cached graph structure
+/// Cached version of `dependency_limit_info` - uses cached graph structure
 fn dependency_limit_info_cached(app: &App, max_roots: usize, max_depth: usize) -> (usize, bool) {
     let roots = &app.tabs.dependencies.cached_roots;
     let graph = &app.tabs.dependencies.cached_graph;
@@ -1679,11 +1678,6 @@ fn truncate_component(id: &str, max_width: usize) -> String {
 /// Detect circular dependencies in a dependency graph.
 /// Returns a list of cycles, where each cycle is a vector of node IDs.
 fn detect_cycles(graph: &HashMap<String, Vec<String>>) -> Vec<Vec<String>> {
-    let mut cycles: Vec<Vec<String>> = Vec::new();
-    let mut visited: HashSet<String> = HashSet::new();
-    let mut rec_stack: HashSet<String> = HashSet::new();
-    let mut path: Vec<String> = Vec::new();
-
     fn dfs(
         node: &str,
         graph: &HashMap<String, Vec<String>>,
@@ -1716,6 +1710,11 @@ fn detect_cycles(graph: &HashMap<String, Vec<String>>) -> Vec<Vec<String>> {
         path.pop();
         rec_stack.remove(node);
     }
+
+    let mut cycles: Vec<Vec<String>> = Vec::new();
+    let mut visited: HashSet<String> = HashSet::new();
+    let mut rec_stack: HashSet<String> = HashSet::new();
+    let mut path: Vec<String> = Vec::new();
 
     // Start DFS from each unvisited node
     for node in graph.keys() {

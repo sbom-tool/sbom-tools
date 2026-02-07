@@ -33,6 +33,7 @@ pub mod dirs {
     use std::path::PathBuf;
 
     /// Get the platform-specific cache directory
+    #[must_use] 
     pub fn cache_dir() -> Option<PathBuf> {
         #[cfg(target_os = "macos")]
         {
@@ -64,6 +65,7 @@ pub mod dirs {
     }
 
     /// Get the default OSV cache directory
+    #[must_use] 
     pub fn osv_cache_dir() -> PathBuf {
         cache_dir()
             .unwrap_or_else(|| PathBuf::from(".cache"))

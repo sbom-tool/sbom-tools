@@ -8,7 +8,7 @@ use ratatui::{
     widgets::{Bar, BarChart, BarGroup, Block, Borders, Gauge, Paragraph},
 };
 
-pub(crate) fn render_summary(frame: &mut Frame, area: Rect, app: &App) {
+pub fn render_summary(frame: &mut Frame, area: Rect, app: &App) {
     match app.mode {
         AppMode::Diff => render_diff_summary(frame, area, app),
         AppMode::View => render_view_summary(frame, area, app),

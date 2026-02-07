@@ -1,4 +1,4 @@
-//! View-specific rendering for the ViewApp.
+//! View-specific rendering for the `ViewApp`.
 
 mod compliance;
 mod dependencies;
@@ -17,5 +17,5 @@ pub use quality::render_quality;
 pub use source::render_source;
 pub use tree::render_tree;
 pub use vulnerabilities::{
-    build_display_items, render_vulnerabilities, VulnCache, VulnCacheRef, VulnDisplayItem, VulnRow,
+    build_display_items, render_vulnerabilities, VulnCache, VulnCacheRef, VulnDisplayItem,
 };

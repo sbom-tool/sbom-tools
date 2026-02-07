@@ -28,17 +28,20 @@ pub struct EnrichmentStats {
 
 impl EnrichmentStats {
     /// Create new empty stats
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Create empty stats (alias for default, for clarity in null object pattern)
+    #[must_use] 
     pub fn empty() -> Self {
         Self::default()
     }
 
     /// Total number of components checked (queried + skipped)
-    pub fn components_checked(&self) -> usize {
+    #[must_use] 
+    pub const fn components_checked(&self) -> usize {
         self.components_queried + self.components_skipped
     }
 
@@ -62,6 +65,7 @@ impl EnrichmentStats {
     }
 
     /// Check if there were any errors
+    #[must_use] 
     pub fn has_errors(&self) -> bool {
         !self.errors.is_empty()
     }

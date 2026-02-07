@@ -5,7 +5,7 @@ use ratatui::{prelude::*, widgets::Widget};
 
 /// A styled badge showing vulnerability severity.
 #[derive(Debug, Clone)]
-pub(crate) struct SeverityBadge {
+pub struct SeverityBadge {
     severity: String,
     compact: bool,
 }
@@ -76,7 +76,7 @@ impl Widget for SeverityBadge {
 }
 
 /// Render a severity distribution bar.
-pub(crate) struct SeverityBar {
+pub struct SeverityBar {
     pub critical: usize,
     pub high: usize,
     pub medium: usize,
@@ -84,7 +84,7 @@ pub(crate) struct SeverityBar {
 }
 
 impl SeverityBar {
-    pub(crate) fn new(critical: usize, high: usize, medium: usize, low: usize) -> Self {
+    pub(crate) const fn new(critical: usize, high: usize, medium: usize, low: usize) -> Self {
         Self {
             critical,
             high,
@@ -93,7 +93,7 @@ impl SeverityBar {
         }
     }
 
-    pub(crate) fn total(&self) -> usize {
+    pub(crate) const fn total(&self) -> usize {
         self.critical + self.high + self.medium + self.low
     }
 }

@@ -36,7 +36,7 @@ impl MultiViewSearchState {
         self.matches.clear();
     }
 
-    pub fn confirm(&mut self) {
+    pub const fn confirm(&mut self) {
         self.active = false;
     }
 
@@ -100,7 +100,7 @@ pub enum MultiViewFilterPreset {
 }
 
 impl MultiViewFilterPreset {
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::All => "All",
             Self::HighDeviation => "High Deviation",
@@ -111,7 +111,7 @@ impl MultiViewFilterPreset {
         }
     }
 
-    pub fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::All => Self::HighDeviation,
             Self::HighDeviation => Self::ChangesOnly,
@@ -135,7 +135,7 @@ pub enum MultiViewSortBy {
 }
 
 impl MultiViewSortBy {
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::Name => "Name",
             Self::Deviation => "Deviation",
@@ -145,7 +145,7 @@ impl MultiViewSortBy {
         }
     }
 
-    pub fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::Name => Self::Deviation,
             Self::Deviation => Self::Changes,
@@ -165,14 +165,14 @@ pub enum SortDirection {
 }
 
 impl SortDirection {
-    pub fn toggle(&mut self) {
+    pub const fn toggle(&mut self) {
         *self = match self {
             Self::Ascending => Self::Descending,
             Self::Descending => Self::Ascending,
         };
     }
 
-    pub fn indicator(self) -> &'static str {
+    pub const fn indicator(self) -> &'static str {
         match self {
             Self::Ascending => "↑",
             Self::Descending => "↓",
@@ -244,62 +244,62 @@ impl MultiDiffState {
         }
     }
 
-    pub fn select_next(&mut self) {
+    pub const fn select_next(&mut self) {
         if self.total_targets > 0 && self.selected_target < self.total_targets - 1 {
             self.selected_target += 1;
         }
     }
 
-    pub fn select_prev(&mut self) {
+    pub const fn select_prev(&mut self) {
         if self.selected_target > 0 {
             self.selected_target -= 1;
         }
     }
 
-    pub fn toggle_panel(&mut self) {
+    pub const fn toggle_panel(&mut self) {
         self.active_panel = match self.active_panel {
             MultiDashboardPanel::Targets => MultiDashboardPanel::Details,
             MultiDashboardPanel::Details => MultiDashboardPanel::Targets,
         };
     }
 
-    pub fn toggle_filter(&mut self) {
+    pub const fn toggle_filter(&mut self) {
         self.filter_preset = self.filter_preset.next();
     }
 
-    pub fn toggle_sort(&mut self) {
+    pub const fn toggle_sort(&mut self) {
         self.sort_by = self.sort_by.next();
     }
 
-    pub fn toggle_sort_direction(&mut self) {
+    pub const fn toggle_sort_direction(&mut self) {
         self.sort_direction.toggle();
     }
 
-    pub fn toggle_detail_modal(&mut self) {
+    pub const fn toggle_detail_modal(&mut self) {
         self.show_detail_modal = !self.show_detail_modal;
     }
 
-    pub fn close_detail_modal(&mut self) {
+    pub const fn close_detail_modal(&mut self) {
         self.show_detail_modal = false;
     }
 
-    pub fn toggle_variable_drill_down(&mut self) {
+    pub const fn toggle_variable_drill_down(&mut self) {
         self.show_variable_drill_down = !self.show_variable_drill_down;
     }
 
-    pub fn close_variable_drill_down(&mut self) {
+    pub const fn close_variable_drill_down(&mut self) {
         self.show_variable_drill_down = false;
     }
 
-    pub fn toggle_cross_target(&mut self) {
+    pub const fn toggle_cross_target(&mut self) {
         self.show_cross_target = !self.show_cross_target;
     }
 
-    pub fn toggle_heat_map(&mut self) {
+    pub const fn toggle_heat_map(&mut self) {
         self.heat_map_mode = !self.heat_map_mode;
     }
 
-    pub fn select_next_variable_component(&mut self) {
+    pub const fn select_next_variable_component(&mut self) {
         if self.total_variable_components > 0
             && self.selected_variable_component < self.total_variable_components - 1
         {
@@ -307,13 +307,13 @@ impl MultiDiffState {
         }
     }
 
-    pub fn select_prev_variable_component(&mut self) {
+    pub const fn select_prev_variable_component(&mut self) {
         if self.selected_variable_component > 0 {
             self.selected_variable_component -= 1;
         }
     }
 
-    pub fn set_variable_components_count(&mut self, count: usize) {
+    pub const fn set_variable_components_count(&mut self, count: usize) {
         self.total_variable_components = count;
         if count > 0 && self.selected_variable_component >= count {
             self.selected_variable_component = count - 1;
@@ -321,7 +321,7 @@ impl MultiDiffState {
     }
 
     /// Check if any modal/overlay is open
-    pub fn has_overlay(&self) -> bool {
+    pub const fn has_overlay(&self) -> bool {
         self.show_detail_modal || self.show_variable_drill_down || self.search.active
     }
 }

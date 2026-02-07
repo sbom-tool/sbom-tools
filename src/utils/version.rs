@@ -4,6 +4,7 @@ use semver::Version;
 use std::cmp::Ordering;
 
 /// Compare two version strings
+#[must_use] 
 pub fn compare_versions(a: &str, b: &str) -> Ordering {
     // Try semver comparison first
     if let (Ok(ver_a), Ok(ver_b)) = (Version::parse(a), Version::parse(b)) {

@@ -1,4 +1,4 @@
-//! Shared compliance rendering functions used by both App (diff mode) and ViewApp (view mode).
+//! Shared compliance rendering functions used by both App (diff mode) and `ViewApp` (view mode).
 
 use crate::quality::ViolationSeverity;
 use crate::tui::theme::colors;
@@ -9,15 +9,15 @@ use ratatui::{
 };
 
 /// Render a modal overlay showing violation details, centered on the given area.
-pub(crate) fn render_violation_detail_overlay(
+pub fn render_violation_detail_overlay(
     frame: &mut Frame,
     area: Rect,
     violation: &crate::quality::Violation,
 ) {
     let scheme = colors();
 
-    let overlay_width = (area.width as f32 * 0.7).max(40.0).min(area.width as f32) as u16;
-    let overlay_height = (area.height as f32 * 0.6).max(12.0).min(area.height as f32) as u16;
+    let overlay_width = (f32::from(area.width) * 0.7).max(40.0).min(f32::from(area.width)) as u16;
+    let overlay_height = (f32::from(area.height) * 0.6).max(12.0).min(f32::from(area.height)) as u16;
     let x = area.x + (area.width.saturating_sub(overlay_width)) / 2;
     let y = area.y + (area.height.saturating_sub(overlay_height)) / 2;
     let overlay_area = Rect::new(x, y, overlay_width, overlay_height);
@@ -101,7 +101,7 @@ pub(crate) fn render_violation_detail_overlay(
 }
 
 /// Simple text wrapping helper — splits text into lines of at most `max_width` characters.
-pub(crate) fn textwrap_simple(text: &str, max_width: usize) -> Vec<String> {
+pub fn textwrap_simple(text: &str, max_width: usize) -> Vec<String> {
     if max_width == 0 {
         return vec![text.to_string()];
     }

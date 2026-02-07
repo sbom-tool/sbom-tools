@@ -15,7 +15,7 @@ use ratatui::{
 };
 use std::collections::HashMap;
 
-pub(crate) fn render_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
+pub fn render_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(3), Constraint::Min(5)])
@@ -339,8 +339,8 @@ fn render_compatibility_panel(frame: &mut Frame, area: Rect, app: &App) {
     }
 
     // Issues
+    lines.push(Line::from(""));
     if report.issues.is_empty() {
-        lines.push(Line::from(""));
         lines.push(Line::from(vec![
             Span::styled("✓ ", Style::default().fg(scheme.success)),
             Span::styled(
@@ -349,7 +349,6 @@ fn render_compatibility_panel(frame: &mut Frame, area: Rect, app: &App) {
             ),
         ]));
     } else {
-        lines.push(Line::from(""));
         lines.push(Line::styled(
             "Compatibility Issues:",
             Style::default().fg(scheme.error).bold(),
@@ -384,13 +383,13 @@ fn render_compatibility_panel(frame: &mut Frame, area: Rect, app: &App) {
 
     // Build license -> components map for conflict detection
     let mut license_map: HashMap<String, Vec<String>> = HashMap::new();
-    for lic in result.licenses.new_licenses.iter() {
+    for lic in &result.licenses.new_licenses {
         license_map
             .entry(lic.license.clone())
             .or_default()
             .extend(lic.components.clone());
     }
-    for lic in result.licenses.removed_licenses.iter() {
+    for lic in &result.licenses.removed_licenses {
         license_map
             .entry(lic.license.clone())
             .or_default()
@@ -1170,6 +1169,6 @@ fn render_view_license_details(frame: &mut Frame, area: Rect, entry: Option<&Lic
 }
 
 /// Categorize a license by type (legacy function for compatibility)
-pub(crate) fn categorize_license(license: &str) -> String {
+pub fn categorize_license(license: &str) -> String {
     LicenseInfo::from_spdx(license).category.as_str().to_string()
 }

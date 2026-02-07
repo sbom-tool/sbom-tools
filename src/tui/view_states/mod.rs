@@ -9,4 +9,4 @@
 
 pub mod quality;
 
-pub(crate) use quality::QualityView;
+pub use quality::QualityView;

@@ -5,7 +5,7 @@ use std::hash::{Hash, Hasher};
 
 /// Vertex in the diff graph representing an alignment position.
 ///
-/// Each vertex represents a position pair (left_pos, right_pos) in the
+/// Each vertex represents a position pair (`left_pos`, `right_pos`) in the
 /// comparison of two SBOMs.
 #[derive(Debug, Clone)]
 pub struct DiffVertex {
@@ -19,7 +19,8 @@ pub struct DiffVertex {
 
 impl DiffVertex {
     /// Create a new diff vertex
-    pub fn new(left_pos: Option<CanonicalId>, right_pos: Option<CanonicalId>) -> Self {
+    #[must_use] 
+    pub const fn new(left_pos: Option<CanonicalId>, right_pos: Option<CanonicalId>) -> Self {
         Self {
             left_pos,
             right_pos,
@@ -28,11 +29,13 @@ impl DiffVertex {
     }
 
     /// Create the start vertex (both positions at beginning)
-    pub fn start() -> Self {
+    #[must_use] 
+    pub const fn start() -> Self {
         Self::new(None, None)
     }
 
     /// Check if this is the end vertex (both positions exhausted)
+    #[must_use] 
     pub fn is_end(&self) -> bool {
         self.left_pos.is_none() && self.right_pos.is_none() && !self.processed_together.is_empty()
     }
@@ -115,7 +118,7 @@ pub enum DiffEdge {
 #[allow(dead_code)]
 impl DiffEdge {
     /// Get the cost of this edge
-    pub fn cost(&self) -> i32 {
+    pub const fn cost(&self) -> i32 {
         match self {
             Self::ComponentRemoved { cost, .. }
             | Self::ComponentAdded { cost, .. }
@@ -131,7 +134,7 @@ impl DiffEdge {
     }
 
     /// Check if this edge represents a change (non-zero cost)
-    pub fn is_change(&self) -> bool {
+    pub const fn is_change(&self) -> bool {
         !matches!(self, Self::ComponentUnchanged { .. })
     }
 }

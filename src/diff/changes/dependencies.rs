@@ -10,7 +10,8 @@ pub struct DependencyChangeComputer;
 
 impl DependencyChangeComputer {
     /// Create a new dependency change computer.
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self
     }
 }
@@ -76,7 +77,7 @@ impl ChangeComputer for DependencyChangeComputer {
         result
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "DependencyChangeComputer"
     }
 }

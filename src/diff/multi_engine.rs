@@ -5,7 +5,7 @@
 //! recomputation when the same SBOM pair is compared multiple times.
 
 use super::incremental::IncrementalDiffEngine;
-use super::multi::*;
+use super::multi::{MultiDiffResult, SbomInfo, ComparisonResult, MultiDiffSummary, VariableComponent, VersionSpread, InconsistentComponent, DivergentComponent, DivergenceType, TimelineResult, EvolutionSummary, VersionAtPoint, ComponentEvolution, VersionChangeType, VulnerabilitySnapshot, DependencySnapshot, ComplianceSnapshot, ComplianceScoreEntry, MatrixResult, SbomClustering, SbomCluster, SecurityImpact, VulnerabilityMatrix};
 use super::{DiffEngine, DiffResult};
 use crate::matching::FuzzyMatchConfig;
 use crate::model::{NormalizedSbom, VulnerabilityCounts};
@@ -26,7 +26,8 @@ pub struct MultiDiffEngine {
 }
 
 impl MultiDiffEngine {
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             fuzzy_config: None,
             include_unchanged: false,
@@ -50,7 +51,7 @@ impl MultiDiffEngine {
         self
     }
 
-    /// Build the configured DiffEngine and wrap it in an IncrementalDiffEngine.
+    /// Build the configured `DiffEngine` and wrap it in an `IncrementalDiffEngine`.
     fn ensure_engine(&mut self) {
         if self.incremental.is_none() {
             let mut engine = DiffEngine::new();
@@ -439,7 +440,7 @@ impl MultiDiffEngine {
                         first_seen = Some((i, ver.clone().unwrap_or_default()));
                         VersionChangeType::Initial
                     } else {
-                        let ct = classify_version_change(&prev_version, &ver);
+                        let ct = classify_version_change(prev_version.as_ref(), ver.as_ref());
                         // Count actual version changes (not unchanged or absent)
                         if !matches!(ct, VersionChangeType::Unchanged | VersionChangeType::Absent) {
                             version_change_count += 1;
@@ -664,7 +665,7 @@ impl MultiDiffEngine {
                     members: cluster_members.clone(),
                     centroid_index: cluster_members[0],
                     internal_similarity: if count > 0 {
-                        total_sim / count as f64
+                        total_sim / f64::from(count)
                     } else {
                         1.0
                     },
@@ -807,7 +808,7 @@ fn compute_vulnerability_matrix(
 }
 
 /// Classify version change type
-fn classify_version_change(old: &Option<String>, new: &Option<String>) -> VersionChangeType {
+fn classify_version_change(old: Option<&String>, new: Option<&String>) -> VersionChangeType {
     match (old, new) {
         (None, Some(_)) => VersionChangeType::Initial,
         (Some(_), None) => VersionChangeType::Removed,

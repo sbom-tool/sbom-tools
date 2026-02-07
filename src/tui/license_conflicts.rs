@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 /// Conflict rule defining an incompatibility
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct ConflictRule {
+pub struct ConflictRule {
     /// Pattern to match first license
     pub license_a_pattern: String,
     /// Pattern to match second license
@@ -25,7 +25,7 @@ pub(crate) struct ConflictRule {
 
 /// Type of license conflict
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub(crate) enum ConflictType {
+pub enum ConflictType {
     /// Licenses cannot coexist in same binary
     BinaryIncompatible,
     /// Licenses cannot be combined in same project
@@ -52,7 +52,7 @@ impl std::fmt::Display for ConflictType {
 
 /// Severity of a conflict
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub(crate) enum ConflictSeverity {
+pub enum ConflictSeverity {
     /// Informational - may need review
     Info,
     /// Warning - should address
@@ -73,7 +73,7 @@ impl std::fmt::Display for ConflictSeverity {
 
 /// A detected license conflict
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct DetectedConflict {
+pub struct DetectedConflict {
     /// The rule that was matched
     pub rule: ConflictRule,
     /// First license involved
@@ -88,7 +88,7 @@ pub(crate) struct DetectedConflict {
 
 /// Context in which the conflict occurs
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum ConflictContext {
+pub enum ConflictContext {
     /// In same linked binary
     SameBinary,
     /// In same project/codebase
@@ -108,7 +108,7 @@ impl std::fmt::Display for ConflictContext {
 }
 
 /// License conflict detector
-pub(crate) struct ConflictDetector {
+pub struct ConflictDetector {
     rules: Vec<ConflictRule>,
 }
 
@@ -239,7 +239,7 @@ impl ConflictDetector {
         let license_normalized = license_upper
             .replace("-ONLY", "")
             .replace("-OR-LATER", "")
-            .replace("+", "");
+            .replace('+', "");
 
         license_normalized.contains(&pattern_upper)
     }

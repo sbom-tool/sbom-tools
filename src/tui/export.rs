@@ -21,7 +21,7 @@ pub enum ExportFormat {
 
 impl ExportFormat {
     /// Get file extension for this format
-    pub(crate) fn extension(self) -> &'static str {
+    pub(crate) const fn extension(self) -> &'static str {
         match self {
             Self::Json => "json",
             Self::Markdown => "md",
@@ -31,28 +31,28 @@ impl ExportFormat {
         }
     }
 
-    /// Convert to report format (where applicable)
-    fn to_report_format(self) -> Option<ReportFormat> {
+    /// Convert to report format
+    const fn to_report_format(self) -> ReportFormat {
         match self {
-            Self::Json => Some(ReportFormat::Json),
-            Self::Markdown => Some(ReportFormat::Markdown),
-            Self::Html => Some(ReportFormat::Html),
-            Self::Sarif => Some(ReportFormat::Sarif),
-            Self::Csv => Some(ReportFormat::Csv),
+            Self::Json => ReportFormat::Json,
+            Self::Markdown => ReportFormat::Markdown,
+            Self::Html => ReportFormat::Html,
+            Self::Sarif => ReportFormat::Sarif,
+            Self::Csv => ReportFormat::Csv,
         }
     }
 }
 
 /// Result of an export operation
 #[derive(Debug)]
-pub(crate) struct ExportResult {
+pub struct ExportResult {
     pub path: PathBuf,
     pub success: bool,
     pub message: String,
 }
 
 /// Export diff results to a file
-pub(crate) fn export_diff(
+pub fn export_diff(
     format: ExportFormat,
     result: &DiffResult,
     old_sbom: &NormalizedSbom,
@@ -63,19 +63,11 @@ pub(crate) fn export_diff(
     let filename = format!("sbom_tools_{}.{}", timestamp, format.extension());
     let path = output_dir.map_or_else(|| PathBuf::from(&filename), |dir| PathBuf::from(dir).join(&filename));
 
-    if let Some(report_format) = format.to_report_format() {
-        export_with_reporter(report_format, result, old_sbom, new_sbom, &path)
-    } else {
-        ExportResult {
-            path,
-            success: false,
-            message: "Unsupported format".to_string(),
-        }
-    }
+    export_with_reporter(format.to_report_format(), result, old_sbom, new_sbom, &path)
 }
 
 /// Export single SBOM to a file (view mode)
-pub(crate) fn export_view(
+pub fn export_view(
     format: ExportFormat,
     sbom: &NormalizedSbom,
     output_dir: Option<&str>,
@@ -84,15 +76,7 @@ pub(crate) fn export_view(
     let filename = format!("sbom_report_{}.{}", timestamp, format.extension());
     let path = output_dir.map_or_else(|| PathBuf::from(&filename), |dir| PathBuf::from(dir).join(&filename));
 
-    if let Some(report_format) = format.to_report_format() {
-        export_view_with_reporter(report_format, sbom, &path)
-    } else {
-        ExportResult {
-            path,
-            success: false,
-            message: "Unsupported format".to_string(),
-        }
-    }
+    export_view_with_reporter(format.to_report_format(), sbom, &path)
 }
 
 fn export_with_reporter(
@@ -157,7 +141,7 @@ fn export_view_with_reporter(
 
 
 /// Export compliance results to a file (JSON or SARIF)
-pub(crate) fn export_compliance(
+pub fn export_compliance(
     format: ExportFormat,
     results: &[crate::quality::ComplianceResult],
     selected_standard: usize,

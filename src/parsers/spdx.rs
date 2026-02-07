@@ -23,12 +23,14 @@ pub struct SpdxParser {
 
 impl SpdxParser {
     /// Create a new SPDX parser
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self { strict: false }
     }
 
     /// Create a strict parser
-    pub fn strict() -> Self {
+    #[must_use] 
+    pub const fn strict() -> Self {
         Self { strict: true }
     }
 
@@ -37,7 +39,7 @@ impl SpdxParser {
         let spdx: SpdxDocument =
             serde_json::from_str(content).map_err(|e| ParseError::JsonError(e.to_string()))?;
 
-        self.convert_to_normalized(spdx)
+        Ok(self.convert_to_normalized(&spdx))
     }
 
     /// Parse an SPDX document from a JSON reader (streaming - doesn't buffer entire file)
@@ -48,17 +50,17 @@ impl SpdxParser {
         let spdx: SpdxDocument =
             serde_json::from_reader(reader).map_err(|e| ParseError::JsonError(e.to_string()))?;
 
-        self.convert_to_normalized(spdx)
+        Ok(self.convert_to_normalized(&spdx))
     }
 
     /// Parse SPDX tag-value format
-    fn parse_tag_value(&self, content: &str) -> Result<NormalizedSbom, ParseError> {
-        let spdx = self.parse_tag_value_format(content)?;
-        self.convert_to_normalized(spdx)
+    fn parse_tag_value(&self, content: &str) -> NormalizedSbom {
+        let spdx = self.parse_tag_value_format(content);
+        self.convert_to_normalized(&spdx)
     }
 
-    /// Parse tag-value format into SpdxDocument
-    fn parse_tag_value_format(&self, content: &str) -> Result<SpdxDocument, ParseError> {
+    /// Parse tag-value format into `SpdxDocument`
+    fn parse_tag_value_format(&self, content: &str) -> SpdxDocument {
         let mut doc = SpdxDocument {
             spdx_version: String::new(),
             spdx_id: String::new(),
@@ -105,7 +107,7 @@ impl SpdxParser {
                     "Creator" => creation_info.creators.push(value.to_string()),
                     "Created" => creation_info.created = Some(value.to_string()),
                     "LicenseListVersion" => {
-                        creation_info.license_list_version = Some(value.to_string())
+                        creation_info.license_list_version = Some(value.to_string());
                     }
                     "PackageName" => {
                         // Save previous package
@@ -191,7 +193,7 @@ impl SpdxParser {
         doc.packages = Some(packages);
         doc.relationships = Some(relationships);
 
-        Ok(doc)
+        doc
     }
 
     /// Parse a relationship line from tag-value format
@@ -238,10 +240,10 @@ impl SpdxParser {
     /// Parse SPDX RDF/XML format
     fn parse_rdf_xml(&self, content: &str) -> Result<NormalizedSbom, ParseError> {
         let spdx = self.parse_rdf_xml_format(content)?;
-        self.convert_to_normalized(spdx)
+        Ok(self.convert_to_normalized(&spdx))
     }
 
-    /// Parse RDF/XML format into SpdxDocument
+    /// Parse RDF/XML format into `SpdxDocument`
     fn parse_rdf_xml_format(&self, content: &str) -> Result<SpdxDocument, ParseError> {
         let mut reader = Reader::from_str(content);
         reader.config_mut().trim_text(true);
@@ -275,15 +277,12 @@ impl SpdxParser {
         let mut in_creation_info = false;
         let mut in_document = false;
         let mut current_text = String::new();
-        let mut element_stack: Vec<String> = Vec::new();
-
         let mut buf = Vec::new();
 
         loop {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(ref e)) => {
                     let local_name = Self::local_name(e.name().as_ref());
-                    element_stack.push(local_name.clone());
                     current_text.clear();
 
                     match local_name.as_str() {
@@ -448,7 +447,6 @@ impl SpdxParser {
                 }
                 Ok(Event::End(ref e)) => {
                     let local_name = Self::local_name(e.name().as_ref());
-                    element_stack.pop();
 
                     match local_name.as_str() {
                         "SpdxDocument" => {
@@ -668,7 +666,7 @@ impl SpdxParser {
         name_str.rfind(':').map_or_else(|| name_str.to_string(), |idx| name_str[idx + 1..].to_string())
     }
 
-    /// Extract SPDX ID from URI (e.g., "http://example.org#SPDXRef-Package" -> "SPDXRef-Package")
+    /// Extract SPDX ID from URI (e.g., "<http://example.org#SPDXRef-Package>" -> "SPDXRef-Package")
     fn extract_spdx_id_from_uri(uri: &str) -> String {
         uri.rfind('#').map_or_else(
             || uri.rfind('/').map_or_else(|| uri.to_string(), |idx| uri[idx + 1..].to_string()),
@@ -692,8 +690,8 @@ impl SpdxParser {
     }
 
     /// Convert SPDX document to normalized representation
-    fn convert_to_normalized(&self, spdx: SpdxDocument) -> Result<NormalizedSbom, ParseError> {
-        let document = self.convert_metadata(&spdx)?;
+    fn convert_to_normalized(&self, spdx: &SpdxDocument) -> NormalizedSbom {
+        let document = self.convert_metadata(spdx);
         let mut sbom = NormalizedSbom::new(document);
 
         let mut id_map: HashMap<String, CanonicalId> = HashMap::new();
@@ -701,7 +699,7 @@ impl SpdxParser {
         // Convert packages to components
         if let Some(packages) = &spdx.packages {
             for pkg in packages {
-                let comp = self.convert_package(pkg)?;
+                let comp = self.convert_package(pkg);
                 id_map.insert(pkg.spdx_id.clone(), comp.canonical_id.clone());
                 sbom.add_component(comp);
             }
@@ -776,11 +774,11 @@ impl SpdxParser {
         }
 
         sbom.calculate_content_hash();
-        Ok(sbom)
+        sbom
     }
 
-    /// Convert SPDX creation info to DocumentMetadata
-    fn convert_metadata(&self, spdx: &SpdxDocument) -> Result<DocumentMetadata, ParseError> {
+    /// Convert SPDX creation info to `DocumentMetadata`
+    fn convert_metadata(&self, spdx: &SpdxDocument) -> DocumentMetadata {
         let version = spdx
             .spdx_version
             .strip_prefix("SPDX-")
@@ -819,7 +817,7 @@ impl SpdxParser {
             }
         }
 
-        Ok(DocumentMetadata {
+        DocumentMetadata {
             format: SbomFormat::Spdx,
             format_version: version.clone(),
             spec_version: version,
@@ -830,11 +828,11 @@ impl SpdxParser {
             security_contact: None,
             vulnerability_disclosure_url: None,
             support_end_date: None,
-        })
+        }
     }
 
     /// Convert SPDX package to normalized Component
-    fn convert_package(&self, pkg: &SpdxPackage) -> Result<Component, ParseError> {
+    fn convert_package(&self, pkg: &SpdxPackage) -> Component {
         let mut comp = Component::new(pkg.name.clone(), pkg.spdx_id.clone());
 
         // Set version
@@ -930,7 +928,7 @@ impl SpdxParser {
         comp.copyright.clone_from(&pkg.copyright_text);
 
         comp.calculate_content_hash();
-        Ok(comp)
+        comp
     }
 }
 
@@ -946,7 +944,7 @@ impl SbomParser for SpdxParser {
         if trimmed.starts_with('{') {
             self.parse_json(content)
         } else if trimmed.starts_with("SPDXVersion:") || trimmed.contains("\nSPDXVersion:") {
-            self.parse_tag_value(content)
+            Ok(self.parse_tag_value(content))
         } else if trimmed.starts_with('<')
             && (content.contains("spdx.org/rdf/terms")
                 || content.contains("SpdxDocument")
@@ -964,7 +962,7 @@ impl SbomParser for SpdxParser {
         vec!["2.2", "2.3"]
     }
 
-    fn format_name(&self) -> &str {
+    fn format_name(&self) -> &'static str {
         "SPDX"
     }
 
@@ -1022,14 +1020,14 @@ impl SbomParser for SpdxParser {
                     detection = detection.version(&v);
                 }
                 return detection;
-            } else {
-                let mut detection =
-                    FormatDetection::with_confidence(FormatConfidence::HIGH).variant("tag-value");
-                if let Some(v) = version {
-                    detection = detection.version(&v);
-                }
-                return detection;
             }
+
+            let mut detection =
+                FormatDetection::with_confidence(FormatConfidence::HIGH).variant("tag-value");
+            if let Some(v) = version {
+                detection = detection.version(&v);
+            }
+            return detection;
         }
 
         // Check for RDF/XML SPDX
@@ -1146,6 +1144,7 @@ struct SpdxChecksum {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(clippy::struct_field_names)]
 struct SpdxExternalRef {
     reference_category: String,
     reference_type: String,

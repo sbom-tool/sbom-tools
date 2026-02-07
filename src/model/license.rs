@@ -17,6 +17,7 @@ pub struct LicenseExpression {
 
 impl LicenseExpression {
     /// Create a new license expression
+    #[must_use] 
     pub fn new(expression: String) -> Self {
         let is_valid_spdx = Self::validate_spdx(&expression);
         Self {
@@ -26,6 +27,7 @@ impl LicenseExpression {
     }
 
     /// Create from an SPDX license ID
+    #[must_use] 
     pub fn from_spdx_id(id: &str) -> Self {
         Self {
             expression: id.to_string(),
@@ -49,6 +51,7 @@ impl LicenseExpression {
     /// For OR expressions (e.g., "MIT OR GPL-2.0"), returns true if at least
     /// one branch is permissive (the licensee can choose the permissive option).
     /// Falls back to substring matching for non-parseable expressions.
+    #[must_use] 
     pub fn is_permissive(&self) -> bool {
         spdx::Expression::parse_mode(&self.expression, spdx::ParseMode::LAX).map_or_else(
             |_| {
@@ -76,6 +79,7 @@ impl LicenseExpression {
     ///
     /// Returns true if any license term in the expression is copyleft.
     /// Falls back to substring matching for non-parseable expressions.
+    #[must_use] 
     pub fn is_copyleft(&self) -> bool {
         spdx::Expression::parse_mode(&self.expression, spdx::ParseMode::LAX).map_or_else(
             |_| {
@@ -103,6 +107,7 @@ impl LicenseExpression {
     /// - OR: returns the most permissive option (licensee can choose)
     /// - AND: returns the most restrictive requirement
     ///   Falls back to substring matching for non-parseable expressions.
+    #[must_use] 
     pub fn family(&self) -> LicenseFamily {
         if let Ok(expr) = spdx::Expression::parse_mode(&self.expression, spdx::ParseMode::LAX) {
             let mut has_copyleft = false;
@@ -127,7 +132,7 @@ impl LicenseExpression {
                             }
                         }
                     }
-                    _ => {}
+                    spdx::expression::ExprNode::Op(_) => {}
                 }
             }
 
@@ -258,6 +263,7 @@ pub struct LicenseInfo {
 
 impl LicenseInfo {
     /// Create new empty license info
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
@@ -268,6 +274,7 @@ impl LicenseInfo {
     }
 
     /// Get all unique license expressions
+    #[must_use] 
     pub fn all_licenses(&self) -> Vec<&LicenseExpression> {
         let mut licenses: Vec<&LicenseExpression> = self.declared.iter().collect();
         if let Some(concluded) = &self.concluded {
@@ -306,7 +313,8 @@ pub struct LicenseEvidence {
 
 impl LicenseEvidence {
     /// Create new license evidence
-    pub fn new(license: LicenseExpression, confidence: f64) -> Self {
+    #[must_use] 
+    pub const fn new(license: LicenseExpression, confidence: f64) -> Self {
         Self {
             license,
             confidence,

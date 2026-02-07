@@ -132,6 +132,7 @@ pub struct RegistryClient {
 
 impl RegistryClient {
     /// Create a new registry client
+    #[must_use] 
     pub fn new(config: RegistryConfig) -> Self {
         Self {
             config,
@@ -260,7 +261,7 @@ impl RegistryClient {
         }
     }
 
-    /// Query PyPI registry
+    /// Query `PyPI` registry
     #[cfg(feature = "enrichment")]
     fn query_pypi(&self, name: &str) -> Result<Option<PackageMetadata>, EnrichmentError> {
         let url = format!("https://pypi.org/pypi/{name}/json");
@@ -314,8 +315,8 @@ impl RegistryClient {
                     .and_then(|i| i.get("project_urls"))
                     .and_then(|u| {
                         u.get("Repository")
-                            .or(u.get("Source"))
-                            .or(u.get("Homepage"))
+                            .or_else(|| u.get("Source"))
+                            .or_else(|| u.get("Homepage"))
                     })
                     .and_then(|u| u.as_str())
                     .map(std::string::ToString::to_string);
@@ -466,6 +467,7 @@ pub struct StalenessEnricher {
 
 impl StalenessEnricher {
     /// Create a new staleness enricher
+    #[must_use] 
     pub fn new(config: RegistryConfig) -> Self {
         Self {
             client: RegistryClient::new(config.clone()),
@@ -474,7 +476,7 @@ impl StalenessEnricher {
     }
 
     /// Check if ecosystem is supported
-    fn is_supported(&self, ecosystem: &Option<Ecosystem>) -> bool {
+    const fn is_supported(&self, ecosystem: Option<&Ecosystem>) -> bool {
         matches!(
             ecosystem,
             Some(Ecosystem::Npm | Ecosystem::PyPi | Ecosystem::Cargo)
@@ -500,9 +502,8 @@ impl StalenessEnricher {
                 return StalenessLevel::Stale;
             } else if days >= 182 {
                 return StalenessLevel::Aging;
-            } else {
-                return StalenessLevel::Fresh;
             }
+            return StalenessLevel::Fresh;
         }
 
         // Unknown age - assume fresh (no data)
@@ -520,7 +521,7 @@ impl StalenessEnricher {
             stats.components_checked += 1;
 
             // Skip unsupported ecosystems
-            if !self.is_supported(&component.ecosystem) {
+            if !self.is_supported(component.ecosystem.as_ref()) {
                 stats.skipped_count += 1;
                 continue;
             }
@@ -558,7 +559,7 @@ impl StalenessEnricher {
                         StalenessLevel::Stale => stats.stale_count += 1,
                         StalenessLevel::Abandoned => stats.abandoned_count += 1,
                         StalenessLevel::Deprecated | StalenessLevel::Archived => {
-                            stats.deprecated_count += 1
+                            stats.deprecated_count += 1;
                         }
                     }
                 }
@@ -621,10 +622,10 @@ mod tests {
         let config = RegistryConfig::default();
         let enricher = StalenessEnricher::new(config);
 
-        assert!(enricher.is_supported(&Some(Ecosystem::Npm)));
-        assert!(enricher.is_supported(&Some(Ecosystem::PyPi)));
-        assert!(enricher.is_supported(&Some(Ecosystem::Cargo)));
-        assert!(!enricher.is_supported(&Some(Ecosystem::Maven)));
-        assert!(!enricher.is_supported(&None));
+        assert!(enricher.is_supported(Some(&Ecosystem::Npm)));
+        assert!(enricher.is_supported(Some(&Ecosystem::PyPi)));
+        assert!(enricher.is_supported(Some(&Ecosystem::Cargo)));
+        assert!(!enricher.is_supported(Some(&Ecosystem::Maven)));
+        assert!(!enricher.is_supported(None));
     }
 }

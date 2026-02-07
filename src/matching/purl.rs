@@ -7,11 +7,13 @@ pub struct PurlNormalizer;
 
 impl PurlNormalizer {
     /// Create a new PURL normalizer
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self
     }
 
     /// Normalize a PURL for comparison
+    #[must_use] 
     pub fn normalize(&self, purl: &str) -> String {
         self.normalize_internal(purl)
     }
@@ -39,8 +41,8 @@ impl PurlNormalizer {
         Some(Ecosystem::from_purl_type(purl_type))
     }
 
-    /// Normalize PyPI PURL
-    /// PyPI names are case-insensitive and treat `_`, `-`, `.` as equivalent
+    /// Normalize `PyPI` PURL
+    /// `PyPI` names are case-insensitive and treat `_`, `-`, `.` as equivalent
     fn normalize_pypi(&self, purl: &str) -> String {
         let lower = purl.to_lowercase();
         // Replace underscores and dots with hyphens
@@ -78,13 +80,14 @@ impl PurlNormalizer {
         purl.to_string()
     }
 
-    /// Normalize NuGet PURL
-    /// NuGet package IDs are case-insensitive
+    /// Normalize `NuGet` PURL
+    /// `NuGet` package IDs are case-insensitive
     fn normalize_nuget(&self, purl: &str) -> String {
         purl.to_lowercase()
     }
 
     /// Extract package name from PURL
+    #[must_use] 
     pub fn extract_name(&self, purl: &str) -> Option<String> {
         let without_pkg = purl.strip_prefix("pkg:")?;
         let parts: Vec<&str> = without_pkg.split('/').collect();
@@ -109,6 +112,7 @@ impl PurlNormalizer {
     }
 
     /// Extract version from PURL
+    #[must_use] 
     pub fn extract_version(&self, purl: &str) -> Option<String> {
         let at_pos = purl.find('@')?;
         let version_part = &purl[at_pos + 1..];
@@ -120,6 +124,7 @@ impl PurlNormalizer {
     }
 
     /// Extract ecosystem type from PURL
+    #[must_use] 
     pub fn extract_type(&self, purl: &str) -> Option<String> {
         let without_pkg = purl.strip_prefix("pkg:")?;
         let purl_type = without_pkg.split('/').next()?;
@@ -127,6 +132,7 @@ impl PurlNormalizer {
     }
 
     /// Check if two PURLs refer to the same package (ignoring version)
+    #[must_use] 
     pub fn same_package(&self, purl_a: &str, purl_b: &str) -> bool {
         let norm_a = self.normalize(purl_a);
         let norm_b = self.normalize(purl_b);

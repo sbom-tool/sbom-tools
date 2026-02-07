@@ -15,7 +15,7 @@ use ratatui::{
 
 /// An aligned row for side-by-side comparison
 #[derive(Debug, Clone)]
-pub(crate) struct AlignedRow {
+pub struct AlignedRow {
     /// Left side component (old SBOM)
     pub left_name: Option<String>,
     pub left_version: Option<String>,
@@ -30,20 +30,20 @@ pub(crate) struct AlignedRow {
 
 /// Inline diff span for character-level highlighting
 #[derive(Debug, Clone)]
-pub(crate) struct DiffSpan {
+pub struct DiffSpan {
     pub text: String,
     pub style: DiffSpanStyle,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum DiffSpanStyle {
+pub enum DiffSpanStyle {
     Unchanged,
     Removed,
     Added,
 }
 
 /// Render side-by-side diff view
-pub(crate) fn render_sidebyside(frame: &mut Frame, area: Rect, app: &mut App) {
+pub fn render_sidebyside(frame: &mut Frame, area: Rect, app: &mut App) {
     match app.mode {
         AppMode::Diff => render_diff_sidebyside(frame, area, app),
         AppMode::View => render_view_placeholder(frame, area),
@@ -204,7 +204,7 @@ fn render_aligned_mode(frame: &mut Frame, area: Rect, app: &mut App) {
             });
 
         let (left_line, right_line) =
-            render_aligned_row(row, is_selected, is_search_match, &search_query, &scheme);
+            render_aligned_row(row, is_selected, is_search_match, search_query.as_ref(), &scheme);
         left_lines.push(left_line);
         right_lines.push(right_line);
     }
@@ -304,7 +304,7 @@ fn render_aligned_row<'a>(
     row: &AlignedRow,
     is_selected: bool,
     is_search_match: bool,
-    search_query: &Option<String>,
+    search_query: Option<&String>,
     scheme: &crate::tui::theme::ColorScheme,
 ) -> (Line<'a>, Line<'a>) {
     let base_style = if is_selected {
@@ -369,7 +369,7 @@ fn render_aligned_row<'a>(
 fn highlight_with_search<'a>(
     name: &str,
     version: &str,
-    search_query: &Option<String>,
+    search_query: Option<&String>,
     scheme: &crate::tui::theme::ColorScheme,
     change_type: ChangeType,
     is_right: bool,
@@ -387,7 +387,7 @@ fn highlight_with_search<'a>(
         ChangeType::Unchanged => scheme.text,
     };
 
-    let name_spans = search_query.as_ref().map_or_else(
+    let name_spans = search_query.map_or_else(
         || vec![Span::styled(
             name.to_string(),
             Style::default().fg(name_color),
@@ -466,7 +466,7 @@ fn highlight_search_matches<'a>(
 }
 
 /// Compute inline diff between two version strings
-pub(crate) fn compute_inline_diff(old: &str, new: &str) -> (Vec<DiffSpan>, Vec<DiffSpan>) {
+pub fn compute_inline_diff(old: &str, new: &str) -> (Vec<DiffSpan>, Vec<DiffSpan>) {
     if old == new {
         return (
             vec![DiffSpan {
@@ -1024,8 +1024,8 @@ fn render_with_detail_modal(frame: &mut Frame, area: Rect, app: &mut App) {
     }
 
     // Calculate modal area (centered, 80% width, 70% height)
-    let modal_width = (area.width as f32 * 0.8) as u16;
-    let modal_height = (area.height as f32 * 0.7) as u16;
+    let modal_width = (f32::from(area.width) * 0.8) as u16;
+    let modal_height = (f32::from(area.height) * 0.7) as u16;
     let modal_x = area.x + (area.width - modal_width) / 2;
     let modal_y = area.y + (area.height - modal_height) / 2;
 

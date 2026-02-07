@@ -12,7 +12,7 @@ pub enum AlignmentMode {
 
 impl AlignmentMode {
     /// Toggle to next mode
-    pub fn toggle(&mut self) {
+    pub const fn toggle(&mut self) {
         *self = match self {
             Self::Grouped => Self::Aligned,
             Self::Aligned => Self::Grouped,
@@ -20,7 +20,7 @@ impl AlignmentMode {
     }
 
     /// Get display name
-    pub fn name(self) -> &'static str {
+    pub const fn name(self) -> &'static str {
         match self {
             Self::Grouped => "Grouped",
             Self::Aligned => "Aligned",
@@ -40,7 +40,7 @@ pub enum ScrollSyncMode {
 
 impl ScrollSyncMode {
     /// Toggle to next mode
-    pub fn toggle(&mut self) {
+    pub const fn toggle(&mut self) {
         *self = match self {
             Self::Independent => Self::Locked,
             Self::Locked => Self::Independent,
@@ -48,7 +48,7 @@ impl ScrollSyncMode {
     }
 
     /// Get display name
-    pub fn name(self) -> &'static str {
+    pub const fn name(self) -> &'static str {
         match self {
             Self::Independent => "Independent",
             Self::Locked => "Locked",
@@ -76,29 +76,29 @@ impl Default for ChangeTypeFilter {
 
 impl ChangeTypeFilter {
     /// Toggle added visibility
-    pub fn toggle_added(&mut self) {
+    pub const fn toggle_added(&mut self) {
         self.show_added = !self.show_added;
     }
 
     /// Toggle removed visibility
-    pub fn toggle_removed(&mut self) {
+    pub const fn toggle_removed(&mut self) {
         self.show_removed = !self.show_removed;
     }
 
     /// Toggle modified visibility
-    pub fn toggle_modified(&mut self) {
+    pub const fn toggle_modified(&mut self) {
         self.show_modified = !self.show_modified;
     }
 
     /// Show all change types
-    pub fn show_all(&mut self) {
+    pub const fn show_all(&mut self) {
         self.show_added = true;
         self.show_removed = true;
         self.show_modified = true;
     }
 
     /// Check if any filter is active
-    pub fn is_filtered(&self) -> bool {
+    pub const fn is_filtered(&self) -> bool {
         !self.show_added || !self.show_removed || !self.show_modified
     }
 
@@ -282,28 +282,28 @@ impl SideBySideState {
     }
 
     /// Toggle focus between left and right panels
-    pub fn toggle_focus(&mut self) {
+    pub const fn toggle_focus(&mut self) {
         self.focus_right = !self.focus_right;
     }
 
     /// Toggle alignment mode
-    pub fn toggle_alignment(&mut self) {
+    pub const fn toggle_alignment(&mut self) {
         self.alignment_mode.toggle();
     }
 
     /// Toggle sync mode
-    pub fn toggle_sync(&mut self) {
+    pub const fn toggle_sync(&mut self) {
         self.sync_mode.toggle();
     }
 
     /// Scroll both panels together (synchronized scroll)
-    pub fn scroll_both_up(&mut self) {
+    pub const fn scroll_both_up(&mut self) {
         self.left_scroll = self.left_scroll.saturating_sub(1);
         self.right_scroll = self.right_scroll.saturating_sub(1);
     }
 
     /// Scroll both panels together (synchronized scroll)
-    pub fn scroll_both_down(&mut self) {
+    pub const fn scroll_both_down(&mut self) {
         if self.left_total > 0 && self.left_scroll < self.left_total.saturating_sub(1) {
             self.left_scroll += 1;
         }
@@ -313,13 +313,13 @@ impl SideBySideState {
     }
 
     /// Set total lines for panels
-    pub fn set_totals(&mut self, left: usize, right: usize) {
+    pub const fn set_totals(&mut self, left: usize, right: usize) {
         self.left_total = left;
         self.right_total = right;
     }
 
     /// Set total rows for aligned mode
-    pub fn set_total_rows(&mut self, total: usize) {
+    pub const fn set_total_rows(&mut self, total: usize) {
         self.total_rows = total;
         if self.selected_row >= total && total > 0 {
             self.selected_row = total - 1;
@@ -399,7 +399,7 @@ impl SideBySideState {
     }
 
     /// Scroll to a specific row
-    pub fn scroll_to_row(&mut self, row: usize) {
+    pub const fn scroll_to_row(&mut self, row: usize) {
         self.selected_row = row;
         // Adjust scroll to keep row visible (assuming ~20 visible rows)
         let visible_rows = 20;
@@ -428,7 +428,7 @@ impl SideBySideState {
     }
 
     /// Confirm search (exit input mode but keep highlights)
-    pub fn confirm_search(&mut self) {
+    pub const fn confirm_search(&mut self) {
         self.search_active = false;
     }
 
@@ -479,7 +479,7 @@ impl SideBySideState {
     }
 
     /// Toggle detail modal
-    pub fn toggle_detail_modal(&mut self) {
+    pub const fn toggle_detail_modal(&mut self) {
         self.show_detail_modal = !self.show_detail_modal;
     }
 

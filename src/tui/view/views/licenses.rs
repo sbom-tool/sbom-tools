@@ -1,4 +1,4 @@
-//! License view for ViewApp.
+//! License view for `ViewApp`.
 
 use crate::tui::theme::colors;
 use crate::tui::view::app::{LicenseGroupBy, ViewApp};

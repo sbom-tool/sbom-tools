@@ -1,7 +1,7 @@
 //! OSV API response types.
 //!
 //! These types model the OSV API response format.
-//! See: https://google.github.io/osv.dev/api/
+//! See: <https://google.github.io/osv.dev/api>/
 
 use serde::{Deserialize, Serialize};
 
@@ -100,7 +100,7 @@ pub struct OsvVulnerability {
 /// OSV severity information.
 #[derive(Debug, Clone, Deserialize)]
 pub struct OsvSeverity {
-    /// Severity type (e.g., "CVSS_V3")
+    /// Severity type (e.g., "`CVSS_V3`")
     #[serde(rename = "type")]
     pub severity_type: String,
 
@@ -179,14 +179,16 @@ pub struct OsvReference {
 
 impl OsvQuery {
     /// Create a PURL-based query.
-    pub fn from_purl(purl: String) -> Self {
+    #[must_use] 
+    pub const fn from_purl(purl: String) -> Self {
         Self::Purl {
             package: OsvPackagePurl { purl },
         }
     }
 
     /// Create a package-based query.
-    pub fn from_package(name: String, ecosystem: String, version: String) -> Self {
+    #[must_use] 
+    pub const fn from_package(name: String, ecosystem: String, version: String) -> Self {
         Self::Package {
             package: OsvPackageInfo { name, ecosystem },
             version,

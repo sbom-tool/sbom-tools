@@ -1,4 +1,4 @@
-//! Quality tab for ViewApp - delegates to shared rendering functions.
+//! Quality tab for `ViewApp` - delegates to shared rendering functions.
 
 use crate::tui::shared::quality as shared;
 use crate::tui::view::app::ViewApp;

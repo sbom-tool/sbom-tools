@@ -20,9 +20,9 @@ pub struct MatrixState {
     pub custom_threshold: f64,
     /// Zoom/Focus mode - highlight single row/column
     pub focus_mode: bool,
-    /// Focused row index (when focus_mode is true)
+    /// Focused row index (when `focus_mode` is true)
     pub focus_row: Option<usize>,
-    /// Focused column index (when focus_mode is true)
+    /// Focused column index (when `focus_mode` is true)
     pub focus_col: Option<usize>,
     /// Show diff for selected pair
     pub show_pair_diff: bool,
@@ -85,50 +85,50 @@ impl MatrixState {
         }
     }
 
-    pub fn move_up(&mut self) {
+    pub const fn move_up(&mut self) {
         if self.selected_row > 0 {
             self.selected_row -= 1;
         }
     }
 
-    pub fn move_down(&mut self) {
+    pub const fn move_down(&mut self) {
         if self.sbom_count > 0 && self.selected_row < self.sbom_count - 1 {
             self.selected_row += 1;
         }
     }
 
-    pub fn move_left(&mut self) {
+    pub const fn move_left(&mut self) {
         if self.selected_col > 0 {
             self.selected_col -= 1;
         }
     }
 
-    pub fn move_right(&mut self) {
+    pub const fn move_right(&mut self) {
         if self.sbom_count > 0 && self.selected_col < self.sbom_count - 1 {
             self.selected_col += 1;
         }
     }
 
-    pub fn toggle_panel(&mut self) {
+    pub const fn toggle_panel(&mut self) {
         self.active_panel = match self.active_panel {
             MatrixPanel::Matrix => MatrixPanel::Details,
             MatrixPanel::Details => MatrixPanel::Matrix,
         };
     }
 
-    pub fn toggle_sort(&mut self) {
+    pub const fn toggle_sort(&mut self) {
         self.sort_by = self.sort_by.next();
     }
 
-    pub fn toggle_sort_direction(&mut self) {
+    pub const fn toggle_sort_direction(&mut self) {
         self.sort_direction.toggle();
     }
 
-    pub fn toggle_threshold(&mut self) {
+    pub const fn toggle_threshold(&mut self) {
         self.threshold = self.threshold.next();
     }
 
-    pub fn toggle_focus_mode(&mut self) {
+    pub const fn toggle_focus_mode(&mut self) {
         self.focus_mode = !self.focus_mode;
         if self.focus_mode {
             self.focus_row = Some(self.selected_row);
@@ -139,62 +139,62 @@ impl MatrixState {
         }
     }
 
-    pub fn focus_on_row(&mut self, row: usize) {
+    pub const fn focus_on_row(&mut self, row: usize) {
         self.focus_mode = true;
         self.focus_row = Some(row);
         self.focus_col = None;
     }
 
-    pub fn focus_on_col(&mut self, col: usize) {
+    pub const fn focus_on_col(&mut self, col: usize) {
         self.focus_mode = true;
         self.focus_row = None;
         self.focus_col = Some(col);
     }
 
-    pub fn clear_focus(&mut self) {
+    pub const fn clear_focus(&mut self) {
         self.focus_mode = false;
         self.focus_row = None;
         self.focus_col = None;
     }
 
-    pub fn toggle_pair_diff(&mut self) {
+    pub const fn toggle_pair_diff(&mut self) {
         // Only toggle if not same cell
         if self.selected_row != self.selected_col {
             self.show_pair_diff = !self.show_pair_diff;
         }
     }
 
-    pub fn close_pair_diff(&mut self) {
+    pub const fn close_pair_diff(&mut self) {
         self.show_pair_diff = false;
     }
 
-    pub fn toggle_export_options(&mut self) {
+    pub const fn toggle_export_options(&mut self) {
         self.show_export_options = !self.show_export_options;
     }
 
-    pub fn close_export_options(&mut self) {
+    pub const fn close_export_options(&mut self) {
         self.show_export_options = false;
     }
 
-    pub fn toggle_clustering_details(&mut self) {
+    pub const fn toggle_clustering_details(&mut self) {
         self.show_clustering_details = !self.show_clustering_details;
     }
 
-    pub fn close_clustering_details(&mut self) {
+    pub const fn close_clustering_details(&mut self) {
         self.show_clustering_details = false;
     }
 
-    pub fn toggle_row_col_highlight(&mut self) {
+    pub const fn toggle_row_col_highlight(&mut self) {
         self.highlight_row_col = !self.highlight_row_col;
     }
 
-    pub fn select_next_cluster(&mut self) {
+    pub const fn select_next_cluster(&mut self) {
         if self.total_clusters > 0 && self.selected_cluster < self.total_clusters - 1 {
             self.selected_cluster += 1;
         }
     }
 
-    pub fn select_prev_cluster(&mut self) {
+    pub const fn select_prev_cluster(&mut self) {
         if self.selected_cluster > 0 {
             self.selected_cluster -= 1;
         }
@@ -212,7 +212,7 @@ impl MatrixState {
     }
 
     /// Check if any modal/overlay is open
-    pub fn has_overlay(&self) -> bool {
+    pub const fn has_overlay(&self) -> bool {
         self.show_pair_diff
             || self.show_export_options
             || self.show_clustering_details
@@ -237,12 +237,12 @@ pub enum SimilarityThreshold {
     Medium,
     /// Show only low similarity (< 50%)
     Low,
-    /// Custom threshold (use threshold_value)
+    /// Custom threshold (use `threshold_value`)
     Custom,
 }
 
 impl SimilarityThreshold {
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::None => "All",
             Self::High => ">= 90%",
@@ -252,7 +252,7 @@ impl SimilarityThreshold {
         }
     }
 
-    pub fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::None => Self::High,
             Self::High => Self::Medium,
@@ -273,7 +273,7 @@ pub enum MatrixSortBy {
 }
 
 impl MatrixSortBy {
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::Name => "Name",
             Self::AvgSimilarity => "Avg Similarity",
@@ -282,7 +282,7 @@ impl MatrixSortBy {
         }
     }
 
-    pub fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::Name => Self::AvgSimilarity,
             Self::AvgSimilarity => Self::ComponentCount,

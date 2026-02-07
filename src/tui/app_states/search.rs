@@ -10,7 +10,7 @@ pub struct DiffSearchState {
 }
 
 impl DiffSearchState {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             active: false,
             query: String::new(),
@@ -33,7 +33,7 @@ impl DiffSearchState {
         }
     }
 
-    pub fn select_prev(&mut self) {
+    pub const fn select_prev(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
         }
@@ -82,7 +82,7 @@ pub enum ChangeType {
 }
 
 impl ChangeType {
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::Added => "added",
             Self::Removed => "removed",
@@ -99,7 +99,7 @@ pub enum VulnChangeType {
 }
 
 impl VulnChangeType {
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::Introduced => "introduced",
             Self::Resolved => "resolved",

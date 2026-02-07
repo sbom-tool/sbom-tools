@@ -65,7 +65,7 @@ pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent) {
 }
 
 /// Handle a click on a list item
-pub(super) fn handle_list_click(app: &mut App, clicked_index: usize, _x: u16) {
+pub(super) const fn handle_list_click(app: &mut App, clicked_index: usize, _x: u16) {
     match app.active_tab {
         crate::tui::TabKind::Components => {
             if clicked_index < app.tabs.components.total {

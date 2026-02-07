@@ -3,7 +3,7 @@
 //! This module provides integration with the OSV database to enrich
 //! SBOM components with known vulnerability information.
 //!
-//! See: https://osv.dev/
+//! See: <https://osv.dev>/
 
 mod client;
 mod mapper;
@@ -149,14 +149,12 @@ impl VulnerabilityEnricher for OsvEnricher {
 
             match self.client.query_batch(&queries_only) {
                 Ok(batch_responses) => {
-                    // Flatten batch responses into a single iterator of results
-                    let all_results: Vec<_> = batch_responses
-                        .into_iter()
-                        .flat_map(|r| r.results.into_iter())
-                        .collect();
-
                     // Match results back to components
-                    for ((idx, key, _), result) in to_fetch.into_iter().zip(all_results.into_iter())
+                    for ((idx, key, _), result) in to_fetch.into_iter().zip(
+                        batch_responses
+                            .into_iter()
+                            .flat_map(|r| r.results.into_iter()),
+                    )
                     {
                         let vulns: Vec<_> = result
                             .vulns

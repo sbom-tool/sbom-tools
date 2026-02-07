@@ -12,19 +12,19 @@ pub enum CraPhase {
     /// Basic SBOM requirements: product/component identification, manufacturer, version, format
     Phase1,
     /// Phase 2: Full compliance — deadline 11 December 2029
-    /// Adds: vulnerability metadata, lifecycle/end-of-support, disclosure policy, EU DoC
+    /// Adds: vulnerability metadata, lifecycle/end-of-support, disclosure policy, EU `DoC`
     Phase2,
 }
 
 impl CraPhase {
-    pub fn name(self) -> &'static str {
+    pub const fn name(self) -> &'static str {
         match self {
             Self::Phase1 => "Phase 1 (2027)",
             Self::Phase2 => "Phase 2 (2029)",
         }
     }
 
-    pub fn deadline(self) -> &'static str {
+    pub const fn deadline(self) -> &'static str {
         match self {
             Self::Phase1 => "11 December 2027",
             Self::Phase2 => "11 December 2029",
@@ -54,7 +54,8 @@ pub enum ComplianceLevel {
 
 impl ComplianceLevel {
     /// Get human-readable name
-    pub fn name(&self) -> &'static str {
+    #[must_use] 
+    pub const fn name(&self) -> &'static str {
         match self {
             Self::Minimum => "Minimum",
             Self::Standard => "Standard",
@@ -67,7 +68,8 @@ impl ComplianceLevel {
     }
 
     /// Get description of what this level checks
-    pub fn description(&self) -> &'static str {
+    #[must_use] 
+    pub const fn description(&self) -> &'static str {
         match self {
             Self::Minimum => "Basic component identification only",
             Self::Standard => "Recommended fields for general use",
@@ -80,7 +82,8 @@ impl ComplianceLevel {
     }
 
     /// Get all compliance levels
-    pub fn all() -> &'static [Self] {
+    #[must_use] 
+    pub const fn all() -> &'static [Self] {
         &[
             Self::Minimum,
             Self::Standard,
@@ -93,12 +96,14 @@ impl ComplianceLevel {
     }
 
     /// Whether this level is a CRA check (either phase)
-    pub fn is_cra(&self) -> bool {
+    #[must_use] 
+    pub const fn is_cra(&self) -> bool {
         matches!(self, Self::CraPhase1 | Self::CraPhase2)
     }
 
     /// Get CRA phase, if applicable
-    pub fn cra_phase(&self) -> Option<CraPhase> {
+    #[must_use] 
+    pub const fn cra_phase(&self) -> Option<CraPhase> {
         match self {
             Self::CraPhase1 => Some(CraPhase::Phase1),
             Self::CraPhase2 => Some(CraPhase::Phase2),
@@ -124,6 +129,7 @@ pub struct Violation {
 
 impl Violation {
     /// Return remediation guidance for this violation based on the requirement.
+    #[must_use] 
     pub fn remediation_guidance(&self) -> &'static str {
         let req = self.requirement.to_lowercase();
         if req.contains("art. 13(4)") {
@@ -197,7 +203,8 @@ pub enum ViolationCategory {
 }
 
 impl ViolationCategory {
-    pub fn name(&self) -> &'static str {
+    #[must_use] 
+    pub const fn name(&self) -> &'static str {
         match self {
             Self::DocumentMetadata => "Document Metadata",
             Self::ComponentIdentification => "Component Identification",
@@ -230,6 +237,7 @@ pub struct ComplianceResult {
 
 impl ComplianceResult {
     /// Create a new compliance result
+    #[must_use] 
     pub fn new(level: ComplianceLevel, violations: Vec<Violation>) -> Self {
         let error_count = violations
             .iter()
@@ -255,6 +263,7 @@ impl ComplianceResult {
     }
 
     /// Get violations filtered by severity
+    #[must_use] 
     pub fn violations_by_severity(&self, severity: ViolationSeverity) -> Vec<&Violation> {
         self.violations
             .iter()
@@ -263,6 +272,7 @@ impl ComplianceResult {
     }
 
     /// Get violations filtered by category
+    #[must_use] 
     pub fn violations_by_category(&self, category: ViolationCategory) -> Vec<&Violation> {
         self.violations
             .iter()
@@ -280,11 +290,13 @@ pub struct ComplianceChecker {
 
 impl ComplianceChecker {
     /// Create a new compliance checker
-    pub fn new(level: ComplianceLevel) -> Self {
+    #[must_use] 
+    pub const fn new(level: ComplianceLevel) -> Self {
         Self { level }
     }
 
     /// Check an SBOM for compliance
+    #[must_use] 
     pub fn check(&self, sbom: &NormalizedSbom) -> ComplianceResult {
         let mut violations = Vec::new();
 

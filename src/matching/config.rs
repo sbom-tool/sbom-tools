@@ -60,21 +60,22 @@ pub struct MultiFieldWeights {
     pub version_minor_penalty: f64,
 }
 
-fn default_true() -> bool {
+const fn default_true() -> bool {
     true
 }
 
-fn default_version_major_penalty() -> f64 {
+const fn default_version_major_penalty() -> f64 {
     0.10
 }
 
-fn default_version_minor_penalty() -> f64 {
+const fn default_version_minor_penalty() -> f64 {
     0.02
 }
 
 impl MultiFieldWeights {
     /// Default weights emphasizing name matching.
-    pub fn name_focused() -> Self {
+    #[must_use] 
+    pub const fn name_focused() -> Self {
         Self {
             name: 0.80,
             version: 0.05,
@@ -90,7 +91,8 @@ impl MultiFieldWeights {
     }
 
     /// Balanced weights across all fields.
-    pub fn balanced() -> Self {
+    #[must_use] 
+    pub const fn balanced() -> Self {
         Self {
             name: 0.60,
             version: 0.10,
@@ -106,7 +108,8 @@ impl MultiFieldWeights {
     }
 
     /// Weights for security-focused matching (emphasizes ecosystem and version).
-    pub fn security_focused() -> Self {
+    #[must_use] 
+    pub const fn security_focused() -> Self {
         Self {
             name: 0.50,
             version: 0.20,
@@ -125,7 +128,8 @@ impl MultiFieldWeights {
     ///
     /// Use this preset when you want the old binary scoring behavior
     /// without ecosystem mismatch penalties or version divergence scoring.
-    pub fn legacy() -> Self {
+    #[must_use] 
+    pub const fn legacy() -> Self {
         Self {
             name: 0.60,
             version: 0.10,
@@ -142,6 +146,7 @@ impl MultiFieldWeights {
 
     /// Check if weights are properly normalized (sum to ~1.0).
     /// Note: Penalty fields are not included in normalization check.
+    #[must_use] 
     pub fn is_normalized(&self) -> bool {
         let sum =
             self.name + self.version + self.ecosystem + self.licenses + self.supplier + self.group;
@@ -172,7 +177,8 @@ impl Default for MultiFieldWeights {
 
 impl FuzzyMatchConfig {
     /// Strict matching for security-critical scenarios
-    pub fn strict() -> Self {
+    #[must_use] 
+    pub const fn strict() -> Self {
         Self {
             threshold: 0.95,
             levenshtein_weight: 0.5,
@@ -185,7 +191,8 @@ impl FuzzyMatchConfig {
     }
 
     /// Balanced matching for general diff operations
-    pub fn balanced() -> Self {
+    #[must_use] 
+    pub const fn balanced() -> Self {
         Self {
             threshold: 0.85,
             levenshtein_weight: 0.4,
@@ -198,7 +205,8 @@ impl FuzzyMatchConfig {
     }
 
     /// Permissive matching for discovery/exploration
-    pub fn permissive() -> Self {
+    #[must_use] 
+    pub const fn permissive() -> Self {
         Self {
             threshold: 0.70,
             levenshtein_weight: 0.3,
@@ -212,25 +220,27 @@ impl FuzzyMatchConfig {
 
     /// Enable multi-field scoring with the given weights.
     #[must_use]
-    pub fn with_multi_field(mut self, weights: MultiFieldWeights) -> Self {
+    pub const fn with_multi_field(mut self, weights: MultiFieldWeights) -> Self {
         self.field_weights = Some(weights);
         self
     }
 
     /// Set a custom threshold value.
     #[must_use]
-    pub fn with_threshold(mut self, threshold: f64) -> Self {
+    pub const fn with_threshold(mut self, threshold: f64) -> Self {
         self.threshold = threshold;
         self
     }
 
     /// Strict matching with multi-field scoring for security scenarios.
-    pub fn strict_multi_field() -> Self {
+    #[must_use] 
+    pub const fn strict_multi_field() -> Self {
         Self::strict().with_multi_field(MultiFieldWeights::security_focused())
     }
 
     /// Balanced matching with multi-field scoring.
-    pub fn balanced_multi_field() -> Self {
+    #[must_use] 
+    pub const fn balanced_multi_field() -> Self {
         Self::balanced().with_multi_field(MultiFieldWeights::balanced())
     }
 
@@ -239,6 +249,7 @@ impl FuzzyMatchConfig {
     /// Supported presets:
     /// - "strict", "balanced", "permissive" - single-field (name only)
     /// - "strict-multi", "balanced-multi" - multi-field scoring enabled
+    #[must_use] 
     pub fn from_preset(name: &str) -> Option<Self> {
         match name.to_lowercase().as_str() {
             "strict" => Some(Self::strict()),
@@ -260,7 +271,7 @@ impl Default for FuzzyMatchConfig {
 /// Configuration for cross-ecosystem matching.
 ///
 /// Cross-ecosystem matching allows components to be matched across different
-/// package ecosystems (e.g., npm vs PyPI) when they represent the same
+/// package ecosystems (e.g., npm vs `PyPI`) when they represent the same
 /// underlying library. This is enabled by default with conservative settings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrossEcosystemConfig {
@@ -290,6 +301,7 @@ impl Default for CrossEcosystemConfig {
 
 impl CrossEcosystemConfig {
     /// Disabled cross-ecosystem matching.
+    #[must_use] 
     pub fn disabled() -> Self {
         Self {
             enabled: false,
@@ -298,7 +310,8 @@ impl CrossEcosystemConfig {
     }
 
     /// Strict settings for high-confidence matches only.
-    pub fn strict() -> Self {
+    #[must_use] 
+    pub const fn strict() -> Self {
         Self {
             enabled: true,
             min_score: 0.90,
@@ -309,7 +322,8 @@ impl CrossEcosystemConfig {
     }
 
     /// Permissive settings for discovery/exploration.
-    pub fn permissive() -> Self {
+    #[must_use] 
+    pub const fn permissive() -> Self {
         Self {
             enabled: true,
             min_score: 0.70,

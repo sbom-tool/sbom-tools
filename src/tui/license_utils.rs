@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 
 /// Parsed SPDX expression
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum SpdxExpression {
+pub enum SpdxExpression {
     /// Single license identifier
     License(String),
     /// License with exception (e.g., GPL-2.0 WITH Classpath-exception-2.0)
@@ -88,7 +88,7 @@ fn find_operator(expr: &str, op: &str) -> Option<usize> {
 
 /// License category for classification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) enum LicenseCategory {
+pub enum LicenseCategory {
     Permissive,
     WeakCopyleft,
     StrongCopyleft,
@@ -99,7 +99,7 @@ pub(crate) enum LicenseCategory {
 }
 
 impl LicenseCategory {
-    pub(crate) fn as_str(self) -> &'static str {
+    pub(crate) const fn as_str(self) -> &'static str {
         match self {
             Self::Permissive => "Permissive",
             Self::WeakCopyleft => "Weak Copyleft",
@@ -112,7 +112,7 @@ impl LicenseCategory {
     }
 
     /// Get the copyleft strength (0 = none, 4 = strongest)
-    pub(crate) fn copyleft_strength(self) -> u8 {
+    pub(crate) const fn copyleft_strength(self) -> u8 {
         match self {
             Self::PublicDomain | Self::Permissive | Self::Unknown => 0,
             Self::WeakCopyleft => 1,
@@ -125,7 +125,7 @@ impl LicenseCategory {
 
 /// License risk level
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub(crate) enum RiskLevel {
+pub enum RiskLevel {
     Low,
     Medium,
     High,
@@ -133,7 +133,7 @@ pub(crate) enum RiskLevel {
 }
 
 impl RiskLevel {
-    pub(crate) fn as_str(self) -> &'static str {
+    pub(crate) const fn as_str(self) -> &'static str {
         match self {
             Self::Low => "Low",
             Self::Medium => "Medium",
@@ -145,7 +145,7 @@ impl RiskLevel {
 
 /// Detailed license information
 #[derive(Debug, Clone)]
-pub(crate) struct LicenseInfo {
+pub struct LicenseInfo {
     /// License category
     pub category: LicenseCategory,
     /// Risk level for commercial use
@@ -227,7 +227,7 @@ impl LicenseInfo {
             return Self {
                 category: LicenseCategory::NetworkCopyleft,
                 risk_level: RiskLevel::Critical,
-                patent_grant: lower.contains("3"),
+                patent_grant: lower.contains('3'),
                 network_copyleft: true,
                 family: "GPL",
             };
@@ -238,7 +238,7 @@ impl LicenseInfo {
             return Self {
                 category: LicenseCategory::WeakCopyleft,
                 risk_level: RiskLevel::Medium,
-                patent_grant: lower.contains("3"),
+                patent_grant: lower.contains('3'),
                 network_copyleft: false,
                 family: "GPL",
             };
@@ -249,7 +249,7 @@ impl LicenseInfo {
             return Self {
                 category: LicenseCategory::StrongCopyleft,
                 risk_level: RiskLevel::High,
-                patent_grant: lower.contains("3"),
+                patent_grant: lower.contains('3'),
                 network_copyleft: false,
                 family: "GPL",
             };
@@ -312,7 +312,7 @@ impl LicenseInfo {
         }
     }
 
-    fn permissive(family: &'static str, patent_grant: bool) -> Self {
+    const fn permissive(family: &'static str, patent_grant: bool) -> Self {
         Self {
             category: LicenseCategory::Permissive,
             risk_level: RiskLevel::Low,
@@ -325,7 +325,7 @@ impl LicenseInfo {
 
 /// License compatibility result
 #[derive(Debug, Clone)]
-pub(crate) struct CompatibilityResult {
+pub struct CompatibilityResult {
     /// Whether the licenses are compatible
     pub compatible: bool,
     /// Compatibility level (0-100)
@@ -335,7 +335,7 @@ pub(crate) struct CompatibilityResult {
 }
 
 /// Check compatibility between two licenses
-pub(crate) fn check_compatibility(license_a: &str, license_b: &str) -> CompatibilityResult {
+pub fn check_compatibility(license_a: &str, license_b: &str) -> CompatibilityResult {
     let info_a = LicenseInfo::from_spdx(license_a);
     let info_b = LicenseInfo::from_spdx(license_b);
 
@@ -424,7 +424,7 @@ pub(crate) fn check_compatibility(license_a: &str, license_b: &str) -> Compatibi
 }
 
 /// Analyze all licenses in an SBOM for compatibility issues
-pub(crate) fn analyze_license_compatibility(licenses: &[&str]) -> LicenseCompatibilityReport {
+pub fn analyze_license_compatibility(licenses: &[&str]) -> LicenseCompatibilityReport {
     let mut issues = Vec::new();
     let mut families: HashMap<&'static str, Vec<String>> = HashMap::new();
     let mut categories: HashMap<LicenseCategory, Vec<String>> = HashMap::new();
@@ -481,7 +481,7 @@ pub(crate) fn analyze_license_compatibility(licenses: &[&str]) -> LicenseCompati
 
 /// License compatibility report for an entire SBOM
 #[derive(Debug)]
-pub(crate) struct LicenseCompatibilityReport {
+pub struct LicenseCompatibilityReport {
     /// Overall compatibility score (0-100)
     pub overall_score: u8,
     /// Specific compatibility issues
@@ -494,20 +494,20 @@ pub(crate) struct LicenseCompatibilityReport {
 
 /// A specific compatibility issue
 #[derive(Debug, Clone)]
-pub(crate) struct CompatibilityIssue {
+pub struct CompatibilityIssue {
     pub severity: IssueSeverity,
     pub message: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum IssueSeverity {
+pub enum IssueSeverity {
     Warning,
     Error,
 }
 
 /// License statistics for display
 #[derive(Debug, Default)]
-pub(crate) struct LicenseStats {
+pub struct LicenseStats {
     pub total_licenses: usize,
     pub unique_licenses: usize,
     pub by_category: HashMap<LicenseCategory, usize>,

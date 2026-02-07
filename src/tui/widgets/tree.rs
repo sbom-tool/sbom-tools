@@ -54,7 +54,7 @@ impl TreeNode {
         }
     }
 
-    pub(crate) fn vuln_count(&self) -> usize {
+    pub(crate) const fn vuln_count(&self) -> usize {
         match self {
             Self::Group { vuln_count, .. } | Self::Component { vuln_count, .. } => *vuln_count,
         }
@@ -63,11 +63,11 @@ impl TreeNode {
     pub(crate) fn max_severity(&self) -> Option<&str> {
         match self {
             Self::Component { max_severity, .. } => max_severity.as_deref(),
-            _ => None,
+            Self::Group { .. } => None,
         }
     }
 
-    pub(crate) fn is_group(&self) -> bool {
+    pub(crate) const fn is_group(&self) -> bool {
         matches!(self, Self::Group { .. })
     }
 
@@ -80,7 +80,7 @@ impl TreeNode {
 }
 
 /// Extract a meaningful display name from a component path
-pub(crate) fn extract_display_name(name: &str) -> String {
+pub fn extract_display_name(name: &str) -> String {
     // If it's a clean package name (no path separators, reasonable length), use it as-is
     if !name.contains('/') && !name.starts_with('.') && name.len() <= 40 {
         return name.to_string();
@@ -145,27 +145,29 @@ fn truncate_name(name: &str, max_len: usize) -> String {
 }
 
 /// Get component type from path/name
-pub(crate) fn detect_component_type(name: &str) -> &'static str {
+pub fn detect_component_type(name: &str) -> &'static str {
     let lower = name.to_lowercase();
+    let ext = std::path::Path::new(&lower)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("");
 
-    if lower.ends_with(".so") || lower.contains(".so.") {
+    if matches!(ext, "so") || lower.contains(".so.") {
         return "lib";
     }
-    if lower.ends_with(".a") {
+    if matches!(ext, "a") {
         return "lib";
     }
-    if lower.ends_with(".crt") || lower.ends_with(".pem") || lower.ends_with(".key") {
+    if matches!(ext, "crt" | "pem" | "key") {
         return "cert";
     }
-    if lower.ends_with(".img") || lower.ends_with(".bin") || lower.ends_with(".elf")
-        || lower.ends_with(".elf32")
-    {
+    if matches!(ext, "img" | "bin" | "elf" | "elf32") {
         return "bin";
     }
-    if lower.ends_with(".squashfs") || lower.ends_with(".squ") {
+    if matches!(ext, "squashfs" | "squ") {
         return "fs";
     }
-    if lower.ends_with(".unknown") {
+    if matches!(ext, "unknown") {
         return "unk";
     }
     if lower.contains("lib") {
@@ -213,23 +215,23 @@ impl TreeState {
         self.expanded.contains(node_id)
     }
 
-    pub(crate) fn select_next(&mut self) {
+    pub(crate) const fn select_next(&mut self) {
         if self.visible_count > 0 && self.selected < self.visible_count - 1 {
             self.selected += 1;
         }
     }
 
-    pub(crate) fn select_prev(&mut self) {
+    pub(crate) const fn select_prev(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
         }
     }
 
-    pub(crate) fn select_first(&mut self) {
+    pub(crate) const fn select_first(&mut self) {
         self.selected = 0;
     }
 
-    pub(crate) fn select_last(&mut self) {
+    pub(crate) const fn select_last(&mut self) {
         if self.visible_count > 0 {
             self.selected = self.visible_count - 1;
         }
@@ -239,7 +241,7 @@ impl TreeState {
 
 /// A flattened tree item for rendering.
 #[derive(Debug, Clone)]
-pub(crate) struct FlattenedItem {
+pub struct FlattenedItem {
     pub label: String,
     pub depth: usize,
     pub is_group: bool,
@@ -252,7 +254,7 @@ pub(crate) struct FlattenedItem {
 }
 
 /// The tree widget.
-pub(crate) struct Tree<'a> {
+pub struct Tree<'a> {
     roots: &'a [TreeNode],
     block: Option<Block<'a>>,
     highlight_style: Style,
@@ -281,7 +283,7 @@ impl<'a> Tree<'a> {
         self
     }
 
-    pub(crate) fn highlight_style(mut self, style: Style) -> Self {
+    pub(crate) const fn highlight_style(mut self, style: Style) -> Self {
         self.highlight_style = style;
         self
     }
@@ -293,6 +295,7 @@ impl<'a> Tree<'a> {
         items
     }
 
+    #[allow(clippy::self_only_used_in_recursion)]
     fn flatten_nodes(
         &self,
         nodes: &[TreeNode],
@@ -329,7 +332,7 @@ impl<'a> Tree<'a> {
     }
 }
 
-impl<'a> StatefulWidget for Tree<'a> {
+impl StatefulWidget for Tree<'_> {
     type State = TreeState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {

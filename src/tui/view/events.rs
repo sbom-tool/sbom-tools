@@ -1,4 +1,4 @@
-//! Event handling for the ViewApp.
+//! Event handling for the `ViewApp`.
 
 use super::app::{ComponentDetailTab, FocusPanel, ViewApp, ViewTab};
 use crate::tui::app_states::SourceViewMode;
@@ -70,7 +70,7 @@ impl EventHandler {
     }
 }
 
-/// Handle key events for ViewApp.
+/// Handle key events for `ViewApp`.
 pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
     // Clear any status message on key press
     app.clear_status_message();
@@ -630,7 +630,7 @@ fn handle_export_key(app: &mut ViewApp, key: KeyEvent) {
     }
 }
 
-/// Handle mouse events for ViewApp.
+/// Handle mouse events for `ViewApp`.
 pub fn handle_mouse_event(app: &mut ViewApp, mouse: event::MouseEvent) {
     // Clear status message on any mouse interaction
     app.clear_status_message();

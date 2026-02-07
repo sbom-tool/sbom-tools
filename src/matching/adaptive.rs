@@ -55,6 +55,7 @@ impl Default for AdaptiveThresholdConfig {
 
 impl AdaptiveThresholdConfig {
     /// Configure for target match ratio search.
+    #[must_use] 
     pub fn for_target_ratio(ratio: f64) -> Self {
         Self {
             target_match_ratio: Some(ratio.clamp(0.0, 1.0)),
@@ -63,6 +64,7 @@ impl AdaptiveThresholdConfig {
     }
 
     /// Configure for Otsu's method (automatic threshold).
+    #[must_use] 
     pub fn otsu() -> Self {
         Self {
             target_match_ratio: None,
@@ -120,6 +122,7 @@ pub struct ScoreStats {
 
 impl ScoreStats {
     /// Compute statistics from a set of scores.
+    #[must_use] 
     pub fn from_scores(scores: &[f64]) -> Self {
         if scores.is_empty() {
             return Self {
@@ -140,7 +143,7 @@ impl ScoreStats {
         let max = sorted[sorted.len() - 1];
         let mean = scores.iter().sum::<f64>() / scores.len() as f64;
         let median = if sorted.len() % 2 == 0 {
-            (sorted[sorted.len() / 2 - 1] + sorted[sorted.len() / 2]) / 2.0
+            f64::midpoint(sorted[sorted.len() / 2 - 1], sorted[sorted.len() / 2])
         } else {
             sorted[sorted.len() / 2]
         };
@@ -171,11 +174,13 @@ pub struct AdaptiveThreshold {
 
 impl AdaptiveThreshold {
     /// Create a new adaptive threshold adjuster with the given config.
-    pub fn new(config: AdaptiveThresholdConfig) -> Self {
+    #[must_use] 
+    pub const fn new(config: AdaptiveThresholdConfig) -> Self {
         Self { config }
     }
 
     /// Compute the optimal threshold for matching between two SBOMs.
+    #[must_use] 
     pub fn compute_threshold(
         &self,
         old_sbom: &NormalizedSbom,
@@ -264,7 +269,7 @@ impl AdaptiveThreshold {
         let mut high = self.config.max_threshold;
 
         for _ in 0..self.config.max_iterations {
-            let mid = (low + high) / 2.0;
+            let mid = f64::midpoint(low, high);
             let match_count = scores.iter().filter(|&&s| s >= mid).count();
             let ratio = match_count as f64 / scores.len() as f64;
 
@@ -281,7 +286,7 @@ impl AdaptiveThreshold {
             }
         }
 
-        (low + high) / 2.0
+        f64::midpoint(low, high)
     }
 
     /// Otsu's method: find threshold that maximizes between-class variance.
@@ -339,7 +344,7 @@ impl AdaptiveThreshold {
 
         // Use the middle of the optimal range for better practical thresholds
         // This helps when there's a gap between clusters (bimodal distribution)
-        let middle_bin = (first_optimal_bin + last_optimal_bin) / 2;
+        let middle_bin = usize::midpoint(first_optimal_bin, last_optimal_bin);
         (middle_bin as f64 + 0.5) / num_bins as f64
     }
 
@@ -374,7 +379,7 @@ impl Default for AdaptiveThreshold {
     }
 }
 
-/// Extension trait for FuzzyMatcher to support adaptive thresholding.
+/// Extension trait for `FuzzyMatcher` to support adaptive thresholding.
 pub trait AdaptiveMatching {
     /// Create a matcher with an adaptively computed threshold for the given SBOMs.
     fn with_adaptive_threshold(

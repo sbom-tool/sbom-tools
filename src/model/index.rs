@@ -65,6 +65,7 @@ pub struct ComponentSortKey {
 
 impl ComponentSortKey {
     /// Build sort key from a component
+    #[must_use] 
     pub fn from_component(comp: &Component) -> Self {
         Self {
             name_lower: comp.name.to_lowercase(),
@@ -86,6 +87,7 @@ impl ComponentSortKey {
     }
 
     /// Check if any field contains the query (case-insensitive)
+    #[must_use] 
     pub fn contains(&self, query_lower: &str) -> bool {
         self.name_lower.contains(query_lower)
             || self.version_lower.contains(query_lower)
@@ -94,6 +96,7 @@ impl ComponentSortKey {
     }
 
     /// Check if name contains the query
+    #[must_use] 
     pub fn name_contains(&self, query_lower: &str) -> bool {
         self.name_lower.contains(query_lower)
     }
@@ -168,6 +171,7 @@ impl NormalizedSbomIndex {
     /// Get dependencies of a component as edges.
     ///
     /// O(k) where k = number of dependencies (much faster than O(edges)).
+    #[must_use] 
     pub fn dependencies_of<'a>(
         &self,
         id: &CanonicalId,
@@ -182,6 +186,7 @@ impl NormalizedSbomIndex {
     /// Get dependents of a component as edges.
     ///
     /// O(k) where k = number of dependents (much faster than O(edges)).
+    #[must_use] 
     pub fn dependents_of<'a>(
         &self,
         id: &CanonicalId,
@@ -204,8 +209,9 @@ impl NormalizedSbomIndex {
 
     /// Find component IDs whose name contains the query (case-insensitive).
     ///
-    /// O(unique_names) - still iterates but only over unique lowercased names,
+    /// `O(unique_names)` - still iterates but only over unique lowercased names,
     /// not all components.
+    #[must_use] 
     pub fn search_by_name(&self, query_lower: &str) -> Vec<CanonicalId> {
         self.by_name_lower
             .iter()
@@ -216,17 +222,20 @@ impl NormalizedSbomIndex {
 
     /// Get the pre-computed sort key for a component.
     ///
-    /// O(1) lookup, avoids repeated to_lowercase() calls during sorting.
+    /// O(1) lookup, avoids repeated `to_lowercase()` calls during sorting.
+    #[must_use] 
     pub fn sort_key(&self, id: &CanonicalId) -> Option<&ComponentSortKey> {
         self.sort_keys.get(id)
     }
 
     /// Get all sort keys for iteration.
-    pub fn sort_keys(&self) -> &HashMap<CanonicalId, ComponentSortKey> {
+    #[must_use] 
+    pub const fn sort_keys(&self) -> &HashMap<CanonicalId, ComponentSortKey> {
         &self.sort_keys
     }
 
     /// Check if component has any dependencies.
+    #[must_use] 
     pub fn has_dependencies(&self, id: &CanonicalId) -> bool {
         self.edges_by_source
             .get(id)
@@ -234,6 +243,7 @@ impl NormalizedSbomIndex {
     }
 
     /// Check if component has any dependents.
+    #[must_use] 
     pub fn has_dependents(&self, id: &CanonicalId) -> bool {
         self.edges_by_target
             .get(id)
@@ -253,16 +263,19 @@ impl NormalizedSbomIndex {
     }
 
     /// Get total component count.
-    pub fn component_count(&self) -> usize {
+    #[must_use] 
+    pub const fn component_count(&self) -> usize {
         self.component_count
     }
 
     /// Get total edge count.
-    pub fn edge_count(&self) -> usize {
+    #[must_use] 
+    pub const fn edge_count(&self) -> usize {
         self.edge_count
     }
 
     /// Get count of root components (no incoming edges).
+    #[must_use] 
     pub fn root_count(&self) -> usize {
         self.component_count
             .saturating_sub(self.edges_by_target.len())
@@ -274,6 +287,7 @@ impl NormalizedSbomIndex {
     }
 
     /// Get count of leaf components (no outgoing edges).
+    #[must_use] 
     pub fn leaf_count(&self) -> usize {
         self.component_count
             .saturating_sub(self.edges_by_source.len())
@@ -297,7 +311,7 @@ pub struct SbomIndexBuilder {
 
 impl SbomIndexBuilder {
     /// Create a new builder with all features enabled.
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             index_names: true,
             build_sort_keys: true,
@@ -305,7 +319,7 @@ impl SbomIndexBuilder {
     }
 
     /// Create a minimal builder (edges only).
-    pub fn minimal() -> Self {
+    pub const fn minimal() -> Self {
         Self {
             index_names: false,
             build_sort_keys: false,
@@ -313,13 +327,13 @@ impl SbomIndexBuilder {
     }
 
     /// Enable name indexing.
-    pub fn with_name_index(mut self) -> Self {
+    pub const fn with_name_index(mut self) -> Self {
         self.index_names = true;
         self
     }
 
     /// Enable sort key building.
-    pub fn with_sort_keys(mut self) -> Self {
+    pub const fn with_sort_keys(mut self) -> Self {
         self.build_sort_keys = true;
         self
     }

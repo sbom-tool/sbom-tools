@@ -104,7 +104,8 @@ pub struct KevClient {
 
 impl KevClient {
     /// Create a new KEV client
-    pub fn new(config: KevClientConfig) -> Self {
+    #[must_use] 
+    pub const fn new(config: KevClientConfig) -> Self {
         Self {
             config,
             catalog: None,
@@ -112,6 +113,7 @@ impl KevClient {
     }
 
     /// Create with default configuration
+    #[must_use] 
     pub fn with_defaults() -> Self {
         Self::new(KevClientConfig::default())
     }
@@ -230,11 +232,13 @@ impl KevClient {
     }
 
     /// Get the loaded catalog (if any)
-    pub fn catalog(&self) -> Option<&KevCatalog> {
+    #[must_use] 
+    pub const fn catalog(&self) -> Option<&KevCatalog> {
         self.catalog.as_ref()
     }
 
     /// Check if a CVE is in the KEV catalog
+    #[must_use] 
     pub fn is_kev(&self, cve_id: &str) -> bool {
         self.catalog
             .as_ref()

@@ -15,7 +15,7 @@ pub enum DependencySort {
 }
 
 impl DependencySort {
-    pub fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::Name => Self::Depth,
             Self::Depth => Self::VulnCount,
@@ -24,7 +24,7 @@ impl DependencySort {
         }
     }
 
-    pub fn display_name(&self) -> &str {
+    pub const fn display_name(&self) -> &str {
         match self {
             Self::Name => "Name",
             Self::Depth => "Depth",
@@ -138,12 +138,12 @@ impl DependenciesState {
     }
 
     /// Invalidate cache (call when data changes)
-    pub fn invalidate_cache(&mut self) {
+    pub const fn invalidate_cache(&mut self) {
         self.cache_valid = false;
     }
 
     /// Check if cache needs refresh based on graph hash
-    pub fn needs_cache_refresh(&self, new_hash: u64) -> bool {
+    pub const fn needs_cache_refresh(&self, new_hash: u64) -> bool {
         !self.cache_valid || self.graph_hash != new_hash
     }
 
@@ -182,7 +182,7 @@ impl DependenciesState {
     }
 
     /// Update viewport for virtual scrolling
-    pub fn update_viewport(&mut self, height: usize) {
+    pub const fn update_viewport(&mut self, height: usize) {
         self.viewport_height = height;
     }
 
@@ -206,30 +206,30 @@ impl DependenciesState {
         }
     }
 
-    /// Increase max depth (up to MAX_TREE_DEPTH)
-    pub fn increase_depth(&mut self) {
+    /// Increase max depth (up to `MAX_TREE_DEPTH`)
+    pub const fn increase_depth(&mut self) {
         if self.max_depth < crate::tui::constants::MAX_TREE_DEPTH {
             self.max_depth += 1;
         }
     }
 
     /// Decrease max depth (down to 1)
-    pub fn decrease_depth(&mut self) {
+    pub const fn decrease_depth(&mut self) {
         if self.max_depth > 1 {
             self.max_depth -= 1;
         }
     }
 
-    /// Increase max roots (up to MAX_TREE_ROOTS)
-    pub fn increase_roots(&mut self) {
+    /// Increase max roots (up to `MAX_TREE_ROOTS`)
+    pub const fn increase_roots(&mut self) {
         use crate::tui::constants::{MAX_TREE_ROOTS, TREE_ROOTS_STEP};
         if self.max_roots < MAX_TREE_ROOTS {
             self.max_roots += TREE_ROOTS_STEP;
         }
     }
 
-    /// Decrease max roots (down to MIN_TREE_ROOTS)
-    pub fn decrease_roots(&mut self) {
+    /// Decrease max roots (down to `MIN_TREE_ROOTS`)
+    pub const fn decrease_roots(&mut self) {
         use crate::tui::constants::{MIN_TREE_ROOTS, TREE_ROOTS_STEP};
         if self.max_roots > MIN_TREE_ROOTS {
             self.max_roots -= TREE_ROOTS_STEP;
@@ -237,7 +237,7 @@ impl DependenciesState {
     }
 
     /// Toggle cycle detection display
-    pub fn toggle_cycles(&mut self) {
+    pub const fn toggle_cycles(&mut self) {
         self.show_cycles = !self.show_cycles;
     }
 
@@ -248,16 +248,16 @@ impl DependenciesState {
             .any(|cycle| cycle.iter().any(|n| n == node_id))
     }
 
-    pub fn toggle_transitive(&mut self) {
+    pub const fn toggle_transitive(&mut self) {
         self.show_transitive = !self.show_transitive;
     }
 
-    pub fn toggle_highlight(&mut self) {
+    pub const fn toggle_highlight(&mut self) {
         self.highlight_changes = !self.highlight_changes;
     }
 
     /// Cycle to next sort order
-    pub fn toggle_sort(&mut self) {
+    pub const fn toggle_sort(&mut self) {
         self.sort_order = self.sort_order.next();
     }
 
@@ -401,7 +401,7 @@ impl DependenciesState {
     }
 
     /// Stop search mode (keep matches for highlighting)
-    pub fn stop_search(&mut self) {
+    pub const fn stop_search(&mut self) {
         self.search_active = false;
     }
 
@@ -414,7 +414,7 @@ impl DependenciesState {
     }
 
     /// Check if search mode is active
-    pub fn is_searching(&self) -> bool {
+    pub const fn is_searching(&self) -> bool {
         self.search_active
     }
 
@@ -424,7 +424,7 @@ impl DependenciesState {
     }
 
     /// Toggle filter mode
-    pub fn toggle_filter_mode(&mut self) {
+    pub const fn toggle_filter_mode(&mut self) {
         self.filter_mode = !self.filter_mode;
     }
 
@@ -521,12 +521,12 @@ impl DependenciesState {
     }
 
     /// Toggle breadcrumb display
-    pub fn toggle_breadcrumbs(&mut self) {
+    pub const fn toggle_breadcrumbs(&mut self) {
         self.show_breadcrumbs = !self.show_breadcrumbs;
     }
 
     /// Toggle dependencies help overlay
-    pub fn toggle_deps_help(&mut self) {
+    pub const fn toggle_deps_help(&mut self) {
         self.show_deps_help = !self.show_deps_help;
     }
 

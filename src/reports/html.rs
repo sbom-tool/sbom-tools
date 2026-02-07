@@ -6,7 +6,7 @@ use crate::diff::{DiffResult, SlaStatus, VulnerabilityDetail};
 use crate::model::NormalizedSbom;
 use std::fmt::Write;
 
-/// A single vulnerability row: (id, severity, cvss_score, component_name, component_version).
+/// A single vulnerability row: (id, severity, `cvss_score`, `component_name`, `component_version`).
 type VulnRow<'a> = (&'a str, &'a Option<crate::model::Severity>, Option<f32>, &'a str, Option<&'a str>);
 
 /// HTML report generator
@@ -17,7 +17,8 @@ pub struct HtmlReporter {
 
 impl HtmlReporter {
     /// Create a new HTML reporter
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             include_styles: true,
         }
@@ -468,7 +469,7 @@ impl ReportGenerator for HtmlReporter {
 // Inline CSS styles
 // ============================================================================
 
-const HTML_STYLES: &str = r#"
+const HTML_STYLES: &str = r"
         <style>
             :root {
                 --bg-color: #1e1e2e;
@@ -615,4 +616,4 @@ const HTML_STYLES: &str = r#"
                 color: #a6adc8;
             }
         </style>
-"#;
+";

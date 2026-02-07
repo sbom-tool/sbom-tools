@@ -26,6 +26,7 @@ const CONFIG_FILE_NAMES: &[&str] = &[
 /// 3. Git repository root (if in a repo)
 /// 4. User config directory (~/.config/sbom-tools/)
 /// 5. Home directory
+#[must_use] 
 pub fn discover_config_file(explicit_path: Option<&Path>) -> Option<PathBuf> {
     // 1. Use explicit path if provided
     if let Some(path) = explicit_path {
@@ -141,7 +142,7 @@ impl From<serde_yaml_ng::Error> for ConfigFileError {
     }
 }
 
-/// Load an AppConfig from a YAML file.
+/// Load an `AppConfig` from a YAML file.
 pub fn load_config_file(path: &Path) -> Result<AppConfig, ConfigFileError> {
     if !path.exists() {
         return Err(ConfigFileError::NotFound(path.to_path_buf()));
@@ -153,6 +154,7 @@ pub fn load_config_file(path: &Path) -> Result<AppConfig, ConfigFileError> {
 }
 
 /// Load config from discovered file, or return default.
+#[must_use] 
 pub fn load_or_default(explicit_path: Option<&Path>) -> (AppConfig, Option<PathBuf>) {
     discover_config_file(explicit_path).map_or_else(
         || (AppConfig::default(), None),
@@ -258,6 +260,7 @@ impl AppConfig {
     }
 
     /// Load from file and merge with CLI overrides.
+    #[must_use] 
     pub fn from_file_with_overrides(
         config_path: Option<&Path>,
         cli_overrides: &Self,
@@ -273,21 +276,23 @@ impl AppConfig {
 // ============================================================================
 
 /// Generate an example config file content.
+#[must_use] 
 pub fn generate_example_config() -> String {
     let example = AppConfig::default();
     format!(
-        r#"# SBOM Diff Configuration
+        r"# SBOM Diff Configuration
 # Place this file at .sbom-tools.yaml in your project root or ~/.config/sbom-tools/
 
 {}
-"#,
+",
         serde_yaml_ng::to_string(&example).unwrap_or_default()
     )
 }
 
 /// Generate a commented example config with all options.
+#[must_use] 
 pub fn generate_full_example_config() -> String {
-    r#"# SBOM Diff Configuration File
+    r"# SBOM Diff Configuration File
 # ==============================
 #
 # This file configures sbom-tools behavior. Place it at:
@@ -367,7 +372,7 @@ tui:
 #   provider: osv
 #   cache_ttl: 3600
 #   max_concurrent: 10
-"#
+"
     .to_string()
 }
 

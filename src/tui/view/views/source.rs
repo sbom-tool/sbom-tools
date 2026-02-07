@@ -1,4 +1,4 @@
-//! Source tab rendering for ViewApp with SBOM Map panel.
+//! Source tab rendering for `ViewApp` with SBOM Map panel.
 
 use crate::model::CreatorType;
 use crate::model::NormalizedSbom;
@@ -12,6 +12,7 @@ use ratatui::{
     widgets::{Block, Borders},
 };
 use std::collections::HashMap;
+use std::fmt::Write;
 use unicode_width::UnicodeWidthChar;
 
 /// Render the source tab for a single SBOM with map panel.
@@ -69,7 +70,7 @@ fn build_map_sections(
             let child_count = match child {
                 JsonTreeNode::Object { children, .. } => children.len(),
                 JsonTreeNode::Array { len, .. } => *len,
-                _ => 0,
+                JsonTreeNode::Leaf { .. } => 0,
             };
             let line_start = line_starts
                 .iter()
@@ -125,7 +126,7 @@ fn current_section_for_raw_line(line_idx: usize, sections: &[MapSection]) -> Opt
     current
 }
 
-/// Extract the array index from a node_id if inside a section array.
+/// Extract the array index from a `node_id` if inside a section array.
 /// e.g., "root.components.[42].name" => Some(42)
 fn extract_array_index(node_id: &str) -> Option<usize> {
     let parts: Vec<&str> = node_id.split('.').collect();
@@ -141,7 +142,7 @@ fn extract_array_index(node_id: &str) -> Option<usize> {
     }
 }
 
-/// Build a semantic breadcrumb from a node_id, replacing array indices with labels.
+/// Build a semantic breadcrumb from a `node_id`, replacing array indices with labels.
 /// e.g., "root.components.[5].name" → "components > lodash@4.17.21 > name"
 fn semantic_breadcrumb(node_id: &str, sbom: &NormalizedSbom) -> String {
     let parts: Vec<&str> = node_id.split('.').collect();
@@ -177,7 +178,7 @@ fn semantic_breadcrumb(node_id: &str, sbom: &NormalizedSbom) -> String {
 }
 
 /// Pre-compute search match counts per section.
-/// Requires flat cache to be warm (call ensure_flat_cache() before this).
+/// Requires flat cache to be warm (call `ensure_flat_cache()` before this).
 fn compute_section_match_counts(
     state: &crate::tui::app_states::source::SourcePanelState,
     sections: &[MapSection],
@@ -211,7 +212,7 @@ fn compute_section_match_counts(
 }
 
 /// Get the current section based on cursor position and view mode.
-/// Requires flat cache to be warm (call ensure_flat_cache() before this).
+/// Requires flat cache to be warm (call `ensure_flat_cache()` before this).
 fn get_current_section(app: &ViewApp, sections: &[MapSection]) -> Option<String> {
     match app.source_state.view_mode {
         SourceViewMode::Tree => {
@@ -427,7 +428,7 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
         // Right side: " count match  badge marker" — right-aligned
         let mut right = format!(" {count_str}{match_str}");
         if !badge.is_empty() {
-            right.push_str(&format!("  {badge}"));
+            let _ = write!(right, "  {badge}");
         }
         right.push_str(marker);
 
@@ -1137,7 +1138,7 @@ fn truncate_map_str(s: &str, max_len: usize) -> String {
     }
 }
 
-/// Write a string into the buffer starting at (x, y), limited to max_width.
+/// Write a string into the buffer starting at (x, y), limited to `max_width`.
 fn render_str(buf: &mut Buffer, x: u16, y: u16, s: &str, max_width: u16, style: Style) {
     let mut cx = x;
     let limit = x + max_width;

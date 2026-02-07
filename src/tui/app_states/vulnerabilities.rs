@@ -13,7 +13,7 @@ pub struct VulnerabilitiesState {
     pub expanded_groups: std::collections::HashSet<String>,
     /// Cached filter+sort key for invalidation
     pub cached_key: Option<(VulnFilter, VulnSort)>,
-    /// Cached indices: (status, index_into_status_vec)
+    /// Cached indices: (status, `index_into_status_vec`)
     pub cached_indices: Vec<(DiffVulnStatus, usize)>,
 }
 
@@ -38,7 +38,7 @@ impl VulnerabilitiesState {
     }
 
     /// Toggle grouped display mode
-    pub fn toggle_grouped_mode(&mut self) {
+    pub const fn toggle_grouped_mode(&mut self) {
         self.group_by_component = !self.group_by_component;
         self.selected = 0;
     }
@@ -113,12 +113,12 @@ pub enum VulnFilter {
     Direct,
     /// Filter to transitive dependencies only (depth > 1)
     Transitive,
-    /// Filter to VEX-actionable vulnerabilities (Affected, UnderInvestigation, or no VEX status)
+    /// Filter to VEX-actionable vulnerabilities (Affected, `UnderInvestigation`, or no VEX status)
     VexActionable,
 }
 
 impl VulnFilter {
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::All => "All",
             Self::Introduced => "Introduced",
@@ -133,7 +133,7 @@ impl VulnFilter {
     }
 
     /// Cycle to next filter option
-    pub fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::All => Self::Introduced,
             Self::Introduced => Self::Resolved,
@@ -163,7 +163,7 @@ pub enum VulnSort {
 }
 
 impl VulnSort {
-    pub fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::Severity => Self::FixUrgency,
             Self::FixUrgency => Self::CvssScore,
@@ -174,7 +174,7 @@ impl VulnSort {
         }
     }
 
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::Severity => "Severity",
             Self::FixUrgency => "Fix Urgency",
@@ -194,7 +194,7 @@ pub enum DiffVulnStatus {
 }
 
 impl DiffVulnStatus {
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::Introduced => "Introduced",
             Self::Resolved => "Resolved",

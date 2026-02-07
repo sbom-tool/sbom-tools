@@ -59,7 +59,7 @@ pub trait CycleFilter: Clone + Copy + Default {
     fn display_name(&self) -> &str;
 }
 
-/// Generic filter state that works with any CycleFilter enum.
+/// Generic filter state that works with any `CycleFilter` enum.
 ///
 /// Provides common state management for filter selection including
 /// cycling and display name access.
@@ -77,6 +77,7 @@ impl<F: CycleFilter> Default for FilterState<F> {
 
 impl<F: CycleFilter> FilterState<F> {
     /// Create a new filter state with the default filter.
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             current: F::default(),
@@ -84,7 +85,7 @@ impl<F: CycleFilter> FilterState<F> {
     }
 
     /// Create a filter state with a specific initial value.
-    pub fn with_filter(filter: F) -> Self {
+    pub const fn with_filter(filter: F) -> Self {
         Self { current: filter }
     }
 
@@ -99,7 +100,7 @@ impl<F: CycleFilter> FilterState<F> {
     }
 
     /// Set a specific filter.
-    pub fn set(&mut self, filter: F) {
+    pub const fn set(&mut self, filter: F) {
         self.current = filter;
     }
 

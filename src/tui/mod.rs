@@ -5,7 +5,7 @@
 //!
 //! Two distinct TUI applications are available:
 //! - `ViewApp` - For exploring a single SBOM with hierarchical navigation
-//! - `App` (DiffApp) - For comparing SBOMs and viewing differences
+//! - `App` (`DiffApp`) - For comparing SBOMs and viewing differences
 //!
 //! # Architecture
 //!

@@ -1,7 +1,7 @@
 //! sbom-tools: Semantic SBOM diff and analysis tool
 //!
 //! A format-agnostic SBOM comparison tool that provides semantic diff operations
-//! for CycloneDX and SPDX SBOMs with enterprise-grade reporting.
+//! for `CycloneDX` and SPDX SBOMs with enterprise-grade reporting.
 //!
 //! # Quick Start
 //!
@@ -23,6 +23,27 @@
 
 // Lint to discourage unwrap() in production code - prefer explicit error handling
 #![warn(clippy::unwrap_used)]
+// Pedantic lints: allow categories that are design choices for this codebase
+#![allow(
+    // Cast safety: usize↔f64/f32/u16/i32 casts are pervasive in TUI layout math
+    // and statistical calculations — all values are bounded in practice
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap,
+    // Doc completeness: # Errors / # Panics sections are aspirational for 78+15 fns
+    clippy::missing_errors_doc,
+    clippy::missing_panics_doc,
+    // TUI render functions are inherently long — splitting hurts readability
+    clippy::too_many_lines,
+    // State structs legitimately use many bools for toggle flags
+    clippy::struct_excessive_bools,
+    clippy::fn_params_excessive_bools,
+    // self is kept for API consistency / future use across trait-like impls
+    clippy::unused_self,
+    // Variable names like `min`/`mid` or `old`/`new` are clear in context
+    clippy::similar_names
+)]
 
 pub mod cli;
 pub mod config;

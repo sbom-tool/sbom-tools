@@ -12,6 +12,7 @@ use crate::tui::{run_view_tui, ViewApp};
 use anyhow::Result;
 
 /// Run the view command
+#[allow(clippy::needless_pass_by_value)]
 pub fn run_view(config: ViewConfig) -> Result<()> {
     let mut parsed = parse_sbom_with_context(&config.sbom_path, false)?;
 
@@ -36,7 +37,7 @@ pub fn run_view(config: ViewConfig) -> Result<()> {
 
     if effective_output == ReportFormat::Tui {
         let (sbom, raw_content) = parsed.into_parts();
-        let mut app = ViewApp::new(sbom, raw_content);
+        let mut app = ViewApp::new(sbom, &raw_content);
         run_view_tui(&mut app)?;
     } else {
         parsed.drop_raw_content();

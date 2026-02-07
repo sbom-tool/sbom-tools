@@ -18,8 +18,9 @@ pub struct ParsedSbom {
 }
 
 impl ParsedSbom {
-    /// Create a new ParsedSbom without enrichment
-    pub fn new(sbom: NormalizedSbom, raw_content: String) -> Self {
+    /// Create a new `ParsedSbom` without enrichment
+    #[must_use] 
+    pub const fn new(sbom: NormalizedSbom, raw_content: String) -> Self {
         Self {
             sbom,
             raw_content,
@@ -29,26 +30,30 @@ impl ParsedSbom {
     }
 
     /// Get a reference to the SBOM
-    pub fn sbom(&self) -> &NormalizedSbom {
+    #[must_use] 
+    pub const fn sbom(&self) -> &NormalizedSbom {
         &self.sbom
     }
 
     /// Get a mutable reference to the SBOM
-    pub fn sbom_mut(&mut self) -> &mut NormalizedSbom {
+    pub const fn sbom_mut(&mut self) -> &mut NormalizedSbom {
         &mut self.sbom
     }
 
     /// Get a reference to the original file content
+    #[must_use] 
     pub fn raw_content(&self) -> &str {
         &self.raw_content
     }
 
     /// Consume and return the inner SBOM
+    #[must_use] 
     pub fn into_sbom(self) -> NormalizedSbom {
         self.sbom
     }
 
     /// Consume and return both the SBOM and the raw content
+    #[must_use] 
     pub fn into_parts(self) -> (NormalizedSbom, String) {
         (self.sbom, self.raw_content)
     }
@@ -66,9 +71,9 @@ pub fn parse_sbom_with_context(path: &Path, quiet: bool) -> Result<ParsedSbom> {
     }
 
     let raw_content = std::fs::read_to_string(path)
-        .with_context(|| format!("Failed to read SBOM file: {path:?}"))?;
+        .with_context(|| format!("Failed to read SBOM file: {}", path.display()))?;
     let sbom = crate::parsers::parse_sbom_str(&raw_content)
-        .with_context(|| format!("Failed to parse SBOM: {path:?}"))?;
+        .with_context(|| format!("Failed to parse SBOM: {}", path.display()))?;
 
     if !quiet {
         tracing::info!("Parsed {} components", sbom.component_count());

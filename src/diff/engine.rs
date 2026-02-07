@@ -43,25 +43,25 @@ impl DiffEngine {
     }
 
     /// Create a diff engine with a custom cost model
-    pub fn with_cost_model(mut self, cost_model: CostModel) -> Self {
+    pub const fn with_cost_model(mut self, cost_model: CostModel) -> Self {
         self.cost_model = cost_model;
         self
     }
 
     /// Set fuzzy matching configuration
-    pub fn with_fuzzy_config(mut self, config: FuzzyMatchConfig) -> Self {
+    pub const fn with_fuzzy_config(mut self, config: FuzzyMatchConfig) -> Self {
         self.fuzzy_config = config;
         self
     }
 
     /// Include unchanged components in the result
-    pub fn include_unchanged(mut self, include: bool) -> Self {
+    pub const fn include_unchanged(mut self, include: bool) -> Self {
         self.include_unchanged = include;
         self
     }
 
     /// Enable graph-aware diffing with the given configuration
-    pub fn with_graph_diff(mut self, config: GraphDiffConfig) -> Self {
+    pub const fn with_graph_diff(mut self, config: GraphDiffConfig) -> Self {
         self.graph_diff_config = Some(config);
         self
     }
@@ -85,28 +85,32 @@ impl DiffEngine {
     }
 
     /// Configure large SBOM optimization settings.
-    pub fn with_large_sbom_config(mut self, config: LargeSbomConfig) -> Self {
+    pub const fn with_large_sbom_config(mut self, config: LargeSbomConfig) -> Self {
         self.large_sbom_config = config;
         self
     }
 
     /// Get the large SBOM configuration.
-    pub fn large_sbom_config(&self) -> &LargeSbomConfig {
+    #[must_use] 
+    pub const fn large_sbom_config(&self) -> &LargeSbomConfig {
         &self.large_sbom_config
     }
 
     /// Check if a custom matcher is configured
+    #[must_use] 
     pub fn has_custom_matcher(&self) -> bool {
         self.custom_matcher.is_some()
     }
 
     /// Check if graph diffing is enabled
-    pub fn graph_diff_enabled(&self) -> bool {
+    #[must_use] 
+    pub const fn graph_diff_enabled(&self) -> bool {
         self.graph_diff_config.is_some()
     }
 
     /// Check if custom matching rules are configured
-    pub fn has_matching_rules(&self) -> bool {
+    #[must_use] 
+    pub const fn has_matching_rules(&self) -> bool {
         self.rule_engine.is_some()
     }
 

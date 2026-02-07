@@ -1,6 +1,12 @@
 //! sbom-tools: Semantic SBOM diff and analysis tool
 //!
-//! A format-agnostic SBOM comparison tool for CycloneDX and SPDX formats.
+//! A format-agnostic SBOM comparison tool for `CycloneDX` and SPDX formats.
+
+#![allow(
+    clippy::too_many_lines,
+    clippy::struct_excessive_bools,
+    clippy::needless_pass_by_value
+)]
 
 use anyhow::Result;
 use clap::{CommandFactory, Parser, Subcommand};
@@ -20,7 +26,7 @@ use std::path::PathBuf;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 /// Build long version string with format support info
-fn build_long_version() -> &'static str {
+const fn build_long_version() -> &'static str {
     concat!(
         env!("CARGO_PKG_VERSION"),
         "\n\nSupported SBOM Formats:",
@@ -65,7 +71,7 @@ struct Cli {
     #[arg(short, long, global = true)]
     quiet: bool,
 
-    /// Disable colored output (also respects NO_COLOR env)
+    /// Disable colored output (also respects `NO_COLOR` env)
     #[arg(long, global = true)]
     no_color: bool,
 
@@ -162,7 +168,7 @@ struct DiffArgs {
     #[arg(long)]
     no_ecosystem_rules: bool,
 
-    /// Exclude vulnerabilities with VEX status not_affected or fixed
+    /// Exclude vulnerabilities with VEX status `not_affected` or fixed
     #[arg(long, alias = "exclude-vex-not-affected")]
     exclude_vex_resolved: bool,
 
@@ -356,7 +362,7 @@ enum Commands {
     /// Analyze SBOM evolution over time (timeline comparison)
     Timeline(TimelineArgs),
 
-    /// Compare all SBOMs against each other (NxN matrix comparison)
+    /// Compare all SBOMs against each other (`NxN` matrix comparison)
     Matrix(MatrixArgs),
 
     /// Assess SBOM quality and completeness

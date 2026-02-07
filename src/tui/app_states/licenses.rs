@@ -18,7 +18,7 @@ pub struct LicensesState {
 }
 
 impl LicensesState {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             group_by: LicenseGroupBy::License,
             sort_by: LicenseSort::License,
@@ -35,11 +35,11 @@ impl LicensesState {
         }
     }
 
-    pub fn toggle_compatibility(&mut self) {
+    pub const fn toggle_compatibility(&mut self) {
         self.show_compatibility = !self.show_compatibility;
     }
 
-    pub fn toggle_risk_filter(&mut self) {
+    pub const fn toggle_risk_filter(&mut self) {
         self.risk_filter = match self.risk_filter {
             None => Some(LicenseRiskFilter::Low),
             Some(LicenseRiskFilter::Low) => Some(LicenseRiskFilter::Medium),
@@ -52,7 +52,7 @@ impl LicensesState {
         self.selected_removed = 0;
     }
 
-    pub fn toggle_focus(&mut self) {
+    pub const fn toggle_focus(&mut self) {
         if self.focus_left {
             self.selected_new = self.selected;
         } else {
@@ -66,7 +66,7 @@ impl LicensesState {
         };
     }
 
-    pub fn toggle_group(&mut self) {
+    pub const fn toggle_group(&mut self) {
         self.group_by = match self.group_by {
             LicenseGroupBy::License => LicenseGroupBy::Component,
             LicenseGroupBy::Component => LicenseGroupBy::Compatibility,
@@ -77,7 +77,7 @@ impl LicensesState {
         self.selected = 0;
     }
 
-    pub fn toggle_sort(&mut self) {
+    pub const fn toggle_sort(&mut self) {
         self.sort_by = match self.sort_by {
             LicenseSort::License => LicenseSort::Count,
             LicenseSort::Count => LicenseSort::Permissiveness,

@@ -13,7 +13,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 /// Compute blast radius via BFS on the reverse dependency graph.
 /// Returns `(direct_dependents, transitive_count)`.
-pub(crate) fn compute_blast_radius(
+pub fn compute_blast_radius(
     component_name: &str,
     reverse_graph: &HashMap<String, Vec<String>>,
 ) -> (usize, usize) {
@@ -48,7 +48,7 @@ pub(crate) fn compute_blast_radius(
 }
 
 /// Determine risk level and associated color from vulnerability count and blast radius.
-pub(crate) fn determine_risk_level(vuln_count: usize, transitive_count: usize) -> (&'static str, Color) {
+pub fn determine_risk_level(vuln_count: usize, transitive_count: usize) -> (&'static str, Color) {
     if vuln_count > 0 && transitive_count > 10 {
         ("Critical", colors().critical)
     } else if vuln_count > 0 || transitive_count > 20 {
@@ -61,7 +61,7 @@ pub(crate) fn determine_risk_level(vuln_count: usize, transitive_count: usize) -
 }
 
 /// Render the security analysis section: header, risk badge, blast radius, license risk.
-pub(crate) fn render_security_analysis_lines(
+pub fn render_security_analysis_lines(
     vuln_count: usize,
     direct_deps: usize,
     transitive_count: usize,
@@ -158,7 +158,7 @@ pub(crate) fn render_security_analysis_lines(
 }
 
 /// Render the quick actions hint line for component details.
-pub(crate) fn render_quick_actions_hint() -> Vec<Line<'static>> {
+pub fn render_quick_actions_hint() -> Vec<Line<'static>> {
     vec![
         Line::from(""),
         Line::from(vec![
@@ -176,7 +176,7 @@ pub(crate) fn render_quick_actions_hint() -> Vec<Line<'static>> {
 
 /// Render vulnerability entries with severity badge + ID + optional description.
 /// Each entry is `(severity, id, description)`.
-pub(crate) fn render_vulnerability_list_lines(
+pub fn render_vulnerability_list_lines(
     vulns: &[(&str, &str, Option<&str>)],
     max_display: usize,
     total_count: usize,
@@ -225,7 +225,7 @@ pub(crate) fn render_vulnerability_list_lines(
 
 /// Render flagged indicator and optional analyst note.
 /// `suffix` is appended after the badge (e.g. `" for follow-up"` in view mode).
-pub(crate) fn render_flagged_lines(
+pub fn render_flagged_lines(
     is_flagged: bool,
     note: Option<&str>,
     area_width: u16,
@@ -270,10 +270,10 @@ pub(crate) fn render_flagged_lines(
 }
 
 /// Render a detail panel: wraps `lines` in a bordered Paragraph with focus-aware styling.
-pub(crate) fn render_detail_block<'a>(
+pub fn render_detail_block(
     frame: &mut Frame,
     area: Rect,
-    lines: Vec<Line<'a>>,
+    lines: Vec<Line<'_>>,
     title: &str,
     focused: bool,
 ) {
@@ -299,7 +299,7 @@ pub(crate) fn render_detail_block<'a>(
 }
 
 /// Render an empty detail panel with icon, message, and keyboard hints.
-pub(crate) fn render_empty_detail_panel(
+pub fn render_empty_detail_panel(
     frame: &mut Frame,
     area: Rect,
     title: &str,

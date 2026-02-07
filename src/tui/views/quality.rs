@@ -13,7 +13,7 @@ use ratatui::{
     widgets::{Block, Borders, Gauge, Paragraph},
 };
 
-pub(crate) fn render_quality(frame: &mut Frame, area: Rect, app: &App) {
+pub fn render_quality(frame: &mut Frame, area: Rect, app: &App) {
     match app.mode {
         AppMode::Diff => render_diff_quality(frame, area, app),
         AppMode::View => render_view_quality(frame, area, app),

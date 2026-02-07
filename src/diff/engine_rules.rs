@@ -58,7 +58,7 @@ pub fn apply_rules(
     })
 }
 
-/// Remap a ComponentMatchResult through canonical IDs from rule engine.
+/// Remap a `ComponentMatchResult` through canonical IDs from rule engine.
 pub fn remap_match_result(
     result: &ComponentMatchResult,
     old_canonical: &HashMap<CanonicalId, CanonicalId>,

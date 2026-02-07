@@ -192,11 +192,13 @@ impl<T: ReportGenerator> WriterReporter for T {
 impl<T: WriterReporter> StreamingReporter for T {}
 
 /// Create a report generator for the given format
+#[must_use] 
 pub fn create_reporter(format: ReportFormat) -> Box<dyn ReportGenerator> {
     create_reporter_with_options(format, true)
 }
 
 /// Create a report generator with color control
+#[must_use] 
 pub fn create_reporter_with_options(
     format: ReportFormat,
     use_color: bool,

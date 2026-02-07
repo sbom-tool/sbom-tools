@@ -10,7 +10,8 @@ pub struct LicenseChangeComputer;
 
 impl LicenseChangeComputer {
     /// Create a new license change computer.
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self
     }
 }
@@ -79,7 +80,7 @@ impl ChangeComputer for LicenseChangeComputer {
         result
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "LicenseChangeComputer"
     }
 }

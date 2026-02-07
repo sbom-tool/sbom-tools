@@ -32,6 +32,7 @@ pub struct SideBySideReporter {
 
 impl SideBySideReporter {
     /// Create a new side-by-side reporter
+    #[must_use] 
     pub fn new() -> Self {
         // Try to detect terminal width, default to 120
         let width = terminal_width().unwrap_or(120);
@@ -44,19 +45,19 @@ impl SideBySideReporter {
 
     /// Set terminal width
     #[must_use]
-    pub fn width(mut self, width: usize) -> Self {
+    pub const fn width(mut self, width: usize) -> Self {
         self.width = width;
         self
     }
 
     /// Disable colors
     #[must_use]
-    pub fn no_colors(mut self) -> Self {
+    pub const fn no_colors(mut self) -> Self {
         self.use_colors = false;
         self
     }
 
-    fn col(&self, code: &'static str) -> &'static str {
+    const fn col(&self, code: &'static str) -> &'static str {
         if self.use_colors {
             code
         } else {
@@ -184,14 +185,14 @@ impl SideBySideReporter {
                     line_num,
                     self.col(colors::RESET)
                 ),
-                truncate(old_text.unwrap_or(""), half_width).clone(),
+                truncate(old_text.unwrap_or(""), half_width),
                 format!(
                     "{}{:>num_width$}{}",
                     self.col(colors::LINE_NUM),
                     line_num,
                     self.col(colors::RESET)
                 ),
-                truncate(new_text.unwrap_or(""), half_width).clone(),
+                truncate(new_text.unwrap_or(""), half_width),
             ),
         };
 
@@ -525,7 +526,7 @@ impl ReportGenerator for SideBySideReporter {
 }
 
 /// Try to get terminal width
-fn terminal_width() -> Option<usize> {
+const fn terminal_width() -> Option<usize> {
     // Try using terminal_size or just return None
     // For simplicity, we'll return None and use default
     None

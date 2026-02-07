@@ -325,7 +325,8 @@ pub trait ErrorContext<T> {
 
 impl<T, E: Into<SbomDiffError>> ErrorContext<T> for std::result::Result<T, E> {
     fn context(self, context: impl Into<String>) -> Result<T> {
-        self.map_err(|e| add_context_to_error(e.into(), context.into()))
+        let ctx: String = context.into();
+        self.map_err(|e| add_context_to_error(e.into(), &ctx))
     }
 
     fn with_context<F, C>(self, f: F) -> Result<T>
@@ -333,46 +334,49 @@ impl<T, E: Into<SbomDiffError>> ErrorContext<T> for std::result::Result<T, E> {
         F: FnOnce() -> C,
         C: Into<String>,
     {
-        self.map_err(|e| add_context_to_error(e.into(), f().into()))
+        self.map_err(|e| {
+            let ctx: String = f().into();
+            add_context_to_error(e.into(), &ctx)
+        })
     }
 }
 
 /// Add context to an error, chaining with any existing context.
-fn add_context_to_error(err: SbomDiffError, new_ctx: String) -> SbomDiffError {
+fn add_context_to_error(err: SbomDiffError, new_ctx: &str) -> SbomDiffError {
     match err {
         SbomDiffError::Parse {
             context: existing,
             source,
         } => SbomDiffError::Parse {
-            context: chain_context(&new_ctx, &existing),
+            context: chain_context(new_ctx, &existing),
             source,
         },
         SbomDiffError::Diff {
             context: existing,
             source,
         } => SbomDiffError::Diff {
-            context: chain_context(&new_ctx, &existing),
+            context: chain_context(new_ctx, &existing),
             source,
         },
         SbomDiffError::Report {
             context: existing,
             source,
         } => SbomDiffError::Report {
-            context: chain_context(&new_ctx, &existing),
+            context: chain_context(new_ctx, &existing),
             source,
         },
         SbomDiffError::Matching {
             context: existing,
             source,
         } => SbomDiffError::Matching {
-            context: chain_context(&new_ctx, &existing),
+            context: chain_context(new_ctx, &existing),
             source,
         },
         SbomDiffError::Enrichment {
             context: existing,
             source,
         } => SbomDiffError::Enrichment {
-            context: chain_context(&new_ctx, &existing),
+            context: chain_context(new_ctx, &existing),
             source,
         },
         SbomDiffError::Io {
@@ -381,12 +385,12 @@ fn add_context_to_error(err: SbomDiffError, new_ctx: String) -> SbomDiffError {
             source,
         } => SbomDiffError::Io {
             path,
-            message: chain_context(&new_ctx, &message),
+            message: chain_context(new_ctx, &message),
             source,
         },
-        SbomDiffError::Config(msg) => SbomDiffError::Config(chain_context(&new_ctx, &msg)),
+        SbomDiffError::Config(msg) => SbomDiffError::Config(chain_context(new_ctx, &msg)),
         SbomDiffError::Validation(msg) => {
-            SbomDiffError::Validation(chain_context(&new_ctx, &msg))
+            SbomDiffError::Validation(chain_context(new_ctx, &msg))
         }
     }
 }
@@ -394,7 +398,7 @@ fn add_context_to_error(err: SbomDiffError, new_ctx: String) -> SbomDiffError {
 /// Chain two context strings together.
 ///
 /// If the existing context is empty, returns just the new context.
-/// Otherwise, returns "new_context: existing_context".
+/// Otherwise, returns "`new_context`: `existing_context`".
 fn chain_context(new: &str, existing: &str) -> String {
     if existing.is_empty() {
         new.to_string()

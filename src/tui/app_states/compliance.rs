@@ -7,16 +7,16 @@ pub enum PolicyPreset {
     Enterprise,
     Strict,
     Permissive,
-    /// EU Cyber Resilience Act compliance (delegates to quality::ComplianceChecker)
+    /// EU Cyber Resilience Act compliance (delegates to `quality::ComplianceChecker`)
     Cra,
-    /// NTIA Minimum Elements compliance (delegates to quality::ComplianceChecker)
+    /// NTIA Minimum Elements compliance (delegates to `quality::ComplianceChecker`)
     Ntia,
-    /// FDA Medical Device compliance (delegates to quality::ComplianceChecker)
+    /// FDA Medical Device compliance (delegates to `quality::ComplianceChecker`)
     Fda,
 }
 
 impl PolicyPreset {
-    pub fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::Enterprise => Self::Strict,
             Self::Strict => Self::Permissive,
@@ -27,7 +27,7 @@ impl PolicyPreset {
         }
     }
 
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::Enterprise => "Enterprise",
             Self::Strict => "Strict",
@@ -38,7 +38,7 @@ impl PolicyPreset {
         }
     }
 
-    pub fn description(self) -> &'static str {
+    pub const fn description(self) -> &'static str {
         match self {
             Self::Enterprise => "Standard enterprise security policy",
             Self::Strict => "Maximum security, minimal risk tolerance",
@@ -50,12 +50,12 @@ impl PolicyPreset {
     }
 
     /// Whether this preset delegates to the standards-based compliance checker.
-    pub fn is_standards_based(self) -> bool {
+    pub const fn is_standards_based(self) -> bool {
         matches!(self, Self::Cra | Self::Ntia | Self::Fda)
     }
 
-    /// Get the corresponding ComplianceLevel for standards-based presets.
-    pub fn compliance_level(self) -> Option<crate::quality::ComplianceLevel> {
+    /// Get the corresponding `ComplianceLevel` for standards-based presets.
+    pub const fn compliance_level(self) -> Option<crate::quality::ComplianceLevel> {
         match self {
             Self::Cra => Some(crate::quality::ComplianceLevel::CraPhase2),
             Self::Ntia => Some(crate::quality::ComplianceLevel::NtiaMinimum),
@@ -101,13 +101,13 @@ impl PolicyComplianceState {
         }
     }
 
-    pub fn select_prev(&mut self) {
+    pub const fn select_prev(&mut self) {
         if self.selected_violation > 0 {
             self.selected_violation -= 1;
         }
     }
 
-    pub fn toggle_details(&mut self) {
+    pub const fn toggle_details(&mut self) {
         self.show_details = !self.show_details;
     }
 
@@ -173,14 +173,14 @@ impl DiffComplianceState {
         Self::default()
     }
 
-    pub fn next_standard(&mut self) {
+    pub const fn next_standard(&mut self) {
         let count = crate::quality::ComplianceLevel::all().len();
         self.selected_standard = (self.selected_standard + 1) % count;
         self.selected_violation = 0;
         self.scroll_offset = 0;
     }
 
-    pub fn prev_standard(&mut self) {
+    pub const fn prev_standard(&mut self) {
         let count = crate::quality::ComplianceLevel::all().len();
         self.selected_standard = if self.selected_standard == 0 {
             count - 1
@@ -191,7 +191,7 @@ impl DiffComplianceState {
         self.scroll_offset = 0;
     }
 
-    pub fn next_view_mode(&mut self) {
+    pub const fn next_view_mode(&mut self) {
         self.view_mode = match self.view_mode {
             DiffComplianceViewMode::Overview => DiffComplianceViewMode::NewViolations,
             DiffComplianceViewMode::NewViolations => DiffComplianceViewMode::ResolvedViolations,
@@ -203,20 +203,20 @@ impl DiffComplianceState {
         self.scroll_offset = 0;
     }
 
-    pub fn select_next(&mut self, max: usize) {
+    pub const fn select_next(&mut self, max: usize) {
         if max > 0 && self.selected_violation + 1 < max {
             self.selected_violation += 1;
         }
     }
 
-    pub fn select_prev(&mut self) {
+    pub const fn select_prev(&mut self) {
         if self.selected_violation > 0 {
             self.selected_violation -= 1;
         }
     }
 
-    /// Adjust scroll_offset to keep the selected violation visible within the viewport.
-    pub fn adjust_scroll(&mut self, viewport_height: usize) {
+    /// Adjust `scroll_offset` to keep the selected violation visible within the viewport.
+    pub const fn adjust_scroll(&mut self, viewport_height: usize) {
         if viewport_height == 0 {
             return;
         }

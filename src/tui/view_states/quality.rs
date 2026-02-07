@@ -1,6 +1,6 @@
-//! Quality tab ViewState implementation.
+//! Quality tab `ViewState` implementation.
 //!
-//! Proof of concept for the ViewState trait: the Quality tab delegates
+//! Proof of concept for the `ViewState` trait: the Quality tab delegates
 //! its key handling to this self-contained view state machine.
 
 use crate::tui::app_states::quality::{QualityState, QualityViewMode};
@@ -17,29 +17,29 @@ pub struct QualityView {
 }
 
 impl QualityView {
-    pub(crate) fn new() -> Self {
+    pub(crate) const fn new() -> Self {
         Self {
             inner: QualityState::new(),
         }
     }
 
-    pub(crate) fn view_mode(&self) -> QualityViewMode {
+    pub(crate) const fn view_mode(&self) -> QualityViewMode {
         self.inner.view_mode
     }
 
-    pub(crate) fn selected_recommendation(&self) -> usize {
+    pub(crate) const fn selected_recommendation(&self) -> usize {
         self.inner.selected_recommendation
     }
 
-    pub(crate) fn set_selected_recommendation(&mut self, idx: usize) {
+    pub(crate) const fn set_selected_recommendation(&mut self, idx: usize) {
         self.inner.selected_recommendation = idx;
     }
 
-    pub(crate) fn set_total_recommendations(&mut self, total: usize) {
+    pub(crate) const fn set_total_recommendations(&mut self, total: usize) {
         self.inner.total_recommendations = total;
     }
 
-    pub(crate) fn scroll_offset(&self) -> usize {
+    pub(crate) const fn scroll_offset(&self) -> usize {
         self.inner.scroll_offset
     }
 }
@@ -97,7 +97,7 @@ impl ViewState for QualityView {
         EventResult::Ignored
     }
 
-    fn title(&self) -> &str {
+    fn title(&self) -> &'static str {
         "Quality"
     }
 

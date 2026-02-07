@@ -7,7 +7,7 @@ use crate::tui::theme::colors;
 use ratatui::prelude::*;
 
 /// Render CWE list as a single line with label.
-pub(crate) fn render_vuln_cwe_lines(cwes: &[String], max_display: usize) -> Vec<Line<'static>> {
+pub fn render_vuln_cwe_lines(cwes: &[String], max_display: usize) -> Vec<Line<'static>> {
     if cwes.is_empty() {
         return vec![];
     }
@@ -27,7 +27,7 @@ pub(crate) fn render_vuln_cwe_lines(cwes: &[String], max_display: usize) -> Vec<
 
 /// Render KEV badge spans for use in vulnerability row ID cells.
 /// Returns `["KEV", " "]` if `is_kev` is true, empty vec otherwise.
-pub(crate) fn render_kev_badge_spans(
+pub fn render_kev_badge_spans(
     is_kev: bool,
     scheme: &crate::tui::theme::ColorScheme,
 ) -> Vec<Span<'static>> {
@@ -49,7 +49,7 @@ pub(crate) fn render_kev_badge_spans(
 
 /// Render DIR/TRN depth badge spans for use in vulnerability row ID cells.
 /// Returns `["DIR"/" TRN", " "]` based on depth, or empty vec if `None`.
-pub(crate) fn render_depth_badge_spans(
+pub fn render_depth_badge_spans(
     depth: Option<usize>,
     scheme: &crate::tui::theme::ColorScheme,
 ) -> Vec<Span<'static>> {
@@ -74,7 +74,7 @@ pub(crate) fn render_depth_badge_spans(
 }
 
 /// Map vulnerability source name to a theme color.
-pub(crate) fn source_color(source: &str, scheme: &crate::tui::theme::ColorScheme) -> Color {
+pub fn source_color(source: &str, scheme: &crate::tui::theme::ColorScheme) -> Color {
     match source.to_uppercase().as_str() {
         "OSV" => scheme.accent,
         "NVD" => scheme.highlight,
@@ -86,7 +86,7 @@ pub(crate) fn source_color(source: &str, scheme: &crate::tui::theme::ColorScheme
 /// Severity rank for sorting (lower = more severe).
 ///
 /// Recognises common aliases: "moderate" = "medium", "informational" = "info" = "none".
-pub(crate) fn severity_rank(severity: &str) -> u8 {
+pub fn severity_rank(severity: &str) -> u8 {
     match severity.to_lowercase().as_str() {
         "critical" => 0,
         "high" => 1,
@@ -98,7 +98,7 @@ pub(crate) fn severity_rank(severity: &str) -> u8 {
 }
 
 /// Word-wrap text to fit within `max_width` columns, breaking at word boundaries.
-pub(crate) fn word_wrap(text: &str, max_width: usize) -> Vec<String> {
+pub fn word_wrap(text: &str, max_width: usize) -> Vec<String> {
     let mut lines = Vec::new();
     let mut current_line = String::new();
 

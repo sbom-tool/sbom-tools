@@ -1,4 +1,4 @@
-//! Shared source rendering functions used by both App (diff mode) and ViewApp (view mode).
+//! Shared source rendering functions used by both App (diff mode) and `ViewApp` (view mode).
 //!
 //! Provides interactive JSON tree rendering and raw text rendering for the Source tab.
 
@@ -29,7 +29,7 @@ pub struct FlatJsonItem {
 }
 
 /// Flatten the JSON tree into a list respecting expand/collapse state.
-pub(crate) fn flatten_json_tree(
+pub fn flatten_json_tree(
     node: &JsonTreeNode,
     parent_path: &str,
     depth: usize,
@@ -85,7 +85,7 @@ pub(crate) fn flatten_json_tree(
 }
 
 /// Render a source panel (dispatches to tree or raw based on view mode).
-pub(crate) fn render_source_panel(
+pub fn render_source_panel(
     frame: &mut Frame,
     area: Rect,
     state: &mut SourcePanelState,
@@ -657,7 +657,7 @@ fn breadcrumb_from_node_id(node_id: &str) -> String {
     parts.join(" > ")
 }
 
-/// Write a string into the buffer starting at (x, y), limited to max_width.
+/// Write a string into the buffer starting at (x, y), limited to `max_width`.
 fn render_str(buf: &mut Buffer, x: u16, y: u16, s: &str, max_width: u16, style: Style) {
     let mut cx = x;
     let limit = x + max_width;

@@ -1,7 +1,7 @@
 //! Streaming SBOM parser for large files.
 //!
 //! This module provides memory-efficient parsing for very large SBOMs by:
-//! - Using streaming JSON/XML parsing (serde_json::from_reader)
+//! - Using streaming JSON/XML parsing (`serde_json::from_reader`)
 //! - Not buffering the entire file into memory as a string
 //! - Yielding results via an iterator interface
 //! - Supporting progress callbacks
@@ -53,6 +53,7 @@ pub struct ParseProgress {
 
 impl ParseProgress {
     /// Get progress percentage (0-100), or None if total is unknown
+    #[must_use] 
     pub fn percent(&self) -> f32 {
         match self.total_bytes {
             Some(total) if total > 0 => (self.bytes_read as f32 / total as f32) * 100.0,
@@ -61,6 +62,7 @@ impl ParseProgress {
     }
 
     /// Check if progress is complete
+    #[must_use] 
     pub fn is_complete(&self) -> bool {
         self.total_bytes.is_some_and(|total| self.bytes_read >= total)
     }
@@ -123,14 +125,14 @@ impl StreamingConfig {
 
     /// Enable/disable validation during parsing
     #[must_use]
-    pub fn with_validation(mut self, validate: bool) -> Self {
+    pub const fn with_validation(mut self, validate: bool) -> Self {
         self.validate_during_parse = validate;
         self
     }
 
     /// Enable/disable skipping malformed components
     #[must_use]
-    pub fn with_skip_malformed(mut self, skip: bool) -> Self {
+    pub const fn with_skip_malformed(mut self, skip: bool) -> Self {
         self.skip_malformed = skip;
         self
     }
@@ -169,11 +171,13 @@ pub struct StreamingParser {
 
 impl StreamingParser {
     /// Create a new streaming parser with the given configuration
-    pub fn new(config: StreamingConfig) -> Self {
+    #[must_use] 
+    pub const fn new(config: StreamingConfig) -> Self {
         Self { config }
     }
 
     /// Create a streaming parser with default configuration
+    #[must_use] 
     pub fn default_config() -> Self {
         Self::new(StreamingConfig::default())
     }
@@ -210,7 +214,7 @@ impl StreamingParser {
         self.parse_reader(reader, total_bytes)
     }
 
-    /// Collect all events into a NormalizedSbom (for convenience)
+    /// Collect all events into a `NormalizedSbom` (for convenience)
     ///
     /// Note: This loads the entire SBOM into memory, negating the
     /// streaming benefits. Use the iterator directly for large files.
@@ -275,7 +279,7 @@ impl StreamingIterator {
         }
     }
 
-    /// Collect all events into a NormalizedSbom
+    /// Collect all events into a `NormalizedSbom`
     pub fn collect_sbom(&mut self) -> Result<NormalizedSbom, ParseError> {
         let mut metadata: Option<DocumentMetadata> = None;
         let mut components = Vec::new();

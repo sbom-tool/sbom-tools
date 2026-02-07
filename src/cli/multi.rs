@@ -13,6 +13,7 @@ use anyhow::{bail, Context, Result};
 use std::path::{Path, PathBuf};
 
 /// Run the diff-multi command (1:N comparison)
+#[allow(clippy::needless_pass_by_value)]
 pub fn run_diff_multi(
     baseline_path: PathBuf,
     target_paths: Vec<PathBuf>,
@@ -23,7 +24,7 @@ pub fn run_diff_multi(
 ) -> Result<()> {
     tracing::info!("Parsing baseline SBOM: {:?}", baseline_path);
     let baseline_sbom = parse_sbom(&baseline_path)
-        .with_context(|| format!("Failed to parse baseline SBOM: {baseline_path:?}"))?;
+        .with_context(|| format!("Failed to parse baseline SBOM: {}", baseline_path.display()))?;
 
     let target_sboms = parse_multiple_sboms(&target_paths)?;
 
@@ -72,6 +73,7 @@ pub fn run_diff_multi(
 }
 
 /// Run the timeline command
+#[allow(clippy::needless_pass_by_value)]
 pub fn run_timeline(
     sbom_paths: Vec<PathBuf>,
     output: ReportFormat,
@@ -114,6 +116,7 @@ pub fn run_timeline(
 }
 
 /// Run the matrix command (N×N comparison)
+#[allow(clippy::needless_pass_by_value)]
 pub fn run_matrix(
     sbom_paths: Vec<PathBuf>,
     output: ReportFormat,
@@ -173,7 +176,7 @@ fn parse_multiple_sboms(paths: &[PathBuf]) -> Result<Vec<NormalizedSbom>> {
     let mut sboms = Vec::with_capacity(paths.len());
     for path in paths {
         tracing::info!("Parsing SBOM: {:?}", path);
-        let sbom = parse_sbom(path).with_context(|| format!("Failed to parse SBOM: {path:?}"))?;
+        let sbom = parse_sbom(path).with_context(|| format!("Failed to parse SBOM: {}", path.display()))?;
         sboms.push(sbom);
     }
     Ok(sboms)

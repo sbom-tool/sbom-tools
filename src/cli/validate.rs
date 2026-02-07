@@ -11,6 +11,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 
 /// Run the validate command
+#[allow(clippy::needless_pass_by_value)]
 pub fn run_validate(
     sbom_path: PathBuf,
     standard: String,
@@ -98,6 +99,7 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
 }
 
 /// Validate SBOM against NTIA minimum elements
+#[allow(clippy::unnecessary_wraps)]
 pub fn validate_ntia_elements(sbom: &NormalizedSbom) -> Result<()> {
     let mut issues = Vec::new();
 
@@ -172,6 +174,7 @@ struct FdaIssue {
 }
 
 /// Validate SBOM against FDA medical device requirements
+#[allow(clippy::unnecessary_wraps)]
 pub fn validate_fda_elements(sbom: &NormalizedSbom) -> Result<()> {
     let mut issues: Vec<FdaIssue> = Vec::new();
 

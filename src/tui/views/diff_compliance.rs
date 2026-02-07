@@ -18,7 +18,7 @@ use crate::tui::shared::compliance as shared_compliance;
 use crate::tui::theme::colors;
 
 /// Get the count of violations shown in the current view mode (for navigation bounds).
-pub(crate) fn diff_compliance_violation_count(app: &App) -> usize {
+pub fn diff_compliance_violation_count(app: &App) -> usize {
     let idx = app.tabs.diff_compliance.selected_standard;
     let Some(old_results) = app.data.old_compliance_results.as_ref() else {
         return 0;
@@ -42,7 +42,7 @@ pub(crate) fn diff_compliance_violation_count(app: &App) -> usize {
 }
 
 /// Main render function for the diff compliance tab.
-pub(crate) fn render_diff_compliance(frame: &mut Frame, area: Rect, app: &mut App) {
+pub fn render_diff_compliance(frame: &mut Frame, area: Rect, app: &mut App) {
     app.ensure_compliance_results();
 
     let old_empty = app.data.old_compliance_results.as_ref().is_none_or(std::vec::Vec::is_empty);
@@ -320,12 +320,10 @@ fn render_overview(frame: &mut Frame, area: Rect, old: &ComplianceResult, new: &
     } else {
         format!("{error_delta}")
     };
-    let delta_color = if error_delta > 0 {
-        colors().error
-    } else if error_delta < 0 {
-        colors().success
-    } else {
-        colors().text_muted
+    let delta_color = match error_delta.cmp(&0) {
+        std::cmp::Ordering::Greater => colors().error,
+        std::cmp::Ordering::Less => colors().success,
+        std::cmp::Ordering::Equal => colors().text_muted,
     };
 
     lines.push(Line::from(vec![

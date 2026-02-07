@@ -23,6 +23,7 @@ impl OutputTarget {
     }
 
     /// Check if output is to a terminal
+    #[must_use] 
     pub fn is_terminal(&self) -> bool {
         matches!(self, Self::Stdout) && std::io::stdout().is_terminal()
     }
@@ -32,6 +33,7 @@ impl OutputTarget {
 ///
 /// Returns TUI for interactive terminals (stdout to TTY),
 /// otherwise returns Summary for non-interactive contexts.
+#[must_use] 
 pub fn auto_detect_format(format: ReportFormat, target: &OutputTarget) -> ReportFormat {
     match format {
         ReportFormat::Auto => {
@@ -46,6 +48,7 @@ pub fn auto_detect_format(format: ReportFormat, target: &OutputTarget) -> Report
 }
 
 /// Determine if color should be used based on flags and environment
+#[must_use] 
 pub fn should_use_color(no_color_flag: bool) -> bool {
     !no_color_flag && std::env::var("NO_COLOR").is_err()
 }
@@ -59,7 +62,7 @@ pub fn write_output(content: &str, target: &OutputTarget, quiet: bool) -> Result
         }
         OutputTarget::File(path) => {
             std::fs::write(path, content)
-                .with_context(|| format!("Failed to write output to {path:?}"))?;
+                .with_context(|| format!("Failed to write output to {}", path.display()))?;
             if !quiet {
                 tracing::info!("Report written to {:?}", path);
             }

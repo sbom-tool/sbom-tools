@@ -1,4 +1,4 @@
-//! Mapper from OSV responses to internal VulnerabilityRef.
+//! Mapper from OSV responses to internal `VulnerabilityRef`.
 
 use super::response::{OsvAffected, OsvSeverity, OsvVulnerability};
 use crate::model::{
@@ -7,7 +7,7 @@ use crate::model::{
 };
 use chrono::{DateTime, Utc};
 
-/// Map an OSV vulnerability to our internal VulnerabilityRef.
+/// Map an OSV vulnerability to our internal `VulnerabilityRef`.
 pub fn map_osv_to_vulnerability_ref(osv: &OsvVulnerability) -> VulnerabilityRef {
     VulnerabilityRef {
         id: osv.id.clone(),
@@ -17,9 +17,9 @@ pub fn map_osv_to_vulnerability_ref(osv: &OsvVulnerability) -> VulnerabilityRef 
         affected_versions: extract_affected_versions(&osv.affected),
         remediation: extract_remediation(&osv.affected),
         description: osv.details.clone().or_else(|| osv.summary.clone()),
-        cwes: extract_cwes(&osv.database_specific),
-        published: parse_datetime(&osv.published),
-        modified: parse_datetime(&osv.modified),
+        cwes: extract_cwes(osv.database_specific.as_ref()),
+        published: parse_datetime(osv.published.as_ref()),
+        modified: parse_datetime(osv.modified.as_ref()),
         is_kev: false,  // Will be enriched by KEV client
         kev_info: None,
     }
@@ -139,8 +139,8 @@ fn extract_remediation(affected: &[OsvAffected]) -> Option<Remediation> {
     None
 }
 
-/// Extract CWE identifiers from database_specific.
-fn extract_cwes(database_specific: &Option<serde_json::Value>) -> Vec<String> {
+/// Extract CWE identifiers from `database_specific`.
+fn extract_cwes(database_specific: Option<&serde_json::Value>) -> Vec<String> {
     let mut cwes = Vec::new();
 
     if let Some(db_specific) = database_specific {
@@ -166,9 +166,9 @@ fn extract_cwes(database_specific: &Option<serde_json::Value>) -> Vec<String> {
     cwes
 }
 
-/// Parse a datetime string to DateTime<Utc>.
-fn parse_datetime(dt_str: &Option<String>) -> Option<DateTime<Utc>> {
-    dt_str.as_ref().and_then(|s| {
+/// Parse a datetime string to `DateTime`<Utc>.
+fn parse_datetime(dt_str: Option<&String>) -> Option<DateTime<Utc>> {
+    dt_str.map(String::as_str).and_then(|s| {
         // OSV uses RFC 3339 format
         DateTime::parse_from_rfc3339(s)
             .map(|dt| dt.with_timezone(&Utc))

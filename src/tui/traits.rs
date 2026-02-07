@@ -77,7 +77,8 @@ impl EventResult {
     }
 
     /// Create a navigation result
-    pub fn navigate(target: TabTarget) -> Self {
+    #[must_use] 
+    pub const fn navigate(target: TabTarget) -> Self {
         Self::NavigateTo(target)
     }
 }
@@ -102,8 +103,9 @@ pub enum TabTarget {
 }
 
 impl TabTarget {
-    /// Convert to TabKind if this is a simple tab navigation
-    pub fn to_tab_kind(&self) -> Option<super::app::TabKind> {
+    /// Convert to `TabKind` if this is a simple tab navigation
+    #[must_use] 
+    pub const fn to_tab_kind(&self) -> Option<super::app::TabKind> {
         match self {
             Self::Summary => Some(super::app::TabKind::Summary),
             Self::Components | Self::ComponentByName(_) => Some(super::app::TabKind::Components),
@@ -118,8 +120,9 @@ impl TabTarget {
         }
     }
 
-    /// Convert from TabKind
-    pub fn from_tab_kind(kind: super::app::TabKind) -> Self {
+    /// Convert from `TabKind`
+    #[must_use] 
+    pub const fn from_tab_kind(kind: super::app::TabKind) -> Self {
         match kind {
             super::app::TabKind::Summary => Self::Summary,
             super::app::TabKind::Components => Self::Components,
@@ -192,7 +195,7 @@ pub struct ViewContext<'a> {
     pub status_message: &'a mut Option<String>,
 }
 
-impl<'a> ViewContext<'a> {
+impl ViewContext<'_> {
     /// Set a status message
     pub fn set_status(&mut self, msg: impl Into<String>) {
         *self.status_message = Some(msg.into());
@@ -220,8 +223,9 @@ pub enum ViewMode {
 }
 
 impl ViewMode {
-    /// Convert from the legacy AppMode enum
-    pub fn from_app_mode(mode: super::app::AppMode) -> Self {
+    /// Convert from the legacy `AppMode` enum
+    #[must_use] 
+    pub const fn from_app_mode(mode: super::app::AppMode) -> Self {
         match mode {
             super::app::AppMode::Diff => Self::Diff,
             super::app::AppMode::View => Self::View,
@@ -249,7 +253,7 @@ impl ViewMode {
 ///
 /// Views own their state and should be self-contained. The only
 /// shared state comes through `ViewContext`, which provides:
-/// - Current mode (Diff, View, MultiDiff, etc.)
+/// - Current mode (Diff, View, `MultiDiff`, etc.)
 /// - Terminal dimensions
 /// - Animation tick
 ///
@@ -405,7 +409,7 @@ pub trait ListViewState: ViewState {
     }
 }
 
-/// Display formatting for EventResult (for debugging)
+/// Display formatting for `EventResult` (for debugging)
 impl fmt::Display for EventResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

@@ -12,7 +12,7 @@ pub enum QualityViewMode {
 }
 
 impl QualityViewMode {
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::Summary => "Summary",
             Self::Breakdown => "Score Breakdown",
@@ -30,7 +30,7 @@ pub struct QualityState {
 }
 
 impl QualityState {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             view_mode: QualityViewMode::Summary,
             selected_recommendation: 0,
@@ -39,7 +39,7 @@ impl QualityState {
         }
     }
 
-    pub fn with_recommendations(total: usize) -> Self {
+    pub const fn with_recommendations(total: usize) -> Self {
         Self {
             view_mode: QualityViewMode::Summary,
             selected_recommendation: 0,
@@ -48,7 +48,7 @@ impl QualityState {
         }
     }
 
-    pub fn toggle_view(&mut self) {
+    pub const fn toggle_view(&mut self) {
         self.view_mode = match self.view_mode {
             QualityViewMode::Summary => QualityViewMode::Breakdown,
             QualityViewMode::Breakdown => QualityViewMode::Metrics,
@@ -59,11 +59,11 @@ impl QualityState {
         self.scroll_offset = 0;
     }
 
-    pub fn scroll_down(&mut self) {
+    pub const fn scroll_down(&mut self) {
         self.scroll_offset = self.scroll_offset.saturating_add(1);
     }
 
-    pub fn scroll_up(&mut self) {
+    pub const fn scroll_up(&mut self) {
         self.scroll_offset = self.scroll_offset.saturating_sub(1);
     }
 }

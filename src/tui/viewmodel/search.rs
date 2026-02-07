@@ -45,7 +45,8 @@ impl<R> Default for SearchState<R> {
 
 impl<R> SearchState<R> {
     /// Create a new empty search state.
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             active: false,
             query: String::new(),
@@ -63,7 +64,7 @@ impl<R> SearchState<R> {
     }
 
     /// Stop search mode.
-    pub fn stop(&mut self) {
+    pub const fn stop(&mut self) {
         self.active = false;
     }
 
@@ -85,11 +86,13 @@ impl<R> SearchState<R> {
     }
 
     /// Check if the query is long enough to search.
+    #[must_use] 
     pub fn has_valid_query(&self) -> bool {
         self.query.len() >= 2
     }
 
     /// Get the lowercased query for case-insensitive matching.
+    #[must_use] 
     pub fn query_lower(&self) -> String {
         self.query.to_lowercase()
     }
@@ -101,6 +104,7 @@ impl<R> SearchState<R> {
     }
 
     /// Get the currently selected result.
+    #[must_use] 
     pub fn selected_result(&self) -> Option<&R> {
         self.results.get(self.selected)
     }
@@ -113,18 +117,20 @@ impl<R> SearchState<R> {
     }
 
     /// Select the previous result.
-    pub fn select_prev(&mut self) {
+    pub const fn select_prev(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
         }
     }
 
     /// Check if there are any results.
+    #[must_use] 
     pub fn has_results(&self) -> bool {
         !self.results.is_empty()
     }
 
     /// Get the result count.
+    #[must_use] 
     pub fn result_count(&self) -> usize {
         self.results.len()
     }
@@ -160,6 +166,7 @@ pub struct SearchStateCore {
 }
 
 impl SearchStateCore {
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
@@ -169,7 +176,7 @@ impl SearchStateCore {
         self.query.clear();
     }
 
-    pub fn stop(&mut self) {
+    pub const fn stop(&mut self) {
         self.active = false;
     }
 
@@ -181,10 +188,12 @@ impl SearchStateCore {
         self.query.pop();
     }
 
+    #[must_use] 
     pub fn has_valid_query(&self) -> bool {
         self.query.len() >= 2
     }
 
+    #[must_use] 
     pub fn query_lower(&self) -> String {
         self.query.to_lowercase()
     }

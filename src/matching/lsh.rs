@@ -1,13 +1,13 @@
 //! Locality-Sensitive Hashing (LSH) for approximate nearest neighbor search.
 //!
-//! This module provides MinHash LSH for efficient similarity search on large SBOMs
+//! This module provides `MinHash` LSH for efficient similarity search on large SBOMs
 //! (10,000+ components). It trades some accuracy for dramatic speed improvements
 //! by using hash-based approximate matching.
 //!
 //! # How it works
 //!
 //! 1. Each component name is converted to a set of character shingles (n-grams)
-//! 2. MinHash signatures are computed for each shingle set
+//! 2. `MinHash` signatures are computed for each shingle set
 //! 3. Signatures are divided into bands and hashed into buckets
 //! 4. Components in the same bucket are candidate matches
 //!
@@ -25,7 +25,7 @@ use std::hash::{Hash, Hasher};
 /// Configuration for LSH index.
 #[derive(Debug, Clone)]
 pub struct LshConfig {
-    /// Number of hash functions in the MinHash signature
+    /// Number of hash functions in the `MinHash` signature
     pub num_hashes: usize,
     /// Number of bands to divide the signature into
     pub num_bands: usize,
@@ -44,6 +44,7 @@ impl LshConfig {
     ///
     /// The number of bands and rows are chosen to maximize the probability
     /// of finding pairs with similarity >= threshold while minimizing false positives.
+    #[must_use] 
     pub fn for_threshold(threshold: f64) -> Self {
         // For threshold t, optimal parameters satisfy: t ≈ (1/b)^(1/r)
         // where b = bands, r = rows per band, and b × r = num_hashes
@@ -76,22 +77,26 @@ impl LshConfig {
     }
 
     /// Default config for balanced matching (~0.8 threshold).
+    #[must_use] 
     pub fn default_balanced() -> Self {
         Self::for_threshold(0.8)
     }
 
     /// Config for strict matching (~0.9 threshold).
+    #[must_use] 
     pub fn strict() -> Self {
         Self::for_threshold(0.9)
     }
 
     /// Config for permissive matching (~0.5 threshold).
+    #[must_use] 
     pub fn permissive() -> Self {
         Self::for_threshold(0.5)
     }
 
     /// Get rows per band (signature elements per band).
-    pub fn rows_per_band(&self) -> usize {
+    #[must_use] 
+    pub const fn rows_per_band(&self) -> usize {
         self.num_hashes / self.num_bands
     }
 }
@@ -102,7 +107,7 @@ impl Default for LshConfig {
     }
 }
 
-/// MinHash signature for a component.
+/// `MinHash` signature for a component.
 #[derive(Debug, Clone)]
 pub struct MinHashSignature {
     /// The hash values (one per hash function)
@@ -111,6 +116,7 @@ pub struct MinHashSignature {
 
 impl MinHashSignature {
     /// Compute the estimated Jaccard similarity between two signatures.
+    #[must_use] 
     pub fn estimated_similarity(&self, other: &Self) -> f64 {
         if self.values.len() != other.values.len() {
             return 0.0;
@@ -131,11 +137,11 @@ impl MinHashSignature {
 pub struct LshIndex {
     /// Configuration
     config: LshConfig,
-    /// MinHash signatures for each component
+    /// `MinHash` signatures for each component
     signatures: HashMap<CanonicalId, MinHashSignature>,
-    /// Band buckets: band_index -> bucket_hash -> component IDs
+    /// Band buckets: `band_index` -> `bucket_hash` -> component IDs
     buckets: Vec<HashMap<u64, Vec<CanonicalId>>>,
-    /// Hash coefficients for MinHash (a, b pairs for h(x) = (ax + b) mod p)
+    /// Hash coefficients for `MinHash` (a, b pairs for h(x) = (ax + b) mod p)
     hash_coeffs: Vec<(u64, u64)>,
     /// Large prime for hashing
     prime: u64,
@@ -143,6 +149,7 @@ pub struct LshIndex {
 
 impl LshIndex {
     /// Create a new LSH index with the given configuration.
+    #[must_use] 
     pub fn new(config: LshConfig) -> Self {
         use std::collections::hash_map::RandomState;
         use std::hash::BuildHasher;
@@ -169,11 +176,12 @@ impl LshIndex {
             signatures: HashMap::with_capacity(256),
             buckets,
             hash_coeffs,
-            prime: 0xFFFFFFFFFFFFFFC5, // Large prime close to 2^64
+            prime: 0xFFFF_FFFF_FFFF_FFC5, // Large prime close to 2^64
         }
     }
 
     /// Build an LSH index from an SBOM.
+    #[must_use] 
     pub fn build(sbom: &NormalizedSbom, config: LshConfig) -> Self {
         let mut index = Self::new(config);
 
@@ -203,6 +211,7 @@ impl LshIndex {
     ///
     /// Returns component IDs that are likely similar based on LSH buckets.
     /// These candidates should be verified with exact similarity computation.
+    #[must_use] 
     pub fn find_candidates(&self, component: &Component) -> Vec<CanonicalId> {
         let shingles = self.compute_shingles(component);
         let signature = self.compute_minhash(&shingles);
@@ -211,6 +220,7 @@ impl LshIndex {
     }
 
     /// Find candidates using a pre-computed signature.
+    #[must_use] 
     pub fn find_candidates_by_signature(&self, signature: &MinHashSignature) -> Vec<CanonicalId> {
         let mut candidates = HashSet::new();
         let rows_per_band = self.config.rows_per_band();
@@ -235,12 +245,14 @@ impl LshIndex {
         self.signatures.get(id).map_or_else(Vec::new, |signature| self.find_candidates_by_signature(signature))
     }
 
-    /// Get the MinHash signature for a component.
+    /// Get the `MinHash` signature for a component.
+    #[must_use] 
     pub fn get_signature(&self, id: &CanonicalId) -> Option<&MinHashSignature> {
         self.signatures.get(id)
     }
 
     /// Estimate similarity between two components in the index.
+    #[must_use] 
     pub fn estimate_similarity(&self, id_a: &CanonicalId, id_b: &CanonicalId) -> Option<f64> {
         let sig_a = self.signatures.get(id_a)?;
         let sig_b = self.signatures.get(id_b)?;
@@ -281,8 +293,8 @@ impl LshIndex {
 
     /// Compute character shingles (n-grams) from a component.
     ///
-    /// Uses ecosystem-aware normalization from ComponentIndex for consistent
-    /// shingling across PyPI, Cargo, npm, etc. Also adds optional ecosystem
+    /// Uses ecosystem-aware normalization from `ComponentIndex` for consistent
+    /// shingling across `PyPI`, Cargo, npm, etc. Also adds optional ecosystem
     /// and group tokens to improve candidate grouping.
     fn compute_shingles(&self, component: &Component) -> HashSet<u64> {
         // Get ecosystem for normalization
@@ -335,7 +347,7 @@ impl LshIndex {
         shingles
     }
 
-    /// Compute MinHash signature from shingles.
+    /// Compute `MinHash` signature from shingles.
     fn compute_minhash(&self, shingles: &HashSet<u64>) -> MinHashSignature {
         let mut min_hashes = vec![u64::MAX; self.config.num_hashes];
 

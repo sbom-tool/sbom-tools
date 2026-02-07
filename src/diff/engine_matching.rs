@@ -12,18 +12,18 @@ use std::collections::{HashMap, HashSet};
 
 use super::engine_config::LargeSbomConfig;
 
-/// Simple result of component matching (old_id -> Option<new_id>).
+/// Simple result of component matching (`old_id` -> Option<`new_id`>).
 pub type MatchResult = HashMap<CanonicalId, Option<CanonicalId>>;
 
 /// Rich result of component matching with score information.
 ///
 /// This struct provides both the match mappings and the scores for each matched pair,
-/// which is needed for reliable match_info population.
+/// which is needed for reliable `match_info` population.
 #[derive(Debug, Clone)]
 pub struct ComponentMatchResult {
-    /// Map from old_id -> Option<new_id>
+    /// Map from `old_id` -> Option<`new_id`>
     pub matches: MatchResult,
-    /// Score for each matched pair (old_id, new_id) -> score
+    /// Score for each matched pair (`old_id`, `new_id`) -> score
     pub pairs: HashMap<(CanonicalId, CanonicalId), f64>,
 }
 
@@ -113,10 +113,9 @@ pub fn match_components(
 
     // Apply assignment results
     for (old_id, new_id, score) in assignment {
-        if !used_new_ids.contains(&new_id) {
+        if used_new_ids.insert(new_id.clone()) {
             result.pairs.insert((old_id.clone(), new_id.clone()), score);
-            result.matches.insert(old_id, Some(new_id.clone()));
-            used_new_ids.insert(new_id);
+            result.matches.insert(old_id, Some(new_id));
         }
     }
 
@@ -130,7 +129,7 @@ pub fn match_components(
     result
 }
 
-/// Use BatchCandidateGenerator (LSH + cross-ecosystem) for large SBOMs.
+/// Use `BatchCandidateGenerator` (LSH + cross-ecosystem) for large SBOMs.
 fn match_with_batch_generator(
     old: &NormalizedSbom,
     new: &NormalizedSbom,
@@ -212,7 +211,7 @@ fn match_with_batch_generator(
     }
 }
 
-/// Use standard ComponentIndex for smaller SBOMs.
+/// Use standard `ComponentIndex` for smaller SBOMs.
 ///
 /// Also includes cross-ecosystem matching when enabled, with score penalty applied.
 fn match_with_component_index(

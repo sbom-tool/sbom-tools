@@ -22,7 +22,8 @@ pub struct CacheKey {
 
 impl CacheKey {
     /// Create a cache key from component data.
-    pub fn new(
+    #[must_use] 
+    pub const fn new(
         purl: Option<String>,
         name: String,
         ecosystem: Option<String>,
@@ -37,6 +38,7 @@ impl CacheKey {
     }
 
     /// Convert to a filesystem-safe filename using SHA256 hash.
+    #[must_use] 
     pub fn to_filename(&self) -> String {
         let mut hasher = Sha256::new();
         hasher.update(format!(
@@ -48,7 +50,8 @@ impl CacheKey {
     }
 
     /// Check if this key can be used for an OSV query.
-    pub fn is_queryable(&self) -> bool {
+    #[must_use] 
+    pub const fn is_queryable(&self) -> bool {
         // Need either a PURL or name + ecosystem + version
         self.purl.is_some() || (self.ecosystem.is_some() && self.version.is_some())
     }
@@ -75,6 +78,7 @@ impl FileCache {
     /// Get cached vulnerabilities for a key.
     ///
     /// Returns None if not cached or cache is expired.
+    #[must_use] 
     pub fn get(&self, key: &CacheKey) -> Option<Vec<VulnerabilityRef>> {
         let path = self.cache_dir.join(key.to_filename());
 
@@ -130,6 +134,7 @@ impl FileCache {
     }
 
     /// Get cache statistics.
+    #[must_use] 
     pub fn stats(&self) -> CacheStats {
         let mut stats = CacheStats::default();
 

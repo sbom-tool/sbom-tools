@@ -14,13 +14,14 @@ pub struct MarkdownReporter {
 
 impl MarkdownReporter {
     /// Create a new Markdown reporter
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self { include_toc: true }
     }
 
     /// Set whether to include table of contents
     #[must_use]
-    pub fn include_toc(mut self, include: bool) -> Self {
+    pub const fn include_toc(mut self, include: bool) -> Self {
         self.include_toc = include;
         self
     }

@@ -82,7 +82,7 @@ impl TimelineState {
     }
 
     /// Update total components count (call this when rendering timeline)
-    pub fn set_total_components(&mut self, count: usize) {
+    pub const fn set_total_components(&mut self, count: usize) {
         self.total_components = count;
         // Clamp selection if it's now out of bounds
         if self.total_components > 0 && self.selected_component >= self.total_components {
@@ -90,7 +90,7 @@ impl TimelineState {
         }
     }
 
-    pub fn select_next(&mut self) {
+    pub const fn select_next(&mut self) {
         match self.active_panel {
             TimelinePanel::Versions => {
                 if self.total_versions > 0 && self.selected_version < self.total_versions - 1 {
@@ -106,7 +106,7 @@ impl TimelineState {
         }
     }
 
-    pub fn select_prev(&mut self) {
+    pub const fn select_prev(&mut self) {
         match self.active_panel {
             TimelinePanel::Versions => {
                 if self.selected_version > 0 {
@@ -121,26 +121,26 @@ impl TimelineState {
         }
     }
 
-    pub fn toggle_panel(&mut self) {
+    pub const fn toggle_panel(&mut self) {
         self.active_panel = match self.active_panel {
             TimelinePanel::Versions => TimelinePanel::Components,
             TimelinePanel::Components => TimelinePanel::Versions,
         };
     }
 
-    pub fn toggle_sort(&mut self) {
+    pub const fn toggle_sort(&mut self) {
         self.sort_by = self.sort_by.next();
     }
 
-    pub fn toggle_sort_direction(&mut self) {
+    pub const fn toggle_sort_direction(&mut self) {
         self.sort_direction.toggle();
     }
 
-    pub fn toggle_component_filter(&mut self) {
+    pub const fn toggle_component_filter(&mut self) {
         self.component_filter = self.component_filter.next();
     }
 
-    pub fn toggle_version_diff_modal(&mut self) {
+    pub const fn toggle_version_diff_modal(&mut self) {
         self.show_version_diff_modal = !self.show_version_diff_modal;
         if self.show_version_diff_modal {
             // Default to comparing with previous version
@@ -154,26 +154,26 @@ impl TimelineState {
         }
     }
 
-    pub fn close_version_diff_modal(&mut self) {
+    pub const fn close_version_diff_modal(&mut self) {
         self.show_version_diff_modal = false;
         self.compare_version = None;
     }
 
-    pub fn set_compare_version(&mut self, version: usize) {
+    pub const fn set_compare_version(&mut self, version: usize) {
         if version < self.total_versions && version != self.selected_version {
             self.compare_version = Some(version);
         }
     }
 
-    pub fn toggle_statistics(&mut self) {
+    pub const fn toggle_statistics(&mut self) {
         self.show_statistics = !self.show_statistics;
     }
 
-    pub fn toggle_component_history(&mut self) {
+    pub const fn toggle_component_history(&mut self) {
         self.show_component_history = !self.show_component_history;
     }
 
-    pub fn close_component_history(&mut self) {
+    pub const fn close_component_history(&mut self) {
         self.show_component_history = false;
     }
 
@@ -209,30 +209,30 @@ impl TimelineState {
         self.jump_input.pop();
     }
 
-    pub fn zoom_in(&mut self) {
+    pub const fn zoom_in(&mut self) {
         if self.chart_zoom < 5 {
             self.chart_zoom += 1;
         }
     }
 
-    pub fn zoom_out(&mut self) {
+    pub const fn zoom_out(&mut self) {
         if self.chart_zoom > 1 {
             self.chart_zoom -= 1;
         }
     }
 
-    pub fn scroll_chart_left(&mut self) {
+    pub const fn scroll_chart_left(&mut self) {
         self.chart_scroll = self.chart_scroll.saturating_sub(1);
     }
 
-    pub fn scroll_chart_right(&mut self) {
+    pub const fn scroll_chart_right(&mut self) {
         if self.chart_scroll < self.total_versions.saturating_sub(1) {
             self.chart_scroll += 1;
         }
     }
 
     /// Check if any modal/overlay is open
-    pub fn has_overlay(&self) -> bool {
+    pub const fn has_overlay(&self) -> bool {
         self.show_version_diff_modal
             || self.show_component_history
             || self.search.active
@@ -257,7 +257,7 @@ pub enum TimelineSortBy {
 }
 
 impl TimelineSortBy {
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::Chronological => "Chronological",
             Self::Changes => "Changes",
@@ -266,7 +266,7 @@ impl TimelineSortBy {
         }
     }
 
-    pub fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::Chronological => Self::Changes,
             Self::Changes => Self::ComponentCount,
@@ -288,7 +288,7 @@ pub enum TimelineComponentFilter {
 }
 
 impl TimelineComponentFilter {
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::All => "All",
             Self::Added => "Added",
@@ -298,7 +298,7 @@ impl TimelineComponentFilter {
         }
     }
 
-    pub fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::All => Self::Added,
             Self::Added => Self::Removed,

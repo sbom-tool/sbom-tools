@@ -24,7 +24,7 @@ impl std::fmt::Display for SbomFormat {
 pub struct DocumentMetadata {
     /// SBOM format type
     pub format: SbomFormat,
-    /// Format version (e.g., "1.5" for CycloneDX)
+    /// Format version (e.g., "1.5" for `CycloneDX`)
     pub format_version: String,
     /// Specification version
     pub spec_version: String,
@@ -93,7 +93,8 @@ pub struct Organization {
 
 impl Organization {
     /// Create a new organization with just a name
-    pub fn new(name: String) -> Self {
+    #[must_use] 
+    pub const fn new(name: String) -> Self {
         Self {
             name,
             urls: Vec::new(),
@@ -166,7 +167,8 @@ pub struct Hash {
 
 impl Hash {
     /// Create a new hash
-    pub fn new(algorithm: HashAlgorithm, value: String) -> Self {
+    #[must_use] 
+    pub const fn new(algorithm: HashAlgorithm, value: String) -> Self {
         Self { algorithm, value }
     }
 }
@@ -406,7 +408,7 @@ pub struct FormatExtensions {
 /// Component-level extensions
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ComponentExtensions {
-    /// Properties from CycloneDX
+    /// Properties from `CycloneDX`
     pub properties: Vec<Property>,
     /// Annotations from SPDX
     pub annotations: Vec<Annotation>,

@@ -32,7 +32,8 @@ pub enum ScoringProfile {
 
 impl ScoringProfile {
     /// Get the compliance level associated with this profile
-    pub fn compliance_level(&self) -> ComplianceLevel {
+    #[must_use] 
+    pub const fn compliance_level(&self) -> ComplianceLevel {
         match self {
             Self::Minimal => ComplianceLevel::Minimum,
             Self::Standard | Self::LicenseCompliance => ComplianceLevel::Standard,
@@ -43,7 +44,7 @@ impl ScoringProfile {
     }
 
     /// Get weights for this profile
-    fn weights(self) -> ScoringWeights {
+    const fn weights(self) -> ScoringWeights {
         match self {
             Self::Minimal => ScoringWeights {
                 completeness: 0.5,
@@ -119,7 +120,8 @@ pub enum QualityGrade {
 
 impl QualityGrade {
     /// Create grade from score
-    pub fn from_score(score: f32) -> Self {
+    #[must_use] 
+    pub const fn from_score(score: f32) -> Self {
         match score as u32 {
             90..=100 => Self::A,
             80..=89 => Self::B,
@@ -130,7 +132,8 @@ impl QualityGrade {
     }
 
     /// Get grade letter
-    pub fn letter(&self) -> &'static str {
+    #[must_use] 
+    pub const fn letter(&self) -> &'static str {
         match self {
             Self::A => "A",
             Self::B => "B",
@@ -141,7 +144,8 @@ impl QualityGrade {
     }
 
     /// Get grade description
-    pub fn description(&self) -> &'static str {
+    #[must_use] 
+    pub const fn description(&self) -> &'static str {
         match self {
             Self::A => "Excellent",
             Self::B => "Good",
@@ -180,7 +184,8 @@ pub enum RecommendationCategory {
 }
 
 impl RecommendationCategory {
-    pub fn name(&self) -> &'static str {
+    #[must_use] 
+    pub const fn name(&self) -> &'static str {
         match self {
             Self::Completeness => "Completeness",
             Self::Identifiers => "Identifiers",
@@ -239,6 +244,7 @@ pub struct QualityScorer {
 
 impl QualityScorer {
     /// Create a new quality scorer with the given profile
+    #[must_use] 
     pub fn new(profile: ScoringProfile) -> Self {
         Self {
             profile,
@@ -248,7 +254,7 @@ impl QualityScorer {
 
     /// Set custom completeness weights
     #[must_use]
-    pub fn with_completeness_weights(mut self, weights: CompletenessWeights) -> Self {
+    pub const fn with_completeness_weights(mut self, weights: CompletenessWeights) -> Self {
         self.completeness_weights = weights;
         self
     }

@@ -30,6 +30,7 @@ pub struct AnalystReport {
 
 impl AnalystReport {
     /// Create a new empty analyst report
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             metadata: AnalystReportMetadata::default(),
@@ -49,6 +50,7 @@ impl AnalystReport {
     }
 
     /// Export report to Markdown format
+    #[must_use] 
     pub fn to_markdown(&self) -> String {
         // Estimate capacity: ~200 bytes per section, plus variable content
         let estimated_size = 2000
@@ -353,7 +355,8 @@ pub enum RiskLevel {
 
 impl RiskLevel {
     /// Calculate from risk score
-    pub fn from_score(score: u8) -> Self {
+    #[must_use] 
+    pub const fn from_score(score: u8) -> Self {
         match score {
             0..=25 => Self::Low,
             26..=50 => Self::Medium,
@@ -363,7 +366,8 @@ impl RiskLevel {
     }
 
     /// Get display label
-    pub fn label(&self) -> &'static str {
+    #[must_use] 
+    pub const fn label(&self) -> &'static str {
         match self {
             Self::Low => "Low",
             Self::Medium => "Medium",
@@ -398,6 +402,7 @@ pub struct VulnerabilityFindings {
 
 impl VulnerabilityFindings {
     /// Get all findings in priority order
+    #[must_use] 
     pub fn all_findings(&self) -> Vec<&VulnFinding> {
         let capacity = self.kev_vulnerabilities.len()
             + self.critical_vulnerabilities.len()
@@ -449,6 +454,7 @@ pub struct VulnFinding {
 
 impl VulnFinding {
     /// Create a new vulnerability finding
+    #[must_use] 
     pub fn new(id: String, component_name: String) -> Self {
         Self {
             id,
@@ -631,6 +637,7 @@ pub struct AnalystNote {
 
 impl AnalystNote {
     /// Create a new analyst note
+    #[must_use] 
     pub fn new(target_type: NoteTargetType, note: String) -> Self {
         Self {
             target_type,
@@ -644,6 +651,7 @@ impl AnalystNote {
     }
 
     /// Create a note for a vulnerability
+    #[must_use] 
     pub fn for_vulnerability(vuln_id: String, note: String) -> Self {
         Self {
             target_type: NoteTargetType::Vulnerability,
@@ -657,6 +665,7 @@ impl AnalystNote {
     }
 
     /// Create a note for a component
+    #[must_use] 
     pub fn for_component(component_name: String, note: String) -> Self {
         Self {
             target_type: NoteTargetType::Component,
@@ -671,7 +680,7 @@ impl AnalystNote {
 
     /// Mark as false positive
     #[must_use]
-    pub fn mark_false_positive(mut self) -> Self {
+    pub const fn mark_false_positive(mut self) -> Self {
         self.false_positive = true;
         self
     }
@@ -720,7 +729,8 @@ pub struct Recommendation {
 
 impl Recommendation {
     /// Create a new recommendation
-    pub fn new(
+    #[must_use] 
+    pub const fn new(
         priority: RecommendationPriority,
         category: RecommendationCategory,
         title: String,

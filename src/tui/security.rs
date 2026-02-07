@@ -6,7 +6,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 /// Component compliance data: (name, version, licenses, vulns\[(id, severity)\]).
-pub(crate) type ComplianceComponentData = (String, Option<String>, Vec<String>, Vec<(String, String)>);
+pub type ComplianceComponentData = (String, Option<String>, Vec<String>, Vec<(String, String)>);
 
 /// Blast radius analysis result for a component
 #[derive(Debug, Clone, Default)]
@@ -92,7 +92,7 @@ impl LicenseRisk {
         }
     }
 
-    pub(crate) fn as_str(self) -> &'static str {
+    pub(crate) const fn as_str(self) -> &'static str {
         match self {
             Self::None => "Unknown",
             Self::Low => "Permissive",
@@ -191,7 +191,7 @@ impl SecurityAnalysisCache {
 // ============================================================================
 
 /// Convert severity string to numeric rank for sorting
-pub(crate) fn severity_to_rank(severity: &str) -> u8 {
+pub fn severity_to_rank(severity: &str) -> u8 {
     let s = severity.to_lowercase();
     if s.contains("critical") {
         4
@@ -199,17 +199,15 @@ pub(crate) fn severity_to_rank(severity: &str) -> u8 {
         3
     } else if s.contains("medium") || s.contains("moderate") {
         2
-    } else if s.contains("low") {
-        1
     } else {
-        0 // Unknown/None
+        u8::from(s.contains("low"))
     }
 }
 
 /// Calculate fix urgency score (0-100) based on severity and blast radius
-pub(crate) fn calculate_fix_urgency(severity_rank: u8, blast_radius: usize, cvss_score: f32) -> u8 {
+pub fn calculate_fix_urgency(severity_rank: u8, blast_radius: usize, cvss_score: f32) -> u8 {
     // Base score from severity (0-40)
-    let severity_score = (severity_rank as u32) * 10;
+    let severity_score = u32::from(severity_rank) * 10;
 
     // CVSS contribution (0-30)
     let cvss_contribution = (cvss_score * 3.0) as u32;
@@ -231,7 +229,7 @@ pub(crate) fn calculate_fix_urgency(severity_rank: u8, blast_radius: usize, cvss
 
 /// Result of version comparison for downgrade detection
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum VersionChange {
+pub enum VersionChange {
     /// Version increased (normal upgrade)
     Upgrade,
     /// Version decreased (potential attack)
@@ -243,7 +241,7 @@ pub(crate) enum VersionChange {
 }
 
 /// Detect if a version change is a downgrade (potential supply chain attack)
-pub(crate) fn detect_version_downgrade(old_version: &str, new_version: &str) -> VersionChange {
+pub fn detect_version_downgrade(old_version: &str, new_version: &str) -> VersionChange {
     if old_version == new_version {
         return VersionChange::NoChange;
     }
@@ -271,12 +269,10 @@ pub(crate) fn detect_version_downgrade(old_version: &str, new_version: &str) -> 
     }
 
     // Fallback: lexicographic comparison (less reliable)
-    if new_version < old_version {
-        VersionChange::Downgrade
-    } else if new_version > old_version {
-        VersionChange::Upgrade
-    } else {
-        VersionChange::Unknown
+    match new_version.cmp(old_version) {
+        std::cmp::Ordering::Less => VersionChange::Downgrade,
+        std::cmp::Ordering::Greater => VersionChange::Upgrade,
+        std::cmp::Ordering::Equal => VersionChange::Unknown,
     }
 }
 
@@ -302,7 +298,7 @@ fn parse_version_parts(version: &str) -> Option<Vec<u32>> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum DowngradeSeverity {
+pub enum DowngradeSeverity {
     /// Minor version downgrade (e.g., 1.2.3 -> 1.2.2)
     Minor,
     /// Major version downgrade (e.g., 2.0.0 -> 1.9.0)
@@ -312,7 +308,7 @@ pub(crate) enum DowngradeSeverity {
 }
 
 /// Analyze a version change for downgrade severity
-pub(crate) fn analyze_downgrade(old_version: &str, new_version: &str) -> Option<DowngradeSeverity> {
+pub fn analyze_downgrade(old_version: &str, new_version: &str) -> Option<DowngradeSeverity> {
     if detect_version_downgrade(old_version, new_version) != VersionChange::Downgrade {
         return None;
     }
@@ -351,7 +347,7 @@ fn sanitize_vuln_id(id: &str) -> String {
 }
 
 /// Format a CVE ID as a URL for opening in browser
-pub(crate) fn cve_url(cve_id: &str) -> String {
+pub fn cve_url(cve_id: &str) -> String {
     let safe_id = sanitize_vuln_id(cve_id);
     if safe_id.to_uppercase().starts_with("CVE-") {
         format!("https://nvd.nist.gov/vuln/detail/{}", safe_id.to_uppercase())
@@ -383,7 +379,7 @@ fn is_safe_url(url: &str) -> bool {
 }
 
 /// Open a URL in the default browser
-pub(crate) fn open_in_browser(url: &str) -> Result<(), String> {
+pub fn open_in_browser(url: &str) -> Result<(), String> {
     if !is_safe_url(url) {
         return Err("URL contains unsafe characters".to_string());
     }
@@ -420,7 +416,7 @@ pub(crate) fn open_in_browser(url: &str) -> Result<(), String> {
 }
 
 /// Copy text to system clipboard
-pub(crate) fn copy_to_clipboard(text: &str) -> Result<(), String> {
+pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
         use std::io::Write;
@@ -495,7 +491,7 @@ pub(crate) fn copy_to_clipboard(text: &str) -> Result<(), String> {
 
 /// An attack path from an entry point to a vulnerable component
 #[derive(Debug, Clone)]
-pub(crate) struct AttackPath {
+pub struct AttackPath {
     /// The path of component names from entry point to target
     pub path: Vec<String>,
     /// Path length (number of hops)
@@ -521,7 +517,7 @@ impl AttackPath {
 }
 
 /// Find attack paths from root components to a vulnerable component
-pub(crate) fn find_attack_paths(
+pub fn find_attack_paths(
     target: &str,
     forward_graph: &HashMap<String, Vec<String>>,
     root_components: &[String],
@@ -603,7 +599,7 @@ pub(crate) fn find_attack_paths(
 }
 
 /// Identify root components (components with no dependents)
-pub(crate) fn find_root_components(
+pub fn find_root_components(
     all_components: &[String],
     reverse_graph: &HashMap<String, Vec<String>>,
 ) -> Vec<String> {
@@ -624,7 +620,7 @@ pub(crate) fn find_root_components(
 
 /// A policy rule for compliance checking
 #[derive(Debug, Clone)]
-pub(crate) enum PolicyRule {
+pub enum PolicyRule {
     /// Ban specific licenses (e.g., GPL in proprietary projects)
     BannedLicense {
         pattern: String,
@@ -647,7 +643,7 @@ pub(crate) enum PolicyRule {
 }
 
 impl PolicyRule {
-    pub(crate) fn name(&self) -> &'static str {
+    pub(crate) const fn name(&self) -> &'static str {
         match self {
             Self::BannedLicense { .. } => "Banned License",
             Self::BannedComponent { .. } => "Banned Component",
@@ -656,7 +652,7 @@ impl PolicyRule {
         }
     }
 
-    pub(crate) fn severity(&self) -> PolicySeverity {
+    pub(crate) const fn severity(&self) -> PolicySeverity {
         match self {
             Self::BannedLicense { .. } | Self::MaxVulnerabilitySeverity { .. } => PolicySeverity::High,
             Self::BannedComponent { .. } => PolicySeverity::Critical,
@@ -692,7 +688,7 @@ pub struct PolicyViolation {
 
 /// Security policy configuration
 #[derive(Debug, Clone, Default)]
-pub(crate) struct SecurityPolicy {
+pub struct SecurityPolicy {
     /// Name of this policy
     pub name: String,
     /// Policy rules
@@ -796,7 +792,7 @@ impl ComplianceResult {
 }
 
 /// Check compliance of components against a policy
-pub(crate) fn check_compliance(
+pub fn check_compliance(
     policy: &SecurityPolicy,
     components: &[ComplianceComponentData],
 ) -> ComplianceResult {

@@ -22,7 +22,7 @@ fn matches_vuln_filter(vuln: &crate::diff::VulnerabilityDetail, filter: VulnFilt
 
 /// Determine which vulnerability categories (introduced, resolved, persistent)
 /// should be included for a given filter.
-fn vuln_category_includes(filter: VulnFilter) -> (bool, bool, bool) {
+const fn vuln_category_includes(filter: VulnFilter) -> (bool, bool, bool) {
     let introduced = matches!(
         filter,
         VulnFilter::All
@@ -89,6 +89,7 @@ impl App {
     }
 
     /// Build diff-mode components list in the same order as the table.
+    #[must_use] 
     pub fn diff_component_items(
         &self,
         filter: ComponentFilter,
@@ -113,7 +114,8 @@ impl App {
     }
 
     /// Count diff-mode components matching the filter (without building full list).
-    /// More efficient than diff_component_items().len() for just getting a count.
+    /// More efficient than `diff_component_items().len()` for just getting a count.
+    #[must_use] 
     pub fn diff_component_count(&self, filter: ComponentFilter) -> usize {
         let Some(diff) = self.data.diff_result.as_ref() else {
             return 0;
@@ -137,6 +139,7 @@ impl App {
     }
 
     /// Build view-mode components list in the same order as the table.
+    #[must_use] 
     pub fn view_component_items(&self) -> Vec<&crate::model::Component> {
         let Some(sbom) = self.data.sbom.as_ref() else {
             return Vec::new();
@@ -147,6 +150,7 @@ impl App {
     }
 
     /// Build diff-mode vulnerabilities list in the same order as the table.
+    #[must_use] 
     pub fn diff_vulnerability_items(&self) -> Vec<DiffVulnItem<'_>> {
         let Some(diff) = self.data.diff_result.as_ref() else {
             return Vec::new();
@@ -290,6 +294,7 @@ impl App {
     ///
     /// Panics if the cache has not been populated. Call `ensure_vulnerability_cache()`
     /// first.
+    #[must_use] 
     pub fn diff_vulnerability_items_from_cache(&self) -> Vec<DiffVulnItem<'_>> {
         let Some(diff) = self.data.diff_result.as_ref() else {
             return Vec::new();
@@ -313,7 +318,8 @@ impl App {
     }
 
     /// Count diff-mode vulnerabilities matching the current filter (without building full list).
-    /// More efficient than diff_vulnerability_items().len() for just getting a count.
+    /// More efficient than `diff_vulnerability_items().len()` for just getting a count.
+    #[must_use] 
     pub fn diff_vulnerability_count(&self) -> usize {
         let Some(diff) = self.data.diff_result.as_ref() else {
             return 0;
@@ -365,6 +371,7 @@ impl App {
     /// Get the sort key for a component in the new SBOM (diff mode).
     ///
     /// Returns pre-computed lowercase strings to avoid repeated allocations during sorting.
+    #[must_use] 
     pub fn get_new_sbom_sort_key(
         &self,
         id: &crate::model::CanonicalId,
@@ -373,6 +380,7 @@ impl App {
     }
 
     /// Get the sort key for a component in the old SBOM (diff mode).
+    #[must_use] 
     pub fn get_old_sbom_sort_key(
         &self,
         id: &crate::model::CanonicalId,
@@ -381,6 +389,7 @@ impl App {
     }
 
     /// Get the sort key for a component in the single SBOM (view mode).
+    #[must_use] 
     pub fn get_sbom_sort_key(
         &self,
         id: &crate::model::CanonicalId,
@@ -389,6 +398,7 @@ impl App {
     }
 
     /// Get dependencies of a component using the cached index (O(k) instead of O(edges)).
+    #[must_use] 
     pub fn get_dependencies_indexed(
         &self,
         id: &crate::model::CanonicalId,
@@ -403,6 +413,7 @@ impl App {
     }
 
     /// Get dependents of a component using the cached index (O(k) instead of O(edges)).
+    #[must_use] 
     pub fn get_dependents_indexed(
         &self,
         id: &crate::model::CanonicalId,

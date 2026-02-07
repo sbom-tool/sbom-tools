@@ -1,4 +1,4 @@
-//! Dependencies view for ViewApp.
+//! Dependencies view for `ViewApp`.
 
 use crate::tui::state::ListNavigation;
 use crate::tui::theme::colors;
@@ -355,7 +355,7 @@ fn flatten_node(
 fn render_dependency_stats(
     frame: &mut Frame,
     area: Rect,
-    app: &mut ViewApp,
+    app: &ViewApp,
     deps: &DependencyGraph,
 ) {
     let scheme = colors();
@@ -488,7 +488,7 @@ struct DependencyGraph {
     vuln_counts: HashMap<String, usize>,
 }
 
-fn build_dependency_graph(app: &mut ViewApp) -> DependencyGraph {
+fn build_dependency_graph(app: &ViewApp) -> DependencyGraph {
     let mut names: HashMap<String, String> = HashMap::new();
     let mut edges: HashMap<String, Vec<String>> = HashMap::new();
     let mut has_parent: HashSet<String> = HashSet::new();
@@ -531,8 +531,6 @@ fn build_dependency_graph(app: &mut ViewApp) -> DependencyGraph {
 }
 
 fn calculate_max_depth(deps: &DependencyGraph) -> usize {
-    let mut max_depth = 0;
-
     fn depth_of(node: &str, deps: &DependencyGraph, visited: &mut HashSet<String>) -> usize {
         if visited.contains(node) {
             return 0;
@@ -550,6 +548,8 @@ fn calculate_max_depth(deps: &DependencyGraph) -> usize {
         visited.remove(node);
         child_depth + 1
     }
+
+    let mut max_depth = 0;
 
     for root in &deps.roots {
         let d = depth_of(root, deps, &mut HashSet::new());

@@ -700,7 +700,7 @@ fn render_search_overlay(frame: &mut Frame, area: Rect, search_state: &DiffSearc
                     };
                     let sev_color = severity
                         .as_ref()
-                        .map_or(colors().text_muted, |s| colors().severity_color(s));
+                        .map_or_else(|| colors().text_muted, |s| colors().severity_color(s));
 
                     Line::from(vec![
                         Span::styled(prefix, Style::default().fg(colors().accent)),

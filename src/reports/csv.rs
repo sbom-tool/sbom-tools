@@ -12,7 +12,8 @@ use std::fmt::Write;
 pub struct CsvReporter;
 
 impl CsvReporter {
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self
     }
 }

@@ -50,7 +50,7 @@ pub struct EventHandler {
 
 impl EventHandler {
     /// Create a new event handler
-    pub fn new(tick_rate: u64) -> Self {
+    pub const fn new(tick_rate: u64) -> Self {
         Self {
             tick_rate: Duration::from_millis(tick_rate),
         }
@@ -217,10 +217,10 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
         match key.code {
             KeyCode::Esc => app.overlays.component_deep_dive.close(),
             KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') => {
-                app.overlays.component_deep_dive.next_section()
+                app.overlays.component_deep_dive.next_section();
             }
             KeyCode::BackTab | KeyCode::Left | KeyCode::Char('h') => {
-                app.overlays.component_deep_dive.prev_section()
+                app.overlays.component_deep_dive.prev_section();
             }
             _ => {}
         }
@@ -338,7 +338,7 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
         KeyCode::PageUp => app.page_up(),
         KeyCode::PageDown => app.page_down(),
         KeyCode::Home | KeyCode::Char('g') if !key.modifiers.contains(KeyModifiers::SHIFT) => {
-            app.select_first()
+            app.select_first();
         }
         KeyCode::End | KeyCode::Char('G') => app.select_last(),
         _ => {}
@@ -355,7 +355,7 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
         super::TabKind::GraphChanges => graph_changes::handle_graph_changes_keys(app, key),
         super::TabKind::SideBySide => sidebyside::handle_sidebyside_keys(app, key),
         super::TabKind::Source => source::handle_source_keys(app, key),
-        _ => {}
+        super::TabKind::Summary => {}
     }
 
     // Mode-specific key bindings for multi-diff, timeline, and matrix

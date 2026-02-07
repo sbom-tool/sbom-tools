@@ -36,7 +36,7 @@ pub struct OsvClient {
 }
 
 /// Helper to convert reqwest errors to enrichment errors
-fn network_error(msg: &str, err: reqwest::Error) -> SbomDiffError {
+fn network_error(msg: &str, err: &reqwest::Error) -> SbomDiffError {
     SbomDiffError::enrichment(msg, EnrichmentErrorKind::NetworkError(err.to_string()))
 }
 
@@ -56,7 +56,7 @@ impl OsvClient {
                 env!("CARGO_PKG_VERSION")
             ))
             .build()
-            .map_err(|e| network_error("Failed to create HTTP client", e))?;
+            .map_err(|e| network_error("Failed to create HTTP client", &e))?;
 
         Ok(Self { client, config })
     }
@@ -68,13 +68,13 @@ impl OsvClient {
             .client
             .get(&url)
             .send()
-            .map_err(|e| network_error("Health check request failed", e))?;
+            .map_err(|e| network_error("Health check request failed", &e))?;
         Ok(response.status().is_success() || response.status().as_u16() == 404)
     }
 
     /// Query vulnerabilities for a batch of packages.
     ///
-    /// Automatically handles chunking if queries exceed batch_size.
+    /// Automatically handles chunking if queries exceed `batch_size`.
     pub fn query_batch(&self, queries: &[OsvQuery]) -> Result<Vec<OsvBatchResponse>> {
         if queries.is_empty() {
             return Ok(vec![]);
@@ -130,7 +130,7 @@ impl OsvClient {
             .post(url)
             .json(request_body)
             .send()
-            .map_err(|e| network_error("Failed to send batch request", e))?;
+            .map_err(|e| network_error("Failed to send batch request", &e))?;
 
         let status = response.status();
         if !status.is_success() {
@@ -163,7 +163,7 @@ impl OsvClient {
             .client
             .get(&url)
             .send()
-            .map_err(|e| network_error("Failed to fetch vulnerability", e))?;
+            .map_err(|e| network_error("Failed to fetch vulnerability", &e))?;
 
         if response.status().as_u16() == 404 {
             return Ok(None);

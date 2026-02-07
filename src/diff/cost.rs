@@ -55,6 +55,7 @@ impl Default for CostModel {
 
 impl CostModel {
     /// Create a security-focused cost model
+    #[must_use] 
     pub fn security_focused() -> Self {
         Self {
             vulnerability_introduced: 25,
@@ -66,6 +67,7 @@ impl CostModel {
     }
 
     /// Create a compliance-focused cost model
+    #[must_use] 
     pub fn compliance_focused() -> Self {
         Self {
             license_changed: 12,
@@ -75,7 +77,8 @@ impl CostModel {
     }
 
     /// Get cost for version change based on semver
-    pub fn version_change_cost(
+    #[must_use] 
+    pub const fn version_change_cost(
         &self,
         old: &Option<semver::Version>,
         new: &Option<semver::Version>,
@@ -99,7 +102,8 @@ impl CostModel {
 
     /// Calculate total semantic score from change counts
     #[allow(clippy::too_many_arguments)]
-    pub fn calculate_semantic_score(
+    #[must_use] 
+    pub const fn calculate_semantic_score(
         &self,
         components_added: usize,
         components_removed: usize,

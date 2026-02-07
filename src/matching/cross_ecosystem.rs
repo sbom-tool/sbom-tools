@@ -5,8 +5,8 @@
 //!
 //! # Examples
 //!
-//! - `lodash` (npm) ↔ `lodash-py` (PyPI) - same library, different ecosystems
-//! - `requests` (PyPI) ↔ `reqwest` (Cargo) - similar purpose, common confusion
+//! - `lodash` (npm) ↔ `lodash-py` (`PyPI`) - same library, different ecosystems
+//! - `requests` (`PyPI`) ↔ `reqwest` (Cargo) - similar purpose, common confusion
 //! - `@types/node` (npm) ↔ `types-node` (npm) - naming variations
 //!
 //! # Use Cases
@@ -59,7 +59,7 @@ impl PackageFamily {
 
     /// Add multiple names for an ecosystem.
     #[must_use]
-    pub fn with_names(mut self, ecosystem: Ecosystem, names: &[&str]) -> Self {
+    pub fn with_names(mut self, ecosystem: &Ecosystem, names: &[&str]) -> Self {
         for name in names {
             self.ecosystem_names
                 .entry(ecosystem.clone())
@@ -78,7 +78,7 @@ impl PackageFamily {
 
     /// Mark as verified.
     #[must_use]
-    pub fn verified(mut self) -> Self {
+    pub const fn verified(mut self) -> Self {
         self.verified = true;
         self
     }
@@ -91,6 +91,7 @@ impl PackageFamily {
     }
 
     /// Check if this family contains a package name in a specific ecosystem.
+    #[must_use] 
     pub fn contains(&self, ecosystem: &Ecosystem, name: &str) -> bool {
         self.ecosystem_names
             .get(ecosystem)
@@ -108,6 +109,7 @@ impl PackageFamily {
     }
 
     /// Check if two packages (in different ecosystems) are equivalent.
+    #[must_use] 
     pub fn are_equivalent(
         &self,
         eco_a: &Ecosystem,
@@ -123,12 +125,13 @@ impl PackageFamily {
 pub struct CrossEcosystemDb {
     /// All package families
     families: Vec<PackageFamily>,
-    /// Index: (ecosystem, lowercase_name) -> family indices
+    /// Index: (ecosystem, `lowercase_name`) -> family indices
     name_index: HashMap<(Ecosystem, String), Vec<usize>>,
 }
 
 impl CrossEcosystemDb {
     /// Create a new empty database.
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             families: Vec::new(),
@@ -137,6 +140,7 @@ impl CrossEcosystemDb {
     }
 
     /// Create a database with built-in well-known mappings.
+    #[must_use] 
     pub fn with_builtin_mappings() -> Self {
         let mut db = Self::new();
         db.add_builtin_mappings();
@@ -161,6 +165,7 @@ impl CrossEcosystemDb {
     }
 
     /// Look up package families by name and ecosystem.
+    #[must_use] 
     pub fn lookup(&self, ecosystem: &Ecosystem, name: &str) -> Vec<&PackageFamily> {
         let key = (ecosystem.clone(), name.to_lowercase());
         self.name_index
@@ -170,6 +175,7 @@ impl CrossEcosystemDb {
     }
 
     /// Find equivalent packages in other ecosystems.
+    #[must_use] 
     pub fn find_equivalents(&self, ecosystem: &Ecosystem, name: &str) -> Vec<CrossEcosystemMatch> {
         let families = self.lookup(ecosystem, name);
         let mut matches = Vec::new();
@@ -195,6 +201,7 @@ impl CrossEcosystemDb {
     }
 
     /// Check if two packages in different ecosystems are equivalent.
+    #[must_use] 
     pub fn are_equivalent(
         &self,
         eco_a: &Ecosystem,
@@ -212,6 +219,7 @@ impl CrossEcosystemDb {
     }
 
     /// Get statistics about the database.
+    #[must_use] 
     pub fn stats(&self) -> CrossEcosystemDbStats {
         let total_families = self.families.len();
         let verified_families = self.families.iter().filter(|f| f.verified).count();
@@ -257,7 +265,7 @@ impl CrossEcosystemDb {
                 .with_description("JavaScript utility libraries and ports")
                 .with_category("utility")
                 .with_names(
-                    Ecosystem::Npm,
+                    &Ecosystem::Npm,
                     &["lodash", "lodash-es", "underscore", "ramda"],
                 )
                 .with_name(Ecosystem::PyPi, "pydash")
@@ -282,8 +290,8 @@ impl CrossEcosystemDb {
             PackageFamily::new("datetime-libs")
                 .with_description("Date and time manipulation")
                 .with_category("datetime")
-                .with_names(Ecosystem::Npm, &["moment", "dayjs", "date-fns", "luxon"])
-                .with_names(Ecosystem::PyPi, &["python-dateutil", "arrow", "pendulum"])
+                .with_names(&Ecosystem::Npm, &["moment", "dayjs", "date-fns", "luxon"])
+                .with_names(&Ecosystem::PyPi, &["python-dateutil", "arrow", "pendulum"])
                 .with_name(Ecosystem::Cargo, "chrono")
                 .with_name(Ecosystem::Cargo, "time")
                 .verified(),
@@ -294,8 +302,8 @@ impl CrossEcosystemDb {
             PackageFamily::new("async-runtime")
                 .with_description("Async runtime/executor libraries")
                 .with_category("async")
-                .with_names(Ecosystem::Cargo, &["tokio", "async-std", "smol"])
-                .with_names(Ecosystem::PyPi, &["asyncio", "trio", "curio"])
+                .with_names(&Ecosystem::Cargo, &["tokio", "async-std", "smol"])
+                .with_names(&Ecosystem::PyPi, &["asyncio", "trio", "curio"])
                 .with_name(Ecosystem::Npm, "async")
                 .verified(),
         );
@@ -305,9 +313,9 @@ impl CrossEcosystemDb {
             PackageFamily::new("cli-args")
                 .with_description("Command-line argument parsing")
                 .with_category("cli")
-                .with_names(Ecosystem::Cargo, &["clap", "structopt", "argh"])
-                .with_names(Ecosystem::PyPi, &["argparse", "click", "typer"])
-                .with_names(Ecosystem::Npm, &["commander", "yargs", "minimist"])
+                .with_names(&Ecosystem::Cargo, &["clap", "structopt", "argh"])
+                .with_names(&Ecosystem::PyPi, &["argparse", "click", "typer"])
+                .with_names(&Ecosystem::Npm, &["commander", "yargs", "minimist"])
                 .with_name(Ecosystem::Golang, "flag")
                 .with_name(Ecosystem::Golang, "cobra")
                 .verified(),
@@ -318,9 +326,9 @@ impl CrossEcosystemDb {
             PackageFamily::new("logging")
                 .with_description("Logging frameworks")
                 .with_category("logging")
-                .with_names(Ecosystem::Cargo, &["log", "tracing", "env_logger"])
-                .with_names(Ecosystem::PyPi, &["logging", "loguru", "structlog"])
-                .with_names(Ecosystem::Npm, &["winston", "pino", "bunyan"])
+                .with_names(&Ecosystem::Cargo, &["log", "tracing", "env_logger"])
+                .with_names(&Ecosystem::PyPi, &["logging", "loguru", "structlog"])
+                .with_names(&Ecosystem::Npm, &["winston", "pino", "bunyan"])
                 .with_name(Ecosystem::Golang, "log")
                 .with_name(Ecosystem::Golang, "zap")
                 .verified(),
@@ -331,8 +339,8 @@ impl CrossEcosystemDb {
             PackageFamily::new("testing")
                 .with_description("Testing frameworks")
                 .with_category("testing")
-                .with_names(Ecosystem::PyPi, &["pytest", "unittest", "nose2"])
-                .with_names(Ecosystem::Npm, &["jest", "mocha", "vitest", "ava"])
+                .with_names(&Ecosystem::PyPi, &["pytest", "unittest", "nose2"])
+                .with_names(&Ecosystem::Npm, &["jest", "mocha", "vitest", "ava"])
                 .with_name(Ecosystem::Cargo, "test") // built-in
                 .with_name(Ecosystem::Golang, "testing")
                 .verified(),
@@ -344,11 +352,11 @@ impl CrossEcosystemDb {
                 .with_description("Web application frameworks")
                 .with_category("web")
                 .with_names(
-                    Ecosystem::PyPi,
+                    &Ecosystem::PyPi,
                     &["flask", "django", "fastapi", "starlette"],
                 )
-                .with_names(Ecosystem::Npm, &["express", "fastify", "koa", "hapi"])
-                .with_names(Ecosystem::Cargo, &["actix-web", "axum", "rocket", "warp"])
+                .with_names(&Ecosystem::Npm, &["express", "fastify", "koa", "hapi"])
+                .with_names(&Ecosystem::Cargo, &["actix-web", "axum", "rocket", "warp"])
                 .with_name(Ecosystem::Golang, "net/http")
                 .with_name(Ecosystem::Golang, "gin")
                 .verified(),
@@ -359,9 +367,9 @@ impl CrossEcosystemDb {
             PackageFamily::new("orm-database")
                 .with_description("ORM and database access libraries")
                 .with_category("database")
-                .with_names(Ecosystem::PyPi, &["sqlalchemy", "peewee", "tortoise-orm"])
-                .with_names(Ecosystem::Npm, &["sequelize", "typeorm", "prisma", "knex"])
-                .with_names(Ecosystem::Cargo, &["diesel", "sqlx", "sea-orm"])
+                .with_names(&Ecosystem::PyPi, &["sqlalchemy", "peewee", "tortoise-orm"])
+                .with_names(&Ecosystem::Npm, &["sequelize", "typeorm", "prisma", "knex"])
+                .with_names(&Ecosystem::Cargo, &["diesel", "sqlx", "sea-orm"])
                 .with_name(Ecosystem::Golang, "gorm")
                 .verified(),
         );
@@ -372,11 +380,11 @@ impl CrossEcosystemDb {
                 .with_description("Cryptography libraries")
                 .with_category("crypto")
                 .with_names(
-                    Ecosystem::PyPi,
+                    &Ecosystem::PyPi,
                     &["cryptography", "pycryptodome", "pyopenssl"],
                 )
-                .with_names(Ecosystem::Npm, &["crypto-js", "node-forge", "bcrypt"])
-                .with_names(Ecosystem::Cargo, &["ring", "rustcrypto", "openssl"])
+                .with_names(&Ecosystem::Npm, &["crypto-js", "node-forge", "bcrypt"])
+                .with_names(&Ecosystem::Cargo, &["ring", "rustcrypto", "openssl"])
                 .with_name(Ecosystem::Golang, "crypto")
                 .verified(),
         );
@@ -386,8 +394,8 @@ impl CrossEcosystemDb {
             PackageFamily::new("yaml-libs")
                 .with_description("YAML parsing libraries")
                 .with_category("serialization")
-                .with_names(Ecosystem::PyPi, &["pyyaml", "ruamel.yaml"])
-                .with_names(Ecosystem::Npm, &["js-yaml", "yaml"])
+                .with_names(&Ecosystem::PyPi, &["pyyaml", "ruamel.yaml"])
+                .with_names(&Ecosystem::Npm, &["js-yaml", "yaml"])
                 .with_name(Ecosystem::Cargo, "serde_yaml")
                 .with_name(Ecosystem::Golang, "gopkg.in/yaml.v3")
                 .verified(),
@@ -410,9 +418,9 @@ impl CrossEcosystemDb {
             PackageFamily::new("markdown")
                 .with_description("Markdown parsing and rendering")
                 .with_category("text")
-                .with_names(Ecosystem::PyPi, &["markdown", "mistune", "commonmark"])
-                .with_names(Ecosystem::Npm, &["marked", "markdown-it", "remark"])
-                .with_names(Ecosystem::Cargo, &["pulldown-cmark", "comrak"])
+                .with_names(&Ecosystem::PyPi, &["markdown", "mistune", "commonmark"])
+                .with_names(&Ecosystem::Npm, &["marked", "markdown-it", "remark"])
+                .with_names(&Ecosystem::Cargo, &["pulldown-cmark", "comrak"])
                 .verified(),
         );
     }

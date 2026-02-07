@@ -5,8 +5,8 @@
 mod severity_badge;
 mod tree;
 
-pub(crate) use severity_badge::{SeverityBadge, SeverityBar};
-pub(crate) use tree::{detect_component_type, Tree, TreeNode, TreeState};
+pub use severity_badge::{SeverityBadge, SeverityBar};
+pub use tree::{detect_component_type, Tree, TreeNode, TreeState};
 
 use crate::tui::theme::colors;
 use ratatui::{
@@ -18,7 +18,7 @@ use ratatui::{
 
 
 /// Helper function to create a centered rectangle.
-pub(crate) fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -39,7 +39,7 @@ pub(crate) fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 }
 
 /// Truncate a string with ellipsis, using Unicode display width for accuracy.
-pub(crate) fn truncate_str(s: &str, max_width: usize) -> String {
+pub fn truncate_str(s: &str, max_width: usize) -> String {
     use unicode_width::UnicodeWidthChar;
     use unicode_width::UnicodeWidthStr;
 
@@ -76,7 +76,7 @@ pub(crate) fn truncate_str(s: &str, max_width: usize) -> String {
 }
 
 /// Format a count with appropriate suffix (K, M).
-pub(crate) fn format_count(count: usize) -> String {
+pub fn format_count(count: usize) -> String {
     if count >= 1_000_000 {
         format!("{:.1}M", count as f64 / 1_000_000.0)
     } else if count >= 1_000 {
@@ -89,7 +89,7 @@ pub(crate) fn format_count(count: usize) -> String {
 
 
 /// Render an enhanced empty state with icon and action hint.
-pub(crate) fn render_empty_state_enhanced(
+pub fn render_empty_state_enhanced(
     frame: &mut ratatui::Frame,
     area: Rect,
     icon: &str,
@@ -126,7 +126,7 @@ pub(crate) fn render_empty_state_enhanced(
 }
 
 /// Render a "no results" state specifically for filtered views.
-pub(crate) fn render_no_results_state(
+pub fn render_no_results_state(
     frame: &mut ratatui::Frame,
     area: Rect,
     filter_name: &str,
@@ -164,7 +164,7 @@ pub(crate) fn render_no_results_state(
 }
 
 /// Render a mode indicator badge for the header.
-pub(crate) fn render_mode_indicator(mode: &str) -> Span<'static> {
+pub fn render_mode_indicator(mode: &str) -> Span<'static> {
     let (label, color) = match mode.to_lowercase().as_str() {
         "diff" => ("DIFF", colors().modified),
         "view" => ("VIEW", colors().primary),
@@ -181,11 +181,11 @@ pub(crate) fn render_mode_indicator(mode: &str) -> Span<'static> {
 }
 
 /// Minimum terminal size requirements.
-pub(crate) const MIN_WIDTH: u16 = 80;
-pub(crate) const MIN_HEIGHT: u16 = 24;
+pub const MIN_WIDTH: u16 = 80;
+pub const MIN_HEIGHT: u16 = 24;
 
 /// Check if terminal meets minimum size requirements.
-pub(crate) fn check_terminal_size(width: u16, height: u16) -> Result<(), (u16, u16)> {
+pub const fn check_terminal_size(width: u16, height: u16) -> Result<(), (u16, u16)> {
     if width < MIN_WIDTH || height < MIN_HEIGHT {
         Err((MIN_WIDTH, MIN_HEIGHT))
     } else {
@@ -194,7 +194,7 @@ pub(crate) fn check_terminal_size(width: u16, height: u16) -> Result<(), (u16, u
 }
 
 /// Render a "terminal too small" message.
-pub(crate) fn render_size_warning(
+pub fn render_size_warning(
     frame: &mut ratatui::Frame,
     area: Rect,
     required_width: u16,

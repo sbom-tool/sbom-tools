@@ -88,6 +88,7 @@ impl CraSidecarMetadata {
 
     /// Try to find a sidecar file for the given SBOM path
     /// Looks for .cra.json or .cra.yaml files alongside the SBOM
+    #[must_use] 
     pub fn find_for_sbom(sbom_path: &Path) -> Option<Self> {
         let parent = sbom_path.parent()?;
         let stem = sbom_path.file_stem()?.to_str()?;
@@ -114,7 +115,8 @@ impl CraSidecarMetadata {
     }
 
     /// Check if any CRA-relevant fields are populated
-    pub fn has_cra_data(&self) -> bool {
+    #[must_use] 
+    pub const fn has_cra_data(&self) -> bool {
         self.security_contact.is_some()
             || self.vulnerability_disclosure_url.is_some()
             || self.support_end_date.is_some()
@@ -123,6 +125,7 @@ impl CraSidecarMetadata {
     }
 
     /// Generate an example sidecar file content
+    #[must_use] 
     pub fn example_json() -> String {
         let example = Self {
             security_contact: Some("security@example.com".to_string()),

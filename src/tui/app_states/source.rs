@@ -1,7 +1,7 @@
 //! Source tab state for viewing raw SBOM file content.
 //!
 //! Provides a JSON tree model and panel state for both single-SBOM
-//! viewing (ViewApp) and side-by-side diff viewing (App).
+//! viewing (`ViewApp`) and side-by-side diff viewing (App).
 
 use std::collections::HashSet;
 
@@ -117,7 +117,7 @@ impl JsonTreeNode {
         }
     }
 
-    pub fn is_expandable(&self) -> bool {
+    pub const fn is_expandable(&self) -> bool {
         matches!(
             self,
             Self::Object { .. } | Self::Array { .. }
@@ -174,7 +174,7 @@ fn count_tree_nodes(node: &JsonTreeNode) -> usize {
     count
 }
 
-/// State for a single source panel (used once in ViewApp, twice in diff App).
+/// State for a single source panel (used once in `ViewApp`, twice in diff App).
 #[derive(Debug, Clone)]
 pub struct SourcePanelState {
     /// Tree vs Raw view mode
@@ -269,7 +269,7 @@ impl SourcePanelState {
     }
 
     /// Invalidate the cached flat tree items (call after expand/collapse changes).
-    pub fn invalidate_flat_cache(&mut self) {
+    pub const fn invalidate_flat_cache(&mut self) {
         self.flat_cache_valid = false;
     }
 
@@ -287,7 +287,7 @@ impl SourcePanelState {
         self.flat_cache_valid = true;
     }
 
-    pub fn toggle_view_mode(&mut self) {
+    pub const fn toggle_view_mode(&mut self) {
         // Save current position
         match self.view_mode {
             SourceViewMode::Tree => {
@@ -357,11 +357,11 @@ impl SourcePanelState {
         }
     }
 
-    pub fn select_prev(&mut self) {
+    pub const fn select_prev(&mut self) {
         self.selected = self.selected.saturating_sub(1);
     }
 
-    pub fn select_first(&mut self) {
+    pub const fn select_first(&mut self) {
         self.selected = 0;
         self.scroll_offset = 0;
     }
@@ -378,7 +378,7 @@ impl SourcePanelState {
         self.selected = (self.selected + 20).min(max.saturating_sub(1));
     }
 
-    pub fn page_up(&mut self) {
+    pub const fn page_up(&mut self) {
         self.selected = self.selected.saturating_sub(20);
     }
 
@@ -397,7 +397,7 @@ impl SourcePanelState {
         self.search_current = 0;
     }
 
-    pub fn stop_search(&mut self) {
+    pub const fn stop_search(&mut self) {
         self.search_active = false;
     }
 
@@ -502,14 +502,14 @@ impl SourceDiffState {
         }
     }
 
-    pub fn active_panel_mut(&mut self) -> &mut SourcePanelState {
+    pub const fn active_panel_mut(&mut self) -> &mut SourcePanelState {
         match self.active_side {
             SourceSide::Old => &mut self.old_panel,
             SourceSide::New => &mut self.new_panel,
         }
     }
 
-    pub fn toggle_side(&mut self) {
+    pub const fn toggle_side(&mut self) {
         self.active_side = match self.active_side {
             SourceSide::Old => SourceSide::New,
             SourceSide::New => SourceSide::Old,

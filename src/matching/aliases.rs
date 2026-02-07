@@ -14,11 +14,13 @@ pub struct AliasTable {
 
 impl AliasTable {
     /// Create a new empty alias table
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Create an alias table with built-in common aliases
+    #[must_use] 
     pub fn with_builtins() -> Self {
         let mut table = Self::new();
         table.load_builtins();
@@ -88,11 +90,13 @@ impl AliasTable {
     }
 
     /// Get the canonical name for an alias
+    #[must_use] 
     pub fn get_canonical(&self, alias: &str) -> Option<String> {
         self.alias_to_canonical.get(&alias.to_lowercase()).cloned()
     }
 
     /// Check if a name is an alias of a canonical name
+    #[must_use] 
     pub fn is_alias(&self, canonical: &str, name: &str) -> bool {
         let canonical_lower = canonical.to_lowercase();
         let name_lower = name.to_lowercase();
@@ -101,6 +105,7 @@ impl AliasTable {
     }
 
     /// Get all aliases for a canonical name
+    #[must_use] 
     pub fn get_aliases(&self, canonical: &str) -> Option<&HashSet<String>> {
         self.canonical_to_aliases.get(&canonical.to_lowercase())
     }

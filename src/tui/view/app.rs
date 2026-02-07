@@ -1,4 +1,4 @@
-//! ViewApp - Dedicated TUI for exploring a single SBOM.
+//! `ViewApp` - Dedicated TUI for exploring a single SBOM.
 //!
 //! This provides a rich, purpose-built interface for SBOM analysis
 //! with hierarchical navigation, search, and deep inspection.
@@ -15,93 +15,94 @@ use super::views::{compute_compliance_results, StandardComplianceState};
 /// Main application state for single SBOM viewing.
 pub struct ViewApp {
     /// The SBOM being viewed
-    pub sbom: NormalizedSbom,
+    pub(crate) sbom: NormalizedSbom,
 
     /// Current active view/tab
-    pub active_tab: ViewTab,
+    pub(crate) active_tab: ViewTab,
 
     /// Tree navigation state
-    pub tree_state: TreeState,
+    pub(crate) tree_state: TreeState,
 
     /// Current tree grouping mode
-    pub tree_group_by: TreeGroupBy,
+    pub(crate) tree_group_by: TreeGroupBy,
 
     /// Current tree filter
-    pub tree_filter: TreeFilter,
+    pub(crate) tree_filter: TreeFilter,
 
     /// Tree search query (inline filter)
-    pub tree_search_query: String,
+    pub(crate) tree_search_query: String,
 
     /// Whether tree search is active
-    pub tree_search_active: bool,
+    pub(crate) tree_search_active: bool,
 
     /// Selected component ID (for detail panel)
-    pub selected_component: Option<String>,
+    pub(crate) selected_component: Option<String>,
 
     /// Component detail sub-tab
-    pub component_tab: ComponentDetailTab,
+    pub(crate) component_tab: ComponentDetailTab,
 
     /// Vulnerability explorer state
-    pub vuln_state: VulnExplorerState,
+    pub(crate) vuln_state: VulnExplorerState,
 
     /// License view state
-    pub license_state: LicenseViewState,
+    pub(crate) license_state: LicenseViewState,
 
     /// Dependency view state
-    pub dependency_state: DependencyViewState,
+    pub(crate) dependency_state: DependencyViewState,
 
     /// Global search state
-    pub search_state: SearchState,
+    pub(crate) search_state: SearchState,
 
     /// Focus panel (left list vs right detail)
-    pub focus_panel: FocusPanel,
+    pub(crate) focus_panel: FocusPanel,
 
     /// Show help overlay
-    pub show_help: bool,
+    pub(crate) show_help: bool,
 
     /// Show export dialog
-    pub show_export: bool,
+    pub(crate) show_export: bool,
 
     /// Show legend overlay
-    pub show_legend: bool,
+    pub(crate) show_legend: bool,
 
     /// Status message to display temporarily
-    pub status_message: Option<String>,
+    pub(crate) status_message: Option<String>,
 
     /// Navigation context for breadcrumbs
-    pub navigation_ctx: ViewNavigationContext,
+    pub(crate) navigation_ctx: ViewNavigationContext,
 
     /// Should quit
-    pub should_quit: bool,
+    pub(crate) should_quit: bool,
 
     /// Animation tick counter
-    pub tick: u64,
+    pub(crate) tick: u64,
 
     /// Cached statistics
-    pub stats: SbomStats,
+    pub(crate) stats: SbomStats,
 
     /// Quality report for the SBOM
-    pub quality_report: QualityReport,
+    pub(crate) quality_report: QualityReport,
 
     /// Quality view state
-    pub quality_state: QualityViewState,
+    pub(crate) quality_state: QualityViewState,
 
     /// Compliance validation results for all standards (lazily computed)
-    pub compliance_results: Option<Vec<ComplianceResult>>,
+    pub(crate) compliance_results: Option<Vec<ComplianceResult>>,
 
     /// Compliance view state
-    pub compliance_state: StandardComplianceState,
+    pub(crate) compliance_state: StandardComplianceState,
 
     /// Precomputed index for fast lookups
-    pub sbom_index: NormalizedSbomIndex,
+    pub(crate) sbom_index: NormalizedSbomIndex,
 
     /// Source tab state
-    pub source_state: SourcePanelState,
+    pub(crate) source_state: SourcePanelState,
 }
 
 impl ViewApp {
-    /// Create a new ViewApp for the given SBOM.
-    pub fn new(sbom: NormalizedSbom, raw_content: String) -> Self {
+    /// Create a new `ViewApp` for the given SBOM.
+    #[must_use] 
+    pub fn new(sbom: NormalizedSbom, raw_content: &str) -> Self {
         let stats = SbomStats::from_sbom(&sbom);
 
         // Calculate quality score
@@ -115,7 +116,7 @@ impl ViewApp {
         let sbom_index = sbom.build_index();
 
         // Build source panel state from raw content
-        let source_state = SourcePanelState::new(&raw_content);
+        let source_state = SourcePanelState::new(raw_content);
 
         // Pre-expand the first few ecosystems
         let mut tree_state = TreeState::new();
@@ -163,7 +164,7 @@ impl ViewApp {
     }
 
     /// Switch to the next tab.
-    pub fn next_tab(&mut self) {
+    pub const fn next_tab(&mut self) {
         self.active_tab = match self.active_tab {
             ViewTab::Overview => ViewTab::Tree,
             ViewTab::Tree => ViewTab::Vulnerabilities,
@@ -177,7 +178,7 @@ impl ViewApp {
     }
 
     /// Switch to the previous tab.
-    pub fn prev_tab(&mut self) {
+    pub const fn prev_tab(&mut self) {
         self.active_tab = match self.active_tab {
             ViewTab::Overview => ViewTab::Source,
             ViewTab::Tree => ViewTab::Overview,
@@ -191,7 +192,7 @@ impl ViewApp {
     }
 
     /// Select a specific tab.
-    pub fn select_tab(&mut self, tab: ViewTab) {
+    pub const fn select_tab(&mut self, tab: ViewTab) {
         self.active_tab = tab;
     }
 
@@ -202,6 +203,7 @@ impl ViewApp {
     /// Get the sort key for a component using the cached index.
     ///
     /// Returns pre-computed lowercase strings to avoid repeated allocations during sorting.
+    #[must_use] 
     pub fn get_sort_key(
         &self,
         id: &crate::model::CanonicalId,
@@ -210,6 +212,7 @@ impl ViewApp {
     }
 
     /// Get dependencies of a component using the cached index (O(k) instead of O(edges)).
+    #[must_use] 
     pub fn get_dependencies(
         &self,
         id: &crate::model::CanonicalId,
@@ -218,6 +221,7 @@ impl ViewApp {
     }
 
     /// Get dependents of a component using the cached index (O(k) instead of O(edges)).
+    #[must_use] 
     pub fn get_dependents(
         &self,
         id: &crate::model::CanonicalId,
@@ -226,12 +230,13 @@ impl ViewApp {
     }
 
     /// Search components by name using the cached index.
+    #[must_use] 
     pub fn search_components_by_name(&self, query: &str) -> Vec<&crate::model::Component> {
         self.sbom.search_by_name_indexed(query, &self.sbom_index)
     }
 
     /// Toggle focus between left and right panels.
-    pub fn toggle_focus(&mut self) {
+    pub const fn toggle_focus(&mut self) {
         self.focus_panel = match self.focus_panel {
             FocusPanel::Left => FocusPanel::Right,
             FocusPanel::Right => FocusPanel::Left,
@@ -246,7 +251,7 @@ impl ViewApp {
     }
 
     /// Stop search mode.
-    pub fn stop_search(&mut self) {
+    pub const fn stop_search(&mut self) {
         self.search_state.active = false;
     }
 
@@ -306,6 +311,7 @@ impl ViewApp {
     }
 
     /// Get the currently selected component.
+    #[must_use] 
     pub fn get_selected_component(&self) -> Option<&Component> {
         self.selected_component.as_ref().and_then(|selected_id| {
             self.sbom
@@ -387,7 +393,7 @@ impl ViewApp {
     }
 
     /// Stop tree search mode.
-    pub fn stop_tree_search(&mut self) {
+    pub const fn stop_tree_search(&mut self) {
         self.tree_search_active = false;
     }
 
@@ -411,7 +417,7 @@ impl ViewApp {
     }
 
     /// Cycle to next component detail tab.
-    pub fn next_component_tab(&mut self) {
+    pub const fn next_component_tab(&mut self) {
         self.component_tab = match self.component_tab {
             ComponentDetailTab::Overview => ComponentDetailTab::Identifiers,
             ComponentDetailTab::Identifiers => ComponentDetailTab::Vulnerabilities,
@@ -421,7 +427,7 @@ impl ViewApp {
     }
 
     /// Cycle to previous component detail tab.
-    pub fn prev_component_tab(&mut self) {
+    pub const fn prev_component_tab(&mut self) {
         self.component_tab = match self.component_tab {
             ComponentDetailTab::Overview => ComponentDetailTab::Dependencies,
             ComponentDetailTab::Identifiers => ComponentDetailTab::Overview,
@@ -431,12 +437,12 @@ impl ViewApp {
     }
 
     /// Select a specific component detail tab.
-    pub fn select_component_tab(&mut self, tab: ComponentDetailTab) {
+    pub(crate) const fn select_component_tab(&mut self, tab: ComponentDetailTab) {
         self.component_tab = tab;
     }
 
     /// Toggle help overlay.
-    pub fn toggle_help(&mut self) {
+    pub const fn toggle_help(&mut self) {
         self.show_help = !self.show_help;
         if self.show_help {
             self.show_export = false;
@@ -445,7 +451,7 @@ impl ViewApp {
     }
 
     /// Toggle export dialog.
-    pub fn toggle_export(&mut self) {
+    pub const fn toggle_export(&mut self) {
         self.show_export = !self.show_export;
         if self.show_export {
             self.show_help = false;
@@ -454,7 +460,7 @@ impl ViewApp {
     }
 
     /// Toggle legend overlay.
-    pub fn toggle_legend(&mut self) {
+    pub const fn toggle_legend(&mut self) {
         self.show_legend = !self.show_legend;
         if self.show_legend {
             self.show_help = false;
@@ -463,7 +469,7 @@ impl ViewApp {
     }
 
     /// Close all overlays.
-    pub fn close_overlays(&mut self) {
+    pub const fn close_overlays(&mut self) {
         self.show_help = false;
         self.show_export = false;
         self.show_legend = false;
@@ -472,7 +478,8 @@ impl ViewApp {
     }
 
     /// Check if any overlay is open.
-    pub fn has_overlay(&self) -> bool {
+    #[must_use] 
+    pub const fn has_overlay(&self) -> bool {
         self.show_help
             || self.show_export
             || self.show_legend
@@ -618,7 +625,7 @@ impl ViewApp {
     }
 
     /// Go to first item in current view.
-    pub fn go_first(&mut self) {
+    pub const fn go_first(&mut self) {
         match self.active_tab {
             ViewTab::Tree => self.tree_state.select_first(),
             ViewTab::Vulnerabilities => self.vuln_state.selected = 0,
@@ -830,6 +837,7 @@ impl ViewApp {
 
     /// Get the component ID currently shown in the source map context footer.
     /// Returns the canonical ID value string if inside the "components" section.
+    #[must_use] 
     pub fn get_map_context_component_id(&self) -> Option<String> {
         let tree = self.source_state.json_tree.as_ref()?;
         let mut items = Vec::new();
@@ -858,6 +866,7 @@ impl ViewApp {
     }
 
     /// Get the currently selected dependency node ID (if any).
+    #[must_use] 
     pub fn get_selected_dependency_node_id(&self) -> Option<String> {
         // Build the flattened list of visible dependency nodes
         let mut visible_nodes = Vec::new();
@@ -937,6 +946,7 @@ impl ViewApp {
     }
 
     /// Build tree nodes based on current grouping.
+    #[must_use] 
     pub fn build_tree_nodes(&self) -> Vec<crate::tui::widgets::TreeNode> {
         match self.tree_group_by {
             TreeGroupBy::Ecosystem => self.build_ecosystem_tree(),
@@ -1340,7 +1350,8 @@ pub enum ViewTab {
 }
 
 impl ViewTab {
-    pub fn title(&self) -> &'static str {
+    #[must_use] 
+    pub const fn title(&self) -> &'static str {
         match self {
             Self::Overview => "Overview",
             Self::Tree => "Components",
@@ -1353,7 +1364,8 @@ impl ViewTab {
         }
     }
 
-    pub fn shortcut(&self) -> &'static str {
+    #[must_use] 
+    pub const fn shortcut(&self) -> &'static str {
         match self {
             Self::Overview => "1",
             Self::Tree => "2",
@@ -1378,7 +1390,8 @@ pub enum TreeGroupBy {
 }
 
 impl TreeGroupBy {
-    pub fn label(&self) -> &'static str {
+    #[must_use] 
+    pub const fn label(&self) -> &'static str {
         match self {
             Self::Ecosystem => "Ecosystem",
             Self::License => "License",
@@ -1398,7 +1411,8 @@ pub enum TreeFilter {
 }
 
 impl TreeFilter {
-    pub fn label(&self) -> &'static str {
+    #[must_use] 
+    pub const fn label(&self) -> &'static str {
         match self {
             Self::All => "All",
             Self::HasVulnerabilities => "Has Vulns",
@@ -1409,7 +1423,7 @@ impl TreeFilter {
 
 /// Component detail sub-tabs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum ComponentDetailTab {
+pub(crate) enum ComponentDetailTab {
     #[default]
     Overview,
     Identifiers,
@@ -1418,7 +1432,7 @@ pub enum ComponentDetailTab {
 }
 
 impl ComponentDetailTab {
-    pub fn title(self) -> &'static str {
+    pub const fn title(self) -> &'static str {
         match self {
             Self::Overview => "Overview",
             Self::Identifiers => "Identifiers",
@@ -1427,7 +1441,7 @@ impl ComponentDetailTab {
         }
     }
 
-    pub fn shortcut(self) -> &'static str {
+    pub const fn shortcut(self) -> &'static str {
         match self {
             Self::Overview => "1",
             Self::Identifiers => "2",
@@ -1436,7 +1450,7 @@ impl ComponentDetailTab {
         }
     }
 
-    pub fn all() -> [Self; 4] {
+    pub const fn all() -> [Self; 4] {
         [
             Self::Overview,
             Self::Identifiers,
@@ -1448,14 +1462,14 @@ impl ComponentDetailTab {
 
 /// Focus panel (for split views).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FocusPanel {
+pub(crate) enum FocusPanel {
     Left,
     Right,
 }
 
 /// State for vulnerability explorer.
 #[derive(Debug, Clone)]
-pub struct VulnExplorerState {
+pub(crate) struct VulnExplorerState {
     pub selected: usize,
     pub total: usize,
     pub scroll_offset: usize,
@@ -1533,14 +1547,14 @@ impl VulnExplorerState {
         self.cached_data = None;
     }
 
-    pub fn select_next(&mut self) {
+    pub const fn select_next(&mut self) {
         if self.total > 0 && self.selected < self.total.saturating_sub(1) {
             self.selected += 1;
             self.detail_scroll = 0;
         }
     }
 
-    pub fn select_prev(&mut self) {
+    pub const fn select_prev(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
             self.detail_scroll = 0;
@@ -1548,17 +1562,17 @@ impl VulnExplorerState {
     }
 
     /// Scroll detail panel down
-    pub fn detail_scroll_down(&mut self) {
+    pub const fn detail_scroll_down(&mut self) {
         self.detail_scroll = self.detail_scroll.saturating_add(1);
     }
 
     /// Scroll detail panel up
-    pub fn detail_scroll_up(&mut self) {
+    pub const fn detail_scroll_up(&mut self) {
         self.detail_scroll = self.detail_scroll.saturating_sub(1);
     }
 
     /// Ensure selected index is within bounds
-    pub fn clamp_selection(&mut self) {
+    pub const fn clamp_selection(&mut self) {
         if self.total == 0 {
             self.selected = 0;
         } else if self.selected >= self.total {
@@ -1619,7 +1633,7 @@ impl VulnExplorerState {
     }
 
     /// Stop search mode (keep query for filtering)
-    pub fn stop_vuln_search(&mut self) {
+    pub const fn stop_vuln_search(&mut self) {
         self.search_active = false;
     }
 
@@ -1695,7 +1709,7 @@ impl ListNavigation for VulnExplorerState {
 
 /// View mode for quality panel
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum QualityViewMode {
+pub(crate) enum QualityViewMode {
     #[default]
     Summary,
     Breakdown,
@@ -1704,7 +1718,7 @@ pub enum QualityViewMode {
 }
 
 /// Quality view state
-pub struct QualityViewState {
+pub(crate) struct QualityViewState {
     pub view_mode: QualityViewMode,
     pub selected_recommendation: usize,
     pub total_recommendations: usize,
@@ -1712,7 +1726,7 @@ pub struct QualityViewState {
 }
 
 impl QualityViewState {
-    pub fn new(total_recommendations: usize) -> Self {
+    pub const fn new(total_recommendations: usize) -> Self {
         Self {
             view_mode: QualityViewMode::Summary,
             selected_recommendation: 0,
@@ -1721,7 +1735,7 @@ impl QualityViewState {
         }
     }
 
-    pub fn toggle_view(&mut self) {
+    pub const fn toggle_view(&mut self) {
         self.view_mode = match self.view_mode {
             QualityViewMode::Summary => QualityViewMode::Breakdown,
             QualityViewMode::Breakdown => QualityViewMode::Metrics,
@@ -1732,13 +1746,6 @@ impl QualityViewState {
         self.scroll_offset = 0;
     }
 
-    pub fn scroll_down(&mut self) {
-        self.scroll_offset = self.scroll_offset.saturating_add(1);
-    }
-
-    pub fn scroll_up(&mut self) {
-        self.scroll_offset = self.scroll_offset.saturating_sub(1);
-    }
 }
 
 impl ListNavigation for QualityViewState {
@@ -1767,7 +1774,7 @@ impl Default for QualityViewState {
 
 /// Vulnerability grouping modes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum VulnGroupBy {
+pub(crate) enum VulnGroupBy {
     Severity,
     Component,
     Flat,
@@ -1775,7 +1782,7 @@ pub enum VulnGroupBy {
 
 /// Vulnerability sorting modes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum VulnSortBy {
+pub(crate) enum VulnSortBy {
     Severity,
     Cvss,
     CveId,
@@ -1783,7 +1790,7 @@ pub enum VulnSortBy {
 }
 
 impl VulnSortBy {
-    pub fn next(self) -> Self {
+    pub const fn next(self) -> Self {
         match self {
             Self::Severity => Self::Cvss,
             Self::Cvss => Self::CveId,
@@ -1792,7 +1799,7 @@ impl VulnSortBy {
         }
     }
 
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::Severity => "Severity",
             Self::Cvss => "CVSS",
@@ -1804,7 +1811,7 @@ impl VulnSortBy {
 
 /// State for license view.
 #[derive(Debug, Clone)]
-pub struct LicenseViewState {
+pub(crate) struct LicenseViewState {
     pub selected: usize,
     pub total: usize,
     pub scroll_offset: usize,
@@ -1816,7 +1823,7 @@ pub struct LicenseViewState {
 }
 
 impl LicenseViewState {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             selected: 0,
             total: 0,
@@ -1828,14 +1835,14 @@ impl LicenseViewState {
     }
 
     /// Scroll component list up
-    pub fn scroll_components_up(&mut self) {
+    pub const fn scroll_components_up(&mut self) {
         if self.component_scroll > 0 {
             self.component_scroll -= 1;
         }
     }
 
     /// Scroll component list down
-    pub fn scroll_components_down(&mut self, visible_count: usize) {
+    pub const fn scroll_components_down(&mut self, visible_count: usize) {
         if self.component_total > visible_count
             && self.component_scroll < self.component_total - visible_count
         {
@@ -1844,18 +1851,18 @@ impl LicenseViewState {
     }
 
     /// Reset component scroll when license selection changes
-    pub fn reset_component_scroll(&mut self) {
+    pub const fn reset_component_scroll(&mut self) {
         self.component_scroll = 0;
     }
 
-    pub fn select_next(&mut self) {
+    pub const fn select_next(&mut self) {
         if self.total > 0 && self.selected < self.total.saturating_sub(1) {
             self.selected += 1;
             self.reset_component_scroll();
         }
     }
 
-    pub fn select_prev(&mut self) {
+    pub const fn select_prev(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
             self.reset_component_scroll();
@@ -1863,7 +1870,7 @@ impl LicenseViewState {
     }
 
     /// Ensure selected index is within bounds
-    pub fn clamp_selection(&mut self) {
+    pub const fn clamp_selection(&mut self) {
         if self.total == 0 {
             self.selected = 0;
         } else if self.selected >= self.total {
@@ -1871,7 +1878,7 @@ impl LicenseViewState {
         }
     }
 
-    pub fn toggle_group(&mut self) {
+    pub const fn toggle_group(&mut self) {
         self.group_by = match self.group_by {
             LicenseGroupBy::License => LicenseGroupBy::Category,
             LicenseGroupBy::Category => LicenseGroupBy::License,
@@ -1907,14 +1914,14 @@ impl ListNavigation for LicenseViewState {
 
 /// License grouping modes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LicenseGroupBy {
+pub(crate) enum LicenseGroupBy {
     License,
     Category,
 }
 
 /// Dependency view state.
 #[derive(Debug, Clone)]
-pub struct DependencyViewState {
+pub(crate) struct DependencyViewState {
     /// Currently selected node in the dependency tree
     pub selected: usize,
     /// Total number of visible nodes
@@ -1974,7 +1981,7 @@ impl ListNavigation for DependencyViewState {
 
 /// Global search state.
 #[derive(Debug, Clone)]
-pub struct SearchState {
+pub(crate) struct SearchState {
     pub active: bool,
     pub query: String,
     pub results: Vec<SearchResult>,
@@ -1982,7 +1989,7 @@ pub struct SearchState {
 }
 
 impl SearchState {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             active: false,
             query: String::new(),
@@ -2005,7 +2012,7 @@ impl SearchState {
         }
     }
 
-    pub fn select_prev(&mut self) {
+    pub const fn select_prev(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
         }
@@ -2020,7 +2027,7 @@ impl Default for SearchState {
 
 /// Search result types.
 #[derive(Debug, Clone)]
-pub enum SearchResult {
+pub(crate) enum SearchResult {
     Component {
         id: String,
         name: String,
@@ -2137,7 +2144,8 @@ pub struct ViewNavigationContext {
 }
 
 impl ViewNavigationContext {
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             breadcrumbs: Vec::new(),
             target_component: None,
@@ -2165,11 +2173,13 @@ impl ViewNavigationContext {
     }
 
     /// Check if we have navigation history
+    #[must_use] 
     pub fn has_history(&self) -> bool {
         !self.breadcrumbs.is_empty()
     }
 
     /// Get the current breadcrumb trail as a string
+    #[must_use] 
     pub fn breadcrumb_trail(&self) -> String {
         self.breadcrumbs
             .iter()
@@ -2193,7 +2203,7 @@ mod tests {
     #[test]
     fn test_view_app_creation() {
         let sbom = NormalizedSbom::default();
-        let app = ViewApp::new(sbom, String::new());
+        let app = ViewApp::new(sbom, "");
         assert_eq!(app.active_tab, ViewTab::Overview);
         assert!(!app.should_quit);
     }
@@ -2201,7 +2211,7 @@ mod tests {
     #[test]
     fn test_tab_navigation() {
         let sbom = NormalizedSbom::default();
-        let mut app = ViewApp::new(sbom, String::new());
+        let mut app = ViewApp::new(sbom, "");
 
         app.next_tab();
         assert_eq!(app.active_tab, ViewTab::Tree);

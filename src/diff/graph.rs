@@ -40,14 +40,14 @@ impl Default for GraphDiffConfig {
 struct DependencyGraph<'a> {
     /// Reference to the SBOM
     sbom: &'a NormalizedSbom,
-    /// parent_id -> Vec<child_id>
+    /// `parent_id` -> Vec<`child_id`>
     edges: HashMap<CanonicalId, Vec<CanonicalId>>,
-    /// child_id -> Vec<parent_id> (reverse index)
+    /// `child_id` -> Vec<`parent_id`> (reverse index)
     reverse_edges: HashMap<CanonicalId, Vec<CanonicalId>>,
-    /// component_id -> minimum depth from root (1 = direct)
+    /// `component_id` -> minimum depth from root (1 = direct)
     /// Uses minimum depth when multiple paths exist (diamond dependencies)
     depths: HashMap<CanonicalId, u32>,
-    /// component_id -> has vulnerabilities
+    /// `component_id` -> has vulnerabilities
     vulnerable_components: HashSet<CanonicalId>,
 }
 
@@ -95,7 +95,7 @@ impl<'a> DependencyGraph<'a> {
     ///
     /// Uses minimum depth when multiple paths exist (diamond dependencies),
     /// which gives the most accurate "direct vs transitive" classification.
-    /// Respects max_depth limit (0 = unlimited).
+    /// Respects `max_depth` limit (0 = unlimited).
     fn calculate_depths(
         edges: &HashMap<CanonicalId, Vec<CanonicalId>>,
         reverse_edges: &HashMap<CanonicalId, Vec<CanonicalId>>,
@@ -104,16 +104,14 @@ impl<'a> DependencyGraph<'a> {
     ) -> HashMap<CanonicalId, u32> {
         let mut depths = HashMap::new();
 
-        // Find roots (components with no parents)
-        let roots: Vec<_> = all_components
+        // BFS to calculate minimum depths
+        // We use a queue that may revisit nodes if a shorter path is found
+        let mut queue: VecDeque<(CanonicalId, u32)> = all_components
             .iter()
             .filter(|id| reverse_edges.get(*id).is_none_or(std::vec::Vec::is_empty))
             .cloned()
+            .map(|id| (id, 1))
             .collect();
-
-        // BFS to calculate minimum depths
-        // We use a queue that may revisit nodes if a shorter path is found
-        let mut queue: VecDeque<(CanonicalId, u32)> = roots.into_iter().map(|id| (id, 1)).collect();
 
         while let Some((id, depth)) = queue.pop_front() {
             // Check if we've found a shorter path to this node
@@ -169,14 +167,16 @@ impl<'a> DependencyGraph<'a> {
         self.sbom
             .components
             .get(component_id)
-            .map(|c| {
-                c.version.as_ref().map_or_else(|| c.name.clone(), |v| format!("{}@{}", c.name, v))
-            })
-            .unwrap_or_else(|| component_id.to_string())
+            .map_or_else(
+                || component_id.to_string(),
+                |c| c.version.as_ref().map_or_else(|| c.name.clone(), |v| format!("{}@{}", c.name, v)),
+            )
     }
 }
 
 /// Perform graph-aware diff between two SBOMs
+#[allow(clippy::implicit_hasher)]
+#[must_use] 
 pub fn diff_dependency_graph(
     old_sbom: &NormalizedSbom,
     new_sbom: &NormalizedSbom,
@@ -189,7 +189,7 @@ pub fn diff_dependency_graph(
     let mut changes = Vec::new();
 
     // Iterate through matched components to find dependency changes
-    for (old_id, new_id_option) in component_matches.iter() {
+    for (old_id, new_id_option) in component_matches {
         if let Some(new_id) = new_id_option {
             let component_name = new_graph.get_component_name(new_id);
 

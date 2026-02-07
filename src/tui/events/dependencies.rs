@@ -235,18 +235,14 @@ pub(super) fn skip_dependency_placeholders(app: &mut App, forward: bool) {
         if !node_id.starts_with("__") {
             break;
         }
+        let before = app.tabs.dependencies.selected;
         if forward {
-            let before = app.tabs.dependencies.selected;
             app.tabs.dependencies.select_next();
-            if app.tabs.dependencies.selected == before {
-                break;
-            }
         } else {
-            let before = app.tabs.dependencies.selected;
             app.tabs.dependencies.select_prev();
-            if app.tabs.dependencies.selected == before {
-                break;
-            }
+        }
+        if app.tabs.dependencies.selected == before {
+            break;
         }
     }
 }

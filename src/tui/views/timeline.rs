@@ -14,7 +14,7 @@ use ratatui::{
 };
 
 /// Render the timeline analysis view
-pub(crate) fn render_timeline(f: &mut Frame, area: Rect, result: &TimelineResult, state: &TimelineState) {
+pub fn render_timeline(f: &mut Frame, area: Rect, result: &TimelineResult, state: &TimelineState) {
     let chunks = if state.show_statistics {
         Layout::default()
             .direction(Direction::Vertical)
@@ -225,7 +225,7 @@ fn render_timeline_bar(f: &mut Frame, area: Rect, result: &TimelineResult, state
     let selected = state.selected_version;
 
     // Calculate bar width based on zoom level
-    let bar_width = 5 + (state.chart_zoom as u16 * 2);
+    let bar_width = 5 + (u16::from(state.chart_zoom) * 2);
 
     // Calculate visible range based on scroll
     let visible_count = (area.width.saturating_sub(4)) / (bar_width + 1);
@@ -337,12 +337,10 @@ fn render_versions_list(f: &mut Frame, area: Rect, result: &TimelineResult, stat
                 format!("+{added} -{removed}")
             };
 
-            let change_color = if added > removed {
-                scheme.added
-            } else if removed > added {
-                scheme.removed
-            } else {
-                scheme.text_muted
+            let change_color = match added.cmp(&removed) {
+                std::cmp::Ordering::Greater => scheme.added,
+                std::cmp::Ordering::Less => scheme.removed,
+                std::cmp::Ordering::Equal => scheme.text_muted,
             };
 
             // CRA Phase 2 compliance indicator for this version
@@ -476,7 +474,7 @@ fn render_component_history(
             } else {
                 evo.current_version
                     .clone()
-                    .unwrap_or(evo.first_seen_version.clone())
+                    .unwrap_or_else(|| evo.first_seen_version.clone())
             };
 
             Row::new(vec![
@@ -641,8 +639,8 @@ fn render_version_diff_modal(
         ]));
     }
 
+    lines.push(Line::from(""));
     if let Some(diff) = diff_info {
-        lines.push(Line::from(""));
         lines.push(Line::from(vec![Span::styled(
             "Changes:",
             Style::default().fg(scheme.text_muted),
@@ -685,7 +683,6 @@ fn render_version_diff_modal(
             ]));
         }
     } else {
-        lines.push(Line::from(""));
         lines.push(Line::from(vec![Span::styled(
             "No direct diff available between these versions.",
             Style::default().fg(scheme.text_muted),

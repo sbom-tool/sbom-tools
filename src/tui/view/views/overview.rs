@@ -1,4 +1,4 @@
-//! Overview tab for ViewApp - high-level SBOM statistics.
+//! Overview tab for `ViewApp` - high-level SBOM statistics.
 
 use crate::tui::theme::colors;
 use crate::tui::view::app::ViewApp;
@@ -8,7 +8,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph, Row, Table},
 };
 
-pub fn render_overview(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
+pub fn render_overview(frame: &mut Frame, area: Rect, app: &ViewApp) {
     // Split into left (stats) and right (details) panels
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -19,7 +19,7 @@ pub fn render_overview(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     render_details_panel(frame, chunks[1], app);
 }
 
-fn render_stats_panel(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
+fn render_stats_panel(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -39,7 +39,7 @@ fn render_stats_panel(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     render_ecosystem_dist(frame, chunks[2], app);
 }
 
-fn render_summary_cards(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
+fn render_summary_cards(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let scheme = colors();
     let stats = &app.stats;
 
@@ -156,7 +156,7 @@ fn render_summary_cards(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     frame.render_widget(lic_para, card_chunks[2]);
 }
 
-fn render_vuln_breakdown(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
+fn render_vuln_breakdown(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let scheme = colors();
     let stats = &app.stats;
     let total = stats.vuln_count.max(1);
@@ -212,7 +212,7 @@ fn render_vuln_breakdown(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     frame.render_widget(para, area);
 }
 
-fn render_ecosystem_dist(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
+fn render_ecosystem_dist(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let scheme = colors();
     let stats = &app.stats;
 
@@ -273,7 +273,7 @@ fn render_ecosystem_dist(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     frame.render_widget(para, area);
 }
 
-fn render_details_panel(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
+fn render_details_panel(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -289,7 +289,7 @@ fn render_details_panel(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     render_top_vulnerable(frame, chunks[1], app);
 }
 
-fn render_document_info(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
+fn render_document_info(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let scheme = colors();
     let doc = &app.sbom.document;
 
@@ -369,7 +369,7 @@ fn render_document_info(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     frame.render_widget(para, area);
 }
 
-fn render_top_vulnerable(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
+fn render_top_vulnerable(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let scheme = colors();
 
     // Get components sorted by vulnerability count

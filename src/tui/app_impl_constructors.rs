@@ -14,7 +14,7 @@ use super::app_states::{
 
 impl App {
     /// Shared default initialization for all mode-independent fields.
-    /// Mode-specific fields (mode, active_tab, and data fields) must be set by the caller.
+    /// Mode-specific fields (mode, `active_tab`, and data fields) must be set by the caller.
     fn base(mode: AppMode, components_len: usize, vulns_len: usize) -> Self {
         Self {
             mode,
@@ -71,12 +71,13 @@ impl App {
     }
 
     /// Create a new app for diff mode
+    #[must_use] 
     pub fn new_diff(
         diff_result: DiffResult,
         old_sbom: NormalizedSbom,
         new_sbom: NormalizedSbom,
-        old_raw: String,
-        new_raw: String,
+        old_raw: &str,
+        new_raw: &str,
     ) -> Self {
         let components_len = diff_result.components.total();
         let vulns_len = diff_result.vulnerabilities.introduced.len()
@@ -97,7 +98,7 @@ impl App {
         let new_sbom_index = Some(new_sbom.build_index());
 
         let mut app = Self::base(AppMode::Diff, components_len, vulns_len);
-        app.tabs.source = SourceDiffState::new(&old_raw, &new_raw);
+        app.tabs.source = SourceDiffState::new(old_raw, new_raw);
         app.data.diff_result = Some(diff_result);
         app.data.old_sbom = Some(old_sbom);
         app.data.new_sbom = Some(new_sbom);
@@ -125,6 +126,7 @@ impl App {
 
     /// Get combined enrichment stats for display
     #[cfg(feature = "enrichment")]
+    #[must_use] 
     pub fn combined_enrichment_stats(&self) -> Option<crate::enrichment::EnrichmentStats> {
         match (&self.data.enrichment_stats_old, &self.data.enrichment_stats_new) {
             (Some(old), Some(new)) => {
@@ -138,6 +140,7 @@ impl App {
     }
 
     /// Create a new app for view mode
+    #[must_use] 
     pub fn new_view(sbom: NormalizedSbom) -> Self {
         let components_len = sbom.component_count();
         let vulns_len = sbom.all_vulnerabilities().len();
@@ -157,6 +160,7 @@ impl App {
     }
 
     /// Create a new app for multi-diff mode
+    #[must_use] 
     pub fn new_multi_diff(result: MultiDiffResult) -> Self {
         let target_count = result.comparisons.len();
 
@@ -167,6 +171,7 @@ impl App {
     }
 
     /// Create a new app for timeline mode
+    #[must_use] 
     pub fn new_timeline(result: TimelineResult) -> Self {
         let version_count = result.sboms.len();
 
@@ -177,6 +182,7 @@ impl App {
     }
 
     /// Create a new app for matrix mode
+    #[must_use] 
     pub fn new_matrix(result: MatrixResult) -> Self {
         let sbom_count = result.sboms.len();
 

@@ -98,6 +98,7 @@ impl DiffResult {
     }
 
     /// Find a component change by canonical ID
+    #[must_use] 
     pub fn find_component_by_id(&self, id: &CanonicalId) -> Option<&ComponentChange> {
         let id_str = id.value();
         self.components
@@ -109,6 +110,7 @@ impl DiffResult {
     }
 
     /// Find a component change by ID string
+    #[must_use] 
     pub fn find_component_by_id_str(&self, id_str: &str) -> Option<&ComponentChange> {
         self.components
             .added
@@ -119,6 +121,7 @@ impl DiffResult {
     }
 
     /// Get all component changes as a flat list with their indices for navigation
+    #[must_use] 
     pub fn all_component_changes(&self) -> Vec<&ComponentChange> {
         self.components
             .added
@@ -129,6 +132,7 @@ impl DiffResult {
     }
 
     /// Find vulnerabilities affecting a specific component by ID
+    #[must_use] 
     pub fn find_vulns_for_component(&self, component_id: &CanonicalId) -> Vec<&VulnerabilityDetail> {
         let id_str = component_id.value();
         self.vulnerabilities
@@ -219,7 +223,8 @@ pub struct ChangeSet<T> {
 }
 
 impl<T> ChangeSet<T> {
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             added: Vec::new(),
             removed: Vec::new(),
@@ -227,10 +232,12 @@ impl<T> ChangeSet<T> {
         }
     }
 
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.added.is_empty() && self.removed.is_empty() && self.modified.is_empty()
     }
 
+    #[must_use] 
     pub fn total(&self) -> usize {
         self.added.len() + self.removed.len() + self.modified.len()
     }
@@ -249,7 +256,7 @@ impl<T> Default for ChangeSet<T> {
 pub struct MatchInfo {
     /// Match confidence score (0.0 - 1.0)
     pub score: f64,
-    /// Matching method used (ExactIdentifier, Alias, Fuzzy, etc.)
+    /// Matching method used (`ExactIdentifier`, Alias, Fuzzy, etc.)
     pub method: String,
     /// Human-readable explanation
     pub reason: String,
@@ -280,7 +287,8 @@ pub struct ConfidenceInterval {
 
 impl ConfidenceInterval {
     /// Create a new confidence interval.
-    pub fn new(lower: f64, upper: f64, level: f64) -> Self {
+    #[must_use] 
+    pub const fn new(lower: f64, upper: f64, level: f64) -> Self {
         Self {
             lower: lower.clamp(0.0, 1.0),
             upper: upper.clamp(0.0, 1.0),
@@ -291,6 +299,7 @@ impl ConfidenceInterval {
     /// Create a 95% confidence interval from a score and standard error.
     ///
     /// Uses ±1.96 × SE for 95% CI.
+    #[must_use] 
     pub fn from_score_and_error(score: f64, std_error: f64) -> Self {
         let margin = 1.96 * std_error;
         Self::new(score - margin, score + margin, 0.95)
@@ -299,6 +308,7 @@ impl ConfidenceInterval {
     /// Create a simple confidence interval based on the matching tier.
     ///
     /// Exact matches have tight intervals, fuzzy matches have wider intervals.
+    #[must_use] 
     pub fn from_tier(score: f64, tier: &str) -> Self {
         let margin = match tier {
             "ExactIdentifier" => 0.0,
@@ -312,6 +322,7 @@ impl ConfidenceInterval {
     }
 
     /// Get the width of the interval.
+    #[must_use] 
     pub fn width(&self) -> f64 {
         self.upper - self.lower
     }
@@ -457,13 +468,15 @@ impl ComponentChange {
     }
 
     /// Get the typed canonical ID, falling back to parsing from string if needed
+    #[must_use] 
     pub fn get_canonical_id(&self) -> CanonicalId {
         self.canonical_id
             .clone()
             .unwrap_or_else(|| CanonicalId::from_name_version(&self.name, self.new_version.as_deref().or(self.old_version.as_deref())))
     }
 
-    /// Get a ComponentRef for this change
+    /// Get a `ComponentRef` for this change
+    #[must_use] 
     pub fn get_component_ref(&self) -> ComponentRef {
         self.component_ref.clone().unwrap_or_else(|| {
             ComponentRef::with_version(
@@ -476,7 +489,8 @@ impl ComponentChange {
 }
 
 impl MatchInfo {
-    /// Create from a MatchExplanation
+    /// Create from a `MatchExplanation`
+    #[must_use] 
     pub fn from_explanation(explanation: &crate::matching::MatchExplanation) -> Self {
         let method = format!("{:?}", explanation.tier);
         let ci = ConfidenceInterval::from_tier(explanation.score, &method);
@@ -501,6 +515,7 @@ impl MatchInfo {
     }
 
     /// Create a simple match info without detailed breakdown
+    #[must_use] 
     pub fn simple(score: f64, method: &str, reason: &str) -> Self {
         let ci = ConfidenceInterval::from_tier(score, method);
         Self {
@@ -515,7 +530,7 @@ impl MatchInfo {
 
     /// Create a match info with a custom confidence interval
     #[must_use]
-    pub fn with_confidence_interval(mut self, ci: ConfidenceInterval) -> Self {
+    pub const fn with_confidence_interval(mut self, ci: ConfidenceInterval) -> Self {
         self.confidence_interval = Some(ci);
         self
     }
@@ -552,6 +567,7 @@ pub struct DependencyChange {
 }
 
 impl DependencyChange {
+    #[must_use] 
     pub fn added(edge: &DependencyEdge) -> Self {
         Self {
             from: edge.from.to_string(),
@@ -561,6 +577,7 @@ impl DependencyChange {
         }
     }
 
+    #[must_use] 
     pub fn removed(edge: &DependencyEdge) -> Self {
         Self {
             from: edge.from.to_string(),
@@ -626,6 +643,7 @@ pub struct VulnerabilityChanges {
 
 impl VulnerabilityChanges {
     /// Count vulnerabilities by severity
+    #[must_use] 
     pub fn introduced_by_severity(&self) -> HashMap<String, usize> {
         // Pre-allocate for typical severity levels (critical, high, medium, low, unknown)
         let mut counts = HashMap::with_capacity(5);
@@ -636,6 +654,7 @@ impl VulnerabilityChanges {
     }
 
     /// Get critical and high severity introduced vulnerabilities
+    #[must_use] 
     pub fn critical_and_high_introduced(&self) -> Vec<&VulnerabilityDetail> {
         self.introduced
             .iter()
@@ -659,6 +678,7 @@ pub enum SlaStatus {
 
 impl SlaStatus {
     /// Format for display (e.g., "3d late", "2d left", "45d old")
+    #[must_use] 
     pub fn display(&self, days_since_published: Option<i64>) -> String {
         match self {
             Self::Overdue(days) => format!("{days}d late"),
@@ -670,12 +690,14 @@ impl SlaStatus {
     }
 
     /// Check if this is an overdue status
-    pub fn is_overdue(&self) -> bool {
+    #[must_use] 
+    pub const fn is_overdue(&self) -> bool {
         matches!(self, Self::Overdue(_))
     }
 
     /// Check if this is due soon (approaching deadline)
-    pub fn is_due_soon(&self) -> bool {
+    #[must_use] 
+    pub const fn is_due_soon(&self) -> bool {
         matches!(self, Self::DueSoon(_))
     }
 }
@@ -737,7 +759,8 @@ impl VulnerabilityDetail {
     ///
     /// Returns `true` if the VEX state is `Affected`, `UnderInvestigation`, or absent.
     /// Returns `false` if the VEX state is `NotAffected` or `Fixed`.
-    pub fn is_vex_actionable(&self) -> bool {
+    #[must_use] 
+    pub const fn is_vex_actionable(&self) -> bool {
         !matches!(
             self.vex_state,
             Some(crate::model::VexState::NotAffected | crate::model::VexState::Fixed)
@@ -796,6 +819,7 @@ impl VulnerabilityDetail {
     }
 
     /// Create from a vulnerability reference and component with known depth
+    #[must_use] 
     pub fn from_ref_with_depth(
         vuln: &VulnerabilityRef,
         component: &Component,
@@ -811,6 +835,7 @@ impl VulnerabilityDetail {
     /// Priority order:
     /// 1. KEV due date (CISA mandated deadline)
     /// 2. Severity-based SLA (Critical=1d, High=7d, Medium=30d, Low=90d)
+    #[must_use] 
     pub fn sla_status(&self) -> SlaStatus {
         // KEV due date takes priority
         if let Some(days) = self.days_until_due {
@@ -818,9 +843,8 @@ impl VulnerabilityDetail {
                 return SlaStatus::Overdue(-days);
             } else if days <= 3 {
                 return SlaStatus::DueSoon(days);
-            } else {
-                return SlaStatus::OnTrack(days);
             }
+            return SlaStatus::OnTrack(days);
         }
 
         // Fall back to severity-based SLA
@@ -837,22 +861,23 @@ impl VulnerabilityDetail {
                 return SlaStatus::Overdue(-remaining);
             } else if remaining <= 3 {
                 return SlaStatus::DueSoon(remaining);
-            } else {
-                return SlaStatus::OnTrack(remaining);
             }
+            return SlaStatus::OnTrack(remaining);
         }
 
         SlaStatus::NoDueDate
     }
 
     /// Get the typed component canonical ID
+    #[must_use] 
     pub fn get_component_id(&self) -> CanonicalId {
         self.component_canonical_id
             .clone()
             .unwrap_or_else(|| CanonicalId::from_name_version(&self.component_name, self.version.as_deref()))
     }
 
-    /// Get a ComponentRef for the affected component
+    /// Get a `ComponentRef` for the affected component
+    #[must_use] 
     pub fn get_component_ref(&self) -> ComponentRef {
         self.component_ref.clone().unwrap_or_else(|| {
             ComponentRef::with_version(
@@ -869,7 +894,7 @@ impl VulnerabilityDetail {
 // ============================================================================
 
 /// Represents a structural change in the dependency graph
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DependencyGraphChange {
     /// The component involved in the change
     pub component_id: CanonicalId,
@@ -882,7 +907,7 @@ pub struct DependencyGraphChange {
 }
 
 /// Types of dependency graph structural changes
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DependencyChangeType {
     /// A new dependency link was added
     DependencyAdded {
@@ -915,7 +940,8 @@ pub enum DependencyChangeType {
 
 impl DependencyChangeType {
     /// Get a short description of the change type
-    pub fn kind(&self) -> &'static str {
+    #[must_use] 
+    pub const fn kind(&self) -> &'static str {
         match self {
             Self::DependencyAdded { .. } => "added",
             Self::DependencyRemoved { .. } => "removed",
@@ -939,7 +965,8 @@ pub enum GraphChangeImpact {
 }
 
 impl GraphChangeImpact {
-    pub fn as_str(&self) -> &'static str {
+    #[must_use] 
+    pub const fn as_str(&self) -> &'static str {
         match self {
             Self::Low => "low",
             Self::Medium => "medium",
@@ -949,6 +976,7 @@ impl GraphChangeImpact {
     }
 
     /// Parse from a string label. Returns Low for unrecognized values.
+    #[must_use] 
     pub fn from_label(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "critical" => Self::Critical,
@@ -978,6 +1006,7 @@ pub struct GraphChangeSummary {
 
 impl GraphChangeSummary {
     /// Build summary from a list of changes
+    #[must_use] 
     pub fn from_changes(changes: &[DependencyGraphChange]) -> Self {
         let mut summary = Self {
             total_changes: changes.len(),

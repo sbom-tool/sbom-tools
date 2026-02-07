@@ -29,7 +29,7 @@ pub struct QualityConfig {
 pub fn run_quality(
     sbom_path: PathBuf,
     profile_name: String,
-    _output: ReportFormat,
+    output: ReportFormat,
     output_file: Option<PathBuf>,
     show_recommendations: bool,
     show_metrics: bool,
@@ -39,7 +39,7 @@ pub fn run_quality(
     let config = QualityConfig {
         sbom_path,
         profile: profile_name,
-        output: _output,
+        output,
         output_file,
         show_recommendations,
         show_metrics,

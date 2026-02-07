@@ -19,6 +19,7 @@ use anyhow::Result;
 ///
 /// The caller is responsible for calling `std::process::exit()` with the
 /// returned code when it is non-zero.
+#[allow(clippy::needless_pass_by_value)]
 pub fn run_diff(config: DiffConfig) -> Result<i32> {
     let quiet = config.behavior.quiet;
 
@@ -89,7 +90,7 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
 
         #[cfg(feature = "enrichment")]
         let mut app = {
-            let app = App::new_diff(result, old_sbom, new_sbom, old_raw, new_raw);
+            let app = App::new_diff(result, old_sbom, new_sbom, &old_raw, &new_raw);
             if let Some((stats_old, stats_new)) = enrichment_stats {
                 app.with_enrichment_stats(stats_old, stats_new)
             } else {
@@ -98,7 +99,7 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
         };
 
         #[cfg(not(feature = "enrichment"))]
-        let mut app = App::new_diff(result, old_sbom, new_sbom, old_raw, new_raw);
+        let mut app = App::new_diff(result, old_sbom, new_sbom, &old_raw, &new_raw);
 
         run_tui(&mut app)?;
     } else {
@@ -111,7 +112,7 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
 }
 
 /// Determine the appropriate exit code based on diff results and config flags.
-fn determine_exit_code(config: &DiffConfig, result: &crate::diff::DiffResult) -> i32 {
+const fn determine_exit_code(config: &DiffConfig, result: &crate::diff::DiffResult) -> i32 {
     if config.behavior.fail_on_vuln && result.summary.vulnerabilities_introduced > 0 {
         return exit_codes::VULNS_INTRODUCED;
     }

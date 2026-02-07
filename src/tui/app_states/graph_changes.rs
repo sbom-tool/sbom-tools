@@ -9,7 +9,7 @@ pub struct GraphChangesState {
 }
 
 impl GraphChangesState {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             selected: 0,
             total: 0,

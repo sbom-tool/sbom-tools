@@ -1,7 +1,7 @@
-//! Shared quality rendering functions used by both App (diff mode) and ViewApp (view mode).
+//! Shared quality rendering functions used by both App (diff mode) and `ViewApp` (view mode).
 //!
 //! All functions take domain types directly (`&QualityReport`, `&QualityGrade`, etc.)
-//! and have no dependency on App or ViewApp state.
+//! and have no dependency on App or `ViewApp` state.
 
 use crate::quality::{QualityGrade, QualityReport, RecommendationCategory, ScoringProfile};
 use crate::tui::theme::colors;
@@ -14,7 +14,7 @@ use ratatui::{
 // Helper functions
 // ---------------------------------------------------------------------------
 
-pub(crate) fn get_profile_weights(profile: ScoringProfile) -> (f32, f32, f32, f32, f32) {
+pub const fn get_profile_weights(profile: ScoringProfile) -> (f32, f32, f32, f32, f32) {
     // (completeness, identifiers, licenses, vulnerabilities, dependencies)
     match profile {
         ScoringProfile::Minimal => (0.50, 0.20, 0.10, 0.10, 0.10),
@@ -26,7 +26,7 @@ pub(crate) fn get_profile_weights(profile: ScoringProfile) -> (f32, f32, f32, f3
     }
 }
 
-pub(crate) fn explain_completeness_score(report: &QualityReport) -> String {
+pub fn explain_completeness_score(report: &QualityReport) -> String {
     let m = &report.completeness_metrics;
     if m.components_with_version >= 90.0 && m.components_with_purl >= 80.0 {
         "Good coverage".to_string()
@@ -39,7 +39,7 @@ pub(crate) fn explain_completeness_score(report: &QualityReport) -> String {
     }
 }
 
-pub(crate) fn explain_identifier_score(report: &QualityReport) -> String {
+pub fn explain_identifier_score(report: &QualityReport) -> String {
     let m = &report.identifier_metrics;
     if m.invalid_purls > 0 || m.invalid_cpes > 0 {
         format!("{} invalid IDs", m.invalid_purls + m.invalid_cpes)
@@ -50,7 +50,7 @@ pub(crate) fn explain_identifier_score(report: &QualityReport) -> String {
     }
 }
 
-pub(crate) fn explain_license_score(report: &QualityReport) -> String {
+pub fn explain_license_score(report: &QualityReport) -> String {
     let m = &report.license_metrics;
     if m.noassertion_count > 0 {
         format!("{} NOASSERTION", m.noassertion_count)
@@ -63,7 +63,7 @@ pub(crate) fn explain_license_score(report: &QualityReport) -> String {
     }
 }
 
-pub(crate) fn explain_vulnerability_score(report: &QualityReport) -> String {
+pub fn explain_vulnerability_score(report: &QualityReport) -> String {
     let m = &report.vulnerability_metrics;
     if m.total_vulnerabilities == 0 {
         "No vulns tracked".to_string()
@@ -74,7 +74,7 @@ pub(crate) fn explain_vulnerability_score(report: &QualityReport) -> String {
     }
 }
 
-pub(crate) fn explain_dependency_score(report: &QualityReport) -> String {
+pub fn explain_dependency_score(report: &QualityReport) -> String {
     let m = &report.dependency_metrics;
     if m.total_dependencies == 0 {
         "No deps defined".to_string()
@@ -85,7 +85,7 @@ pub(crate) fn explain_dependency_score(report: &QualityReport) -> String {
     }
 }
 
-pub(crate) fn generate_key_factors(report: &QualityReport) -> Vec<Line<'static>> {
+pub fn generate_key_factors(report: &QualityReport) -> Vec<Line<'static>> {
     let scheme = colors();
     let mut lines = vec![];
 
@@ -190,7 +190,7 @@ pub(crate) fn generate_key_factors(report: &QualityReport) -> Vec<Line<'static>>
     lines
 }
 
-pub(crate) fn get_recommendation_reason(category: RecommendationCategory) -> String {
+pub fn get_recommendation_reason(category: RecommendationCategory) -> String {
     match category {
         RecommendationCategory::Completeness => {
             "Complete data enables accurate vulnerability scanning and license compliance"
@@ -214,7 +214,7 @@ pub(crate) fn get_recommendation_reason(category: RecommendationCategory) -> Str
     }
 }
 
-pub(crate) fn grade_color_and_label(grade: QualityGrade) -> (Color, &'static str) {
+pub fn grade_color_and_label(grade: QualityGrade) -> (Color, &'static str) {
     let scheme = colors();
     match grade {
         QualityGrade::A => (scheme.success, "Excellent"),
@@ -225,11 +225,11 @@ pub(crate) fn grade_color_and_label(grade: QualityGrade) -> (Color, &'static str
     }
 }
 
-pub(crate) fn grade_color(grade: QualityGrade) -> Color {
+pub fn grade_color(grade: QualityGrade) -> Color {
     grade_color_and_label(grade).0
 }
 
-pub(crate) fn priority_style(priority: u8) -> Style {
+pub fn priority_style(priority: u8) -> Style {
     let scheme = colors();
     match priority {
         1 => Style::default().fg(scheme.error).bold(),
@@ -263,7 +263,7 @@ fn bar_grade_style(score: f32) -> Style {
     Style::default().fg(Color::Rgb(r as u8, g as u8, b as u8))
 }
 
-pub(crate) fn score_color(score: f32) -> Color {
+pub fn score_color(score: f32) -> Color {
     let scheme = colors();
     if score >= 80.0 {
         scheme.success
@@ -274,7 +274,7 @@ pub(crate) fn score_color(score: f32) -> Color {
     }
 }
 
-pub(crate) fn score_style(score: f32) -> Style {
+pub fn score_style(score: f32) -> Style {
     Style::default().fg(score_color(score))
 }
 
@@ -282,7 +282,7 @@ pub(crate) fn score_style(score: f32) -> Style {
 // Rendering functions
 // ---------------------------------------------------------------------------
 
-pub(crate) fn render_quality_summary(
+pub fn render_quality_summary(
     frame: &mut Frame,
     area: Rect,
     report: &QualityReport,
@@ -363,7 +363,7 @@ fn render_compact_header(frame: &mut Frame, area: Rect, report: &QualityReport) 
     // Build inline gauge bar using block characters
     // Use area width minus borders and padding for bar width
     let bar_max = 20usize;
-    let filled = ((score.min(100) as f32 / 100.0) * bar_max as f32).round() as usize;
+    let filled = ((f32::from(score.min(100)) / 100.0) * bar_max as f32).round() as usize;
     let empty = bar_max.saturating_sub(filled);
     let bar_str: String = "\u{2588}".repeat(filled) + &"\u{2591}".repeat(empty);
 
@@ -568,7 +568,7 @@ fn render_top_recommendations(
     frame.render_widget(widget, area);
 }
 
-pub(crate) fn render_score_gauge(frame: &mut Frame, area: Rect, report: &QualityReport, title: &str) {
+pub fn render_score_gauge(frame: &mut Frame, area: Rect, report: &QualityReport, title: &str) {
     let scheme = colors();
     let score = report.overall_score as u16;
     let (gauge_color, grade_label) = grade_color_and_label(report.grade);
@@ -587,7 +587,7 @@ pub(crate) fn render_score_gauge(frame: &mut Frame, area: Rect, report: &Quality
     frame.render_widget(gauge, area);
 }
 
-pub(crate) fn render_score_breakdown(frame: &mut Frame, area: Rect, report: &QualityReport) {
+pub fn render_score_breakdown(frame: &mut Frame, area: Rect, report: &QualityReport) {
     let scheme = colors();
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -712,7 +712,7 @@ fn create_breakdown_row(name: &str, score: f32, weight: f32, explanation: &str) 
     .style(Style::default().fg(sc))
 }
 
-pub(crate) fn render_quality_metrics(frame: &mut Frame, area: Rect, report: &QualityReport) {
+pub fn render_quality_metrics(frame: &mut Frame, area: Rect, report: &QualityReport) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -727,7 +727,7 @@ pub(crate) fn render_quality_metrics(frame: &mut Frame, area: Rect, report: &Qua
     render_dependency_details(frame, chunks[2], report);
 }
 
-pub(crate) fn render_completeness_details(frame: &mut Frame, area: Rect, report: &QualityReport) {
+pub fn render_completeness_details(frame: &mut Frame, area: Rect, report: &QualityReport) {
     let scheme = colors();
     let m = &report.completeness_metrics;
     let total = m.total_components;
@@ -796,7 +796,7 @@ pub(crate) fn render_completeness_details(frame: &mut Frame, area: Rect, report:
     frame.render_widget(paragraph, area);
 }
 
-pub(crate) fn render_id_license_details(frame: &mut Frame, area: Rect, report: &QualityReport) {
+pub fn render_id_license_details(frame: &mut Frame, area: Rect, report: &QualityReport) {
     let scheme = colors();
     let id_m = &report.identifier_metrics;
     let lic_m = &report.license_metrics;
@@ -907,7 +907,7 @@ pub(crate) fn render_id_license_details(frame: &mut Frame, area: Rect, report: &
     frame.render_widget(lic_widget, h_chunks[1]);
 }
 
-pub(crate) fn render_dependency_details(frame: &mut Frame, area: Rect, report: &QualityReport) {
+pub fn render_dependency_details(frame: &mut Frame, area: Rect, report: &QualityReport) {
     let scheme = colors();
     let d = &report.dependency_metrics;
     let v = &report.vulnerability_metrics;
@@ -977,7 +977,7 @@ pub(crate) fn render_dependency_details(frame: &mut Frame, area: Rect, report: &
     frame.render_widget(paragraph, area);
 }
 
-pub(crate) fn render_quality_recommendations(
+pub fn render_quality_recommendations(
     frame: &mut Frame,
     area: Rect,
     report: &QualityReport,

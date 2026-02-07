@@ -47,11 +47,13 @@ impl Default for LargeSbomConfig {
 
 impl LargeSbomConfig {
     /// Check if cross-ecosystem matching is enabled.
-    pub fn enable_cross_ecosystem(&self) -> bool {
+    #[must_use] 
+    pub const fn enable_cross_ecosystem(&self) -> bool {
         self.cross_ecosystem.enabled
     }
 
     /// Aggressive optimization for very large SBOMs (1000+)
+    #[must_use] 
     pub fn aggressive() -> Self {
         Self {
             lsh_threshold: 300,
@@ -64,6 +66,7 @@ impl LargeSbomConfig {
     }
 
     /// Conservative settings (for accuracy over speed)
+    #[must_use] 
     pub fn conservative() -> Self {
         Self {
             lsh_threshold: 1000,

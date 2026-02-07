@@ -2,7 +2,7 @@
 //!
 //! Provides validation traits and implementations for all configuration types.
 
-use super::types::*;
+use super::types::{AppConfig, MatchingConfig, FilterConfig, OutputConfig, BehaviorConfig, TuiConfig, EnrichmentConfig, DiffConfig, ViewConfig, MultiDiffConfig, TimelineConfig, MatrixConfig};
 
 // ============================================================================
 // Configuration Error

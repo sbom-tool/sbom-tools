@@ -34,6 +34,7 @@ pub struct CompletenessMetrics {
 
 impl CompletenessMetrics {
     /// Calculate completeness metrics from an SBOM
+    #[must_use] 
     pub fn from_sbom(sbom: &NormalizedSbom) -> Self {
         let total = sbom.components.len();
         if total == 0 {
@@ -90,7 +91,8 @@ impl CompletenessMetrics {
     }
 
     /// Create empty metrics
-    pub fn empty() -> Self {
+    #[must_use] 
+    pub const fn empty() -> Self {
         Self {
             components_with_version: 0.0,
             components_with_purl: 0.0,
@@ -107,6 +109,7 @@ impl CompletenessMetrics {
     }
 
     /// Calculate overall completeness score (0-100)
+    #[must_use] 
     pub fn overall_score(&self, weights: &CompletenessWeights) -> f32 {
         let mut score = 0.0;
         let mut total_weight = 0.0;
@@ -198,6 +201,7 @@ pub struct IdentifierMetrics {
 
 impl IdentifierMetrics {
     /// Calculate identifier metrics from an SBOM
+    #[must_use] 
     pub fn from_sbom(sbom: &NormalizedSbom) -> Self {
         let mut valid_purls = 0;
         let mut invalid_purls = 0;
@@ -256,6 +260,7 @@ impl IdentifierMetrics {
     }
 
     /// Calculate identifier quality score (0-100)
+    #[must_use] 
     pub fn quality_score(&self, total_components: usize) -> f32 {
         if total_components == 0 {
             return 0.0;
@@ -292,6 +297,7 @@ pub struct LicenseMetrics {
 
 impl LicenseMetrics {
     /// Calculate license metrics from an SBOM
+    #[must_use] 
     pub fn from_sbom(sbom: &NormalizedSbom) -> Self {
         let mut with_declared = 0;
         let mut with_concluded = 0;
@@ -336,6 +342,7 @@ impl LicenseMetrics {
     }
 
     /// Calculate license quality score (0-100)
+    #[must_use] 
     pub fn quality_score(&self, total_components: usize) -> f32 {
         if total_components == 0 {
             return 0.0;
@@ -378,6 +385,7 @@ pub struct VulnerabilityMetrics {
 
 impl VulnerabilityMetrics {
     /// Calculate vulnerability metrics from an SBOM
+    #[must_use] 
     pub fn from_sbom(sbom: &NormalizedSbom) -> Self {
         let mut components_with_vulns = 0;
         let mut total_vulns = 0;
@@ -422,6 +430,7 @@ impl VulnerabilityMetrics {
 
     /// Calculate vulnerability documentation quality score (0-100)
     /// Note: This measures how well vulnerabilities are documented, not how many there are
+    #[must_use] 
     pub fn documentation_score(&self) -> f32 {
         if self.total_vulnerabilities == 0 {
             return 100.0; // No vulns to document
@@ -452,6 +461,7 @@ pub struct DependencyMetrics {
 
 impl DependencyMetrics {
     /// Calculate dependency metrics from an SBOM
+    #[must_use] 
     pub fn from_sbom(sbom: &NormalizedSbom) -> Self {
         let total_deps = sbom.edges.len();
 
@@ -485,6 +495,7 @@ impl DependencyMetrics {
     }
 
     /// Calculate dependency graph quality score (0-100)
+    #[must_use] 
     pub fn quality_score(&self, total_components: usize) -> f32 {
         if total_components == 0 {
             return 0.0;

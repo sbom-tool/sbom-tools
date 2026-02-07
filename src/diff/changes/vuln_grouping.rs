@@ -55,6 +55,7 @@ pub struct VulnerabilityGroup {
 
 impl VulnerabilityGroup {
     /// Create a new empty group for a component
+    #[must_use] 
     pub fn new(
         component_id: String,
         component_name: String,
@@ -100,21 +101,25 @@ impl VulnerabilityGroup {
     }
 
     /// Get total vulnerability count
+    #[must_use] 
     pub fn vuln_count(&self) -> usize {
         self.vulnerabilities.len()
     }
 
     /// Check if group has any critical vulnerabilities
+    #[must_use] 
     pub fn has_critical(&self) -> bool {
         self.severity_counts.get("Critical").copied().unwrap_or(0) > 0
     }
 
     /// Check if group has any high severity vulnerabilities
+    #[must_use] 
     pub fn has_high(&self) -> bool {
         self.severity_counts.get("High").copied().unwrap_or(0) > 0
     }
 
     /// Get summary line for display
+    #[must_use] 
     pub fn summary_line(&self) -> String {
         let version_str = self
             .component_version
@@ -159,6 +164,7 @@ fn severity_priority(severity: &str) -> u8 {
 }
 
 /// Group vulnerabilities by component
+#[must_use] 
 pub fn group_vulnerabilities(
     vulns: &[VulnerabilityDetail],
     status: VulnGroupStatus,
@@ -206,6 +212,7 @@ pub struct VulnerabilityGroupedView {
 
 impl VulnerabilityGroupedView {
     /// Create grouped view from vulnerability lists
+    #[must_use] 
     pub fn from_changes(
         introduced: &[VulnerabilityDetail],
         resolved: &[VulnerabilityDetail],
@@ -219,6 +226,7 @@ impl VulnerabilityGroupedView {
     }
 
     /// Get total group count
+    #[must_use] 
     pub fn total_groups(&self) -> usize {
         self.introduced_groups.len() + self.resolved_groups.len() + self.persistent_groups.len()
     }
@@ -231,6 +239,7 @@ impl VulnerabilityGroupedView {
     }
 
     /// Check if any group has KEV vulnerabilities
+    #[must_use] 
     pub fn has_any_kev(&self) -> bool {
         self.introduced_groups.iter().any(|g| g.has_kev)
             || self.resolved_groups.iter().any(|g| g.has_kev)

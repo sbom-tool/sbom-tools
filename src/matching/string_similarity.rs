@@ -9,6 +9,7 @@ use std::collections::HashSet;
 ///
 /// Splits names on common delimiters (-, _, ., @, /) and compares token sets.
 /// This catches reordered names like "react-dom" <-> "dom-react".
+#[must_use] 
 pub fn compute_token_similarity(name_a: &str, name_b: &str) -> f64 {
     let tokens_a: HashSet<&str> = name_a
         .split(['-', '_', '.', '@', '/'])
@@ -45,7 +46,8 @@ pub fn compute_token_similarity(name_a: &str, name_b: &str) -> f64 {
 /// - Same major: 0.04
 /// - Both present but different: 0.0
 /// - One or both missing: 0.0
-pub fn compute_version_similarity(va: &Option<String>, vb: &Option<String>) -> f64 {
+#[must_use] 
+pub fn compute_version_similarity(va: Option<&String>, vb: Option<&String>) -> f64 {
     match (va, vb) {
         (Some(a), Some(b)) if a == b => 0.10, // Exact match
         (Some(a), Some(b)) => {
@@ -124,7 +126,8 @@ pub fn soundex(name: &str) -> String {
 }
 
 /// Get Soundex digit for a character.
-pub fn soundex_digit(c: char) -> char {
+#[must_use] 
+pub const fn soundex_digit(c: char) -> char {
     match c {
         'B' | 'F' | 'P' | 'V' => '1',
         'C' | 'G' | 'J' | 'K' | 'Q' | 'S' | 'X' | 'Z' => '2',
@@ -140,6 +143,7 @@ pub fn soundex_digit(c: char) -> char {
 ///
 /// Returns 1.0 if Soundex codes match, 0.0 otherwise.
 /// Also checks individual tokens for partial phonetic matches.
+#[must_use] 
 pub fn compute_phonetic_similarity(name_a: &str, name_b: &str) -> f64 {
     // Compare full name Soundex
     let soundex_a = soundex(name_a);
@@ -184,7 +188,7 @@ pub fn compute_phonetic_similarity(name_a: &str, name_b: &str) -> f64 {
     if total == 0 {
         0.0
     } else {
-        matches as f64 / total as f64
+        f64::from(matches) / total as f64
     }
 }
 
@@ -239,27 +243,27 @@ mod tests {
 
     #[test]
     fn test_version_similarity_exact() {
-        let v1 = Some("1.2.3".to_string());
-        let v2 = Some("1.2.3".to_string());
-        assert_eq!(compute_version_similarity(&v1, &v2), 0.10);
+        let v1 = "1.2.3".to_string();
+        let v2 = "1.2.3".to_string();
+        assert_eq!(compute_version_similarity(Some(&v1), Some(&v2)), 0.10);
     }
 
     #[test]
     fn test_version_similarity_same_major_minor() {
-        let v1 = Some("1.2.3".to_string());
-        let v2 = Some("1.2.5".to_string());
-        assert_eq!(compute_version_similarity(&v1, &v2), 0.07);
+        let v1 = "1.2.3".to_string();
+        let v2 = "1.2.5".to_string();
+        assert_eq!(compute_version_similarity(Some(&v1), Some(&v2)), 0.07);
     }
 
     #[test]
     fn test_version_similarity_same_major() {
-        let v1 = Some("1.2.3".to_string());
-        let v2 = Some("1.5.0".to_string());
-        assert_eq!(compute_version_similarity(&v1, &v2), 0.04);
+        let v1 = "1.2.3".to_string();
+        let v2 = "1.5.0".to_string();
+        assert_eq!(compute_version_similarity(Some(&v1), Some(&v2)), 0.04);
     }
 
     #[test]
     fn test_version_similarity_none() {
-        assert_eq!(compute_version_similarity(&None, &None), 0.0);
+        assert_eq!(compute_version_similarity(None, None), 0.0);
     }
 }

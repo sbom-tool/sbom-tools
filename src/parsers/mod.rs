@@ -1,6 +1,6 @@
 //! SBOM format parsers.
 //!
-//! This module provides parsers for CycloneDX and SPDX SBOM formats,
+//! This module provides parsers for `CycloneDX` and SPDX SBOM formats,
 //! converting them to the normalized intermediate representation.
 //!
 //! ## Format Detection
@@ -59,6 +59,7 @@ pub struct DetectedFormat {
 /// Detect SBOM format from content without parsing
 ///
 /// Returns None if no format could be detected with sufficient confidence.
+#[must_use] 
 pub fn detect_format(content: &str) -> Option<DetectedFormat> {
     let detector = FormatDetector::new();
     let result = detector.detect_from_content(content);
@@ -110,11 +111,12 @@ pub fn parse_sbom_str(content: &str) -> Result<NormalizedSbom, ParseError> {
 
 // Legacy detection functions - kept for backwards compatibility but deprecated
 
-/// Check if content looks like CycloneDX
+/// Check if content looks like `CycloneDX`
 #[deprecated(
     since = "0.2.0",
     note = "Use detect_format() or CycloneDxParser::detect() instead"
 )]
+#[must_use] 
 pub fn is_cyclonedx(content: &str) -> bool {
     CycloneDxParser::new().can_parse(content)
 }
@@ -124,6 +126,7 @@ pub fn is_cyclonedx(content: &str) -> bool {
     since = "0.2.0",
     note = "Use detect_format() or SpdxParser::detect() instead"
 )]
+#[must_use] 
 pub fn is_spdx(content: &str) -> bool {
     SpdxParser::new().can_parse(content)
 }

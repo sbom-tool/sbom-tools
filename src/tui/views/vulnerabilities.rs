@@ -28,14 +28,14 @@ enum VulnRenderItem {
 }
 
 /// Pre-built vulnerability list to avoid rebuilding on each render call.
-/// Built once per frame in render_vulnerabilities and passed to sub-functions.
-pub(crate) enum VulnListData<'a> {
+/// Built once per frame in `render_vulnerabilities` and passed to sub-functions.
+pub enum VulnListData<'a> {
     Diff(Vec<DiffVulnItem<'a>>),
     View(Vec<(&'a Component, &'a VulnerabilityRef)>),
     Empty,
 }
 
-pub(crate) fn render_vulnerabilities(frame: &mut Frame, area: Rect, app: &mut App) {
+pub fn render_vulnerabilities(frame: &mut Frame, area: Rect, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -465,9 +465,9 @@ fn build_grouped_render_items(
 use crate::tui::shared::vulnerabilities::severity_rank;
 
 /// Build table rows for grouped mode.
-fn build_grouped_rows<'a>(
+fn build_grouped_rows(
     app: &App,
-    vuln_data: &VulnListData<'a>,
+    vuln_data: &VulnListData<'_>,
     cached_depths: &std::collections::HashMap<String, usize>,
 ) -> Vec<Row<'static>> {
     let render_items = build_grouped_render_items(app, vuln_data);
@@ -537,6 +537,8 @@ fn build_single_diff_row(
     item: &DiffVulnItem<'_>,
     scheme: &crate::tui::theme::ColorScheme,
 ) -> Row<'static> {
+    use crate::tui::shared::vulnerabilities::{render_kev_badge_spans, render_depth_badge_spans};
+
     let (status_label, status_bg, status_fg, row_style) = match item.status {
         DiffVulnStatus::Introduced => (
             " + NEW ",
@@ -561,7 +563,6 @@ fn build_single_diff_row(
     let vuln = item.vuln;
 
     // Build ID cell with KEV and DIR/TRN badges
-    use crate::tui::shared::vulnerabilities::{render_kev_badge_spans, render_depth_badge_spans};
     let mut id_spans: Vec<Span<'_>> = Vec::new();
     id_spans.extend(render_kev_badge_spans(vuln.is_kev, scheme));
     id_spans.extend(render_depth_badge_spans(vuln.component_depth.map(|d| d as usize), scheme));
@@ -600,13 +601,14 @@ fn build_single_view_row(
     cached_depths: &std::collections::HashMap<String, usize>,
     scheme: &crate::tui::theme::ColorScheme,
 ) -> Row<'static> {
+    use crate::tui::shared::vulnerabilities::{render_kev_badge_spans, render_depth_badge_spans};
+
     let (comp, vuln) = item;
     let severity = vuln
         .severity
         .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
     let sev_color = scheme.severity_color(&severity);
 
-    use crate::tui::shared::vulnerabilities::{render_kev_badge_spans, render_depth_badge_spans};
     let mut id_spans: Vec<Span<'_>> = Vec::new();
     id_spans.extend(render_kev_badge_spans(vuln.is_kev, scheme));
     let comp_id = comp.canonical_id.to_string();
@@ -1017,7 +1019,7 @@ fn get_view_vuln_rows(
     items.iter().map(|item| build_single_view_row(item, cached_depths, &scheme)).collect()
 }
 
-/// Format SLA cell for diff mode (using VulnerabilityDetail)
+/// Format SLA cell for diff mode (using `VulnerabilityDetail`)
 fn format_sla_cell(
     sla_status: SlaStatus,
     days_since_published: Option<i64>,
@@ -1048,7 +1050,7 @@ fn format_sla_cell(
     }
 }
 
-/// Format SLA cell for view mode (using VulnerabilityRef)
+/// Format SLA cell for view mode (using `VulnerabilityRef`)
 fn format_view_vuln_sla_cell(
     vuln: &VulnerabilityRef,
     severity: &str,
@@ -1081,9 +1083,8 @@ fn calculate_sla_status(
             return SlaStatus::Overdue(-days);
         } else if days <= 3 {
             return SlaStatus::DueSoon(days);
-        } else {
-            return SlaStatus::OnTrack(days);
         }
+        return SlaStatus::OnTrack(days);
     }
 
     // Fall back to severity-based SLA
@@ -1100,9 +1101,8 @@ fn calculate_sla_status(
             return SlaStatus::Overdue(-remaining);
         } else if remaining <= 3 {
             return SlaStatus::DueSoon(remaining);
-        } else {
-            return SlaStatus::OnTrack(remaining);
         }
+        return SlaStatus::OnTrack(remaining);
     }
 
     SlaStatus::NoDueDate
@@ -1158,7 +1158,7 @@ fn calculate_view_vuln_urgency(
     calculate_fix_urgency(severity_rank, blast_radius, cvss_score)
 }
 
-/// Count the number of visible items in grouped mode without building full VulnListData.
+/// Count the number of visible items in grouped mode without building full `VulnListData`.
 /// Each component group adds 1 header + N vulns (if expanded).
 fn count_grouped_items(app: &App) -> usize {
     match app.mode {

@@ -2,7 +2,7 @@
 //!
 //! # State synchronization
 //!
-//! The quality tab state lives in two places during the ViewState migration:
+//! The quality tab state lives in two places during the `ViewState` migration:
 //! - `app.quality_view.inner` — authoritative for event handling
 //! - `app.tabs.quality` — read by the rendering code
 //!

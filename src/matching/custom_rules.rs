@@ -114,6 +114,7 @@ impl AliasPattern {
     }
 
     /// Get a description of this pattern for display
+    #[must_use] 
     pub fn description(&self) -> String {
         match self {
             Self::Exact(purl) => format!("exact:{purl}"),
@@ -208,6 +209,7 @@ impl ExclusionRule {
     }
 
     /// Get the reason for this exclusion, if any
+    #[must_use] 
     pub fn get_reason(&self) -> Option<&str> {
         match self {
             Self::Exact(_) => None,
@@ -216,6 +218,7 @@ impl ExclusionRule {
     }
 
     /// Get a description of this rule for display
+    #[must_use] 
     pub fn description(&self) -> String {
         match self {
             Self::Exact(purl) => format!("exact:{purl}"),
@@ -266,6 +269,7 @@ impl MatchingRulesConfig {
     }
 
     /// Get summary statistics about the rules
+    #[must_use] 
     pub fn summary(&self) -> RulesSummary {
         RulesSummary {
             equivalence_groups: self.equivalences.len(),
@@ -276,6 +280,7 @@ impl MatchingRulesConfig {
     }
 
     /// Check if the configuration is empty (no rules defined)
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.equivalences.is_empty() && self.exclusions.is_empty()
     }

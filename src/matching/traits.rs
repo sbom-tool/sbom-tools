@@ -28,7 +28,7 @@ impl MatchResult {
     }
 
     /// Create a match result with metadata
-    pub fn with_metadata(score: f64, tier: MatchTier, metadata: MatchMetadata) -> Self {
+    pub const fn with_metadata(score: f64, tier: MatchTier, metadata: MatchMetadata) -> Self {
         Self {
             score,
             tier,
@@ -46,6 +46,7 @@ impl MatchResult {
     }
 
     /// Check if this represents a successful match
+    #[must_use] 
     pub fn is_match(&self) -> bool {
         self.score > 0.0 && self.tier != MatchTier::None
     }
@@ -71,7 +72,8 @@ pub enum MatchTier {
 
 impl MatchTier {
     /// Get the default confidence score for this tier
-    pub fn default_score(&self) -> f64 {
+    #[must_use] 
+    pub const fn default_score(&self) -> f64 {
         match self {
             Self::None => 0.0,
             Self::ExactIdentifier => 1.0,
@@ -168,6 +170,7 @@ impl MatchExplanation {
     }
 
     /// Generate a human-readable summary of the match.
+    #[must_use] 
     pub fn summary(&self) -> String {
         if self.is_match {
             format!(
@@ -182,6 +185,7 @@ impl MatchExplanation {
     }
 
     /// Generate a detailed multi-line explanation.
+    #[must_use] 
     pub fn detailed(&self) -> String {
         let mut lines = vec![self.summary()];
 
@@ -283,7 +287,7 @@ pub trait ComponentMatcher: Send + Sync {
     }
 
     /// Get the name of this matcher for logging/debugging.
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "ComponentMatcher"
     }
 
@@ -313,7 +317,8 @@ impl Default for CacheConfig {
 
 impl CacheConfig {
     /// Create a config optimized for small SBOMs.
-    pub fn small() -> Self {
+    #[must_use] 
+    pub const fn small() -> Self {
         Self {
             max_entries: 10_000,
             cache_detailed: true,
@@ -321,7 +326,8 @@ impl CacheConfig {
     }
 
     /// Create a config optimized for large SBOMs.
-    pub fn large() -> Self {
+    #[must_use] 
+    pub const fn large() -> Self {
         Self {
             max_entries: 500_000,
             cache_detailed: false,
@@ -402,7 +408,7 @@ impl<M: ComponentMatcher> CachedMatcher<M> {
     }
 
     /// Get a reference to the inner matcher.
-    pub fn inner(&self) -> &M {
+    pub const fn inner(&self) -> &M {
         &self.inner
     }
 
@@ -532,7 +538,7 @@ impl<M: ComponentMatcher> ComponentMatcher for CachedMatcher<M> {
         self.inner.explain_match(a, b)
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "CachedMatcher"
     }
 
@@ -562,6 +568,7 @@ impl CompositeMatcherBuilder {
     }
 
     /// Build the composite matcher.
+    #[must_use] 
     pub fn build(self) -> CompositeMatcher {
         CompositeMatcher {
             matchers: self.matchers,
@@ -603,7 +610,7 @@ impl ComponentMatcher for CompositeMatcher {
             .unwrap_or_else(MatchResult::no_match)
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "CompositeMatcher"
     }
 }
@@ -620,7 +627,7 @@ mod tests {
             self.0
         }
 
-        fn name(&self) -> &str {
+        fn name(&self) -> &'static str {
             "FixedScoreMatcher"
         }
     }

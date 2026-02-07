@@ -14,13 +14,14 @@ pub struct SarifReporter {
 
 impl SarifReporter {
     /// Create a new SARIF reporter
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self { include_info: true }
     }
 
     /// Set whether to include informational results
     #[must_use]
-    pub fn include_info(mut self, include: bool) -> Self {
+    pub const fn include_info(mut self, include: bool) -> Self {
         self.include_info = include;
         self
     }
@@ -293,7 +294,7 @@ fn format_sla_label(vuln: &VulnerabilityDetail) -> String {
     }
 }
 
-fn violation_severity_to_level(severity: ViolationSeverity) -> SarifLevel {
+const fn violation_severity_to_level(severity: ViolationSeverity) -> SarifLevel {
     match severity {
         ViolationSeverity::Error => SarifLevel::Error,
         ViolationSeverity::Warning => SarifLevel::Warning,

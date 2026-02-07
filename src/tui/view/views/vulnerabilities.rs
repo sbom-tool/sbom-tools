@@ -1,4 +1,4 @@
-//! Vulnerability explorer view for ViewApp.
+//! Vulnerability explorer view for `ViewApp`.
 
 use crate::tui::theme::colors;
 use crate::tui::view::app::{FocusPanel, ViewApp, VulnGroupBy};
@@ -354,7 +354,7 @@ fn resolve_severity(vuln: &crate::model::VulnerabilityRef) -> String {
 }
 
 /// Group affected component names by extracted package name for smart display.
-/// Returns (package_display_name, count) pairs.
+/// Returns (`package_display_name`, count) pairs.
 fn group_affected_components(components: &[String], description: Option<&str>) -> Vec<(String, usize)> {
     use std::collections::HashMap;
     let mut groups: HashMap<String, usize> = HashMap::new();
@@ -371,6 +371,7 @@ fn group_affected_components(components: &[String], description: Option<&str>) -
 
 /// Build the vulnerability cache from SBOM data
 fn build_vuln_cache(app: &ViewApp) -> VulnCache {
+    use crate::tui::shared::vulnerabilities::severity_rank;
     use crate::tui::view::app::VulnSortBy;
     use std::collections::HashMap;
 
@@ -409,7 +410,7 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                     }
                 }
 
-                let cvss = vuln.max_cvss_score().map(|v| v as f64);
+                let cvss = vuln.max_cvss_score().map(f64::from);
                 if cvss.is_some() {
                     has_any_cvss = true;
                 }
@@ -432,7 +433,7 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                             }
                         }
                     })
-                    .or_insert(VulnRow {
+                    .or_insert_with(|| VulnRow {
                         vuln_id: vuln.id.clone(),
                         severity: sev,
                         cvss,
@@ -442,7 +443,6 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                         affected_count: 1,
                         affected_components: vec![comp.name.clone()],
                         cwes: vuln.cwes.clone(),
-                        display_name: None,
                         published: vuln.published,
                         affected_versions: vuln.affected_versions.clone(),
                         source: vuln.source.to_string(),
@@ -489,7 +489,7 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                     }
                 }
 
-                let cvss = vuln.max_cvss_score().map(|v| v as f64);
+                let cvss = vuln.max_cvss_score().map(f64::from);
                 if cvss.is_some() {
                     has_any_cvss = true;
                 }
@@ -513,7 +513,6 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                     affected_count: 1,
                     affected_components: vec![comp.name.clone()],
                     cwes: vuln.cwes.clone(),
-                    display_name: None,
                     published: vuln.published,
                     affected_versions: vuln.affected_versions.clone(),
                     source: vuln.source.to_string(),
@@ -525,8 +524,6 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
     }
 
     // Sort based on user selection
-    use crate::tui::shared::vulnerabilities::severity_rank;
-
     match app.vuln_state.sort_by {
         VulnSortBy::Severity => {
             vulns.sort_by(|a, b| {
@@ -1133,7 +1130,7 @@ fn is_cryptic_name(name: &str) -> bool {
 
 /// Clean up a component name (remove path prefixes, extensions)
 fn clean_component_name(name: &str) -> String {
-    if name.starts_with("./") || name.starts_with("/") || name.contains('/') {
+    if name.starts_with("./") || name.starts_with('/') || name.contains('/') {
         if let Some(filename) = name.rsplit('/').next() {
             let clean = filename
                 .trim_end_matches(".squ")
@@ -1370,8 +1367,6 @@ pub struct VulnRow {
     pub affected_count: usize,
     pub affected_components: Vec<String>,
     pub cwes: Vec<String>,
-    /// Cached display name (computed lazily from description)
-    pub display_name: Option<String>,
     /// Published date
     pub published: Option<chrono::DateTime<chrono::Utc>>,
     /// Affected version ranges
@@ -1399,6 +1394,8 @@ pub enum VulnDisplayItem {
 }
 
 /// Build display items from cached vulns based on grouping mode and expansion state.
+#[allow(clippy::implicit_hasher)]
+#[must_use] 
 pub fn build_display_items(
     vulns: &[VulnRow],
     group_by: &VulnGroupBy,

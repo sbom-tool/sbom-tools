@@ -140,6 +140,7 @@ impl RuleEngine {
     }
 
     /// Apply rules to a set of components
+    #[must_use] 
     pub fn apply(&self, components: &IndexMap<CanonicalId, Component>) -> RuleApplicationResult {
         let mut result = RuleApplicationResult::default();
 
@@ -351,11 +352,13 @@ impl RuleEngine {
     }
 
     /// Get the configuration
-    pub fn config(&self) -> &MatchingRulesConfig {
+    #[must_use] 
+    pub const fn config(&self) -> &MatchingRulesConfig {
         &self.config
     }
 
     /// Check if a PURL is excluded by any rule
+    #[must_use] 
     pub fn is_excluded(&self, purl: &str) -> bool {
         for (idx, rule) in self.config.exclusions.iter().enumerate() {
             match rule {
@@ -386,6 +389,7 @@ impl RuleEngine {
     }
 
     /// Get the canonical PURL for a given PURL, if any equivalence applies
+    #[must_use] 
     pub fn get_canonical(&self, purl: &str) -> Option<String> {
         for (eq_idx, eq) in self.config.equivalences.iter().enumerate() {
             if purl == eq.canonical {

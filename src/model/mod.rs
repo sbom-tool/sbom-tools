@@ -1,7 +1,7 @@
 //! Intermediate representation for normalized SBOMs.
 //!
 //! This module defines the canonical data structures used for format-agnostic
-//! SBOM comparison. Both CycloneDX and SPDX formats are normalized to these
+//! SBOM comparison. Both `CycloneDX` and SPDX formats are normalized to these
 //! structures before diff operations.
 //!
 //! # Index Support

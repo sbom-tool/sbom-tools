@@ -20,7 +20,7 @@ pub enum MultiViewType {
 }
 
 impl MultiViewType {
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::MultiDiff => "Multi-Diff Dashboard",
             Self::Timeline => "Timeline View",
@@ -28,7 +28,7 @@ impl MultiViewType {
         }
     }
 
-    pub fn shortcut(self) -> &'static str {
+    pub const fn shortcut(self) -> &'static str {
         match self {
             Self::MultiDiff => "1",
             Self::Timeline => "2",
@@ -36,7 +36,7 @@ impl MultiViewType {
         }
     }
 
-    pub fn icon(self) -> &'static str {
+    pub const fn icon(self) -> &'static str {
         match self {
             Self::MultiDiff => "◆",
             Self::Timeline => "◇",
@@ -58,15 +58,15 @@ impl ViewSwitcherState {
         }
     }
 
-    pub fn toggle(&mut self) {
+    pub const fn toggle(&mut self) {
         self.visible = !self.visible;
     }
 
-    pub fn show(&mut self) {
+    pub const fn show(&mut self) {
         self.visible = true;
     }
 
-    pub fn hide(&mut self) {
+    pub const fn hide(&mut self) {
         self.visible = false;
     }
 
@@ -171,11 +171,11 @@ impl ComponentDeepDiveState {
         self.collected_data = ComponentDeepDiveData::default();
     }
 
-    pub fn close(&mut self) {
+    pub const fn close(&mut self) {
         self.visible = false;
     }
 
-    pub fn next_section(&mut self) {
+    pub const fn next_section(&mut self) {
         self.active_section = (self.active_section + 1) % 4;
     }
 
@@ -183,7 +183,7 @@ impl ComponentDeepDiveState {
         self.active_section = self.active_section.checked_sub(1).unwrap_or(3);
     }
 
-    pub fn section_labels() -> [&'static str; 4] {
+    pub const fn section_labels() -> [&'static str; 4] {
         ["Overview", "Versions", "Dependencies", "Vulnerabilities"]
     }
 }
@@ -213,12 +213,12 @@ impl ShortcutsOverlayState {
         Self::default()
     }
 
-    pub fn show(&mut self, context: ShortcutsContext) {
+    pub const fn show(&mut self, context: ShortcutsContext) {
         self.visible = true;
         self.context = context;
     }
 
-    pub fn hide(&mut self) {
+    pub const fn hide(&mut self) {
         self.visible = false;
     }
 }

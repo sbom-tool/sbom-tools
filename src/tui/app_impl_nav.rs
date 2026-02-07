@@ -72,7 +72,7 @@ impl App {
     }
 
     /// Select a specific tab
-    pub fn select_tab(&mut self, tab: TabKind) {
+    pub const fn select_tab(&mut self, tab: TabKind) {
         self.active_tab = tab;
     }
 
@@ -240,11 +240,13 @@ impl App {
     }
 
     /// Check if we have navigation history
+    #[must_use] 
     pub fn has_navigation_history(&self) -> bool {
         self.navigation_ctx.has_history()
     }
 
     /// Get the breadcrumb trail for display
+    #[must_use] 
     pub fn breadcrumb_trail(&self) -> String {
         self.navigation_ctx.breadcrumb_trail()
     }

@@ -1,13 +1,13 @@
-//! ViewApp - Dedicated TUI for exploring a single SBOM.
+//! `ViewApp` - Dedicated TUI for exploring a single SBOM.
 //!
 //! This module provides a rich, purpose-built interface for SBOM analysis
 //! with hierarchical navigation, search, and deep inspection.
 
 mod app;
 mod events;
-pub mod severity;
+pub(crate) mod severity;
 mod ui;
-pub mod views;
+pub(crate) mod views;
 
 pub use app::{
     SbomStats, TreeFilter, TreeGroupBy, ViewApp, ViewBreadcrumb, ViewNavigationContext, ViewTab,

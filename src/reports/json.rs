@@ -17,7 +17,8 @@ pub struct JsonReporter {
 
 impl JsonReporter {
     /// Create a new JSON reporter
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             summary_only: false,
             pretty: true,
@@ -25,7 +26,8 @@ impl JsonReporter {
     }
 
     /// Create a summary-only reporter
-    pub fn summary_only() -> Self {
+    #[must_use] 
+    pub const fn summary_only() -> Self {
         Self {
             summary_only: true,
             pretty: true,
@@ -34,7 +36,7 @@ impl JsonReporter {
 
     /// Set pretty printing
     #[must_use]
-    pub fn pretty(mut self, pretty: bool) -> Self {
+    pub const fn pretty(mut self, pretty: bool) -> Self {
         self.pretty = pretty;
         self
     }

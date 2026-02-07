@@ -1,7 +1,7 @@
 //! Ecosystem-specific configuration for package matching rules.
 //!
 //! This module provides configurable rules for normalizing and matching
-//! package names across different ecosystems (npm, PyPI, Cargo, Maven, etc.).
+//! package names across different ecosystems (npm, `PyPI`, Cargo, Maven, etc.).
 //!
 //! Configuration can be loaded from YAML files or use built-in defaults.
 
@@ -63,7 +63,7 @@ impl Default for GlobalSettings {
     }
 }
 
-fn default_true() -> bool {
+const fn default_true() -> bool {
     true
 }
 
@@ -115,7 +115,7 @@ pub struct NormalizationConfig {
     pub case_sensitive: bool,
 
     /// Characters that should be treated as equivalent
-    /// e.g., ["-", "_", "."] means foo-bar == foo_bar == foo.bar
+    /// e.g., `["-", "_", "."]` means foo-bar == `foo_bar` == foo.bar
     #[serde(default)]
     pub equivalent_chars: Vec<Vec<String>>,
 
@@ -176,7 +176,7 @@ pub struct VersioningConfig {
     pub qualifier_order: Vec<String>,
 }
 
-fn default_semver() -> VersionSpec {
+const fn default_semver() -> VersionSpec {
     VersionSpec::Semver
 }
 
@@ -201,7 +201,7 @@ pub enum VersionSpec {
     Pep440,
     /// Maven versioning
     Maven,
-    /// RubyGems versioning
+    /// `RubyGems` versioning
     Rubygems,
     /// Go module versioning
     Gomod,
@@ -245,7 +245,7 @@ pub struct ImportMapping {
     /// Pattern to match (glob-style)
     pub pattern: String,
 
-    /// Type of import (github, stdlib_extension, etc.)
+    /// Type of import (github, `stdlib_extension`, etc.)
     #[serde(rename = "type")]
     pub mapping_type: String,
 }
@@ -296,6 +296,7 @@ pub struct CustomEquivalence {
 
 impl EcosystemRulesConfig {
     /// Create a new empty configuration
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             version: default_version(),
@@ -307,6 +308,7 @@ impl EcosystemRulesConfig {
     }
 
     /// Create configuration with built-in defaults
+    #[must_use] 
     pub fn builtin() -> Self {
         let mut config = Self::new();
         config.load_builtin_rules();
@@ -582,7 +584,7 @@ impl EcosystemRulesConfig {
         self.load_cross_ecosystem_mappings();
     }
 
-    /// PyPI known aliases
+    /// `PyPI` known aliases
     fn pypi_aliases() -> HashMap<String, Vec<String>> {
         let mut aliases = HashMap::new();
         aliases.insert(
@@ -706,11 +708,13 @@ impl EcosystemRulesConfig {
     }
 
     /// Get configuration for a specific ecosystem
+    #[must_use] 
     pub fn get_ecosystem(&self, ecosystem: &str) -> Option<&EcosystemConfig> {
         self.ecosystems.get(&ecosystem.to_lowercase())
     }
 
     /// Check if configuration is empty
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.ecosystems.is_empty()
             && self.cross_ecosystem.is_empty()

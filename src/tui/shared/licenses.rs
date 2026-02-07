@@ -8,7 +8,7 @@ use crate::tui::theme::colors;
 use ratatui::prelude::*;
 
 /// Map a `LicenseCategory` to a theme color.
-pub(crate) fn category_color(category: LicenseCategory) -> Color {
+pub fn category_color(category: LicenseCategory) -> Color {
     let scheme = colors();
     match category {
         LicenseCategory::Permissive | LicenseCategory::PublicDomain => scheme.success,
@@ -20,7 +20,7 @@ pub(crate) fn category_color(category: LicenseCategory) -> Color {
 }
 
 /// Map a `RiskLevel` to a theme color.
-pub(crate) fn risk_level_color(risk: RiskLevel) -> Color {
+pub fn risk_level_color(risk: RiskLevel) -> Color {
     let scheme = colors();
     match risk {
         RiskLevel::Low => scheme.success,
@@ -32,7 +32,7 @@ pub(crate) fn risk_level_color(risk: RiskLevel) -> Color {
 
 /// Render license metadata lines: title (with dual-license indicator), category badge,
 /// risk badge, family, and component count.
-pub(crate) fn render_license_metadata_lines(
+pub fn render_license_metadata_lines(
     license: &str,
     category: LicenseCategory,
     risk_level: RiskLevel,
@@ -99,7 +99,7 @@ pub(crate) fn render_license_metadata_lines(
 /// Get license characteristics based on category.
 ///
 /// Returns a list of `(description, allowed)` pairs.
-pub(crate) fn get_license_characteristics(license: &str) -> Vec<(&'static str, bool)> {
+pub fn get_license_characteristics(license: &str) -> Vec<(&'static str, bool)> {
     let info = LicenseInfo::from_spdx(license);
 
     match info.category {
@@ -135,7 +135,7 @@ pub(crate) fn get_license_characteristics(license: &str) -> Vec<(&'static str, b
 }
 
 /// Render license characteristics as check/cross icon lines.
-pub(crate) fn render_license_characteristics_lines(license: &str) -> Vec<Line<'static>> {
+pub fn render_license_characteristics_lines(license: &str) -> Vec<Line<'static>> {
     let scheme = colors();
     let mut lines = vec![];
 

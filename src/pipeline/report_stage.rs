@@ -32,7 +32,7 @@ pub fn output_report(
     // Pre-compute CRA compliance once, pass to reporters to avoid redundant checks
     let cra_checker =
         crate::quality::ComplianceChecker::new(crate::quality::ComplianceLevel::CraPhase2);
-    let old_cra = cra_checker.clone().check(old_sbom);
+    let old_cra = cra_checker.check(old_sbom);
     let new_cra = cra_checker.check(new_sbom);
 
     let report_config = ReportConfig {
@@ -99,32 +99,29 @@ fn output_streaming(
 ) -> Result<()> {
     let streaming_reporter = StreamingJsonReporter::new();
 
-    match &config.output.file {
-        Some(path) => {
-            let file = File::create(path)?;
-            let mut writer = BufWriter::new(file);
-            streaming_reporter.write_diff_to(
-                result,
-                old_sbom,
-                new_sbom,
-                report_config,
-                &mut writer,
-            )?;
-            if !config.behavior.quiet {
-                tracing::info!("Streaming report written to {:?}", path);
-            }
+    if let Some(path) = &config.output.file {
+        let file = File::create(path)?;
+        let mut writer = BufWriter::new(file);
+        streaming_reporter.write_diff_to(
+            result,
+            old_sbom,
+            new_sbom,
+            report_config,
+            &mut writer,
+        )?;
+        if !config.behavior.quiet {
+            tracing::info!("Streaming report written to {:?}", path);
         }
-        None => {
-            let stdout = std::io::stdout();
-            let mut writer = BufWriter::new(stdout.lock());
-            streaming_reporter.write_diff_to(
-                result,
-                old_sbom,
-                new_sbom,
-                report_config,
-                &mut writer,
-            )?;
-        }
+    } else {
+        let stdout = std::io::stdout();
+        let mut writer = BufWriter::new(stdout.lock());
+        streaming_reporter.write_diff_to(
+            result,
+            old_sbom,
+            new_sbom,
+            report_config,
+            &mut writer,
+        )?;
     }
 
     Ok(())

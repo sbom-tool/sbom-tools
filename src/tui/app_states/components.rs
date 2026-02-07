@@ -37,7 +37,7 @@ impl ComponentsState {
     }
 
     /// Toggle focus between table and detail panel
-    pub fn toggle_focus(&mut self) {
+    pub const fn toggle_focus(&mut self) {
         self.focus_detail = !self.focus_detail;
     }
 
@@ -52,7 +52,7 @@ impl ComponentsState {
         self.multi_selected.clear(); // Clear multi-selection on filter change
     }
 
-    pub fn toggle_sort(&mut self) {
+    pub const fn toggle_sort(&mut self) {
         self.sort_by = match self.sort_by {
             ComponentSort::Name => ComponentSort::Version,
             ComponentSort::Version => ComponentSort::Ecosystem,
@@ -125,7 +125,7 @@ pub enum ComponentFilter {
 }
 
 impl ComponentFilter {
-    pub fn label(self) -> &'static str {
+    pub const fn label(self) -> &'static str {
         match self {
             Self::All => "All",
             Self::Added => "Added",

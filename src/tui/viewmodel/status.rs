@@ -35,12 +35,14 @@ pub struct StatusMessage {
 
 impl StatusMessage {
     /// Create a new status message manager.
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Create a status message manager with auto-clear after duration.
-    pub fn with_auto_clear(duration: Duration) -> Self {
+    #[must_use] 
+    pub const fn with_auto_clear(duration: Duration) -> Self {
         Self {
             message: None,
             set_at: None,
@@ -75,24 +77,27 @@ impl StatusMessage {
     /// Get the current message without checking auto-clear.
     ///
     /// Use this when you don't want to mutate state.
+    #[must_use] 
     pub fn peek(&self) -> Option<&str> {
         self.message.as_deref()
     }
 
     /// Check if there's an active message.
-    pub fn has_message(&self) -> bool {
+    #[must_use] 
+    pub const fn has_message(&self) -> bool {
         self.message.is_some()
     }
 
     /// Get the message directly (for backwards compatibility).
     ///
     /// Returns a reference to the Option<String> without auto-clear logic.
-    pub fn as_option(&self) -> &Option<String> {
+    #[must_use] 
+    pub const fn as_option(&self) -> &Option<String> {
         &self.message
     }
 
     /// Take the message, clearing it.
-    pub fn take(&mut self) -> Option<String> {
+    pub const fn take(&mut self) -> Option<String> {
         self.set_at = None;
         self.message.take()
     }

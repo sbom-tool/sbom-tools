@@ -1,4 +1,4 @@
-//! Shared ViewModel layer for TUI views.
+//! Shared `ViewModel` layer for TUI views.
 //!
 //! This module provides reusable state management components that can be
 //! shared between the diff TUI (`App`) and view TUI (`ViewApp`).
@@ -29,7 +29,7 @@
 //!
 //! # Migration Guide
 //!
-//! ## SearchState Migration
+//! ## `SearchState` Migration
 //!
 //! Replace `DiffSearchState` or local `SearchState` with:
 //! ```ignore
@@ -109,7 +109,8 @@ impl Default for QualityViewState {
 }
 
 impl QualityViewState {
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             view_mode: QualityViewMode::Summary,
             selected_recommendation: 0,
@@ -118,7 +119,8 @@ impl QualityViewState {
         }
     }
 
-    pub fn with_recommendations(total: usize) -> Self {
+    #[must_use] 
+    pub const fn with_recommendations(total: usize) -> Self {
         Self {
             view_mode: QualityViewMode::Summary,
             selected_recommendation: 0,
@@ -128,7 +130,7 @@ impl QualityViewState {
     }
 
     /// Cycle to the next view mode.
-    pub fn next_mode(&mut self) {
+    pub const fn next_mode(&mut self) {
         self.view_mode = match self.view_mode {
             QualityViewMode::Summary => QualityViewMode::Recommendations,
             QualityViewMode::Recommendations => QualityViewMode::Metrics,
@@ -137,32 +139,32 @@ impl QualityViewState {
     }
 
     /// Select next recommendation.
-    pub fn select_next(&mut self) {
+    pub const fn select_next(&mut self) {
         if self.selected_recommendation < self.total_recommendations.saturating_sub(1) {
             self.selected_recommendation += 1;
         }
     }
 
     /// Select previous recommendation.
-    pub fn select_prev(&mut self) {
+    pub const fn select_prev(&mut self) {
         if self.selected_recommendation > 0 {
             self.selected_recommendation -= 1;
         }
     }
 
     /// Go to first recommendation.
-    pub fn go_first(&mut self) {
+    pub const fn go_first(&mut self) {
         self.selected_recommendation = 0;
         self.scroll_offset = 0;
     }
 
     /// Go to last recommendation.
-    pub fn go_last(&mut self) {
+    pub const fn go_last(&mut self) {
         self.selected_recommendation = self.total_recommendations.saturating_sub(1);
     }
 
     /// Update total recommendations count.
-    pub fn set_total(&mut self, total: usize) {
+    pub const fn set_total(&mut self, total: usize) {
         self.total_recommendations = total;
         if self.selected_recommendation >= total {
             self.selected_recommendation = total.saturating_sub(1);

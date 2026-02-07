@@ -42,12 +42,13 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
-    /// Create a new AppConfig with default values.
+    /// Create a new `AppConfig` with default values.
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Create an AppConfig builder.
+    /// Create an `AppConfig` builder.
     pub fn builder() -> AppConfigBuilder {
         AppConfigBuilder::default()
     }
@@ -57,7 +58,7 @@ impl AppConfig {
 // Builder for AppConfig
 // ============================================================================
 
-/// Builder for constructing AppConfig with fluent API.
+/// Builder for constructing `AppConfig` with fluent API.
 #[derive(Debug, Default)]
 #[must_use]
 pub struct AppConfigBuilder {
@@ -72,13 +73,13 @@ impl AppConfigBuilder {
     }
 
     /// Set the matching threshold.
-    pub fn matching_threshold(mut self, threshold: f64) -> Self {
+    pub const fn matching_threshold(mut self, threshold: f64) -> Self {
         self.config.matching.threshold = Some(threshold);
         self
     }
 
     /// Set the output format.
-    pub fn output_format(mut self, format: ReportFormat) -> Self {
+    pub const fn output_format(mut self, format: ReportFormat) -> Self {
         self.config.output.format = format;
         self
     }
@@ -90,31 +91,31 @@ impl AppConfigBuilder {
     }
 
     /// Disable colored output.
-    pub fn no_color(mut self, no_color: bool) -> Self {
+    pub const fn no_color(mut self, no_color: bool) -> Self {
         self.config.output.no_color = no_color;
         self
     }
 
     /// Include unchanged components.
-    pub fn include_unchanged(mut self, include: bool) -> Self {
+    pub const fn include_unchanged(mut self, include: bool) -> Self {
         self.config.matching.include_unchanged = include;
         self
     }
 
     /// Enable fail-on-vulnerability mode.
-    pub fn fail_on_vuln(mut self, fail: bool) -> Self {
+    pub const fn fail_on_vuln(mut self, fail: bool) -> Self {
         self.config.behavior.fail_on_vuln = fail;
         self
     }
 
     /// Enable fail-on-change mode.
-    pub fn fail_on_change(mut self, fail: bool) -> Self {
+    pub const fn fail_on_change(mut self, fail: bool) -> Self {
         self.config.behavior.fail_on_change = fail;
         self
     }
 
     /// Enable quiet mode.
-    pub fn quiet(mut self, quiet: bool) -> Self {
+    pub const fn quiet(mut self, quiet: bool) -> Self {
         self.config.behavior.quiet = quiet;
         self
     }
@@ -147,7 +148,8 @@ impl AppConfigBuilder {
         self
     }
 
-    /// Build the AppConfig.
+    /// Build the `AppConfig`.
+    #[must_use] 
     pub fn build(self) -> AppConfig {
         self.config
     }
@@ -174,11 +176,13 @@ impl Default for TuiPreferences {
 
 impl TuiPreferences {
     /// Get the path to the preferences file.
+    #[must_use] 
     pub fn config_path() -> Option<PathBuf> {
         dirs::config_dir().map(|p| p.join("sbom-tools").join("preferences.json"))
     }
 
     /// Load preferences from disk, or return defaults if not found.
+    #[must_use] 
     pub fn load() -> Self {
         Self::config_path()
             .and_then(|p| std::fs::read_to_string(p).ok())
@@ -362,7 +366,7 @@ impl Default for OutputConfig {
 #[serde(default)]
 pub struct StreamingConfig {
     /// Enable streaming mode automatically for files larger than this threshold (in bytes).
-    /// Default: 10 MB (10_485_760 bytes)
+    /// Default: 10 MB (`10_485_760` bytes)
     #[schemars(range(min = 0))]
     pub threshold_bytes: u64,
     /// Force streaming mode regardless of file size.
@@ -388,6 +392,7 @@ impl Default for StreamingConfig {
 
 impl StreamingConfig {
     /// Check if streaming should be used for a file of the given size.
+    #[must_use] 
     pub fn should_stream(&self, file_size: Option<u64>, is_stdin: bool) -> bool {
         if self.disabled {
             return false;
@@ -402,6 +407,7 @@ impl StreamingConfig {
     }
 
     /// Create a streaming config that always streams.
+    #[must_use] 
     pub fn always() -> Self {
         Self {
             force: true,
@@ -410,6 +416,7 @@ impl StreamingConfig {
     }
 
     /// Create a streaming config that never streams.
+    #[must_use] 
     pub fn never() -> Self {
         Self {
             disabled: true,
@@ -419,7 +426,7 @@ impl StreamingConfig {
 
     /// Set the threshold in megabytes.
     #[must_use]
-    pub fn with_threshold_mb(mut self, mb: u64) -> Self {
+    pub const fn with_threshold_mb(mut self, mb: u64) -> Self {
         self.threshold_bytes = mb * 1024 * 1024;
         self
     }
@@ -450,7 +457,8 @@ impl Default for MatchingConfig {
 }
 
 impl MatchingConfig {
-    /// Convert preset name to FuzzyMatchConfig
+    /// Convert preset name to `FuzzyMatchConfig`
+    #[must_use] 
     pub fn to_fuzzy_config(&self) -> FuzzyMatchConfig {
         let mut config = FuzzyMatchConfig::from_preset(&self.fuzzy_preset).unwrap_or_else(|| {
             tracing::warn!(
@@ -478,7 +486,7 @@ pub struct FilterConfig {
     /// Minimum severity filter
     #[serde(skip_serializing_if = "Option::is_none")]
     pub min_severity: Option<String>,
-    /// Exclude vulnerabilities with VEX status not_affected or fixed
+    /// Exclude vulnerabilities with VEX status `not_affected` or fixed
     #[serde(alias = "exclude_vex_not_affected")]
     pub exclude_vex_resolved: bool,
 }
@@ -513,7 +521,8 @@ pub struct GraphAwareDiffConfig {
 
 impl GraphAwareDiffConfig {
     /// Create enabled graph diff options with defaults
-    pub fn enabled() -> Self {
+    #[must_use] 
+    pub const fn enabled() -> Self {
         Self {
             enabled: true,
             detect_reparenting: true,
@@ -589,6 +598,7 @@ impl Default for EnrichmentConfig {
 
 impl EnrichmentConfig {
     /// Create an enabled enrichment config with OSV provider.
+    #[must_use] 
     pub fn osv() -> Self {
         Self {
             enabled: true,
@@ -606,21 +616,21 @@ impl EnrichmentConfig {
 
     /// Set the cache TTL in hours.
     #[must_use]
-    pub fn with_cache_ttl_hours(mut self, hours: u64) -> Self {
+    pub const fn with_cache_ttl_hours(mut self, hours: u64) -> Self {
         self.cache_ttl_hours = hours;
         self
     }
 
     /// Enable cache bypass (refresh).
     #[must_use]
-    pub fn with_bypass_cache(mut self) -> Self {
+    pub const fn with_bypass_cache(mut self) -> Self {
         self.bypass_cache = true;
         self
     }
 
     /// Set the API timeout in seconds.
     #[must_use]
-    pub fn with_timeout_secs(mut self, secs: u64) -> Self {
+    pub const fn with_timeout_secs(mut self, secs: u64) -> Self {
         self.timeout_secs = secs;
         self
     }
@@ -630,7 +640,7 @@ impl EnrichmentConfig {
 // Builder for DiffConfig
 // ============================================================================
 
-/// Builder for DiffConfig
+/// Builder for `DiffConfig`
 #[derive(Debug, Default)]
 pub struct DiffConfigBuilder {
     old: Option<PathBuf>,
@@ -646,6 +656,7 @@ pub struct DiffConfigBuilder {
 }
 
 impl DiffConfigBuilder {
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
@@ -663,7 +674,7 @@ impl DiffConfigBuilder {
     }
 
     #[must_use]
-    pub fn output_format(mut self, format: ReportFormat) -> Self {
+    pub const fn output_format(mut self, format: ReportFormat) -> Self {
         self.output.format = format;
         self
     }
@@ -675,13 +686,13 @@ impl DiffConfigBuilder {
     }
 
     #[must_use]
-    pub fn report_types(mut self, types: ReportType) -> Self {
+    pub const fn report_types(mut self, types: ReportType) -> Self {
         self.output.report_types = types;
         self
     }
 
     #[must_use]
-    pub fn no_color(mut self, no_color: bool) -> Self {
+    pub const fn no_color(mut self, no_color: bool) -> Self {
         self.output.no_color = no_color;
         self
     }
@@ -693,19 +704,19 @@ impl DiffConfigBuilder {
     }
 
     #[must_use]
-    pub fn matching_threshold(mut self, threshold: Option<f64>) -> Self {
+    pub const fn matching_threshold(mut self, threshold: Option<f64>) -> Self {
         self.matching.threshold = threshold;
         self
     }
 
     #[must_use]
-    pub fn include_unchanged(mut self, include: bool) -> Self {
+    pub const fn include_unchanged(mut self, include: bool) -> Self {
         self.matching.include_unchanged = include;
         self
     }
 
     #[must_use]
-    pub fn only_changes(mut self, only: bool) -> Self {
+    pub const fn only_changes(mut self, only: bool) -> Self {
         self.filtering.only_changes = only;
         self
     }
@@ -717,31 +728,31 @@ impl DiffConfigBuilder {
     }
 
     #[must_use]
-    pub fn fail_on_vuln(mut self, fail: bool) -> Self {
+    pub const fn fail_on_vuln(mut self, fail: bool) -> Self {
         self.behavior.fail_on_vuln = fail;
         self
     }
 
     #[must_use]
-    pub fn fail_on_change(mut self, fail: bool) -> Self {
+    pub const fn fail_on_change(mut self, fail: bool) -> Self {
         self.behavior.fail_on_change = fail;
         self
     }
 
     #[must_use]
-    pub fn quiet(mut self, quiet: bool) -> Self {
+    pub const fn quiet(mut self, quiet: bool) -> Self {
         self.behavior.quiet = quiet;
         self
     }
 
     #[must_use]
-    pub fn explain_matches(mut self, explain: bool) -> Self {
+    pub const fn explain_matches(mut self, explain: bool) -> Self {
         self.behavior.explain_matches = explain;
         self
     }
 
     #[must_use]
-    pub fn recommend_threshold(mut self, recommend: bool) -> Self {
+    pub const fn recommend_threshold(mut self, recommend: bool) -> Self {
         self.behavior.recommend_threshold = recommend;
         self
     }
@@ -763,7 +774,7 @@ impl DiffConfigBuilder {
     }
 
     #[must_use]
-    pub fn dry_run_rules(mut self, dry_run: bool) -> Self {
+    pub const fn dry_run_rules(mut self, dry_run: bool) -> Self {
         self.rules.dry_run = dry_run;
         self
     }
@@ -775,13 +786,13 @@ impl DiffConfigBuilder {
     }
 
     #[must_use]
-    pub fn disable_ecosystem_rules(mut self, disabled: bool) -> Self {
+    pub const fn disable_ecosystem_rules(mut self, disabled: bool) -> Self {
         self.ecosystem_rules.disabled = disabled;
         self
     }
 
     #[must_use]
-    pub fn detect_typosquats(mut self, detect: bool) -> Self {
+    pub const fn detect_typosquats(mut self, detect: bool) -> Self {
         self.ecosystem_rules.detect_typosquats = detect;
         self
     }
@@ -793,7 +804,7 @@ impl DiffConfigBuilder {
     }
 
     #[must_use]
-    pub fn enable_enrichment(mut self, enabled: bool) -> Self {
+    pub const fn enable_enrichment(mut self, enabled: bool) -> Self {
         self.enrichment.enabled = enabled;
         self
     }

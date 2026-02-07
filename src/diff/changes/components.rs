@@ -12,7 +12,8 @@ pub struct ComponentChangeComputer {
 
 impl ComponentChangeComputer {
     /// Create a new component change computer with the given cost model.
-    pub fn new(cost_model: CostModel) -> Self {
+    #[must_use] 
+    pub const fn new(cost_model: CostModel) -> Self {
         Self { cost_model }
     }
 
@@ -174,7 +175,7 @@ impl ChangeComputer for ComponentChangeComputer {
         result
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "ComponentChangeComputer"
     }
 }

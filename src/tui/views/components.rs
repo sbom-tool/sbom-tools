@@ -15,14 +15,14 @@ use ratatui::{
 };
 
 /// Pre-built component list to avoid rebuilding on each render call.
-/// Built once per frame in render_components and passed to sub-functions.
-pub(crate) enum ComponentListData<'a> {
+/// Built once per frame in `render_components` and passed to sub-functions.
+pub enum ComponentListData<'a> {
     Diff(Vec<&'a ComponentChange>),
     View(Vec<&'a Component>),
     Empty,
 }
 
-pub(crate) fn render_components(frame: &mut Frame, area: Rect, app: &mut App) {
+pub fn render_components(frame: &mut Frame, area: Rect, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(3), Constraint::Min(10)])
@@ -84,6 +84,8 @@ pub(crate) fn render_components(frame: &mut Frame, area: Rect, app: &mut App) {
 }
 
 fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
+    use crate::tui::viewmodel::security_filter::QuickFilter;
+
     let filter = app.tabs.components.filter;
     let sort = &app.tabs.components.sort_by;
     let multi_select = app.tabs.components.multi_select_mode;
@@ -119,7 +121,6 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
         filter_spans.push(Span::styled("│", Style::default().fg(colors().border)));
         filter_spans.push(Span::raw(" "));
 
-        use crate::tui::viewmodel::security_filter::QuickFilter;
         for quick_filter in QuickFilter::all() {
             if quick_filter.is_active(&security_filter.criteria) {
                 let label = quick_filter.label();
@@ -316,7 +317,7 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
             crate::diff::ChangeType::Added => ("ADDED", colors().added, "+"),
             crate::diff::ChangeType::Removed => ("REMOVED", colors().removed, "-"),
             crate::diff::ChangeType::Modified => ("MODIFIED", colors().modified, "~"),
-            _ => ("UNCHANGED", colors().muted, "="),
+            crate::diff::ChangeType::Unchanged => ("UNCHANGED", colors().muted, "="),
         };
 
         let mut lines = vec![
@@ -741,7 +742,7 @@ fn get_diff_rows(app: &App, components: &[&ComponentChange]) -> Vec<Row<'static>
                     scheme.badge_fg_dark,
                     Style::default().fg(scheme.modified),
                 ),
-                _ => (
+                crate::diff::ChangeType::Unchanged => (
                     " = SAME ",
                     scheme.muted,
                     scheme.badge_fg_light,

@@ -96,7 +96,8 @@ impl FuzzyMatcher {
     }
 
     /// Get the current configuration.
-    pub fn config(&self) -> &FuzzyMatchConfig {
+    #[must_use] 
+    pub const fn config(&self) -> &FuzzyMatchConfig {
         &self.config
     }
 
@@ -249,7 +250,7 @@ impl FuzzyMatcher {
         let combined = char_score.max(token_score).max(phonetic_score * 0.85);
 
         // Version-aware boost (semantic version similarity)
-        let version_boost = Self::compute_version_similarity(&a.version, &b.version);
+        let version_boost = Self::compute_version_similarity(a.version.as_ref(), b.version.as_ref());
 
         (combined + version_boost).min(1.0)
     }
@@ -260,11 +261,12 @@ impl FuzzyMatcher {
     }
 
     /// Compute version similarity with semantic awareness.
-    fn compute_version_similarity(va: &Option<String>, vb: &Option<String>) -> f64 {
+    fn compute_version_similarity(va: Option<&String>, vb: Option<&String>) -> f64 {
         string_similarity::compute_version_similarity(va, vb)
     }
 
     /// Compute phonetic similarity using Soundex.
+    #[must_use] 
     pub fn compute_phonetic_similarity(name_a: &str, name_b: &str) -> f64 {
         string_similarity::compute_phonetic_similarity(name_a, name_b)
     }
@@ -272,6 +274,7 @@ impl FuzzyMatcher {
     /// Compute multi-field weighted score.
     ///
     /// Combines scores from multiple component fields based on configured weights.
+    #[must_use] 
     pub fn compute_multi_field_score(
         &self,
         a: &Component,
@@ -439,7 +442,7 @@ impl ComponentMatcher for FuzzyMatcher {
         MatchResult::no_match()
     }
 
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "FuzzyMatcher"
     }
 
@@ -829,56 +832,52 @@ mod tests {
 
     #[test]
     fn test_version_similarity_exact() {
-        let score = FuzzyMatcher::compute_version_similarity(
-            &Some("1.2.3".to_string()),
-            &Some("1.2.3".to_string()),
-        );
+        let v1 = "1.2.3".to_string();
+        let v2 = "1.2.3".to_string();
+        let score = FuzzyMatcher::compute_version_similarity(Some(&v1), Some(&v2));
         assert_eq!(score, 0.10, "Exact version match should give max boost");
     }
 
     #[test]
     fn test_version_similarity_same_major_minor() {
-        let score = FuzzyMatcher::compute_version_similarity(
-            &Some("1.2.3".to_string()),
-            &Some("1.2.4".to_string()),
-        );
+        let v1 = "1.2.3".to_string();
+        let v2 = "1.2.4".to_string();
+        let score = FuzzyMatcher::compute_version_similarity(Some(&v1), Some(&v2));
         assert_eq!(score, 0.07, "Same major.minor should give 0.07 boost");
     }
 
     #[test]
     fn test_version_similarity_same_major() {
-        let score = FuzzyMatcher::compute_version_similarity(
-            &Some("1.2.3".to_string()),
-            &Some("1.5.0".to_string()),
-        );
+        let v1 = "1.2.3".to_string();
+        let v2 = "1.5.0".to_string();
+        let score = FuzzyMatcher::compute_version_similarity(Some(&v1), Some(&v2));
         assert_eq!(score, 0.04, "Same major should give 0.04 boost");
     }
 
     #[test]
     fn test_version_similarity_different_major() {
-        let score = FuzzyMatcher::compute_version_similarity(
-            &Some("1.2.3".to_string()),
-            &Some("2.0.0".to_string()),
-        );
+        let v1 = "1.2.3".to_string();
+        let v2 = "2.0.0".to_string();
+        let score = FuzzyMatcher::compute_version_similarity(Some(&v1), Some(&v2));
         assert_eq!(score, 0.0, "Different major versions should give no boost");
     }
 
     #[test]
     fn test_version_similarity_prerelease() {
         // Handle prerelease versions like "1.2.3-beta"
-        let score = FuzzyMatcher::compute_version_similarity(
-            &Some("1.2.3-beta".to_string()),
-            &Some("1.2.4".to_string()),
-        );
+        let v1 = "1.2.3-beta".to_string();
+        let v2 = "1.2.4".to_string();
+        let score = FuzzyMatcher::compute_version_similarity(Some(&v1), Some(&v2));
         assert_eq!(score, 0.07, "Prerelease should still match major.minor");
     }
 
     #[test]
     fn test_version_similarity_missing() {
-        let score = FuzzyMatcher::compute_version_similarity(&None, &Some("1.0.0".to_string()));
+        let v = "1.0.0".to_string();
+        let score = FuzzyMatcher::compute_version_similarity(None, Some(&v));
         assert_eq!(score, 0.0, "Missing version should give no boost");
 
-        let score = FuzzyMatcher::compute_version_similarity(&None, &None);
+        let score = FuzzyMatcher::compute_version_similarity(None, None);
         assert_eq!(score, 0.0, "Both missing should give no boost");
     }
 

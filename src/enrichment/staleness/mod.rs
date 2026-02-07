@@ -6,7 +6,7 @@
 //! # Supported Ecosystems
 //!
 //! - npm (npmjs.com)
-//! - PyPI (pypi.org)
+//! - `PyPI` (pypi.org)
 //! - crates.io
 //!
 //! # Example

@@ -17,7 +17,8 @@ pub enum RiskLevel {
 
 impl RiskLevel {
     /// Get display label
-    pub fn label(&self) -> &'static str {
+    #[must_use] 
+    pub const fn label(&self) -> &'static str {
         match self {
             Self::Low => "Low",
             Self::Medium => "Medium",
@@ -27,7 +28,8 @@ impl RiskLevel {
     }
 
     /// Get short label (single letter)
-    pub fn short_label(&self) -> &'static str {
+    #[must_use] 
+    pub const fn short_label(&self) -> &'static str {
         match self {
             Self::Low => "L",
             Self::Medium => "M",
@@ -37,7 +39,8 @@ impl RiskLevel {
     }
 
     /// Get numeric value (higher = more risk)
-    pub fn value(&self) -> u8 {
+    #[must_use] 
+    pub const fn value(&self) -> u8 {
         match self {
             Self::Low => 1,
             Self::Medium => 2,
@@ -65,7 +68,8 @@ pub enum LicenseCategory {
 
 impl LicenseCategory {
     /// Get display label
-    pub fn label(&self) -> &'static str {
+    #[must_use] 
+    pub const fn label(&self) -> &'static str {
         match self {
             Self::Permissive => "Permissive",
             Self::Copyleft => "Copyleft",
@@ -109,12 +113,14 @@ pub struct SecurityFilterCriteria {
 
 impl SecurityFilterCriteria {
     /// Create new empty criteria
+    #[must_use] 
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Check if no filters are active
-    pub fn is_empty(&self) -> bool {
+    #[must_use] 
+    pub const fn is_empty(&self) -> bool {
         self.min_risk.is_none()
             && self.has_vulns.is_none()
             && self.min_vuln_count.is_none()
@@ -128,7 +134,8 @@ impl SecurityFilterCriteria {
     }
 
     /// Count active filters
-    pub fn active_filter_count(&self) -> usize {
+    #[must_use] 
+    pub const fn active_filter_count(&self) -> usize {
         let mut count = 0;
         if self.min_risk.is_some() {
             count += 1;
@@ -164,6 +171,7 @@ impl SecurityFilterCriteria {
     }
 
     /// Get summary of active filters
+    #[must_use] 
     pub fn summary(&self) -> String {
         let count = self.active_filter_count();
         if count == 0 {
@@ -202,28 +210,28 @@ impl SecurityFilterCriteria {
 
     /// Set minimum risk level
     #[must_use]
-    pub fn with_min_risk(mut self, level: RiskLevel) -> Self {
+    pub const fn with_min_risk(mut self, level: RiskLevel) -> Self {
         self.min_risk = Some(level);
         self
     }
 
     /// Filter to components with vulnerabilities
     #[must_use]
-    pub fn with_vulns(mut self) -> Self {
+    pub const fn with_vulns(mut self) -> Self {
         self.has_vulns = Some(true);
         self
     }
 
     /// Filter to KEV components
     #[must_use]
-    pub fn with_kev(mut self) -> Self {
+    pub const fn with_kev(mut self) -> Self {
         self.has_kev = Some(true);
         self
     }
 
     /// Filter by license category
     #[must_use]
-    pub fn with_license(mut self, category: LicenseCategory) -> Self {
+    pub const fn with_license(mut self, category: LicenseCategory) -> Self {
         self.license_type = Some(category);
         self
     }
@@ -252,7 +260,8 @@ pub enum QuickFilter {
 
 impl QuickFilter {
     /// Get display label
-    pub fn label(&self) -> &'static str {
+    #[must_use] 
+    pub const fn label(&self) -> &'static str {
         match self {
             Self::HighRisk => "High Risk",
             Self::HasVulns => "Has Vulns",
@@ -266,7 +275,8 @@ impl QuickFilter {
     }
 
     /// Get keyboard shortcut (1-8)
-    pub fn shortcut(&self) -> &'static str {
+    #[must_use] 
+    pub const fn shortcut(&self) -> &'static str {
         match self {
             Self::HighRisk => "1",
             Self::HasVulns => "2",
@@ -340,6 +350,7 @@ impl QuickFilter {
     }
 
     /// Check if this quick filter is currently active
+    #[must_use] 
     pub fn is_active(&self, criteria: &SecurityFilterCriteria) -> bool {
         match self {
             Self::HighRisk => criteria.min_risk.is_some(),
@@ -356,7 +367,8 @@ impl QuickFilter {
     }
 
     /// Get all available quick filters
-    pub fn all() -> &'static [Self] {
+    #[must_use] 
+    pub const fn all() -> &'static [Self] {
         &[
             Self::HighRisk,
             Self::HasVulns,
@@ -391,6 +403,7 @@ pub struct SecurityFilterState {
 
 impl SecurityFilterState {
     /// Create new filter state
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             criteria: SecurityFilterCriteria::new(),
@@ -426,23 +439,25 @@ impl SecurityFilterState {
     }
 
     /// Check if any filters are active
-    pub fn has_active_filters(&self) -> bool {
+    #[must_use] 
+    pub const fn has_active_filters(&self) -> bool {
         !self.criteria.is_empty()
     }
 
     /// Get summary text
+    #[must_use] 
     pub fn summary(&self) -> String {
         self.criteria.summary()
     }
 
     /// Navigate to next quick filter
-    pub fn focus_next(&mut self) {
+    pub const fn focus_next(&mut self) {
         let total = QuickFilter::all().len();
         self.focused_quick_filter = (self.focused_quick_filter + 1) % total;
     }
 
     /// Navigate to previous quick filter
-    pub fn focus_prev(&mut self) {
+    pub const fn focus_prev(&mut self) {
         let total = QuickFilter::all().len();
         if self.focused_quick_filter == 0 {
             self.focused_quick_filter = total - 1;

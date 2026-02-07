@@ -1,4 +1,4 @@
-//! Tree view for ViewApp - hierarchical component navigation.
+//! Tree view for `ViewApp` - hierarchical component navigation.
 
 use crate::model::Component;
 use crate::tui::theme::colors;

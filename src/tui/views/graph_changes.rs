@@ -15,7 +15,7 @@ use ratatui::{
     },
 };
 
-pub(crate) fn render_graph_changes(frame: &mut Frame, area: Rect, app: &mut App) {
+pub fn render_graph_changes(frame: &mut Frame, area: Rect, app: &mut App) {
     let Some(result) = &app.data.diff_result else {
         render_no_data(frame, area);
         return;
@@ -183,7 +183,7 @@ fn render_changes_table(
     frame: &mut Frame,
     area: Rect,
     changes: &[DependencyGraphChange],
-    app: &mut App,
+    app: &App,
 ) {
     // Split for scrollbar
     let chunks = Layout::default()

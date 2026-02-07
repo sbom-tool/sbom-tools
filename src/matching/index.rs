@@ -52,6 +52,7 @@ impl ComponentIndex {
     ///
     /// Uses `Arc<CanonicalId>` internally to avoid expensive cloning of IDs
     /// across multiple index structures.
+    #[must_use] 
     pub fn build(sbom: &NormalizedSbom) -> Self {
         let mut by_ecosystem: HashMap<String, Vec<Arc<CanonicalId>>> = HashMap::new();
         let mut by_prefix: HashMap<String, Vec<Arc<CanonicalId>>> = HashMap::new();
@@ -102,6 +103,7 @@ impl ComponentIndex {
     }
 
     /// Normalize a component for indexing.
+    #[must_use] 
     pub fn normalize_component(comp: &Component) -> NormalizedEntry {
         // Extract ecosystem from PURL
         let (ecosystem, normalized_purl) = comp.identifiers.purl.as_ref().map_or_else(
@@ -199,12 +201,13 @@ impl ComponentIndex {
     /// Normalize a component name for comparison.
     ///
     /// Applies ecosystem-specific normalization rules:
-    /// - PyPI: underscores, hyphens, dots are all equivalent (converted to hyphen)
+    /// - `PyPI`: underscores, hyphens, dots are all equivalent (converted to hyphen)
     /// - Cargo: hyphens and underscores are equivalent (converted to underscore)
     /// - npm: lowercase only, preserves scope
     /// - Default: lowercase with underscore to hyphen conversion
     ///
     /// This is also used by LSH for consistent shingle computation.
+    #[must_use] 
     pub fn normalize_name(name: &str, ecosystem: Option<&str>) -> String {
         let mut normalized = name.to_lowercase();
 
@@ -237,6 +240,7 @@ impl ComponentIndex {
     }
 
     /// Get normalized entry for a component.
+    #[must_use] 
     pub fn get_entry(&self, id: &CanonicalId) -> Option<&NormalizedEntry> {
         // Arc<T>: Borrow<T> allows HashMap lookup with &CanonicalId
         self.entries.get(id)
@@ -244,8 +248,9 @@ impl ComponentIndex {
 
     /// Get components by ecosystem.
     ///
-    /// Returns cloned CanonicalIds for API stability. The internal storage uses Arc
+    /// Returns cloned `CanonicalIds` for API stability. The internal storage uses Arc
     /// to avoid expensive cloning during index building.
+    #[must_use] 
     pub fn get_by_ecosystem(&self, ecosystem: &str) -> Option<Vec<CanonicalId>> {
         self.by_ecosystem
             .get(ecosystem)
@@ -257,8 +262,9 @@ impl ComponentIndex {
     /// Returns a list of component IDs that are likely matches, ordered by likelihood.
     /// Uses ecosystem and prefix-based filtering to reduce candidates.
     ///
-    /// Returns cloned CanonicalIds for API stability. The internal storage uses Arc
+    /// Returns cloned `CanonicalIds` for API stability. The internal storage uses Arc
     /// to avoid expensive cloning during index building.
+    #[must_use] 
     pub fn find_candidates(
         &self,
         source_id: &CanonicalId,
@@ -392,17 +398,20 @@ impl ComponentIndex {
 
     /// Get all component IDs (for fallback full scan).
     ///
-    /// Returns cloned CanonicalIds for API stability.
+    /// Returns cloned `CanonicalIds` for API stability.
+    #[must_use] 
     pub fn all_ids(&self) -> Vec<CanonicalId> {
         self.all_ids.iter().map(|arc| (**arc).clone()).collect()
     }
 
     /// Get the number of indexed components.
+    #[must_use] 
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
     /// Check if the index is empty.
+    #[must_use] 
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
@@ -412,7 +421,8 @@ impl ComponentIndex {
     /// This is significantly faster than calling `find_candidates` sequentially
     /// for large SBOMs (1000+ components). Uses rayon for parallel iteration.
     ///
-    /// Returns a vector of (source_id, candidates) pairs in the same order as input.
+    /// Returns a vector of (`source_id`, candidates) pairs in the same order as input.
+    #[must_use] 
     pub fn find_candidates_parallel<'a>(
         &self,
         sources: &[(&'a CanonicalId, &NormalizedEntry)],
@@ -433,6 +443,7 @@ impl ComponentIndex {
     ///
     /// Useful for diffing two SBOMs: build an index from the new SBOM,
     /// then find candidates for all components from the old SBOM.
+    #[must_use] 
     pub fn find_all_candidates_from(
         &self,
         other: &Self,
@@ -490,6 +501,7 @@ impl ComponentIndex {
     /// Compute trigram similarity between two entries (Jaccard coefficient).
     ///
     /// Returns a value between 0.0 and 1.0 where 1.0 means identical trigram sets.
+    #[must_use] 
     pub fn trigram_similarity(entry_a: &NormalizedEntry, entry_b: &NormalizedEntry) -> f64 {
         if entry_a.trigrams.is_empty() || entry_b.trigrams.is_empty() {
             return 0.0;
@@ -531,7 +543,7 @@ pub struct IndexStats {
 /// Batch candidate generator that combines multiple indexing strategies.
 ///
 /// For best recall, combines:
-/// 1. ComponentIndex (ecosystem, prefix, trigram-based)
+/// 1. `ComponentIndex` (ecosystem, prefix, trigram-based)
 /// 2. LSH index (for large SBOMs, catches approximate matches)
 /// 3. Cross-ecosystem mappings (optional)
 ///
@@ -578,7 +590,7 @@ pub struct BatchCandidateResult {
     pub source_id: CanonicalId,
     /// Candidates from component index
     pub index_candidates: Vec<CanonicalId>,
-    /// Additional candidates from LSH (not in index_candidates)
+    /// Additional candidates from LSH (not in `index_candidates`)
     pub lsh_candidates: Vec<CanonicalId>,
     /// Cross-ecosystem candidates (if different ecosystems)
     pub cross_ecosystem_candidates: Vec<CanonicalId>,
@@ -588,6 +600,7 @@ pub struct BatchCandidateResult {
 
 impl BatchCandidateGenerator {
     /// Create a new batch candidate generator from an SBOM.
+    #[must_use] 
     pub fn build(sbom: &NormalizedSbom, config: BatchCandidateConfig) -> Self {
         let component_index = ComponentIndex::build(sbom);
 
@@ -699,6 +712,7 @@ impl BatchCandidateGenerator {
     }
 
     /// Generate candidates for multiple components in parallel.
+    #[must_use] 
     pub fn find_candidates_batch(
         &self,
         sources: &[(&CanonicalId, &Component)],
@@ -710,6 +724,7 @@ impl BatchCandidateGenerator {
     }
 
     /// Get all unique candidates (deduplicated across all strategies).
+    #[must_use] 
     pub fn all_candidates(
         &self,
         source_id: &CanonicalId,
@@ -723,17 +738,20 @@ impl BatchCandidateGenerator {
     }
 
     /// Get the underlying component index.
-    pub fn component_index(&self) -> &ComponentIndex {
+    #[must_use] 
+    pub const fn component_index(&self) -> &ComponentIndex {
         &self.component_index
     }
 
     /// Check if LSH is enabled.
-    pub fn has_lsh(&self) -> bool {
+    #[must_use] 
+    pub const fn has_lsh(&self) -> bool {
         self.lsh_index.is_some()
     }
 
     /// Check if cross-ecosystem matching is enabled.
-    pub fn has_cross_ecosystem(&self) -> bool {
+    #[must_use] 
+    pub const fn has_cross_ecosystem(&self) -> bool {
         self.cross_ecosystem_db.is_some()
     }
 
@@ -774,14 +792,16 @@ pub struct LazyComponentIndex {
 
 impl LazyComponentIndex {
     /// Create a new lazy index that will build from the given SBOM on first access.
-    pub fn new(sbom: std::sync::Arc<NormalizedSbom>) -> Self {
+    #[must_use] 
+    pub const fn new(sbom: std::sync::Arc<NormalizedSbom>) -> Self {
         Self {
             sbom: Some(sbom),
             index: std::sync::OnceLock::new(),
         }
     }
 
-    /// Create a lazy index from an already-built ComponentIndex.
+    /// Create a lazy index from an already-built `ComponentIndex`.
+    #[must_use] 
     pub fn from_index(index: ComponentIndex) -> Self {
         let lazy = Self {
             sbom: None,

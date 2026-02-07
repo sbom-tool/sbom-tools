@@ -54,7 +54,7 @@ pub struct StreamingJsonWriter<'w, W: Write> {
 
 impl<'w, W: Write> StreamingJsonWriter<'w, W> {
     /// Create a new streaming JSON writer.
-    pub fn new(writer: &'w mut W, pretty: bool) -> Self {
+    pub const fn new(writer: &'w mut W, pretty: bool) -> Self {
         Self {
             writer,
             pretty,
@@ -392,7 +392,7 @@ pub struct NdjsonWriter<'w, W: Write> {
 
 impl<'w, W: Write> NdjsonWriter<'w, W> {
     /// Create a new NDJSON writer.
-    pub fn new(writer: &'w mut W) -> Self {
+    pub const fn new(writer: &'w mut W) -> Self {
         Self {
             writer,
             flush_interval: 100,
@@ -539,7 +539,8 @@ impl<'w, W: Write> NdjsonWriter<'w, W> {
     }
 
     /// Get the number of items written.
-    pub fn items_written(&self) -> usize {
+    #[must_use] 
+    pub const fn items_written(&self) -> usize {
         self.items_written
     }
 }
@@ -559,12 +560,14 @@ pub struct StreamingJsonReporter {
 
 impl StreamingJsonReporter {
     /// Create a new streaming JSON reporter.
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self { pretty: true }
     }
 
     /// Create a compact (non-pretty) streaming JSON reporter.
-    pub fn compact() -> Self {
+    #[must_use] 
+    pub const fn compact() -> Self {
         Self { pretty: false }
     }
 }
@@ -610,7 +613,8 @@ pub struct NdjsonReporter;
 
 impl NdjsonReporter {
     /// Create a new NDJSON reporter.
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self
     }
 }
@@ -634,9 +638,6 @@ impl WriterReporter for NdjsonReporter {
         _config: &ReportConfig,
         writer: &mut W,
     ) -> Result<(), ReportError> {
-        let mut ndjson = NdjsonWriter::new(writer);
-
-        // Write metadata
         #[derive(Serialize)]
         struct ViewMetadata<'a> {
             #[serde(rename = "type")]
@@ -645,6 +646,18 @@ impl WriterReporter for NdjsonReporter {
             component_count: usize,
         }
 
+        #[derive(Serialize)]
+        struct ComponentLine<'a> {
+            #[serde(rename = "type")]
+            type_: &'a str,
+            name: &'a str,
+            version: Option<&'a str>,
+            ecosystem: Option<String>,
+        }
+
+        let mut ndjson = NdjsonWriter::new(writer);
+
+        // Write metadata
         let metadata = ViewMetadata {
             type_: "metadata",
             format: sbom.document.format.to_string(),
@@ -654,15 +667,6 @@ impl WriterReporter for NdjsonReporter {
 
         // Write each component
         for (_, comp) in &sbom.components {
-            #[derive(Serialize)]
-            struct ComponentLine<'a> {
-                #[serde(rename = "type")]
-                type_: &'a str,
-                name: &'a str,
-                version: Option<&'a str>,
-                ecosystem: Option<String>,
-            }
-
             let line = ComponentLine {
                 type_: "component",
                 name: &comp.name,

@@ -16,7 +16,7 @@ impl App {
     }
 
     /// Stop searching
-    pub fn stop_search(&mut self) {
+    pub const fn stop_search(&mut self) {
         self.overlays.search.active = false;
     }
 

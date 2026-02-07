@@ -1,6 +1,6 @@
-//! CycloneDX SBOM parser.
+//! `CycloneDX` SBOM parser.
 //!
-//! Supports CycloneDX versions 1.4, 1.5, and 1.6 in JSON and XML formats.
+//! Supports `CycloneDX` versions 1.4, 1.5, and 1.6 in JSON and XML formats.
 
 use crate::model::{
     CanonicalId, Component, ComponentType, Creator, CreatorType, CvssScore, CvssVersion,
@@ -14,7 +14,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::collections::HashMap;
 
-/// Parser for CycloneDX SBOM format
+/// Parser for `CycloneDX` SBOM format
 #[allow(dead_code)]
 pub struct CycloneDxParser {
     /// Whether to validate strictly
@@ -22,25 +22,27 @@ pub struct CycloneDxParser {
 }
 
 impl CycloneDxParser {
-    /// Create a new CycloneDX parser
-    pub fn new() -> Self {
+    /// Create a new `CycloneDX` parser
+    #[must_use] 
+    pub const fn new() -> Self {
         Self { strict: false }
     }
 
     /// Create a strict parser that validates more thoroughly
-    pub fn strict() -> Self {
+    #[must_use] 
+    pub const fn strict() -> Self {
         Self { strict: true }
     }
 
-    /// Parse a CycloneDX BOM from JSON
+    /// Parse a `CycloneDX` BOM from JSON
     fn parse_json(&self, content: &str) -> Result<NormalizedSbom, ParseError> {
         let cdx: CycloneDxBom =
             serde_json::from_str(content).map_err(|e| ParseError::JsonError(e.to_string()))?;
 
-        self.convert_to_normalized(cdx)
+        Ok(self.convert_to_normalized(cdx))
     }
 
-    /// Parse a CycloneDX BOM from a JSON reader (streaming - doesn't buffer entire file)
+    /// Parse a `CycloneDX` BOM from a JSON reader (streaming - doesn't buffer entire file)
     pub fn parse_json_reader<R: std::io::Read>(
         &self,
         reader: R,
@@ -48,10 +50,10 @@ impl CycloneDxParser {
         let cdx: CycloneDxBom =
             serde_json::from_reader(reader).map_err(|e| ParseError::JsonError(e.to_string()))?;
 
-        self.convert_to_normalized(cdx)
+        Ok(self.convert_to_normalized(cdx))
     }
 
-    /// Parse a CycloneDX BOM from XML
+    /// Parse a `CycloneDX` BOM from XML
     fn parse_xml(&self, content: &str) -> Result<NormalizedSbom, ParseError> {
         let cdx: CycloneDxBomXml =
             quick_xml::de::from_str(content).map_err(|e| ParseError::XmlError(e.to_string()))?;
@@ -74,12 +76,12 @@ impl CycloneDxParser {
             vulnerabilities: cdx.vulnerabilities.map(|v| v.vulnerability),
         };
 
-        self.convert_to_normalized(bom)
+        Ok(self.convert_to_normalized(bom))
     }
 
-    /// Convert CycloneDX BOM to normalized representation
-    fn convert_to_normalized(&self, cdx: CycloneDxBom) -> Result<NormalizedSbom, ParseError> {
-        let document = self.convert_metadata(&cdx)?;
+    /// Convert `CycloneDX` BOM to normalized representation
+    fn convert_to_normalized(&self, cdx: CycloneDxBom) -> NormalizedSbom {
+        let document = self.convert_metadata(&cdx);
         let mut sbom = NormalizedSbom::new(document);
 
         // Convert components
@@ -88,7 +90,7 @@ impl CycloneDxParser {
         // Handle metadata.component as primary/root product component (CRA requirement)
         if let Some(meta) = &cdx.metadata {
             if let Some(meta_comp) = &meta.component {
-                let comp = self.convert_component(meta_comp)?;
+                let comp = self.convert_component(meta_comp);
                 let bom_ref = meta_comp
                     .bom_ref
                     .clone()
@@ -140,7 +142,7 @@ impl CycloneDxParser {
 
         if let Some(components) = cdx.components {
             for cdx_comp in components {
-                let comp = self.convert_component(&cdx_comp)?;
+                let comp = self.convert_component(&cdx_comp);
                 let bom_ref = cdx_comp
                     .bom_ref
                     .unwrap_or_else(|| comp.name.clone());
@@ -169,16 +171,16 @@ impl CycloneDxParser {
         // Convert vulnerabilities
         if let Some(vulns) = cdx.vulnerabilities {
             for vuln in vulns {
-                self.apply_vulnerability(&mut sbom, &vuln, &id_map)?;
+                self.apply_vulnerability(&mut sbom, &vuln, &id_map);
             }
         }
 
         sbom.calculate_content_hash();
-        Ok(sbom)
+        sbom
     }
 
-    /// Convert CycloneDX metadata to DocumentMetadata
-    fn convert_metadata(&self, cdx: &CycloneDxBom) -> Result<DocumentMetadata, ParseError> {
+    /// Convert `CycloneDX` metadata to `DocumentMetadata`
+    fn convert_metadata(&self, cdx: &CycloneDxBom) -> DocumentMetadata {
         let created = cdx
             .metadata
             .as_ref()
@@ -204,7 +206,7 @@ impl CycloneDxParser {
             }
         }
 
-        Ok(DocumentMetadata {
+        DocumentMetadata {
             format: SbomFormat::CycloneDx,
             format_version: cdx.spec_version.clone(),
             spec_version: cdx.spec_version.clone(),
@@ -219,11 +221,11 @@ impl CycloneDxParser {
             security_contact: None,
             vulnerability_disclosure_url: None,
             support_end_date: None,
-        })
+        }
     }
 
-    /// Convert a CycloneDX component to normalized Component
-    fn convert_component(&self, cdx: &CdxComponent) -> Result<Component, ParseError> {
+    /// Convert a `CycloneDX` component to normalized Component
+    fn convert_component(&self, cdx: &CdxComponent) -> Component {
         let format_id = cdx.bom_ref.clone().unwrap_or_else(|| cdx.name.clone());
         let mut comp = Component::new(cdx.name.clone(), format_id);
 
@@ -345,7 +347,7 @@ impl CycloneDxParser {
         comp.copyright.clone_from(&cdx.copyright);
 
         comp.calculate_content_hash();
-        Ok(comp)
+        comp
     }
 
     /// Apply vulnerability information to components
@@ -354,7 +356,7 @@ impl CycloneDxParser {
         sbom: &mut NormalizedSbom,
         vuln: &CdxVulnerability,
         id_map: &HashMap<String, CanonicalId>,
-    ) -> Result<(), ParseError> {
+    ) {
         let source = vuln
             .source
             .as_ref()
@@ -484,7 +486,6 @@ impl CycloneDxParser {
             }
         }
 
-        Ok(())
     }
 }
 
@@ -512,7 +513,7 @@ impl SbomParser for CycloneDxParser {
         vec!["1.4", "1.5", "1.6"]
     }
 
-    fn format_name(&self) -> &str {
+    fn format_name(&self) -> &'static str {
         "CycloneDX"
     }
 
@@ -665,7 +666,7 @@ struct CdxMetadata {
     lifecycles: Option<Vec<CdxLifecycle>>,
 }
 
-/// CycloneDX lifecycle entry (1.5+)
+/// `CycloneDX` lifecycle entry (1.5+)
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
@@ -678,7 +679,7 @@ struct CdxLifecycle {
     description: Option<String>,
 }
 
-/// CycloneDX 1.6 tools object format
+/// `CycloneDX` 1.6 tools object format
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
@@ -687,7 +688,7 @@ struct CdxToolsObject {
     services: Option<Vec<CdxToolService>>,
 }
 
-/// Tool component in CycloneDX 1.6 format
+/// Tool component in `CycloneDX` 1.6 format
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
@@ -698,7 +699,7 @@ struct CdxToolComponent {
     bom_ref: Option<String>,
 }
 
-/// Tool service in CycloneDX 1.6 format
+/// Tool service in `CycloneDX` 1.6 format
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
@@ -707,7 +708,7 @@ struct CdxToolService {
     version: Option<String>,
 }
 
-/// Author in CycloneDX 1.6 format
+/// Author in `CycloneDX` 1.6 format
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
@@ -725,7 +726,7 @@ struct CdxTool {
     version: Option<String>,
 }
 
-/// Custom deserializer to handle both CycloneDX 1.4/1.5 (array) and 1.6 (object) tool formats
+/// Custom deserializer to handle both `CycloneDX` 1.4/1.5 (array) and 1.6 (object) tool formats
 fn deserialize_tools<'de, D>(deserializer: D) -> Result<Option<Vec<CdxTool>>, D::Error>
 where
     D: serde::Deserializer<'de>,
