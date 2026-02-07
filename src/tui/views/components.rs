@@ -142,7 +142,19 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
         Span::styled(" filter  ", Style::default().fg(colors().text_muted)),
         Span::styled("[s]", Style::default().fg(colors().accent)),
         Span::styled(" sort  ", Style::default().fg(colors().text_muted)),
-        Span::styled("[1-8]", Style::default().fg(colors().accent)),
+        Span::styled("[", Style::default().fg(colors().accent)),
+    ]);
+    for (i, qf) in QuickFilter::all().iter().enumerate() {
+        if i > 0 {
+            filter_spans.push(Span::styled("/", Style::default().fg(colors().border)));
+        }
+        filter_spans.push(Span::styled(
+            qf.shortcut().to_string(),
+            Style::default().fg(colors().accent),
+        ));
+    }
+    filter_spans.extend(vec![
+        Span::styled("]", Style::default().fg(colors().accent)),
         Span::styled(" quick  ", Style::default().fg(colors().text_muted)),
         Span::styled("[v]", Style::default().fg(colors().accent)),
         Span::styled(
@@ -190,9 +202,11 @@ fn render_component_table(
     total_unfiltered: usize,
     scroll_offset: &mut usize,
 ) {
-    let header_cells = ["", "Name", "Old Ver", "New Ver", "Eco", "Stale"]
-        .iter()
-        .map(|h| Cell::from(*h).style(Style::default().fg(colors().accent).bold()));
+    let is_diff = matches!(component_data, ComponentListData::Diff(_));
+    let last_col_header = if is_diff { "Changes" } else { "Staleness" };
+    let header_cells = ["", "Name", "Old Version", "New Version", "Ecosystem", last_col_header]
+        .into_iter()
+        .map(|h| Cell::from(h).style(Style::default().fg(colors().accent).bold()));
     let header = Row::new(header_cells).height(1);
 
     // Use pre-built component list (state already updated in render_components)
@@ -226,13 +240,14 @@ fn render_component_table(
         return;
     }
 
+    let last_col_width = if is_diff { Constraint::Length(7) } else { Constraint::Length(9) };
     let widths = [
         Constraint::Length(12),
         Constraint::Min(16),
         Constraint::Length(10),
         Constraint::Length(10),
         Constraint::Length(7),
-        Constraint::Length(9),
+        last_col_width,
     ];
 
     let selected_idx = app.tabs.components.selected;
@@ -331,7 +346,7 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
                         .bold(),
                 ),
                 Span::styled(
-                    format!("  Cost: {}", comp.cost),
+                    format!("  Change Weight: {}", comp.cost),
                     Style::default().fg(colors().text_muted),
                 ),
             ]),
@@ -417,8 +432,14 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
             ]));
         }
 
-        // Field changes for modified components
-        if !comp.field_changes.is_empty() {
+        // Field changes for modified components (skip version-only changes since
+        // the version diff is already shown above)
+        let non_version_changes: Vec<_> = comp
+            .field_changes
+            .iter()
+            .filter(|c| c.field != "version")
+            .collect();
+        if !non_version_changes.is_empty() {
             lines.push(Line::from(""));
             lines.push(Line::from(vec![
                 Span::styled("━━━ ", Style::default().fg(colors().border)),
@@ -426,7 +447,7 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
                 Span::styled(" ━━━", Style::default().fg(colors().border)),
             ]));
 
-            for change in &comp.field_changes {
+            for change in &non_version_changes {
                 let old_val = change.old_value.as_deref().unwrap_or("(none)");
                 let new_val = change.new_value.as_deref().unwrap_or("(none)");
                 lines.push(Line::from(vec![
@@ -513,7 +534,9 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
             "",
         ));
 
-        lines.extend(crate::tui::shared::components::render_quick_actions_hint());
+        lines.extend(crate::tui::shared::components::render_quick_actions_hint(
+            !related_vulns.is_empty(),
+        ));
 
         crate::tui::shared::components::render_detail_block(
             frame,
@@ -678,7 +701,9 @@ fn render_view_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
             " for follow-up",
         ));
 
-        lines.extend(crate::tui::shared::components::render_quick_actions_hint());
+        lines.extend(crate::tui::shared::components::render_quick_actions_hint(
+            !comp.vulnerabilities.is_empty(),
+        ));
 
         crate::tui::shared::components::render_detail_block(
             frame,
@@ -725,13 +750,13 @@ fn get_diff_rows(app: &App, components: &[&ComponentChange]) -> Vec<Row<'static>
             let scheme = colors();
             let (label, status_bg, status_fg, row_style) = match comp.change_type {
                 crate::diff::ChangeType::Added => (
-                    " + ADDED ",
+                    " + ADDED    ",
                     scheme.added,
                     scheme.badge_fg_dark,
                     Style::default().fg(scheme.added),
                 ),
                 crate::diff::ChangeType::Removed => (
-                    " - REMOVED ",
+                    " - REMOVED  ",
                     scheme.removed,
                     scheme.badge_fg_light,
                     Style::default().fg(scheme.removed),
@@ -743,7 +768,7 @@ fn get_diff_rows(app: &App, components: &[&ComponentChange]) -> Vec<Row<'static>
                     Style::default().fg(scheme.modified),
                 ),
                 crate::diff::ChangeType::Unchanged => (
-                    " = SAME ",
+                    " = SAME     ",
                     scheme.muted,
                     scheme.badge_fg_light,
                     Style::default().fg(scheme.text),
@@ -762,10 +787,14 @@ fn get_diff_rows(app: &App, components: &[&ComponentChange]) -> Vec<Row<'static>
                     Style::default().fg(status_fg).bg(status_bg).bold(),
                 )),
                 Cell::from(comp.name.clone()),
-                Cell::from(comp.old_version.clone().unwrap_or_else(|| "-".to_string())),
-                Cell::from(comp.new_version.clone().unwrap_or_else(|| "-".to_string())),
+                Cell::from(comp.old_version.clone().unwrap_or_else(|| "\u{2014}".to_string())),
+                Cell::from(comp.new_version.clone().unwrap_or_else(|| "\u{2014}".to_string())),
                 Cell::from(comp.ecosystem.clone().unwrap_or_else(|| "-".to_string())),
-                Cell::from("-"), // Staleness not available in diff mode
+                Cell::from(if comp.field_changes.is_empty() {
+                    "-".to_string()
+                } else {
+                    comp.field_changes.len().to_string()
+                }),
             ])
             .style(row_style)
         })
@@ -842,8 +871,8 @@ fn get_view_rows(app: &App, components: &[&crate::model::Component]) -> Vec<Row<
             Row::new(vec![
                 Cell::from(vuln_indicator),
                 Cell::from(comp.name.clone()),
-                Cell::from(comp.version.clone().unwrap_or_else(|| "-".to_string())),
-                Cell::from("-"),
+                Cell::from(comp.version.clone().unwrap_or_else(|| "\u{2014}".to_string())),
+                Cell::from("\u{2014}"),
                 Cell::from(
                     comp.ecosystem
                         .as_ref().map_or_else(|| "-".to_string(), std::string::ToString::to_string),

@@ -74,7 +74,7 @@ pub fn render_security_analysis_lines(
     lines.push(Line::from(vec![
         Span::styled("━━━ ", Style::default().fg(colors().border)),
         Span::styled(
-            "🛡 Security Analysis",
+            "Security Analysis",
             Style::default().fg(colors().accent).bold(),
         ),
         Span::styled(" ━━━", Style::default().fg(colors().border)),
@@ -94,29 +94,42 @@ pub fn render_security_analysis_lines(
     ]));
 
     // Blast radius
-    lines.push(Line::from(vec![
-        Span::styled(
-            "  Blast Radius: ",
-            Style::default().fg(colors().text_muted),
-        ),
-        Span::styled(
-            format!("{direct_deps} direct"),
-            Style::default().fg(if direct_deps > 5 {
-                colors().warning
-            } else {
-                colors().text
-            }),
-        ),
-        Span::styled(", ", Style::default().fg(colors().text_muted)),
-        Span::styled(
-            format!("{transitive_count} transitive"),
-            Style::default().fg(if transitive_count > 10 {
-                colors().warning
-            } else {
-                colors().text
-            }),
-        ),
-    ]));
+    if direct_deps == 0 && transitive_count == 0 {
+        lines.push(Line::from(vec![
+            Span::styled(
+                "  Blast Radius: ",
+                Style::default().fg(colors().text_muted),
+            ),
+            Span::styled(
+                "None (no dependents)",
+                Style::default().fg(colors().text_muted),
+            ),
+        ]));
+    } else {
+        lines.push(Line::from(vec![
+            Span::styled(
+                "  Blast Radius: ",
+                Style::default().fg(colors().text_muted),
+            ),
+            Span::styled(
+                format!("{direct_deps} direct"),
+                Style::default().fg(if direct_deps > 5 {
+                    colors().warning
+                } else {
+                    colors().text
+                }),
+            ),
+            Span::styled(", ", Style::default().fg(colors().text_muted)),
+            Span::styled(
+                format!("{transitive_count} transitive"),
+                Style::default().fg(if transitive_count > 10 {
+                    colors().warning
+                } else {
+                    colors().text
+                }),
+            ),
+        ]));
+    }
 
     // Impact (only when there are transitive dependents)
     if transitive_count > 0 {
@@ -158,20 +171,22 @@ pub fn render_security_analysis_lines(
 }
 
 /// Render the quick actions hint line for component details.
-pub fn render_quick_actions_hint() -> Vec<Line<'static>> {
-    vec![
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("[y]", Style::default().fg(colors().accent)),
-            Span::styled(" copy  ", Style::default().fg(colors().text_muted)),
-            Span::styled("[F]", Style::default().fg(colors().accent)),
-            Span::styled(" flag  ", Style::default().fg(colors().text_muted)),
-            Span::styled("[n]", Style::default().fg(colors().accent)),
-            Span::styled(" note  ", Style::default().fg(colors().text_muted)),
-            Span::styled("[o]", Style::default().fg(colors().accent)),
-            Span::styled(" CVE", Style::default().fg(colors().text_muted)),
-        ]),
-    ]
+/// When `has_vulns` is false, the `[o] CVE` action is omitted.
+pub fn render_quick_actions_hint(has_vulns: bool) -> Vec<Line<'static>> {
+    let mut spans = vec![
+        Span::styled("[y]", Style::default().fg(colors().accent)),
+        Span::styled(" copy  ", Style::default().fg(colors().text_muted)),
+        Span::styled("[F]", Style::default().fg(colors().accent)),
+        Span::styled(" flag  ", Style::default().fg(colors().text_muted)),
+        Span::styled("[n]", Style::default().fg(colors().accent)),
+        Span::styled(" note", Style::default().fg(colors().text_muted)),
+    ];
+    if has_vulns {
+        spans.push(Span::styled("  ", Style::default()));
+        spans.push(Span::styled("[o]", Style::default().fg(colors().accent)));
+        spans.push(Span::styled(" CVE", Style::default().fg(colors().text_muted)));
+    }
+    vec![Line::from(""), Line::from(spans)]
 }
 
 /// Render vulnerability entries with severity badge + ID + optional description.
