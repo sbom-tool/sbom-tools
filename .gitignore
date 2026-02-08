@@ -31,3 +31,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Demo recording artifacts
+docs/demo/
