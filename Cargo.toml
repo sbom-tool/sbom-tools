@@ -46,7 +46,7 @@ rayon = "1.10"
 thiserror = "2.0"
 anyhow = "1.0"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 indexmap = { version = "2.13", features = ["serde"] }
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
 dirs = "6.0.0"
