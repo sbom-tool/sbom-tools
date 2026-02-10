@@ -11,9 +11,12 @@
 <p align="center">
   <a href="https://github.com/sbom-tool/sbom-tools/actions/workflows/rust.yml"><img src="https://github.com/sbom-tool/sbom-tools/actions/workflows/rust.yml/badge.svg" alt="build"></a>
   <a href="https://crates.io/crates/sbom-tools"><img src="https://img.shields.io/crates/v/sbom-tools" alt="crates.io"></a>
+  <a href="https://docs.rs/sbom-tools"><img src="https://docs.rs/sbom-tools/badge.svg" alt="docs.rs"></a>
   <a href="https://crates.io/crates/sbom-tools"><img src="https://img.shields.io/crates/d/sbom-tools" alt="downloads"></a>
+  <a href="https://deps.rs/repo/github/sbom-tool/sbom-tools"><img src="https://deps.rs/repo/github/sbom-tool/sbom-tools/status.svg" alt="dependency status"></a>
   <a href="https://github.com/sbom-tool/sbom-tools"><img src="https://img.shields.io/crates/l/sbom-tools" alt="license"></a>
   <a href="https://github.com/sbom-tool/sbom-tools"><img src="https://img.shields.io/badge/MSRV-1.86-blue" alt="MSRV"></a>
+  <a href="https://securityscorecards.dev/viewer/?uri=github.com/sbom-tool/sbom-tools"><img src="https://api.securityscorecards.dev/projects/github.com/sbom-tool/sbom-tools/badge" alt="OpenSSF Scorecard"></a>
 </p>
 
 Semantic SBOM diff and analysis tool. Compare, validate, and assess the quality of SBOMs across CycloneDX and SPDX formats.
