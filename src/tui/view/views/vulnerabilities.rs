@@ -593,7 +593,7 @@ fn render_vuln_table_panel(
                     Constraint::Length(3),
                     Constraint::Length(16),
                     Constraint::Length(5),
-                    Constraint::Length(20),
+                    Constraint::Length(28),
                     Constraint::Min(15),
                 ],
                 vec!["", "CVE ID", "CVSS", component_header, "Description"],
@@ -615,7 +615,7 @@ fn render_vuln_table_panel(
                 vec![
                     Constraint::Length(3),
                     Constraint::Length(16),
-                    Constraint::Length(20),
+                    Constraint::Length(28),
                     Constraint::Min(20),
                 ],
                 vec!["", "CVE ID", component_header, "Description"],
@@ -740,7 +740,7 @@ fn render_vuln_table_panel(
                             v.description.as_deref(),
                         );
                         cells.push(Cell::from(Span::styled(
-                            truncate_str(&display_name, 20),
+                            truncate_str(&display_name, 28),
                             Style::default().fg(scheme.primary),
                         )));
                     }

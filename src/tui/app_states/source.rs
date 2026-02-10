@@ -485,12 +485,13 @@ pub enum SourceSide {
     New,
 }
 
-/// Diff mode state: two independent panels with active-side tracking.
+/// Diff mode state: two panels with active-side tracking and optional sync.
 #[derive(Debug, Clone)]
 pub struct SourceDiffState {
     pub old_panel: SourcePanelState,
     pub new_panel: SourcePanelState,
     pub active_side: SourceSide,
+    pub sync_mode: super::ScrollSyncMode,
 }
 
 impl SourceDiffState {
@@ -499,6 +500,7 @@ impl SourceDiffState {
             old_panel: SourcePanelState::new(old_raw),
             new_panel: SourcePanelState::new(new_raw),
             active_side: SourceSide::New,
+            sync_mode: super::ScrollSyncMode::Locked,
         }
     }
 
@@ -509,10 +511,132 @@ impl SourceDiffState {
         }
     }
 
-    pub const fn toggle_side(&mut self) {
+    pub const fn inactive_panel_mut(&mut self) -> &mut SourcePanelState {
+        match self.active_side {
+            SourceSide::Old => &mut self.new_panel,
+            SourceSide::New => &mut self.old_panel,
+        }
+    }
+
+    pub const fn is_synced(&self) -> bool {
+        matches!(self.sync_mode, super::ScrollSyncMode::Locked)
+    }
+
+    pub const fn toggle_sync(&mut self) {
+        self.sync_mode = match self.sync_mode {
+            super::ScrollSyncMode::Independent => super::ScrollSyncMode::Locked,
+            super::ScrollSyncMode::Locked => super::ScrollSyncMode::Independent,
+        };
+    }
+
+    pub fn toggle_side(&mut self) {
+        if self.is_synced() {
+            self.sync_target_to_active();
+        }
         self.active_side = match self.active_side {
             SourceSide::Old => SourceSide::New,
             SourceSide::New => SourceSide::Old,
         };
+    }
+
+    /// Try to jump the inactive panel to the same node path as the active panel.
+    fn sync_target_to_active(&mut self) {
+        // Get the current node_id from the active panel (tree mode only)
+        let target_node_id = {
+            let active = match self.active_side {
+                SourceSide::Old => &mut self.old_panel,
+                SourceSide::New => &mut self.new_panel,
+            };
+            if active.view_mode != SourceViewMode::Tree {
+                return;
+            }
+            active.ensure_flat_cache();
+            active
+                .cached_flat_items
+                .get(active.selected)
+                .map(|item| item.node_id.clone())
+        };
+
+        let Some(node_id) = target_node_id else {
+            return;
+        };
+
+        // Find the matching node in the inactive panel
+        let inactive = match self.active_side {
+            SourceSide::Old => &mut self.new_panel,
+            SourceSide::New => &mut self.old_panel,
+        };
+        if inactive.view_mode != SourceViewMode::Tree {
+            return;
+        }
+
+        // Try exact match first, then progressively shorter ancestor paths
+        let parts: Vec<&str> = node_id.split('.').collect();
+        for len in (1..=parts.len()).rev() {
+            let candidate = parts[..len].join(".");
+            // Ensure the candidate node is expanded (expand ancestors)
+            for ancestor_len in 1..len {
+                let ancestor = parts[..ancestor_len].join(".");
+                if !inactive.expanded.contains(&ancestor) {
+                    inactive.expanded.insert(ancestor);
+                    inactive.invalidate_flat_cache();
+                }
+            }
+            inactive.ensure_flat_cache();
+            if let Some(idx) = inactive
+                .cached_flat_items
+                .iter()
+                .position(|item| item.node_id == candidate)
+            {
+                inactive.selected = idx;
+                // Reset scroll so render can recompute it
+                inactive.scroll_offset = idx.saturating_sub(5);
+                return;
+            }
+        }
+    }
+
+    // --- Synchronized navigation methods ---
+
+    pub fn select_next(&mut self) {
+        self.active_panel_mut().select_next();
+        if self.is_synced() {
+            self.inactive_panel_mut().select_next();
+        }
+    }
+
+    pub fn select_prev(&mut self) {
+        self.active_panel_mut().select_prev();
+        if self.is_synced() {
+            self.inactive_panel_mut().select_prev();
+        }
+    }
+
+    pub fn select_first(&mut self) {
+        self.active_panel_mut().select_first();
+        if self.is_synced() {
+            self.inactive_panel_mut().select_first();
+        }
+    }
+
+    pub fn select_last(&mut self) {
+        self.active_panel_mut().select_last();
+        if self.is_synced() {
+            self.inactive_panel_mut().select_last();
+        }
+    }
+
+    pub fn page_up(&mut self) {
+        self.active_panel_mut().page_up();
+        if self.is_synced() {
+            self.inactive_panel_mut().page_up();
+        }
+    }
+
+    pub fn page_down(&mut self) {
+        self.active_panel_mut().page_down();
+        if self.is_synced() {
+            self.inactive_panel_mut().page_down();
+        }
     }
 }

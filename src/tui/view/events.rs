@@ -398,6 +398,11 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                 app.license_state.scroll_components_down(crate::tui::constants::PAGE_SIZE);
             }
         }
+        KeyCode::Char('m') => {
+            if app.active_tab == ViewTab::Tree {
+                app.toggle_bookmark();
+            }
+        }
         KeyCode::Char('f') => match app.active_tab {
             ViewTab::Tree => app.toggle_tree_filter(),
             ViewTab::Vulnerabilities => app.vuln_state.toggle_filter(),
@@ -412,6 +417,9 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
             if app.active_tab == ViewTab::Vulnerabilities {
                 app.vuln_state.toggle_deduplicate();
             }
+        }
+        KeyCode::Char('w') if app.active_tab == ViewTab::Source => {
+            app.toggle_focus();
         }
         KeyCode::Char('n') if app.active_tab == ViewTab::Source => {
             app.source_state.next_search_match();

@@ -2,7 +2,7 @@
 
 use crate::tui::theme::colors;
 use crate::tui::view::app::ViewApp;
-use crate::tui::widgets::{format_count, SeverityBar};
+use crate::tui::widgets::{extract_display_name, format_count, SeverityBar};
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Paragraph, Row, Table},
@@ -20,12 +20,17 @@ pub fn render_overview(frame: &mut Frame, area: Rect, app: &ViewApp) {
 }
 
 fn render_stats_panel(frame: &mut Frame, area: Rect, app: &ViewApp) {
+    // Compute adaptive height for ecosystem panel: entries + 2 (borders)
+    let eco_count = app.stats.ecosystem_counts.len();
+    let eco_height = (eco_count + 2).min(12) as u16; // cap at 12 rows
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(8), // Summary cards
-            Constraint::Length(8), // Vulnerability breakdown
-            Constraint::Min(6),    // Ecosystem distribution
+            Constraint::Length(8),          // Summary cards
+            Constraint::Length(8),          // Vulnerability breakdown
+            Constraint::Length(eco_height), // Ecosystem distribution (adaptive)
+            Constraint::Min(6),            // License distribution
         ])
         .split(area);
 
@@ -37,6 +42,9 @@ fn render_stats_panel(frame: &mut Frame, area: Rect, app: &ViewApp) {
 
     // Ecosystem distribution
     render_ecosystem_dist(frame, chunks[2], app);
+
+    // License distribution
+    render_license_dist(frame, chunks[3], app);
 }
 
 fn render_summary_cards(frame: &mut Frame, area: Rect, app: &ViewApp) {
@@ -226,7 +234,10 @@ fn render_ecosystem_dist(frame: &mut Frame, area: Rect, app: &ViewApp) {
 
     let palette = scheme.chart_palette();
 
-    for (i, (eco, count)) in ecosystems.iter().take(6).enumerate() {
+    // Dynamic row count based on available area height
+    let max_eco_rows = area.height.saturating_sub(3) as usize; // subtract borders + "Other" line
+
+    for (i, (eco, count)) in ecosystems.iter().take(max_eco_rows).enumerate() {
         let pct = (**count as f64 / total as f64 * 100.0) as usize;
         let bar_width = 25;
         let filled = (**count * bar_width / total).max(usize::from(**count > 0));
@@ -249,8 +260,8 @@ fn render_ecosystem_dist(frame: &mut Frame, area: Rect, app: &ViewApp) {
         ]));
     }
 
-    if ecosystems.len() > 6 {
-        let remaining: usize = ecosystems.iter().skip(6).map(|(_, c)| *c).sum();
+    if ecosystems.len() > max_eco_rows {
+        let remaining: usize = ecosystems.iter().skip(max_eco_rows).map(|(_, c)| *c).sum();
         lines.push(Line::from(vec![
             Span::styled(
                 format!("{:>12} ", "Other"),
@@ -273,20 +284,115 @@ fn render_ecosystem_dist(frame: &mut Frame, area: Rect, app: &ViewApp) {
     frame.render_widget(para, area);
 }
 
+fn render_license_dist(frame: &mut Frame, area: Rect, app: &ViewApp) {
+    let scheme = colors();
+    let stats = &app.stats;
+
+    // Sort licenses by count, exclude "Unknown"
+    let mut licenses: Vec<_> = stats
+        .license_counts
+        .iter()
+        .filter(|(name, _)| name.as_str() != "Unknown")
+        .collect();
+    licenses.sort_by(|a, b| b.1.cmp(a.1).then_with(|| a.0.cmp(b.0)));
+
+    let total = stats.component_count.max(1);
+    let unknown_count = *stats.license_counts.get("Unknown").unwrap_or(&0);
+
+    let mut lines = vec![];
+
+    let palette = scheme.chart_palette();
+
+    let max_rows = area.height.saturating_sub(3) as usize; // borders + possible "Other" line
+
+    for (i, (lic, count)) in licenses.iter().take(max_rows).enumerate() {
+        let pct = (**count as f64 / total as f64 * 100.0) as usize;
+        let bar_width = 25;
+        let filled = (**count * bar_width / total).max(usize::from(**count > 0));
+        let color = palette[i % palette.len()];
+
+        let display_name = if lic.len() > 12 { &lic[..12] } else { lic.as_str() };
+        lines.push(Line::from(vec![
+            Span::styled(
+                format!("{display_name:>12} "),
+                Style::default().fg(color).bold(),
+            ),
+            Span::styled("\u{2588}".repeat(filled), Style::default().fg(color)),
+            Span::styled(
+                "\u{2591}".repeat(bar_width - filled),
+                Style::default().fg(scheme.muted),
+            ),
+            Span::styled(
+                format!(" {count:>5} ({pct:>2}%)"),
+                Style::default().fg(scheme.text),
+            ),
+        ]));
+    }
+
+    // Show "Other" line for remaining + unknown
+    let shown_count: usize = licenses.iter().take(max_rows).map(|(_, c)| *c).sum();
+    let remaining = stats.component_count.saturating_sub(shown_count);
+    if remaining > 0 || unknown_count > 0 {
+        let other_total = remaining;
+        if other_total > 0 {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    format!("{:>12} ", "Other"),
+                    Style::default().fg(scheme.muted),
+                ),
+                Span::styled(
+                    format!("{other_total} more ({unknown_count} unknown)"),
+                    Style::default().fg(scheme.muted),
+                ),
+            ]));
+        }
+    }
+
+    let para = Paragraph::new(lines).block(
+        Block::default()
+            .title(" License Distribution ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(scheme.success)),
+    );
+
+    frame.render_widget(para, area);
+}
+
 fn render_details_panel(frame: &mut Frame, area: Rect, app: &ViewApp) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(10), // Document info
-            Constraint::Min(6),     // Top components with vulns
-        ])
-        .split(area);
+    let has_edges = !app.sbom.edges.is_empty();
+
+    let remaining = area.height.saturating_sub(11);
+    let half = remaining / 2;
+
+    let chunks = if has_edges {
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(11),   // Document info
+                Constraint::Length(half), // Top vulnerable components
+                Constraint::Min(6),      // Top depended-on components
+            ])
+            .split(area)
+    } else {
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(11), // Document info
+                Constraint::Min(6),    // Top components with vulns
+            ])
+            .split(area)
+    };
 
     // Document info
     render_document_info(frame, chunks[0], app);
 
     // Top vulnerable components
     render_top_vulnerable(frame, chunks[1], app);
+
+    // Top depended-on components (only when dependency edges exist)
+    if has_edges {
+        render_top_depended_on(frame, chunks[2], app);
+    }
 }
 
 fn render_document_info(frame: &mut Frame, area: Rect, app: &ViewApp) {
@@ -310,9 +416,11 @@ fn render_document_info(frame: &mut Frame, area: Rect, app: &ViewApp) {
         ),
     ]));
 
+    let (age_str, age_color) = format_age(doc.created);
     lines.push(Line::from(vec![
         Span::styled("Created: ", Style::default().fg(scheme.muted)),
         Span::raw(doc.created.format("%Y-%m-%d %H:%M:%S").to_string()),
+        Span::styled(format!("  ({age_str})"), Style::default().fg(age_color)),
     ]));
 
     // Get creators (people and orgs)
@@ -359,6 +467,15 @@ fn render_document_info(frame: &mut Frame, area: Rect, app: &ViewApp) {
         ]));
     }
 
+    // Export hint
+    lines.push(Line::from(vec![
+        Span::styled("[e]", Style::default().fg(scheme.accent)),
+        Span::styled(
+            " Export to JSON/CSV/Markdown",
+            Style::default().fg(scheme.muted),
+        ),
+    ]));
+
     let para = Paragraph::new(lines).block(
         Block::default()
             .title(" Document Info ")
@@ -383,18 +500,22 @@ fn render_top_vulnerable(frame: &mut Frame, area: Rect, app: &ViewApp) {
 
     vuln_comps.sort_by(|a, b| b.1.cmp(&a.1));
 
+    // Dynamic row count based on available area height
+    let max_rows = area.height.saturating_sub(3) as usize; // subtract header + borders
+
     let rows: Vec<Row> = vuln_comps
         .iter()
-        .take(8)
+        .take(max_rows)
         .map(|(name, count, max_sev)| {
             let sev_str = max_sev.as_deref().unwrap_or("Unknown");
             let sev_color = scheme.severity_color(sev_str);
+            let display_name = extract_display_name(name);
 
             Row::new(vec![
-                if name.len() > 25 {
-                    format!("{}...", &name[..22])
+                if display_name.len() > 45 {
+                    format!("{}...", &display_name[..42])
                 } else {
-                    name.clone()
+                    display_name
                 },
                 count.to_string(),
                 sev_str.to_string(),
@@ -407,7 +528,7 @@ fn render_top_vulnerable(frame: &mut Frame, area: Rect, app: &ViewApp) {
         .style(Style::default().fg(scheme.accent).bold());
 
     let widths = [
-        Constraint::Min(20),
+        Constraint::Min(30),
         Constraint::Length(6),
         Constraint::Length(12),
     ];
@@ -423,6 +544,105 @@ fn render_top_vulnerable(frame: &mut Frame, area: Rect, app: &ViewApp) {
     );
 
     frame.render_widget(table, area);
+}
+
+fn render_top_depended_on(frame: &mut Frame, area: Rect, app: &ViewApp) {
+    let scheme = colors();
+
+    // Count how many times each component appears as a dependency target
+    let mut dependent_counts: std::collections::HashMap<&crate::model::CanonicalId, usize> =
+        std::collections::HashMap::new();
+    for edge in &app.sbom.edges {
+        *dependent_counts.entry(&edge.to).or_insert(0) += 1;
+    }
+
+    // Build sorted list of (name, dependents_count, vuln_count)
+    let mut top_deps: Vec<_> = dependent_counts
+        .iter()
+        .filter_map(|(id, &dep_count)| {
+            app.sbom.components.get(*id).map(|c| {
+                (c.name.clone(), dep_count, c.vulnerabilities.len())
+            })
+        })
+        .collect();
+
+    top_deps.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+
+    let max_rows = area.height.saturating_sub(3) as usize;
+
+    let rows: Vec<Row> = top_deps
+        .iter()
+        .take(max_rows)
+        .map(|(name, dep_count, vuln_count)| {
+            let display_name = extract_display_name(name);
+
+            Row::new(vec![
+                if display_name.len() > 35 {
+                    format!("{}...", &display_name[..32])
+                } else {
+                    display_name
+                },
+                dep_count.to_string(),
+                vuln_count.to_string(),
+            ])
+            .style(Style::default().fg(scheme.text))
+        })
+        .collect();
+
+    let header = Row::new(vec!["Component", "Deps", "Vulns"])
+        .style(Style::default().fg(scheme.accent).bold());
+
+    let widths = [
+        Constraint::Min(20),
+        Constraint::Length(6),
+        Constraint::Length(6),
+    ];
+
+    let table = Table::new(rows, widths).header(header).block(
+        Block::default()
+            .title(format!(
+                " Top Depended-On Components ({}) ",
+                top_deps.len()
+            ))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(scheme.primary)),
+    );
+
+    frame.render_widget(table, area);
+}
+
+/// Format SBOM age as a human-readable string with appropriate color.
+fn format_age(created: chrono::DateTime<chrono::Utc>) -> (String, Color) {
+    let scheme = colors();
+    let age_days = (chrono::Utc::now() - created).num_days();
+
+    let age_str = if age_days < 0 {
+        "in the future".to_string()
+    } else if age_days == 0 {
+        "today".to_string()
+    } else if age_days == 1 {
+        "1 day ago".to_string()
+    } else if age_days < 30 {
+        format!("{age_days} days ago")
+    } else if age_days < 60 {
+        "1 month ago".to_string()
+    } else if age_days < 365 {
+        format!("{} months ago", age_days / 30)
+    } else if age_days < 730 {
+        "1 year ago".to_string()
+    } else {
+        format!("{} years ago", age_days / 365)
+    };
+
+    let color = if age_days < 30 {
+        scheme.success
+    } else if age_days < 180 {
+        scheme.warning
+    } else {
+        scheme.critical
+    };
+
+    (age_str, color)
 }
 
 /// Extension trait for Component to get max severity.

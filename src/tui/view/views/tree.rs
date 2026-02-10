@@ -114,7 +114,9 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
     spans.push(Span::styled("[g]", Style::default().fg(scheme.accent)));
     spans.push(Span::raw(" group  "));
     spans.push(Span::styled("[f]", Style::default().fg(scheme.accent)));
-    spans.push(Span::raw(" filter"));
+    spans.push(Span::raw(" filter  "));
+    spans.push(Span::styled("[m]", Style::default().fg(scheme.accent)));
+    spans.push(Span::raw(" bookmark"));
 
     let para = Paragraph::new(Line::from(spans));
     frame.render_widget(para, area);
@@ -155,6 +157,9 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &ViewApp) {
                 render_dependencies_tab(frame, chunks[1], app, comp, border_color);
             }
         }
+    } else if let Some((group_label, child_ids)) = app.get_selected_group_info() {
+        // Group node selected - show group-specific stats
+        render_group_stats_panel(frame, area, app, &group_label, &child_ids, border_color);
     } else {
         // No component selected - show quick stats overview
         render_component_stats_panel(frame, area, app, scheme.border);
@@ -210,7 +215,7 @@ fn render_overview_tab(frame: &mut Frame, area: Rect, comp: &Component, border_c
     let scheme = colors();
     let mut lines = vec![];
 
-    // Component name
+    // Component name (with bookmark indicator)
     lines.push(Line::from(vec![Span::styled(
         &comp.name,
         Style::default().fg(scheme.text).bold(),
@@ -808,6 +813,166 @@ fn render_component_stats_panel(frame: &mut Frame, area: Rect, app: &ViewApp, bo
         .block(
             Block::default()
                 .title(" Component Overview ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(border_color)),
+        )
+        .wrap(Wrap { trim: true });
+
+    frame.render_widget(panel, area);
+}
+
+/// Render group-specific stats panel when a group node is selected
+fn render_group_stats_panel(
+    frame: &mut Frame,
+    area: Rect,
+    app: &ViewApp,
+    group_label: &str,
+    child_ids: &[String],
+    border_color: Color,
+) {
+    use crate::tui::view::severity::severity_category;
+
+    let scheme = colors();
+    let mut lines = Vec::with_capacity(30);
+
+    // Title with group name and count
+    lines.push(Line::from(vec![Span::styled(
+        group_label,
+        Style::default().fg(scheme.accent).bold(),
+    )]));
+    lines.push(Line::from(vec![
+        Span::styled("Components: ", Style::default().fg(scheme.text_muted)),
+        Span::styled(
+            child_ids.len().to_string(),
+            Style::default().fg(scheme.text).bold(),
+        ),
+    ]));
+    lines.push(Line::from(""));
+
+    // Collect group components
+    let group_comps: Vec<&Component> = child_ids
+        .iter()
+        .filter_map(|id| {
+            app.sbom
+                .components
+                .iter()
+                .find(|(cid, _)| cid.value() == id)
+                .map(|(_, c)| c)
+        })
+        .collect();
+
+    // Vulnerability breakdown by severity
+    let mut vuln_counts: std::collections::HashMap<&str, usize> =
+        std::collections::HashMap::with_capacity(5);
+    vuln_counts.insert("critical", 0);
+    vuln_counts.insert("high", 0);
+    vuln_counts.insert("medium", 0);
+    vuln_counts.insert("low", 0);
+    vuln_counts.insert("clean", 0);
+
+    let mut total_vulns = 0usize;
+    for comp in &group_comps {
+        let category = severity_category(&comp.vulnerabilities);
+        *vuln_counts.entry(category).or_insert(0) += 1;
+        total_vulns += comp.vulnerabilities.len();
+    }
+
+    lines.push(Line::styled(
+        format!("Vulnerabilities: {total_vulns}"),
+        Style::default().fg(scheme.high).bold(),
+    ));
+
+    let width = area.width.saturating_sub(4) as usize;
+    let bar_width = width.saturating_sub(20).min(25);
+    let max_vuln = vuln_counts.values().copied().max().unwrap_or(1);
+
+    let vuln_order = [
+        ("critical", "Critical", scheme.critical),
+        ("high", "High", scheme.high),
+        ("medium", "Medium", scheme.warning),
+        ("low", "Low", scheme.info),
+        ("clean", "Clean", scheme.success),
+    ];
+
+    for (key, label, color) in &vuln_order {
+        let count = vuln_counts.get(key).copied().unwrap_or(0);
+        if count == 0 {
+            continue;
+        }
+        let bar_len = if max_vuln > 0 {
+            (count * bar_width) / max_vuln
+        } else {
+            0
+        };
+        lines.push(Line::from(vec![
+            Span::styled(format!("  {label:10}"), Style::default().fg(*color)),
+            Span::styled(format!("{count:>4} "), Style::default().fg(scheme.text)),
+            Span::styled("\u{2588}".repeat(bar_len), Style::default().fg(*color)),
+        ]));
+    }
+
+    lines.push(Line::from(""));
+
+    // Top 5 most vulnerable components in this group
+    let mut vuln_comps: Vec<(&str, usize)> = group_comps
+        .iter()
+        .filter(|c| !c.vulnerabilities.is_empty())
+        .map(|c| (c.name.as_str(), c.vulnerabilities.len()))
+        .collect();
+    vuln_comps.sort_by(|a, b| b.1.cmp(&a.1));
+
+    if !vuln_comps.is_empty() {
+        lines.push(Line::styled(
+            "Most Vulnerable:",
+            Style::default().fg(scheme.critical).bold(),
+        ));
+        for (name, count) in vuln_comps.iter().take(5) {
+            let display = crate::tui::widgets::extract_display_name(name);
+            lines.push(Line::from(vec![
+                Span::styled("  ", Style::default()),
+                Span::styled(
+                    truncate_str(&display, width.saturating_sub(10)),
+                    Style::default().fg(scheme.text),
+                ),
+                Span::styled(
+                    format!(" ({count})"),
+                    Style::default().fg(scheme.high),
+                ),
+            ]));
+        }
+        lines.push(Line::from(""));
+    }
+
+    // Ecosystem breakdown
+    let mut eco_counts: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
+    for comp in &group_comps {
+        let eco = comp
+            .ecosystem
+            .as_ref()
+            .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
+        *eco_counts.entry(eco).or_insert(0) += 1;
+    }
+
+    if eco_counts.len() > 1 {
+        lines.push(Line::styled(
+            "Ecosystems:",
+            Style::default().fg(scheme.primary).bold(),
+        ));
+        let mut eco_sorted: Vec<_> = eco_counts.iter().collect();
+        eco_sorted.sort_by(|a, b| b.1.cmp(a.1));
+        for (eco, count) in eco_sorted.iter().take(5) {
+            lines.push(Line::from(vec![
+                Span::styled(format!("  {eco}: "), Style::default().fg(scheme.text_muted)),
+                Span::styled(count.to_string(), Style::default().fg(scheme.text)),
+            ]));
+        }
+    }
+
+    let panel = Paragraph::new(lines)
+        .block(
+            Block::default()
+                .title(format!(" {group_label} "))
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(border_color)),
         )

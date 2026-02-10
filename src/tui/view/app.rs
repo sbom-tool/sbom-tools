@@ -97,6 +97,9 @@ pub struct ViewApp {
 
     /// Source tab state
     pub(crate) source_state: SourcePanelState,
+
+    /// Bookmarked component canonical IDs (in-memory, no persistence)
+    pub(crate) bookmarked: HashSet<String>,
 }
 
 impl ViewApp {
@@ -153,6 +156,7 @@ impl ViewApp {
             compliance_state,
             sbom_index,
             source_state,
+            bookmarked: HashSet::new(),
         }
     }
 
@@ -364,6 +368,78 @@ impl ViewApp {
         false
     }
 
+    /// Get the currently selected tree node info (Group label + children component IDs,
+    /// or None if a component is selected or nothing is selected).
+    #[must_use]
+    pub fn get_selected_group_info(&self) -> Option<(String, Vec<String>)> {
+        let nodes = self.build_tree_nodes();
+        let mut flat_items = Vec::new();
+        flatten_tree_for_selection(&nodes, &self.tree_state, &mut flat_items);
+
+        let selected = flat_items.get(self.tree_state.selected)?;
+        match selected {
+            SelectedTreeNode::Group(group_id) => {
+                // Find the group in tree nodes and collect child component IDs
+                fn find_group_children(
+                    nodes: &[crate::tui::widgets::TreeNode],
+                    target_id: &str,
+                ) -> Option<(String, Vec<String>)> {
+                    for node in nodes {
+                        if let crate::tui::widgets::TreeNode::Group {
+                            id,
+                            label,
+                            children,
+                            ..
+                        } = node
+                        {
+                            if id == target_id {
+                                let child_ids: Vec<String> = children
+                                    .iter()
+                                    .filter_map(|c| match c {
+                                        crate::tui::widgets::TreeNode::Component { id, .. } => {
+                                            Some(id.clone())
+                                        }
+                                        crate::tui::widgets::TreeNode::Group { .. } => None,
+                                    })
+                                    .collect();
+                                return Some((label.clone(), child_ids));
+                            }
+                            // Recurse into subgroups
+                            if let Some(result) = find_group_children(children, target_id) {
+                                return Some(result);
+                            }
+                        }
+                    }
+                    None
+                }
+                find_group_children(&nodes, group_id)
+            }
+            SelectedTreeNode::Component(_) => None,
+        }
+    }
+
+    /// Toggle bookmark on the currently selected component.
+    pub fn toggle_bookmark(&mut self) {
+        if let Some(ref comp_id) = self.selected_component {
+            if self.bookmarked.contains(comp_id) {
+                self.bookmarked.remove(comp_id);
+            } else {
+                self.bookmarked.insert(comp_id.clone());
+            }
+        } else if let Some(node) = self.get_selected_tree_node() {
+            match node {
+                SelectedTreeNode::Component(id) => {
+                    if self.bookmarked.contains(&id) {
+                        self.bookmarked.remove(&id);
+                    } else {
+                        self.bookmarked.insert(id);
+                    }
+                }
+                SelectedTreeNode::Group(_) => {}
+            }
+        }
+    }
+
     /// Toggle tree grouping mode.
     pub fn toggle_tree_grouping(&mut self) {
         self.tree_group_by = match self.tree_group_by {
@@ -381,7 +457,8 @@ impl ViewApp {
         self.tree_filter = match self.tree_filter {
             TreeFilter::All => TreeFilter::HasVulnerabilities,
             TreeFilter::HasVulnerabilities => TreeFilter::Critical,
-            TreeFilter::Critical => TreeFilter::All,
+            TreeFilter::Critical => TreeFilter::Bookmarked,
+            TreeFilter::Bookmarked => TreeFilter::All,
         };
         self.tree_state = TreeState::new();
     }
@@ -988,6 +1065,8 @@ impl ViewApp {
                         component_type: Some(
                             crate::tui::widgets::detect_component_type(&c.name).to_string(),
                         ),
+                        ecosystem: c.ecosystem.as_ref().map(std::string::ToString::to_string),
+                        is_bookmarked: self.bookmarked.contains(c.canonical_id.value()),
                     })
                     .collect();
                 let count = children.len();
@@ -1045,6 +1124,8 @@ impl ViewApp {
                         component_type: Some(
                             crate::tui::widgets::detect_component_type(&c.name).to_string(),
                         ),
+                        ecosystem: c.ecosystem.as_ref().map(std::string::ToString::to_string),
+                        is_bookmarked: self.bookmarked.contains(c.canonical_id.value()),
                     })
                     .collect();
                 let count = children.len();
@@ -1091,7 +1172,7 @@ impl ViewApp {
             }
         }
 
-        let build_group = |label: &str, id: &str, comps: Vec<&Component>| -> TreeNode {
+        let build_group = |label: &str, id: &str, comps: Vec<&Component>, bookmarked: &HashSet<String>| -> TreeNode {
             let vuln_count: usize = comps.iter().map(|c| c.vulnerabilities.len()).sum();
             let children: Vec<TreeNode> = comps
                 .into_iter()
@@ -1104,6 +1185,8 @@ impl ViewApp {
                     component_type: Some(
                         crate::tui::widgets::detect_component_type(&c.name).to_string(),
                     ),
+                    ecosystem: c.ecosystem.as_ref().map(std::string::ToString::to_string),
+                    is_bookmarked: bookmarked.contains(c.canonical_id.value()),
                 })
                 .collect();
             let count = children.len();
@@ -1118,20 +1201,21 @@ impl ViewApp {
 
         let mut groups = Vec::new();
         if !critical_comps.is_empty() {
-            groups.push(build_group("Critical", "vuln:critical", critical_comps));
+            groups.push(build_group("Critical", "vuln:critical", critical_comps, &self.bookmarked));
         }
         if !high_comps.is_empty() {
-            groups.push(build_group("High", "vuln:high", high_comps));
+            groups.push(build_group("High", "vuln:high", high_comps, &self.bookmarked));
         }
         if !other_vuln_comps.is_empty() {
             groups.push(build_group(
                 "Other Vulnerabilities",
                 "vuln:other",
                 other_vuln_comps,
+                &self.bookmarked,
             ));
         }
         if !clean_comps.is_empty() {
-            groups.push(build_group("No Vulnerabilities", "vuln:clean", clean_comps));
+            groups.push(build_group("No Vulnerabilities", "vuln:clean", clean_comps, &self.bookmarked));
         }
 
         groups
@@ -1176,6 +1260,8 @@ impl ViewApp {
                         vuln_count: c.vulnerabilities.len(),
                         max_severity: get_max_severity(c),
                         component_type: Some(type_key.to_string()),
+                        ecosystem: c.ecosystem.as_ref().map(std::string::ToString::to_string),
+                        is_bookmarked: self.bookmarked.contains(c.canonical_id.value()),
                     })
                     .collect();
                 let count = children.len();
@@ -1208,6 +1294,8 @@ impl ViewApp {
                 component_type: Some(
                     crate::tui::widgets::detect_component_type(&c.name).to_string(),
                 ),
+                ecosystem: c.ecosystem.as_ref().map(std::string::ToString::to_string),
+                is_bookmarked: self.bookmarked.contains(c.canonical_id.value()),
             })
             .collect()
     }
@@ -1223,6 +1311,7 @@ impl ViewApp {
                 .vulnerabilities
                 .iter()
                 .any(|v| severity_matches(v.severity.as_ref(), "critical")),
+            TreeFilter::Bookmarked => self.bookmarked.contains(comp.canonical_id.value()),
         };
 
         if !passes_filter {
@@ -1408,15 +1497,17 @@ pub enum TreeFilter {
     All,
     HasVulnerabilities,
     Critical,
+    Bookmarked,
 }
 
 impl TreeFilter {
-    #[must_use] 
+    #[must_use]
     pub const fn label(&self) -> &'static str {
         match self {
             Self::All => "All",
             Self::HasVulnerabilities => "Has Vulns",
             Self::Critical => "Critical",
+            Self::Bookmarked => "Bookmarked",
         }
     }
 }

@@ -6,9 +6,7 @@
 
 A semantic SBOM (Software Bill of Materials) diff and analysis tool. Compare, validate, and assess the quality of SBOMs across CycloneDX and SPDX formats.
 
-![sbom-tools diff summary](assets/tui-diff-summary.png)
-
-![sbom-tools view overview](assets/tui-view-overview.png)
+![sbom-tools diff summary](assets/tui-diff-summary.svg)
 
 ## Features
 
@@ -197,30 +195,75 @@ sbom-tools config-schema > schema.json
 
 Both `diff` and `view` commands launch an interactive terminal UI by default when connected to a TTY.
 
-**Diff mode tabs:** Summary, Components, Dependencies, Licenses, Vulnerabilities, Quality, Compliance, Side-by-Side, Graph Changes, Source
+### Diff Mode
 
-**View mode tabs:** Overview, Tree, Vulnerabilities, Licenses, Dependencies, Quality, Compliance, Source
+Compare two SBOMs with semantic change detection across 9 tabs.
 
-![Components tab](assets/tui-diff-components.png)
+**Summary** — Overall change score with component, vulnerability, and compliance breakdowns at a glance.
 
-![Compliance tab](assets/tui-diff-compliance.png)
+![Diff summary](assets/tui-diff-summary.svg)
 
-![Quality tab](assets/tui-view-quality.png)
+**Components** — Every added, removed, and modified component with version diffs and ecosystem tags.
 
-![Side-by-side tab](assets/tui-diff-sidebyside.png)
+![Diff components](assets/tui-diff-components.svg)
 
-**Navigation:**
+<details>
+<summary>More diff screenshots</summary>
+
+**Side-by-Side** — Aligned dual-panel comparison with synchronized scrolling.
+
+![Diff side-by-side](assets/tui-diff-sidebyside.svg)
+
+**Source** — Raw SBOM JSON in a synced dual-panel tree view. Press `s` to lock navigation across panels.
+
+![Diff source](assets/tui-diff-source.svg)
+
+**Compliance** — CRA, NTIA, and FDA readiness checks with pass/fail details for each requirement.
+
+![Diff compliance](assets/tui-diff-compliance.svg)
+
+</details>
+
+### View Mode
+
+Explore a single SBOM interactively across 8 tabs.
+
+**Overview** — SBOM metadata, component statistics, and vulnerability summary.
+
+![View overview](assets/tui-view-overview.svg)
+
+**Components** — Expandable component tree grouped by ecosystem.
+
+![View components tree](assets/tui-view-tree.svg)
+
+<details>
+<summary>More view screenshots</summary>
+
+**Vulnerabilities** — CVE table with severity, CVSS scores, and affected components.
+
+![View vulnerabilities](assets/tui-view-vulns.svg)
+
+**Quality** — Weighted quality score with category breakdown and improvement recommendations.
+
+![View quality](assets/tui-view-quality.svg)
+
+</details>
+
+### Navigation
 
 | Key | Action |
 |-----|--------|
-| `Tab` / `Shift+Tab` | Switch between tabs |
-| `1`–`0` | Jump to tab by number |
-| `↑` / `↓` | Navigate list items |
-| `Enter` | Expand / drill into selection |
-| `Ctrl+F` or `/` | Search |
-| `f` | Toggle filter panel |
-| `s` | Cycle sort order |
-| `q` / `Esc` | Quit |
+| `1`–`0` / `Tab` | Switch tabs |
+| `↑↓` / `jk` | Navigate items |
+| `Enter` / `Space` | Expand / collapse |
+| `/` | Search |
+| `f` | Filter panel |
+| `s` | Sync panels (Source) / sort |
+| `w` | Switch focus (Source, Side-by-Side) |
+| `v` | Tree / raw toggle (Source) |
+| `e` | Export |
+| `T` | Cycle theme |
+| `q` | Quit |
 
 ## Output Formats
 

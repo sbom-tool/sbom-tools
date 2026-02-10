@@ -1,6 +1,7 @@
 //! Source tab event handling for App (diff mode).
 
 use crate::tui::app::App;
+use crate::tui::app_states::source::SourceDiffState;
 use crate::tui::app_states::SourceViewMode;
 use crossterm::event::{KeyCode, KeyEvent};
 
@@ -41,90 +42,104 @@ pub fn handle_source_keys(app: &mut App, key: KeyEvent) {
             app.tabs.source.active_panel_mut().prev_search_match();
         }
         KeyCode::Char('v') => {
-            app.tabs.source.active_panel_mut().toggle_view_mode();
+            app.tabs.source.old_panel.toggle_view_mode();
+            app.tabs.source.new_panel.toggle_view_mode();
         }
-        KeyCode::Char('w' | '\t') => {
-            // Tab or 'w' to switch active side
+        KeyCode::Char('w') => {
             app.tabs.source.toggle_side();
         }
+        KeyCode::Char('s') => {
+            app.tabs.source.toggle_sync();
+        }
         KeyCode::Enter | KeyCode::Char(' ') => {
-            let panel = app.tabs.source.active_panel_mut();
-            if panel.view_mode == SourceViewMode::Tree {
-                // Get the selected node id from the flattened tree
-                if let Some(ref tree) = panel.json_tree {
-                    let mut items = Vec::new();
-                    crate::tui::shared::source::flatten_json_tree(
-                        tree,
-                        "",
-                        0,
-                        &panel.expanded,
-                        &mut items,
-                        true,
-                        &[],
-                    );
-                    if let Some(item) = items.get(panel.selected) {
-                        if item.is_expandable {
-                            let node_id = item.node_id.clone();
-                            panel.toggle_expand(&node_id);
-                        }
-                    }
+            let node_id = get_active_expandable_node(&mut app.tabs.source, None);
+            if let Some(id) = node_id {
+                app.tabs.source.active_panel_mut().toggle_expand(&id);
+                if app.tabs.source.is_synced() {
+                    sync_expand_to_inactive(&mut app.tabs.source, &id);
                 }
             }
         }
         KeyCode::Left | KeyCode::Char('h') => {
-            let panel = app.tabs.source.active_panel_mut();
-            if panel.view_mode == SourceViewMode::Tree {
-                // Collapse current node
-                if let Some(ref tree) = panel.json_tree {
-                    let mut items = Vec::new();
-                    crate::tui::shared::source::flatten_json_tree(
-                        tree,
-                        "",
-                        0,
-                        &panel.expanded,
-                        &mut items,
-                        true,
-                        &[],
-                    );
-                    if let Some(item) = items.get(panel.selected) {
-                        if item.is_expandable && item.is_expanded {
-                            let node_id = item.node_id.clone();
-                            panel.toggle_expand(&node_id);
-                        }
-                    }
+            // Collapse: only if expanded
+            let node_id = get_active_expandable_node(&mut app.tabs.source, Some(true));
+            if let Some(id) = node_id {
+                app.tabs.source.active_panel_mut().toggle_expand(&id);
+                if app.tabs.source.is_synced() {
+                    sync_expand_to_inactive(&mut app.tabs.source, &id);
                 }
             }
         }
         KeyCode::Right | KeyCode::Char('l') => {
-            let panel = app.tabs.source.active_panel_mut();
-            if panel.view_mode == SourceViewMode::Tree {
-                // Expand current node
-                if let Some(ref tree) = panel.json_tree {
-                    let mut items = Vec::new();
-                    crate::tui::shared::source::flatten_json_tree(
-                        tree,
-                        "",
-                        0,
-                        &panel.expanded,
-                        &mut items,
-                        true,
-                        &[],
-                    );
-                    if let Some(item) = items.get(panel.selected) {
-                        if item.is_expandable && !item.is_expanded {
-                            let node_id = item.node_id.clone();
-                            panel.toggle_expand(&node_id);
-                        }
-                    }
+            // Expand: only if collapsed
+            let node_id = get_active_expandable_node(&mut app.tabs.source, Some(false));
+            if let Some(id) = node_id {
+                app.tabs.source.active_panel_mut().toggle_expand(&id);
+                if app.tabs.source.is_synced() {
+                    sync_expand_to_inactive(&mut app.tabs.source, &id);
                 }
             }
         }
         KeyCode::Char('H') => {
             app.tabs.source.active_panel_mut().collapse_all();
+            if app.tabs.source.is_synced() {
+                app.tabs.source.inactive_panel_mut().collapse_all();
+            }
         }
         KeyCode::Char('L') => {
             app.tabs.source.active_panel_mut().expand_all();
+            if app.tabs.source.is_synced() {
+                app.tabs.source.inactive_panel_mut().expand_all();
+            }
         }
         _ => {}
+    }
+}
+
+/// Get the node_id of the selected expandable node in the active panel.
+///
+/// `require_expanded`: `None` = any expandable node, `Some(true)` = must be expanded,
+/// `Some(false)` = must be collapsed.
+fn get_active_expandable_node(
+    source: &mut SourceDiffState,
+    require_expanded: Option<bool>,
+) -> Option<String> {
+    let panel = source.active_panel_mut();
+    if panel.view_mode != SourceViewMode::Tree {
+        return None;
+    }
+    panel.ensure_flat_cache();
+    let item = panel.cached_flat_items.get(panel.selected)?;
+    if !item.is_expandable {
+        return None;
+    }
+    if let Some(must_be_expanded) = require_expanded {
+        if item.is_expanded != must_be_expanded {
+            return None;
+        }
+    }
+    Some(item.node_id.clone())
+}
+
+/// Apply expand/collapse toggle on the inactive panel for the same node_id (if it exists).
+fn sync_expand_to_inactive(source: &mut SourceDiffState, node_id: &str) {
+    let inactive = source.inactive_panel_mut();
+    if inactive.view_mode != SourceViewMode::Tree || inactive.json_tree.is_none() {
+        return;
+    }
+    // Toggle the same node on the inactive panel (if it exists in its tree)
+    inactive.ensure_flat_cache();
+    let exists = inactive
+        .cached_flat_items
+        .iter()
+        .any(|item| item.node_id == node_id);
+    if exists {
+        inactive.toggle_expand(node_id);
+    } else {
+        // Node path may not be visible yet — check if it exists in the expanded set
+        // or try to expand ancestors to reveal it
+        if inactive.expanded.contains(node_id) {
+            inactive.toggle_expand(node_id);
+        }
     }
 }

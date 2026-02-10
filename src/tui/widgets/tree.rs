@@ -28,6 +28,10 @@ pub enum TreeNode {
         max_severity: Option<String>,
         /// Component type indicator (library, binary, file, etc.)
         component_type: Option<String>,
+        /// Ecosystem (npm, pypi, etc.) for display tag
+        ecosystem: Option<String>,
+        /// Whether this component is bookmarked by the user
+        is_bookmarked: bool,
     },
 }
 
@@ -43,13 +47,31 @@ impl TreeNode {
             Self::Group {
                 label, item_count, ..
             } => format!("{label} ({item_count})"),
-            Self::Component { name, version, .. } => {
+            Self::Component {
+                name,
+                version,
+                ecosystem,
+                is_bookmarked,
+                ..
+            } => {
                 let display_name = extract_display_name(name);
-                if let Some(v) = version {
+                let mut result = if let Some(v) = version {
                     format!("{display_name}@{v}")
                 } else {
                     display_name
+                };
+                // Append ecosystem tag if present and not "Unknown"
+                if let Some(eco) = ecosystem {
+                    if eco != "Unknown" {
+                        use std::fmt::Write;
+                        let _ = write!(result, " [{eco}]");
+                    }
                 }
+                // Prepend bookmark star
+                if *is_bookmarked {
+                    result = format!("\u{2605} {result}");
+                }
+                result
             }
         }
     }
@@ -560,12 +582,46 @@ mod tests {
             vuln_count: 2,
             max_severity: Some("high".to_string()),
             component_type: Some("lib".to_string()),
+            ecosystem: Some("npm".to_string()),
+            is_bookmarked: false,
         };
 
-        assert_eq!(node.label(), "lodash@4.17.21");
+        assert_eq!(node.label(), "lodash@4.17.21 [npm]");
         assert_eq!(node.vuln_count(), 2);
         assert_eq!(node.max_severity(), Some("high"));
         assert!(!node.is_group());
+    }
+
+    #[test]
+    fn test_tree_node_bookmarked() {
+        let node = TreeNode::Component {
+            id: "comp-1".to_string(),
+            name: "lodash".to_string(),
+            version: Some("4.17.21".to_string()),
+            vuln_count: 0,
+            max_severity: None,
+            component_type: None,
+            ecosystem: None,
+            is_bookmarked: true,
+        };
+
+        assert_eq!(node.label(), "\u{2605} lodash@4.17.21");
+    }
+
+    #[test]
+    fn test_tree_node_unknown_ecosystem_hidden() {
+        let node = TreeNode::Component {
+            id: "comp-1".to_string(),
+            name: "lodash".to_string(),
+            version: Some("4.17.21".to_string()),
+            vuln_count: 0,
+            max_severity: None,
+            component_type: None,
+            ecosystem: Some("Unknown".to_string()),
+            is_bookmarked: false,
+        };
+
+        assert_eq!(node.label(), "lodash@4.17.21");
     }
 
     #[test]

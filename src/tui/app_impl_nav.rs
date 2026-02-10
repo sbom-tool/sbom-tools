@@ -82,7 +82,7 @@ impl App {
             TabKind::Components => self.tabs.components.select_prev(),
             TabKind::Vulnerabilities => self.tabs.vulnerabilities.select_prev(),
             TabKind::Licenses => self.tabs.licenses.select_prev(),
-            TabKind::Source => self.tabs.source.active_panel_mut().select_prev(),
+            TabKind::Source => self.tabs.source.select_prev(),
             _ => {}
         }
     }
@@ -93,7 +93,7 @@ impl App {
             TabKind::Components => self.tabs.components.select_next(),
             TabKind::Vulnerabilities => self.tabs.vulnerabilities.select_next(),
             TabKind::Licenses => self.tabs.licenses.select_next(),
-            TabKind::Source => self.tabs.source.active_panel_mut().select_next(),
+            TabKind::Source => self.tabs.source.select_next(),
             _ => {}
         }
     }
@@ -104,7 +104,7 @@ impl App {
             TabKind::Components => self.tabs.components.go_first(),
             TabKind::Vulnerabilities => self.tabs.vulnerabilities.go_first(),
             TabKind::Licenses => self.tabs.licenses.go_first(),
-            TabKind::Source => self.tabs.source.active_panel_mut().select_first(),
+            TabKind::Source => self.tabs.source.select_first(),
             _ => {}
         }
     }
@@ -114,7 +114,7 @@ impl App {
         match self.active_tab {
             TabKind::Components => self.tabs.components.go_last(),
             TabKind::Vulnerabilities => self.tabs.vulnerabilities.go_last(),
-            TabKind::Source => self.tabs.source.active_panel_mut().select_last(),
+            TabKind::Source => self.tabs.source.select_last(),
             _ => {}
         }
     }
@@ -124,7 +124,7 @@ impl App {
         match self.active_tab {
             TabKind::Components => self.tabs.components.page_up(),
             TabKind::Vulnerabilities => self.tabs.vulnerabilities.page_up(),
-            TabKind::Source => self.tabs.source.active_panel_mut().page_up(),
+            TabKind::Source => self.tabs.source.page_up(),
             _ => {}
         }
     }
@@ -134,7 +134,7 @@ impl App {
         match self.active_tab {
             TabKind::Components => self.tabs.components.page_down(),
             TabKind::Vulnerabilities => self.tabs.vulnerabilities.page_down(),
-            TabKind::Source => self.tabs.source.active_panel_mut().page_down(),
+            TabKind::Source => self.tabs.source.page_down(),
             _ => {}
         }
     }
