@@ -60,7 +60,7 @@ enrichment = ["reqwest", "sha2"]
 [dev-dependencies]
 criterion = "0.8"
 proptest = "1.5"
-tempfile = "3.14"
+tempfile = "3.25"
 
 [[bench]]
 name = "diff_benchmark"
