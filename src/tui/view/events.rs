@@ -372,7 +372,34 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
 
         // Actions
         KeyCode::Enter => {
-            app.handle_enter();
+            if app.active_tab == ViewTab::Source
+                && app.source_state.view_mode == SourceViewMode::Tree
+            {
+                app.source_state.ensure_flat_cache();
+                if let Some(item) =
+                    app.source_state.cached_flat_items.get(app.source_state.selected)
+                {
+                    if item.is_expandable {
+                        let node_id = item.node_id.clone();
+                        app.source_state.toggle_expand(&node_id);
+                    }
+                }
+            } else {
+                app.handle_enter();
+            }
+        }
+        KeyCode::Char(' ') if app.active_tab == ViewTab::Source => {
+            if app.source_state.view_mode == SourceViewMode::Tree {
+                app.source_state.ensure_flat_cache();
+                if let Some(item) =
+                    app.source_state.cached_flat_items.get(app.source_state.selected)
+                {
+                    if item.is_expandable {
+                        let node_id = item.node_id.clone();
+                        app.source_state.toggle_expand(&node_id);
+                    }
+                }
+            }
         }
         // 'l' or Right arrow with Ctrl to toggle focus between panels
         KeyCode::Char('p') => {
@@ -459,19 +486,12 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                     app.compliance_state.prev_standard();
                 }
                 ViewTab::Source => {
-                    // Collapse current node in tree mode
                     if app.source_state.view_mode == SourceViewMode::Tree {
-                        if let Some(ref tree) = app.source_state.json_tree {
-                            let mut items = Vec::new();
-                            crate::tui::shared::source::flatten_json_tree(
-                                tree, "", 0, &app.source_state.expanded, &mut items,
-                                true, &[],
-                            );
-                            if let Some(item) = items.get(app.source_state.selected) {
-                                if item.is_expandable && item.is_expanded {
-                                    let node_id = item.node_id.clone();
-                                    app.source_state.toggle_expand(&node_id);
-                                }
+                        app.source_state.ensure_flat_cache();
+                        if let Some(item) = app.source_state.cached_flat_items.get(app.source_state.selected) {
+                            if item.is_expandable && item.is_expanded {
+                                let node_id = item.node_id.clone();
+                                app.source_state.toggle_expand(&node_id);
                             }
                         }
                     }
@@ -502,19 +522,12 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                     }
                 }
                 ViewTab::Source => {
-                    // Expand current node in tree mode
                     if app.source_state.view_mode == SourceViewMode::Tree {
-                        if let Some(ref tree) = app.source_state.json_tree {
-                            let mut items = Vec::new();
-                            crate::tui::shared::source::flatten_json_tree(
-                                tree, "", 0, &app.source_state.expanded, &mut items,
-                                true, &[],
-                            );
-                            if let Some(item) = items.get(app.source_state.selected) {
-                                if item.is_expandable && !item.is_expanded {
-                                    let node_id = item.node_id.clone();
-                                    app.source_state.toggle_expand(&node_id);
-                                }
+                        app.source_state.ensure_flat_cache();
+                        if let Some(item) = app.source_state.cached_flat_items.get(app.source_state.selected) {
+                            if item.is_expandable && !item.is_expanded {
+                                let node_id = item.node_id.clone();
+                                app.source_state.toggle_expand(&node_id);
                             }
                         }
                     }

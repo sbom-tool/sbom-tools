@@ -174,6 +174,124 @@ fn count_tree_nodes(node: &JsonTreeNode) -> usize {
     count
 }
 
+// ── Raw line ↔ node_id mapping ──────────────────────────────────────────────
+
+/// Stack entry for tracking JSON structure during raw line mapping.
+enum RawMapEntry {
+    Object(String),
+    Array(String, usize),
+}
+
+/// Build a mapping from each raw line index to the corresponding tree `node_id`.
+///
+/// Walks the pretty-printed JSON lines (`serde_json::to_string_pretty`) with a
+/// stack to track the current path through the JSON structure.
+fn build_raw_line_mapping(raw_lines: &[String]) -> Vec<String> {
+    let mut result = Vec::with_capacity(raw_lines.len());
+    let mut stack: Vec<RawMapEntry> = Vec::new();
+
+    for line in raw_lines {
+        let trimmed = line.trim();
+        let content = trimmed.trim_end_matches(',');
+
+        if content.is_empty() {
+            result.push(stack_to_node_id(&stack));
+            continue;
+        }
+
+        if let Some((key, value_part)) = parse_json_kv(content) {
+            match value_part {
+                "{" => {
+                    stack.push(RawMapEntry::Object(key));
+                    result.push(stack_to_node_id(&stack));
+                }
+                "[" => {
+                    stack.push(RawMapEntry::Array(key, 0));
+                    result.push(stack_to_node_id(&stack));
+                }
+                _ => {
+                    let parent = stack_to_node_id(&stack);
+                    result.push(if parent.is_empty() {
+                        key
+                    } else {
+                        format!("{parent}.{key}")
+                    });
+                }
+            }
+        } else if content == "{" || content == "[" {
+            if stack.is_empty() {
+                if content == "[" {
+                    stack.push(RawMapEntry::Array("root".to_string(), 0));
+                } else {
+                    stack.push(RawMapEntry::Object("root".to_string()));
+                }
+            } else {
+                let idx = take_next_array_index(&mut stack);
+                if content == "[" {
+                    stack.push(RawMapEntry::Array(format!("[{idx}]"), 0));
+                } else {
+                    stack.push(RawMapEntry::Object(format!("[{idx}]")));
+                }
+            }
+            result.push(stack_to_node_id(&stack));
+        } else if content == "}" || content == "]" {
+            result.push(stack_to_node_id(&stack));
+            stack.pop();
+        } else {
+            // Bare value in array
+            let idx = take_next_array_index(&mut stack);
+            let parent = stack_to_node_id(&stack);
+            result.push(format!("{parent}.[{idx}]"));
+        }
+    }
+
+    result
+}
+
+fn stack_to_node_id(stack: &[RawMapEntry]) -> String {
+    stack
+        .iter()
+        .map(|e| match e {
+            RawMapEntry::Object(s) | RawMapEntry::Array(s, _) => s.as_str(),
+        })
+        .collect::<Vec<_>>()
+        .join(".")
+}
+
+fn take_next_array_index(stack: &mut [RawMapEntry]) -> usize {
+    if let Some(RawMapEntry::Array(_, idx)) = stack.last_mut() {
+        let current = *idx;
+        *idx += 1;
+        current
+    } else {
+        0
+    }
+}
+
+/// Parse `"key": rest` from a trimmed JSON line.
+fn parse_json_kv(s: &str) -> Option<(String, &str)> {
+    if !s.starts_with('"') {
+        return None;
+    }
+    let bytes = s.as_bytes();
+    let mut i = 1;
+    while i < bytes.len() {
+        if bytes[i] == b'\\' {
+            i += 2;
+            continue;
+        }
+        if bytes[i] == b'"' {
+            break;
+        }
+        i += 1;
+    }
+    if i >= bytes.len() {
+        return None;
+    }
+    let key = s[1..i].to_string();
+    s[i + 1..].strip_prefix(": ").map(|rest| (key, rest))
+}
+
 /// State for a single source panel (used once in `ViewApp`, twice in diff App).
 #[derive(Debug, Clone)]
 pub struct SourcePanelState {
@@ -191,6 +309,8 @@ pub struct SourcePanelState {
     pub json_tree: Option<JsonTreeNode>,
     /// Raw content lines (pretty-printed JSON or original lines for non-JSON)
     pub raw_lines: Vec<String>,
+    /// Mapping from raw line index to the corresponding tree node_id
+    pub raw_line_node_ids: Vec<String>,
     /// Total node count in JSON tree (computed once)
     pub total_node_count: usize,
     /// Saved tree mode position
@@ -239,6 +359,11 @@ impl SourcePanelState {
         }
 
         let total_node_count = json_tree.as_ref().map_or(0, count_tree_nodes);
+        let raw_line_node_ids = if json_tree.is_some() {
+            build_raw_line_mapping(&raw_lines)
+        } else {
+            Vec::new()
+        };
 
         Self {
             view_mode: if json_tree.is_some() {
@@ -252,6 +377,7 @@ impl SourcePanelState {
             visible_count: 0,
             json_tree,
             raw_lines,
+            raw_line_node_ids,
             total_node_count,
             tree_selected: 0,
             tree_scroll_offset: 0,
@@ -287,8 +413,8 @@ impl SourcePanelState {
         self.flat_cache_valid = true;
     }
 
-    pub const fn toggle_view_mode(&mut self) {
-        // Save current position
+    pub fn toggle_view_mode(&mut self) {
+        // Save current position for fallback
         match self.view_mode {
             SourceViewMode::Tree => {
                 self.tree_selected = self.selected;
@@ -300,29 +426,94 @@ impl SourcePanelState {
             }
         }
 
+        // Compute synced position BEFORE switching mode
+        let synced = self.compute_synced_position();
+
         // Switch mode
-        self.view_mode = match self.view_mode {
+        let new_mode = match self.view_mode {
             SourceViewMode::Tree => SourceViewMode::Raw,
             SourceViewMode::Raw => {
                 if self.json_tree.is_some() {
                     SourceViewMode::Tree
                 } else {
-                    SourceViewMode::Raw
+                    return;
                 }
             }
         };
+        self.view_mode = new_mode;
 
-        // Restore saved position for the new mode
-        match self.view_mode {
-            SourceViewMode::Tree => {
-                self.selected = self.tree_selected;
-                self.scroll_offset = self.tree_scroll_offset;
-            }
-            SourceViewMode::Raw => {
-                self.selected = self.raw_selected;
-                self.scroll_offset = self.raw_scroll_offset;
+        // Apply synced position, falling back to saved position
+        if let Some((sel, scroll)) = synced {
+            self.selected = sel;
+            self.scroll_offset = scroll;
+        } else {
+            match self.view_mode {
+                SourceViewMode::Tree => {
+                    self.selected = self.tree_selected;
+                    self.scroll_offset = self.tree_scroll_offset;
+                }
+                SourceViewMode::Raw => {
+                    self.selected = self.raw_selected;
+                    self.scroll_offset = self.raw_scroll_offset;
+                }
             }
         }
+    }
+
+    /// Compute the synced position in the target mode based on current position.
+    fn compute_synced_position(&mut self) -> Option<(usize, usize)> {
+        match self.view_mode {
+            SourceViewMode::Tree => self.sync_tree_to_raw(),
+            SourceViewMode::Raw => self.sync_raw_to_tree(),
+        }
+    }
+
+    /// Find the raw line corresponding to the current tree selection.
+    fn sync_tree_to_raw(&mut self) -> Option<(usize, usize)> {
+        self.ensure_flat_cache();
+        let node_id = self
+            .cached_flat_items
+            .get(self.selected)
+            .map(|item| item.node_id.clone())?;
+        let raw_idx = self
+            .raw_line_node_ids
+            .iter()
+            .position(|id| *id == node_id)?;
+        Some((raw_idx, raw_idx.saturating_sub(5)))
+    }
+
+    /// Find the tree item corresponding to the current raw line.
+    fn sync_raw_to_tree(&mut self) -> Option<(usize, usize)> {
+        let node_id = self.raw_line_node_ids.get(self.selected)?.clone();
+        if node_id.is_empty() {
+            return None;
+        }
+        // Expand ancestors to reveal the target node
+        let parts: Vec<&str> = node_id.split('.').collect();
+        let mut changed = false;
+        for len in 1..parts.len() {
+            let ancestor = parts[..len].join(".");
+            if !self.expanded.contains(&ancestor) {
+                self.expanded.insert(ancestor);
+                changed = true;
+            }
+        }
+        if changed {
+            self.invalidate_flat_cache();
+        }
+        self.ensure_flat_cache();
+        // Try exact match first, then progressively shorter ancestor paths
+        for len in (1..=parts.len()).rev() {
+            let candidate = parts[..len].join(".");
+            if let Some(idx) = self
+                .cached_flat_items
+                .iter()
+                .position(|item| item.node_id == candidate)
+            {
+                return Some((idx, idx.saturating_sub(5)));
+            }
+        }
+        None
     }
 
     pub fn toggle_expand(&mut self, node_id: &str) {
