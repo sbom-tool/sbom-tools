@@ -1,10 +1,22 @@
-# sbom-tools
+<p align="center">
+  <img src="assets/logo.png" alt="sbom-tools logo" width="180">
+</p>
 
-[![crates.io](https://img.shields.io/crates/v/sbom-tools)](https://crates.io/crates/sbom-tools)
-[![license](https://img.shields.io/crates/l/sbom-tools)](https://github.com/sbom-tool/sbom-tools)
-[![crates.io downloads](https://img.shields.io/crates/d/sbom-tools)](https://crates.io/crates/sbom-tools)
+<h1 align="center">sbom-tools</h1>
 
-A semantic SBOM (Software Bill of Materials) diff and analysis tool. Compare, validate, and assess the quality of SBOMs across CycloneDX and SPDX formats.
+<p align="center">
+  Know exactly what changed in your software supply chain.
+</p>
+
+<p align="center">
+  <a href="https://github.com/sbom-tool/sbom-tools/actions/workflows/rust.yml"><img src="https://github.com/sbom-tool/sbom-tools/actions/workflows/rust.yml/badge.svg" alt="build"></a>
+  <a href="https://crates.io/crates/sbom-tools"><img src="https://img.shields.io/crates/v/sbom-tools" alt="crates.io"></a>
+  <a href="https://crates.io/crates/sbom-tools"><img src="https://img.shields.io/crates/d/sbom-tools" alt="downloads"></a>
+  <a href="https://github.com/sbom-tool/sbom-tools"><img src="https://img.shields.io/crates/l/sbom-tools" alt="license"></a>
+  <a href="https://github.com/sbom-tool/sbom-tools"><img src="https://img.shields.io/badge/MSRV-1.86-blue" alt="MSRV"></a>
+</p>
+
+Semantic SBOM diff and analysis tool. Compare, validate, and assess the quality of SBOMs across CycloneDX and SPDX formats.
 
 ![sbom-tools diff summary](assets/tui-diff-summary.svg)
 
@@ -43,7 +55,7 @@ cargo build --release --no-default-features
 
 The binary is placed at `target/release/sbom-tools`.
 
-## Quick Start
+## Usage
 
 ```sh
 # Compare two SBOMs
@@ -59,15 +71,16 @@ sbom-tools validate sbom.json --standard ntia
 sbom-tools quality sbom.json --profile security --recommendations
 ```
 
-## Usage
-
-### Compare two SBOMs
+### Diff
 
 ```sh
 sbom-tools diff old-sbom.json new-sbom.json
 ```
 
-#### Common diff options
+Compares two SBOMs and reports added, removed, and modified components with version diffs, vulnerability changes, and license deltas.
+
+<details>
+<summary>Diff options</summary>
 
 | Flag | Description |
 |------|-------------|
@@ -80,7 +93,10 @@ sbom-tools diff old-sbom.json new-sbom.json
 | `--detect-typosquats` | Flag components that look like known-package typosquats |
 | `--explain-matches` | Show why each component pair was matched |
 
-#### Example output
+</details>
+
+<details>
+<summary>Example output</summary>
 
 ```
 sbom-tools diff old-sbom.json new-sbom.json --enrich-vulns
@@ -107,13 +123,18 @@ Vulnerabilities:
 License changes: none
 ```
 
-### View a single SBOM
+</details>
+
+### View
 
 ```sh
 sbom-tools view sbom.json
 ```
 
-Launches an interactive TUI with component tree, vulnerability details, license breakdown, and dependency graph. Key flags:
+Launches an interactive TUI with component tree, vulnerability details, license breakdown, and dependency graph.
+
+<details>
+<summary>View options</summary>
 
 | Flag | Description |
 |------|-------------|
@@ -122,7 +143,9 @@ Launches an interactive TUI with component tree, vulnerability details, license 
 | `--ecosystem <name>` | Filter components by ecosystem (e.g., `npm`, `cargo`, `pypi`) |
 | `--validate-ntia` | Validate against NTIA minimum elements |
 
-### Validate against a compliance standard
+</details>
+
+### Validate
 
 ```sh
 sbom-tools validate sbom.json --standard ntia
@@ -131,12 +154,17 @@ sbom-tools validate sbom.json --standard cra -o sarif -O results.sarif
 
 Checks an SBOM against a compliance standard and reports missing fields or failing requirements.
 
+<details>
+<summary>Validate options</summary>
+
 | Flag | Description |
 |------|-------------|
 | `--standard <std>` | Standard to validate: `ntia` (default), `fda`, `cra` |
 | `-o, --output <fmt>` | Output format (default: `json`; supports `sarif` for CI integration) |
 
-### Assess SBOM quality
+</details>
+
+### Quality
 
 ```sh
 sbom-tools quality sbom.json --profile security --recommendations
@@ -144,27 +172,21 @@ sbom-tools quality sbom.json --profile security --recommendations
 
 Scores an SBOM from 0–100 using a weighted profile. Use `--min-score` to fail CI if quality drops below a threshold.
 
+<details>
+<summary>Quality options</summary>
+
 | Flag | Description |
 |------|-------------|
-| `--profile <name>` | Scoring profile (see table below) |
+| `--profile <name>` | Scoring profile: `minimal`, `standard` (default), `security`, `license-compliance`, `cra`, `comprehensive` |
 | `--min-score <n>` | Fail if quality score is below threshold (0–100) |
 | `--recommendations` | Show detailed improvement recommendations |
 | `--metrics` | Show detailed scoring metrics |
 
-#### Quality profiles
-
-| Profile | Description |
-|---------|-------------|
-| `minimal` | Basic field presence checks |
-| `standard` | Default — balanced coverage of all quality dimensions |
-| `security` | Emphasizes vulnerability data, CPE/PURL identifiers, and hash completeness |
-| `license-compliance` | Focuses on license identification and SPDX expression validity |
-| `cra` | Cyber Resilience Act readiness |
-| `comprehensive` | All checks at maximum weight |
+</details>
 
 ### Fleet comparison
 
-For comparing multiple SBOMs across a project portfolio:
+Compare multiple SBOMs across a project portfolio:
 
 ```sh
 # Compare a baseline against multiple targets (1:N)
@@ -177,7 +199,7 @@ sbom-tools timeline v1.json v2.json v3.json
 sbom-tools matrix sbom1.json sbom2.json sbom3.json
 ```
 
-### Generate shell completions
+### Shell completions
 
 ```sh
 sbom-tools completions bash > ~/.local/share/bash-completion/completions/sbom-tools
@@ -185,11 +207,14 @@ sbom-tools completions zsh > ~/.zfunc/_sbom-tools
 sbom-tools completions fish > ~/.config/fish/completions/sbom-tools.fish
 ```
 
-### Export config schema
+### Global flags
 
-```sh
-sbom-tools config-schema > schema.json
-```
+| Flag | Description |
+|------|-------------|
+| `-o, --output <fmt>` | Output format (see [Output Formats](#output-formats)) |
+| `-v, --verbose` | Enable debug output |
+| `-q, --quiet` | Suppress non-essential output |
+| `--no-color` | Disable colored output (also respects `NO_COLOR`) |
 
 ## Interactive TUI
 
@@ -300,9 +325,44 @@ sbom-tools quality sbom.json --profile security --min-score 80 -o json
 sbom-tools validate sbom.json --standard cra -o sarif -O compliance.sarif
 ```
 
-Check `$?` for the exit code (see below) to determine pass/fail in your pipeline.
+<details>
+<summary>GitHub Actions example</summary>
 
-## Exit Codes
+```yaml
+name: SBOM Check
+
+on:
+  pull_request:
+    paths: ['sbom.json']
+
+jobs:
+  sbom-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Install sbom-tools
+        run: cargo install sbom-tools
+
+      - name: Diff SBOM against main
+        run: |
+          git show HEAD~1:sbom.json > /tmp/old-sbom.json
+          sbom-tools diff /tmp/old-sbom.json sbom.json \
+            --fail-on-vuln --enrich-vulns \
+            -o sarif -O results.sarif
+
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+```
+
+</details>
+
+### Exit codes
 
 | Code | Meaning |
 |------|---------|
@@ -329,15 +389,6 @@ See [`examples/ecosystem-rules.yaml`](examples/ecosystem-rules.yaml) for a full 
 | `strict` | Exact matches only |
 | `balanced` | Default — uses normalization and moderate similarity thresholds |
 | `permissive` | Aggressive fuzzy matching for noisy SBOMs |
-
-## Global Flags
-
-| Flag | Description |
-|------|-------------|
-| `-o, --output <fmt>` | Output format (see [Output Formats](#output-formats)) |
-| `-v, --verbose` | Enable debug output |
-| `-q, --quiet` | Suppress non-essential output |
-| `--no-color` | Disable colored output (also respects the `NO_COLOR` environment variable) |
 
 ## Project Structure
 
@@ -372,6 +423,7 @@ cargo bench
 
 - [Architecture overview](docs/ARCHITECTURE.md)
 - [Pipeline diagrams](docs/pipeline-diagrams.md)
+- [Releases and changelog](https://github.com/sbom-tool/sbom-tools/releases)
 
 ## Contributing
 
