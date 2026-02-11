@@ -11,8 +11,19 @@ use ratatui::{
     widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState, Wrap},
 };
 
-/// Vulnerability detail tuple: (status, id, severity, cvss, component, description, cwes, source).
-type VulnDetail = (String, String, String, Option<f32>, String, Option<String>, Vec<String>, String);
+/// Structured vulnerability detail for the detail panel.
+struct VulnDetailInfo {
+    status: String,
+    id: String,
+    severity: String,
+    cvss: Option<f32>,
+    component: String,
+    description: Option<String>,
+    cwes: Vec<String>,
+    source: String,
+    remediation: Option<String>,
+    fixed_version: Option<String>,
+}
 
 /// Render item for grouped vulnerability display.
 enum VulnRenderItem {
@@ -96,6 +107,13 @@ pub fn render_vulnerabilities(frame: &mut Frame, area: Rect, app: &mut App) {
         AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => VulnListData::Empty,
     };
 
+    // Pre-compute grouped render items once per frame (used by both table and detail panel)
+    let grouped_items = if app.tabs.vulnerabilities.group_by_component {
+        Some(build_grouped_render_items(app, &vuln_data))
+    } else {
+        None
+    };
+
     // Master-detail layout
     let content_chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -103,10 +121,10 @@ pub fn render_vulnerabilities(frame: &mut Frame, area: Rect, app: &mut App) {
         .split(chunks[1]);
 
     // Vulnerability table (master)
-    render_vuln_table(frame, content_chunks[0], app, &vuln_data, total_unfiltered);
+    render_vuln_table(frame, content_chunks[0], app, &vuln_data, total_unfiltered, grouped_items.as_deref());
 
     // Detail panel
-    render_detail_panel(frame, content_chunks[1], app, &vuln_data);
+    render_detail_panel(frame, content_chunks[1], app, &vuln_data, grouped_items.as_deref());
 }
 
 fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
@@ -284,22 +302,36 @@ fn render_vuln_table(
     app: &App,
     vuln_data: &VulnListData,
     total_unfiltered: usize,
+    grouped_items: Option<&[VulnRenderItem]>,
 ) {
-    let header = Row::new(vec![
-        Cell::from("Status").style(Style::default().fg(colors().accent).bold()),
-        Cell::from("ID").style(Style::default().fg(colors().accent).bold()),
-        Cell::from("CVSS").style(Style::default().fg(colors().accent).bold()),
-        Cell::from("SLA").style(Style::default().fg(colors().accent).bold()),
-        Cell::from("Component").style(Style::default().fg(colors().accent).bold()),
-    ])
+    let is_diff = app.mode == AppMode::Diff;
+    let header_style = Style::default().fg(colors().accent).bold();
+    let header = if is_diff {
+        Row::new(vec![
+            Cell::from("Status").style(header_style),
+            Cell::from("Sev").style(header_style),
+            Cell::from("ID").style(header_style),
+            Cell::from("CVSS").style(header_style),
+            Cell::from("SLA").style(header_style),
+            Cell::from("Component").style(header_style),
+        ])
+    } else {
+        Row::new(vec![
+            Cell::from("Status").style(header_style),
+            Cell::from("ID").style(header_style),
+            Cell::from("CVSS").style(header_style),
+            Cell::from("SLA").style(header_style),
+            Cell::from("Component").style(header_style),
+        ])
+    }
     .height(1);
 
     // Use pre-built vulnerability list (state already updated in render_vulnerabilities)
     let cached_depths = &app.tabs.dependencies.cached_depths;
 
     // Build rows (flat or grouped)
-    let rows: Vec<Row> = if app.tabs.vulnerabilities.group_by_component {
-        build_grouped_rows(app, vuln_data, cached_depths)
+    let rows: Vec<Row> = if let Some(items) = grouped_items {
+        build_grouped_rows(app, vuln_data, cached_depths, items)
     } else {
         match vuln_data {
             VulnListData::Diff(items) => get_diff_vuln_rows(items),
@@ -330,15 +362,28 @@ fn render_vuln_table(
         return;
     }
 
-    let widths = [
-        Constraint::Length(12),
-        Constraint::Percentage(25),
-        Constraint::Length(5),
-        Constraint::Length(10),
-        Constraint::Percentage(30),
-    ];
+    let table = if is_diff {
+        let widths = [
+            Constraint::Length(12),
+            Constraint::Length(3),
+            Constraint::Percentage(25),
+            Constraint::Length(5),
+            Constraint::Length(10),
+            Constraint::Percentage(30),
+        ];
+        Table::new(rows, widths)
+    } else {
+        let widths = [
+            Constraint::Length(12),
+            Constraint::Percentage(25),
+            Constraint::Length(5),
+            Constraint::Length(10),
+            Constraint::Percentage(30),
+        ];
+        Table::new(rows, widths)
+    };
 
-    let table = Table::new(rows, widths)
+    let table = table
         .header(header)
         .block(
             Block::default()
@@ -464,13 +509,13 @@ fn build_grouped_render_items(
 
 use crate::tui::shared::vulnerabilities::severity_rank;
 
-/// Build table rows for grouped mode.
+/// Build table rows for grouped mode using pre-computed render items.
 fn build_grouped_rows(
     app: &App,
     vuln_data: &VulnListData<'_>,
     cached_depths: &std::collections::HashMap<String, usize>,
+    render_items: &[VulnRenderItem],
 ) -> Vec<Row<'static>> {
-    let render_items = build_grouped_render_items(app, vuln_data);
     let scheme = colors();
 
     render_items
@@ -486,32 +531,35 @@ fn build_grouped_rows(
                 let sev_color = scheme.severity_color(max_severity);
                 let bg_tint = scheme.severity_bg_tint(max_severity);
 
-                Row::new(vec![
-                    Cell::from(Span::styled(
-                        format!(" {} ", max_severity.chars().next().unwrap_or('?')),
-                        Style::default()
-                            .fg(scheme.severity_badge_fg(max_severity))
-                            .bg(sev_color)
-                            .bold(),
-                    )),
-                    Cell::from(Line::from(vec![
-                        Span::styled(
-                            format!("{arrow} "),
-                            Style::default().fg(scheme.accent),
-                        ),
-                        Span::styled(
-                            name.clone(),
-                            Style::default().fg(scheme.text).bold(),
-                        ),
-                    ])),
-                    Cell::from(""),
-                    Cell::from(Span::styled(
-                        format!("{vuln_count} {}", if *vuln_count == 1 { "CVE" } else { "CVEs" }),
-                        Style::default().fg(scheme.text_muted),
-                    )),
-                    Cell::from(""),
-                ])
-                .style(Style::default().bg(bg_tint))
+                let sev_badge = Cell::from(Span::styled(
+                    format!(" {} ", max_severity.chars().next().unwrap_or('?')),
+                    Style::default()
+                        .fg(scheme.severity_badge_fg(max_severity))
+                        .bg(sev_color)
+                        .bold(),
+                ));
+                let name_cell = Cell::from(Line::from(vec![
+                    Span::styled(
+                        format!("{arrow} "),
+                        Style::default().fg(scheme.accent),
+                    ),
+                    Span::styled(
+                        name.clone(),
+                        Style::default().fg(scheme.text).bold(),
+                    ),
+                ]));
+                let count_cell = Cell::from(Span::styled(
+                    format!("{vuln_count} {}", if *vuln_count == 1 { "CVE" } else { "CVEs" }),
+                    Style::default().fg(scheme.text_muted),
+                ));
+
+                // Diff mode has 6 columns (extra Sev column), view mode has 5
+                let cells: Vec<Cell<'static>> = if app.mode == AppMode::Diff {
+                    vec![Cell::from(""), sev_badge, name_cell, Cell::from(""), count_cell, Cell::from("")]
+                } else {
+                    vec![sev_badge, name_cell, Cell::from(""), count_cell, Cell::from("")]
+                };
+                Row::new(cells).style(Style::default().bg(bg_tint))
             }
             VulnRenderItem::VulnRow(idx) => match vuln_data {
                 VulnListData::Diff(items) => {
@@ -580,10 +628,18 @@ fn build_single_diff_row(
         scheme.severity_bg_tint(&vuln.severity)
     };
 
+    let sev_color = scheme.severity_color(&vuln.severity);
     Row::new(vec![
         Cell::from(Span::styled(
             status_label,
             Style::default().fg(status_fg).bg(status_bg).bold(),
+        )),
+        Cell::from(Span::styled(
+            format!(" {} ", vuln.severity.chars().next().unwrap_or('?')),
+            Style::default()
+                .fg(scheme.severity_badge_fg(&vuln.severity))
+                .bg(sev_color)
+                .bold(),
         )),
         Cell::from(Line::from(id_spans)),
         Cell::from(
@@ -637,13 +693,12 @@ fn build_single_view_row(
     .style(Style::default().fg(scheme.text).bg(bg_tint))
 }
 
-fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &VulnListData) {
+fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &VulnListData, grouped_items: Option<&[VulnRenderItem]>) {
     let selected = app.tabs.vulnerabilities.selected;
 
-    // In grouped mode, resolve the selected index through the render items
-    let vuln_info = if app.tabs.vulnerabilities.group_by_component {
-        let render_items = build_grouped_render_items(app, vuln_data);
-        match render_items.get(selected) {
+    // In grouped mode, resolve the selected index through the pre-computed render items
+    let vuln_info = if let Some(items) = grouped_items {
+        match items.get(selected) {
             Some(VulnRenderItem::VulnRow(idx)) => match vuln_data {
                 VulnListData::Diff(items) => get_diff_vuln_at(items, *idx),
                 VulnListData::View(items) => get_view_vuln_at(items, *idx),
@@ -651,16 +706,18 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
             },
             Some(VulnRenderItem::ComponentHeader { name, vuln_count, max_severity, .. }) => {
                 // Show a summary for the component group header
-                Some((
-                    "Component Group".to_string(),
-                    name.clone(),
-                    max_severity.clone(),
-                    None,
-                    name.clone(),
-                    Some(format!("{vuln_count} vulnerabilities in this component")),
-                    Vec::new(),
-                    String::new(),
-                ))
+                Some(VulnDetailInfo {
+                    status: "Component Group".to_string(),
+                    id: name.clone(),
+                    severity: max_severity.clone(),
+                    cvss: None,
+                    component: name.clone(),
+                    description: Some(format!("{vuln_count} vulnerabilities in this component")),
+                    cwes: Vec::new(),
+                    source: String::new(),
+                    remediation: None,
+                    fixed_version: None,
+                })
             }
             None => None,
         }
@@ -672,27 +729,27 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
         }
     };
 
-    if let Some((status, id, severity, cvss, component, description, cwes, source)) = vuln_info {
+    if let Some(info) = vuln_info {
         let scheme = colors();
-        let sev_color = scheme.severity_color(&severity);
+        let sev_color = scheme.severity_color(&info.severity);
 
-        let source_color = crate::tui::shared::vulnerabilities::source_color(&source, &scheme);
+        let source_color = crate::tui::shared::vulnerabilities::source_color(&info.source, &scheme);
 
         let mut lines = vec![
             // Severity badge
             Line::from(vec![
                 Span::styled(
-                    format!(" {} ", severity.chars().next().unwrap_or('?')),
+                    format!(" {} ", info.severity.chars().next().unwrap_or('?')),
                     Style::default()
-                        .fg(scheme.severity_badge_fg(&severity))
+                        .fg(scheme.severity_badge_fg(&info.severity))
                         .bg(sev_color)
                         .bold(),
                 ),
                 Span::styled(
-                    format!(" {severity} "),
+                    format!(" {} ", info.severity),
                     Style::default().fg(sev_color).bold(),
                 ),
-                cvss.map_or_else(
+                info.cvss.map_or_else(
                     || Span::raw(""),
                     |score| Span::styled(
                         format!("  CVSS: {score:.1}"),
@@ -704,36 +761,55 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
             // Vulnerability ID
             Line::from(vec![
                 Span::styled("ID: ", Style::default().fg(colors().text_muted)),
-                Span::styled(&id, Style::default().fg(colors().text).bold()),
+                Span::styled(&info.id, Style::default().fg(colors().text).bold()),
             ]),
             // Source
             Line::from(vec![
                 Span::styled("Source: ", Style::default().fg(colors().text_muted)),
                 Span::styled(
-                    format!("[{source}]"),
+                    format!("[{}]", info.source),
                     Style::default().fg(source_color).bold(),
                 ),
             ]),
             // Status
             Line::from(vec![
                 Span::styled("Status: ", Style::default().fg(colors().text_muted)),
-                status_span(&status),
+                status_span(&info.status),
             ]),
             // Component
             Line::from(vec![
                 Span::styled("Component: ", Style::default().fg(colors().text_muted)),
-                Span::styled(&component, Style::default().fg(colors().secondary)),
+                Span::styled(&info.component, Style::default().fg(colors().secondary)),
             ]),
         ];
 
+        // Remediation / Fix version
+        if info.remediation.is_some() || info.fixed_version.is_some() {
+            lines.push(Line::from(""));
+            if let Some(ref fix_ver) = info.fixed_version {
+                lines.push(Line::from(vec![
+                    Span::styled(
+                        format!("\u{2b06} Upgrade to {fix_ver}"),
+                        Style::default().fg(scheme.accent).bold(),
+                    ),
+                ]));
+            }
+            if let Some(ref rem) = info.remediation {
+                lines.push(Line::from(vec![
+                    Span::styled("Remediation: ", Style::default().fg(colors().text_muted)),
+                    Span::styled(rem.clone(), Style::default().fg(colors().text)),
+                ]));
+            }
+        }
+
         // Description (inline label, no heavy borders)
-        if let Some(desc) = description {
+        if let Some(ref desc) = info.description {
             lines.push(Line::from(""));
             lines.push(Line::from(vec![
                 Span::styled("Description: ", Style::default().fg(colors().text_muted)),
             ]));
             let max_width = area.width.saturating_sub(4) as usize;
-            for wrapped_line in crate::tui::shared::vulnerabilities::word_wrap(&desc, max_width) {
+            for wrapped_line in crate::tui::shared::vulnerabilities::word_wrap(desc, max_width) {
                 lines.push(Line::styled(
                     wrapped_line,
                     Style::default().fg(colors().text).italic(),
@@ -742,7 +818,7 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
         }
 
         // CWEs (inline label)
-        lines.extend(crate::tui::shared::vulnerabilities::render_vuln_cwe_lines(&cwes, 3));
+        lines.extend(crate::tui::shared::vulnerabilities::render_vuln_cwe_lines(&info.cwes, 3));
 
         // Attack Paths (show how to reach this vulnerable component from entry points)
         if matches!(app.mode, AppMode::Diff | AppMode::View) {
@@ -757,7 +833,7 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
 
             // Find attack paths to this vulnerable component
             let attack_paths = crate::tui::security::find_attack_paths(
-                &component,
+                &info.component,
                 forward_graph,
                 &roots,
                 3,  // max 3 paths
@@ -862,23 +938,24 @@ fn render_empty_detail(frame: &mut Frame, area: Rect) {
     );
 }
 
-// Returns: (status, id, severity, cvss, component, description, cwes, source)
 fn get_diff_vuln_at(
     items: &[crate::tui::app::DiffVulnItem<'_>],
     index: usize,
-) -> Option<VulnDetail> {
+) -> Option<VulnDetailInfo> {
     items.get(index).map(|item| {
         let vuln = item.vuln;
-        (
-            item.status.label().to_string(),
-            vuln.id.clone(),
-            vuln.severity.clone(),
-            vuln.cvss_score,
-            vuln.component_name.clone(),
-            vuln.description.clone(),
-            vuln.cwes.clone(),
-            vuln.source.clone(),
-        )
+        VulnDetailInfo {
+            status: item.status.label().to_string(),
+            id: vuln.id.clone(),
+            severity: vuln.severity.clone(),
+            cvss: vuln.cvss_score,
+            component: vuln.component_name.clone(),
+            description: vuln.description.clone(),
+            cwes: vuln.cwes.clone(),
+            source: vuln.source.clone(),
+            remediation: vuln.remediation.clone(),
+            fixed_version: None, // Not available in diff mode
+        }
     })
 }
 
@@ -984,25 +1061,36 @@ fn collect_view_vulns(
     vulns
 }
 
-// Returns: (status, id, severity, cvss, component, description, cwes, source)
 fn get_view_vuln_at(
     items: &[(&crate::model::Component, &crate::model::VulnerabilityRef)],
     index: usize,
-) -> Option<VulnDetail> {
+) -> Option<VulnDetailInfo> {
     items.get(index).map(|(comp, vuln)| {
         let severity = vuln
             .severity
             .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
-        (
-            "Present".to_string(),
-            vuln.id.clone(),
+        let (remediation, fixed_version) = vuln.remediation.as_ref().map_or_else(
+            || (None, None),
+            |r| {
+                let desc = r.description.as_ref().map_or_else(
+                    || format!("{}", r.remediation_type),
+                    |d| format!("{}: {d}", r.remediation_type),
+                );
+                (Some(desc), r.fixed_version.clone())
+            },
+        );
+        VulnDetailInfo {
+            status: "Present".to_string(),
+            id: vuln.id.clone(),
             severity,
-            vuln.max_cvss_score(),
-            comp.name.clone(),
-            vuln.description.clone(),
-            vuln.cwes.clone(),
-            vuln.source.to_string(),
-        )
+            cvss: vuln.max_cvss_score(),
+            component: comp.name.clone(),
+            description: vuln.description.clone(),
+            cwes: vuln.cwes.clone(),
+            source: vuln.source.to_string(),
+            remediation,
+            fixed_version,
+        }
     })
 }
 
