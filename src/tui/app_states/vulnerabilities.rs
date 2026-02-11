@@ -15,6 +15,8 @@ pub struct VulnerabilitiesState {
     pub cached_key: Option<(VulnFilter, VulnSort)>,
     /// Cached indices: (status, `index_into_status_vec`)
     pub cached_indices: Vec<(DiffVulnStatus, usize)>,
+    /// Cached attack paths for the currently selected vulnerability: (component_name, paths)
+    pub(crate) cached_attack_paths: Option<(String, Vec<crate::tui::security::AttackPath>)>,
 }
 
 impl VulnerabilitiesState {
@@ -28,6 +30,7 @@ impl VulnerabilitiesState {
             expanded_groups: std::collections::HashSet::new(),
             cached_key: None,
             cached_indices: Vec::new(),
+            cached_attack_paths: None,
         }
     }
 

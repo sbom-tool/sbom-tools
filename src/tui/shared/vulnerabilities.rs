@@ -73,6 +73,40 @@ pub fn render_depth_badge_spans(
     ]
 }
 
+/// Render RANSOMWARE badge spans for KEV vulns with known ransomware use.
+pub fn render_ransomware_badge_spans(
+    is_ransomware: bool,
+    scheme: &crate::tui::theme::ColorScheme,
+) -> Vec<Span<'static>> {
+    if is_ransomware {
+        vec![
+            Span::styled(
+                "RW",
+                Style::default()
+                    .fg(scheme.badge_fg_light)
+                    .bg(scheme.critical)
+                    .bold(),
+            ),
+            Span::raw(" "),
+        ]
+    } else {
+        vec![]
+    }
+}
+
+/// Color for a CVSS score value (red ≥9.0, orange ≥7.0, yellow ≥4.0, green <4.0).
+pub fn cvss_score_color(score: f32, scheme: &crate::tui::theme::ColorScheme) -> Color {
+    if score >= 9.0 {
+        scheme.critical
+    } else if score >= 7.0 {
+        scheme.high
+    } else if score >= 4.0 {
+        scheme.medium
+    } else {
+        scheme.low
+    }
+}
+
 /// Map vulnerability source name to a theme color.
 pub fn source_color(source: &str, scheme: &crate::tui::theme::ColorScheme) -> Color {
     match source.to_uppercase().as_str() {

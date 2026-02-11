@@ -23,6 +23,11 @@ struct VulnDetailInfo {
     source: String,
     remediation: Option<String>,
     fixed_version: Option<String>,
+    is_kev: bool,
+    is_ransomware: bool,
+    affected_versions: Vec<String>,
+    cvss_vector: Option<String>,
+    published_age_days: Option<i64>,
 }
 
 /// Render item for grouped vulnerability display.
@@ -125,6 +130,42 @@ pub fn render_vulnerabilities(frame: &mut Frame, area: Rect, app: &mut App) {
 
     // Detail panel
     render_detail_panel(frame, content_chunks[1], app, &vuln_data, grouped_items.as_deref());
+
+    // Update attack path cache for the currently selected component
+    if matches!(app.mode, AppMode::Diff | AppMode::View) {
+        let selected_component = resolve_selected_component(app, &vuln_data, grouped_items.as_deref());
+        if let Some(comp) = selected_component {
+            let needs_update = app.tabs.vulnerabilities.cached_attack_paths
+                .as_ref()
+                .is_none_or(|(cached, _)| *cached != comp);
+            if needs_update {
+                let paths = compute_attack_paths(&comp, app);
+                app.tabs.vulnerabilities.cached_attack_paths = Some((comp, paths));
+            }
+        }
+    }
+}
+
+/// Resolve the component name of the currently selected vulnerability (for cache keying).
+fn resolve_selected_component(app: &App, vuln_data: &VulnListData, grouped_items: Option<&[VulnRenderItem]>) -> Option<String> {
+    let selected = app.tabs.vulnerabilities.selected;
+    if let Some(items) = grouped_items {
+        match items.get(selected) {
+            Some(VulnRenderItem::VulnRow(idx)) => match vuln_data {
+                VulnListData::Diff(items) => items.get(*idx).map(|i| i.vuln.component_name.clone()),
+                VulnListData::View(items) => items.get(*idx).map(|(c, _)| c.name.clone()),
+                VulnListData::Empty => None,
+            },
+            Some(VulnRenderItem::ComponentHeader { name, .. }) => Some(name.clone()),
+            None => None,
+        }
+    } else {
+        match vuln_data {
+            VulnListData::Diff(items) => items.get(selected).map(|i| i.vuln.component_name.clone()),
+            VulnListData::View(items) => items.get(selected).map(|(c, _)| c.name.clone()),
+            VulnListData::Empty => None,
+        }
+    }
 }
 
 fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
@@ -147,22 +188,76 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
     match app.mode {
         AppMode::Diff => {
             if let Some(result) = &app.data.diff_result {
+                let scheme = colors();
+
+                // Compute per-severity deltas
+                let count_by_sev = |vulns: &[crate::diff::VulnerabilityDetail]| -> [usize; 4] {
+                    let mut counts = [0usize; 4]; // [C, H, M, L]
+                    for v in vulns {
+                        match v.severity.to_lowercase().as_str() {
+                            "critical" => counts[0] += 1,
+                            "high" => counts[1] += 1,
+                            "medium" | "moderate" => counts[2] += 1,
+                            "low" => counts[3] += 1,
+                            _ => {}
+                        }
+                    }
+                    counts
+                };
+                let intro = count_by_sev(&result.vulnerabilities.introduced);
+                let resolved = count_by_sev(&result.vulnerabilities.resolved);
+
+                spans.push(Span::styled("│ ", Style::default().fg(scheme.border)));
+
+                let sev_labels = [
+                    ("C", scheme.critical, "critical"),
+                    ("H", scheme.high, "high"),
+                    ("M", scheme.medium, "medium"),
+                    ("L", scheme.low, "low"),
+                ];
+                for (i, (label, bg, sev_name)) in sev_labels.iter().enumerate() {
+                    spans.push(Span::styled(
+                        format!(" {label} "),
+                        Style::default().fg(scheme.severity_badge_fg(sev_name)).bg(*bg).bold(),
+                    ));
+                    let net: i32 = intro[i] as i32 - resolved[i] as i32;
+                    let delta_str = if net > 0 {
+                        format!("+{net}")
+                    } else if net < 0 {
+                        format!("{net}")
+                    } else {
+                        "0".to_string()
+                    };
+                    let delta_color = if net > 0 {
+                        scheme.removed // worse
+                    } else if net < 0 {
+                        scheme.added // better
+                    } else {
+                        scheme.text_muted
+                    };
+                    spans.push(Span::styled(
+                        format!(" {delta_str} "),
+                        Style::default().fg(delta_color),
+                    ));
+                }
+
+                // Total summary
                 spans.extend(vec![
-                    Span::styled("│ ", Style::default().fg(colors().border)),
-                    Span::styled("+ ", Style::default().fg(colors().removed).bold()),
+                    Span::styled("│ ", Style::default().fg(scheme.border)),
+                    Span::styled("+ ", Style::default().fg(scheme.removed).bold()),
                     Span::styled(
-                        format!("{} introduced  ", result.summary.vulnerabilities_introduced),
-                        Style::default().fg(colors().text),
+                        format!("{}  ", result.summary.vulnerabilities_introduced),
+                        Style::default().fg(scheme.text),
                     ),
-                    Span::styled("- ", Style::default().fg(colors().added).bold()),
+                    Span::styled("- ", Style::default().fg(scheme.added).bold()),
                     Span::styled(
-                        format!("{} resolved  ", result.summary.vulnerabilities_resolved),
-                        Style::default().fg(colors().text),
+                        format!("{}  ", result.summary.vulnerabilities_resolved),
+                        Style::default().fg(scheme.text),
                     ),
-                    Span::styled("= ", Style::default().fg(colors().modified).bold()),
+                    Span::styled("= ", Style::default().fg(scheme.modified).bold()),
                     Span::styled(
-                        format!("{} persistent", result.summary.vulnerabilities_persistent),
-                        Style::default().fg(colors().text),
+                        format!("{}", result.summary.vulnerabilities_persistent),
+                        Style::default().fg(scheme.text),
                     ),
                 ]);
 
@@ -171,11 +266,11 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
                 if let Some(stats) = app.combined_enrichment_stats() {
                     if stats.total_vulns_found > 0 {
                         spans.extend(vec![
-                            Span::styled("  │ ", Style::default().fg(colors().border)),
-                            Span::styled("OSV ", Style::default().fg(colors().accent).bold()),
+                            Span::styled("  │ ", Style::default().fg(scheme.border)),
+                            Span::styled("OSV ", Style::default().fg(scheme.accent).bold()),
                             Span::styled(
                                 format!("+{}", stats.total_vulns_found),
-                                Style::default().fg(colors().accent),
+                                Style::default().fg(scheme.accent),
                             ),
                         ]);
                     }
@@ -352,11 +447,22 @@ fn render_vuln_table(
                 None,
             );
         } else {
-            widgets::render_no_results_state(
+            // Contextual empty state: show unfiltered counts
+            let hint = if total_unfiltered > 0 {
+                format!(
+                    "{total_unfiltered} {} in unfiltered view",
+                    if total_unfiltered == 1 { "vulnerability" } else { "vulnerabilities" },
+                )
+            } else {
+                String::new()
+            };
+            let filter_label = app.tabs.vulnerabilities.filter.label();
+            widgets::render_no_results_state_with_hint(
                 frame,
                 area,
                 "Filter",
-                app.tabs.vulnerabilities.filter.label(),
+                filter_label,
+                &hint,
             );
         }
         return;
@@ -628,7 +734,17 @@ fn build_single_diff_row(
         scheme.severity_bg_tint(&vuln.severity)
     };
 
+    use crate::tui::shared::vulnerabilities::cvss_score_color;
+
     let sev_color = scheme.severity_color(&vuln.severity);
+    let cvss_cell = vuln.cvss_score.map_or_else(
+        || Cell::from("-".to_string()),
+        |s| Cell::from(Span::styled(
+            format!("{s:.1}"),
+            Style::default().fg(cvss_score_color(s, scheme)).bold(),
+        )),
+    );
+
     Row::new(vec![
         Cell::from(Span::styled(
             status_label,
@@ -642,9 +758,7 @@ fn build_single_diff_row(
                 .bold(),
         )),
         Cell::from(Line::from(id_spans)),
-        Cell::from(
-            vuln.cvss_score.map_or_else(|| "-".to_string(), |s| format!("{s:.1}")),
-        ),
+        cvss_cell,
         sla_cell,
         Cell::from(widgets::truncate_str(&vuln.component_name, 30)),
     ])
@@ -657,7 +771,10 @@ fn build_single_view_row(
     cached_depths: &std::collections::HashMap<String, usize>,
     scheme: &crate::tui::theme::ColorScheme,
 ) -> Row<'static> {
-    use crate::tui::shared::vulnerabilities::{render_kev_badge_spans, render_depth_badge_spans};
+    use crate::tui::shared::vulnerabilities::{
+        render_kev_badge_spans, render_depth_badge_spans, render_ransomware_badge_spans,
+        cvss_score_color,
+    };
 
     let (comp, vuln) = item;
     let severity = vuln
@@ -667,6 +784,8 @@ fn build_single_view_row(
 
     let mut id_spans: Vec<Span<'_>> = Vec::new();
     id_spans.extend(render_kev_badge_spans(vuln.is_kev, scheme));
+    let is_ransomware = vuln.kev_info.as_ref().is_some_and(|k| k.known_ransomware_use);
+    id_spans.extend(render_ransomware_badge_spans(is_ransomware, scheme));
     let comp_id = comp.canonical_id.to_string();
     let depth = cached_depths.get(&comp_id).copied();
     id_spans.extend(render_depth_badge_spans(depth, scheme));
@@ -674,6 +793,14 @@ fn build_single_view_row(
 
     let sla_cell = format_view_vuln_sla_cell(vuln, &severity, scheme);
     let bg_tint = scheme.severity_bg_tint(&severity);
+
+    let cvss_cell = vuln.max_cvss_score().map_or_else(
+        || Cell::from("-".to_string()),
+        |s| Cell::from(Span::styled(
+            format!("{s:.1}"),
+            Style::default().fg(cvss_score_color(s, scheme)).bold(),
+        )),
+    );
 
     Row::new(vec![
         Cell::from(Span::styled(
@@ -684,9 +811,7 @@ fn build_single_view_row(
                 .bold(),
         )),
         Cell::from(Line::from(id_spans)),
-        Cell::from(
-            vuln.max_cvss_score().map_or_else(|| "-".to_string(), |s| format!("{s:.1}")),
-        ),
+        cvss_cell,
         sla_cell,
         Cell::from(widgets::truncate_str(&comp.name, 30)),
     ])
@@ -717,6 +842,11 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
                     source: String::new(),
                     remediation: None,
                     fixed_version: None,
+                    is_kev: false,
+                    is_ransomware: false,
+                    affected_versions: Vec::new(),
+                    cvss_vector: None,
+                    published_age_days: None,
                 })
             }
             None => None,
@@ -732,59 +862,73 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
     if let Some(info) = vuln_info {
         let scheme = colors();
         let sev_color = scheme.severity_color(&info.severity);
-
         let source_color = crate::tui::shared::vulnerabilities::source_color(&info.source, &scheme);
 
+        // === Section 1: Risk Summary ===
+        let mut badge_spans = vec![
+            Span::styled(
+                format!(" {} ", info.severity.chars().next().unwrap_or('?')),
+                Style::default()
+                    .fg(scheme.severity_badge_fg(&info.severity))
+                    .bg(sev_color)
+                    .bold(),
+            ),
+            Span::styled(
+                format!(" {} ", info.severity),
+                Style::default().fg(sev_color).bold(),
+            ),
+        ];
+        if let Some(score) = info.cvss {
+            let cvss_color = crate::tui::shared::vulnerabilities::cvss_score_color(score, &scheme);
+            badge_spans.push(Span::styled(
+                format!(" {score:.1} "),
+                Style::default().fg(scheme.severity_badge_fg(&info.severity)).bg(cvss_color).bold(),
+            ));
+        }
+        if info.is_kev {
+            badge_spans.push(Span::raw(" "));
+            badge_spans.push(Span::styled(
+                "KEV",
+                Style::default().fg(scheme.kev_badge_fg()).bg(scheme.kev()).bold(),
+            ));
+        }
+        if info.is_ransomware {
+            badge_spans.push(Span::raw(" "));
+            badge_spans.push(Span::styled(
+                "RANSOMWARE",
+                Style::default().fg(scheme.badge_fg_light).bg(scheme.critical).bold(),
+            ));
+        }
+
         let mut lines = vec![
-            // Severity badge
-            Line::from(vec![
-                Span::styled(
-                    format!(" {} ", info.severity.chars().next().unwrap_or('?')),
-                    Style::default()
-                        .fg(scheme.severity_badge_fg(&info.severity))
-                        .bg(sev_color)
-                        .bold(),
-                ),
-                Span::styled(
-                    format!(" {} ", info.severity),
-                    Style::default().fg(sev_color).bold(),
-                ),
-                info.cvss.map_or_else(
-                    || Span::raw(""),
-                    |score| Span::styled(
-                        format!("  CVSS: {score:.1}"),
-                        Style::default().fg(colors().text),
+            Line::from(badge_spans),
+            // ID + Source + Published
+            Line::from({
+                let mut spans = vec![
+                    Span::styled(&info.id, Style::default().fg(scheme.text).bold()),
+                    Span::styled(
+                        format!(" [{}]", info.source),
+                        Style::default().fg(source_color),
                     ),
-                ),
-            ]),
-            Line::from(""),
-            // Vulnerability ID
+                ];
+                if let Some(age) = info.published_age_days {
+                    spans.push(Span::styled(
+                        format!("  {age}d ago"),
+                        Style::default().fg(scheme.text_muted),
+                    ));
+                }
+                spans
+            }),
+            // Status + Component
             Line::from(vec![
-                Span::styled("ID: ", Style::default().fg(colors().text_muted)),
-                Span::styled(&info.id, Style::default().fg(colors().text).bold()),
-            ]),
-            // Source
-            Line::from(vec![
-                Span::styled("Source: ", Style::default().fg(colors().text_muted)),
-                Span::styled(
-                    format!("[{}]", info.source),
-                    Style::default().fg(source_color).bold(),
-                ),
-            ]),
-            // Status
-            Line::from(vec![
-                Span::styled("Status: ", Style::default().fg(colors().text_muted)),
                 status_span(&info.status),
-            ]),
-            // Component
-            Line::from(vec![
-                Span::styled("Component: ", Style::default().fg(colors().text_muted)),
-                Span::styled(&info.component, Style::default().fg(colors().secondary)),
+                Span::styled("  ", Style::default()),
+                Span::styled(&info.component, Style::default().fg(scheme.secondary)),
             ]),
         ];
 
-        // Remediation / Fix version
-        if info.remediation.is_some() || info.fixed_version.is_some() {
+        // === Section 2: Remediation (actionable fix) ===
+        if info.fixed_version.is_some() || info.remediation.is_some() || !info.affected_versions.is_empty() {
             lines.push(Line::from(""));
             if let Some(ref fix_ver) = info.fixed_version {
                 lines.push(Line::from(vec![
@@ -796,49 +940,60 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
             }
             if let Some(ref rem) = info.remediation {
                 lines.push(Line::from(vec![
-                    Span::styled("Remediation: ", Style::default().fg(colors().text_muted)),
-                    Span::styled(rem.clone(), Style::default().fg(colors().text)),
+                    Span::styled("Remediation: ", Style::default().fg(scheme.text_muted)),
+                    Span::styled(rem.clone(), Style::default().fg(scheme.text)),
+                ]));
+            }
+            if !info.affected_versions.is_empty() {
+                let versions_str = info.affected_versions.join(", ");
+                lines.push(Line::from(vec![
+                    Span::styled("Affects: ", Style::default().fg(scheme.text_muted)),
+                    Span::styled(versions_str, Style::default().fg(scheme.text)),
                 ]));
             }
         }
 
-        // Description (inline label, no heavy borders)
+        // === Section 3: Impact (CWEs + CVSS vector) ===
+        if !info.cwes.is_empty() || info.cvss_vector.is_some() {
+            lines.push(Line::from(""));
+        }
+        // CWEs with names
+        lines.extend(crate::tui::shared::vulnerabilities::render_vuln_cwe_lines(&info.cwes, 3));
+        if let Some(ref vector) = info.cvss_vector {
+            // Show abbreviated attack vector (e.g., AV:N/AC:L from full CVSS string)
+            let brief = vector.split('/').take(2).collect::<Vec<_>>().join("/");
+            lines.push(Line::from(vec![
+                Span::styled("Vector: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(brief, Style::default().fg(scheme.text)),
+            ]));
+        }
+
+        // === Section 4: Description ===
         if let Some(ref desc) = info.description {
             lines.push(Line::from(""));
-            lines.push(Line::from(vec![
-                Span::styled("Description: ", Style::default().fg(colors().text_muted)),
-            ]));
             let max_width = area.width.saturating_sub(4) as usize;
             for wrapped_line in crate::tui::shared::vulnerabilities::word_wrap(desc, max_width) {
                 lines.push(Line::styled(
                     wrapped_line,
-                    Style::default().fg(colors().text).italic(),
+                    Style::default().fg(scheme.text).italic(),
                 ));
             }
         }
 
-        // CWEs (inline label)
-        lines.extend(crate::tui::shared::vulnerabilities::render_vuln_cwe_lines(&info.cwes, 3));
-
         // Attack Paths (show how to reach this vulnerable component from entry points)
+        // Uses cached paths when the selected component hasn't changed
         if matches!(app.mode, AppMode::Diff | AppMode::View) {
-            // Use cached forward graph instead of rebuilding every frame
-            let forward_graph = &app.tabs.dependencies.cached_forward_graph;
-            let reverse_graph = &app.tabs.dependencies.cached_reverse_graph;
-
-            // Find root components (those with no dependencies pointing to them)
-            let all_components: Vec<String> = reverse_graph.keys().cloned().collect();
-            let roots =
-                crate::tui::security::find_root_components(&all_components, reverse_graph);
-
-            // Find attack paths to this vulnerable component
-            let attack_paths = crate::tui::security::find_attack_paths(
-                &info.component,
-                forward_graph,
-                &roots,
-                3,  // max 3 paths
-                5,  // max depth 5
-            );
+            let attack_paths = if let Some((ref cached_comp, ref cached_paths)) =
+                app.tabs.vulnerabilities.cached_attack_paths
+            {
+                if *cached_comp == info.component {
+                    cached_paths.clone()
+                } else {
+                    compute_attack_paths(&info.component, app)
+                }
+            } else {
+                compute_attack_paths(&info.component, app)
+            };
 
             if !attack_paths.is_empty() {
                 lines.push(Line::from(""));
@@ -954,7 +1109,12 @@ fn get_diff_vuln_at(
             cwes: vuln.cwes.clone(),
             source: vuln.source.clone(),
             remediation: vuln.remediation.clone(),
-            fixed_version: None, // Not available in diff mode
+            fixed_version: None,
+            is_kev: vuln.is_kev,
+            is_ransomware: false, // Not available in diff mode
+            affected_versions: Vec::new(),
+            cvss_vector: None,
+            published_age_days: vuln.days_since_published,
         }
     })
 }
@@ -1079,6 +1239,10 @@ fn get_view_vuln_at(
                 (Some(desc), r.fixed_version.clone())
             },
         );
+        let published_age_days = vuln.published.map(|dt| {
+            let today = chrono::Utc::now().date_naive();
+            (today - dt.date_naive()).num_days()
+        });
         VulnDetailInfo {
             status: "Present".to_string(),
             id: vuln.id.clone(),
@@ -1090,6 +1254,11 @@ fn get_view_vuln_at(
             source: vuln.source.to_string(),
             remediation,
             fixed_version,
+            is_kev: vuln.is_kev,
+            is_ransomware: vuln.kev_info.as_ref().is_some_and(|k| k.known_ransomware_use),
+            affected_versions: vuln.affected_versions.clone(),
+            cvss_vector: vuln.cvss.first().and_then(|c| c.vector.clone()),
+            published_age_days,
         }
     })
 }
@@ -1244,6 +1413,18 @@ fn calculate_view_vuln_urgency(
     }
 
     calculate_fix_urgency(severity_rank, blast_radius, cvss_score)
+}
+
+/// Compute attack paths for a component (used by both render and cache).
+fn compute_attack_paths(
+    component: &str,
+    app: &App,
+) -> Vec<crate::tui::security::AttackPath> {
+    let forward_graph = &app.tabs.dependencies.cached_forward_graph;
+    let reverse_graph = &app.tabs.dependencies.cached_reverse_graph;
+    let all_components: Vec<String> = reverse_graph.keys().cloned().collect();
+    let roots = crate::tui::security::find_root_components(&all_components, reverse_graph);
+    crate::tui::security::find_attack_paths(component, forward_graph, &roots, 3, 5)
 }
 
 /// Count the number of visible items in grouped mode without building full `VulnListData`.

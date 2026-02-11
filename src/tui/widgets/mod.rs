@@ -163,6 +163,51 @@ pub fn render_no_results_state(
     frame.render_widget(paragraph, area);
 }
 
+/// Render no-results state with an additional contextual hint line.
+pub fn render_no_results_state_with_hint(
+    frame: &mut ratatui::Frame,
+    area: Rect,
+    filter_name: &str,
+    filter_value: &str,
+    hint: &str,
+) {
+    let mut lines = vec![
+        Line::from(""),
+        Line::styled("\u{1f50d}", Style::default().fg(colors().text_muted)),
+        Line::from(""),
+        Line::styled("No results found", Style::default().fg(colors().text)),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Filter: ", Style::default().fg(colors().text_muted)),
+            Span::styled(
+                format!("{filter_name} = {filter_value}"),
+                Style::default().fg(colors().accent),
+            ),
+        ]),
+    ];
+    if !hint.is_empty() {
+        lines.push(Line::styled(
+            hint.to_string(),
+            Style::default().fg(colors().text_muted),
+        ));
+    }
+    lines.push(Line::from(""));
+    lines.push(Line::styled(
+        "Press [f] to change filter or [Esc] to clear",
+        Style::default().fg(colors().text_muted),
+    ));
+
+    let paragraph = Paragraph::new(lines)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(colors().border)),
+        )
+        .alignment(Alignment::Center);
+
+    frame.render_widget(paragraph, area);
+}
+
 /// Render a mode indicator badge for the header.
 pub fn render_mode_indicator(mode: &str) -> Span<'static> {
     let (label, color) = match mode.to_lowercase().as_str() {
