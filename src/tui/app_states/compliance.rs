@@ -38,17 +38,6 @@ impl PolicyPreset {
         }
     }
 
-    pub const fn description(self) -> &'static str {
-        match self {
-            Self::Enterprise => "Standard enterprise security policy",
-            Self::Strict => "Maximum security, minimal risk tolerance",
-            Self::Permissive => "Minimal checks, only critical issues",
-            Self::Cra => "EU Cyber Resilience Act (2024/2847) SBOM requirements",
-            Self::Ntia => "NTIA minimum elements for software transparency",
-            Self::Fda => "FDA premarket submission SBOM requirements",
-        }
-    }
-
     /// Whether this preset delegates to the standards-based compliance checker.
     pub const fn is_standards_based(self) -> bool {
         matches!(self, Self::Cra | Self::Ntia | Self::Fda)
@@ -91,39 +80,14 @@ impl PolicyComplianceState {
         self.checked = false;
     }
 
-    pub fn select_next(&mut self) {
-        if let Some(ref result) = self.result {
-            if !result.violations.is_empty()
-                && self.selected_violation < result.violations.len() - 1
-            {
-                self.selected_violation += 1;
-            }
-        }
-    }
-
-    pub const fn select_prev(&mut self) {
-        if self.selected_violation > 0 {
-            self.selected_violation -= 1;
-        }
-    }
-
     pub const fn toggle_details(&mut self) {
         self.show_details = !self.show_details;
-    }
-
-    pub fn violation_count(&self) -> usize {
-        self.result
-            .as_ref()
-            .map_or(0, |r| r.violations.len())
     }
 
     pub fn passes(&self) -> bool {
         self.result.as_ref().is_none_or(|r| r.passes)
     }
 
-    pub fn score(&self) -> u8 {
-        self.result.as_ref().map_or(100, |r| r.score)
-    }
 }
 
 /// State for compliance tab in diff mode (side-by-side multi-standard comparison)

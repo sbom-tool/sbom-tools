@@ -14,7 +14,36 @@ pub use parse::{parse_sbom_with_context, ParsedSbom};
 pub use report_stage::output_report;
 
 #[cfg(feature = "enrichment")]
-pub use parse::enrich_sbom;
+pub use parse::{build_enrichment_config, enrich_sbom};
+
+/// Structured pipeline error types for better diagnostics.
+#[derive(Debug, thiserror::Error)]
+pub enum PipelineError {
+    /// Failed to read or parse an SBOM file
+    #[error("Parse failed for {path}: {source}")]
+    ParseFailed {
+        path: String,
+        source: anyhow::Error,
+    },
+
+    /// Enrichment failed (non-fatal by default)
+    #[error("Enrichment failed: {reason}")]
+    EnrichmentFailed { reason: String },
+
+    /// Diff computation failed
+    #[error("Diff failed: {source}")]
+    DiffFailed {
+        #[source]
+        source: anyhow::Error,
+    },
+
+    /// Report generation or output failed
+    #[error("Report failed: {source}")]
+    ReportFailed {
+        #[source]
+        source: anyhow::Error,
+    },
+}
 
 /// Exit codes for CI/CD integration
 pub mod exit_codes {

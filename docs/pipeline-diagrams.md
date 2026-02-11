@@ -81,3 +81,50 @@ flowchart TD
     J --> K[String output]
     K --> M[write to file/stdout]
 ```
+
+## Multi-SBOM Pipeline (diff-multi / timeline / matrix)
+Source: `src/cli/multi.rs`, `src/diff/multi.rs`
+
+Multi-SBOM commands bypass the standard pipeline and use `MultiDiffEngine` directly.
+
+```mermaid
+flowchart TD
+    A[SBOM paths] --> B[parse_sbom per path]
+    B --> C[FuzzyMatchConfig::from_preset]
+    C --> D[MultiDiffEngine::new]
+
+    D --> E{Command}
+    E -->|diff-multi| F[engine.diff_multi baseline vs targets]
+    E -->|timeline| G[engine.timeline sequential diffs]
+    E -->|matrix| H[engine.matrix NxN comparison]
+
+    F --> I[MultiDiffResult]
+    G --> J[TimelineResult]
+    H --> K[MatrixResult]
+
+    I --> L{Output format}
+    J --> L
+    K --> L
+    L -->|TUI| M[App::new_multi_diff/timeline/matrix]
+    L -->|JSON| N[serde_json::to_string_pretty]
+    N --> O[write to file/stdout]
+```
+
+Note: No enrichment, no DiffConfig, no streaming, no report format variety.
+
+## Enrichment Flow (feature-gated)
+Source: `src/pipeline/parse.rs`, `src/cli/diff.rs`
+
+```mermaid
+flowchart TD
+    A[DiffConfig.enrichment] --> B{enrichment enabled?}
+    B -->|no| Z[Skip enrichment]
+    B -->|yes| C[Build OsvEnricherConfig]
+    C --> D[OsvEnricher::new]
+    D --> E{API available?}
+    E -->|no| F[Warn + skip]
+    E -->|yes| G[Clone components to Vec]
+    G --> H[enricher.enrich components]
+    H --> I[Re-insert into sbom.components]
+    I --> J[Return EnrichmentStats]
+```

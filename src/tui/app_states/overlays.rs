@@ -62,10 +62,6 @@ impl ViewSwitcherState {
         self.visible = !self.visible;
     }
 
-    pub const fn show(&mut self) {
-        self.visible = true;
-    }
-
     pub const fn hide(&mut self) {
         self.visible = false;
     }
@@ -106,6 +102,7 @@ pub struct ComponentDeepDiveState {
 }
 
 /// Collected data for component deep dive across views
+#[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub struct ComponentDeepDiveData {
     /// Version history (from timeline view)
@@ -123,6 +120,7 @@ pub struct ComponentDeepDiveData {
 }
 
 /// Version entry in component history
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct ComponentVersionEntry {
     pub version: String,
@@ -132,6 +130,7 @@ pub struct ComponentVersionEntry {
 }
 
 /// Component presence in a target SBOM
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct ComponentTargetPresence {
     pub target_name: String,
@@ -141,6 +140,7 @@ pub struct ComponentTargetPresence {
 }
 
 /// Similarity info for a component
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct ComponentSimilarityInfo {
     pub other_sbom: String,
@@ -149,6 +149,7 @@ pub struct ComponentSimilarityInfo {
 }
 
 /// Vulnerability info for a component
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct ComponentVulnInfo {
     pub vuln_id: String,

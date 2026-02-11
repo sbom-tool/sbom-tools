@@ -82,11 +82,6 @@ impl ComponentsState {
         self.multi_selected = (0..self.total).collect();
     }
 
-    /// Clear all selections
-    pub fn clear_selection(&mut self) {
-        self.multi_selected.clear();
-    }
-
     /// Check if an index is selected
     pub fn is_selected(&self, index: usize) -> bool {
         self.multi_selected.contains(&index)

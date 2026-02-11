@@ -5,7 +5,6 @@ use crate::tui::state::ListNavigation;
 pub struct GraphChangesState {
     pub selected: usize,
     pub total: usize,
-    pub scroll_offset: usize,
 }
 
 impl GraphChangesState {
@@ -13,7 +12,6 @@ impl GraphChangesState {
         Self {
             selected: 0,
             total: 0,
-            scroll_offset: 0,
         }
     }
 

@@ -11,17 +11,6 @@ pub enum QualityViewMode {
     Recommendations,
 }
 
-impl QualityViewMode {
-    pub const fn label(self) -> &'static str {
-        match self {
-            Self::Summary => "Summary",
-            Self::Breakdown => "Score Breakdown",
-            Self::Metrics => "Detailed Metrics",
-            Self::Recommendations => "Recommendations",
-        }
-    }
-}
-
 pub struct QualityState {
     pub view_mode: QualityViewMode,
     pub selected_recommendation: usize,
@@ -35,15 +24,6 @@ impl QualityState {
             view_mode: QualityViewMode::Summary,
             selected_recommendation: 0,
             total_recommendations: 0,
-            scroll_offset: 0,
-        }
-    }
-
-    pub const fn with_recommendations(total: usize) -> Self {
-        Self {
-            view_mode: QualityViewMode::Summary,
-            selected_recommendation: 0,
-            total_recommendations: total,
             scroll_offset: 0,
         }
     }

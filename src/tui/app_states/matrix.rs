@@ -16,8 +16,6 @@ pub struct MatrixState {
     pub sort_direction: SortDirection,
     /// Similarity threshold filter
     pub threshold: SimilarityThreshold,
-    /// Custom threshold value (0.0 - 1.0)
-    pub custom_threshold: f64,
     /// Zoom/Focus mode - highlight single row/column
     pub focus_mode: bool,
     /// Focused row index (when `focus_mode` is true)
@@ -49,7 +47,7 @@ impl MatrixState {
             sort_by: MatrixSortBy::default(),
             sort_direction: SortDirection::default(),
             threshold: SimilarityThreshold::default(),
-            custom_threshold: 0.5,
+
             focus_mode: false,
             focus_row: None,
             focus_col: None,
@@ -72,7 +70,7 @@ impl MatrixState {
             sort_by: MatrixSortBy::default(),
             sort_direction: SortDirection::default(),
             threshold: SimilarityThreshold::default(),
-            custom_threshold: 0.5,
+
             focus_mode: false,
             focus_row: None,
             focus_col: None,
@@ -207,17 +205,9 @@ impl MatrixState {
             SimilarityThreshold::High => similarity >= 0.9,
             SimilarityThreshold::Medium => similarity >= 0.7,
             SimilarityThreshold::Low => similarity < 0.5,
-            SimilarityThreshold::Custom => similarity >= self.custom_threshold,
         }
     }
 
-    /// Check if any modal/overlay is open
-    pub const fn has_overlay(&self) -> bool {
-        self.show_pair_diff
-            || self.show_export_options
-            || self.show_clustering_details
-            || self.search.active
-    }
 }
 
 impl Default for MatrixState {
@@ -237,8 +227,6 @@ pub enum SimilarityThreshold {
     Medium,
     /// Show only low similarity (< 50%)
     Low,
-    /// Custom threshold (use `threshold_value`)
-    Custom,
 }
 
 impl SimilarityThreshold {
@@ -248,7 +236,6 @@ impl SimilarityThreshold {
             Self::High => ">= 90%",
             Self::Medium => ">= 70%",
             Self::Low => "< 50%",
-            Self::Custom => "Custom",
         }
     }
 
@@ -257,7 +244,7 @@ impl SimilarityThreshold {
             Self::None => Self::High,
             Self::High => Self::Medium,
             Self::Medium => Self::Low,
-            Self::Low | Self::Custom => Self::None,
+            Self::Low => Self::None,
         }
     }
 }

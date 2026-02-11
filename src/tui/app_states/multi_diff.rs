@@ -313,17 +313,6 @@ impl MultiDiffState {
         }
     }
 
-    pub const fn set_variable_components_count(&mut self, count: usize) {
-        self.total_variable_components = count;
-        if count > 0 && self.selected_variable_component >= count {
-            self.selected_variable_component = count - 1;
-        }
-    }
-
-    /// Check if any modal/overlay is open
-    pub const fn has_overlay(&self) -> bool {
-        self.show_detail_modal || self.show_variable_drill_down || self.search.active
-    }
 }
 
 impl Default for MultiDiffState {

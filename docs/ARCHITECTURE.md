@@ -34,12 +34,61 @@ SBOM files
 
 ## Data Flow
 
+### Single Diff (`diff` command)
+
+The `diff` command uses the full pipeline:
+
 1. CLI parses arguments and merges config (`src/cli/`, `src/config/`).
-2. Parser detects format and builds NormalizedSbom (`src/parsers/`). For large files, the streaming parser reads incrementally.
-3. Optional enrichment adds vulnerability metadata from OSV/KEV (`src/enrichment/`, feature-gated).
-4. Pipeline orchestrates matching and diff stages (`src/pipeline/`).
-5. DiffEngine matches components and generates DiffResult (`src/matching/`, `src/diff/`).
-6. Reports or TUI render the result (`src/reports/`, `src/tui/`).
+2. `pipeline::parse_sbom_with_context()` reads and parses both SBOMs into `ParsedSbom` (preserves raw content for TUI Source tab).
+3. Optional enrichment mutates SBOMs in-place with OSV/KEV data (`pipeline::enrich_sbom()`, feature-gated). Currently called from CLI, not pipeline.
+4. `pipeline::compute_diff()` builds `DiffEngine` with matching config, rules, and graph options, then diffs.
+5. `pipeline::output_report()` selects reporter format, pre-computes CRA compliance, and writes to file or stdout. For TUI output, raw content is preserved; for non-TUI, it is dropped to save memory.
+
+### Multi-SBOM Commands (`diff-multi`, `timeline`, `matrix`)
+
+Multi-SBOM commands bypass the pipeline and use `MultiDiffEngine` directly:
+
+```
+cli/multi.rs
+  -> parse_sbom() (direct, not pipeline)
+  -> FuzzyMatchConfig::from_preset()
+  -> MultiDiffEngine::new()
+  -> .diff_multi() / .timeline() / .matrix()
+  -> JSON or TUI output only
+```
+
+Key differences from single-diff:
+- No `DiffConfig` — uses scattered function parameters instead
+- No enrichment — vulnerability data not available in multi-SBOM views
+- No report format variety — JSON or TUI only (no SARIF/CSV/HTML/Markdown)
+- No streaming support
+- No matching rules
+
+### Enrichment Flow
+
+Enrichment is feature-gated behind the `enrichment` Cargo feature. When enabled,
+the CLI layer (`src/cli/diff.rs`) constructs `OsvEnricherConfig` from `DiffConfig.enrichment`
+and calls `pipeline::enrich_sbom()` to mutate each SBOM in-place before diffing.
+
+```
+DiffConfig.enrichment → OsvEnricherConfig
+  → pipeline::enrich_sbom(&mut sbom, &config)
+    → OsvEnricher::new() → enricher.enrich(&mut components)
+    → Re-insert enriched components into sbom.components
+```
+
+The pipeline module exports `enrich_sbom()` but does not orchestrate it — the CLI is
+responsible for calling it at the right time.
+
+## TUI Architecture
+
+The TUI has two systems:
+
+- **Legacy system** (`src/tui/views/`): Monolithic `App` struct holds all state. Each tab renders via functions in `views/*.rs` that take `&App` or `&mut App`. Event handling is a large match tree in `input.rs`. All tabs except Quality use this system.
+
+- **Modern system** (`src/tui/view/views/`): `ViewState` trait with per-tab state structs. Events return `EventResult` enums for navigation, overlays, status messages. Only the Quality tab uses this system as a proof-of-concept.
+
+Both systems coexist. The `App` struct has a `quality_view: Option<QualityView>` field that dispatches to the modern system when present. Migration of remaining tabs to the `ViewState` trait is possible but not planned — the legacy system works and is well-tested.
 
 ## Invariants and Conventions
 
@@ -57,3 +106,13 @@ SBOM files
 - **Enrichment**: OSV/KEV integration for vulnerability data (feature-gated).
 - **Reports**: Add new generators by implementing ReportGenerator.
 - **Compliance**: Add new standards by extending the quality scorer.
+
+## Known Technical Debt
+
+- Multi-SBOM commands bypass the pipeline (no enrichment, limited output formats).
+- Enrichment is orchestrated by CLI, not the pipeline module.
+- ~100 `unwrap()` and ~30 `expect()` calls in production code (most safe-by-construction, but not annotated).
+- 12 lock-poisoning patterns (`lock().unwrap()` / `lock().expect()`).
+- 77/192 source files have test modules (40% coverage by file).
+- CLI command handlers (`src/cli/`) have no integration tests.
+- TUI dual system (legacy + ViewState trait) — only Quality migrated.

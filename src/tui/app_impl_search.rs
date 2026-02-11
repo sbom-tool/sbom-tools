@@ -49,7 +49,6 @@ impl App {
                         name: comp.name.clone(),
                         version: comp.new_version.clone(),
                         change_type: ChangeType::Added,
-                        match_field: "name".to_string(),
                     });
                 }
             }
@@ -61,7 +60,6 @@ impl App {
                         name: comp.name.clone(),
                         version: comp.old_version.clone(),
                         change_type: ChangeType::Removed,
-                        match_field: "name".to_string(),
                     });
                 }
             }
@@ -73,7 +71,6 @@ impl App {
                         name: change.name.clone(),
                         version: change.new_version.clone(),
                         change_type: ChangeType::Modified,
-                        match_field: "name".to_string(),
                     });
                 }
             }
@@ -187,7 +184,6 @@ impl App {
                     self.tabs.vulnerabilities.filter = match change_type {
                         VulnChangeType::Introduced => VulnFilter::Introduced,
                         VulnChangeType::Resolved => VulnFilter::Resolved,
-                        VulnChangeType::Persistent => VulnFilter::All,
                     };
 
                     if let Some(index) = self.find_vulnerability_index(&id) {

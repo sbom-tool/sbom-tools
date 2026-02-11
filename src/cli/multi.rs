@@ -1,15 +1,15 @@
 //! Multi-SBOM command handlers.
 //!
 //! Implements the `diff-multi`, `timeline`, and `matrix` subcommands.
+//! Uses the pipeline module for parsing and enrichment (shared with `diff`).
 
 use crate::diff::MultiDiffEngine;
 use crate::matching::FuzzyMatchConfig;
 use crate::model::NormalizedSbom;
-use crate::parsers::parse_sbom;
-use crate::pipeline::{write_output, OutputTarget};
+use crate::pipeline::{parse_sbom_with_context, write_output, OutputTarget};
 use crate::reports::ReportFormat;
 use crate::tui::{run_tui, App};
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Result};
 use std::path::{Path, PathBuf};
 
 /// Run the diff-multi command (1:N comparison)
@@ -22,15 +22,12 @@ pub fn run_diff_multi(
     fuzzy_preset: String,
     include_unchanged: bool,
 ) -> Result<()> {
-    tracing::info!("Parsing baseline SBOM: {:?}", baseline_path);
-    let baseline_sbom = parse_sbom(&baseline_path)
-        .with_context(|| format!("Failed to parse baseline SBOM: {}", baseline_path.display()))?;
-
+    let baseline_parsed = parse_sbom_with_context(&baseline_path, false)?;
     let target_sboms = parse_multiple_sboms(&target_paths)?;
 
     tracing::info!(
         "Comparing baseline ({} components) against {} targets",
-        baseline_sbom.component_count(),
+        baseline_parsed.sbom().component_count(),
         target_sboms.len()
     );
 
@@ -51,7 +48,7 @@ pub fn run_diff_multi(
     let baseline_name = get_sbom_name(&baseline_path);
 
     let result = engine.diff_multi(
-        &baseline_sbom,
+        baseline_parsed.sbom(),
         &baseline_name,
         &baseline_path.to_string_lossy(),
         &target_refs,
@@ -171,13 +168,12 @@ pub fn run_matrix(
     })
 }
 
-/// Parse multiple SBOMs from paths
+/// Parse multiple SBOMs using the pipeline (with structured error context).
 fn parse_multiple_sboms(paths: &[PathBuf]) -> Result<Vec<NormalizedSbom>> {
     let mut sboms = Vec::with_capacity(paths.len());
     for path in paths {
-        tracing::info!("Parsing SBOM: {:?}", path);
-        let sbom = parse_sbom(path).with_context(|| format!("Failed to parse SBOM: {}", path.display()))?;
-        sboms.push(sbom);
+        let parsed = parse_sbom_with_context(path, false)?;
+        sboms.push(parsed.into_sbom());
     }
     Ok(sboms)
 }

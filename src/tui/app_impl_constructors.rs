@@ -3,8 +3,6 @@
 use crate::diff::{DiffResult, MatrixResult, MultiDiffResult, TimelineResult};
 use crate::model::NormalizedSbom;
 use crate::quality::{ComplianceChecker, ComplianceLevel, QualityScorer, ScoringProfile};
-use ratatui::widgets::ScrollbarState;
-
 use super::app::{App, AppMode, AppOverlays, DataContext, TabKind, TabStates};
 use super::app_states::{
     ComponentsState, DependenciesState, GraphChangesState, LicensesState,
@@ -58,7 +56,6 @@ impl App {
                 source: SourceDiffState::new("", ""),
             },
             overlays: AppOverlays::new(),
-            scroll_state: ScrollbarState::default(),
             should_quit: false,
             status_message: None,
             tick: 0,

@@ -39,21 +39,7 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
     #[cfg(feature = "enrichment")]
     let enrichment_stats = {
         if config.enrichment.enabled {
-            use crate::enrichment::OsvEnricherConfig;
-            use crate::pipeline::dirs;
-
-            let osv_config = OsvEnricherConfig {
-                cache_dir: config
-                    .enrichment
-                    .cache_dir
-                    .clone()
-                    .unwrap_or_else(dirs::osv_cache_dir),
-                cache_ttl: std::time::Duration::from_secs(config.enrichment.cache_ttl_hours * 3600),
-                bypass_cache: config.enrichment.bypass_cache,
-                timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
-                ..Default::default()
-            };
-
+            let osv_config = crate::pipeline::build_enrichment_config(&config.enrichment);
             let stats_old =
                 crate::pipeline::enrich_sbom(old_parsed.sbom_mut(), &osv_config, quiet);
             let stats_new =

@@ -3,7 +3,7 @@
 //! Provides functions for parsing SBOMs with context and optional enrichment.
 
 use crate::model::NormalizedSbom;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::path::Path;
 
 /// A parsed SBOM with optional enrichment stats
@@ -64,16 +64,28 @@ impl ParsedSbom {
     }
 }
 
-/// Parse an SBOM with context for error messages
+/// Parse an SBOM with context for error messages.
+///
+/// Returns a [`PipelineError::ParseFailed`] with the file path on failure.
 pub fn parse_sbom_with_context(path: &Path, quiet: bool) -> Result<ParsedSbom> {
     if !quiet {
         tracing::info!("Parsing SBOM: {:?}", path);
     }
 
-    let raw_content = std::fs::read_to_string(path)
-        .with_context(|| format!("Failed to read SBOM file: {}", path.display()))?;
-    let sbom = crate::parsers::parse_sbom_str(&raw_content)
-        .with_context(|| format!("Failed to parse SBOM: {}", path.display()))?;
+    let path_display = path.display().to_string();
+
+    let raw_content = std::fs::read_to_string(path).map_err(|e| {
+        super::PipelineError::ParseFailed {
+            path: path_display.clone(),
+            source: e.into(),
+        }
+    })?;
+    let sbom = crate::parsers::parse_sbom_str(&raw_content).map_err(|e| {
+        super::PipelineError::ParseFailed {
+            path: path_display,
+            source: e.into(),
+        }
+    })?;
 
     if !quiet {
         tracing::info!("Parsed {} components", sbom.component_count());
@@ -82,6 +94,26 @@ pub fn parse_sbom_with_context(path: &Path, quiet: bool) -> Result<ParsedSbom> {
     sbom.log_collision_summary();
 
     Ok(ParsedSbom::new(sbom, raw_content))
+}
+
+/// Build an `OsvEnricherConfig` from the user-facing `EnrichmentConfig`.
+///
+/// Centralizes the config construction that was previously duplicated in CLI handlers.
+#[cfg(feature = "enrichment")]
+#[must_use]
+pub fn build_enrichment_config(
+    config: &crate::config::EnrichmentConfig,
+) -> crate::enrichment::OsvEnricherConfig {
+    crate::enrichment::OsvEnricherConfig {
+        cache_dir: config
+            .cache_dir
+            .clone()
+            .unwrap_or_else(super::dirs::osv_cache_dir),
+        cache_ttl: std::time::Duration::from_secs(config.cache_ttl_hours * 3600),
+        bypass_cache: config.bypass_cache,
+        timeout: std::time::Duration::from_secs(config.timeout_secs),
+        ..Default::default()
+    }
 }
 
 /// Enrich an SBOM with vulnerability data from OSV

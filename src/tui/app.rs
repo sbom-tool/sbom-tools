@@ -6,7 +6,7 @@ use crate::enrichment::EnrichmentStats;
 use crate::model::{NormalizedSbom, NormalizedSbomIndex};
 use crate::quality::{ComplianceResult, QualityReport};
 use crate::tui::views::ThresholdTuningState;
-use ratatui::widgets::ScrollbarState;
+
 
 // Re-export state types from app_states module for backwards compatibility
 #[allow(unused_imports)]
@@ -49,32 +49,32 @@ pub use super::app_states::{
 /// Groups all tab-specific state structs that were previously
 /// flat fields on `App`. Access via `app.tabs.components`, etc.
 pub struct TabStates {
-    pub components: ComponentsState,
-    pub dependencies: DependenciesState,
-    pub licenses: LicensesState,
-    pub vulnerabilities: VulnerabilitiesState,
-    pub quality: QualityState,
-    pub graph_changes: GraphChangesState,
-    pub side_by_side: SideBySideState,
-    pub diff_compliance: crate::tui::app_states::DiffComplianceState,
-    pub multi_diff: MultiDiffState,
-    pub timeline: TimelineState,
-    pub matrix: MatrixState,
-    pub source: crate::tui::app_states::SourceDiffState,
+    pub(crate) components: ComponentsState,
+    pub(crate) dependencies: DependenciesState,
+    pub(crate) licenses: LicensesState,
+    pub(crate) vulnerabilities: VulnerabilitiesState,
+    pub(crate) quality: QualityState,
+    pub(crate) graph_changes: GraphChangesState,
+    pub(crate) side_by_side: SideBySideState,
+    pub(crate) diff_compliance: crate::tui::app_states::DiffComplianceState,
+    pub(crate) multi_diff: MultiDiffState,
+    pub(crate) timeline: TimelineState,
+    pub(crate) matrix: MatrixState,
+    pub(crate) source: crate::tui::app_states::SourceDiffState,
 }
 
 /// Overlay UI state container.
 ///
 /// Groups all overlay visibility flags and complex overlay states.
 pub struct AppOverlays {
-    pub show_help: bool,
-    pub show_export: bool,
-    pub show_legend: bool,
-    pub search: DiffSearchState,
-    pub threshold_tuning: ThresholdTuningState,
-    pub view_switcher: ViewSwitcherState,
-    pub shortcuts: ShortcutsOverlayState,
-    pub component_deep_dive: ComponentDeepDiveState,
+    pub(crate) show_help: bool,
+    pub(crate) show_export: bool,
+    pub(crate) show_legend: bool,
+    pub(crate) search: DiffSearchState,
+    pub(crate) threshold_tuning: ThresholdTuningState,
+    pub(crate) view_switcher: ViewSwitcherState,
+    pub(crate) shortcuts: ShortcutsOverlayState,
+    pub(crate) component_deep_dive: ComponentDeepDiveState,
 }
 
 impl AppOverlays {
@@ -136,64 +136,62 @@ impl AppOverlays {
 ///
 /// Groups all immutable-after-construction data that tabs read from.
 pub struct DataContext {
-    pub diff_result: Option<DiffResult>,
-    pub old_sbom: Option<NormalizedSbom>,
-    pub new_sbom: Option<NormalizedSbom>,
-    pub sbom: Option<NormalizedSbom>,
-    pub multi_diff_result: Option<MultiDiffResult>,
-    pub timeline_result: Option<TimelineResult>,
-    pub matrix_result: Option<MatrixResult>,
-    pub old_sbom_index: Option<NormalizedSbomIndex>,
-    pub new_sbom_index: Option<NormalizedSbomIndex>,
-    pub sbom_index: Option<NormalizedSbomIndex>,
-    pub old_quality: Option<QualityReport>,
-    pub new_quality: Option<QualityReport>,
-    pub quality_report: Option<QualityReport>,
-    pub old_cra_compliance: Option<ComplianceResult>,
-    pub new_cra_compliance: Option<ComplianceResult>,
-    pub old_compliance_results: Option<Vec<ComplianceResult>>,
-    pub new_compliance_results: Option<Vec<ComplianceResult>>,
-    pub matching_threshold: f64,
+    pub(crate) diff_result: Option<DiffResult>,
+    pub(crate) old_sbom: Option<NormalizedSbom>,
+    pub(crate) new_sbom: Option<NormalizedSbom>,
+    pub(crate) sbom: Option<NormalizedSbom>,
+    pub(crate) multi_diff_result: Option<MultiDiffResult>,
+    pub(crate) timeline_result: Option<TimelineResult>,
+    pub(crate) matrix_result: Option<MatrixResult>,
+    pub(crate) old_sbom_index: Option<NormalizedSbomIndex>,
+    pub(crate) new_sbom_index: Option<NormalizedSbomIndex>,
+    pub(crate) sbom_index: Option<NormalizedSbomIndex>,
+    pub(crate) old_quality: Option<QualityReport>,
+    pub(crate) new_quality: Option<QualityReport>,
+    pub(crate) quality_report: Option<QualityReport>,
+    pub(crate) old_cra_compliance: Option<ComplianceResult>,
+    pub(crate) new_cra_compliance: Option<ComplianceResult>,
+    pub(crate) old_compliance_results: Option<Vec<ComplianceResult>>,
+    pub(crate) new_compliance_results: Option<Vec<ComplianceResult>>,
+    pub(crate) matching_threshold: f64,
     #[cfg(feature = "enrichment")]
-    pub enrichment_stats_old: Option<EnrichmentStats>,
+    pub(crate) enrichment_stats_old: Option<EnrichmentStats>,
     #[cfg(feature = "enrichment")]
-    pub enrichment_stats_new: Option<EnrichmentStats>,
+    pub(crate) enrichment_stats_new: Option<EnrichmentStats>,
 }
 
 /// Main application state
 pub struct App {
     /// Current mode (diff or view)
-    pub mode: AppMode,
+    pub(crate) mode: AppMode,
     /// Active tab
-    pub active_tab: TabKind,
+    pub(crate) active_tab: TabKind,
     /// SBOM data, diff results, indexes, quality, and compliance
-    pub data: DataContext,
+    pub(crate) data: DataContext,
     /// Per-tab UI state
-    pub tabs: TabStates,
+    pub(crate) tabs: TabStates,
     /// Overlay UI state
-    pub overlays: AppOverlays,
-    /// Scrollbar state
-    pub scroll_state: ScrollbarState,
+    pub(crate) overlays: AppOverlays,
     /// Should quit
-    pub should_quit: bool,
+    pub(crate) should_quit: bool,
     /// Status message to display temporarily
-    pub status_message: Option<String>,
+    pub(crate) status_message: Option<String>,
     /// Animation tick counter
-    pub tick: u64,
+    pub(crate) tick: u64,
     /// Last exported file path
-    pub last_export_path: Option<String>,
+    pub(crate) last_export_path: Option<String>,
     /// Navigation context for cross-view navigation
-    pub navigation_ctx: NavigationContext,
+    pub(crate) navigation_ctx: NavigationContext,
     /// Security analysis cache for blast radius, risk indicators, and flagged items
-    pub security_cache: crate::tui::security::SecurityAnalysisCache,
+    pub(crate) security_cache: crate::tui::security::SecurityAnalysisCache,
     /// Compliance/policy checking state
-    pub compliance_state: crate::tui::app_states::PolicyComplianceState,
+    pub(crate) compliance_state: crate::tui::app_states::PolicyComplianceState,
     /// Quality tab `ViewState` implementation (proof of concept).
     ///
     /// When present, quality tab key events are dispatched through this
     /// `ViewState` instead of the direct handler. State is synced back to
     /// `tabs.quality` after each event for rendering compatibility.
-    pub quality_view: Option<crate::tui::view_states::QualityView>,
+    pub(crate) quality_view: Option<crate::tui::view_states::QualityView>,
 }
 
 impl App {

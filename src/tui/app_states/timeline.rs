@@ -81,15 +81,6 @@ impl TimelineState {
         }
     }
 
-    /// Update total components count (call this when rendering timeline)
-    pub const fn set_total_components(&mut self, count: usize) {
-        self.total_components = count;
-        // Clamp selection if it's now out of bounds
-        if self.total_components > 0 && self.selected_component >= self.total_components {
-            self.selected_component = self.total_components - 1;
-        }
-    }
-
     pub const fn select_next(&mut self) {
         match self.active_panel {
             TimelinePanel::Versions => {
@@ -231,13 +222,6 @@ impl TimelineState {
         }
     }
 
-    /// Check if any modal/overlay is open
-    pub const fn has_overlay(&self) -> bool {
-        self.show_version_diff_modal
-            || self.show_component_history
-            || self.search.active
-            || self.jump_mode
-    }
 }
 
 impl Default for TimelineState {

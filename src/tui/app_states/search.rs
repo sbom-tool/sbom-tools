@@ -59,7 +59,6 @@ pub enum DiffSearchResult {
         name: String,
         version: Option<String>,
         change_type: ChangeType,
-        match_field: String,
     },
     Vulnerability {
         id: String,
@@ -95,7 +94,6 @@ impl ChangeType {
 pub enum VulnChangeType {
     Introduced,
     Resolved,
-    Persistent,
 }
 
 impl VulnChangeType {
@@ -103,7 +101,6 @@ impl VulnChangeType {
         match self {
             Self::Introduced => "introduced",
             Self::Resolved => "resolved",
-            Self::Persistent => "persistent",
         }
     }
 }

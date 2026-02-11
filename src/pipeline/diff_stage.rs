@@ -7,7 +7,7 @@ use crate::config::DiffConfig;
 use crate::diff::{DiffEngine, DiffResult, GraphDiffConfig};
 use crate::matching::{FuzzyMatchConfig, MatchingRulesConfig};
 use crate::model::NormalizedSbom;
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 /// Run the core diff computation between two SBOMs.
 ///
@@ -55,9 +55,9 @@ pub fn compute_diff(
         }
     }
 
-    let mut result = engine
-        .diff(old_sbom, new_sbom)
-        .context("Failed to compute diff")?;
+    let mut result = engine.diff(old_sbom, new_sbom).map_err(|e| {
+        super::PipelineError::DiffFailed { source: e.into() }
+    })?;
 
     // Report on graph changes if enabled
     if config.graph_diff.enabled && !quiet {

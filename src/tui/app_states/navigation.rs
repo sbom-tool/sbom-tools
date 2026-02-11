@@ -50,11 +50,6 @@ impl NavigationContext {
         self.breadcrumbs.pop()
     }
 
-    /// Clear all breadcrumbs (on explicit tab switch)
-    pub fn clear_breadcrumbs(&mut self) {
-        self.breadcrumbs.clear();
-    }
-
     /// Check if we have navigation history
     pub fn has_history(&self) -> bool {
         !self.breadcrumbs.is_empty()

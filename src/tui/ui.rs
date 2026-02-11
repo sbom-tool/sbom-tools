@@ -698,7 +698,6 @@ fn render_search_overlay(frame: &mut Frame, area: Rect, search_state: &DiffSearc
                     let change_color = match change_type {
                         VulnChangeType::Introduced => colors().removed,
                         VulnChangeType::Resolved => colors().added,
-                        VulnChangeType::Persistent => colors().modified,
                     };
                     let sev_color = severity
                         .as_ref()

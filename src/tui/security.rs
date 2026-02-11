@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 pub type ComplianceComponentData = (String, Option<String>, Vec<String>, Vec<(String, String)>);
 
 /// Blast radius analysis result for a component
+#[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub struct BlastRadius {
     /// Direct dependents (components that directly depend on this)
@@ -27,6 +28,7 @@ impl BlastRadius {
 }
 
 /// Risk level for a component
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum RiskLevel {
     #[default]
@@ -38,6 +40,7 @@ pub enum RiskLevel {
 
 
 /// Risk indicators for a component
+#[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub struct RiskIndicators {
     /// Vulnerability count
@@ -103,6 +106,7 @@ impl LicenseRisk {
 }
 
 /// Flagged item for analyst follow-up
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct FlaggedItem {
     /// Component ID or name
@@ -116,6 +120,7 @@ pub struct FlaggedItem {
 }
 
 /// Security analysis cache for the TUI
+#[allow(dead_code)]
 #[derive(Debug, Default)]
 pub struct SecurityAnalysisCache {
     /// Cached blast radius for components
@@ -672,6 +677,7 @@ pub enum PolicySeverity {
 
 
 /// A policy violation
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct PolicyViolation {
     /// The rule that was violated
@@ -766,6 +772,7 @@ impl SecurityPolicy {
 }
 
 /// Result of a compliance check
+#[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub struct ComplianceResult {
     /// Policy name that was checked
