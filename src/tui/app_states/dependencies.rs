@@ -96,6 +96,8 @@ pub struct DependenciesState {
     pub sort_order: DependencySort,
     /// Cached depth for each node
     pub cached_depths: HashMap<String, usize>,
+    /// Cached display names: canonical ID → "name@version"
+    pub cached_display_names: HashMap<String, String>,
 }
 
 impl DependenciesState {
@@ -134,6 +136,7 @@ impl DependenciesState {
             cached_forward_graph: HashMap::new(),
             sort_order: DependencySort::default(),
             cached_depths: HashMap::new(),
+            cached_display_names: HashMap::new(),
         }
     }
 
@@ -373,7 +376,8 @@ impl DependenciesState {
         self.filter_mode = !self.filter_mode;
     }
 
-    /// Update search matches based on query and available nodes
+    /// Update search matches based on query and available nodes.
+    /// Also matches against cached display names for name-based search.
     pub fn update_search_matches(&mut self, all_node_names: &[(String, String)]) {
         self.search_matches.clear();
         if self.search_query.is_empty() {
@@ -383,6 +387,10 @@ impl DependenciesState {
         for (node_id, node_name) in all_node_names {
             if node_name.to_lowercase().contains(&query_lower) {
                 self.search_matches.insert(node_id.clone());
+            } else if let Some(display_name) = self.cached_display_names.get(node_id) {
+                if display_name.to_lowercase().contains(&query_lower) {
+                    self.search_matches.insert(node_id.clone());
+                }
             }
         }
     }
@@ -504,12 +512,20 @@ impl DependenciesState {
         }
     }
 
-    /// Get formatted breadcrumb string
+    /// Get formatted breadcrumb string, resolving canonical IDs to display names
     pub fn get_breadcrumb_display(&self) -> String {
         if self.breadcrumb_trail.is_empty() {
             return String::new();
         }
-        self.breadcrumb_trail.join(" → ")
+        self.breadcrumb_trail
+            .iter()
+            .map(|id| {
+                self.cached_display_names
+                    .get(id)
+                    .map_or(id.as_str(), String::as_str)
+            })
+            .collect::<Vec<_>>()
+            .join(" → ")
     }
 
 }

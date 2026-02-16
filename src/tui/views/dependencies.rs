@@ -78,6 +78,18 @@ fn update_view_mode_cache(app: &mut App) {
                 .map(|c| c.name.clone())
                 .collect();
             app.tabs.dependencies.update_vuln_cache(vuln_components);
+
+            // Build display name cache: canonical ID → "name@version"
+            let mut display_names = HashMap::new();
+            for (id, comp) in &sbom.components {
+                let id_str = id.value().to_string();
+                let display = comp.version.as_ref().map_or_else(
+                    || comp.name.clone(),
+                    |v| format!("{}@{}", comp.name, v),
+                );
+                display_names.insert(id_str, display);
+            }
+            app.tabs.dependencies.cached_display_names = display_names;
         }
     }
 }
@@ -128,6 +140,23 @@ fn update_diff_mode_cache(app: &mut App) {
                 .map(|v| v.component_name.clone())
                 .collect();
             app.tabs.dependencies.update_vuln_cache(vuln_components);
+
+            // Build display name cache from both old and new SBOMs
+            let mut display_names = HashMap::new();
+            // Try new SBOM first (preferred for added deps), then old SBOM
+            for sbom in app.data.new_sbom.iter().chain(app.data.old_sbom.iter()) {
+                for (id, comp) in &sbom.components {
+                    let id_str = id.value().to_string();
+                    if !display_names.contains_key(&id_str) {
+                        let display = comp.version.as_ref().map_or_else(
+                            || comp.name.clone(),
+                            |v| format!("{}@{}", comp.name, v),
+                        );
+                        display_names.insert(id_str, display);
+                    }
+                }
+            }
+            app.tabs.dependencies.cached_display_names = display_names;
         }
     }
 }
@@ -446,11 +475,20 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
 fn render_dependency_tree(frame: &mut Frame, area: Rect, app: &mut App) {
     let scheme = colors();
 
-    // Split into main area and scrollbar
+    // Split into tree (60%) and detail panel (40%)
+    let main_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+        .split(area);
+
+    let tree_with_scrollbar = main_chunks[0];
+    let detail_area = main_chunks[1];
+
+    // Split tree area into main area and scrollbar
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Min(10), Constraint::Length(1)])
-        .split(area);
+        .split(tree_with_scrollbar);
 
     let tree_area = chunks[0];
 
@@ -575,6 +613,198 @@ fn render_dependency_tree(frame: &mut Frame, area: Rect, app: &mut App) {
         chunks[1],
         &mut scrollbar_state,
     );
+
+    // Render detail panel for selected node
+    render_detail_panel(frame, detail_area, app);
+}
+
+/// Render the detail panel showing info about the selected dependency node
+fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
+    use ratatui::widgets::Wrap;
+
+    let scheme = colors();
+    let mut lines = vec![];
+
+    lines.push(Line::styled(
+        "Node Details",
+        Style::default().fg(scheme.primary).bold(),
+    ));
+    lines.push(Line::from(""));
+
+    let selected_node = app.tabs.dependencies.get_selected_node_id();
+
+    if let Some(raw_id) = selected_node {
+        // Skip placeholder nodes
+        if raw_id.starts_with("__") {
+            lines.push(Line::styled(
+                "Select a dependency node to view details",
+                Style::default().fg(scheme.text_muted),
+            ));
+        } else {
+            // For diff mode child nodes, extract the actual component ID
+            // Format: "parent:+:child" or "parent:-:child"
+            let (component_id, change_marker) = if let Some(pos) = raw_id.find(":+:") {
+                (&raw_id[pos + 3..], Some("+"))
+            } else if let Some(pos) = raw_id.find(":-:") {
+                (&raw_id[pos + 3..], Some("-"))
+            } else {
+                (raw_id, None)
+            };
+
+            // Display name
+            let display_name = app
+                .tabs.dependencies
+                .cached_display_names
+                .get(component_id);
+
+            if let Some(name) = display_name {
+                lines.push(Line::from(vec![
+                    Span::styled("Name: ", Style::default().fg(scheme.text_muted)),
+                    Span::styled(name, Style::default().fg(scheme.text).bold()),
+                ]));
+            }
+
+            // Change type (diff mode)
+            if let Some(marker) = change_marker {
+                let (label, style) = if marker == "+" {
+                    ("Added", Style::default().fg(scheme.added).bold())
+                } else {
+                    ("Removed", Style::default().fg(scheme.removed).bold())
+                };
+                lines.push(Line::from(vec![
+                    Span::styled("Change: ", Style::default().fg(scheme.text_muted)),
+                    Span::styled(label, style),
+                ]));
+            }
+
+            // Look up component in SBOMs for rich details
+            let component = find_component_in_sboms(component_id, app);
+
+            if let Some(comp) = component {
+                if let Some(ref ver) = comp.version {
+                    lines.push(Line::from(vec![
+                        Span::styled("Version: ", Style::default().fg(scheme.text_muted)),
+                        Span::styled(ver, Style::default().fg(scheme.text)),
+                    ]));
+                }
+
+                lines.push(Line::from(vec![
+                    Span::styled("Type: ", Style::default().fg(scheme.text_muted)),
+                    Span::styled(
+                        format!("{:?}", comp.component_type),
+                        Style::default().fg(scheme.text),
+                    ),
+                ]));
+
+                if let Some(ref eco) = comp.ecosystem {
+                    lines.push(Line::from(vec![
+                        Span::styled("Ecosystem: ", Style::default().fg(scheme.text_muted)),
+                        Span::styled(
+                            format!("{eco:?}"),
+                            Style::default().fg(scheme.text),
+                        ),
+                    ]));
+                }
+
+                if let Some(ref purl) = comp.identifiers.purl {
+                    if purl != component_id {
+                        lines.push(Line::from(vec![
+                            Span::styled("PURL: ", Style::default().fg(scheme.text_muted)),
+                            Span::styled(purl, Style::default().fg(scheme.accent)),
+                        ]));
+                    }
+                }
+
+                if !comp.vulnerabilities.is_empty() {
+                    lines.push(Line::from(vec![
+                        Span::styled("Vulns: ", Style::default().fg(scheme.text_muted)),
+                        Span::styled(
+                            format!("{}", comp.vulnerabilities.len()),
+                            Style::default().fg(scheme.critical).bold(),
+                        ),
+                    ]));
+                }
+            }
+
+            // Dependency counts from cached graphs
+            let dep_count = app
+                .tabs.dependencies
+                .cached_graph
+                .get(component_id)
+                .map_or(0, Vec::len);
+            let depended_on_count = app
+                .tabs.dependencies
+                .cached_reverse_graph
+                .get(component_id)
+                .map_or(0, Vec::len);
+
+            lines.push(Line::from(""));
+            lines.push(Line::from(vec![
+                Span::styled("Dependencies: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(
+                    dep_count.to_string(),
+                    Style::default().fg(scheme.primary),
+                ),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("Depended-on-by: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(
+                    depended_on_count.to_string(),
+                    Style::default().fg(scheme.primary),
+                ),
+            ]));
+
+            // Canonical ID (dimmed, for reference)
+            lines.push(Line::from(""));
+            lines.push(Line::styled(
+                "Canonical ID:",
+                Style::default().fg(scheme.text_muted),
+            ));
+            lines.push(Line::styled(
+                component_id,
+                Style::default().fg(scheme.text_muted).dim(),
+            ));
+        }
+    } else {
+        lines.push(Line::styled(
+            "No node selected",
+            Style::default().fg(scheme.text_muted),
+        ));
+    }
+
+    let para = Paragraph::new(lines)
+        .block(
+            Block::default()
+                .title(" Details ")
+                .title_style(Style::default().fg(scheme.primary).bold())
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(scheme.border)),
+        )
+        .wrap(Wrap { trim: false });
+
+    frame.render_widget(para, area);
+}
+
+/// Look up a component by canonical ID in available SBOMs
+fn find_component_in_sboms<'a>(
+    id: &str,
+    app: &'a App,
+) -> Option<&'a crate::model::Component> {
+    // Try view-mode SBOM first, then diff-mode SBOMs
+    for sbom in app
+        .data
+        .sbom
+        .iter()
+        .chain(app.data.new_sbom.iter())
+        .chain(app.data.old_sbom.iter())
+    {
+        for (canonical_id, comp) in &sbom.components {
+            if canonical_id.value() == id {
+                return Some(comp);
+            }
+        }
+    }
+    None
 }
 
 #[allow(dead_code)]
@@ -937,6 +1167,7 @@ fn render_view_node(
     let child_count = children.map_or(0, std::vec::Vec::len);
     let is_expanded = expanded.contains(node_id);
 
+    let empty_names = HashMap::new();
     render_view_node_line(
         lines,
         visible_nodes,
@@ -952,6 +1183,7 @@ fn render_view_node(
         cycles_in_deps,
         show_cycles,
         false,
+        &empty_names,
     );
 
     if child_count == 0 || !is_expanded || depth >= max_depth {
@@ -983,6 +1215,7 @@ fn render_view_node(
                     cycles_in_deps,
                     show_cycles,
                     true,
+                    &empty_names,
                 );
                 continue;
             }
@@ -1025,6 +1258,7 @@ fn render_view_node_line(
     cycles_in_deps: &HashSet<String>,
     show_cycles: bool,
     cycle_ref: bool,
+    display_names: &HashMap<String, String>,
 ) {
     let mut prefix = String::new();
     for last in ancestors_last {
@@ -1049,7 +1283,7 @@ fn render_view_node_line(
     };
 
     let name_budget = max_width.saturating_sub(prefix.len() + 6);
-    let short_name = truncate_component(node_id, name_budget.max(6));
+    let short_name = resolve_display_name(node_id, display_names, name_budget.max(6));
     let has_vuln = vuln_components.contains(node_id);
     let in_cycle = cycles_in_deps.contains(node_id) || cycle_ref;
 
@@ -1137,6 +1371,7 @@ fn render_diff_tree_cached(
         // Use cached roots (sources)
         let sources = &app.tabs.dependencies.cached_roots;
         let expanded = &app.tabs.dependencies.expanded_nodes;
+        let display_names = &app.tabs.dependencies.cached_display_names;
 
         // Build added/removed lookup from result
         let mut added_by_source: HashMap<&str, Vec<&str>> = HashMap::new();
@@ -1189,7 +1424,7 @@ fn render_diff_tree_cached(
                 Style::default().fg(scheme.text)
             };
 
-            let short_source = truncate_component(source, max_width - 20);
+            let short_source = resolve_display_name(source, display_names, max_width - 20);
             let mut spans = vec![
                 Span::styled(branch, Style::default().fg(scheme.border)),
                 Span::styled(expand_icon, Style::default().fg(scheme.accent)),
@@ -1216,7 +1451,7 @@ fn render_diff_tree_cached(
                     for (i, dep) in added_deps.iter().enumerate() {
                         let is_last_child = removed.is_none() && i == added_deps.len() - 1;
                         let child_branch = if is_last_child { "└─" } else { "├─" };
-                        let short_dep = truncate_component(dep, max_width - 25);
+                        let short_dep = resolve_display_name(dep, display_names, max_width - 25);
                         let dep_has_vuln = vuln_components.contains(*dep);
 
                         let dep_style = if highlight {
@@ -1244,7 +1479,7 @@ fn render_diff_tree_cached(
                     for (i, dep) in removed_deps.iter().enumerate() {
                         let is_last_child = i == removed_deps.len() - 1;
                         let child_branch = if is_last_child { "└─" } else { "├─" };
-                        let short_dep = truncate_component(dep, max_width - 25);
+                        let short_dep = resolve_display_name(dep, display_names, max_width - 25);
                         let dep_has_vuln = vuln_components.contains(*dep);
 
                         let dep_style = if highlight {
@@ -1305,6 +1540,7 @@ fn render_view_tree_cached(
     let cycles_in_deps = &app.tabs.dependencies.cached_cycle_nodes;
     let cached_depths = &app.tabs.dependencies.cached_depths;
     let cached_reverse_graph = &app.tabs.dependencies.cached_reverse_graph;
+    let display_names = &app.tabs.dependencies.cached_display_names;
 
     if by_source.is_empty() && app.data.sbom.is_none() {
         return;
@@ -1419,6 +1655,7 @@ fn render_view_tree_cached(
             show_cycles,
             show_transitive,
             &mut path,
+            display_names,
         );
     }
 
@@ -1457,6 +1694,7 @@ fn render_view_node_cached(
     show_cycles: bool,
     show_transitive: bool,
     path: &mut Vec<String>,
+    display_names: &HashMap<String, String>,
 ) {
     let children = by_source.get(node_id);
     let child_count = children.map_or(0, std::vec::Vec::len);
@@ -1485,6 +1723,7 @@ fn render_view_node_cached(
         cycles_in_deps,
         show_cycles,
         false,
+        display_names,
     );
 
     // Skip rendering children if:
@@ -1527,6 +1766,7 @@ fn render_view_node_cached(
                     cycles_in_deps,
                     show_cycles,
                     true,
+                    display_names,
                 );
                 continue;
             }
@@ -1548,6 +1788,7 @@ fn render_view_node_cached(
                 show_cycles,
                 show_transitive,
                 path,
+                display_names,
             );
         }
     }
@@ -1648,31 +1889,112 @@ fn depth_exceeds_limit(
     false
 }
 
-/// Truncate component ID to fit width, preferring name@version over full PURL
+/// Resolve a canonical ID to a display name, falling back to truncated ID
+fn resolve_display_name(id: &str, names: &HashMap<String, String>, budget: usize) -> String {
+    names.get(id).map_or_else(
+        || truncate_component(id, budget),
+        |name| truncate_component(name, budget),
+    )
+}
+
+/// Truncate component ID to fit width, with PURL and path-aware strategies.
+///
+/// Strategy:
+/// 1. If it fits → return as-is
+/// 2. If PURL → strip `pkg:type/` prefix, try again
+/// 3. If path-like (contains `/`) → show last segments that fit, prepend `…/`
+/// 4. Final fallback → tail truncate with `…`
 fn truncate_component(id: &str, max_width: usize) -> String {
-    // Try to extract name@version from PURL
-    if id.starts_with("pkg:") {
-        if let Some(rest) = id.strip_prefix("pkg:") {
-            // Find the part after the ecosystem/
-            if let Some(slash_pos) = rest.find('/') {
-                let name_ver = &rest[slash_pos + 1..];
-                // Remove any query params
-                let clean = name_ver.split('?').next().unwrap_or(name_ver);
-                if clean.len() <= max_width {
-                    return clean.to_string();
+    use unicode_width::UnicodeWidthStr;
+
+    let width = UnicodeWidthStr::width(id);
+    if width <= max_width {
+        return id.to_string();
+    }
+
+    // PURL: strip "pkg:type/" prefix to get "name@version"
+    if let Some(rest) = id.strip_prefix("pkg:") {
+        if let Some(slash_pos) = rest.find('/') {
+            let name_ver = &rest[slash_pos + 1..];
+            let clean = name_ver.split('?').next().unwrap_or(name_ver);
+            if UnicodeWidthStr::width(clean) <= max_width {
+                return clean.to_string();
+            }
+            // Still too long — fall through to general truncation on the clean name
+            return truncate_by_width(clean, max_width);
+        }
+    }
+
+    // Path-like: show last segments that fit, prepend "…/"
+    if id.contains('/') && max_width > 4 {
+        let segments: Vec<&str> = id.rsplit('/').collect();
+        let mut result = String::new();
+        let ellipsis_prefix = "…/";
+
+        for (i, seg) in segments.iter().enumerate() {
+            let candidate = if i == 0 {
+                // Just the last segment
+                seg.to_string()
+            } else {
+                format!("{ellipsis_prefix}{}/{result}", seg)
+            };
+            let candidate_w = UnicodeWidthStr::width(candidate.as_str());
+            if candidate_w > max_width {
+                break;
+            }
+            if i == 0 {
+                result = seg.to_string();
+            } else {
+                result = format!("{seg}/{result}");
+            }
+        }
+
+        if !result.is_empty() {
+            let result_w = UnicodeWidthStr::width(result.as_str());
+            if result_w < width {
+                // We truncated something, add ellipsis prefix
+                let with_ellipsis = format!("{ellipsis_prefix}{result}");
+                if UnicodeWidthStr::width(with_ellipsis.as_str()) <= max_width {
+                    return with_ellipsis;
                 }
+                // Just the result without ellipsis if it fits
+                if result_w <= max_width {
+                    return format!("…{result}");
+                }
+            } else if result_w <= max_width {
+                return result;
             }
         }
     }
 
-    // Truncate with ellipsis
-    if id.len() <= max_width {
-        id.to_string()
-    } else if max_width > 3 {
-        format!("{}...", &id[..max_width - 3])
-    } else {
-        id[..max_width].to_string()
+    truncate_by_width(id, max_width)
+}
+
+/// Unicode-width-aware truncation with ellipsis
+fn truncate_by_width(s: &str, max_width: usize) -> String {
+    use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+
+    if UnicodeWidthStr::width(s) <= max_width {
+        return s.to_string();
     }
+
+    if max_width <= 1 {
+        return "…".to_string();
+    }
+
+    let mut width = 0;
+    let truncated: String = s
+        .chars()
+        .take_while(|ch| {
+            let w = UnicodeWidthChar::width(*ch).unwrap_or(0);
+            if width + w > max_width - 1 {
+                return false;
+            }
+            width += w;
+            true
+        })
+        .collect();
+    format!("{truncated}…")
 }
 
 /// Detect circular dependencies in a dependency graph.

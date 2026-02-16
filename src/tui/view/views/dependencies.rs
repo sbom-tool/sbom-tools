@@ -437,11 +437,53 @@ fn render_dependency_stats(
         if let Some(name) = deps.names.get(&node_id) {
             lines.push(Line::from(vec![
                 Span::styled("Name: ", Style::default().fg(scheme.muted)),
+                Span::styled(name, Style::default().fg(scheme.text).bold()),
+            ]));
+        }
+
+        // Look up component in SBOM for rich details
+        let component = app.sbom.components.iter().find_map(|(id, comp)| {
+            if id.value() == node_id {
+                Some(comp)
+            } else {
+                None
+            }
+        });
+
+        if let Some(comp) = component {
+            if let Some(ref ver) = comp.version {
+                lines.push(Line::from(vec![
+                    Span::styled("Version: ", Style::default().fg(scheme.muted)),
+                    Span::styled(ver, Style::default().fg(scheme.text)),
+                ]));
+            }
+
+            lines.push(Line::from(vec![
+                Span::styled("Type: ", Style::default().fg(scheme.muted)),
                 Span::styled(
-                    truncate_str(name, area.width as usize - 10),
+                    format!("{:?}", comp.component_type),
                     Style::default().fg(scheme.text),
                 ),
             ]));
+
+            if let Some(ref eco) = comp.ecosystem {
+                lines.push(Line::from(vec![
+                    Span::styled("Ecosystem: ", Style::default().fg(scheme.muted)),
+                    Span::styled(
+                        format!("{eco:?}"),
+                        Style::default().fg(scheme.text),
+                    ),
+                ]));
+            }
+
+            if let Some(ref purl) = comp.identifiers.purl {
+                if purl != &node_id {
+                    lines.push(Line::from(vec![
+                        Span::styled("PURL: ", Style::default().fg(scheme.muted)),
+                        Span::styled(purl, Style::default().fg(scheme.accent)),
+                    ]));
+                }
+            }
         }
 
         if let Some(children) = deps.edges.get(&node_id) {
@@ -454,6 +496,20 @@ fn render_dependency_stats(
             ]));
         }
 
+        // Depended-on-by count (reverse graph)
+        let depended_on_count = deps
+            .edges
+            .values()
+            .filter(|children| children.contains(&node_id))
+            .count();
+        lines.push(Line::from(vec![
+            Span::styled("Depended-on-by: ", Style::default().fg(scheme.muted)),
+            Span::styled(
+                depended_on_count.to_string(),
+                Style::default().fg(scheme.primary),
+            ),
+        ]));
+
         if let Some(vuln_count) = deps.vuln_counts.get(&node_id) {
             if *vuln_count > 0 {
                 lines.push(Line::from(vec![
@@ -465,14 +521,29 @@ fn render_dependency_stats(
                 ]));
             }
         }
+
+        // Canonical ID (dimmed, for reference when it differs from name)
+        if deps.names.get(&node_id).is_some_and(|name| name != &node_id) {
+            lines.push(Line::from(""));
+            lines.push(Line::styled(
+                "Canonical ID:",
+                Style::default().fg(scheme.muted),
+            ));
+            lines.push(Line::styled(
+                node_id.clone(),
+                Style::default().fg(scheme.muted).dim(),
+            ));
+        }
     }
 
-    let para = Paragraph::new(lines).block(
-        Block::default()
-            .title(" Stats & Info ")
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(scheme.secondary)),
-    );
+    let para = Paragraph::new(lines)
+        .block(
+            Block::default()
+                .title(" Stats & Info ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(scheme.secondary)),
+        )
+        .wrap(ratatui::widgets::Wrap { trim: false });
 
     frame.render_widget(para, area);
 }
