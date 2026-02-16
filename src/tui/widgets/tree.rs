@@ -490,13 +490,13 @@ impl StatefulWidget for Tree<'_> {
             // Vulnerability indicator with severity badge
             if item.vuln_count > 0 {
                 // Get severity color
-                let (sev_char, sev_color) = item.max_severity.as_ref().map_or(('?', scheme.muted), |sev| {
+                let (sev_char, sev_color) = item.max_severity.as_ref().map_or(('!', scheme.warning), |sev| {
                     match sev.to_lowercase().as_str() {
                         "critical" => ('C', scheme.critical),
                         "high" => ('H', scheme.high),
                         "medium" => ('M', scheme.medium),
                         "low" => ('L', scheme.low),
-                        _ => ('?', scheme.muted),
+                        _ => ('!', scheme.warning),
                     }
                 });
 

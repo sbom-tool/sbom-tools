@@ -1,6 +1,6 @@
 //! Tree view for `ViewApp` - hierarchical component navigation.
 
-use crate::model::Component;
+use crate::model::{Component, EolStatus};
 use crate::tui::theme::colors;
 use crate::tui::view::app::{ComponentDetailTab, FocusPanel, ViewApp};
 use crate::tui::widgets::{truncate_str, SeverityBadge, Tree};
@@ -319,6 +319,114 @@ fn render_overview_tab(frame: &mut Frame, area: Rect, comp: &Component, border_c
             lines.push(Line::from(vec![
                 Span::styled("  Justification: ", Style::default().fg(scheme.text_muted)),
                 Span::raw(just.to_string()),
+            ]));
+        }
+    }
+
+    // Staleness info
+    if let Some(staleness) = &comp.staleness {
+        use crate::model::StalenessLevel;
+        lines.push(Line::from(""));
+        let stale_color = match staleness.level {
+            StalenessLevel::Fresh => scheme.success,
+            StalenessLevel::Aging => scheme.warning,
+            StalenessLevel::Stale => scheme.high,
+            StalenessLevel::Abandoned | StalenessLevel::Deprecated => scheme.critical,
+            StalenessLevel::Archived => scheme.error,
+        };
+        lines.push(Line::from(vec![
+            Span::styled("Staleness: ", Style::default().fg(scheme.text_muted)),
+            Span::styled(
+                format!(" {} ", staleness.level.label()),
+                Style::default().fg(scheme.badge_fg_dark).bg(stale_color).bold(),
+            ),
+        ]));
+        if let Some(days) = staleness.days_since_update {
+            lines.push(Line::from(vec![
+                Span::styled("  Last release: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(
+                    format!("{days} days ago"),
+                    Style::default().fg(stale_color),
+                ),
+            ]));
+        }
+    }
+
+    // End-of-Life info
+    if let Some(eol) = &comp.eol {
+        use crate::model::EolStatus;
+        lines.push(Line::from(""));
+        let eol_color = match eol.status {
+            EolStatus::Supported => scheme.success,
+            EolStatus::SecurityOnly => scheme.warning,
+            EolStatus::ApproachingEol => scheme.high,
+            EolStatus::EndOfLife => scheme.critical,
+            _ => scheme.muted,
+        };
+        lines.push(Line::from(vec![
+            Span::styled(
+                format!("{} End-of-Life: ", eol.status.icon()),
+                Style::default().fg(scheme.text_muted),
+            ),
+            Span::styled(
+                format!(" {} ", eol.status.label()),
+                Style::default().fg(scheme.badge_fg_dark).bg(eol_color).bold(),
+            ),
+        ]));
+        // Days countdown
+        if let Some(days) = eol.days_until_eol {
+            let days_text = if days < 0 {
+                format!("{} days past EOL", days.abs())
+            } else if days == 0 {
+                "EOL today".to_string()
+            } else {
+                format!("{days} days remaining")
+            };
+            lines.push(Line::from(vec![
+                Span::styled("  ", Style::default()),
+                Span::styled(days_text, Style::default().fg(eol_color)),
+            ]));
+        }
+        // Product and cycle
+        lines.push(Line::from(vec![
+            Span::styled("  Product: ", Style::default().fg(scheme.text_muted)),
+            Span::styled(&eol.product, Style::default().fg(scheme.text)),
+            Span::styled(
+                format!(" (cycle {})", eol.cycle),
+                Style::default().fg(scheme.text_muted),
+            ),
+        ]));
+        // EOL date
+        if let Some(date) = eol.eol_date {
+            lines.push(Line::from(vec![
+                Span::styled("  EOL Date: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(date.to_string(), Style::default().fg(eol_color)),
+            ]));
+        }
+        // LTS indicator
+        if eol.is_lts {
+            lines.push(Line::from(vec![
+                Span::styled("  LTS: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(
+                    " Yes ",
+                    Style::default().fg(scheme.badge_fg_dark).bg(scheme.info).bold(),
+                ),
+            ]));
+        }
+        // Latest version in cycle
+        if let Some(latest) = &eol.latest_in_cycle {
+            let is_outdated = comp.version.as_deref().is_some_and(|v| v != latest.as_str());
+            lines.push(Line::from(vec![
+                Span::styled("  Latest: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(
+                    latest,
+                    Style::default().fg(if is_outdated { scheme.warning } else { scheme.success }),
+                ),
+                if is_outdated {
+                    Span::styled(" (update available)", Style::default().fg(scheme.warning))
+                } else {
+                    Span::styled(" (up to date)", Style::default().fg(scheme.success))
+                },
             ]));
         }
     }
@@ -780,7 +888,57 @@ fn render_component_stats_panel(frame: &mut Frame, area: Rect, app: &ViewApp, bo
         ]));
     }
 
-    lines.push(Line::from(""));
+    // EOL Status section (only when enriched)
+    if app.stats.eol_enriched {
+        lines.push(Line::styled(
+            "EOL Status:",
+            Style::default().fg(scheme.warning).bold(),
+        ));
+
+        let mut eol_counts: std::collections::HashMap<&str, usize> =
+            std::collections::HashMap::with_capacity(5);
+        eol_counts.insert("eol", 0);
+        eol_counts.insert("approaching", 0);
+        eol_counts.insert("security", 0);
+        eol_counts.insert("supported", 0);
+        eol_counts.insert("unknown", 0);
+
+        for comp in app.sbom.components.values() {
+            let key = eol_status_key(comp.eol.as_ref().map(|e| &e.status));
+            *eol_counts.entry(key).or_insert(0) += 1;
+        }
+
+        let eol_order = [
+            ("eol", "EOL", scheme.critical),
+            ("approaching", "Near EOL", scheme.high),
+            ("security", "Sec Only", scheme.warning),
+            ("supported", "Supported", scheme.success),
+            ("unknown", "Unknown", scheme.muted),
+        ];
+
+        let max_eol_count = eol_counts.values().copied().max().unwrap_or(1);
+
+        for (key, label, color) in &eol_order {
+            let count = eol_counts.get(key).copied().unwrap_or(0);
+            if count == 0 {
+                continue;
+            }
+            let bar_len = if max_eol_count > 0 {
+                (count * bar_width) / max_eol_count
+            } else {
+                0
+            };
+            let bar = "█".repeat(bar_len);
+            lines.push(Line::from(vec![
+                Span::styled(format!("  {label:12}"), Style::default().fg(*color)),
+                Span::styled(format!("{count:>5} "), Style::default().fg(scheme.text)),
+                Span::styled(bar, Style::default().fg(*color)),
+            ]));
+        }
+
+        lines.push(Line::from(""));
+    }
+
     lines.push(Line::from(""));
 
     // Navigation hints
@@ -911,6 +1069,55 @@ fn render_group_stats_panel(
         ]));
     }
 
+    // EOL Status section (only when enriched)
+    if app.stats.eol_enriched {
+        lines.push(Line::from(""));
+        lines.push(Line::styled(
+            "EOL Status:",
+            Style::default().fg(scheme.warning).bold(),
+        ));
+
+        let mut eol_counts: std::collections::HashMap<&str, usize> =
+            std::collections::HashMap::with_capacity(5);
+        eol_counts.insert("eol", 0);
+        eol_counts.insert("approaching", 0);
+        eol_counts.insert("security", 0);
+        eol_counts.insert("supported", 0);
+        eol_counts.insert("unknown", 0);
+
+        for comp in &group_comps {
+            let key = eol_status_key(comp.eol.as_ref().map(|e| &e.status));
+            *eol_counts.entry(key).or_insert(0) += 1;
+        }
+
+        let eol_order = [
+            ("eol", "EOL", scheme.critical),
+            ("approaching", "Near EOL", scheme.high),
+            ("security", "Sec Only", scheme.warning),
+            ("supported", "Supported", scheme.success),
+            ("unknown", "Unknown", scheme.muted),
+        ];
+
+        let max_eol = eol_counts.values().copied().max().unwrap_or(1);
+
+        for (key, label, color) in &eol_order {
+            let count = eol_counts.get(key).copied().unwrap_or(0);
+            if count == 0 {
+                continue;
+            }
+            let bar_len = if max_eol > 0 {
+                (count * bar_width) / max_eol
+            } else {
+                0
+            };
+            lines.push(Line::from(vec![
+                Span::styled(format!("  {label:10}"), Style::default().fg(*color)),
+                Span::styled(format!("{count:>4} "), Style::default().fg(scheme.text)),
+                Span::styled("█".repeat(bar_len), Style::default().fg(*color)),
+            ]));
+        }
+    }
+
     lines.push(Line::from(""));
 
     // Top 5 most vulnerable components in this group
@@ -979,4 +1186,15 @@ fn render_group_stats_panel(
         .wrap(Wrap { trim: true });
 
     frame.render_widget(panel, area);
+}
+
+/// Map an optional `EolStatus` to a bar-chart key.
+fn eol_status_key(status: Option<&EolStatus>) -> &'static str {
+    match status {
+        Some(EolStatus::EndOfLife) => "eol",
+        Some(EolStatus::ApproachingEol) => "approaching",
+        Some(EolStatus::SecurityOnly) => "security",
+        Some(EolStatus::Supported) => "supported",
+        _ => "unknown",
+    }
 }
