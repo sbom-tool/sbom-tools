@@ -73,10 +73,17 @@ impl ReportGenerator for MarkdownReporter {
             if config.includes(ReportType::Dependencies) {
                 writeln!(md, "- [Dependency Changes](#dependency-changes)")?;
             }
-            if config.includes(ReportType::Licenses) {
+            if config.includes(ReportType::Licenses)
+                && (!result.licenses.new_licenses.is_empty()
+                    || !result.licenses.removed_licenses.is_empty()
+                    || !result.licenses.conflicts.is_empty())
+            {
                 writeln!(md, "- [License Changes](#license-changes)")?;
             }
-            if config.includes(ReportType::Vulnerabilities) {
+            if config.includes(ReportType::Vulnerabilities)
+                && (!result.vulnerabilities.introduced.is_empty()
+                    || !result.vulnerabilities.resolved.is_empty())
+            {
                 writeln!(md, "- [Vulnerability Changes](#vulnerability-changes)")?;
             }
             writeln!(md, "- [CRA Compliance](#cra-compliance)")?;
@@ -234,7 +241,11 @@ impl ReportGenerator for MarkdownReporter {
         }
 
         // License changes section
-        if config.includes(ReportType::Licenses) {
+        if config.includes(ReportType::Licenses)
+            && (!result.licenses.new_licenses.is_empty()
+                || !result.licenses.removed_licenses.is_empty()
+                || !result.licenses.conflicts.is_empty())
+        {
             writeln!(md, "## License Changes\n")?;
 
             if !result.licenses.new_licenses.is_empty() {
@@ -292,7 +303,10 @@ impl ReportGenerator for MarkdownReporter {
         }
 
         // Vulnerability changes section
-        if config.includes(ReportType::Vulnerabilities) {
+        if config.includes(ReportType::Vulnerabilities)
+            && (!result.vulnerabilities.introduced.is_empty()
+                || !result.vulnerabilities.resolved.is_empty())
+        {
             writeln!(md, "## Vulnerability Changes\n")?;
 
             if !result.vulnerabilities.introduced.is_empty() {
@@ -453,6 +467,29 @@ impl ReportGenerator for MarkdownReporter {
     }
 }
 
+/// Format a delta indicator: arrow showing improvement/regression
+fn delta_indicator(old_val: usize, new_val: usize, lower_is_better: bool) -> &'static str {
+    if old_val == new_val {
+        ""
+    } else if (new_val < old_val) == lower_is_better {
+        " (+)"  // improvement
+    } else {
+        " (!)"  // regression
+    }
+}
+
+/// Compute compliance score as percentage (0-100)
+fn compliance_score(result: &ComplianceResult) -> u8 {
+    let total = result.violations.len() + 1; // +1 avoids div-by-zero, counts "base pass"
+    let issues = result.error_count + result.warning_count;
+    let score = if issues >= total {
+        0
+    } else {
+        ((total - issues) * 100) / total
+    };
+    score.min(100) as u8
+}
+
 /// Write CRA compliance comparison for diff reports
 fn write_cra_compliance_diff(
     md: &mut String,
@@ -461,15 +498,22 @@ fn write_cra_compliance_diff(
 ) -> std::fmt::Result {
     writeln!(md, "## CRA Compliance\n")?;
 
-    // Status summary
+    // Status summary with delta indicators
     let old_status = if old.is_compliant { "Compliant" } else { "Non-compliant" };
     let new_status = if new.is_compliant { "Compliant" } else { "Non-compliant" };
-    writeln!(md, "| | Old SBOM | New SBOM |")?;
-    writeln!(md, "|--|----------|----------|")?;
-    writeln!(md, "| **Status** | {old_status} | {new_status} |")?;
-    writeln!(md, "| **Level** | {} | {} |", old.level.name(), new.level.name())?;
-    writeln!(md, "| **Errors** | {} | {} |", old.error_count, new.error_count)?;
-    writeln!(md, "| **Warnings** | {} | {} |", old.warning_count, new.warning_count)?;
+    let old_score = compliance_score(old);
+    let new_score = compliance_score(new);
+    let err_delta = delta_indicator(old.error_count, new.error_count, true);
+    let warn_delta = delta_indicator(old.warning_count, new.warning_count, true);
+    let score_delta = delta_indicator(old_score.into(), new_score.into(), false);
+
+    writeln!(md, "| | Old SBOM | New SBOM | Trend |")?;
+    writeln!(md, "|--|----------|----------|-------|")?;
+    writeln!(md, "| **Status** | {old_status} | {new_status} | |")?;
+    writeln!(md, "| **Score** | {old_score}% | {new_score}% | {score_delta} |")?;
+    writeln!(md, "| **Level** | {} | {} | |", old.level.name(), new.level.name())?;
+    writeln!(md, "| **Errors** | {} | {} | {err_delta} |", old.error_count, new.error_count)?;
+    writeln!(md, "| **Warnings** | {} | {} | {warn_delta} |", old.warning_count, new.warning_count)?;
     writeln!(md)?;
 
     // Show new SBOM violations if any
@@ -486,7 +530,9 @@ fn write_cra_compliance_view(md: &mut String, result: &ComplianceResult) -> std:
     writeln!(md, "## CRA Compliance\n")?;
 
     let status = if result.is_compliant { "Compliant" } else { "Non-compliant" };
+    let score = compliance_score(result);
     writeln!(md, "**Status:** {status}  ")?;
+    writeln!(md, "**Score:** {score}%  ")?;
     writeln!(md, "**Level:** {}  ", result.level.name())?;
     writeln!(
         md,
@@ -501,27 +547,109 @@ fn write_cra_compliance_view(md: &mut String, result: &ComplianceResult) -> std:
     Ok(())
 }
 
-/// Write a markdown table of CRA compliance violations
+/// Aggregate violations by (severity, category, requirement) to reduce noise.
+/// Per-component violations like "Component X missing supplier" x9 become
+/// "9 components missing supplier (X, Y, Z, ...)".
+fn aggregate_violations(violations: &[crate::quality::Violation]) -> Vec<AggregatedViolation<'_>> {
+    use std::collections::BTreeMap;
+
+    // Group by (severity, category, requirement)
+    let mut groups: BTreeMap<(u8, &str, &str), Vec<&crate::quality::Violation>> = BTreeMap::new();
+    for v in violations {
+        let sev_ord = match v.severity {
+            ViolationSeverity::Error => 0,
+            ViolationSeverity::Warning => 1,
+            ViolationSeverity::Info => 2,
+        };
+        groups
+            .entry((sev_ord, v.category.name(), v.requirement.as_str()))
+            .or_default()
+            .push(v);
+    }
+
+    groups
+        .into_values()
+        .map(|group| {
+            if group.len() == 1 {
+                AggregatedViolation {
+                    severity: group[0].severity,
+                    category: group[0].category.name(),
+                    requirement: &group[0].requirement,
+                    message: group[0].message.clone(),
+                    remediation: group[0].remediation_guidance(),
+                    count: 1,
+                }
+            } else {
+                let elements: Vec<&str> = group
+                    .iter()
+                    .filter_map(|v| v.element.as_deref())
+                    .collect();
+                let message = if elements.is_empty() {
+                    group[0].message.clone()
+                } else {
+                    let preview: Vec<&str> = elements.iter().take(5).copied().collect();
+                    let suffix = if elements.len() > 5 {
+                        format!(", ... +{} more", elements.len() - 5)
+                    } else {
+                        String::new()
+                    };
+                    format!(
+                        "{} components affected ({}{})",
+                        elements.len(),
+                        preview.join(", "),
+                        suffix
+                    )
+                };
+                AggregatedViolation {
+                    severity: group[0].severity,
+                    category: group[0].category.name(),
+                    requirement: &group[0].requirement,
+                    message,
+                    remediation: group[0].remediation_guidance(),
+                    count: group.len(),
+                }
+            }
+        })
+        .collect()
+}
+
+struct AggregatedViolation<'a> {
+    severity: ViolationSeverity,
+    category: &'a str,
+    requirement: &'a str,
+    message: String,
+    remediation: &'static str,
+    count: usize,
+}
+
+/// Write a markdown table of CRA compliance violations (aggregated)
 fn write_violation_table(
     md: &mut String,
     violations: &[crate::quality::Violation],
 ) -> std::fmt::Result {
+    let aggregated = aggregate_violations(violations);
     writeln!(md, "| Severity | Category | Requirement | Message | Remediation |")?;
     writeln!(md, "|----------|----------|-------------|---------|-------------|")?;
-    for v in violations {
+    for v in &aggregated {
         let severity = match v.severity {
             ViolationSeverity::Error => "Error",
             ViolationSeverity::Warning => "Warning",
             ViolationSeverity::Info => "Info",
         };
+        let count_suffix = if v.count > 1 {
+            format!(" (x{})", v.count)
+        } else {
+            String::new()
+        };
         writeln!(
             md,
-            "| {} | {} | {} | {} | {} |",
+            "| {}{} | {} | {} | {} | {} |",
             severity,
-            escape_markdown_table(v.category.name()),
-            escape_markdown_table(&v.requirement),
+            escape_markdown_table(&count_suffix),
+            escape_markdown_table(v.category),
+            escape_markdown_table(v.requirement),
             escape_markdown_table(&v.message),
-            escape_markdown_table(v.remediation_guidance()),
+            escape_markdown_table(v.remediation),
         )?;
     }
     writeln!(md)?;

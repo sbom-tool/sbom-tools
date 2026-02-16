@@ -7,9 +7,6 @@ use crate::model::NormalizedSbom;
 use crate::quality::{ComplianceChecker, ComplianceLevel, ComplianceResult, ViolationSeverity};
 use std::fmt::Write;
 
-/// A single vulnerability row: (id, severity, `cvss_score`, `component_name`, `component_version`).
-type VulnRow<'a> = (&'a str, &'a Option<crate::model::Severity>, Option<f32>, &'a str, Option<&'a str>);
-
 /// HTML report generator
 pub struct HtmlReporter {
     /// Include inline CSS
@@ -57,7 +54,7 @@ fn write_html_head(html: &mut String, title: &str, include_styles: bool) -> std:
 
 /// Write the page header with title and generation info.
 fn write_page_header(html: &mut String, title: &str, subtitle: Option<&str>) -> std::fmt::Result {
-    writeln!(html, "<div class=\"header\">")?;
+    writeln!(html, "<div class=\"header\" id=\"top\">")?;
     writeln!(html, "    <h1>{}</h1>", escape_html(title))?;
     if let Some(sub) = subtitle {
         writeln!(html, "    <p>{}</p>", escape_html(sub))?;
@@ -69,6 +66,17 @@ fn write_page_header(html: &mut String, title: &str, subtitle: Option<&str>) -> 
         chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")
     )?;
     writeln!(html, "</div>")
+}
+
+/// Write a table of contents navigation.
+fn write_toc(html: &mut String, sections: &[(&str, &str)]) -> std::fmt::Result {
+    writeln!(html, "<nav class=\"toc\">")?;
+    writeln!(html, "    <strong>Contents:</strong>")?;
+    for (id, label) in sections {
+        write!(html, "    <a href=\"#{id}\">{label}</a>")?;
+    }
+    writeln!(html)?;
+    writeln!(html, "</nav>")
 }
 
 /// Write a single summary card.
@@ -94,7 +102,7 @@ fn write_html_footer(html: &mut String) -> std::fmt::Result {
 
 /// Write the component changes table for diff reports.
 fn write_diff_component_table(html: &mut String, result: &DiffResult) -> std::fmt::Result {
-    writeln!(html, "<div class=\"section\">")?;
+    writeln!(html, "<div class=\"section\" id=\"component-changes\">")?;
     writeln!(html, "    <h2>Component Changes</h2>")?;
     writeln!(html, "    <table>")?;
     writeln!(html, "        <thead>")?;
@@ -145,7 +153,7 @@ fn write_diff_component_table(html: &mut String, result: &DiffResult) -> std::fm
 
 /// Write the introduced vulnerabilities table for diff reports.
 fn write_diff_vuln_table(html: &mut String, result: &DiffResult) -> std::fmt::Result {
-    writeln!(html, "<div class=\"section\">")?;
+    writeln!(html, "<div class=\"section\" id=\"vulnerabilities\">")?;
     writeln!(html, "    <h2>Introduced Vulnerabilities</h2>")?;
     writeln!(html, "    <table>")?;
     writeln!(html, "        <thead>")?;
@@ -218,7 +226,7 @@ fn write_diff_vuln_table(html: &mut String, result: &DiffResult) -> std::fmt::Re
 
 /// Write the components table for view reports.
 fn write_view_component_table(html: &mut String, sbom: &NormalizedSbom) -> std::fmt::Result {
-    writeln!(html, "<div class=\"section\">")?;
+    writeln!(html, "<div class=\"section\" id=\"components\">")?;
     writeln!(html, "    <h2>Components</h2>")?;
     writeln!(html, "    <table>")?;
     writeln!(html, "        <thead>")?;
@@ -271,9 +279,12 @@ fn write_view_component_table(html: &mut String, sbom: &NormalizedSbom) -> std::
     writeln!(html, "</div>")
 }
 
-/// Write the vulnerabilities table for view reports.
+/// A view vulnerability row with SLA info.
+type ViewVulnRow<'a> = (&'a str, &'a Option<crate::model::Severity>, Option<f32>, &'a str, Option<&'a str>, Option<&'a crate::model::VulnerabilityRef>);
+
+/// Write the vulnerabilities table for view reports (with SLA columns).
 fn write_view_vuln_table(html: &mut String, sbom: &NormalizedSbom) -> std::fmt::Result {
-    writeln!(html, "<div class=\"section\">")?;
+    writeln!(html, "<div class=\"section\" id=\"vulnerabilities\">")?;
     writeln!(html, "    <h2>Vulnerabilities</h2>")?;
     writeln!(html, "    <table>")?;
     writeln!(html, "        <thead>")?;
@@ -281,6 +292,7 @@ fn write_view_vuln_table(html: &mut String, sbom: &NormalizedSbom) -> std::fmt::
     writeln!(html, "                <th>ID</th>")?;
     writeln!(html, "                <th>Severity</th>")?;
     writeln!(html, "                <th>CVSS</th>")?;
+    writeln!(html, "                <th>SLA</th>")?;
     writeln!(html, "                <th>Component</th>")?;
     writeln!(html, "                <th>Version</th>")?;
     writeln!(html, "            </tr>")?;
@@ -288,7 +300,7 @@ fn write_view_vuln_table(html: &mut String, sbom: &NormalizedSbom) -> std::fmt::
     writeln!(html, "        <tbody>")?;
 
     // Collect all vulnerabilities with their component info
-    let mut all_vulns: Vec<VulnRow<'_>> = sbom
+    let mut all_vulns: Vec<ViewVulnRow<'_>> = sbom
         .components
         .values()
         .flat_map(|comp| {
@@ -299,6 +311,7 @@ fn write_view_vuln_table(html: &mut String, sbom: &NormalizedSbom) -> std::fmt::
                     v.cvss.first().map(|c| c.base_score),
                     comp.name.as_str(),
                     comp.version.as_deref(),
+                    Some(v),
                 )
             })
         })
@@ -317,7 +330,7 @@ fn write_view_vuln_table(html: &mut String, sbom: &NormalizedSbom) -> std::fmt::
         sev_order(a.1).cmp(&sev_order(b.1))
     });
 
-    for (id, severity, cvss, comp_name, version) in all_vulns {
+    for &(id, severity, cvss, comp_name, version, vuln) in &all_vulns {
         let (badge_class, sev_str) = match severity {
             Some(crate::model::Severity::Critical) => ("badge-critical", "Critical"),
             Some(crate::model::Severity::High) => ("badge-high", "High"),
@@ -325,6 +338,13 @@ fn write_view_vuln_table(html: &mut String, sbom: &NormalizedSbom) -> std::fmt::
             Some(crate::model::Severity::Low) => ("badge-low", "Low"),
             Some(crate::model::Severity::Info) => ("badge-low", "Info"),
             _ => ("badge-low", "Unknown"),
+        };
+
+        // Compute SLA from published date if available
+        let (sla_text, sla_class) = if let Some(v) = vuln {
+            compute_view_sla(v)
+        } else {
+            ("-".to_string(), "sla-unknown")
         };
 
         writeln!(html, "            <tr>")?;
@@ -340,6 +360,14 @@ fn write_view_vuln_table(html: &mut String, sbom: &NormalizedSbom) -> std::fmt::
                 .as_deref()
                 .unwrap_or("-")
         )?;
+        if sla_class.is_empty() {
+            writeln!(html, "                <td>{sla_text}</td>")?;
+        } else {
+            writeln!(
+                html,
+                "                <td><span class=\"{sla_class}\">{sla_text}</span></td>"
+            )?;
+        }
         writeln!(html, "                <td>{}</td>", escape_html(comp_name))?;
         writeln!(html, "                <td>{}</td>", escape_html_opt(version))?;
         writeln!(html, "            </tr>")?;
@@ -348,6 +376,39 @@ fn write_view_vuln_table(html: &mut String, sbom: &NormalizedSbom) -> std::fmt::
     writeln!(html, "        </tbody>")?;
     writeln!(html, "    </table>")?;
     writeln!(html, "</div>")
+}
+
+/// Compute SLA display for a vulnerability in view mode (from published date).
+fn compute_view_sla(vuln: &crate::model::VulnerabilityRef) -> (String, &'static str) {
+    if let Some(published) = vuln.published {
+        let delta: chrono::TimeDelta = chrono::Utc::now() - published;
+        let days = delta.num_days();
+        if days < 0 {
+            return ("-".to_string(), "sla-unknown");
+        }
+        let days = days as u64;
+        // Use standard SLA thresholds based on severity
+        let sla_days: Option<u64> = match &vuln.severity {
+            Some(crate::model::Severity::Critical) => Some(15),
+            Some(crate::model::Severity::High) => Some(30),
+            Some(crate::model::Severity::Medium) => Some(90),
+            Some(crate::model::Severity::Low) => Some(180),
+            _ => None,
+        };
+        if let Some(sla) = sla_days {
+            if days > sla {
+                (format!("{}d late", days - sla), "sla-overdue")
+            } else if sla - days <= 7 {
+                (format!("{}d left", sla - days), "sla-due-soon")
+            } else {
+                (format!("{}d left", sla - days), "sla-on-track")
+            }
+        } else {
+            (format!("{days}d old"), "sla-unknown")
+        }
+    } else {
+        ("-".to_string(), "sla-unknown")
+    }
 }
 
 /// Format SLA status for HTML display.
@@ -364,28 +425,58 @@ fn format_sla_html(vuln: &VulnerabilityDetail) -> (String, &'static str) {
     }
 }
 
+/// Compute compliance score as percentage (0-100)
+fn compliance_score_html(result: &ComplianceResult) -> u8 {
+    let total = result.violations.len() + 1;
+    let issues = result.error_count + result.warning_count;
+    let score = if issues >= total {
+        0
+    } else {
+        ((total - issues) * 100) / total
+    };
+    score.min(100) as u8
+}
+
+/// Generate an HTML trend badge for numeric delta
+fn trend_badge(old_val: usize, new_val: usize, lower_is_better: bool) -> &'static str {
+    if old_val == new_val {
+        ""
+    } else if (new_val < old_val) == lower_is_better {
+        " <span class=\"badge badge-added\">improved</span>"
+    } else {
+        " <span class=\"badge badge-removed\">regressed</span>"
+    }
+}
+
 /// Write a CRA compliance comparison section for diff reports.
 fn write_cra_compliance_diff_html(
     html: &mut String,
     old: &ComplianceResult,
     new: &ComplianceResult,
 ) -> std::fmt::Result {
-    writeln!(html, "<div class=\"section\">")?;
+    writeln!(html, "<div class=\"section\" id=\"cra-compliance\">")?;
     writeln!(html, "    <h2>CRA Compliance</h2>")?;
     writeln!(html, "    <table>")?;
     writeln!(html, "        <thead>")?;
-    writeln!(html, "            <tr><th></th><th>Old SBOM</th><th>New SBOM</th></tr>")?;
+    writeln!(html, "            <tr><th></th><th>Old SBOM</th><th>New SBOM</th><th>Trend</th></tr>")?;
     writeln!(html, "        </thead>")?;
     writeln!(html, "        <tbody>")?;
 
     let old_badge = compliance_status_badge(old.is_compliant);
     let new_badge = compliance_status_badge(new.is_compliant);
-    writeln!(html, "            <tr><td><strong>Status</strong></td><td>{old_badge}</td><td>{new_badge}</td></tr>")?;
-    writeln!(html, "            <tr><td><strong>Level</strong></td><td>{}</td><td>{}</td></tr>",
+    let old_score = compliance_score_html(old);
+    let new_score = compliance_score_html(new);
+    let err_trend = trend_badge(old.error_count, new.error_count, true);
+    let warn_trend = trend_badge(old.warning_count, new.warning_count, true);
+    let score_trend = trend_badge(old_score.into(), new_score.into(), false);
+
+    writeln!(html, "            <tr><td><strong>Status</strong></td><td>{old_badge}</td><td>{new_badge}</td><td></td></tr>")?;
+    writeln!(html, "            <tr><td><strong>Score</strong></td><td>{old_score}%</td><td>{new_score}%</td><td>{score_trend}</td></tr>")?;
+    writeln!(html, "            <tr><td><strong>Level</strong></td><td>{}</td><td>{}</td><td></td></tr>",
         escape_html(old.level.name()), escape_html(new.level.name()))?;
-    writeln!(html, "            <tr><td><strong>Errors</strong></td><td>{}</td><td>{}</td></tr>",
+    writeln!(html, "            <tr><td><strong>Errors</strong></td><td>{}</td><td>{}</td><td>{err_trend}</td></tr>",
         old.error_count, new.error_count)?;
-    writeln!(html, "            <tr><td><strong>Warnings</strong></td><td>{}</td><td>{}</td></tr>",
+    writeln!(html, "            <tr><td><strong>Warnings</strong></td><td>{}</td><td>{}</td><td>{warn_trend}</td></tr>",
         old.warning_count, new.warning_count)?;
 
     writeln!(html, "        </tbody>")?;
@@ -396,16 +487,19 @@ fn write_cra_compliance_diff_html(
         write_violation_table_html(html, &new.violations)?;
     }
 
-    writeln!(html, "</div>")
+    writeln!(html, "</div>")?;
+    writeln!(html, "<a href=\"#top\" class=\"back-to-top\">Back to top</a>")
 }
 
 /// Write a CRA compliance section for view reports.
 fn write_cra_compliance_view_html(html: &mut String, result: &ComplianceResult) -> std::fmt::Result {
-    writeln!(html, "<div class=\"section\">")?;
+    writeln!(html, "<div class=\"section\" id=\"cra-compliance\">")?;
     writeln!(html, "    <h2>CRA Compliance</h2>")?;
 
     let badge = compliance_status_badge(result.is_compliant);
+    let score = compliance_score_html(result);
     writeln!(html, "    <p><strong>Status:</strong> {badge} &nbsp; ")?;
+    writeln!(html, "    <strong>Score:</strong> {score}% &nbsp; ")?;
     writeln!(html, "    <strong>Level:</strong> {} &nbsp; ", escape_html(result.level.name()))?;
     writeln!(html, "    <strong>Issues:</strong> {} errors, {} warnings</p>",
         result.error_count, result.warning_count)?;
@@ -414,14 +508,81 @@ fn write_cra_compliance_view_html(html: &mut String, result: &ComplianceResult) 
         write_violation_table_html(html, &result.violations)?;
     }
 
-    writeln!(html, "</div>")
+    writeln!(html, "</div>")?;
+    writeln!(html, "<a href=\"#top\" class=\"back-to-top\">Back to top</a>")
 }
 
-/// Write an HTML table of compliance violations.
+/// Aggregate violations by (severity, category, requirement) to reduce noise.
+fn aggregate_violations_html(violations: &[crate::quality::Violation]) -> Vec<AggregatedViolationHtml<'_>> {
+    use std::collections::BTreeMap;
+
+    let mut groups: BTreeMap<(u8, &str, &str), Vec<&crate::quality::Violation>> = BTreeMap::new();
+    for v in violations {
+        let sev_ord = match v.severity {
+            ViolationSeverity::Error => 0,
+            ViolationSeverity::Warning => 1,
+            ViolationSeverity::Info => 2,
+        };
+        groups
+            .entry((sev_ord, v.category.name(), v.requirement.as_str()))
+            .or_default()
+            .push(v);
+    }
+
+    groups
+        .into_values()
+        .map(|group| {
+            let message = if group.len() == 1 {
+                group[0].message.clone()
+            } else {
+                let elements: Vec<&str> = group
+                    .iter()
+                    .filter_map(|v| v.element.as_deref())
+                    .collect();
+                if elements.is_empty() {
+                    group[0].message.clone()
+                } else {
+                    let preview: Vec<&str> = elements.iter().take(5).copied().collect();
+                    let suffix = if elements.len() > 5 {
+                        format!(", ... +{} more", elements.len() - 5)
+                    } else {
+                        String::new()
+                    };
+                    format!(
+                        "{} components affected ({}{})",
+                        elements.len(),
+                        preview.join(", "),
+                        suffix
+                    )
+                }
+            };
+            AggregatedViolationHtml {
+                severity: group[0].severity,
+                category: group[0].category.name(),
+                requirement: &group[0].requirement,
+                message,
+                remediation: group[0].remediation_guidance(),
+                count: group.len(),
+            }
+        })
+        .collect()
+}
+
+struct AggregatedViolationHtml<'a> {
+    severity: ViolationSeverity,
+    category: &'a str,
+    requirement: &'a str,
+    message: String,
+    remediation: &'static str,
+    count: usize,
+}
+
+/// Write an HTML table of compliance violations (aggregated, with collapsible remediation).
 fn write_violation_table_html(
     html: &mut String,
     violations: &[crate::quality::Violation],
 ) -> std::fmt::Result {
+    let aggregated = aggregate_violations_html(violations);
     writeln!(html, "    <table>")?;
     writeln!(html, "        <thead>")?;
     writeln!(html, "            <tr>")?;
@@ -434,18 +595,23 @@ fn write_violation_table_html(
     writeln!(html, "        </thead>")?;
     writeln!(html, "        <tbody>")?;
 
-    for v in violations {
+    for v in &aggregated {
         let (badge_class, label) = match v.severity {
             ViolationSeverity::Error => ("badge-critical", "Error"),
             ViolationSeverity::Warning => ("badge-medium", "Warning"),
             ViolationSeverity::Info => ("badge-low", "Info"),
         };
+        let count_suffix = if v.count > 1 {
+            format!(" <span class=\"badge badge-transitive\">x{}</span>", v.count)
+        } else {
+            String::new()
+        };
         writeln!(html, "            <tr>")?;
-        writeln!(html, "                <td><span class=\"badge {badge_class}\">{label}</span></td>")?;
-        writeln!(html, "                <td>{}</td>", escape_html(v.category.name()))?;
-        writeln!(html, "                <td>{}</td>", escape_html(&v.requirement))?;
+        writeln!(html, "                <td><span class=\"badge {badge_class}\">{label}</span>{count_suffix}</td>")?;
+        writeln!(html, "                <td>{}</td>", escape_html(v.category))?;
+        writeln!(html, "                <td>{}</td>", escape_html(v.requirement))?;
         writeln!(html, "                <td>{}</td>", escape_html(&v.message))?;
-        writeln!(html, "                <td>{}</td>", escape_html(v.remediation_guidance()))?;
+        writeln!(html, "                <td><details><summary>View</summary>{}</details></td>", escape_html(v.remediation))?;
         writeln!(html, "            </tr>")?;
     }
 
@@ -483,6 +649,19 @@ impl ReportGenerator for HtmlReporter {
         write_html_head(&mut html, &title, self.include_styles)?;
         write_page_header(&mut html, &title, None)?;
 
+        // Build TOC entries based on what will render
+        let has_components = config.includes(ReportType::Components) && !result.components.is_empty();
+        let has_vulns = config.includes(ReportType::Vulnerabilities) && !result.vulnerabilities.introduced.is_empty();
+        let mut toc_entries: Vec<(&str, &str)> = Vec::new();
+        if has_components {
+            toc_entries.push(("component-changes", "Components"));
+        }
+        if has_vulns {
+            toc_entries.push(("vulnerabilities", "Vulnerabilities"));
+        }
+        toc_entries.push(("cra-compliance", "CRA Compliance"));
+        write_toc(&mut html, &toc_entries)?;
+
         // Summary cards
         writeln!(html, "<div class=\"summary-cards\">")?;
         write_card(&mut html, "Components Added", &format!("+{}", result.summary.components_added), "added")?;
@@ -493,12 +672,12 @@ impl ReportGenerator for HtmlReporter {
         writeln!(html, "</div>")?;
 
         // Component changes
-        if config.includes(ReportType::Components) && !result.components.is_empty() {
+        if has_components {
             write_diff_component_table(&mut html, result)?;
         }
 
         // Vulnerability changes
-        if config.includes(ReportType::Vulnerabilities) && !result.vulnerabilities.introduced.is_empty() {
+        if has_vulns {
             write_diff_vuln_table(&mut html, result)?;
         }
 
@@ -545,6 +724,19 @@ impl ReportGenerator for HtmlReporter {
         write_html_head(&mut html, &title, self.include_styles)?;
         write_page_header(&mut html, &title, subtitle.as_deref())?;
 
+        // Build TOC
+        let has_components = config.includes(ReportType::Components) && total_components > 0;
+        let has_vulns = config.includes(ReportType::Vulnerabilities) && total_vulns > 0;
+        let mut toc_entries: Vec<(&str, &str)> = Vec::new();
+        if has_components {
+            toc_entries.push(("components", "Components"));
+        }
+        if has_vulns {
+            toc_entries.push(("vulnerabilities", "Vulnerabilities"));
+        }
+        toc_entries.push(("cra-compliance", "CRA Compliance"));
+        write_toc(&mut html, &toc_entries)?;
+
         // Summary cards
         writeln!(html, "<div class=\"summary-cards\">")?;
         write_card(&mut html, "Total Components", &total_components.to_string(), "")?;
@@ -557,12 +749,12 @@ impl ReportGenerator for HtmlReporter {
         writeln!(html, "</div>")?;
 
         // Components table
-        if config.includes(ReportType::Components) && total_components > 0 {
+        if has_components {
             write_view_component_table(&mut html, sbom)?;
         }
 
         // Vulnerabilities table
-        if config.includes(ReportType::Vulnerabilities) && total_vulns > 0 {
+        if has_vulns {
             write_view_vuln_table(&mut html, sbom)?;
         }
 
@@ -732,6 +924,55 @@ const HTML_STYLES: &str = r"
                 border-top: 1px solid var(--border-color);
                 font-size: 0.9em;
                 color: #a6adc8;
+            }
+
+            .toc {
+                background-color: var(--card-bg);
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                padding: 12px 20px;
+                margin-bottom: 30px;
+                display: flex;
+                gap: 16px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+
+            .toc a {
+                color: var(--accent-color);
+                text-decoration: none;
+                padding: 4px 8px;
+                border-radius: 4px;
+            }
+
+            .toc a:hover {
+                background-color: rgba(137, 180, 250, 0.1);
+            }
+
+            .back-to-top {
+                display: inline-block;
+                color: #a6adc8;
+                text-decoration: none;
+                font-size: 0.85em;
+                margin-bottom: 20px;
+            }
+
+            .back-to-top:hover {
+                color: var(--accent-color);
+            }
+
+            details summary {
+                cursor: pointer;
+                color: var(--accent-color);
+                font-size: 0.85em;
+            }
+
+            details summary:hover {
+                text-decoration: underline;
+            }
+
+            details[open] summary {
+                margin-bottom: 6px;
             }
         </style>
 ";

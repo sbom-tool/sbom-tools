@@ -20,6 +20,8 @@ pub fn run_validate(
     standard: String,
     output: ReportFormat,
     output_file: Option<PathBuf>,
+    fail_on_warning: bool,
+    summary: bool,
 ) -> Result<()> {
     let parsed = parse_sbom_with_context(&sbom_path, false)?;
 
@@ -31,7 +33,20 @@ pub fn run_validate(
             bail!("Unknown validation standard: {standard}");
         }
     };
-    write_compliance_output(&result, output, output_file)?;
+
+    if summary {
+        write_compliance_summary(&result, output_file)?;
+    } else {
+        write_compliance_output(&result, output, output_file)?;
+    }
+
+    // Exit code: 1 for errors, 2 for warnings (if --fail-on-warning)
+    if result.error_count > 0 {
+        std::process::exit(1);
+    }
+    if fail_on_warning && result.warning_count > 0 {
+        std::process::exit(2);
+    }
 
     Ok(())
 }
@@ -50,6 +65,45 @@ fn write_compliance_output(
         _ => format_compliance_text(result),
     };
 
+    write_output(&content, &target, false)?;
+    Ok(())
+}
+
+/// Compact summary for CI badge generation
+#[derive(serde::Serialize)]
+struct ComplianceSummary {
+    standard: String,
+    compliant: bool,
+    score: u8,
+    errors: usize,
+    warnings: usize,
+    info: usize,
+}
+
+fn write_compliance_summary(
+    result: &ComplianceResult,
+    output_file: Option<PathBuf>,
+) -> Result<()> {
+    let target = OutputTarget::from_option(output_file);
+    let total = result.violations.len() + 1;
+    let issues = result.error_count + result.warning_count;
+    let score = if issues >= total {
+        0
+    } else {
+        ((total - issues) * 100) / total
+    }
+    .min(100) as u8;
+
+    let summary = ComplianceSummary {
+        standard: result.level.name().to_string(),
+        compliant: result.is_compliant,
+        score,
+        errors: result.error_count,
+        warnings: result.warning_count,
+        info: result.info_count,
+    };
+    let content = serde_json::to_string(&summary)
+        .map_err(|e| anyhow::anyhow!("Failed to serialize summary: {e}"))?;
     write_output(&content, &target, false)?;
     Ok(())
 }

@@ -254,6 +254,7 @@ impl ReportGenerator for SarifReporter {
 }
 
 pub fn generate_compliance_sarif(result: &ComplianceResult) -> Result<String, ReportError> {
+    let rules = get_sarif_rules_for_standard(result.level);
     let sarif = SarifReport {
         schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
         version: "2.1.0".to_string(),
@@ -263,7 +264,7 @@ pub fn generate_compliance_sarif(result: &ComplianceResult) -> Result<String, Re
                     name: "sbom-tools".to_string(),
                     version: env!("CARGO_PKG_VERSION").to_string(),
                     information_uri: "https://github.com/binarly-io/sbom-tools".to_string(),
-                    rules: get_sarif_compliance_rules(),
+                    rules,
                 },
             },
             results: compliance_results_to_sarif(result, None),
@@ -305,6 +306,52 @@ const fn violation_severity_to_level(severity: ViolationSeverity) -> SarifLevel 
 /// Map a violation's requirement string to a specific SARIF rule ID.
 fn violation_to_rule_id(requirement: &str) -> &'static str {
     let req = requirement.to_lowercase();
+
+    // NTIA-specific rules
+    if req.starts_with("ntia") {
+        if req.contains("author") {
+            return "SBOM-NTIA-AUTHOR";
+        } else if req.contains("component name") {
+            return "SBOM-NTIA-NAME";
+        } else if req.contains("version") {
+            return "SBOM-NTIA-VERSION";
+        } else if req.contains("supplier") {
+            return "SBOM-NTIA-SUPPLIER";
+        } else if req.contains("unique identifier") {
+            return "SBOM-NTIA-IDENTIFIER";
+        } else if req.contains("dependency") {
+            return "SBOM-NTIA-DEPENDENCY";
+        }
+        return "SBOM-NTIA-GENERAL";
+    }
+
+    // FDA-specific rules
+    if req.starts_with("fda") {
+        if req.contains("author") || req.contains("creator") {
+            return "SBOM-FDA-CREATOR";
+        } else if req.contains("serial") || req.contains("namespace") {
+            return "SBOM-FDA-NAMESPACE";
+        } else if req.contains("name") || req.contains("title") {
+            return "SBOM-FDA-NAME";
+        } else if req.contains("supplier") || req.contains("manufacturer") {
+            return "SBOM-FDA-SUPPLIER";
+        } else if req.contains("hash") {
+            return "SBOM-FDA-HASH";
+        } else if req.contains("identifier") {
+            return "SBOM-FDA-IDENTIFIER";
+        } else if req.contains("version") {
+            return "SBOM-FDA-VERSION";
+        } else if req.contains("dependency") || req.contains("orphan") {
+            return "SBOM-FDA-DEPENDENCY";
+        } else if req.contains("support") || req.contains("contact") {
+            return "SBOM-FDA-SUPPORT";
+        } else if req.contains("vulnerabilit") || req.contains("security") {
+            return "SBOM-FDA-SECURITY";
+        }
+        return "SBOM-FDA-GENERAL";
+    }
+
+    // CRA-specific rules (original logic)
     if req.contains("art. 13(4)") || req.contains("art.13(4)") {
         "SBOM-CRA-ART-13-4"
     } else if req.contains("art. 13(6)") || req.contains("art.13(6)") {
@@ -444,6 +491,169 @@ fn get_sarif_view_rules() -> Vec<SarifRule> {
     }];
     rules.extend(get_sarif_compliance_rules());
     rules
+}
+
+/// Get the appropriate compliance rules based on the standard being checked.
+fn get_sarif_rules_for_standard(level: ComplianceLevel) -> Vec<SarifRule> {
+    match level {
+        ComplianceLevel::NtiaMinimum => get_sarif_ntia_rules(),
+        ComplianceLevel::FdaMedicalDevice => get_sarif_fda_rules(),
+        _ => get_sarif_compliance_rules(),
+    }
+}
+
+fn get_sarif_ntia_rules() -> Vec<SarifRule> {
+    vec![
+        SarifRule {
+            id: "SBOM-NTIA-AUTHOR".to_string(),
+            name: "NtiaAuthor".to_string(),
+            short_description: SarifMessage {
+                text: "NTIA Minimum Elements: Author/creator information".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-NTIA-NAME".to_string(),
+            name: "NtiaComponentName".to_string(),
+            short_description: SarifMessage {
+                text: "NTIA Minimum Elements: Component name".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-NTIA-VERSION".to_string(),
+            name: "NtiaVersion".to_string(),
+            short_description: SarifMessage {
+                text: "NTIA Minimum Elements: Component version string".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-NTIA-SUPPLIER".to_string(),
+            name: "NtiaSupplier".to_string(),
+            short_description: SarifMessage {
+                text: "NTIA Minimum Elements: Supplier name".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-NTIA-IDENTIFIER".to_string(),
+            name: "NtiaUniqueIdentifier".to_string(),
+            short_description: SarifMessage {
+                text: "NTIA Minimum Elements: Unique identifier (PURL/CPE/SWID)".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-NTIA-DEPENDENCY".to_string(),
+            name: "NtiaDependency".to_string(),
+            short_description: SarifMessage {
+                text: "NTIA Minimum Elements: Dependency relationship".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-NTIA-GENERAL".to_string(),
+            name: "NtiaGeneralRequirement".to_string(),
+            short_description: SarifMessage {
+                text: "NTIA Minimum Elements: General requirement".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+    ]
+}
+
+fn get_sarif_fda_rules() -> Vec<SarifRule> {
+    vec![
+        SarifRule {
+            id: "SBOM-FDA-CREATOR".to_string(),
+            name: "FdaCreator".to_string(),
+            short_description: SarifMessage {
+                text: "FDA Medical Device: SBOM creator/manufacturer information".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-FDA-NAMESPACE".to_string(),
+            name: "FdaNamespace".to_string(),
+            short_description: SarifMessage {
+                text: "FDA Medical Device: SBOM serial number or document namespace".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-FDA-NAME".to_string(),
+            name: "FdaDocumentName".to_string(),
+            short_description: SarifMessage {
+                text: "FDA Medical Device: SBOM document name/title".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-FDA-SUPPLIER".to_string(),
+            name: "FdaSupplier".to_string(),
+            short_description: SarifMessage {
+                text: "FDA Medical Device: Component supplier/manufacturer information".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-FDA-HASH".to_string(),
+            name: "FdaHash".to_string(),
+            short_description: SarifMessage {
+                text: "FDA Medical Device: Component cryptographic hash".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-FDA-IDENTIFIER".to_string(),
+            name: "FdaIdentifier".to_string(),
+            short_description: SarifMessage {
+                text: "FDA Medical Device: Component unique identifier (PURL/CPE/SWID)".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-FDA-VERSION".to_string(),
+            name: "FdaVersion".to_string(),
+            short_description: SarifMessage {
+                text: "FDA Medical Device: Component version information".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-FDA-DEPENDENCY".to_string(),
+            name: "FdaDependency".to_string(),
+            short_description: SarifMessage {
+                text: "FDA Medical Device: Dependency relationships".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-FDA-SUPPORT".to_string(),
+            name: "FdaSupport".to_string(),
+            short_description: SarifMessage {
+                text: "FDA Medical Device: Component support/contact information".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Note },
+        },
+        SarifRule {
+            id: "SBOM-FDA-SECURITY".to_string(),
+            name: "FdaSecurity".to_string(),
+            short_description: SarifMessage {
+                text: "FDA Medical Device: Security vulnerability information".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-FDA-GENERAL".to_string(),
+            name: "FdaGeneralRequirement".to_string(),
+            short_description: SarifMessage {
+                text: "FDA Medical Device: General SBOM requirement".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+    ]
 }
 
 fn get_sarif_compliance_rules() -> Vec<SarifRule> {

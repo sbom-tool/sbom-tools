@@ -241,6 +241,14 @@ struct ValidateArgs {
     /// Output file path (stdout if not specified)
     #[arg(short = 'O', long)]
     output_file: Option<PathBuf>,
+
+    /// Exit with non-zero code when warnings are found (not just errors)
+    #[arg(long)]
+    fail_on_warning: bool,
+
+    /// Output only a compact JSON summary (overrides --output)
+    #[arg(long)]
+    summary: bool,
 }
 
 /// Arguments for the `diff-multi` subcommand
@@ -484,9 +492,14 @@ fn main() -> Result<()> {
             cli::run_view(config)
         }
 
-        Commands::Validate(args) => {
-            cli::run_validate(args.sbom, args.standard, args.output, args.output_file)
-        }
+        Commands::Validate(args) => cli::run_validate(
+            args.sbom,
+            args.standard,
+            args.output,
+            args.output_file,
+            args.fail_on_warning,
+            args.summary,
+        ),
 
         Commands::DiffMulti(args) => cli::run_diff_multi(
             args.baseline,
