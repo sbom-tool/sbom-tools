@@ -132,6 +132,10 @@ struct DiffArgs {
     #[arg(long)]
     enrich_vulns: bool,
 
+    /// Enable end-of-life detection via endoflife.date
+    #[arg(long)]
+    enrich_eol: bool,
+
     /// Cache directory for vulnerability data
     #[arg(long)]
     vuln_cache_dir: Option<PathBuf>,
@@ -414,6 +418,7 @@ fn main() -> Result<()> {
                 cache_dir: args.vuln_cache_dir.or_else(|| Some(dirs::osv_cache_dir())),
                 bypass_cache: args.refresh_vulns,
                 timeout_secs: args.osv_timeout,
+                enable_eol: args.enrich_eol,
             };
 
             let config = DiffConfig {

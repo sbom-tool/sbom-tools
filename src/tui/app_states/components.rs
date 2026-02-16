@@ -46,10 +46,23 @@ impl ComponentsState {
             ComponentFilter::All => ComponentFilter::Added,
             ComponentFilter::Added => ComponentFilter::Removed,
             ComponentFilter::Removed => ComponentFilter::Modified,
-            ComponentFilter::Modified => ComponentFilter::All,
+            ComponentFilter::Modified => ComponentFilter::EolOnly,
+            ComponentFilter::EolOnly => ComponentFilter::EolRisk,
+            ComponentFilter::EolRisk => ComponentFilter::All,
         };
         self.selected = 0; // Reset selection on filter change
         self.multi_selected.clear(); // Clear multi-selection on filter change
+    }
+
+    /// Toggle filter in view mode (only view-relevant filters)
+    pub fn toggle_view_filter(&mut self) {
+        self.filter = match self.filter {
+            ComponentFilter::All => ComponentFilter::EolOnly,
+            ComponentFilter::EolOnly => ComponentFilter::EolRisk,
+            _ => ComponentFilter::All,
+        };
+        self.selected = 0;
+        self.multi_selected.clear();
     }
 
     pub const fn toggle_sort(&mut self) {
@@ -117,6 +130,10 @@ pub enum ComponentFilter {
     Added,
     Removed,
     Modified,
+    /// Show only components that have reached end-of-life
+    EolOnly,
+    /// Show only components that are EOL or approaching EOL
+    EolRisk,
 }
 
 impl ComponentFilter {
@@ -126,7 +143,14 @@ impl ComponentFilter {
             Self::Added => "Added",
             Self::Removed => "Removed",
             Self::Modified => "Modified",
+            Self::EolOnly => "EOL",
+            Self::EolRisk => "EOL Risk",
         }
+    }
+
+    /// Whether this filter applies to view mode (non-diff)
+    pub const fn is_view_filter(self) -> bool {
+        matches!(self, Self::All | Self::EolOnly | Self::EolRisk)
     }
 }
 
@@ -174,6 +198,95 @@ pub fn sort_component_changes(items: &mut Vec<&crate::diff::ComponentChange>, so
                 )
             });
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tui::state::ListNavigation;
+
+    #[test]
+    fn component_filter_labels() {
+        assert_eq!(ComponentFilter::All.label(), "All");
+        assert_eq!(ComponentFilter::Added.label(), "Added");
+        assert_eq!(ComponentFilter::Removed.label(), "Removed");
+        assert_eq!(ComponentFilter::Modified.label(), "Modified");
+        assert_eq!(ComponentFilter::EolOnly.label(), "EOL");
+        assert_eq!(ComponentFilter::EolRisk.label(), "EOL Risk");
+    }
+
+    #[test]
+    fn component_filter_is_view_filter() {
+        assert!(ComponentFilter::All.is_view_filter());
+        assert!(ComponentFilter::EolOnly.is_view_filter());
+        assert!(ComponentFilter::EolRisk.is_view_filter());
+        assert!(!ComponentFilter::Added.is_view_filter());
+        assert!(!ComponentFilter::Removed.is_view_filter());
+        assert!(!ComponentFilter::Modified.is_view_filter());
+    }
+
+    #[test]
+    fn view_filter_cycling() {
+        let mut state = ComponentsState::new(10);
+        assert_eq!(state.filter, ComponentFilter::All);
+
+        state.toggle_view_filter();
+        assert_eq!(state.filter, ComponentFilter::EolOnly);
+
+        state.toggle_view_filter();
+        assert_eq!(state.filter, ComponentFilter::EolRisk);
+
+        state.toggle_view_filter();
+        assert_eq!(state.filter, ComponentFilter::All);
+    }
+
+    #[test]
+    fn diff_filter_cycling_includes_eol() {
+        let mut state = ComponentsState::new(10);
+        assert_eq!(state.filter, ComponentFilter::All);
+
+        state.toggle_filter();
+        assert_eq!(state.filter, ComponentFilter::Added);
+
+        state.toggle_filter();
+        assert_eq!(state.filter, ComponentFilter::Removed);
+
+        state.toggle_filter();
+        assert_eq!(state.filter, ComponentFilter::Modified);
+
+        state.toggle_filter();
+        assert_eq!(state.filter, ComponentFilter::EolOnly);
+
+        state.toggle_filter();
+        assert_eq!(state.filter, ComponentFilter::EolRisk);
+
+        state.toggle_filter();
+        assert_eq!(state.filter, ComponentFilter::All);
+    }
+
+    #[test]
+    fn filter_change_resets_selection() {
+        let mut state = ComponentsState::new(10);
+        state.set_selected(5);
+        state.multi_selected.insert(3);
+
+        state.toggle_view_filter();
+        assert_eq!(state.selected(), 0, "Selection should reset on filter change");
+        assert!(
+            state.multi_selected.is_empty(),
+            "Multi-selection should clear on filter change"
+        );
+    }
+
+    #[test]
+    fn view_filter_change_resets_selection() {
+        let mut state = ComponentsState::new(10);
+        state.set_selected(5);
+
+        state.toggle_view_filter();
+        assert_eq!(state.selected(), 0);
+        assert_eq!(state.filter, ComponentFilter::EolOnly);
     }
 }
 

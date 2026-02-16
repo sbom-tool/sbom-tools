@@ -164,6 +164,38 @@ impl ReportGenerator for SummaryReporter {
             }
         }
 
+        // End-of-life summary (from new SBOM)
+        {
+            let eol_counts = count_eol_statuses(new_sbom);
+            if eol_counts.total > 0 {
+                lines.push(String::new());
+                lines.push(self.color("End-of-Life:", "bold"));
+                let mut parts = Vec::new();
+                if eol_counts.eol > 0 {
+                    parts.push(self.color(&format!("{} EOL", eol_counts.eol), "red"));
+                }
+                if eol_counts.approaching > 0 {
+                    parts.push(self.color(
+                        &format!("{} approaching", eol_counts.approaching),
+                        "yellow",
+                    ));
+                }
+                if eol_counts.supported > 0 {
+                    parts.push(self.color(
+                        &format!("{} supported", eol_counts.supported),
+                        "green",
+                    ));
+                }
+                if eol_counts.security_only > 0 {
+                    parts.push(format!("{} security-only", eol_counts.security_only));
+                }
+                if eol_counts.unknown > 0 {
+                    parts.push(format!("{} unknown", eol_counts.unknown));
+                }
+                lines.push(format!("  {}", parts.join(", ")));
+            }
+        }
+
         // Score
         lines.push(String::new());
         let score = result.semantic_score;
@@ -484,6 +516,45 @@ fn truncate(s: &str, max_len: usize) -> String {
         let end = floor_char_boundary(s, max_len);
         s[..end].to_string()
     }
+}
+
+/// EOL status counts for summary display.
+struct EolCounts {
+    total: usize,
+    eol: usize,
+    approaching: usize,
+    supported: usize,
+    security_only: usize,
+    unknown: usize,
+}
+
+/// Count EOL statuses across all components in an SBOM.
+fn count_eol_statuses(sbom: &NormalizedSbom) -> EolCounts {
+    use crate::model::EolStatus;
+
+    let mut counts = EolCounts {
+        total: 0,
+        eol: 0,
+        approaching: 0,
+        supported: 0,
+        security_only: 0,
+        unknown: 0,
+    };
+
+    for comp in sbom.components.values() {
+        if let Some(eol) = &comp.eol {
+            counts.total += 1;
+            match eol.status {
+                EolStatus::EndOfLife => counts.eol += 1,
+                EolStatus::ApproachingEol => counts.approaching += 1,
+                EolStatus::Supported => counts.supported += 1,
+                EolStatus::SecurityOnly => counts.security_only += 1,
+                EolStatus::Unknown => counts.unknown += 1,
+            }
+        }
+    }
+
+    counts
 }
 
 /// Find the largest byte index <= `index` that is a valid UTF-8 char boundary.

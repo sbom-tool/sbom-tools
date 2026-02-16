@@ -198,6 +198,12 @@ impl ReportGenerator for JsonReporter {
                         .collect(),
                     supplier: c.supplier.as_ref().map(|s| s.name.clone()),
                     vulnerabilities: c.vulnerabilities.len(),
+                    eol_status: c.eol.as_ref().map(|e| e.status.label().to_string()),
+                    eol_date: c
+                        .eol
+                        .as_ref()
+                        .and_then(|e| e.eol_date.map(|d| d.to_string())),
+                    eol_product: c.eol.as_ref().map(|e| e.product.clone()),
                 })
                 .collect(),
         };
@@ -469,4 +475,10 @@ struct ComponentView {
     licenses: Vec<String>,
     supplier: Option<String>,
     vulnerabilities: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    eol_status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    eol_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    eol_product: Option<String>,
 }

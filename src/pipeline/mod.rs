@@ -14,7 +14,7 @@ pub use parse::{parse_sbom_with_context, ParsedSbom};
 pub use report_stage::output_report;
 
 #[cfg(feature = "enrichment")]
-pub use parse::{build_enrichment_config, enrich_sbom};
+pub use parse::{build_enrichment_config, enrich_eol, enrich_sbom};
 
 /// Structured pipeline error types for better diagnostics.
 #[derive(Debug, thiserror::Error)]
@@ -94,12 +94,21 @@ pub mod dirs {
     }
 
     /// Get the default OSV cache directory
-    #[must_use] 
+    #[must_use]
     pub fn osv_cache_dir() -> PathBuf {
         cache_dir()
             .unwrap_or_else(|| PathBuf::from(".cache"))
             .join("sbom-tools")
             .join("osv")
+    }
+
+    /// Get the default EOL cache directory
+    #[must_use]
+    pub fn eol_cache_dir() -> PathBuf {
+        cache_dir()
+            .unwrap_or_else(|| PathBuf::from(".cache"))
+            .join("sbom-tools")
+            .join("eol")
     }
 }
 

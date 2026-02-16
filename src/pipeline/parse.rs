@@ -168,6 +168,55 @@ pub fn enrich_sbom(
     }
 }
 
+/// Enrich an SBOM with end-of-life data from endoflife.date
+#[cfg(feature = "enrichment")]
+pub fn enrich_eol(
+    sbom: &mut NormalizedSbom,
+    config: &crate::enrichment::EolClientConfig,
+    quiet: bool,
+) -> Option<crate::enrichment::EolEnrichmentStats> {
+    use crate::enrichment::EolEnricher;
+
+    if !quiet {
+        tracing::info!("Enriching SBOM with end-of-life data from endoflife.date...");
+    }
+
+    match EolEnricher::new(config.clone()) {
+        Ok(mut enricher) => {
+            let components: Vec<_> = sbom.components.values().cloned().collect();
+            let mut comp_vec = components;
+
+            match enricher.enrich_components(&mut comp_vec) {
+                Ok(stats) => {
+                    if !quiet {
+                        tracing::info!(
+                            "EOL enrichment: {} enriched, {} EOL, {} approaching, {} supported, {} skipped",
+                            stats.components_enriched,
+                            stats.eol_count,
+                            stats.approaching_eol_count,
+                            stats.supported_count,
+                            stats.skipped_count,
+                        );
+                    }
+                    // Update SBOM with enriched components
+                    for comp in comp_vec {
+                        sbom.components.insert(comp.canonical_id.clone(), comp);
+                    }
+                    Some(stats)
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to enrich SBOM with EOL data: {}", e);
+                    None
+                }
+            }
+        }
+        Err(e) => {
+            tracing::warn!("Failed to initialize EOL enricher: {}", e);
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

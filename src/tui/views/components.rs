@@ -184,6 +184,8 @@ fn filter_color(filter: ComponentFilter) -> Color {
         ComponentFilter::Added => colors().added,
         ComponentFilter::Removed => colors().removed,
         ComponentFilter::Modified => colors().modified,
+        ComponentFilter::EolOnly => colors().critical,
+        ComponentFilter::EolRisk => colors().high,
     }
 }
 
@@ -203,10 +205,17 @@ fn render_component_table(
     scroll_offset: &mut usize,
 ) {
     let is_diff = matches!(component_data, ComponentListData::Diff(_));
-    let last_col_header = if is_diff { "Changes" } else { "Staleness" };
-    let header_cells = ["", "Name", "Old Version", "New Version", "Ecosystem", last_col_header]
-        .into_iter()
-        .map(|h| Cell::from(h).style(Style::default().fg(colors().accent).bold()));
+    let header_cells: Vec<Cell> = if is_diff {
+        ["", "Name", "Old Version", "New Version", "Ecosystem", "Changes"]
+            .into_iter()
+            .map(|h| Cell::from(h).style(Style::default().fg(colors().accent).bold()))
+            .collect()
+    } else {
+        ["", "Name", "Version", "", "Ecosystem", "Staleness", "EOL"]
+            .into_iter()
+            .map(|h| Cell::from(h).style(Style::default().fg(colors().accent).bold()))
+            .collect()
+    };
     let header = Row::new(header_cells).height(1);
 
     // Use pre-built component list (state already updated in render_components)
@@ -240,15 +249,26 @@ fn render_component_table(
         return;
     }
 
-    let last_col_width = if is_diff { Constraint::Length(7) } else { Constraint::Length(9) };
-    let widths = [
-        Constraint::Length(12),
-        Constraint::Min(16),
-        Constraint::Length(10),
-        Constraint::Length(10),
-        Constraint::Length(7),
-        last_col_width,
-    ];
+    let widths: Vec<Constraint> = if is_diff {
+        vec![
+            Constraint::Length(12),
+            Constraint::Min(16),
+            Constraint::Length(10),
+            Constraint::Length(10),
+            Constraint::Length(7),
+            Constraint::Length(7),
+        ]
+    } else {
+        vec![
+            Constraint::Length(12),
+            Constraint::Min(14),
+            Constraint::Length(10),
+            Constraint::Length(0),
+            Constraint::Length(7),
+            Constraint::Length(9),
+            Constraint::Length(12),
+        ]
+    };
 
     let selected_idx = app.tabs.components.selected;
     let scheme = colors();
@@ -679,6 +699,94 @@ fn render_view_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
             }
         }
 
+        // End-of-Life section
+        if let Some(eol) = &comp.eol {
+            use crate::model::EolStatus;
+            lines.push(Line::from(""));
+            let status_color = match eol.status {
+                EolStatus::Supported => colors().success,
+                EolStatus::SecurityOnly => colors().warning,
+                EolStatus::ApproachingEol => colors().high,
+                EolStatus::EndOfLife => colors().critical,
+                EolStatus::Unknown => colors().muted,
+            };
+            lines.push(Line::from(vec![
+                Span::styled("━━━ ", Style::default().fg(colors().border)),
+                Span::styled(
+                    format!("{} End-of-Life", eol.status.icon()),
+                    Style::default().fg(status_color).bold(),
+                ),
+                Span::styled(" ━━━", Style::default().fg(colors().border)),
+            ]));
+            // Status badge with days countdown
+            let days_text = eol.days_until_eol.map_or_else(String::new, |d| {
+                if d < 0 {
+                    format!(" ({} days past EOL)", d.abs())
+                } else if d == 0 {
+                    " (EOL today)".to_string()
+                } else {
+                    format!(" ({d} days remaining)")
+                }
+            });
+            lines.push(Line::from(vec![
+                Span::styled("  Status: ", Style::default().fg(colors().text_muted)),
+                Span::styled(
+                    format!(" {} ", eol.status.label()),
+                    Style::default().fg(colors().badge_fg_dark).bg(status_color).bold(),
+                ),
+                Span::styled(days_text, Style::default().fg(status_color)),
+            ]));
+            // Product and cycle
+            lines.push(Line::from(vec![
+                Span::styled("  Product: ", Style::default().fg(colors().text_muted)),
+                Span::styled(&eol.product, Style::default().fg(colors().text)),
+                Span::styled(
+                    format!(" (cycle {})", eol.cycle),
+                    Style::default().fg(colors().text_muted),
+                ),
+            ]));
+            // EOL date
+            if let Some(date) = eol.eol_date {
+                lines.push(Line::from(vec![
+                    Span::styled("  EOL Date: ", Style::default().fg(colors().text_muted)),
+                    Span::styled(date.to_string(), Style::default().fg(status_color)),
+                ]));
+            }
+            // Support end date
+            if let Some(date) = eol.support_end_date {
+                lines.push(Line::from(vec![
+                    Span::styled("  Support End: ", Style::default().fg(colors().text_muted)),
+                    Span::styled(date.to_string(), Style::default().fg(colors().text)),
+                ]));
+            }
+            // LTS indicator
+            if eol.is_lts {
+                lines.push(Line::from(vec![
+                    Span::styled("  LTS: ", Style::default().fg(colors().text_muted)),
+                    Span::styled(
+                        " LTS ",
+                        Style::default().fg(colors().badge_fg_dark).bg(colors().success).bold(),
+                    ),
+                ]));
+            }
+            // Latest available version in cycle
+            if let Some(latest) = &eol.latest_in_cycle {
+                let is_outdated = comp.version.as_deref().is_some_and(|v| v != latest.as_str());
+                lines.push(Line::from(vec![
+                    Span::styled("  Latest: ", Style::default().fg(colors().text_muted)),
+                    Span::styled(
+                        latest,
+                        Style::default().fg(if is_outdated { colors().warning } else { colors().success }),
+                    ),
+                    if is_outdated {
+                        Span::styled(" (update available)", Style::default().fg(colors().warning))
+                    } else {
+                        Span::styled(" (up to date)", Style::default().fg(colors().success))
+                    },
+                ]));
+            }
+        }
+
         // Security Analysis section
         let reverse_graph = &app.tabs.dependencies.cached_reverse_graph;
         let (direct_deps, transitive_count) =
@@ -868,16 +976,48 @@ fn get_view_rows(app: &App, components: &[&crate::model::Component]) -> Vec<Row<
                 },
             );
 
+            // Build EOL cell
+            let eol_cell = comp.eol.as_ref().map_or_else(
+                || Cell::from("-"),
+                |info| {
+                    use crate::model::EolStatus;
+                    let (label, color) = match info.status {
+                        EolStatus::Supported => ("Supported", scheme.success),
+                        EolStatus::SecurityOnly => ("Sec Only", scheme.warning),
+                        EolStatus::ApproachingEol => ("Near EOL", scheme.high),
+                        EolStatus::EndOfLife => ("EOL", scheme.critical),
+                        EolStatus::Unknown => ("?", scheme.muted),
+                    };
+                    Cell::from(Span::styled(
+                        format!(" {label} "),
+                        Style::default()
+                            .fg(
+                                if matches!(
+                                    info.status,
+                                    EolStatus::Supported | EolStatus::Unknown
+                                ) {
+                                    scheme.badge_fg_dark
+                                } else {
+                                    scheme.badge_fg_light
+                                },
+                            )
+                            .bg(color)
+                            .bold(),
+                    ))
+                },
+            );
+
             Row::new(vec![
                 Cell::from(vuln_indicator),
                 Cell::from(comp.name.clone()),
                 Cell::from(comp.version.clone().unwrap_or_else(|| "\u{2014}".to_string())),
-                Cell::from("\u{2014}"),
+                Cell::from(""),
                 Cell::from(
                     comp.ecosystem
                         .as_ref().map_or_else(|| "-".to_string(), std::string::ToString::to_string),
                 ),
                 staleness_cell,
+                eol_cell,
             ])
             .style(row_style)
         })

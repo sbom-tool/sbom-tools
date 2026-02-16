@@ -83,7 +83,7 @@ impl ReportGenerator for CsvReporter {
         // Pre-allocate based on component count
         let mut content = String::with_capacity(sbom.components.len() * 150 + 100);
 
-        content.push_str("Name,Version,Ecosystem,Type,PURL,Licenses,Vulnerabilities\n");
+        content.push_str("Name,Version,Ecosystem,Type,PURL,Licenses,Vulnerabilities,EOL Status,EOL Date\n");
 
         for (_, comp) in &sbom.components {
             let licenses = comp
@@ -100,16 +100,28 @@ impl ReportGenerator for CsvReporter {
                 .map(|e| format!("{e:?}"));
             let ecosystem = ecosystem.as_deref().unwrap_or("-");
 
+            let eol_status = comp
+                .eol
+                .as_ref()
+                .map_or("-", |e| e.status.label());
+            let eol_date = comp
+                .eol
+                .as_ref()
+                .and_then(|e| e.eol_date.map(|d| d.to_string()));
+            let eol_date = eol_date.as_deref().unwrap_or("-");
+
             let _ = writeln!(
                 content,
-                "\"{}\",\"{}\",\"{}\",\"{:?}\",\"{}\",\"{}\",{}",
+                "\"{}\",\"{}\",\"{}\",\"{:?}\",\"{}\",\"{}\",{},\"{}\",\"{}\"",
                 escape_csv(&comp.name),
                 comp.version.as_deref().unwrap_or("-"),
                 ecosystem,
                 comp.component_type,
                 comp.identifiers.purl.as_deref().unwrap_or("-"),
                 escape_csv(&licenses),
-                vuln_count
+                vuln_count,
+                eol_status,
+                eol_date,
             );
         }
 

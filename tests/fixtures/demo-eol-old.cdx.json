@@ -1,0 +1,160 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2024-01-15T08:00:00Z",
+    "component": {
+      "type": "application",
+      "name": "acme-platform",
+      "version": "3.0.0"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "django",
+      "version": "3.2.23",
+      "purl": "pkg:pypi/django@3.2.23",
+      "licenses": [{"license": {"id": "BSD-3-Clause"}}],
+      "description": "The Web framework for perfectionists with deadlines"
+    },
+    {
+      "type": "library",
+      "name": "flask",
+      "version": "2.2.5",
+      "purl": "pkg:pypi/flask@2.2.5",
+      "licenses": [{"license": {"id": "BSD-3-Clause"}}],
+      "description": "Lightweight WSGI web application framework"
+    },
+    {
+      "type": "library",
+      "name": "react",
+      "version": "17.0.2",
+      "purl": "pkg:npm/react@17.0.2",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "A JavaScript library for building user interfaces"
+    },
+    {
+      "type": "library",
+      "name": "vue",
+      "version": "2.7.16",
+      "purl": "pkg:npm/vue@2.7.16",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "Progressive JavaScript framework"
+    },
+    {
+      "type": "library",
+      "name": "jquery",
+      "version": "3.6.4",
+      "purl": "pkg:npm/jquery@3.6.4",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "Fast, small, and feature-rich JavaScript library"
+    },
+    {
+      "type": "library",
+      "name": "bootstrap",
+      "version": "4.6.2",
+      "purl": "pkg:npm/bootstrap@4.6.2",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "The most popular HTML, CSS, and JS library"
+    },
+    {
+      "type": "library",
+      "name": "express",
+      "version": "4.18.2",
+      "purl": "pkg:npm/express@4.18.2",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "Fast, unopinionated, minimalist web framework for Node.js"
+    },
+    {
+      "type": "library",
+      "name": "spring-boot",
+      "version": "2.7.18",
+      "purl": "pkg:maven/org.springframework.boot/spring-boot@2.7.18",
+      "licenses": [{"license": {"id": "Apache-2.0"}}],
+      "description": "Spring Boot framework"
+    },
+    {
+      "type": "library",
+      "name": "log4j",
+      "version": "2.17.1",
+      "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.17.1",
+      "licenses": [{"license": {"id": "Apache-2.0"}}],
+      "description": "Apache Log4j logging library"
+    },
+    {
+      "type": "library",
+      "name": "ruby-on-rails",
+      "version": "6.1.7",
+      "purl": "pkg:gem/rails@6.1.7",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "Full-stack web framework"
+    },
+    {
+      "type": "library",
+      "name": "electron",
+      "version": "22.3.27",
+      "purl": "pkg:npm/electron@22.3.27",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "Build cross-platform desktop apps"
+    },
+    {
+      "type": "library",
+      "name": "numpy",
+      "version": "1.24.4",
+      "purl": "pkg:pypi/numpy@1.24.4",
+      "licenses": [{"license": {"id": "BSD-3-Clause"}}],
+      "description": "Fundamental package for scientific computing"
+    },
+    {
+      "type": "library",
+      "name": "lodash",
+      "version": "4.17.21",
+      "purl": "pkg:npm/lodash@4.17.21",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "A modern JavaScript utility library"
+    },
+    {
+      "type": "library",
+      "name": "next",
+      "version": "13.5.6",
+      "purl": "pkg:npm/next@13.5.6",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "The React Framework for the Web"
+    },
+    {
+      "type": "library",
+      "name": "celery",
+      "version": "5.3.4",
+      "purl": "pkg:pypi/celery@5.3.4",
+      "licenses": [{"license": {"id": "BSD-3-Clause"}}],
+      "description": "Distributed task queue"
+    }
+  ],
+  "dependencies": [
+    {"ref": "pkg:pypi/django@3.2.23", "dependsOn": ["pkg:pypi/celery@5.3.4"]},
+    {"ref": "pkg:npm/react@17.0.2", "dependsOn": ["pkg:npm/lodash@4.17.21"]},
+    {"ref": "pkg:npm/next@13.5.6", "dependsOn": ["pkg:npm/react@17.0.2"]},
+    {"ref": "pkg:npm/express@4.18.2", "dependsOn": ["pkg:npm/lodash@4.17.21"]},
+    {"ref": "pkg:npm/bootstrap@4.6.2", "dependsOn": ["pkg:npm/jquery@3.6.4"]},
+    {"ref": "pkg:gem/rails@6.1.7", "dependsOn": []},
+    {"ref": "pkg:npm/electron@22.3.27", "dependsOn": []}
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2023-36053",
+      "source": {"name": "NVD"},
+      "ratings": [{"severity": "high", "score": 7.5}],
+      "description": "Django EmailValidator/URLValidator ReDoS vulnerability",
+      "affects": [{"ref": "pkg:pypi/django@3.2.23"}]
+    },
+    {
+      "id": "CVE-2021-44228",
+      "source": {"name": "NVD"},
+      "ratings": [{"severity": "critical", "score": 10.0}],
+      "description": "Apache Log4j2 remote code execution (Log4Shell)",
+      "affects": [{"ref": "pkg:maven/org.apache.logging.log4j/log4j-core@2.17.1"}]
+    }
+  ]
+}

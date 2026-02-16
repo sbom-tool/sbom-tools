@@ -1108,6 +1108,50 @@ impl ComplianceChecker {
                 requirement: "CRA Annex III: Document signature/integrity".to_string(),
             });
         }
+
+        // B6: Art. 13(8) / Art. 13(11) — Component lifecycle / EOL detection
+        // If EOL enrichment data is present, warn about EOL components
+        let eol_count = sbom
+            .components
+            .values()
+            .filter(|c| {
+                c.eol
+                    .as_ref()
+                    .is_some_and(|e| e.status == crate::model::EolStatus::EndOfLife)
+            })
+            .count();
+        if eol_count > 0 {
+            violations.push(Violation {
+                severity: ViolationSeverity::Warning,
+                category: ViolationCategory::SecurityInfo,
+                message: format!(
+                    "[CRA Art. 13(8)] {eol_count} component(s) have reached end-of-life and no longer receive security updates"
+                ),
+                element: None,
+                requirement: "CRA Art. 13(8): Support period / lifecycle management".to_string(),
+            });
+        }
+
+        let approaching_eol_count = sbom
+            .components
+            .values()
+            .filter(|c| {
+                c.eol
+                    .as_ref()
+                    .is_some_and(|e| e.status == crate::model::EolStatus::ApproachingEol)
+            })
+            .count();
+        if approaching_eol_count > 0 {
+            violations.push(Violation {
+                severity: ViolationSeverity::Info,
+                category: ViolationCategory::SecurityInfo,
+                message: format!(
+                    "[CRA Art. 13(11)] {approaching_eol_count} component(s) are approaching end-of-life within 6 months"
+                ),
+                element: None,
+                requirement: "CRA Art. 13(11): Component lifecycle monitoring".to_string(),
+            });
+        }
     }
 
     /// NIST SP 800-218 Secure Software Development Framework checks

@@ -5,7 +5,13 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
     match key.code {
-        KeyCode::Char('f') => app.tabs.components.toggle_filter(),
+        KeyCode::Char('f') => {
+            if matches!(app.mode, AppMode::View) {
+                app.tabs.components.toggle_view_filter();
+            } else {
+                app.tabs.components.toggle_filter();
+            }
+        }
         KeyCode::Char('s') => app.tabs.components.toggle_sort(),
         KeyCode::Char('v') => app.tabs.components.toggle_multi_select_mode(),
         KeyCode::Char('p') | KeyCode::Tab => app.tabs.components.toggle_focus(),

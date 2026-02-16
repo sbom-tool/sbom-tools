@@ -50,6 +50,26 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
         }
     };
 
+    // Enrich with end-of-life data if enabled
+    #[cfg(feature = "enrichment")]
+    {
+        if config.enrichment.enable_eol {
+            let eol_config = crate::enrichment::EolClientConfig {
+                cache_dir: config
+                    .enrichment
+                    .cache_dir
+                    .clone()
+                    .unwrap_or_else(crate::pipeline::dirs::eol_cache_dir),
+                cache_ttl: std::time::Duration::from_secs(config.enrichment.cache_ttl_hours * 3600),
+                bypass_cache: config.enrichment.bypass_cache,
+                timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
+                ..Default::default()
+            };
+            crate::pipeline::enrich_eol(old_parsed.sbom_mut(), &eol_config, quiet);
+            crate::pipeline::enrich_eol(new_parsed.sbom_mut(), &eol_config, quiet);
+        }
+    }
+
     #[cfg(not(feature = "enrichment"))]
     {
         if config.enrichment.enabled && !quiet {

@@ -7,6 +7,27 @@ use super::app_states::{
 };
 use crate::diff::SlaStatus;
 
+/// Check whether a component matches the active EOL filter.
+fn eol_filter_matches(comp: &crate::model::Component, filter: ComponentFilter) -> bool {
+    use crate::model::EolStatus;
+    match filter {
+        ComponentFilter::EolOnly => comp
+            .eol
+            .as_ref()
+            .is_some_and(|e| e.status == EolStatus::EndOfLife),
+        ComponentFilter::EolRisk => comp
+            .eol
+            .as_ref()
+            .is_some_and(|e| {
+                matches!(
+                    e.status,
+                    EolStatus::EndOfLife | EolStatus::ApproachingEol | EolStatus::SecurityOnly
+                )
+            }),
+        _ => true,
+    }
+}
+
 /// Check whether a vulnerability matches the active filter.
 fn matches_vuln_filter(vuln: &crate::diff::VulnerabilityDetail, filter: VulnFilter) -> bool {
     match filter {
@@ -99,13 +120,19 @@ impl App {
         };
 
         let mut items = Vec::new();
-        if filter == ComponentFilter::All || filter == ComponentFilter::Added {
+        // EOL filters are view-only; in diff mode they show all
+        let effective = if filter.is_view_filter() && filter != ComponentFilter::All {
+            ComponentFilter::All
+        } else {
+            filter
+        };
+        if effective == ComponentFilter::All || effective == ComponentFilter::Added {
             items.extend(diff.components.added.iter());
         }
-        if filter == ComponentFilter::All || filter == ComponentFilter::Removed {
+        if effective == ComponentFilter::All || effective == ComponentFilter::Removed {
             items.extend(diff.components.removed.iter());
         }
-        if filter == ComponentFilter::All || filter == ComponentFilter::Modified {
+        if effective == ComponentFilter::All || effective == ComponentFilter::Modified {
             items.extend(diff.components.modified.iter());
         }
 
@@ -115,14 +142,14 @@ impl App {
 
     /// Count diff-mode components matching the filter (without building full list).
     /// More efficient than `diff_component_items().len()` for just getting a count.
-    #[must_use] 
+    #[must_use]
     pub fn diff_component_count(&self, filter: ComponentFilter) -> usize {
         let Some(diff) = self.data.diff_result.as_ref() else {
             return 0;
         };
 
         match filter {
-            ComponentFilter::All => {
+            ComponentFilter::All | ComponentFilter::EolOnly | ComponentFilter::EolRisk => {
                 diff.components.added.len()
                     + diff.components.removed.len()
                     + diff.components.modified.len()
@@ -135,16 +162,29 @@ impl App {
 
     /// Count view-mode components (without building full list).
     pub fn view_component_count(&self) -> usize {
-        self.data.sbom.as_ref().map_or(0, crate::model::NormalizedSbom::component_count)
+        let Some(sbom) = self.data.sbom.as_ref() else {
+            return 0;
+        };
+        let filter = self.tabs.components.filter;
+        if filter == ComponentFilter::All || !filter.is_view_filter() {
+            sbom.component_count()
+        } else {
+            sbom.components.values().filter(|c| eol_filter_matches(c, filter)).count()
+        }
     }
 
     /// Build view-mode components list in the same order as the table.
-    #[must_use] 
+    #[must_use]
     pub fn view_component_items(&self) -> Vec<&crate::model::Component> {
         let Some(sbom) = self.data.sbom.as_ref() else {
             return Vec::new();
         };
-        let mut items: Vec<_> = sbom.components.values().collect();
+        let filter = self.tabs.components.filter;
+        let mut items: Vec<_> = if filter == ComponentFilter::All || !filter.is_view_filter() {
+            sbom.components.values().collect()
+        } else {
+            sbom.components.values().filter(|c| eol_filter_matches(c, filter)).collect()
+        };
         sort_components(&mut items, self.tabs.components.sort_by);
         items
     }

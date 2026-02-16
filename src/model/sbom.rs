@@ -456,9 +456,100 @@ impl StalenessInfo {
     }
 
     /// Check if component needs attention (stale or worse)
-    #[must_use] 
+    #[must_use]
     pub const fn needs_attention(&self) -> bool {
         self.level.severity() >= 2
+    }
+}
+
+/// End-of-life status classification for components
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum EolStatus {
+    /// Actively receiving updates
+    Supported,
+    /// Active support ended, security patches continue (LTS phase)
+    SecurityOnly,
+    /// Within 6 months of EOL date
+    ApproachingEol,
+    /// Past EOL, no more updates
+    EndOfLife,
+    /// Product found but cycle not matched
+    Unknown,
+}
+
+impl EolStatus {
+    /// Get display label
+    #[must_use]
+    pub const fn label(&self) -> &'static str {
+        match self {
+            Self::Supported => "Supported",
+            Self::SecurityOnly => "Security Only",
+            Self::ApproachingEol => "Approaching EOL",
+            Self::EndOfLife => "End of Life",
+            Self::Unknown => "Unknown",
+        }
+    }
+
+    /// Get icon for TUI display
+    #[must_use]
+    pub const fn icon(&self) -> &'static str {
+        match self {
+            Self::Supported => "✓",
+            Self::SecurityOnly => "🔒",
+            Self::ApproachingEol => "⚠",
+            Self::EndOfLife => "⛔",
+            Self::Unknown => "?",
+        }
+    }
+
+    /// Get severity weight (higher = worse)
+    #[must_use]
+    pub const fn severity(&self) -> u8 {
+        match self {
+            Self::Supported => 0,
+            Self::SecurityOnly => 1,
+            Self::ApproachingEol => 2,
+            Self::EndOfLife => 3,
+            Self::Unknown => 0,
+        }
+    }
+}
+
+impl std::fmt::Display for EolStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.label())
+    }
+}
+
+/// End-of-life information for a component
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EolInfo {
+    /// EOL status classification
+    pub status: EolStatus,
+    /// Matched endoflife.date product slug
+    pub product: String,
+    /// Matched release cycle (e.g., "3.11")
+    pub cycle: String,
+    /// EOL date if known
+    pub eol_date: Option<chrono::NaiveDate>,
+    /// Active support end date
+    pub support_end_date: Option<chrono::NaiveDate>,
+    /// Whether this is an LTS release
+    pub is_lts: bool,
+    /// Latest patch version in this cycle
+    pub latest_in_cycle: Option<String>,
+    /// Latest release date in this cycle
+    pub latest_release_date: Option<chrono::NaiveDate>,
+    /// Days until EOL (negative = past EOL)
+    pub days_until_eol: Option<i64>,
+}
+
+impl EolInfo {
+    /// Check if the component needs attention (approaching or past EOL)
+    #[must_use]
+    pub const fn needs_attention(&self) -> bool {
+        self.status.severity() >= 2
     }
 }
 
@@ -505,6 +596,8 @@ pub struct Component {
     pub group: Option<String>,
     /// Staleness information (populated by enrichment)
     pub staleness: Option<StalenessInfo>,
+    /// End-of-life information (populated by enrichment)
+    pub eol: Option<EolInfo>,
 }
 
 impl Component {
@@ -535,6 +628,7 @@ impl Component {
             author: None,
             group: None,
             staleness: None,
+            eol: None,
         }
     }
 

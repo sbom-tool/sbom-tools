@@ -363,6 +363,49 @@ impl ReportGenerator for MarkdownReporter {
             }
         }
 
+        // End-of-Life section (from new SBOM)
+        {
+            let eol_components: Vec<_> = new_sbom
+                .components
+                .values()
+                .filter(|c| {
+                    c.eol.as_ref().is_some_and(|e| {
+                        matches!(
+                            e.status,
+                            crate::model::EolStatus::EndOfLife
+                                | crate::model::EolStatus::ApproachingEol
+                        )
+                    })
+                })
+                .collect();
+
+            if !eol_components.is_empty() {
+                writeln!(md, "## End-of-Life Components\n")?;
+                writeln!(
+                    md,
+                    "| Component | Version | Status | Product | EOL Date |"
+                )?;
+                writeln!(
+                    md,
+                    "|-----------|---------|--------|---------|----------|"
+                )?;
+                for comp in &eol_components {
+                    let eol = comp.eol.as_ref().unwrap();
+                    writeln!(
+                        md,
+                        "| {} | {} | {} | {} | {} |",
+                        escape_markdown_table(&comp.name),
+                        escape_md_opt(comp.version.as_deref()),
+                        escape_markdown_table(eol.status.label()),
+                        escape_markdown_table(&eol.product),
+                        eol.eol_date
+                            .map_or_else(|| "-".to_string(), |d| d.to_string()),
+                    )?;
+                }
+                writeln!(md)?;
+            }
+        }
+
         // CRA Compliance section
         {
             let old_cra = config.old_cra_compliance.clone().unwrap_or_else(|| {

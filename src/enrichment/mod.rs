@@ -17,6 +17,7 @@
 //! ```
 
 mod cache;
+pub mod eol;
 pub mod kev;
 pub mod osv;
 pub mod staleness;
@@ -24,6 +25,7 @@ mod stats;
 mod traits;
 
 pub use cache::{CacheKey, FileCache};
+pub use eol::{EolClientConfig, EolEnrichmentStats, EolEnricher};
 pub use kev::{KevClient, KevClientConfig, KevCatalog, KevEnrichmentStats};
 pub use osv::{OsvEnricher, OsvEnricherConfig};
 pub use staleness::{RegistryConfig, StalenessEnricher, StalenessEnrichmentStats};
@@ -42,6 +44,8 @@ pub struct EnricherConfig {
     pub enable_kev: bool,
     /// Enable staleness enrichment
     pub enable_staleness: bool,
+    /// Enable end-of-life detection
+    pub enable_eol: bool,
     /// Cache directory for vulnerability data
     pub cache_dir: PathBuf,
     /// Cache TTL
@@ -60,6 +64,7 @@ impl Default for EnricherConfig {
             enable_osv: true,
             enable_kev: true,
             enable_staleness: false, // Off by default (requires registry API calls)
+            enable_eol: false,       // Off by default (requires API calls)
             cache_dir: default_cache_dir(),
             cache_ttl: Duration::from_secs(24 * 3600), // 24 hours
             bypass_cache: false,

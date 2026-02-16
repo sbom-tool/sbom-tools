@@ -1,0 +1,161 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 2,
+  "metadata": {
+    "timestamp": "2025-01-15T10:00:00Z",
+    "component": {
+      "type": "application",
+      "name": "acme-platform",
+      "version": "4.0.0"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "django",
+      "version": "4.2.11",
+      "purl": "pkg:pypi/django@4.2.11",
+      "licenses": [{"license": {"id": "BSD-3-Clause"}}],
+      "description": "The Web framework for perfectionists with deadlines"
+    },
+    {
+      "type": "library",
+      "name": "flask",
+      "version": "3.0.2",
+      "purl": "pkg:pypi/flask@3.0.2",
+      "licenses": [{"license": {"id": "BSD-3-Clause"}}],
+      "description": "Lightweight WSGI web application framework"
+    },
+    {
+      "type": "library",
+      "name": "react",
+      "version": "18.2.0",
+      "purl": "pkg:npm/react@18.2.0",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "A JavaScript library for building user interfaces"
+    },
+    {
+      "type": "library",
+      "name": "vue",
+      "version": "3.4.15",
+      "purl": "pkg:npm/vue@3.4.15",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "Progressive JavaScript framework"
+    },
+    {
+      "type": "library",
+      "name": "jquery",
+      "version": "3.7.1",
+      "purl": "pkg:npm/jquery@3.7.1",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "Fast, small, and feature-rich JavaScript library"
+    },
+    {
+      "type": "library",
+      "name": "bootstrap",
+      "version": "5.3.3",
+      "purl": "pkg:npm/bootstrap@5.3.3",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "The most popular HTML, CSS, and JS library"
+    },
+    {
+      "type": "library",
+      "name": "express",
+      "version": "4.19.2",
+      "purl": "pkg:npm/express@4.19.2",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "Fast, unopinionated, minimalist web framework for Node.js"
+    },
+    {
+      "type": "library",
+      "name": "spring-boot",
+      "version": "3.2.3",
+      "purl": "pkg:maven/org.springframework.boot/spring-boot@3.2.3",
+      "licenses": [{"license": {"id": "Apache-2.0"}}],
+      "description": "Spring Boot framework"
+    },
+    {
+      "type": "library",
+      "name": "log4j",
+      "version": "2.23.0",
+      "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.23.0",
+      "licenses": [{"license": {"id": "Apache-2.0"}}],
+      "description": "Apache Log4j logging library"
+    },
+    {
+      "type": "library",
+      "name": "numpy",
+      "version": "1.26.4",
+      "purl": "pkg:pypi/numpy@1.26.4",
+      "licenses": [{"license": {"id": "BSD-3-Clause"}}],
+      "description": "Fundamental package for scientific computing"
+    },
+    {
+      "type": "library",
+      "name": "lodash",
+      "version": "4.17.21",
+      "purl": "pkg:npm/lodash@4.17.21",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "A modern JavaScript utility library"
+    },
+    {
+      "type": "library",
+      "name": "next",
+      "version": "14.1.0",
+      "purl": "pkg:npm/next@14.1.0",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "The React Framework for the Web"
+    },
+    {
+      "type": "library",
+      "name": "celery",
+      "version": "5.3.6",
+      "purl": "pkg:pypi/celery@5.3.6",
+      "licenses": [{"license": {"id": "BSD-3-Clause"}}],
+      "description": "Distributed task queue"
+    },
+    {
+      "type": "library",
+      "name": "nuxt",
+      "version": "3.10.2",
+      "purl": "pkg:npm/nuxt@3.10.2",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "The Intuitive Vue Framework"
+    },
+    {
+      "type": "library",
+      "name": "laravel",
+      "version": "10.43.0",
+      "purl": "pkg:composer/laravel/framework@10.43.0",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "The PHP Framework for Web Artisans"
+    },
+    {
+      "type": "library",
+      "name": "electron",
+      "version": "28.2.2",
+      "purl": "pkg:npm/electron@28.2.2",
+      "licenses": [{"license": {"id": "MIT"}}],
+      "description": "Build cross-platform desktop apps"
+    }
+  ],
+  "dependencies": [
+    {"ref": "pkg:pypi/django@4.2.11", "dependsOn": ["pkg:pypi/celery@5.3.6"]},
+    {"ref": "pkg:npm/react@18.2.0", "dependsOn": ["pkg:npm/lodash@4.17.21"]},
+    {"ref": "pkg:npm/next@14.1.0", "dependsOn": ["pkg:npm/react@18.2.0"]},
+    {"ref": "pkg:npm/express@4.19.2", "dependsOn": ["pkg:npm/lodash@4.17.21"]},
+    {"ref": "pkg:npm/bootstrap@5.3.3", "dependsOn": ["pkg:npm/jquery@3.7.1"]},
+    {"ref": "pkg:npm/nuxt@3.10.2", "dependsOn": ["pkg:npm/vue@3.4.15"]},
+    {"ref": "pkg:npm/electron@28.2.2", "dependsOn": []}
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2024-21538",
+      "source": {"name": "NVD"},
+      "ratings": [{"severity": "high", "score": 7.5}],
+      "description": "Regular expression denial of service in lodash",
+      "affects": [{"ref": "pkg:npm/lodash@4.17.21"}]
+    }
+  ]
+}

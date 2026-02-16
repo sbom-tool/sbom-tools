@@ -100,6 +100,67 @@ fn write_html_footer(html: &mut String) -> std::fmt::Result {
     writeln!(html, "</html>")
 }
 
+/// Write an EOL components section if any components have EOL data.
+fn write_eol_section(html: &mut String, sbom: &NormalizedSbom) -> std::fmt::Result {
+    use crate::model::EolStatus;
+
+    let eol_components: Vec<_> = sbom
+        .components
+        .values()
+        .filter(|c| {
+            c.eol.as_ref().is_some_and(|e| {
+                matches!(
+                    e.status,
+                    EolStatus::EndOfLife | EolStatus::ApproachingEol | EolStatus::SecurityOnly
+                )
+            })
+        })
+        .collect();
+
+    if eol_components.is_empty() {
+        return Ok(());
+    }
+
+    writeln!(html, "<div class=\"section\" id=\"eol\">")?;
+    writeln!(html, "    <h2>End-of-Life Components</h2>")?;
+    writeln!(html, "    <table>")?;
+    writeln!(html, "        <thead>")?;
+    writeln!(
+        html,
+        "            <tr><th>Component</th><th>Version</th><th>Status</th><th>Product</th><th>EOL Date</th></tr>"
+    )?;
+    writeln!(html, "        </thead>")?;
+    writeln!(html, "        <tbody>")?;
+
+    for comp in &eol_components {
+        let eol = comp.eol.as_ref().unwrap();
+        let badge_class = match eol.status {
+            EolStatus::EndOfLife => "badge-critical",
+            EolStatus::ApproachingEol => "badge-warning",
+            EolStatus::SecurityOnly => "badge-info",
+            _ => "",
+        };
+        let eol_date = eol
+            .eol_date
+            .map_or_else(|| "-".to_string(), |d| d.to_string());
+
+        writeln!(
+            html,
+            "            <tr><td>{}</td><td>{}</td><td><span class=\"badge {}\">{}</span></td><td>{}</td><td>{}</td></tr>",
+            escape_html(&comp.name),
+            escape_html(comp.version.as_deref().unwrap_or("-")),
+            badge_class,
+            escape_html(eol.status.label()),
+            escape_html(&eol.product),
+            escape_html(&eol_date),
+        )?;
+    }
+
+    writeln!(html, "        </tbody>")?;
+    writeln!(html, "    </table>")?;
+    writeln!(html, "</div>")
+}
+
 /// Write the component changes table for diff reports.
 fn write_diff_component_table(html: &mut String, result: &DiffResult) -> std::fmt::Result {
     writeln!(html, "<div class=\"section\" id=\"component-changes\">")?;
@@ -680,6 +741,9 @@ impl ReportGenerator for HtmlReporter {
         if has_vulns {
             write_diff_vuln_table(&mut html, result)?;
         }
+
+        // End-of-Life section
+        write_eol_section(&mut html, new_sbom)?;
 
         // CRA Compliance
         {

@@ -164,6 +164,53 @@ impl ReportGenerator for SarifReporter {
             }
         }
 
+        // Add EOL results (from new SBOM)
+        for comp in new_sbom.components.values() {
+            if let Some(eol) = &comp.eol {
+                match eol.status {
+                    crate::model::EolStatus::EndOfLife => {
+                        let eol_date_str = eol
+                            .eol_date
+                            .map_or_else(String::new, |d| format!(" (EOL: {d})"));
+                        results.push(SarifResult {
+                            rule_id: "SBOM-EOL-001".to_string(),
+                            level: SarifLevel::Error,
+                            message: SarifMessage {
+                                text: format!(
+                                    "Component '{}' version '{}' has reached end-of-life{} (product: {})",
+                                    comp.name,
+                                    comp.version.as_deref().unwrap_or("unknown"),
+                                    eol_date_str,
+                                    eol.product,
+                                ),
+                            },
+                            locations: vec![],
+                        });
+                    }
+                    crate::model::EolStatus::ApproachingEol => {
+                        let days_str = eol
+                            .days_until_eol
+                            .map_or_else(String::new, |d| format!(" ({d} days remaining)"));
+                        results.push(SarifResult {
+                            rule_id: "SBOM-EOL-002".to_string(),
+                            level: SarifLevel::Warning,
+                            message: SarifMessage {
+                                text: format!(
+                                    "Component '{}' version '{}' is approaching end-of-life{} (product: {})",
+                                    comp.name,
+                                    comp.version.as_deref().unwrap_or("unknown"),
+                                    days_str,
+                                    eol.product,
+                                ),
+                            },
+                            locations: vec![],
+                        });
+                    }
+                    _ => {}
+                }
+            }
+        }
+
         // Add CRA compliance results for old and new SBOMs (use pre-computed if available)
         let cra_old = config.old_cra_compliance.clone().unwrap_or_else(|| {
             ComplianceChecker::new(ComplianceLevel::CraPhase2).check(old_sbom)
@@ -522,6 +569,26 @@ fn get_sarif_rules() -> Vec<SarifRule> {
             name: "SupplierChanged".to_string(),
             short_description: SarifMessage {
                 text: "A component supplier was changed".to_string(),
+            },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
+        },
+        SarifRule {
+            id: "SBOM-EOL-001".to_string(),
+            name: "ComponentEndOfLife".to_string(),
+            short_description: SarifMessage {
+                text: "A component has reached end-of-life".to_string(),
+            },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
+        },
+        SarifRule {
+            id: "SBOM-EOL-002".to_string(),
+            name: "ComponentApproachingEol".to_string(),
+            short_description: SarifMessage {
+                text: "A component is approaching end-of-life".to_string(),
             },
             default_configuration: SarifConfiguration {
                 level: SarifLevel::Warning,

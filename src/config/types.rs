@@ -580,6 +580,8 @@ pub struct EnrichmentConfig {
     /// API timeout in seconds
     #[schemars(range(min = 1))]
     pub timeout_secs: u64,
+    /// Enable end-of-life detection via endoflife.date API
+    pub enable_eol: bool,
 }
 
 impl Default for EnrichmentConfig {
@@ -592,6 +594,7 @@ impl Default for EnrichmentConfig {
             cache_dir: None,
             bypass_cache: false,
             timeout_secs: 30,
+            enable_eol: false,
         }
     }
 }
