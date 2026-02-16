@@ -25,27 +25,60 @@ pub fn run_validate(
 ) -> Result<()> {
     let parsed = parse_sbom_with_context(&sbom_path, false)?;
 
-    let result = match standard.to_lowercase().as_str() {
-        "ntia" => check_ntia_compliance(parsed.sbom()),
-        "fda" => check_fda_compliance(parsed.sbom()),
-        "cra" => ComplianceChecker::new(ComplianceLevel::CraPhase2).check(parsed.sbom()),
-        _ => {
-            bail!("Unknown validation standard: {standard}");
+    let standards: Vec<&str> = standard.split(',').map(str::trim).collect();
+    let mut results = Vec::new();
+
+    for std_name in &standards {
+        let result = match std_name.to_lowercase().as_str() {
+            "ntia" => check_ntia_compliance(parsed.sbom()),
+            "fda" => check_fda_compliance(parsed.sbom()),
+            "cra" => ComplianceChecker::new(ComplianceLevel::CraPhase2).check(parsed.sbom()),
+            "ssdf" | "nist-ssdf" | "nist_ssdf" => {
+                ComplianceChecker::new(ComplianceLevel::NistSsdf).check(parsed.sbom())
+            }
+            "eo14028" | "eo-14028" | "eo_14028" => {
+                ComplianceChecker::new(ComplianceLevel::Eo14028).check(parsed.sbom())
+            }
+            _ => {
+                bail!(
+                    "Unknown validation standard: {std_name}. \
+                    Valid options: ntia, fda, cra, ssdf, eo14028"
+                );
+            }
+        };
+        results.push(result);
+    }
+
+    if results.len() == 1 {
+        let result = &results[0];
+        if summary {
+            write_compliance_summary(result, output_file)?;
+        } else {
+            write_compliance_output(result, output, output_file)?;
         }
-    };
 
-    if summary {
-        write_compliance_summary(&result, output_file)?;
+        if result.error_count > 0 {
+            std::process::exit(1);
+        }
+        if fail_on_warning && result.warning_count > 0 {
+            std::process::exit(2);
+        }
     } else {
-        write_compliance_output(&result, output, output_file)?;
-    }
+        // Multi-standard: merge results for output
+        if summary {
+            write_multi_compliance_summary(&results, output_file)?;
+        } else {
+            write_multi_compliance_output(&results, output, output_file)?;
+        }
 
-    // Exit code: 1 for errors, 2 for warnings (if --fail-on-warning)
-    if result.error_count > 0 {
-        std::process::exit(1);
-    }
-    if fail_on_warning && result.warning_count > 0 {
-        std::process::exit(2);
+        let has_errors = results.iter().any(|r| r.error_count > 0);
+        let has_warnings = results.iter().any(|r| r.warning_count > 0);
+        if has_errors {
+            std::process::exit(1);
+        }
+        if fail_on_warning && has_warnings {
+            std::process::exit(2);
+        }
     }
 
     Ok(())
@@ -104,6 +137,65 @@ fn write_compliance_summary(
     };
     let content = serde_json::to_string(&summary)
         .map_err(|e| anyhow::anyhow!("Failed to serialize summary: {e}"))?;
+    write_output(&content, &target, false)?;
+    Ok(())
+}
+
+fn write_multi_compliance_output(
+    results: &[ComplianceResult],
+    output: ReportFormat,
+    output_file: Option<PathBuf>,
+) -> Result<()> {
+    let target = OutputTarget::from_option(output_file);
+
+    let content = match output {
+        ReportFormat::Json => {
+            serde_json::to_string_pretty(results)
+                .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?
+        }
+        _ => {
+            let mut parts = Vec::new();
+            for result in results {
+                parts.push(format_compliance_text(result));
+            }
+            parts.join("\n---\n\n")
+        }
+    };
+
+    write_output(&content, &target, false)?;
+    Ok(())
+}
+
+fn write_multi_compliance_summary(
+    results: &[ComplianceResult],
+    output_file: Option<PathBuf>,
+) -> Result<()> {
+    let target = OutputTarget::from_option(output_file);
+    let summaries: Vec<ComplianceSummary> = results
+        .iter()
+        .map(|result| {
+            let total = result.violations.len() + 1;
+            let issues = result.error_count + result.warning_count;
+            let score = if issues >= total {
+                0
+            } else {
+                ((total - issues) * 100) / total
+            }
+            .min(100) as u8;
+
+            ComplianceSummary {
+                standard: result.level.name().to_string(),
+                compliant: result.is_compliant,
+                score,
+                errors: result.error_count,
+                warnings: result.warning_count,
+                info: result.info_count,
+            }
+        })
+        .collect();
+
+    let content = serde_json::to_string(&summaries)
+        .map_err(|e| anyhow::anyhow!("Failed to serialize multi-standard summary: {e}"))?;
     write_output(&content, &target, false)?;
     Ok(())
 }

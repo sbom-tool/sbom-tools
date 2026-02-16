@@ -48,13 +48,17 @@ pub enum ComplianceLevel {
     CraPhase2,
     /// FDA Medical Device SBOM requirements
     FdaMedicalDevice,
+    /// NIST SP 800-218 Secure Software Development Framework
+    NistSsdf,
+    /// Executive Order 14028 Section 4 — Enhancing Software Supply Chain Security
+    Eo14028,
     /// Comprehensive compliance (all recommended fields)
     Comprehensive,
 }
 
 impl ComplianceLevel {
     /// Get human-readable name
-    #[must_use] 
+    #[must_use]
     pub const fn name(&self) -> &'static str {
         match self {
             Self::Minimum => "Minimum",
@@ -63,12 +67,14 @@ impl ComplianceLevel {
             Self::CraPhase1 => "EU CRA Phase 1 (2027)",
             Self::CraPhase2 => "EU CRA Phase 2 (2029)",
             Self::FdaMedicalDevice => "FDA Medical Device",
+            Self::NistSsdf => "NIST SSDF (SP 800-218)",
+            Self::Eo14028 => "EO 14028 Section 4",
             Self::Comprehensive => "Comprehensive",
         }
     }
 
     /// Get description of what this level checks
-    #[must_use] 
+    #[must_use]
     pub const fn description(&self) -> &'static str {
         match self {
             Self::Minimum => "Basic component identification only",
@@ -77,12 +83,14 @@ impl ComplianceLevel {
             Self::CraPhase1 => "CRA reporting obligations — product ID, SBOM format, manufacturer (deadline: 11 Dec 2027)",
             Self::CraPhase2 => "Full CRA compliance — adds vulnerability metadata, lifecycle, disclosure (deadline: 11 Dec 2029)",
             Self::FdaMedicalDevice => "FDA premarket submission requirements for medical devices",
+            Self::NistSsdf => "Secure Software Development Framework — provenance, build integrity, VCS references",
+            Self::Eo14028 => "Executive Order 14028 — machine-readable SBOM, auto-generation, supply chain security",
             Self::Comprehensive => "All recommended fields and best practices",
         }
     }
 
     /// Get all compliance levels
-    #[must_use] 
+    #[must_use]
     pub const fn all() -> &'static [Self] {
         &[
             Self::Minimum,
@@ -91,6 +99,8 @@ impl ComplianceLevel {
             Self::CraPhase1,
             Self::CraPhase2,
             Self::FdaMedicalDevice,
+            Self::NistSsdf,
+            Self::Eo14028,
             Self::Comprehensive,
         ]
     }
@@ -164,6 +174,20 @@ impl Violation {
             "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification."
         } else if req.contains("annex i") && req.contains("traceability") {
             "The primary product component needs a stable unique identifier (PURL or CPE) that persists across software updates for traceability."
+        } else if req.contains("art. 13(3)") {
+            "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(3) requires timely updates reflecting the current state of the software."
+        } else if req.contains("art. 13(5)") {
+            "Ensure every component has license information. CycloneDX: use component.licenses[]. SPDX: use PackageLicenseDeclared / PackageLicenseConcluded."
+        } else if req.contains("art. 13(9)") {
+            "Include vulnerability data or add a vulnerability-assertion external reference stating no known vulnerabilities. CycloneDX: use the vulnerabilities array. SPDX: use annotations or external references."
+        } else if req.contains("annex i") && req.contains("supply chain") {
+            "Populate the supplier field for all components, especially transitive dependencies. CycloneDX: use component.supplier. SPDX: use PackageSupplier."
+        } else if req.contains("annex iii") {
+            "Add document-level integrity metadata: a serial number (CycloneDX: serialNumber, SPDX: documentNamespace), or a digital signature/attestation with a cryptographic hash."
+        } else if req.contains("nist ssdf") || req.contains("sp 800-218") {
+            "Follow NIST SP 800-218 SSDF practices: include tool provenance, source VCS references, build metadata, and cryptographic hashes for all components."
+        } else if req.contains("eo 14028") {
+            "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+ or SPDX 2.3+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information."
         } else {
             "Review the requirement and update the SBOM accordingly. Consult the EU CRA regulation (EU 2024/2847) for detailed guidance."
         }
@@ -296,24 +320,39 @@ impl ComplianceChecker {
     }
 
     /// Check an SBOM for compliance
-    #[must_use] 
+    #[must_use]
     pub fn check(&self, sbom: &NormalizedSbom) -> ComplianceResult {
         let mut violations = Vec::new();
 
-        // Check document-level requirements
-        self.check_document_metadata(sbom, &mut violations);
+        match self.level {
+            ComplianceLevel::NistSsdf => {
+                self.check_nist_ssdf(sbom, &mut violations);
+            }
+            ComplianceLevel::Eo14028 => {
+                self.check_eo14028(sbom, &mut violations);
+            }
+            _ => {
+                // Check document-level requirements
+                self.check_document_metadata(sbom, &mut violations);
 
-        // Check component requirements
-        self.check_components(sbom, &mut violations);
+                // Check component requirements
+                self.check_components(sbom, &mut violations);
 
-        // Check dependency requirements
-        self.check_dependencies(sbom, &mut violations);
+                // Check dependency requirements
+                self.check_dependencies(sbom, &mut violations);
 
-        // Check vulnerability metadata (CRA readiness)
-        self.check_vulnerability_metadata(sbom, &mut violations);
+                // Check vulnerability metadata (CRA readiness)
+                self.check_vulnerability_metadata(sbom, &mut violations);
 
-        // Check format-specific requirements
-        self.check_format_specific(sbom, &mut violations);
+                // Check format-specific requirements
+                self.check_format_specific(sbom, &mut violations);
+
+                // Check CRA-specific gap requirements (Art. 13(3), 13(5), 13(9), Annex I Part III, Annex III)
+                if self.level.is_cra() {
+                    self.check_cra_gaps(sbom, &mut violations);
+                }
+            }
+        }
 
         ComplianceResult::new(self.level, violations)
     }
@@ -943,6 +982,483 @@ impl ComplianceChecker {
         }
     }
 
+    /// CRA gap checks: Art. 13(3), 13(5), 13(9), Annex I Part III, Annex III
+    fn check_cra_gaps(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
+        // B1: Art. 13(3) — Update frequency / SBOM freshness
+        let age_days = (chrono::Utc::now() - sbom.document.created).num_days();
+        if age_days > 90 {
+            violations.push(Violation {
+                severity: ViolationSeverity::Warning,
+                category: ViolationCategory::DocumentMetadata,
+                message: format!(
+                    "[CRA Art. 13(3)] SBOM is {age_days} days old; CRA requires timely updates when components change"
+                ),
+                element: None,
+                requirement: "CRA Art. 13(3): SBOM update frequency".to_string(),
+            });
+        } else if age_days > 30 {
+            violations.push(Violation {
+                severity: ViolationSeverity::Info,
+                category: ViolationCategory::DocumentMetadata,
+                message: format!(
+                    "[CRA Art. 13(3)] SBOM is {age_days} days old; consider regenerating after component changes"
+                ),
+                element: None,
+                requirement: "CRA Art. 13(3): SBOM update frequency".to_string(),
+            });
+        }
+
+        // B2: Art. 13(5) — Licensed component tracking (all components should have license info)
+        let total = sbom.components.len();
+        let without_license = sbom
+            .components
+            .values()
+            .filter(|c| c.licenses.declared.is_empty() && c.licenses.concluded.is_none())
+            .count();
+        if without_license > 0 {
+            let pct = (without_license * 100) / total.max(1);
+            let severity = if pct > 50 {
+                ViolationSeverity::Warning
+            } else {
+                ViolationSeverity::Info
+            };
+            violations.push(Violation {
+                severity,
+                category: ViolationCategory::LicenseInfo,
+                message: format!(
+                    "[CRA Art. 13(5)] {without_license}/{total} components ({pct}%) missing license information"
+                ),
+                element: None,
+                requirement: "CRA Art. 13(5): Licensed component tracking".to_string(),
+            });
+        }
+
+        // B3: Art. 13(9) — Known vulnerabilities statement
+        // SBOM should either contain vulnerability data or explicitly indicate "none known"
+        let has_vuln_data = sbom
+            .components
+            .values()
+            .any(|c| !c.vulnerabilities.is_empty());
+        let has_vuln_assertion = sbom.components.values().any(|comp| {
+            comp.external_refs.iter().any(|r| {
+                matches!(
+                    r.ref_type,
+                    crate::model::ExternalRefType::VulnerabilityAssertion
+                        | crate::model::ExternalRefType::ExploitabilityStatement
+                )
+            })
+        });
+        if !has_vuln_data && !has_vuln_assertion {
+            violations.push(Violation {
+                severity: ViolationSeverity::Info,
+                category: ViolationCategory::SecurityInfo,
+                message: "[CRA Art. 13(9)] No vulnerability data or vulnerability assertion found; \
+                    include vulnerability information or a statement of no known vulnerabilities"
+                    .to_string(),
+                element: None,
+                requirement: "CRA Art. 13(9): Known vulnerabilities statement".to_string(),
+            });
+        }
+
+        // B4: Annex I Part III — Supply chain transparency
+        // Transitive dependencies should have supplier information for supply chain visibility
+        if !sbom.edges.is_empty() {
+            let transitive_without_supplier = sbom
+                .components
+                .values()
+                .filter(|c| c.supplier.is_none() && c.author.is_none())
+                .count();
+            if transitive_without_supplier > 0 {
+                let pct = (transitive_without_supplier * 100) / total.max(1);
+                if pct > 30 {
+                    violations.push(Violation {
+                        severity: ViolationSeverity::Warning,
+                        category: ViolationCategory::SupplierInfo,
+                        message: format!(
+                            "[CRA Annex I, Part III] {transitive_without_supplier}/{total} components ({pct}%) \
+                            missing supplier information for supply chain transparency"
+                        ),
+                        element: None,
+                        requirement: "CRA Annex I, Part III: Supply chain transparency".to_string(),
+                    });
+                }
+            }
+        }
+
+        // B5: Annex III — Document signature/integrity
+        // Check for document-level hash, signature, or attestation
+        let has_doc_integrity = sbom.document.serial_number.is_some()
+            || sbom.components.values().any(|comp| {
+                comp.external_refs.iter().any(|r| {
+                    matches!(
+                        r.ref_type,
+                        crate::model::ExternalRefType::Attestation
+                            | crate::model::ExternalRefType::Certification
+                    ) && !r.hashes.is_empty()
+                })
+            });
+        if !has_doc_integrity {
+            violations.push(Violation {
+                severity: ViolationSeverity::Info,
+                category: ViolationCategory::IntegrityInfo,
+                message: "[CRA Annex III] Consider adding document-level integrity metadata \
+                    (serial number, digital signature, or attestation with hash)"
+                    .to_string(),
+                element: None,
+                requirement: "CRA Annex III: Document signature/integrity".to_string(),
+            });
+        }
+    }
+
+    /// NIST SP 800-218 Secure Software Development Framework checks
+    fn check_nist_ssdf(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
+        use crate::model::ExternalRefType;
+
+        // PS.1 — Provenance: creator/tool information
+        if sbom.document.creators.is_empty() {
+            violations.push(Violation {
+                severity: ViolationSeverity::Error,
+                category: ViolationCategory::DocumentMetadata,
+                message: "SBOM must identify its creator (tool or organization) for provenance tracking"
+                    .to_string(),
+                element: None,
+                requirement: "NIST SSDF PS.1: Provenance — creator identification".to_string(),
+            });
+        }
+
+        let has_tool_creator = sbom
+            .document
+            .creators
+            .iter()
+            .any(|c| c.creator_type == crate::model::CreatorType::Tool);
+        if !has_tool_creator {
+            violations.push(Violation {
+                severity: ViolationSeverity::Warning,
+                category: ViolationCategory::DocumentMetadata,
+                message: "SBOM should identify the generation tool for automated provenance"
+                    .to_string(),
+                element: None,
+                requirement: "NIST SSDF PS.1: Provenance — tool identification".to_string(),
+            });
+        }
+
+        // PS.2 — Build integrity: components should have hashes
+        let total = sbom.components.len();
+        let without_hash = sbom
+            .components
+            .values()
+            .filter(|c| c.hashes.is_empty())
+            .count();
+        if without_hash > 0 {
+            let pct = (without_hash * 100) / total.max(1);
+            violations.push(Violation {
+                severity: if pct > 50 {
+                    ViolationSeverity::Error
+                } else {
+                    ViolationSeverity::Warning
+                },
+                category: ViolationCategory::IntegrityInfo,
+                message: format!(
+                    "{without_hash}/{total} components ({pct}%) missing cryptographic hashes for build integrity"
+                ),
+                element: None,
+                requirement: "NIST SSDF PS.2: Build integrity — component hashes".to_string(),
+            });
+        }
+
+        // PO.1 — VCS references: at least some components should reference their source
+        let has_vcs_ref = sbom.components.values().any(|comp| {
+            comp.external_refs
+                .iter()
+                .any(|r| matches!(r.ref_type, ExternalRefType::Vcs))
+        });
+        if !has_vcs_ref {
+            violations.push(Violation {
+                severity: ViolationSeverity::Warning,
+                category: ViolationCategory::ComponentIdentification,
+                message: "No components reference a VCS repository; include source repository links for traceability"
+                    .to_string(),
+                element: None,
+                requirement: "NIST SSDF PO.1: Source code provenance — VCS references".to_string(),
+            });
+        }
+
+        // PO.3 — Build metadata: check for build system/meta references
+        let has_build_ref = sbom.components.values().any(|comp| {
+            comp.external_refs.iter().any(|r| {
+                matches!(
+                    r.ref_type,
+                    ExternalRefType::BuildMeta | ExternalRefType::BuildSystem
+                )
+            })
+        });
+        if !has_build_ref {
+            violations.push(Violation {
+                severity: ViolationSeverity::Info,
+                category: ViolationCategory::DocumentMetadata,
+                message: "No build metadata references found; include build system information for reproducibility"
+                    .to_string(),
+                element: None,
+                requirement: "NIST SSDF PO.3: Build provenance — build metadata".to_string(),
+            });
+        }
+
+        // PW.4 — Dependency management: dependency relationships required
+        if sbom.components.len() > 1 && sbom.edges.is_empty() {
+            violations.push(Violation {
+                severity: ViolationSeverity::Error,
+                category: ViolationCategory::DependencyInfo,
+                message: "SBOM with multiple components must include dependency relationships"
+                    .to_string(),
+                element: None,
+                requirement: "NIST SSDF PW.4: Dependency management — relationships".to_string(),
+            });
+        }
+
+        // PW.6 — Vulnerability information
+        let has_vuln_info = sbom
+            .components
+            .values()
+            .any(|c| !c.vulnerabilities.is_empty());
+        let has_security_ref = sbom.components.values().any(|comp| {
+            comp.external_refs.iter().any(|r| {
+                matches!(
+                    r.ref_type,
+                    ExternalRefType::Advisories
+                        | ExternalRefType::SecurityContact
+                        | ExternalRefType::VulnerabilityAssertion
+                )
+            })
+        });
+        if !has_vuln_info && !has_security_ref {
+            violations.push(Violation {
+                severity: ViolationSeverity::Info,
+                category: ViolationCategory::SecurityInfo,
+                message: "No vulnerability or security advisory references found; \
+                    include vulnerability data or security contact for incident response"
+                    .to_string(),
+                element: None,
+                requirement: "NIST SSDF PW.6: Vulnerability information".to_string(),
+            });
+        }
+
+        // RV.1 — Component identification: unique identifiers (PURL/CPE)
+        let without_id = sbom
+            .components
+            .values()
+            .filter(|c| {
+                c.identifiers.purl.is_none()
+                    && c.identifiers.cpe.is_empty()
+                    && c.identifiers.swid.is_none()
+            })
+            .count();
+        if without_id > 0 {
+            violations.push(Violation {
+                severity: ViolationSeverity::Warning,
+                category: ViolationCategory::ComponentIdentification,
+                message: format!(
+                    "{without_id}/{total} components missing unique identifier (PURL/CPE/SWID)"
+                ),
+                element: None,
+                requirement: "NIST SSDF RV.1: Component identification — unique identifiers"
+                    .to_string(),
+            });
+        }
+
+        // PS.3 — Supplier identification
+        let without_supplier = sbom
+            .components
+            .values()
+            .filter(|c| c.supplier.is_none() && c.author.is_none())
+            .count();
+        if without_supplier > 0 {
+            violations.push(Violation {
+                severity: ViolationSeverity::Warning,
+                category: ViolationCategory::SupplierInfo,
+                message: format!(
+                    "{without_supplier}/{total} components missing supplier/author information"
+                ),
+                element: None,
+                requirement: "NIST SSDF PS.3: Supplier identification".to_string(),
+            });
+        }
+    }
+
+    /// Executive Order 14028 Section 4 checks
+    fn check_eo14028(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
+        use crate::model::ExternalRefType;
+
+        // Sec 4(e) — Machine-readable format
+        let format_ok = match sbom.document.format {
+            crate::model::SbomFormat::CycloneDx => {
+                let v = &sbom.document.spec_version;
+                !(v.starts_with("1.0")
+                    || v.starts_with("1.1")
+                    || v.starts_with("1.2")
+                    || v.starts_with("1.3"))
+            }
+            crate::model::SbomFormat::Spdx => {
+                let v = &sbom.document.spec_version;
+                v.starts_with("2.3") || v.starts_with("3.")
+            }
+        };
+        if !format_ok {
+            violations.push(Violation {
+                severity: ViolationSeverity::Error,
+                category: ViolationCategory::FormatSpecific,
+                message: format!(
+                    "SBOM format {} {} does not meet EO 14028 machine-readable requirements; \
+                    use CycloneDX 1.4+ or SPDX 2.3+",
+                    sbom.document.format, sbom.document.spec_version
+                ),
+                element: None,
+                requirement: "EO 14028 Sec 4(e): Machine-readable SBOM format".to_string(),
+            });
+        }
+
+        // Sec 4(e) — Automated generation: tool creator should be present
+        let has_tool = sbom
+            .document
+            .creators
+            .iter()
+            .any(|c| c.creator_type == crate::model::CreatorType::Tool);
+        if !has_tool {
+            violations.push(Violation {
+                severity: ViolationSeverity::Warning,
+                category: ViolationCategory::DocumentMetadata,
+                message: "SBOM should be auto-generated by a tool; no tool creator identified"
+                    .to_string(),
+                element: None,
+                requirement: "EO 14028 Sec 4(e): Automated SBOM generation".to_string(),
+            });
+        }
+
+        // Sec 4(e) — Creator identification
+        if sbom.document.creators.is_empty() {
+            violations.push(Violation {
+                severity: ViolationSeverity::Error,
+                category: ViolationCategory::DocumentMetadata,
+                message: "SBOM must identify its creator (vendor or tool)".to_string(),
+                element: None,
+                requirement: "EO 14028 Sec 4(e): SBOM creator identification".to_string(),
+            });
+        }
+
+        // Sec 4(e) — Component identification with unique identifiers
+        let total = sbom.components.len();
+        let without_id = sbom
+            .components
+            .values()
+            .filter(|c| {
+                c.identifiers.purl.is_none()
+                    && c.identifiers.cpe.is_empty()
+                    && c.identifiers.swid.is_none()
+            })
+            .count();
+        if without_id > 0 {
+            violations.push(Violation {
+                severity: ViolationSeverity::Error,
+                category: ViolationCategory::ComponentIdentification,
+                message: format!(
+                    "{without_id}/{total} components missing unique identifier (PURL/CPE/SWID)"
+                ),
+                element: None,
+                requirement: "EO 14028 Sec 4(e): Component unique identification".to_string(),
+            });
+        }
+
+        // Sec 4(e) — Dependency relationships
+        if sbom.components.len() > 1 && sbom.edges.is_empty() {
+            violations.push(Violation {
+                severity: ViolationSeverity::Error,
+                category: ViolationCategory::DependencyInfo,
+                message: "SBOM with multiple components must include dependency relationships"
+                    .to_string(),
+                element: None,
+                requirement: "EO 14028 Sec 4(e): Dependency relationships".to_string(),
+            });
+        }
+
+        // Sec 4(e) — Version information
+        let without_version = sbom
+            .components
+            .values()
+            .filter(|c| c.version.is_none())
+            .count();
+        if without_version > 0 {
+            violations.push(Violation {
+                severity: ViolationSeverity::Error,
+                category: ViolationCategory::ComponentIdentification,
+                message: format!(
+                    "{without_version}/{total} components missing version information"
+                ),
+                element: None,
+                requirement: "EO 14028 Sec 4(e): Component version".to_string(),
+            });
+        }
+
+        // Sec 4(e) — Cryptographic hashes for integrity
+        let without_hash = sbom
+            .components
+            .values()
+            .filter(|c| c.hashes.is_empty())
+            .count();
+        if without_hash > 0 {
+            violations.push(Violation {
+                severity: ViolationSeverity::Warning,
+                category: ViolationCategory::IntegrityInfo,
+                message: format!(
+                    "{without_hash}/{total} components missing cryptographic hashes"
+                ),
+                element: None,
+                requirement: "EO 14028 Sec 4(e): Component integrity verification".to_string(),
+            });
+        }
+
+        // Sec 4(g) — Vulnerability disclosure
+        let has_security_ref = sbom.document.security_contact.is_some()
+            || sbom.document.vulnerability_disclosure_url.is_some()
+            || sbom.components.values().any(|comp| {
+                comp.external_refs.iter().any(|r| {
+                    matches!(
+                        r.ref_type,
+                        ExternalRefType::SecurityContact | ExternalRefType::Advisories
+                    )
+                })
+            });
+        if !has_security_ref {
+            violations.push(Violation {
+                severity: ViolationSeverity::Warning,
+                category: ViolationCategory::SecurityInfo,
+                message: "No security contact or vulnerability disclosure reference found"
+                    .to_string(),
+                element: None,
+                requirement: "EO 14028 Sec 4(g): Vulnerability disclosure process".to_string(),
+            });
+        }
+
+        // Sec 4(e) — Supplier identification
+        let without_supplier = sbom
+            .components
+            .values()
+            .filter(|c| c.supplier.is_none() && c.author.is_none())
+            .count();
+        if without_supplier > 0 {
+            let pct = (without_supplier * 100) / total.max(1);
+            if pct > 30 {
+                violations.push(Violation {
+                    severity: ViolationSeverity::Warning,
+                    category: ViolationCategory::SupplierInfo,
+                    message: format!(
+                        "{without_supplier}/{total} components ({pct}%) missing supplier information"
+                    ),
+                    element: None,
+                    requirement: "EO 14028 Sec 4(e): Supplier identification".to_string(),
+                });
+            }
+        }
+    }
+
     fn check_format_specific(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
         match sbom.document.format {
             SbomFormat::CycloneDx => {
@@ -1064,6 +1580,25 @@ mod tests {
         assert_eq!(ComplianceLevel::NtiaMinimum.name(), "NTIA Minimum Elements");
         assert_eq!(ComplianceLevel::CraPhase1.name(), "EU CRA Phase 1 (2027)");
         assert_eq!(ComplianceLevel::CraPhase2.name(), "EU CRA Phase 2 (2029)");
+        assert_eq!(ComplianceLevel::NistSsdf.name(), "NIST SSDF (SP 800-218)");
+        assert_eq!(ComplianceLevel::Eo14028.name(), "EO 14028 Section 4");
+    }
+
+    #[test]
+    fn test_nist_ssdf_empty_sbom() {
+        let sbom = NormalizedSbom::default();
+        let checker = ComplianceChecker::new(ComplianceLevel::NistSsdf);
+        let result = checker.check(&sbom);
+        // Empty SBOM should have at least a creator violation
+        assert!(result.violations.iter().any(|v| v.requirement.contains("PS.1")));
+    }
+
+    #[test]
+    fn test_eo14028_empty_sbom() {
+        let sbom = NormalizedSbom::default();
+        let checker = ComplianceChecker::new(ComplianceLevel::Eo14028);
+        let result = checker.check(&sbom);
+        assert!(result.violations.iter().any(|v| v.requirement.contains("EO 14028")));
     }
 
     #[test]

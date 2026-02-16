@@ -351,8 +351,56 @@ fn violation_to_rule_id(requirement: &str) -> &'static str {
         return "SBOM-FDA-GENERAL";
     }
 
+    // NIST SSDF rules
+    if req.starts_with("nist ssdf") {
+        if req.contains("ps.1") {
+            return "SBOM-SSDF-PS1";
+        } else if req.contains("ps.2") {
+            return "SBOM-SSDF-PS2";
+        } else if req.contains("ps.3") {
+            return "SBOM-SSDF-PS3";
+        } else if req.contains("po.1") {
+            return "SBOM-SSDF-PO1";
+        } else if req.contains("po.3") {
+            return "SBOM-SSDF-PO3";
+        } else if req.contains("pw.4") {
+            return "SBOM-SSDF-PW4";
+        } else if req.contains("pw.6") {
+            return "SBOM-SSDF-PW6";
+        } else if req.contains("rv.1") {
+            return "SBOM-SSDF-RV1";
+        }
+        return "SBOM-SSDF-GENERAL";
+    }
+
+    // EO 14028 rules
+    if req.starts_with("eo 14028") {
+        if req.contains("machine-readable") || req.contains("format") {
+            return "SBOM-EO14028-FORMAT";
+        } else if req.contains("auto") || req.contains("generation") {
+            return "SBOM-EO14028-AUTOGEN";
+        } else if req.contains("creator") {
+            return "SBOM-EO14028-CREATOR";
+        } else if req.contains("unique ident") {
+            return "SBOM-EO14028-IDENTIFIER";
+        } else if req.contains("dependency") || req.contains("relationship") {
+            return "SBOM-EO14028-DEPENDENCY";
+        } else if req.contains("version") {
+            return "SBOM-EO14028-VERSION";
+        } else if req.contains("integrity") || req.contains("hash") {
+            return "SBOM-EO14028-INTEGRITY";
+        } else if req.contains("disclosure") || req.contains("vulnerab") {
+            return "SBOM-EO14028-DISCLOSURE";
+        } else if req.contains("supplier") {
+            return "SBOM-EO14028-SUPPLIER";
+        }
+        return "SBOM-EO14028-GENERAL";
+    }
+
     // CRA-specific rules (original logic)
-    if req.contains("art. 13(4)") || req.contains("art.13(4)") {
+    if req.contains("art. 13(3)") || req.contains("art.13(3)") {
+        "SBOM-CRA-ART-13-3"
+    } else if req.contains("art. 13(4)") || req.contains("art.13(4)") {
         "SBOM-CRA-ART-13-4"
     } else if req.contains("art. 13(6)") || req.contains("art.13(6)") {
         "SBOM-CRA-ART-13-6"
@@ -366,8 +414,14 @@ fn violation_to_rule_id(requirement: &str) -> &'static str {
         "SBOM-CRA-ART-13-12"
     } else if req.contains("art. 13(15)") || req.contains("art.13(15)") {
         "SBOM-CRA-ART-13-15"
+    } else if req.contains("art. 13(5)") || req.contains("art.13(5)") {
+        "SBOM-CRA-ART-13-5"
+    } else if req.contains("art. 13(9)") || req.contains("art.13(9)") {
+        "SBOM-CRA-ART-13-9"
     } else if req.contains("annex vii") {
         "SBOM-CRA-ANNEX-VII"
+    } else if req.contains("annex iii") {
+        "SBOM-CRA-ANNEX-III"
     } else if req.contains("annex i") || req.contains("annex_i") {
         "SBOM-CRA-ANNEX-I"
     } else {
@@ -498,6 +552,8 @@ fn get_sarif_rules_for_standard(level: ComplianceLevel) -> Vec<SarifRule> {
     match level {
         ComplianceLevel::NtiaMinimum => get_sarif_ntia_rules(),
         ComplianceLevel::FdaMedicalDevice => get_sarif_fda_rules(),
+        ComplianceLevel::NistSsdf => get_sarif_ssdf_rules(),
+        ComplianceLevel::Eo14028 => get_sarif_eo14028_rules(),
         _ => get_sarif_compliance_rules(),
     }
 }
@@ -656,8 +712,178 @@ fn get_sarif_fda_rules() -> Vec<SarifRule> {
     ]
 }
 
+fn get_sarif_ssdf_rules() -> Vec<SarifRule> {
+    vec![
+        SarifRule {
+            id: "SBOM-SSDF-PS1".to_string(),
+            name: "SsdfProvenance".to_string(),
+            short_description: SarifMessage {
+                text: "NIST SSDF PS.1: Provenance and creator identification".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-SSDF-PS2".to_string(),
+            name: "SsdfBuildIntegrity".to_string(),
+            short_description: SarifMessage {
+                text: "NIST SSDF PS.2: Build integrity — component cryptographic hashes".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-SSDF-PS3".to_string(),
+            name: "SsdfSupplierIdentification".to_string(),
+            short_description: SarifMessage {
+                text: "NIST SSDF PS.3: Supplier identification for components".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-SSDF-PO1".to_string(),
+            name: "SsdfSourceProvenance".to_string(),
+            short_description: SarifMessage {
+                text: "NIST SSDF PO.1: Source code provenance — VCS references".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-SSDF-PO3".to_string(),
+            name: "SsdfBuildMetadata".to_string(),
+            short_description: SarifMessage {
+                text: "NIST SSDF PO.3: Build provenance — build system metadata".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Note },
+        },
+        SarifRule {
+            id: "SBOM-SSDF-PW4".to_string(),
+            name: "SsdfDependencyManagement".to_string(),
+            short_description: SarifMessage {
+                text: "NIST SSDF PW.4: Dependency management — relationships".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-SSDF-PW6".to_string(),
+            name: "SsdfVulnerabilityInfo".to_string(),
+            short_description: SarifMessage {
+                text: "NIST SSDF PW.6: Vulnerability information and security references".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Note },
+        },
+        SarifRule {
+            id: "SBOM-SSDF-RV1".to_string(),
+            name: "SsdfComponentIdentification".to_string(),
+            short_description: SarifMessage {
+                text: "NIST SSDF RV.1: Component identification — unique identifiers".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-SSDF-GENERAL".to_string(),
+            name: "SsdfGeneralRequirement".to_string(),
+            short_description: SarifMessage {
+                text: "NIST SSDF: General secure development requirement".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+    ]
+}
+
+fn get_sarif_eo14028_rules() -> Vec<SarifRule> {
+    vec![
+        SarifRule {
+            id: "SBOM-EO14028-FORMAT".to_string(),
+            name: "Eo14028MachineReadable".to_string(),
+            short_description: SarifMessage {
+                text: "EO 14028 Sec 4(e): Machine-readable SBOM format requirement".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-EO14028-AUTOGEN".to_string(),
+            name: "Eo14028AutoGeneration".to_string(),
+            short_description: SarifMessage {
+                text: "EO 14028 Sec 4(e): Automated SBOM generation".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-EO14028-CREATOR".to_string(),
+            name: "Eo14028Creator".to_string(),
+            short_description: SarifMessage {
+                text: "EO 14028 Sec 4(e): SBOM creator identification".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-EO14028-IDENTIFIER".to_string(),
+            name: "Eo14028Identifier".to_string(),
+            short_description: SarifMessage {
+                text: "EO 14028 Sec 4(e): Component unique identification".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-EO14028-DEPENDENCY".to_string(),
+            name: "Eo14028Dependency".to_string(),
+            short_description: SarifMessage {
+                text: "EO 14028 Sec 4(e): Dependency relationship information".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-EO14028-VERSION".to_string(),
+            name: "Eo14028Version".to_string(),
+            short_description: SarifMessage {
+                text: "EO 14028 Sec 4(e): Component version information".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-EO14028-INTEGRITY".to_string(),
+            name: "Eo14028Integrity".to_string(),
+            short_description: SarifMessage {
+                text: "EO 14028 Sec 4(e): Component integrity verification (hashes)".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-EO14028-DISCLOSURE".to_string(),
+            name: "Eo14028Disclosure".to_string(),
+            short_description: SarifMessage {
+                text: "EO 14028 Sec 4(g): Vulnerability disclosure process".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-EO14028-SUPPLIER".to_string(),
+            name: "Eo14028Supplier".to_string(),
+            short_description: SarifMessage {
+                text: "EO 14028 Sec 4(e): Supplier identification".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-EO14028-GENERAL".to_string(),
+            name: "Eo14028GeneralRequirement".to_string(),
+            short_description: SarifMessage {
+                text: "EO 14028: General SBOM requirement".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+    ]
+}
+
 fn get_sarif_compliance_rules() -> Vec<SarifRule> {
     vec![
+        SarifRule {
+            id: "SBOM-CRA-ART-13-3".to_string(),
+            name: "CraUpdateFrequency".to_string(),
+            short_description: SarifMessage {
+                text: "CRA Art. 13(3): SBOM update frequency — timely regeneration after changes".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
         SarifRule {
             id: "SBOM-CRA-ART-13-4".to_string(),
             name: "CraMachineReadableFormat".to_string(),
@@ -671,6 +897,14 @@ fn get_sarif_compliance_rules() -> Vec<SarifRule> {
             name: "CraVulnerabilityDisclosure".to_string(),
             short_description: SarifMessage {
                 text: "CRA Art. 13(6): Vulnerability disclosure contact and metadata completeness".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-CRA-ART-13-5".to_string(),
+            name: "CraLicensedComponentTracking".to_string(),
+            short_description: SarifMessage {
+                text: "CRA Art. 13(5): Licensed component tracking — license information for all components".to_string(),
             },
             default_configuration: SarifConfiguration { level: SarifLevel::Warning },
         },
@@ -715,12 +949,28 @@ fn get_sarif_compliance_rules() -> Vec<SarifRule> {
             default_configuration: SarifConfiguration { level: SarifLevel::Warning },
         },
         SarifRule {
+            id: "SBOM-CRA-ART-13-9".to_string(),
+            name: "CraKnownVulnerabilities".to_string(),
+            short_description: SarifMessage {
+                text: "CRA Art. 13(9): Known vulnerabilities statement — vulnerability data or assertion".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Note },
+        },
+        SarifRule {
             id: "SBOM-CRA-ANNEX-I".to_string(),
             name: "CraTechnicalDocumentation".to_string(),
             short_description: SarifMessage {
                 text: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)".to_string(),
             },
             default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-CRA-ANNEX-III".to_string(),
+            name: "CraDocumentIntegrity".to_string(),
+            short_description: SarifMessage {
+                text: "CRA Annex III: Document signature/integrity — serial number, hash, or digital signature".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Note },
         },
         SarifRule {
             id: "SBOM-CRA-ANNEX-VII".to_string(),

@@ -13,6 +13,10 @@ pub enum PolicyPreset {
     Ntia,
     /// FDA Medical Device compliance (delegates to `quality::ComplianceChecker`)
     Fda,
+    /// NIST SP 800-218 Secure Software Development Framework
+    NistSsdf,
+    /// Executive Order 14028 Section 4
+    Eo14028,
 }
 
 impl PolicyPreset {
@@ -23,7 +27,9 @@ impl PolicyPreset {
             Self::Permissive => Self::Cra,
             Self::Cra => Self::Ntia,
             Self::Ntia => Self::Fda,
-            Self::Fda => Self::Enterprise,
+            Self::Fda => Self::NistSsdf,
+            Self::NistSsdf => Self::Eo14028,
+            Self::Eo14028 => Self::Enterprise,
         }
     }
 
@@ -35,12 +41,17 @@ impl PolicyPreset {
             Self::Cra => "EU CRA",
             Self::Ntia => "NTIA",
             Self::Fda => "FDA",
+            Self::NistSsdf => "NIST SSDF",
+            Self::Eo14028 => "EO 14028",
         }
     }
 
     /// Whether this preset delegates to the standards-based compliance checker.
     pub const fn is_standards_based(self) -> bool {
-        matches!(self, Self::Cra | Self::Ntia | Self::Fda)
+        matches!(
+            self,
+            Self::Cra | Self::Ntia | Self::Fda | Self::NistSsdf | Self::Eo14028
+        )
     }
 
     /// Get the corresponding `ComplianceLevel` for standards-based presets.
@@ -49,6 +60,8 @@ impl PolicyPreset {
             Self::Cra => Some(crate::quality::ComplianceLevel::CraPhase2),
             Self::Ntia => Some(crate::quality::ComplianceLevel::NtiaMinimum),
             Self::Fda => Some(crate::quality::ComplianceLevel::FdaMedicalDevice),
+            Self::NistSsdf => Some(crate::quality::ComplianceLevel::NistSsdf),
+            Self::Eo14028 => Some(crate::quality::ComplianceLevel::Eo14028),
             _ => None,
         }
     }

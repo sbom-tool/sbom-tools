@@ -45,11 +45,12 @@ pub fn render_compliance(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     // Render summary gauge
     render_compliance_summary(frame, chunks[1], result);
 
-    // Render violations with scroll
-    render_violations(frame, chunks[2], result, selected_violation, scroll_offset);
+    // Render violations with scroll + filter
+    let severity_filter = app.compliance_state.severity_filter;
+    render_violations(frame, chunks[2], result, selected_violation, scroll_offset, severity_filter);
 
     // Render help bar
-    render_help_bar(frame, chunks[3]);
+    render_help_bar(frame, chunks[3], severity_filter);
 
     // Render detail overlay if active
     if show_detail {
@@ -212,6 +213,7 @@ fn render_violations(
     result: &ComplianceResult,
     selected_violation: usize,
     scroll_offset: usize,
+    severity_filter: SeverityFilter,
 ) {
     let scheme = colors();
 
@@ -243,18 +245,24 @@ fn render_violations(
         return;
     }
 
-    // Viewport scrolling: compute visible range
-    let viewport_height = area.height.saturating_sub(4) as usize;
-    let visible_end = (scroll_offset + viewport_height).min(result.violations.len());
-
-    // Create table rows from visible violations only
-    let rows: Vec<Row> = result
+    // Apply severity filter
+    let filtered: Vec<(usize, &crate::quality::Violation)> = result
         .violations
         .iter()
         .enumerate()
+        .filter(|(_, v)| severity_filter.matches(v.severity))
+        .collect();
+
+    // Viewport scrolling: compute visible range
+    let viewport_height = area.height.saturating_sub(4) as usize;
+    let visible_end = (scroll_offset + viewport_height).min(filtered.len());
+
+    // Create table rows from visible filtered violations
+    let rows: Vec<Row> = filtered
+        .iter()
         .skip(scroll_offset)
         .take(visible_end - scroll_offset)
-        .map(|(i, violation)| {
+        .map(|&(i, violation)| {
             let is_selected = i == selected_violation;
 
             let severity_style = match violation.severity {
@@ -297,19 +305,27 @@ fn render_violations(
         Constraint::Length(20),
     ];
 
-    // Show scroll position in title when scrolled
-    let title = if scroll_offset > 0 || visible_end < result.violations.len() {
+    // Show scroll position in title when scrolled, and filter info
+    let filter_label = if severity_filter == SeverityFilter::All {
+        String::new()
+    } else {
+        format!(" [Filter: {}]", severity_filter.label())
+    };
+    let title = if scroll_offset > 0 || visible_end < filtered.len() {
         format!(
-            " Violations ({}) [{}-{}/{}] - j/k to navigate ",
+            " Violations ({}/{}) [{}-{}/{}]{} - j/k to navigate ",
+            filtered.len(),
             result.violations.len(),
             scroll_offset + 1,
             visible_end,
-            result.violations.len(),
+            filtered.len(),
+            filter_label,
         )
     } else {
         format!(
-            " Violations ({}) - j/k to navigate ",
-            result.violations.len()
+            " Violations ({}){} - j/k to navigate ",
+            filtered.len(),
+            filter_label,
         )
     };
 
@@ -330,18 +346,23 @@ fn render_violations(
     frame.render_widget(table, area);
 }
 
-fn render_help_bar(frame: &mut Frame, area: Rect) {
+fn render_help_bar(frame: &mut Frame, area: Rect, severity_filter: SeverityFilter) {
     let scheme = colors();
 
     let help = Line::from(vec![
         Span::styled("←/→", Style::default().fg(scheme.primary)),
-        Span::styled(" switch standard  ", Style::default().fg(scheme.muted)),
+        Span::styled(" standard  ", Style::default().fg(scheme.muted)),
         Span::styled("j/k", Style::default().fg(scheme.primary)),
-        Span::styled(" navigate violations  ", Style::default().fg(scheme.muted)),
+        Span::styled(" navigate  ", Style::default().fg(scheme.muted)),
         Span::styled("Enter", Style::default().fg(scheme.primary)),
-        Span::styled(" view details  ", Style::default().fg(scheme.muted)),
+        Span::styled(" details  ", Style::default().fg(scheme.muted)),
+        Span::styled("f", Style::default().fg(scheme.primary)),
+        Span::styled(
+            format!(" filter [{}]  ", severity_filter.label()),
+            Style::default().fg(scheme.muted),
+        ),
         Span::styled("E", Style::default().fg(scheme.primary)),
-        Span::styled(" export JSON  ", Style::default().fg(scheme.muted)),
+        Span::styled(" export  ", Style::default().fg(scheme.muted)),
         Span::styled("?", Style::default().fg(scheme.primary)),
         Span::styled(" help", Style::default().fg(scheme.muted)),
     ]);
@@ -349,6 +370,47 @@ fn render_help_bar(frame: &mut Frame, area: Rect) {
     let paragraph = Paragraph::new(help).block(Block::default().borders(Borders::ALL));
 
     frame.render_widget(paragraph, area);
+}
+
+/// Severity filter for violation display
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SeverityFilter {
+    /// Show all violations
+    #[default]
+    All,
+    /// Show only errors
+    ErrorsOnly,
+    /// Show errors and warnings
+    WarningsAndAbove,
+}
+
+impl SeverityFilter {
+    pub const fn next(self) -> Self {
+        match self {
+            Self::All => Self::ErrorsOnly,
+            Self::ErrorsOnly => Self::WarningsAndAbove,
+            Self::WarningsAndAbove => Self::All,
+        }
+    }
+
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::All => "All",
+            Self::ErrorsOnly => "Errors",
+            Self::WarningsAndAbove => "Warn+",
+        }
+    }
+
+    pub const fn matches(self, severity: ViolationSeverity) -> bool {
+        match self {
+            Self::All => true,
+            Self::ErrorsOnly => matches!(severity, ViolationSeverity::Error),
+            Self::WarningsAndAbove => matches!(
+                severity,
+                ViolationSeverity::Error | ViolationSeverity::Warning
+            ),
+        }
+    }
 }
 
 /// Compliance view state for multi-standard comparison (view mode)
@@ -362,6 +424,8 @@ pub struct StandardComplianceState {
     pub scroll_offset: usize,
     /// Whether the detail overlay is shown for the selected violation
     pub show_detail: bool,
+    /// Severity filter for displayed violations
+    pub severity_filter: SeverityFilter,
 }
 
 impl Default for StandardComplianceState {
@@ -371,6 +435,7 @@ impl Default for StandardComplianceState {
             selected_violation: 0,
             scroll_offset: 0,
             show_detail: false,
+            severity_filter: SeverityFilter::All,
         }
     }
 }

@@ -667,14 +667,25 @@ impl ViewApp {
             ViewTab::Quality => self.quality_state.select_next(),
             ViewTab::Compliance => {
                 self.ensure_compliance_results();
-                let max = self.compliance_results.as_ref()
-                    .and_then(|r| r.get(self.compliance_state.selected_standard))
-                    .map_or(0, |r| r.violations.len());
+                let max = self.filtered_compliance_violation_count();
                 self.compliance_state.select_next(max);
             }
             ViewTab::Source => self.source_state.select_next(),
             ViewTab::Overview => {} // Overview has no list navigation
         }
+    }
+
+    /// Count compliance violations that pass the current severity filter.
+    pub(crate) fn filtered_compliance_violation_count(&self) -> usize {
+        self.compliance_results
+            .as_ref()
+            .and_then(|r| r.get(self.compliance_state.selected_standard))
+            .map_or(0, |r| {
+                r.violations
+                    .iter()
+                    .filter(|v| self.compliance_state.severity_filter.matches(v.severity))
+                    .count()
+            })
     }
 
     /// Page up - move up by page size.
@@ -734,9 +745,7 @@ impl ViewApp {
             }
             ViewTab::Compliance => {
                 self.ensure_compliance_results();
-                let max = self.compliance_results.as_ref()
-                    .and_then(|r| r.get(self.compliance_state.selected_standard))
-                    .map_or(0, |r| r.violations.len());
+                let max = self.filtered_compliance_violation_count();
                 self.compliance_state.selected_violation = max.saturating_sub(1);
             }
             ViewTab::Source => self.source_state.select_last(),

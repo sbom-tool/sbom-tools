@@ -433,6 +433,12 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
         KeyCode::Char('f') => match app.active_tab {
             ViewTab::Tree => app.toggle_tree_filter(),
             ViewTab::Vulnerabilities => app.vuln_state.toggle_filter(),
+            ViewTab::Compliance => {
+                app.compliance_state.severity_filter =
+                    app.compliance_state.severity_filter.next();
+                app.compliance_state.selected_violation = 0;
+                app.compliance_state.scroll_offset = 0;
+            }
             _ => {}
         },
         KeyCode::Char('s') => {
@@ -754,9 +760,7 @@ fn handle_list_click(app: &mut ViewApp, clicked_index: usize, _x: u16) {
         }
         ViewTab::Compliance => {
             app.ensure_compliance_results();
-            let max = app.compliance_results.as_ref()
-                .and_then(|r| r.get(app.compliance_state.selected_standard))
-                .map_or(0, |r| r.violations.len());
+            let max = app.filtered_compliance_violation_count();
             if clicked_index < max {
                 app.compliance_state.selected_violation = clicked_index;
             }
