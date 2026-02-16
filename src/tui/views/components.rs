@@ -253,9 +253,9 @@ fn render_component_table(
         vec![
             Constraint::Length(12),
             Constraint::Min(16),
-            Constraint::Length(10),
-            Constraint::Length(10),
-            Constraint::Length(7),
+            Constraint::Length(11),
+            Constraint::Length(11),
+            Constraint::Length(9),
             Constraint::Length(7),
         ]
     } else {
@@ -264,7 +264,7 @@ fn render_component_table(
             Constraint::Min(14),
             Constraint::Length(10),
             Constraint::Length(0),
-            Constraint::Length(7),
+            Constraint::Length(9),
             Constraint::Length(9),
             Constraint::Length(12),
         ]
