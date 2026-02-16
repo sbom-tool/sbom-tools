@@ -68,6 +68,9 @@ pub struct ViewApp {
     /// Status message to display temporarily
     pub(crate) status_message: Option<String>,
 
+    /// When true, the status message survives one extra keypress before clearing.
+    pub(crate) status_sticky: bool,
+
     /// Navigation context for breadcrumbs
     pub(crate) navigation_ctx: ViewNavigationContext,
 
@@ -146,6 +149,7 @@ impl ViewApp {
             show_export: false,
             show_legend: false,
             status_message: None,
+            status_sticky: false,
             navigation_ctx: ViewNavigationContext::new(),
             should_quit: false,
             tick: 0,
@@ -570,18 +574,32 @@ impl ViewApp {
     }
 
     /// Clear the status message.
+    ///
+    /// If `status_sticky` is set the message is kept for one extra keypress,
+    /// then cleared on the subsequent call.
     pub fn clear_status_message(&mut self) {
-        self.status_message = None;
+        if self.status_sticky {
+            self.status_sticky = false;
+        } else {
+            self.status_message = None;
+        }
     }
 
     /// Export the current SBOM to a file.
+    ///
+    /// The export is scoped to the active tab: e.g. if the user is on the
+    /// Vulnerabilities tab only vulnerability data is included.
     pub fn export(&mut self, format: crate::tui::export::ExportFormat) {
-        use crate::tui::export::export_view;
+        use crate::reports::ReportConfig;
+        use crate::tui::export::{export_view, view_tab_to_report_type};
 
-        let result = export_view(format, &self.sbom, None);
+        let report_type = view_tab_to_report_type(self.active_tab);
+        let config = ReportConfig::with_types(vec![report_type]);
+        let result = export_view(format, &self.sbom, None, &config);
 
         if result.success {
             self.set_status_message(result.message);
+            self.status_sticky = true;
         } else {
             self.set_status_message(format!("Export failed: {}", result.message));
         }
@@ -608,6 +626,7 @@ impl ViewApp {
         );
         if result.success {
             self.set_status_message(result.message);
+            self.status_sticky = true;
         } else {
             self.set_status_message(format!("Export failed: {}", result.message));
         }

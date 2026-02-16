@@ -632,31 +632,24 @@ fn handle_search_key(app: &mut ViewApp, key: KeyEvent) {
 fn handle_export_key(app: &mut ViewApp, key: KeyEvent) {
     use crate::tui::export::ExportFormat;
 
-    match key.code {
+    let format = match key.code {
         KeyCode::Esc => {
             app.show_export = false;
+            return;
         }
-        KeyCode::Char('j') => {
-            app.show_export = false;
-            app.export(ExportFormat::Json);
-        }
-        KeyCode::Char('s') => {
-            app.show_export = false;
-            app.export(ExportFormat::Sarif);
-        }
-        KeyCode::Char('m') => {
-            app.show_export = false;
-            app.export(ExportFormat::Markdown);
-        }
-        KeyCode::Char('h') => {
-            app.show_export = false;
-            app.export(ExportFormat::Html);
-        }
-        KeyCode::Char('c') => {
-            app.show_export = false;
-            app.export(ExportFormat::Csv);
-        }
-        _ => {}
+        KeyCode::Char('j') => ExportFormat::Json,
+        KeyCode::Char('s') => ExportFormat::Sarif,
+        KeyCode::Char('m') => ExportFormat::Markdown,
+        KeyCode::Char('h') => ExportFormat::Html,
+        KeyCode::Char('c') => ExportFormat::Csv,
+        _ => return,
+    };
+
+    app.show_export = false;
+    if app.active_tab == ViewTab::Compliance {
+        app.export_compliance(format);
+    } else {
+        app.export(format);
     }
 }
 

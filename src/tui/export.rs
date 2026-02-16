@@ -4,7 +4,9 @@
 
 use crate::diff::DiffResult;
 use crate::model::NormalizedSbom;
-use crate::reports::{create_reporter, ReportConfig, ReportFormat};
+use crate::reports::{create_reporter, ReportConfig, ReportFormat, ReportType};
+use crate::tui::app::TabKind;
+use crate::tui::ViewTab;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -51,6 +53,65 @@ pub struct ExportResult {
     pub message: String,
 }
 
+/// Map a diff-mode tab to its corresponding `ReportType`.
+///
+/// Tabs that represent the full report (Summary, Quality, Compliance, etc.)
+/// map to `ReportType::All`.
+#[must_use]
+pub const fn tab_to_report_type(tab: TabKind) -> ReportType {
+    match tab {
+        TabKind::Components => ReportType::Components,
+        TabKind::Dependencies => ReportType::Dependencies,
+        TabKind::Licenses => ReportType::Licenses,
+        TabKind::Vulnerabilities => ReportType::Vulnerabilities,
+        TabKind::Summary
+        | TabKind::Quality
+        | TabKind::Compliance
+        | TabKind::SideBySide
+        | TabKind::GraphChanges
+        | TabKind::Source => ReportType::All,
+    }
+}
+
+/// Map a view-mode tab to its corresponding `ReportType`.
+#[must_use]
+pub const fn view_tab_to_report_type(tab: ViewTab) -> ReportType {
+    match tab {
+        ViewTab::Tree => ReportType::Components,
+        ViewTab::Vulnerabilities => ReportType::Vulnerabilities,
+        ViewTab::Licenses => ReportType::Licenses,
+        ViewTab::Dependencies => ReportType::Dependencies,
+        ViewTab::Overview
+        | ViewTab::Quality
+        | ViewTab::Compliance
+        | ViewTab::Source => ReportType::All,
+    }
+}
+
+/// Get the export scope label for a diff-mode tab.
+#[must_use]
+pub const fn tab_export_scope(tab: TabKind) -> &'static str {
+    match tab {
+        TabKind::Components => "Components",
+        TabKind::Dependencies => "Dependencies",
+        TabKind::Licenses => "Licenses",
+        TabKind::Vulnerabilities => "Vulnerabilities",
+        _ => "Report",
+    }
+}
+
+/// Get the export scope label for a view-mode tab.
+#[must_use]
+pub const fn view_tab_export_scope(tab: ViewTab) -> &'static str {
+    match tab {
+        ViewTab::Tree => "Components",
+        ViewTab::Vulnerabilities => "Vulnerabilities",
+        ViewTab::Licenses => "Licenses",
+        ViewTab::Dependencies => "Dependencies",
+        _ => "Report",
+    }
+}
+
 /// Export diff results to a file
 pub fn export_diff(
     format: ExportFormat,
@@ -58,12 +119,13 @@ pub fn export_diff(
     old_sbom: &NormalizedSbom,
     new_sbom: &NormalizedSbom,
     output_dir: Option<&str>,
+    config: &ReportConfig,
 ) -> ExportResult {
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
     let filename = format!("sbom_tools_{}.{}", timestamp, format.extension());
     let path = output_dir.map_or_else(|| PathBuf::from(&filename), |dir| PathBuf::from(dir).join(&filename));
 
-    export_with_reporter(format.to_report_format(), result, old_sbom, new_sbom, &path)
+    export_with_reporter(format.to_report_format(), result, old_sbom, new_sbom, &path, config)
 }
 
 /// Export single SBOM to a file (view mode)
@@ -71,12 +133,13 @@ pub fn export_view(
     format: ExportFormat,
     sbom: &NormalizedSbom,
     output_dir: Option<&str>,
+    config: &ReportConfig,
 ) -> ExportResult {
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
     let filename = format!("sbom_report_{}.{}", timestamp, format.extension());
     let path = output_dir.map_or_else(|| PathBuf::from(&filename), |dir| PathBuf::from(dir).join(&filename));
 
-    export_view_with_reporter(format.to_report_format(), sbom, &path)
+    export_view_with_reporter(format.to_report_format(), sbom, &path, config)
 }
 
 fn export_with_reporter(
@@ -85,16 +148,16 @@ fn export_with_reporter(
     old_sbom: &NormalizedSbom,
     new_sbom: &NormalizedSbom,
     path: &PathBuf,
+    config: &ReportConfig,
 ) -> ExportResult {
     let reporter = create_reporter(report_format);
-    let config = ReportConfig::default();
 
-    match reporter.generate_diff_report(result, old_sbom, new_sbom, &config) {
+    match reporter.generate_diff_report(result, old_sbom, new_sbom, config) {
         Ok(content) => match write_to_file(path, &content) {
             Ok(()) => ExportResult {
                 path: path.clone(),
                 success: true,
-                message: format!("Exported to {}", path.display()),
+                message: format!("Exported to {}", display_path(path)),
             },
             Err(e) => ExportResult {
                 path: path.clone(),
@@ -114,16 +177,16 @@ fn export_view_with_reporter(
     report_format: ReportFormat,
     sbom: &NormalizedSbom,
     path: &PathBuf,
+    config: &ReportConfig,
 ) -> ExportResult {
     let reporter = create_reporter(report_format);
-    let config = ReportConfig::default();
 
-    match reporter.generate_view_report(sbom, &config) {
+    match reporter.generate_view_report(sbom, config) {
         Ok(content) => match write_to_file(path, &content) {
             Ok(()) => ExportResult {
                 path: path.clone(),
                 success: true,
-                message: format!("Exported to {}", path.display()),
+                message: format!("Exported to {}", display_path(path)),
             },
             Err(e) => ExportResult {
                 path: path.clone(),
@@ -140,7 +203,9 @@ fn export_view_with_reporter(
 }
 
 
-/// Export compliance results to a file (JSON or SARIF)
+/// Export compliance results to a file.
+///
+/// All five export formats are supported: JSON, SARIF, Markdown, HTML, CSV.
 pub fn export_compliance(
     format: ExportFormat,
     results: &[crate::quality::ComplianceResult],
@@ -159,12 +224,17 @@ pub fn export_compliance(
             let sarif = compliance_to_sarif(result);
             ("sarif.json", sarif)
         }
-        _ => {
-            return ExportResult {
-                path: PathBuf::new(),
-                success: false,
-                message: "Compliance export supports JSON and SARIF only".to_string(),
-            };
+        ExportFormat::Markdown => {
+            let md = compliance_to_markdown(results, selected_standard);
+            ("md", md)
+        }
+        ExportFormat::Html => {
+            let html = compliance_to_html(results, selected_standard);
+            ("html", html)
+        }
+        ExportFormat::Csv => {
+            let csv = compliance_to_csv(results, selected_standard);
+            ("csv", csv)
         }
     };
 
@@ -176,7 +246,7 @@ pub fn export_compliance(
         Ok(()) => ExportResult {
             path: path.clone(),
             success: true,
-            message: format!("Compliance exported to {}", path.display()),
+            message: format!("Compliance exported to {}", display_path(&path)),
         },
         Err(e) => ExportResult {
             path,
@@ -229,55 +299,166 @@ fn compliance_to_json(
     serde_json::to_string_pretty(&output).unwrap_or_default()
 }
 
+/// Delegate to the proper SARIF generator in `reports::sarif`.
 fn compliance_to_sarif(
     result: Option<&crate::quality::ComplianceResult>,
 ) -> String {
-    use serde_json::{json, Value};
-
     let Some(result) = result else {
-        return json!({"error": "no compliance result"}).to_string();
+        return r#"{"error": "no compliance result selected"}"#.to_string();
     };
 
-    let results: Vec<Value> = result
-        .violations
-        .iter()
-        .map(|v| {
-            let level = match v.severity {
+    crate::reports::generate_compliance_sarif(result)
+        .unwrap_or_else(|e| format!(r#"{{"error": "{e}"}}"#))
+}
+
+fn compliance_to_markdown(
+    results: &[crate::quality::ComplianceResult],
+    selected: usize,
+) -> String {
+    let mut md = String::new();
+
+    let items: Vec<&crate::quality::ComplianceResult> = results
+        .get(selected)
+        .map_or_else(|| results.iter().collect(), |r| vec![r]);
+
+    for r in items {
+        let status = if r.is_compliant { "COMPLIANT" } else { "NON-COMPLIANT" };
+        md.push_str(&format!("# {} - {status}\n\n", r.level.name()));
+        md.push_str(&format!(
+            "Errors: {} | Warnings: {} | Info: {}\n\n",
+            r.error_count, r.warning_count, r.info_count
+        ));
+
+        if r.violations.is_empty() {
+            md.push_str("No violations found.\n\n");
+            continue;
+        }
+
+        md.push_str("| Severity | Category | Requirement | Element | Remediation |\n");
+        md.push_str("|----------|----------|-------------|---------|-------------|\n");
+        for v in &r.violations {
+            let element = v.element.as_deref().unwrap_or("-");
+            md.push_str(&format!(
+                "| {:?} | {} | {} | {} | {} |\n",
+                v.severity,
+                v.category.name(),
+                v.requirement,
+                element,
+                v.remediation_guidance(),
+            ));
+        }
+        md.push('\n');
+    }
+
+    md
+}
+
+fn compliance_to_csv(
+    results: &[crate::quality::ComplianceResult],
+    selected: usize,
+) -> String {
+    let mut lines = vec!["Standard,Severity,Category,Requirement,Element,Message,Remediation".to_string()];
+
+    let items: Vec<&crate::quality::ComplianceResult> = results
+        .get(selected)
+        .map_or_else(|| results.iter().collect(), |r| vec![r]);
+
+    for r in &items {
+        let std_name = r.level.name();
+        for v in &r.violations {
+            let element = v.element.as_deref().unwrap_or("");
+            lines.push(format!(
+                "\"{}\",\"{:?}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"",
+                std_name,
+                v.severity,
+                csv_escape(v.category.name()),
+                csv_escape(&v.requirement),
+                csv_escape(element),
+                csv_escape(&v.message),
+                csv_escape(v.remediation_guidance()),
+            ));
+        }
+    }
+
+    lines.join("\n")
+}
+
+fn compliance_to_html(
+    results: &[crate::quality::ComplianceResult],
+    selected: usize,
+) -> String {
+    use crate::reports::escape::escape_html;
+
+    let items: Vec<&crate::quality::ComplianceResult> = results
+        .get(selected)
+        .map_or_else(|| results.iter().collect(), |r| vec![r]);
+
+    let mut html = String::from(
+        r#"<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>SBOM Compliance Report</title>
+<style>
+body { font-family: system-ui, sans-serif; background: #1e1e2e; color: #cdd6f4; margin: 2rem; }
+h1, h2 { color: #89b4fa; }
+table { border-collapse: collapse; margin: 1rem 0; width: 100%; }
+th, td { padding: 8px 12px; border: 1px solid #45475a; text-align: left; }
+th { background: #313244; color: #89b4fa; font-weight: 600; }
+.error { color: #f38ba8; }
+.warning { color: #f9e2af; }
+.info { color: #89b4fa; }
+.pass { color: #a6e3a1; font-weight: bold; }
+.fail { color: #f38ba8; font-weight: bold; }
+.summary { margin: 1rem 0; color: #a6adc8; }
+</style></head><body>
+<h1>SBOM Compliance Report</h1>
+<p class="summary">Generated by sbom-tools</p>
+"#,
+    );
+
+    for r in &items {
+        let status_class = if r.is_compliant { "pass" } else { "fail" };
+        let status_label = if r.is_compliant { "COMPLIANT" } else { "NON-COMPLIANT" };
+        html.push_str(&format!(
+            "<h2>{} - <span class=\"{status_class}\">{status_label}</span></h2>\n",
+            escape_html(r.level.name()),
+        ));
+        html.push_str(&format!(
+            "<p>Errors: {} | Warnings: {} | Info: {}</p>\n",
+            r.error_count, r.warning_count, r.info_count
+        ));
+
+        if r.violations.is_empty() {
+            html.push_str("<p>No violations found.</p>\n");
+            continue;
+        }
+
+        html.push_str("<table><tr><th>Severity</th><th>Category</th><th>Requirement</th><th>Element</th><th>Message</th><th>Remediation</th></tr>\n");
+        for v in &r.violations {
+            let sev_class = match v.severity {
                 crate::quality::ViolationSeverity::Error => "error",
                 crate::quality::ViolationSeverity::Warning => "warning",
-                crate::quality::ViolationSeverity::Info => "note",
+                crate::quality::ViolationSeverity::Info => "info",
             };
-            json!({
-                "ruleId": format!("COMPLIANCE-{}", v.category.name().to_uppercase().replace(' ', "-")),
-                "level": level,
-                "message": { "text": v.message },
-                "properties": {
-                    "requirement": v.requirement,
-                    "category": v.category.name(),
-                    "remediation": v.remediation_guidance(),
-                    "element": v.element,
-                }
-            })
-        })
-        .collect();
+            let element = v.element.as_deref().unwrap_or("-");
+            html.push_str(&format!(
+                "<tr><td class=\"{sev_class}\">{:?}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>\n",
+                v.severity,
+                escape_html(v.category.name()),
+                escape_html(&v.requirement),
+                escape_html(element),
+                escape_html(&v.message),
+                escape_html(v.remediation_guidance()),
+            ));
+        }
+        html.push_str("</table>\n");
+    }
 
-    let sarif = json!({
-        "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
-        "version": "2.1.0",
-        "runs": [{
-            "tool": {
-                "driver": {
-                    "name": "sbom-tools",
-                    "version": env!("CARGO_PKG_VERSION"),
-                    "informationUri": "https://github.com/anthropics/sbom-tools",
-                    "rules": [],
-                }
-            },
-            "results": results,
-        }]
-    });
+    html.push_str("</body></html>");
+    html
+}
 
-    serde_json::to_string_pretty(&sarif).unwrap_or_default()
+/// Escape a value for CSV: double any embedded quotes.
+fn csv_escape(s: &str) -> String {
+    s.replace('"', "\"\"")
 }
 
 /// Export matrix results to a file (JSON, CSV, or HTML)
@@ -306,7 +487,7 @@ pub fn export_matrix(
         Ok(()) => ExportResult {
             path: path.clone(),
             success: true,
-            message: format!("Matrix exported to {}", path.display()),
+            message: format!("Matrix exported to {}", display_path(&path)),
         },
         Err(e) => ExportResult {
             path,
@@ -431,5 +612,18 @@ fn write_to_file(path: &PathBuf, content: &str) -> std::io::Result<()> {
     let mut file = File::create(path)?;
     file.write_all(content.as_bytes())?;
     Ok(())
+}
+
+/// Resolve a path to an absolute path for display in status messages.
+fn display_path(path: &PathBuf) -> String {
+    if path.is_absolute() {
+        path.display().to_string()
+    } else {
+        std::env::current_dir()
+            .map(|cwd| cwd.join(path))
+            .unwrap_or_else(|_| path.clone())
+            .display()
+            .to_string()
+    }
 }
 

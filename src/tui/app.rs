@@ -176,6 +176,8 @@ pub struct App {
     pub(crate) should_quit: bool,
     /// Status message to display temporarily
     pub(crate) status_message: Option<String>,
+    /// When true, the status message survives one extra keypress before clearing.
+    pub(crate) status_sticky: bool,
     /// Animation tick counter
     pub(crate) tick: u64,
     /// Last exported file path
@@ -322,21 +324,35 @@ impl App {
         self.status_message = Some(msg.into());
     }
 
-    /// Clear the status message
+    /// Clear the status message.
+    ///
+    /// If `status_sticky` is set the message is kept for one extra keypress,
+    /// then cleared on the subsequent call.
     pub fn clear_status_message(&mut self) {
-        self.status_message = None;
+        if self.status_sticky {
+            self.status_sticky = false;
+        } else {
+            self.status_message = None;
+        }
     }
 
-    /// Export the current diff to a file
+    /// Export the current diff to a file.
+    ///
+    /// The export is scoped to the active tab: e.g. if the user is on the
+    /// Vulnerabilities tab only vulnerability data is included.
     pub fn export(&mut self, format: super::export::ExportFormat) {
-        use super::export::{export_diff, export_view};
+        use super::export::{export_diff, export_view, tab_to_report_type};
+        use crate::reports::ReportConfig;
+
+        let report_type = tab_to_report_type(self.active_tab);
+        let config = ReportConfig::with_types(vec![report_type]);
 
         let result = match self.mode {
             AppMode::Diff => {
                 if let (Some(diff_result), Some(old_sbom), Some(new_sbom)) =
                     (&self.data.diff_result, &self.data.old_sbom, &self.data.new_sbom)
                 {
-                    export_diff(format, diff_result, old_sbom, new_sbom, None)
+                    export_diff(format, diff_result, old_sbom, new_sbom, None, &config)
                 } else {
                     self.set_status_message("No diff data to export");
                     return;
@@ -344,7 +360,7 @@ impl App {
             }
             AppMode::View => {
                 if let Some(ref sbom) = self.data.sbom {
-                    export_view(format, sbom, None)
+                    export_view(format, sbom, None, &config)
                 } else {
                     self.set_status_message("No SBOM data to export");
                     return;
@@ -359,6 +375,7 @@ impl App {
         if result.success {
             self.last_export_path = Some(result.path.display().to_string());
             self.set_status_message(result.message);
+            self.status_sticky = true;
         } else {
             self.set_status_message(format!("Export failed: {}", result.message));
         }
@@ -399,6 +416,7 @@ impl App {
         if result.success {
             self.last_export_path = Some(result.path.display().to_string());
             self.set_status_message(result.message);
+            self.status_sticky = true;
         } else {
             self.set_status_message(format!("Export failed: {}", result.message));
         }
@@ -417,6 +435,7 @@ impl App {
         if result.success {
             self.last_export_path = Some(result.path.display().to_string());
             self.set_status_message(result.message);
+            self.status_sticky = true;
         } else {
             self.set_status_message(format!("Export failed: {}", result.message));
         }

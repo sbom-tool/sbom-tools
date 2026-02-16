@@ -6,6 +6,7 @@
 
 pub mod compliance;
 pub mod components;
+pub mod export;
 pub mod licenses;
 pub mod quality;
 pub mod source;

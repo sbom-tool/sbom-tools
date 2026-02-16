@@ -151,23 +151,23 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
             // Export format selection in export dialog
             KeyCode::Char('j') if app.overlays.show_export => {
                 app.close_overlays();
-                app.export(super::export::ExportFormat::Json);
+                dispatch_export(app, super::export::ExportFormat::Json);
             }
             KeyCode::Char('m') if app.overlays.show_export => {
                 app.close_overlays();
-                app.export(super::export::ExportFormat::Markdown);
+                dispatch_export(app, super::export::ExportFormat::Markdown);
             }
             KeyCode::Char('h') if app.overlays.show_export => {
                 app.close_overlays();
-                app.export(super::export::ExportFormat::Html);
+                dispatch_export(app, super::export::ExportFormat::Html);
             }
             KeyCode::Char('s') if app.overlays.show_export => {
                 app.close_overlays();
-                app.export(super::export::ExportFormat::Sarif);
+                dispatch_export(app, super::export::ExportFormat::Sarif);
             }
             KeyCode::Char('c') if app.overlays.show_export => {
                 app.close_overlays();
-                app.export(super::export::ExportFormat::Csv);
+                dispatch_export(app, super::export::ExportFormat::Csv);
             }
             _ => {}
         }
@@ -372,6 +372,16 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
         super::AppMode::Timeline => timeline::handle_timeline_keys(app, key),
         super::AppMode::Matrix => matrix::handle_matrix_keys(app, key),
         _ => {}
+    }
+}
+
+/// Route an export to either the standard reporter pipeline or the
+/// compliance-specific exporter depending on the active tab.
+fn dispatch_export(app: &mut super::App, format: crate::tui::export::ExportFormat) {
+    if app.active_tab == super::TabKind::Compliance {
+        app.export_compliance(format);
+    } else {
+        app.export(format);
     }
 }
 

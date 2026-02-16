@@ -158,7 +158,8 @@ fn render(frame: &mut Frame, app: &mut App) {
     }
 
     if app.overlays.show_export {
-        render_export_dialog(frame, area);
+        let scope = super::export::tab_export_scope(app.active_tab);
+        super::shared::export::render_export_dialog(frame, area, scope, centered_rect);
     }
 
     if app.overlays.show_legend {
@@ -778,76 +779,6 @@ fn render_search_overlay(frame: &mut Frame, area: Rect, search_state: &DiffSearc
     );
 
     frame.render_widget(search, popup_area);
-}
-
-fn render_export_dialog(frame: &mut Frame, area: Rect) {
-    let popup_area = centered_rect(50, 45, area);
-    frame.render_widget(Clear, popup_area);
-
-    let export_text = vec![
-        Line::styled(
-            "━━━ Export Report ━━━",
-            Style::default().fg(colors().primary).bold(),
-        ),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("[j]", Style::default().fg(colors().accent).bold()),
-            Span::styled(" JSON      ", Style::default().fg(colors().text)),
-            Span::styled(
-                "- Structured data for automation",
-                Style::default().fg(colors().text_muted),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("[s]", Style::default().fg(colors().accent).bold()),
-            Span::styled(" SARIF     ", Style::default().fg(colors().text)),
-            Span::styled(
-                "- CI/CD integration (GitHub, etc.)",
-                Style::default().fg(colors().text_muted),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("[m]", Style::default().fg(colors().accent).bold()),
-            Span::styled(" Markdown  ", Style::default().fg(colors().text)),
-            Span::styled(
-                "- Documentation & PRs",
-                Style::default().fg(colors().text_muted),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("[h]", Style::default().fg(colors().accent).bold()),
-            Span::styled(" HTML      ", Style::default().fg(colors().text)),
-            Span::styled(
-                "- Stakeholder report",
-                Style::default().fg(colors().text_muted),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("[c]", Style::default().fg(colors().accent).bold()),
-            Span::styled(" CSV       ", Style::default().fg(colors().text)),
-            Span::styled(
-                "- Component list for spreadsheets",
-                Style::default().fg(colors().text_muted),
-            ),
-        ]),
-        Line::from(""),
-        Line::styled(
-            "Press Esc to cancel",
-            Style::default().fg(colors().text_muted),
-        ),
-    ];
-
-    let export = Paragraph::new(export_text)
-        .block(
-            Block::default()
-                .title(" Export ")
-                .title_style(Style::default().fg(colors().primary).bold())
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(colors().primary)),
-        )
-        .alignment(Alignment::Center);
-
-    frame.render_widget(export, popup_area);
 }
 
 fn render_legend_overlay(frame: &mut Frame, area: Rect) {

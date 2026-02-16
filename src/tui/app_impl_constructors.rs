@@ -58,6 +58,7 @@ impl App {
             overlays: AppOverlays::new(),
             should_quit: false,
             status_message: None,
+            status_sticky: false,
             tick: 0,
             last_export_path: None,
             navigation_ctx: NavigationContext::new(),
