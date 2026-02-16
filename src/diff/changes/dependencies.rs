@@ -88,13 +88,13 @@ mod tests {
 
     #[test]
     fn test_dependency_change_computer_default() {
-        let computer = DependencyChangeComputer::default();
+        let computer = DependencyChangeComputer;
         assert_eq!(computer.name(), "DependencyChangeComputer");
     }
 
     #[test]
     fn test_empty_sboms() {
-        let computer = DependencyChangeComputer::default();
+        let computer = DependencyChangeComputer;
         let old = NormalizedSbom::default();
         let new = NormalizedSbom::default();
         let matches = ComponentMatches::new();

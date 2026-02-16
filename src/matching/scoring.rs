@@ -151,7 +151,7 @@ mod tests {
         let v1 = Some("1.2.3".to_string());
         let v2 = Some("1.2.5".to_string());
         let score = compute_version_divergence_score(&v1, &v2, &weights);
-        assert!(score >= 0.5 && score <= 0.8);
+        assert!((0.5..=0.8).contains(&score));
     }
 
     #[test]

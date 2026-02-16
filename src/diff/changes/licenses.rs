@@ -91,13 +91,13 @@ mod tests {
 
     #[test]
     fn test_license_change_computer_default() {
-        let computer = LicenseChangeComputer::default();
+        let computer = LicenseChangeComputer;
         assert_eq!(computer.name(), "LicenseChangeComputer");
     }
 
     #[test]
     fn test_empty_sboms() {
-        let computer = LicenseChangeComputer::default();
+        let computer = LicenseChangeComputer;
         let old = NormalizedSbom::default();
         let new = NormalizedSbom::default();
         let matches = ComponentMatches::new();

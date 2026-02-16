@@ -857,7 +857,7 @@ mod tests {
         comp.identifiers.purl = purl.map(|s| s.to_string());
         // Convert extracted ecosystem string to Ecosystem enum
         comp.ecosystem = purl
-            .and_then(|p| ComponentIndex::extract_ecosystem(p))
+            .and_then(ComponentIndex::extract_ecosystem)
             .map(|eco_str| Ecosystem::from_purl_type(&eco_str));
         comp
     }

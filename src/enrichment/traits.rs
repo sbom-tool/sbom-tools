@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn test_noop_enricher_default() {
-        let enricher = NoOpEnricher::default();
+        let enricher = NoOpEnricher;
         assert!(!enricher.is_available());
     }
 }

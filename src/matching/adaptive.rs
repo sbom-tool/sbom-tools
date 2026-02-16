@@ -556,16 +556,9 @@ mod tests {
     fn test_otsu_threshold_bimodal() {
         // Create bimodal distribution (two peaks) with deterministic values
         // Using extreme separation to make Otsu clearly identify the gap
-        let mut scores = Vec::new();
-
-        // Low scores: all exactly 0.1
-        for _ in 0..50 {
-            scores.push(0.1);
-        }
+        let mut scores = vec![0.1; 50];
         // High scores: all exactly 0.9
-        for _ in 0..50 {
-            scores.push(0.9);
-        }
+        scores.extend(std::iter::repeat_n(0.9, 50));
 
         let adjuster = AdaptiveThreshold::default();
         let threshold = adjuster.otsu_threshold(&scores);

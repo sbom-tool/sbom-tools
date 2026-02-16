@@ -65,8 +65,7 @@ fn bench_diff_small(c: &mut Criterion) {
 
     c.bench_function("diff_100_components", |b| {
         b.iter(|| {
-            let result = engine.diff(black_box(&old), black_box(&new));
-            black_box(result);
+            let _ = black_box(engine.diff(black_box(&old), black_box(&new)));
         })
     });
 }
@@ -77,8 +76,7 @@ fn bench_diff_medium(c: &mut Criterion) {
 
     c.bench_function("diff_500_components", |b| {
         b.iter(|| {
-            let result = engine.diff(black_box(&old), black_box(&new));
-            black_box(result);
+            let _ = black_box(engine.diff(black_box(&old), black_box(&new)));
         })
     });
 }
@@ -89,8 +87,7 @@ fn bench_diff_large(c: &mut Criterion) {
 
     c.bench_function("diff_1000_components", |b| {
         b.iter(|| {
-            let result = engine.diff(black_box(&old), black_box(&new));
-            black_box(result);
+            let _ = black_box(engine.diff(black_box(&old), black_box(&new)));
         })
     });
 }
@@ -104,8 +101,7 @@ fn bench_diff_scaling(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::new("standard", size), size, |b, _| {
             b.iter(|| {
-                let result = engine.diff(black_box(&old), black_box(&new));
-                black_box(result);
+                let _ = black_box(engine.diff(black_box(&old), black_box(&new)));
             })
         });
     }
@@ -127,8 +123,7 @@ fn bench_lsh_threshold(c: &mut Criterion) {
 
     group.bench_function("without_lsh", |b| {
         b.iter(|| {
-            let result = engine_no_lsh.diff(black_box(&old), black_box(&new));
-            black_box(result);
+            let _ = black_box(engine_no_lsh.diff(black_box(&old), black_box(&new)));
         })
     });
 
@@ -137,8 +132,7 @@ fn bench_lsh_threshold(c: &mut Criterion) {
 
     group.bench_function("with_lsh", |b| {
         b.iter(|| {
-            let result = engine_with_lsh.diff(black_box(&old), black_box(&new));
-            black_box(result);
+            let _ = black_box(engine_with_lsh.diff(black_box(&old), black_box(&new)));
         })
     });
 
@@ -185,8 +179,7 @@ fn bench_repeated_diffs(c: &mut Criterion) {
     group.bench_function("standard_5x", |b| {
         b.iter(|| {
             for _ in 0..5 {
-                let result = standard_engine.diff(black_box(&old), black_box(&new));
-                black_box(result);
+                let _ = black_box(standard_engine.diff(black_box(&old), black_box(&new)));
             }
         })
     });
@@ -197,8 +190,7 @@ fn bench_repeated_diffs(c: &mut Criterion) {
         b.iter(|| {
             incremental_engine.clear_cache();
             for _ in 0..5 {
-                let result = incremental_engine.diff(black_box(&old), black_box(&new));
-                black_box(result);
+                let _ = black_box(incremental_engine.diff(black_box(&old), black_box(&new)));
             }
         })
     });

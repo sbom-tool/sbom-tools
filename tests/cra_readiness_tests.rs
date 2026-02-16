@@ -216,7 +216,7 @@ fn diff_reports_include_cra_compliance() {
     let json_value: serde_json::Value =
         serde_json::from_str(&json).expect("Invalid JSON diff report");
     assert!(json_value.get("cra_compliance").is_some());
-    assert!(json_value["cra_compliance"]["new"]["violations"].as_array().unwrap().len() >= 1);
+    assert!(!json_value["cra_compliance"]["new"]["violations"].as_array().unwrap().is_empty());
 
     let sarif = SarifReporter::new()
         .generate_diff_report(&diff, &old_sbom, &new_sbom, &config)

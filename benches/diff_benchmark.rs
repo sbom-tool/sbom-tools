@@ -51,8 +51,7 @@ fn benchmark_diff_small(c: &mut Criterion) {
 
     c.bench_function("diff_50_components_10pct", |b| {
         b.iter(|| {
-            let result = engine.diff(black_box(&old), black_box(&new));
-            black_box(result);
+            let _ = black_box(engine.diff(black_box(&old), black_box(&new)));
         })
     });
 }
@@ -63,8 +62,7 @@ fn benchmark_diff_medium(c: &mut Criterion) {
 
     c.bench_function("diff_200_components_20pct", |b| {
         b.iter(|| {
-            let result = engine.diff(black_box(&old), black_box(&new));
-            black_box(result);
+            let _ = black_box(engine.diff(black_box(&old), black_box(&new)));
         })
     });
 }

@@ -162,13 +162,13 @@ mod tests {
 
     #[test]
     fn test_vulnerability_change_computer_default() {
-        let computer = VulnerabilityChangeComputer::default();
+        let computer = VulnerabilityChangeComputer;
         assert_eq!(computer.name(), "VulnerabilityChangeComputer");
     }
 
     #[test]
     fn test_empty_sboms() {
-        let computer = VulnerabilityChangeComputer::default();
+        let computer = VulnerabilityChangeComputer;
         let old = NormalizedSbom::default();
         let new = NormalizedSbom::default();
         let matches = ComponentMatches::new();

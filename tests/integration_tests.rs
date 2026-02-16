@@ -332,8 +332,8 @@ mod diff_engine_tests {
         // New SBOM has vulnerabilities that old one doesn't
         // The exact count depends on component matching
         assert!(
-            result.vulnerabilities.introduced.len() > 0
-                || result.vulnerabilities.persistent.len() > 0,
+            !result.vulnerabilities.introduced.is_empty()
+                || !result.vulnerabilities.persistent.is_empty(),
             "Should detect vulnerability changes"
         );
     }
@@ -1597,8 +1597,7 @@ mod streaming_tests {
 
     #[test]
     fn test_streaming_config_stdin_disabled() {
-        let mut config = StreamingConfig::default();
-        config.stream_stdin = false;
+        let config = StreamingConfig { stream_stdin: false, ..StreamingConfig::default() };
         // stdin with stream_stdin=false should not trigger streaming
         assert!(!config.should_stream(None, true));
     }
