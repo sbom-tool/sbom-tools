@@ -2177,6 +2177,11 @@ pub struct SbomStats {
     pub medium_count: usize,
     pub low_count: usize,
     pub unknown_count: usize,
+    pub eol_count: usize,
+    pub eol_approaching_count: usize,
+    pub eol_supported_count: usize,
+    pub eol_security_only_count: usize,
+    pub eol_enriched: bool,
 }
 
 impl SbomStats {
@@ -2190,6 +2195,11 @@ impl SbomStats {
         let mut medium_count = 0;
         let mut low_count = 0;
         let mut unknown_count = 0;
+        let mut eol_count = 0;
+        let mut eol_approaching_count = 0;
+        let mut eol_supported_count = 0;
+        let mut eol_security_only_count = 0;
+        let mut eol_enriched = false;
 
         for comp in sbom.components.values() {
             // Count ecosystems
@@ -2222,6 +2232,19 @@ impl SbomStats {
                     _ => unknown_count += 1,
                 }
             }
+
+            // Count EOL statuses
+            if let Some(eol) = &comp.eol {
+                use crate::model::EolStatus;
+                eol_enriched = true;
+                match eol.status {
+                    EolStatus::EndOfLife => eol_count += 1,
+                    EolStatus::ApproachingEol => eol_approaching_count += 1,
+                    EolStatus::Supported => eol_supported_count += 1,
+                    EolStatus::SecurityOnly => eol_security_only_count += 1,
+                    _ => {}
+                }
+            }
         }
 
         Self {
@@ -2236,6 +2259,11 @@ impl SbomStats {
             medium_count,
             low_count,
             unknown_count,
+            eol_count,
+            eol_approaching_count,
+            eol_supported_count,
+            eol_security_only_count,
+            eol_enriched,
         }
     }
 }

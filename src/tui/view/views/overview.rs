@@ -24,27 +24,39 @@ fn render_stats_panel(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let eco_count = app.stats.ecosystem_counts.len();
     let eco_height = (eco_count + 2).min(12) as u16; // cap at 12 rows
 
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(8),          // Summary cards
-            Constraint::Length(8),          // Vulnerability breakdown
-            Constraint::Length(eco_height), // Ecosystem distribution (adaptive)
-            Constraint::Min(6),            // License distribution
-        ])
-        .split(area);
+    if app.stats.eol_enriched {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(8),          // Summary cards
+                Constraint::Length(8),          // EOL breakdown
+                Constraint::Length(8),          // Vulnerability breakdown
+                Constraint::Length(eco_height), // Ecosystem distribution (adaptive)
+                Constraint::Min(6),            // License distribution
+            ])
+            .split(area);
 
-    // Summary cards
-    render_summary_cards(frame, chunks[0], app);
+        render_summary_cards(frame, chunks[0], app);
+        render_eol_breakdown(frame, chunks[1], app);
+        render_vuln_breakdown(frame, chunks[2], app);
+        render_ecosystem_dist(frame, chunks[3], app);
+        render_license_dist(frame, chunks[4], app);
+    } else {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(8),          // Summary cards
+                Constraint::Length(8),          // Vulnerability breakdown
+                Constraint::Length(eco_height), // Ecosystem distribution (adaptive)
+                Constraint::Min(6),            // License distribution
+            ])
+            .split(area);
 
-    // Vulnerability breakdown
-    render_vuln_breakdown(frame, chunks[1], app);
-
-    // Ecosystem distribution
-    render_ecosystem_dist(frame, chunks[2], app);
-
-    // License distribution
-    render_license_dist(frame, chunks[3], app);
+        render_summary_cards(frame, chunks[0], app);
+        render_vuln_breakdown(frame, chunks[1], app);
+        render_ecosystem_dist(frame, chunks[2], app);
+        render_license_dist(frame, chunks[3], app);
+    }
 }
 
 fn render_summary_cards(frame: &mut Frame, area: Rect, app: &ViewApp) {
@@ -215,6 +227,74 @@ fn render_vuln_breakdown(frame: &mut Frame, area: Rect, app: &ViewApp) {
             .title(" Vulnerability Severity ")
             .borders(Borders::ALL)
             .border_style(Style::default().fg(scheme.high)),
+    );
+
+    frame.render_widget(para, area);
+}
+
+fn render_eol_breakdown(frame: &mut Frame, area: Rect, app: &ViewApp) {
+    let scheme = colors();
+    let stats = &app.stats;
+    let total = stats.component_count.max(1);
+
+    let mut lines = vec![Line::from("")];
+
+    let add_eol_line = |lines: &mut Vec<Line>, label: &str, count: usize, color: Color| {
+        let pct = (count as f64 / total as f64 * 100.0) as usize;
+        let bar_width = 20;
+        let filled = (count * bar_width / total.max(1)).max(usize::from(count > 0));
+        let scheme = colors();
+
+        lines.push(Line::from(vec![
+            Span::styled(format!("{label:>10} "), Style::default().fg(color).bold()),
+            Span::styled("\u{2588}".repeat(filled), Style::default().fg(color)),
+            Span::styled(
+                "\u{2591}".repeat(bar_width - filled),
+                Style::default().fg(scheme.muted),
+            ),
+            Span::styled(
+                format!(" {count:>5} ({pct:>2}%)"),
+                Style::default().fg(scheme.text),
+            ),
+        ]));
+    };
+
+    add_eol_line(&mut lines, "EOL", stats.eol_count, scheme.critical);
+    add_eol_line(
+        &mut lines,
+        "Near EOL",
+        stats.eol_approaching_count,
+        scheme.high,
+    );
+    add_eol_line(
+        &mut lines,
+        "Sec Only",
+        stats.eol_security_only_count,
+        scheme.warning,
+    );
+    add_eol_line(
+        &mut lines,
+        "Supported",
+        stats.eol_supported_count,
+        scheme.success,
+    );
+
+    let border_color = if stats.eol_count > 0 {
+        scheme.critical
+    } else if stats.eol_approaching_count > 0 {
+        scheme.high
+    } else {
+        scheme.success
+    };
+
+    let para = Paragraph::new(lines).block(
+        Block::default()
+            .title(format!(
+                " End-of-Life Status ({} at risk) ",
+                stats.eol_count + stats.eol_approaching_count
+            ))
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(border_color)),
     );
 
     frame.render_widget(para, area);

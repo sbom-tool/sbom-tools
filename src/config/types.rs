@@ -285,6 +285,8 @@ pub struct ViewConfig {
     pub vulnerable_only: bool,
     /// Filter by ecosystem
     pub ecosystem_filter: Option<String>,
+    /// Enrichment configuration
+    pub enrichment: EnrichmentConfig,
 }
 
 /// Configuration for multi-diff operations

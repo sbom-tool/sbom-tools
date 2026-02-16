@@ -226,6 +226,30 @@ struct ViewArgs {
     /// Filter by ecosystem (e.g., npm, cargo, pypi, maven)
     #[arg(long)]
     ecosystem: Option<String>,
+
+    /// Enable OSV vulnerability enrichment
+    #[arg(long)]
+    enrich_vulns: bool,
+
+    /// Enable end-of-life detection via endoflife.date
+    #[arg(long)]
+    enrich_eol: bool,
+
+    /// Cache directory for enrichment data
+    #[arg(long)]
+    vuln_cache_dir: Option<PathBuf>,
+
+    /// Cache TTL in hours (default: 24)
+    #[arg(long, default_value = "24")]
+    vuln_cache_ttl: u64,
+
+    /// Bypass cache and fetch fresh data
+    #[arg(long)]
+    refresh_vulns: bool,
+
+    /// API timeout in seconds (default: 30)
+    #[arg(long, default_value = "30")]
+    api_timeout: u64,
 }
 
 /// Arguments for the `validate` subcommand
@@ -480,6 +504,17 @@ fn main() -> Result<()> {
         }
 
         Commands::View(args) => {
+            let enrichment = EnrichmentConfig {
+                enabled: args.enrich_vulns,
+                provider: "osv".to_string(),
+                cache_ttl_hours: args.vuln_cache_ttl,
+                max_concurrent: 10,
+                cache_dir: args.vuln_cache_dir.or_else(|| Some(dirs::osv_cache_dir())),
+                bypass_cache: args.refresh_vulns,
+                timeout_secs: args.api_timeout,
+                enable_eol: args.enrich_eol,
+            };
+
             let config = ViewConfig {
                 sbom_path: args.sbom,
                 output: OutputConfig {
@@ -493,6 +528,7 @@ fn main() -> Result<()> {
                 min_severity: args.severity,
                 vulnerable_only: args.vulnerable_only,
                 ecosystem_filter: args.ecosystem,
+                enrichment,
             };
             cli::run_view(config)
         }

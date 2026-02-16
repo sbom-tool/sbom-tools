@@ -16,6 +16,39 @@ use anyhow::Result;
 pub fn run_view(config: ViewConfig) -> Result<()> {
     let mut parsed = parse_sbom_with_context(&config.sbom_path, false)?;
 
+    // Enrich with OSV vulnerability data if enabled
+    #[cfg(feature = "enrichment")]
+    if config.enrichment.enabled {
+        let osv_config = crate::pipeline::build_enrichment_config(&config.enrichment);
+        crate::pipeline::enrich_sbom(parsed.sbom_mut(), &osv_config, false);
+    }
+
+    // Enrich with end-of-life data if enabled
+    #[cfg(feature = "enrichment")]
+    if config.enrichment.enable_eol {
+        let eol_config = crate::enrichment::EolClientConfig {
+            cache_dir: config
+                .enrichment
+                .cache_dir
+                .clone()
+                .unwrap_or_else(crate::pipeline::dirs::eol_cache_dir),
+            cache_ttl: std::time::Duration::from_secs(config.enrichment.cache_ttl_hours * 3600),
+            bypass_cache: config.enrichment.bypass_cache,
+            timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
+            ..Default::default()
+        };
+        crate::pipeline::enrich_eol(parsed.sbom_mut(), &eol_config, false);
+    }
+
+    // Warn if enrichment requested but feature not enabled
+    #[cfg(not(feature = "enrichment"))]
+    if config.enrichment.enabled || config.enrichment.enable_eol {
+        tracing::warn!(
+            "Enrichment requested but the 'enrichment' feature is not enabled. \
+             Recompile with `cargo build --features enrichment`."
+        );
+    }
+
     // Apply filters to SBOM
     let filtered_count = apply_view_filters(parsed.sbom_mut(), &config);
     if filtered_count > 0 {
@@ -209,6 +242,7 @@ mod tests {
             min_severity: None,
             vulnerable_only: false,
             ecosystem_filter: None,
+            enrichment: crate::config::EnrichmentConfig::default(),
         };
 
         let removed = apply_view_filters(&mut sbom, &config);
