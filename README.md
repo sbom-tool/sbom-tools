@@ -29,7 +29,8 @@ Semantic SBOM diff and analysis tool. Compare, validate, and assess the quality 
 - **Streaming Parser** — Memory-efficient parsing for very large SBOMs (>512MB) with progress reporting
 - **Fuzzy Matching** — Multi-tier matching engine using exact PURL match, alias lookup, ecosystem-specific normalization, and string similarity with adaptive thresholds and LSH indexing
 - **Vulnerability Enrichment** — Integration with OSV and KEV databases to track new and resolved vulnerabilities (feature-gated)
-- **Quality Assessment** — Score SBOMs against compliance standards including NTIA minimum elements, FDA, and CRA (Cyber Resilience Act)
+- **EOL Detection** — End-of-life status for components via endoflife.date API with TUI visualization and compliance integration (feature-gated)
+- **Quality Assessment** — Score SBOMs against compliance standards including NTIA, FDA, CRA (Cyber Resilience Act), NIST SSDF, and EO 14028
 - **Fleet Comparison** — 1:N baseline comparison, timeline analysis across versions, and NxN matrix analysis
 - **Incremental Diff** — Track changes across SBOM versions with drift detection and divergence analysis
 - **Multiple Output Formats** — JSON, SARIF, HTML, Markdown, CSV, table, side-by-side, summary, and an interactive TUI
@@ -92,6 +93,7 @@ Compares two SBOMs and reports added, removed, and modified components with vers
 | `--ecosystem-rules <path>` | Load custom per-ecosystem normalization rules |
 | `--fuzzy-preset <preset>` | Matching preset: `strict`, `balanced` (default), `permissive` |
 | `--enrich-vulns` | Query OSV/KEV databases for vulnerability data |
+| `--enrich-eol` | Detect end-of-life status via endoflife.date API |
 | `--detect-typosquats` | Flag components that look like known-package typosquats |
 | `--explain-matches` | Show why each component pair was matched |
 
@@ -143,6 +145,7 @@ Launches an interactive TUI with component tree, vulnerability details, license 
 | `--severity <level>` | Filter by minimum vulnerability severity (`critical`, `high`, `medium`, `low`) |
 | `--vulnerable-only` | Only show components with known vulnerabilities |
 | `--ecosystem <name>` | Filter components by ecosystem (e.g., `npm`, `cargo`, `pypi`) |
+| `--enrich-eol` | Detect end-of-life status via endoflife.date API |
 | `--validate-ntia` | Validate against NTIA minimum elements |
 
 </details>
@@ -161,7 +164,7 @@ Checks an SBOM against a compliance standard and reports missing fields or faili
 
 | Flag | Description |
 |------|-------------|
-| `--standard <std>` | Standard to validate: `ntia` (default), `fda`, `cra` |
+| `--standard <std>` | Standard to validate: `ntia` (default), `fda`, `cra`, `ssdf`, `eo14028` (comma-separated for multiple) |
 | `-o, --output <fmt>` | Output format (default: `json`; supports `sarif` for CI integration) |
 
 </details>
@@ -245,7 +248,7 @@ Compare two SBOMs with semantic change detection across 9 tabs.
 
 ![Diff source](assets/tui-diff-source.svg)
 
-**Compliance** — CRA, NTIA, and FDA readiness checks with pass/fail details for each requirement.
+**Compliance** — CRA, NTIA, FDA, NIST SSDF, and EO 14028 readiness checks with pass/fail details for each requirement.
 
 ![Diff compliance](assets/tui-diff-compliance.svg)
 
@@ -402,8 +405,8 @@ src/
 ├── parsers/      Format detection + parsing (streaming for >512MB)
 ├── matching/     Multi-tier fuzzy matching (PURL, alias, ecosystem, adaptive, LSH)
 ├── diff/         Semantic diffing engine with graph support + incremental diff
-├── enrichment/   OSV/KEV vulnerability data (feature-gated), file cache with TTL
-├── quality/      NTIA/FDA/CRA compliance scoring
+├── enrichment/   OSV/KEV vulnerability data + EOL detection (feature-gated), file cache with TTL
+├── quality/      NTIA/FDA/CRA/NIST SSDF/EO 14028 compliance scoring
 ├── pipeline/     parse → enrich → diff → report orchestration
 ├── reports/      Output format generators + streaming reporter
 └── tui/          Ratatui-based interactive UI

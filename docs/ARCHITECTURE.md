@@ -26,8 +26,8 @@ SBOM files
   - LSH (locality-sensitive hashing) index for fast candidate lookup.
   - Custom rule engine for user-defined matching rules.
 - **diff** (`src/diff/`): Semantic diff engine with graph-aware dependency diffing, incremental diff tracking, and cost-model scoring.
-- **enrichment** (`src/enrichment/`): OSV and KEV vulnerability database integration (feature-gated behind `enrichment`). Includes file-based caching with TTL and staleness tracking.
-- **quality** (`src/quality/`): SBOM quality scoring and compliance checks against NTIA, FDA, and CRA standards.
+- **enrichment** (`src/enrichment/`): OSV and KEV vulnerability database integration plus EOL detection via endoflife.date API (feature-gated behind `enrichment`). Includes file-based caching with TTL and staleness tracking.
+- **quality** (`src/quality/`): SBOM quality scoring and compliance checks against NTIA, FDA, CRA, NIST SSDF, and EO 14028 standards.
 - **pipeline** (`src/pipeline/`): Orchestrates the parse → enrich → diff → report workflow. Handles stage sequencing and output routing.
 - **reports** (`src/reports/`): Report generators for JSON, SARIF, HTML, Markdown, CSV, summary, table, and side-by-side formats. Includes a streaming reporter for large outputs.
 - **tui** (`src/tui/`): Interactive ratatui-based UI for exploring diffs and single SBOMs. Supports diff mode, view mode, fleet comparison, and timeline views.
@@ -103,16 +103,15 @@ Both systems coexist. The `App` struct has a `quality_view: Option<QualityView>`
 ## Extension Points
 
 - **Matching rules**: Configurable matching behavior via YAML configs and custom rule engine.
-- **Enrichment**: OSV/KEV integration for vulnerability data (feature-gated).
+- **Enrichment**: OSV/KEV integration for vulnerability data and EOL detection via endoflife.date API (feature-gated).
 - **Reports**: Add new generators by implementing ReportGenerator.
-- **Compliance**: Add new standards by extending the quality scorer.
+- **Compliance**: Add new standards by extending the quality scorer (currently: NTIA, FDA, CRA, NIST SSDF, EO 14028).
 
 ## Known Technical Debt
 
 - Multi-SBOM commands bypass the pipeline (no enrichment, limited output formats).
 - Enrichment is orchestrated by CLI, not the pipeline module.
-- ~100 `unwrap()` and ~30 `expect()` calls in production code (most safe-by-construction, but not annotated).
+- ~112 `unwrap()` calls across 27 files (most in non-production code: cache, parsers, config) and ~30 `expect()` calls (safe-by-construction).
 - 12 lock-poisoning patterns (`lock().unwrap()` / `lock().expect()`).
-- 77/192 source files have test modules (40% coverage by file).
-- CLI command handlers (`src/cli/`) have no integration tests.
+- 38 integration tests across 6 test files in `tests/`.
 - TUI dual system (legacy + ViewState trait) — only Quality migrated.

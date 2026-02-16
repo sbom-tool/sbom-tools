@@ -112,7 +112,7 @@ flowchart TD
 
 Note: No enrichment, no DiffConfig, no streaming, no report format variety.
 
-## Enrichment Flow (feature-gated)
+## Vulnerability Enrichment Flow (feature-gated)
 Source: `src/pipeline/parse.rs`, `src/cli/diff.rs`
 
 ```mermaid
@@ -127,4 +127,24 @@ flowchart TD
     G --> H[enricher.enrich components]
     H --> I[Re-insert into sbom.components]
     I --> J[Return EnrichmentStats]
+```
+
+## EOL Enrichment Flow (feature-gated)
+Source: `src/enrichment/eol/`, `src/cli/diff.rs`, `src/cli/view.rs`
+
+```mermaid
+flowchart TD
+    A[--enrich-eol flag] --> B{flag set?}
+    B -->|no| Z[Skip EOL enrichment]
+    B -->|yes| C[Build EolEnricherConfig]
+    C --> D[pipeline::enrich_eol]
+    D --> E[EolClient::new with file cache]
+    E --> F[For each component: extract name + version]
+    F --> G[Query endoflife.date API]
+    G --> H{Product found?}
+    H -->|no| I[Skip component]
+    H -->|yes| J[Match release cycle]
+    J --> K[Classify: Supported / SecurityOnly / ApproachingEol / EndOfLife / Unknown]
+    K --> L[Set component.eol = EolInfo]
+    L --> M[Component enriched with EOL status]
 ```
