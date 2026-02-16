@@ -151,7 +151,7 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
             KeyCode::Char('e') if app.show_export => app.toggle_export(),
             KeyCode::Char('l') if app.show_legend => app.toggle_legend(),
             // Export format selection
-            KeyCode::Char('j' | 'm' | 'c' | 'v')
+            KeyCode::Char('j' | 's' | 'm' | 'h' | 'c')
                 if app.show_export =>
             {
                 handle_export_key(app, key);
@@ -634,16 +634,19 @@ fn handle_export_key(app: &mut ViewApp, key: KeyEvent) {
             app.show_export = false;
             app.export(ExportFormat::Json);
         }
+        KeyCode::Char('s') => {
+            app.show_export = false;
+            app.export(ExportFormat::Sarif);
+        }
         KeyCode::Char('m') => {
             app.show_export = false;
             app.export(ExportFormat::Markdown);
         }
-        KeyCode::Char('c') => {
+        KeyCode::Char('h') => {
             app.show_export = false;
-            app.export(ExportFormat::Csv);
+            app.export(ExportFormat::Html);
         }
-        KeyCode::Char('v') => {
-            // 'v' was for "Vulns CSV" - use regular CSV
+        KeyCode::Char('c') => {
             app.show_export = false;
             app.export(ExportFormat::Csv);
         }

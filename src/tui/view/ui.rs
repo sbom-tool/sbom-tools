@@ -624,6 +624,14 @@ fn render_export_dialog(frame: &mut Frame, area: Rect) {
             ),
         ]),
         Line::from(vec![
+            Span::styled("[s]", Style::default().fg(colors().accent).bold()),
+            Span::styled(" SARIF     ", Style::default().fg(colors().text)),
+            Span::styled(
+                "- CI/CD integration (GitHub, etc.)",
+                Style::default().fg(colors().text_muted),
+            ),
+        ]),
+        Line::from(vec![
             Span::styled("[m]", Style::default().fg(colors().accent).bold()),
             Span::styled(" Markdown  ", Style::default().fg(colors().text)),
             Span::styled(
@@ -632,18 +640,18 @@ fn render_export_dialog(frame: &mut Frame, area: Rect) {
             ),
         ]),
         Line::from(vec![
-            Span::styled("[c]", Style::default().fg(colors().accent).bold()),
-            Span::styled(" CSV       ", Style::default().fg(colors().text)),
+            Span::styled("[h]", Style::default().fg(colors().accent).bold()),
+            Span::styled(" HTML      ", Style::default().fg(colors().text)),
             Span::styled(
-                "- Component list for spreadsheets",
+                "- Stakeholder report",
                 Style::default().fg(colors().text_muted),
             ),
         ]),
         Line::from(vec![
-            Span::styled("[v]", Style::default().fg(colors().accent).bold()),
-            Span::styled(" Vulns CSV ", Style::default().fg(colors().text)),
+            Span::styled("[c]", Style::default().fg(colors().accent).bold()),
+            Span::styled(" CSV       ", Style::default().fg(colors().text)),
             Span::styled(
-                "- Vulnerability list for tracking",
+                "- Component list for spreadsheets",
                 Style::default().fg(colors().text_muted),
             ),
         ]),

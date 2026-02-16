@@ -28,19 +28,16 @@ pub(super) fn handle_matrix_keys(app: &mut App, key: KeyEvent) {
                 app.tabs.matrix.close_export_options();
             }
             KeyCode::Char('c') => {
-                // Export as CSV
                 app.tabs.matrix.close_export_options();
-                app.set_status_message("Matrix exported as CSV".to_string());
+                app.export_matrix(crate::tui::export::ExportFormat::Csv);
             }
             KeyCode::Char('j') => {
-                // Export as JSON
                 app.tabs.matrix.close_export_options();
-                app.set_status_message("Matrix exported as JSON".to_string());
+                app.export_matrix(crate::tui::export::ExportFormat::Json);
             }
             KeyCode::Char('h') => {
-                // Export as HTML
                 app.tabs.matrix.close_export_options();
-                app.set_status_message("Matrix exported as HTML".to_string());
+                app.export_matrix(crate::tui::export::ExportFormat::Html);
             }
             _ => {}
         }

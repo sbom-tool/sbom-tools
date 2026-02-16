@@ -3,16 +3,16 @@
 //! Implements the `quality` subcommand for assessing SBOM quality.
 
 use crate::pipeline::{exit_codes, parse_sbom_with_context, write_output, OutputTarget};
-use crate::quality::{QualityGrade, QualityReport, QualityScorer, ScoringProfile};
+use crate::quality::{QualityGrade, QualityReport, QualityScorer, ScoringProfile, ViolationSeverity};
 use crate::reports::ReportFormat;
 use anyhow::{bail, Result};
+use serde_json::json;
 use std::path::PathBuf;
 
 /// Quality command configuration
 pub struct QualityConfig {
     pub sbom_path: PathBuf,
     pub profile: String,
-    #[allow(dead_code)] // Reserved for future JSON/SARIF output support
     pub output: ReportFormat,
     pub output_file: Option<PathBuf>,
     pub show_recommendations: bool,
@@ -61,8 +61,12 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
     let scorer = QualityScorer::new(profile);
     let report = scorer.score(parsed.sbom());
 
-    // Build output
-    let output_text = format_quality_report(&report, &config);
+    // Build output based on format
+    let output_text = match config.output {
+        ReportFormat::Json => format_quality_json(&report, &config),
+        ReportFormat::Sarif => format_quality_sarif(&report, &config),
+        _ => format_quality_report(&report, &config),
+    };
 
     // Write output
     let output_target = OutputTarget::from_option(config.output_file);
@@ -98,6 +102,89 @@ fn parse_scoring_profile(profile_name: &str) -> Result<ScoringProfile> {
             );
         }
     }
+}
+
+/// Format quality report as JSON
+fn format_quality_json(report: &QualityReport, config: &QualityConfig) -> String {
+    let output = json!({
+        "tool": "sbom-tools",
+        "version": env!("CARGO_PKG_VERSION"),
+        "sbom": config.sbom_path.file_name().unwrap_or_default().to_string_lossy(),
+        "profile": config.profile,
+        "report": report,
+    });
+    serde_json::to_string_pretty(&output).unwrap_or_default()
+}
+
+/// Format quality report as SARIF 2.1.0
+fn format_quality_sarif(report: &QualityReport, config: &QualityConfig) -> String {
+    let mut results = Vec::new();
+
+    // Add compliance violations as SARIF results
+    for violation in &report.compliance.violations {
+        let level = match violation.severity {
+            ViolationSeverity::Error => "error",
+            ViolationSeverity::Warning => "warning",
+            ViolationSeverity::Info => "note",
+        };
+        results.push(json!({
+            "ruleId": format!("QUALITY-{}", violation.category.name().to_uppercase().replace(' ', "-")),
+            "level": level,
+            "message": { "text": violation.message },
+            "properties": {
+                "requirement": violation.requirement,
+                "category": violation.category.name(),
+                "remediation": violation.remediation_guidance(),
+                "element": violation.element,
+            }
+        }));
+    }
+
+    // Add recommendations as informational results
+    for rec in &report.recommendations {
+        let level = match rec.priority {
+            1 => "error",
+            2 => "warning",
+            _ => "note",
+        };
+        results.push(json!({
+            "ruleId": format!("QUALITY-REC-{}", rec.category.name().to_uppercase().replace(' ', "-")),
+            "level": level,
+            "message": {
+                "text": format!("{} ({} affected, +{:.1} impact)", rec.message, rec.affected_count, rec.impact)
+            },
+            "properties": {
+                "priority": rec.priority,
+                "category": rec.category.name(),
+                "affected_count": rec.affected_count,
+                "impact": rec.impact,
+            }
+        }));
+    }
+
+    let sarif = json!({
+        "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+        "version": "2.1.0",
+        "runs": [{
+            "tool": {
+                "driver": {
+                    "name": "sbom-tools",
+                    "version": env!("CARGO_PKG_VERSION"),
+                    "informationUri": "https://github.com/anthropics/sbom-tools",
+                }
+            },
+            "results": results,
+            "properties": {
+                "sbom": config.sbom_path.file_name().unwrap_or_default().to_string_lossy(),
+                "profile": config.profile,
+                "overall_score": report.overall_score,
+                "grade": report.grade.letter(),
+                "compliant": report.compliance.is_compliant,
+            }
+        }]
+    });
+
+    serde_json::to_string_pretty(&sarif).unwrap_or_default()
 }
 
 /// Format quality report for output

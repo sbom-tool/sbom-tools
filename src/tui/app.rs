@@ -404,6 +404,24 @@ impl App {
         }
     }
 
+    /// Export matrix results to a file
+    pub fn export_matrix(&mut self, format: super::export::ExportFormat) {
+        use super::export::export_matrix;
+
+        let Some(ref matrix_result) = self.data.matrix_result else {
+            self.set_status_message("No matrix data to export");
+            return;
+        };
+
+        let result = export_matrix(format, matrix_result);
+        if result.success {
+            self.last_export_path = Some(result.path.display().to_string());
+            self.set_status_message(result.message);
+        } else {
+            self.set_status_message(format!("Export failed: {}", result.message));
+        }
+    }
+
     // ========================================================================
     // Compliance / Policy Checking
     // ========================================================================

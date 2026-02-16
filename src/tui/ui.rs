@@ -823,10 +823,10 @@ fn render_export_dialog(frame: &mut Frame, area: Rect) {
             ),
         ]),
         Line::from(vec![
-            Span::styled("[d]", Style::default().fg(colors().accent).bold()),
-            Span::styled(" Diff      ", Style::default().fg(colors().text)),
+            Span::styled("[c]", Style::default().fg(colors().accent).bold()),
+            Span::styled(" CSV       ", Style::default().fg(colors().text)),
             Span::styled(
-                "- Side-by-side terminal diff",
+                "- Component list for spreadsheets",
                 Style::default().fg(colors().text_muted),
             ),
         ]),

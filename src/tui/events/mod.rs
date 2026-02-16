@@ -165,7 +165,7 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
                 app.close_overlays();
                 app.export(super::export::ExportFormat::Sarif);
             }
-            KeyCode::Char('d' | 'c') if app.overlays.show_export => {
+            KeyCode::Char('c') if app.overlays.show_export => {
                 app.close_overlays();
                 app.export(super::export::ExportFormat::Csv);
             }
