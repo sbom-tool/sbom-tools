@@ -147,6 +147,7 @@ fn output_view_report(
         .check(sbom);
 
     let report_config = ReportConfig {
+        report_types: vec![config.output.report_types],
         metadata: crate::reports::ReportMetadata {
             old_sbom_path: Some(config.sbom_path.to_string_lossy().to_string()),
             ..Default::default()

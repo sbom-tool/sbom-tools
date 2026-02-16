@@ -4,6 +4,7 @@ use super::escape::{escape_html, escape_html_opt};
 use super::{ReportConfig, ReportError, ReportFormat, ReportGenerator, ReportType};
 use crate::diff::{DiffResult, SlaStatus, VulnerabilityDetail};
 use crate::model::NormalizedSbom;
+use crate::quality::{ComplianceChecker, ComplianceLevel, ComplianceResult, ViolationSeverity};
 use std::fmt::Write;
 
 /// A single vulnerability row: (id, severity, `cvss_score`, `component_name`, `component_version`).
@@ -363,6 +364,104 @@ fn format_sla_html(vuln: &VulnerabilityDetail) -> (String, &'static str) {
     }
 }
 
+/// Write a CRA compliance comparison section for diff reports.
+fn write_cra_compliance_diff_html(
+    html: &mut String,
+    old: &ComplianceResult,
+    new: &ComplianceResult,
+) -> std::fmt::Result {
+    writeln!(html, "<div class=\"section\">")?;
+    writeln!(html, "    <h2>CRA Compliance</h2>")?;
+    writeln!(html, "    <table>")?;
+    writeln!(html, "        <thead>")?;
+    writeln!(html, "            <tr><th></th><th>Old SBOM</th><th>New SBOM</th></tr>")?;
+    writeln!(html, "        </thead>")?;
+    writeln!(html, "        <tbody>")?;
+
+    let old_badge = compliance_status_badge(old.is_compliant);
+    let new_badge = compliance_status_badge(new.is_compliant);
+    writeln!(html, "            <tr><td><strong>Status</strong></td><td>{old_badge}</td><td>{new_badge}</td></tr>")?;
+    writeln!(html, "            <tr><td><strong>Level</strong></td><td>{}</td><td>{}</td></tr>",
+        escape_html(old.level.name()), escape_html(new.level.name()))?;
+    writeln!(html, "            <tr><td><strong>Errors</strong></td><td>{}</td><td>{}</td></tr>",
+        old.error_count, new.error_count)?;
+    writeln!(html, "            <tr><td><strong>Warnings</strong></td><td>{}</td><td>{}</td></tr>",
+        old.warning_count, new.warning_count)?;
+
+    writeln!(html, "        </tbody>")?;
+    writeln!(html, "    </table>")?;
+
+    if !new.violations.is_empty() {
+        writeln!(html, "    <h3>Violations (New SBOM)</h3>")?;
+        write_violation_table_html(html, &new.violations)?;
+    }
+
+    writeln!(html, "</div>")
+}
+
+/// Write a CRA compliance section for view reports.
+fn write_cra_compliance_view_html(html: &mut String, result: &ComplianceResult) -> std::fmt::Result {
+    writeln!(html, "<div class=\"section\">")?;
+    writeln!(html, "    <h2>CRA Compliance</h2>")?;
+
+    let badge = compliance_status_badge(result.is_compliant);
+    writeln!(html, "    <p><strong>Status:</strong> {badge} &nbsp; ")?;
+    writeln!(html, "    <strong>Level:</strong> {} &nbsp; ", escape_html(result.level.name()))?;
+    writeln!(html, "    <strong>Issues:</strong> {} errors, {} warnings</p>",
+        result.error_count, result.warning_count)?;
+
+    if !result.violations.is_empty() {
+        write_violation_table_html(html, &result.violations)?;
+    }
+
+    writeln!(html, "</div>")
+}
+
+/// Write an HTML table of compliance violations.
+fn write_violation_table_html(
+    html: &mut String,
+    violations: &[crate::quality::Violation],
+) -> std::fmt::Result {
+    writeln!(html, "    <table>")?;
+    writeln!(html, "        <thead>")?;
+    writeln!(html, "            <tr>")?;
+    writeln!(html, "                <th>Severity</th>")?;
+    writeln!(html, "                <th>Category</th>")?;
+    writeln!(html, "                <th>Requirement</th>")?;
+    writeln!(html, "                <th>Message</th>")?;
+    writeln!(html, "                <th>Remediation</th>")?;
+    writeln!(html, "            </tr>")?;
+    writeln!(html, "        </thead>")?;
+    writeln!(html, "        <tbody>")?;
+
+    for v in violations {
+        let (badge_class, label) = match v.severity {
+            ViolationSeverity::Error => ("badge-critical", "Error"),
+            ViolationSeverity::Warning => ("badge-medium", "Warning"),
+            ViolationSeverity::Info => ("badge-low", "Info"),
+        };
+        writeln!(html, "            <tr>")?;
+        writeln!(html, "                <td><span class=\"badge {badge_class}\">{label}</span></td>")?;
+        writeln!(html, "                <td>{}</td>", escape_html(v.category.name()))?;
+        writeln!(html, "                <td>{}</td>", escape_html(&v.requirement))?;
+        writeln!(html, "                <td>{}</td>", escape_html(&v.message))?;
+        writeln!(html, "                <td>{}</td>", escape_html(v.remediation_guidance()))?;
+        writeln!(html, "            </tr>")?;
+    }
+
+    writeln!(html, "        </tbody>")?;
+    writeln!(html, "    </table>")
+}
+
+/// Generate an HTML badge for compliance status.
+fn compliance_status_badge(is_compliant: bool) -> &'static str {
+    if is_compliant {
+        "<span class=\"badge badge-added\">Compliant</span>"
+    } else {
+        "<span class=\"badge badge-removed\">Non-compliant</span>"
+    }
+}
+
 // ============================================================================
 // Report generation (using helpers above)
 // ============================================================================
@@ -371,8 +470,8 @@ impl ReportGenerator for HtmlReporter {
     fn generate_diff_report(
         &self,
         result: &DiffResult,
-        _old_sbom: &NormalizedSbom,
-        _new_sbom: &NormalizedSbom,
+        old_sbom: &NormalizedSbom,
+        new_sbom: &NormalizedSbom,
         config: &ReportConfig,
     ) -> Result<String, ReportError> {
         let mut html = String::new();
@@ -401,6 +500,17 @@ impl ReportGenerator for HtmlReporter {
         // Vulnerability changes
         if config.includes(ReportType::Vulnerabilities) && !result.vulnerabilities.introduced.is_empty() {
             write_diff_vuln_table(&mut html, result)?;
+        }
+
+        // CRA Compliance
+        {
+            let old_cra = config.old_cra_compliance.clone().unwrap_or_else(|| {
+                ComplianceChecker::new(ComplianceLevel::CraPhase2).check(old_sbom)
+            });
+            let new_cra = config.new_cra_compliance.clone().unwrap_or_else(|| {
+                ComplianceChecker::new(ComplianceLevel::CraPhase2).check(new_sbom)
+            });
+            write_cra_compliance_diff_html(&mut html, &old_cra, &new_cra)?;
         }
 
         write_html_footer(&mut html)?;
@@ -454,6 +564,14 @@ impl ReportGenerator for HtmlReporter {
         // Vulnerabilities table
         if config.includes(ReportType::Vulnerabilities) && total_vulns > 0 {
             write_view_vuln_table(&mut html, sbom)?;
+        }
+
+        // CRA Compliance
+        {
+            let cra = config.view_cra_compliance.clone().unwrap_or_else(|| {
+                ComplianceChecker::new(ComplianceLevel::CraPhase2).check(sbom)
+            });
+            write_cra_compliance_view_html(&mut html, &cra)?;
         }
 
         write_html_footer(&mut html)?;

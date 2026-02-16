@@ -4,7 +4,10 @@
 
 use crate::model::{CreatorType, ExternalRefType, HashAlgorithm, NormalizedSbom, Severity};
 use crate::pipeline::{parse_sbom_with_context, write_output, OutputTarget};
-use crate::quality::{ComplianceChecker, ComplianceLevel, ComplianceResult, ViolationSeverity};
+use crate::quality::{
+    ComplianceChecker, ComplianceLevel, ComplianceResult, Violation, ViolationCategory,
+    ViolationSeverity,
+};
 use crate::reports::{generate_compliance_sarif, ReportFormat};
 use anyhow::{bail, Result};
 use std::collections::HashSet;
@@ -20,18 +23,15 @@ pub fn run_validate(
 ) -> Result<()> {
     let parsed = parse_sbom_with_context(&sbom_path, false)?;
 
-    match standard.to_lowercase().as_str() {
-        "ntia" => validate_ntia_elements(parsed.sbom())?,
-        "fda" => validate_fda_elements(parsed.sbom())?,
-        "cra" => {
-            let checker = ComplianceChecker::new(ComplianceLevel::CraPhase2);
-            let result = checker.check(parsed.sbom());
-            write_compliance_output(&result, output, output_file)?;
-        }
+    let result = match standard.to_lowercase().as_str() {
+        "ntia" => check_ntia_compliance(parsed.sbom()),
+        "fda" => check_fda_compliance(parsed.sbom()),
+        "cra" => ComplianceChecker::new(ComplianceLevel::CraPhase2).check(parsed.sbom()),
         _ => {
             bail!("Unknown validation standard: {standard}");
         }
-    }
+    };
+    write_compliance_output(&result, output, output_file)?;
 
     Ok(())
 }
@@ -96,6 +96,111 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
     }
 
     lines.join("\n")
+}
+
+/// Check SBOM against NTIA minimum elements, returning a structured result.
+fn check_ntia_compliance(sbom: &NormalizedSbom) -> ComplianceResult {
+    let mut violations = Vec::new();
+
+    if sbom.document.creators.is_empty() {
+        violations.push(Violation {
+            severity: ViolationSeverity::Error,
+            category: ViolationCategory::DocumentMetadata,
+            message: "Missing author/creator information".to_string(),
+            element: None,
+            requirement: "NTIA Minimum Elements: Author".to_string(),
+        });
+    }
+
+    for (_id, comp) in &sbom.components {
+        if comp.name.is_empty() {
+            violations.push(Violation {
+                severity: ViolationSeverity::Error,
+                category: ViolationCategory::ComponentIdentification,
+                message: "Component missing name".to_string(),
+                element: None,
+                requirement: "NTIA Minimum Elements: Component Name".to_string(),
+            });
+        }
+        if comp.version.is_none() {
+            violations.push(Violation {
+                severity: ViolationSeverity::Warning,
+                category: ViolationCategory::ComponentIdentification,
+                message: format!("Component '{}' missing version", comp.name),
+                element: Some(comp.name.clone()),
+                requirement: "NTIA Minimum Elements: Version".to_string(),
+            });
+        }
+        if comp.supplier.is_none() {
+            violations.push(Violation {
+                severity: ViolationSeverity::Warning,
+                category: ViolationCategory::SupplierInfo,
+                message: format!("Component '{}' missing supplier", comp.name),
+                element: Some(comp.name.clone()),
+                requirement: "NTIA Minimum Elements: Supplier Name".to_string(),
+            });
+        }
+        if comp.identifiers.purl.is_none()
+            && comp.identifiers.cpe.is_empty()
+            && comp.identifiers.swid.is_none()
+        {
+            violations.push(Violation {
+                severity: ViolationSeverity::Warning,
+                category: ViolationCategory::ComponentIdentification,
+                message: format!(
+                    "Component '{}' missing unique identifier (PURL/CPE/SWID)",
+                    comp.name
+                ),
+                element: Some(comp.name.clone()),
+                requirement: "NTIA Minimum Elements: Unique Identifier".to_string(),
+            });
+        }
+    }
+
+    if sbom.edges.is_empty() && sbom.component_count() > 1 {
+        violations.push(Violation {
+            severity: ViolationSeverity::Error,
+            category: ViolationCategory::DependencyInfo,
+            message: "Missing dependency relationships".to_string(),
+            element: None,
+            requirement: "NTIA Minimum Elements: Dependency Relationship".to_string(),
+        });
+    }
+
+    ComplianceResult::new(ComplianceLevel::NtiaMinimum, violations)
+}
+
+/// Check SBOM against FDA medical device requirements, returning a structured result.
+fn check_fda_compliance(sbom: &NormalizedSbom) -> ComplianceResult {
+    let mut fda_issues: Vec<FdaIssue> = Vec::new();
+
+    validate_fda_document(sbom, &mut fda_issues);
+    validate_fda_components(sbom, &mut fda_issues);
+    validate_fda_relationships(sbom, &mut fda_issues);
+    validate_fda_vulnerabilities(sbom, &mut fda_issues);
+
+    let violations = fda_issues
+        .into_iter()
+        .map(|issue| Violation {
+            severity: match issue.severity {
+                FdaSeverity::Error => ViolationSeverity::Error,
+                FdaSeverity::Warning => ViolationSeverity::Warning,
+                FdaSeverity::Info => ViolationSeverity::Info,
+            },
+            category: match issue.category {
+                "Document" => ViolationCategory::DocumentMetadata,
+                "Component" => ViolationCategory::ComponentIdentification,
+                "Dependency" => ViolationCategory::DependencyInfo,
+                "Security" => ViolationCategory::SecurityInfo,
+                _ => ViolationCategory::DocumentMetadata,
+            },
+            requirement: format!("FDA Medical Device: {}", issue.category),
+            message: issue.message,
+            element: None,
+        })
+        .collect();
+
+    ComplianceResult::new(ComplianceLevel::FdaMedicalDevice, violations)
 }
 
 /// Validate SBOM against NTIA minimum elements
@@ -171,29 +276,6 @@ struct FdaIssue {
     severity: FdaSeverity,
     category: &'static str,
     message: String,
-}
-
-/// Validate SBOM against FDA medical device requirements
-#[allow(clippy::unnecessary_wraps)]
-pub fn validate_fda_elements(sbom: &NormalizedSbom) -> Result<()> {
-    let mut issues: Vec<FdaIssue> = Vec::new();
-
-    // Document-level requirements
-    validate_fda_document(sbom, &mut issues);
-
-    // Component-level requirements
-    let component_stats = validate_fda_components(sbom, &mut issues);
-
-    // Relationship requirements
-    validate_fda_relationships(sbom, &mut issues);
-
-    // Vulnerability information
-    validate_fda_vulnerabilities(sbom, &mut issues);
-
-    // Output results
-    output_fda_results(sbom, &mut issues, &component_stats);
-
-    Ok(())
 }
 
 /// Component validation statistics
@@ -465,86 +547,6 @@ fn validate_fda_vulnerabilities(sbom: &NormalizedSbom, issues: &mut Vec<FdaIssue
     }
 }
 
-fn output_fda_results(sbom: &NormalizedSbom, issues: &mut [FdaIssue], _stats: &ComponentStats) {
-    // Sort issues by severity
-    issues.sort_by(|a, b| a.severity.cmp(&b.severity));
-
-    let error_count = issues
-        .iter()
-        .filter(|i| i.severity == FdaSeverity::Error)
-        .count();
-    let warning_count = issues
-        .iter()
-        .filter(|i| i.severity == FdaSeverity::Warning)
-        .count();
-    let info_count = issues
-        .iter()
-        .filter(|i| i.severity == FdaSeverity::Info)
-        .count();
-
-    // Print header
-    println!();
-    println!("===================================================================");
-    println!("  FDA Medical Device SBOM Validation Report");
-    println!("===================================================================");
-    println!();
-
-    // Print summary
-    println!(
-        "SBOM: {}",
-        sbom.document.name.as_deref().unwrap_or("(unnamed)")
-    );
-    println!(
-        "Format: {} {}",
-        sbom.document.format, sbom.document.format_version
-    );
-    println!("Components: {}", sbom.component_count());
-    println!("Dependencies: {}", sbom.edges.len());
-    println!();
-
-    // Print issues
-    if issues.is_empty() {
-        println!("PASSED - SBOM meets FDA premarket submission requirements");
-        println!();
-    } else {
-        if error_count > 0 {
-            println!(
-                "FAILED - {error_count} error(s), {warning_count} warning(s), {info_count} info"
-            );
-        } else {
-            println!(
-                "PASSED with warnings - {warning_count} warning(s), {info_count} info"
-            );
-        }
-        println!();
-
-        // Group by category
-        let categories: Vec<&str> = issues
-            .iter()
-            .map(|i| i.category)
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .collect();
-
-        for category in categories {
-            println!("--- {category} ---");
-            for issue in issues.iter().filter(|i| i.category == category) {
-                let symbol = match issue.severity {
-                    FdaSeverity::Error => "X",
-                    FdaSeverity::Warning => "!",
-                    FdaSeverity::Info => "i",
-                };
-                println!("  {} [{}] {}", symbol, issue.severity, issue.message);
-            }
-            println!();
-        }
-    }
-
-    // Print FDA reference
-    println!("-------------------------------------------------------------------");
-    println!("Reference: FDA \"Cybersecurity in Medical Devices\" Guidance (2023)");
-    println!();
-}
 
 #[cfg(test)]
 mod tests {

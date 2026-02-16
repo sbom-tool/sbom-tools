@@ -132,9 +132,9 @@ impl ReportGenerator for JsonReporter {
                     },
                     vulnerabilities: if config.includes(ReportType::Vulnerabilities) {
                         Some(VulnerabilitiesReport {
-                            introduced: &result.vulnerabilities.introduced,
-                            resolved: &result.vulnerabilities.resolved,
-                            persistent: &result.vulnerabilities.persistent,
+                            introduced: VulnerabilityWithSla::from_slice(&result.vulnerabilities.introduced),
+                            resolved: VulnerabilityWithSla::from_slice(&result.vulnerabilities.resolved),
+                            persistent: VulnerabilityWithSla::from_slice(&result.vulnerabilities.persistent),
                         })
                     } else {
                         None
@@ -371,7 +371,7 @@ struct JsonReports<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     licenses: Option<LicensesReport<'a>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    vulnerabilities: Option<VulnerabilitiesReport<'a>>,
+    vulnerabilities: Option<VulnerabilitiesReport>,
 }
 
 #[derive(Serialize)]
@@ -395,10 +395,45 @@ struct LicensesReport<'a> {
 }
 
 #[derive(Serialize)]
-struct VulnerabilitiesReport<'a> {
-    introduced: &'a [crate::diff::VulnerabilityDetail],
-    resolved: &'a [crate::diff::VulnerabilityDetail],
-    persistent: &'a [crate::diff::VulnerabilityDetail],
+struct VulnerabilitiesReport {
+    introduced: Vec<VulnerabilityWithSla>,
+    resolved: Vec<VulnerabilityWithSla>,
+    persistent: Vec<VulnerabilityWithSla>,
+}
+
+/// Wrapper that adds computed SLA status to vulnerability JSON output.
+#[derive(Serialize)]
+struct VulnerabilityWithSla {
+    #[serde(flatten)]
+    detail: crate::diff::VulnerabilityDetail,
+    sla_status: String,
+    sla_category: String,
+}
+
+impl VulnerabilityWithSla {
+    fn from_detail(v: &crate::diff::VulnerabilityDetail) -> Self {
+        let sla = v.sla_status();
+        let (status_text, category) = match &sla {
+            crate::diff::SlaStatus::Overdue(days) => (format!("{days}d overdue"), "overdue"),
+            crate::diff::SlaStatus::DueSoon(days) => (format!("{days}d remaining"), "due_soon"),
+            crate::diff::SlaStatus::OnTrack(days) => (format!("{days}d remaining"), "on_track"),
+            crate::diff::SlaStatus::NoDueDate => {
+                let text = v
+                    .days_since_published
+                    .map_or_else(|| "unknown".to_string(), |d| format!("{d}d old"));
+                (text, "no_due_date")
+            }
+        };
+        Self {
+            detail: v.clone(),
+            sla_status: status_text,
+            sla_category: category.to_string(),
+        }
+    }
+
+    fn from_slice(vulns: &[crate::diff::VulnerabilityDetail]) -> Vec<Self> {
+        vulns.iter().map(Self::from_detail).collect()
+    }
 }
 
 // View report structures
