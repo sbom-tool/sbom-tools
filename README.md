@@ -67,6 +67,9 @@ sbom-tools diff old-sbom.json new-sbom.json
 # View SBOM contents interactively
 sbom-tools view sbom.json
 
+# Search for components across SBOMs
+sbom-tools query "log4j" --version "<2.17.0" fleet/*.json
+
 # Validate compliance
 sbom-tools validate sbom.json --standard ntia
 
@@ -186,6 +189,68 @@ Scores an SBOM from 0–100 using a weighted profile. Use `--min-score` to fail 
 | `--min-score <n>` | Fail if quality score is below threshold (0–100) |
 | `--recommendations` | Show detailed improvement recommendations |
 | `--metrics` | Show detailed scoring metrics |
+
+</details>
+
+### Query
+
+```sh
+sbom-tools query "log4j" sbom1.json sbom2.json sbom3.json
+```
+
+Search for components across multiple SBOMs by name, version, ecosystem, license, supplier, or vulnerability ID. Answers the "where is Log4j?" question across your entire SBOM fleet.
+
+<details>
+<summary>Query options</summary>
+
+| Flag | Description |
+|------|-------------|
+| `--name <str>` | Filter by component name (substring) |
+| `--version <ver>` | Filter by version — exact match or semver range (e.g., `<2.17.0`) |
+| `--ecosystem <eco>` | Filter by ecosystem (e.g., `npm`, `maven`, `pypi`) |
+| `--license <str>` | Filter by license (substring) |
+| `--purl <str>` | Filter by PURL (substring) |
+| `--supplier <str>` | Filter by supplier name (substring) |
+| `--affected-by <id>` | Filter by vulnerability ID (e.g., `CVE-2021-44228`) |
+| `--enrich-vulns` | Query OSV databases for vulnerability data |
+| `--enrich-eol` | Detect end-of-life status via endoflife.date API |
+| `--limit <n>` | Maximum number of results |
+| `--group-by-sbom` | Group output by SBOM source |
+
+</details>
+
+<details>
+<summary>Example output</summary>
+
+```
+$ sbom-tools query "log4j" --version "<2.17.0" fleet/*.cdx.json
+
+Query: "log4j" AND version=<2.17.0 across 5 SBOMs (1247 total components)
+
+COMPONENT  VERSION  ECOSYSTEM  LICENSE     VULNS  FOUND IN
+log4j      2.14.0   maven      Apache-2.0      1  firmware-v1, device-a
+log4j      2.14.1   maven      Apache-2.0      1  gateway
+
+2 components found across 5 SBOMs
+
+$ sbom-tools query --ecosystem pypi *.json --group-by-sbom
+
+Query: ecosystem=pypi across 2 SBOMs (33 total components)
+
+── backend-v3 (4 matches / 18 components) ──
+  django 4.2.11 (pypi)
+  flask 3.0.2 (pypi)
+  celery 5.3.6 (pypi)
+  numpy 1.26.4 (pypi)
+
+── backend-v2 (4 matches / 15 components) ──
+  django 3.2.23 (pypi)
+  flask 2.2.5 (pypi)
+  celery 5.3.4 (pypi)
+  numpy 1.24.4 (pypi)
+
+8 components found across 2 SBOMs
+```
 
 </details>
 
@@ -328,6 +393,9 @@ sbom-tools quality sbom.json --profile security --min-score 80 -o json
 
 # Validate CRA compliance
 sbom-tools validate sbom.json --standard cra -o sarif -O compliance.sarif
+
+# Check for vulnerable Log4j versions across all SBOMs (exits 1 if found)
+sbom-tools query "log4j" --version "<2.17.0" fleet/*.json -o json
 ```
 
 <details>
@@ -399,7 +467,7 @@ See [`examples/ecosystem-rules.yaml`](examples/ecosystem-rules.yaml) for a full 
 
 ```
 src/
-├── cli/          Command handlers (diff, view, validate, quality, fleet commands)
+├── cli/          Command handlers (diff, view, validate, quality, query, fleet commands)
 ├── config/       YAML/JSON config with presets, validation, schema generation
 ├── model/        Canonical SBOM representation (NormalizedSbom, Component, CanonicalId)
 ├── parsers/      Format detection + parsing (streaming for >512MB)

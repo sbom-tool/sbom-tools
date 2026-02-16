@@ -67,7 +67,7 @@ pub use config::{
     OutputConfig,
 };
 pub use config::{ConfigError, Validatable};
-pub use config::{DiffConfig, MatrixConfig, MultiDiffConfig, TimelineConfig, ViewConfig};
+pub use config::{DiffConfig, MatrixConfig, MultiDiffConfig, QueryConfig, TimelineConfig, ViewConfig};
 pub use diff::{DiffEngine, DiffResult, GraphDiffConfig};
 #[cfg(feature = "enrichment")]
 pub use enrichment::{

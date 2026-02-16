@@ -16,13 +16,13 @@ use sbom_tools::{
     config::{
         BehaviorConfig, DiffConfig, DiffPaths, EcosystemRulesConfig, EnrichmentConfig,
         FilterConfig, GraphAwareDiffConfig, MatchingConfig, MatchingRulesPathConfig, OutputConfig,
-        ViewConfig,
+        QueryConfig, ViewConfig,
     },
     pipeline::dirs,
     reports::{ReportFormat, ReportType},
 };
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 /// Build long version string with format support info
@@ -46,7 +46,7 @@ const fn build_long_version() -> &'static str {
 #[command(about = "Semantic SBOM diff and analysis tool", long_about = None)]
 #[command(after_help = "EXIT CODES:
     0  No changes detected (or --no-fail-on-change)
-    1  Changes detected
+    1  Changes detected / no query matches
     2  Vulnerabilities introduced
     3  Error occurred
 
@@ -61,7 +61,10 @@ EXAMPLES:
     sbom-tools diff old.cdx.json new.cdx.json -o json > diff.json
 
     # Compare baseline against fleet
-    sbom-tools diff-multi baseline.cdx.json device-*.cdx.json -o table")]
+    sbom-tools diff-multi baseline.cdx.json device-*.cdx.json -o table
+
+    # Search for vulnerable components across SBOMs
+    sbom-tools query \"log4j\" --version \"<2.17.0\" fleet/*.json")]
 struct Cli {
     /// Enable verbose output
     #[arg(short, long, global = true)]
@@ -381,6 +384,84 @@ struct QualityArgs {
     min_score: Option<f32>,
 }
 
+/// Arguments for the `query` subcommand
+#[derive(Parser)]
+struct QueryArgs {
+    /// Positional arguments: [PATTERN] SBOM_FILES...
+    /// First argument is treated as search pattern if it doesn't look like a file path.
+    /// All remaining arguments are SBOM file paths.
+    #[arg(required = true)]
+    args: Vec<String>,
+
+    /// Filter by component name (substring)
+    #[arg(long)]
+    name: Option<String>,
+
+    /// Filter by PURL (substring)
+    #[arg(long)]
+    purl: Option<String>,
+
+    /// Filter by version (exact or semver range, e.g., "<2.17.0")
+    #[arg(long)]
+    version: Option<String>,
+
+    /// Filter by license (substring)
+    #[arg(long)]
+    license: Option<String>,
+
+    /// Filter by ecosystem (e.g., npm, maven, cargo)
+    #[arg(long)]
+    ecosystem: Option<String>,
+
+    /// Filter by supplier name (substring)
+    #[arg(long)]
+    supplier: Option<String>,
+
+    /// Filter by vulnerability ID (e.g., CVE-2021-44228)
+    #[arg(long)]
+    affected_by: Option<String>,
+
+    /// Output format (table, json, csv)
+    #[arg(short, long, default_value = "auto")]
+    output: ReportFormat,
+
+    /// Output file path (stdout if not specified)
+    #[arg(short = 'O', long)]
+    output_file: Option<PathBuf>,
+
+    /// Enable OSV vulnerability enrichment
+    #[arg(long)]
+    enrich_vulns: bool,
+
+    /// Enable end-of-life detection via endoflife.date
+    #[arg(long)]
+    enrich_eol: bool,
+
+    /// Cache directory for enrichment data
+    #[arg(long)]
+    vuln_cache_dir: Option<PathBuf>,
+
+    /// Cache TTL in hours (default: 24)
+    #[arg(long, default_value = "24")]
+    vuln_cache_ttl: u64,
+
+    /// Bypass cache and fetch fresh data
+    #[arg(long)]
+    refresh_vulns: bool,
+
+    /// API timeout in seconds (default: 30)
+    #[arg(long, default_value = "30")]
+    api_timeout: u64,
+
+    /// Maximum number of results to return
+    #[arg(long)]
+    limit: Option<usize>,
+
+    /// Group results by SBOM source
+    #[arg(long)]
+    group_by_sbom: bool,
+}
+
 #[derive(Subcommand)]
 enum Commands {
     /// Compare two SBOMs
@@ -403,6 +484,9 @@ enum Commands {
 
     /// Assess SBOM quality and completeness
     Quality(QualityArgs),
+
+    /// Search for components across multiple SBOMs
+    Query(QueryArgs),
 
     /// Generate shell completions
     Completions {
@@ -580,6 +664,54 @@ fn main() -> Result<()> {
             Ok(())
         }
 
+        Commands::Query(args) => {
+            // Split positional args: first arg is pattern if it doesn't look like a file,
+            // otherwise all args are file paths
+            let (pattern, sbom_paths) = split_query_args(&args.args);
+
+            if sbom_paths.is_empty() {
+                anyhow::bail!("No SBOM files specified. Usage: sbom-tools query [PATTERN] FILE...");
+            }
+
+            let enrichment = EnrichmentConfig {
+                enabled: args.enrich_vulns,
+                provider: "osv".to_string(),
+                cache_ttl_hours: args.vuln_cache_ttl,
+                max_concurrent: 10,
+                cache_dir: args.vuln_cache_dir.or_else(|| Some(dirs::osv_cache_dir())),
+                bypass_cache: args.refresh_vulns,
+                timeout_secs: args.api_timeout,
+                enable_eol: args.enrich_eol,
+            };
+
+            let filter = cli::QueryFilter {
+                pattern,
+                name: args.name,
+                purl: args.purl,
+                version: args.version,
+                license: args.license,
+                ecosystem: args.ecosystem,
+                supplier: args.supplier,
+                affected_by: args.affected_by,
+            };
+
+            let config = QueryConfig {
+                sbom_paths,
+                output: OutputConfig {
+                    format: args.output,
+                    file: args.output_file,
+                    report_types: ReportType::All,
+                    no_color: cli.no_color,
+                    streaming: sbom_tools::config::StreamingConfig::default(),
+                },
+                enrichment,
+                limit: args.limit,
+                group_by_sbom: args.group_by_sbom,
+            };
+
+            cli::run_query(config, filter)
+        }
+
         Commands::Completions { shell } => {
             generate(shell, &mut Cli::command(), "sbom-tools", &mut io::stdout());
             Ok(())
@@ -598,5 +730,32 @@ fn main() -> Result<()> {
             }
             Ok(())
         }
+    }
+}
+
+/// Split positional args into (optional pattern, file paths).
+///
+/// The first argument is treated as a search pattern if it doesn't look like
+/// a file path (no path separator, no file extension). Otherwise, all arguments
+/// are treated as file paths.
+fn split_query_args(args: &[String]) -> (Option<String>, Vec<PathBuf>) {
+    if args.is_empty() {
+        return (None, Vec::new());
+    }
+
+    let first = &args[0];
+    let looks_like_file = first.contains(std::path::MAIN_SEPARATOR)
+        || first.contains('/')
+        || first.contains('.')
+        || Path::new(first).exists();
+
+    if looks_like_file {
+        // All args are file paths
+        (None, args.iter().map(PathBuf::from).collect())
+    } else {
+        // First arg is pattern, rest are file paths
+        let pattern = Some(first.clone());
+        let paths = args[1..].iter().map(PathBuf::from).collect();
+        (pattern, paths)
     }
 }

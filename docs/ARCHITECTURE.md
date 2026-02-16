@@ -16,7 +16,7 @@ SBOM files
 
 ## Core Modules
 
-- **cli** (`src/cli/`): Clap command handlers for diff, view, validate, quality, diff-multi, timeline, matrix, completions, and config-schema.
+- **cli** (`src/cli/`): Clap command handlers for diff, view, validate, quality, query, diff-multi, timeline, matrix, completions, and config-schema.
 - **config** (`src/config/`): Typed configuration with YAML/JSON support, presets, validation, and schema generation.
 - **parsers** (`src/parsers/`): CycloneDX/SPDX format detection and parsing into NormalizedSbom. Includes a streaming parser for large files (>512MB) with progress callbacks.
 - **model** (`src/model/`): Canonical data model — NormalizedSbom, Component, CanonicalId, DocumentMetadata, Vulnerability, DependencyEdge, License.
@@ -64,6 +64,28 @@ Key differences from single-diff:
 - No streaming support
 - No matching rules
 
+### Query Command (`query`)
+
+The `query` command searches for components across multiple SBOMs:
+
+```
+cli/query.rs
+  -> parse_multiple_sboms() (reused from multi.rs)
+  -> Optional: enrich_sbom() / enrich_eol() (feature-gated)
+  -> For each SBOM: NormalizedSbomIndex::build()
+  -> QueryFilter::matches() on each component via ComponentSortKey
+  -> Deduplicate by (name_lower, version), merge found_in sources
+  -> Output: table (default), JSON, or CSV
+```
+
+Key design:
+- Reuses `parse_multiple_sboms()` and `get_sbom_name()` from `cli/multi.rs`
+- Supports optional enrichment (OSV vulns + EOL) before searching
+- Version filter tries semver range parsing first (for `<2.17.0`), falls back to exact match
+- All filters are AND-combined; pattern filter uses `ComponentSortKey::contains()` for broad matching
+- Deduplication groups by `(name_lower, version)` and merges `found_in` sources and vulnerability IDs
+- Exit code 1 if no matches (useful for CI gate checks)
+
 ### Enrichment Flow
 
 Enrichment is feature-gated behind the `enrichment` Cargo feature. When enabled,
@@ -109,9 +131,9 @@ Both systems coexist. The `App` struct has a `quality_view: Option<QualityView>`
 
 ## Known Technical Debt
 
-- Multi-SBOM commands bypass the pipeline (no enrichment, limited output formats).
+- Multi-SBOM fleet commands (diff-multi, timeline, matrix) bypass the pipeline (no enrichment, limited output formats). The `query` command supports enrichment.
 - Enrichment is orchestrated by CLI, not the pipeline module.
 - ~112 `unwrap()` calls across 27 files (most in non-production code: cache, parsers, config) and ~30 `expect()` calls (safe-by-construction).
 - 12 lock-poisoning patterns (`lock().unwrap()` / `lock().expect()`).
-- 38 integration tests across 6 test files in `tests/`.
+- 45 integration tests across 7 test files in `tests/`.
 - TUI dual system (legacy + ViewState trait) — only Quality migrated.

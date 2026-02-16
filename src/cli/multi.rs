@@ -169,7 +169,7 @@ pub fn run_matrix(
 }
 
 /// Parse multiple SBOMs using the pipeline (with structured error context).
-fn parse_multiple_sboms(paths: &[PathBuf]) -> Result<Vec<NormalizedSbom>> {
+pub(crate) fn parse_multiple_sboms(paths: &[PathBuf]) -> Result<Vec<NormalizedSbom>> {
     let mut sboms = Vec::with_capacity(paths.len());
     for path in paths {
         let parsed = parse_sbom_with_context(path, false)?;
@@ -190,7 +190,7 @@ fn get_fuzzy_config(preset: &str) -> FuzzyMatchConfig {
 }
 
 /// Get SBOM name from path
-fn get_sbom_name(path: &Path) -> String {
+pub(crate) fn get_sbom_name(path: &Path) -> String {
     path.file_stem().map_or_else(|| "unknown".to_string(), |s| s.to_string_lossy().to_string())
 }
 

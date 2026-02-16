@@ -55,8 +55,8 @@ pub use defaults::{
 pub use types::{
     AppConfig, AppConfigBuilder, BehaviorConfig, DiffConfig, DiffConfigBuilder, DiffPaths,
     EcosystemRulesConfig, EnrichmentConfig, FilterConfig, GraphAwareDiffConfig, MatchingConfig,
-    MatchingRulesPathConfig, MatrixConfig, MultiDiffConfig, OutputConfig, StreamingConfig,
-    TimelineConfig, TuiConfig, TuiPreferences, ViewConfig,
+    MatchingRulesPathConfig, MatrixConfig, MultiDiffConfig, OutputConfig, QueryConfig,
+    StreamingConfig, TimelineConfig, TuiConfig, TuiPreferences, ViewConfig,
 };
 pub use validation::{ConfigError, Validatable};
 

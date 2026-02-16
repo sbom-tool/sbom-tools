@@ -313,6 +313,21 @@ pub struct TimelineConfig {
     pub matching: MatchingConfig,
 }
 
+/// Configuration for query operations (searching components across multiple SBOMs)
+#[derive(Debug, Clone)]
+pub struct QueryConfig {
+    /// Paths to SBOM files to search
+    pub sbom_paths: Vec<PathBuf>,
+    /// Output configuration
+    pub output: OutputConfig,
+    /// Enrichment configuration
+    pub enrichment: EnrichmentConfig,
+    /// Maximum number of results to return
+    pub limit: Option<usize>,
+    /// Group results by SBOM source
+    pub group_by_sbom: bool,
+}
+
 /// Configuration for matrix comparison
 #[derive(Debug, Clone)]
 pub struct MatrixConfig {
