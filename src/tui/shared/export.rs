@@ -6,6 +6,21 @@ use ratatui::{
     widgets::{Block, Borders, Clear, Paragraph},
 };
 
+/// Format option row data.
+struct FormatRow {
+    key: &'static str,
+    name: &'static str,
+    desc: &'static str,
+}
+
+const FORMATS: &[FormatRow] = &[
+    FormatRow { key: "j", name: "JSON",     desc: "Structured data for automation" },
+    FormatRow { key: "s", name: "SARIF",    desc: "CI/CD integration (GitHub, etc.)" },
+    FormatRow { key: "m", name: "Markdown", desc: "Documentation & PRs" },
+    FormatRow { key: "h", name: "HTML",     desc: "Stakeholder report" },
+    FormatRow { key: "c", name: "CSV",      desc: "Spreadsheet import" },
+];
+
 /// Render the export format selection dialog.
 ///
 /// `scope` describes what will be exported (e.g. "Components", "Vulnerabilities",
@@ -16,61 +31,37 @@ pub fn render_export_dialog(frame: &mut Frame, area: Rect, scope: &str, centered
 
     let header = format!("━━━ Export {scope} ━━━");
 
-    let export_text = vec![
-        Line::styled(
-            header,
-            Style::default().fg(colors().primary).bold(),
-        ),
+    let mut lines = vec![
+        Line::styled(header, Style::default().fg(colors().primary).bold())
+            .alignment(Alignment::Center),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("[j]", Style::default().fg(colors().accent).bold()),
-            Span::styled(" JSON      ", Style::default().fg(colors().text)),
-            Span::styled(
-                "- Structured data for automation",
-                Style::default().fg(colors().text_muted),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("[s]", Style::default().fg(colors().accent).bold()),
-            Span::styled(" SARIF     ", Style::default().fg(colors().text)),
-            Span::styled(
-                "- CI/CD integration (GitHub, etc.)",
-                Style::default().fg(colors().text_muted),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("[m]", Style::default().fg(colors().accent).bold()),
-            Span::styled(" Markdown  ", Style::default().fg(colors().text)),
-            Span::styled(
-                "- Documentation & PRs",
-                Style::default().fg(colors().text_muted),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("[h]", Style::default().fg(colors().accent).bold()),
-            Span::styled(" HTML      ", Style::default().fg(colors().text)),
-            Span::styled(
-                "- Stakeholder report",
-                Style::default().fg(colors().text_muted),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("[c]", Style::default().fg(colors().accent).bold()),
-            Span::styled(" CSV       ", Style::default().fg(colors().text)),
-            Span::styled(
-                "- Component list for spreadsheets",
-                Style::default().fg(colors().text_muted),
-            ),
-        ]),
-        Line::from(""),
-        Line::styled(
-            "Press Esc to cancel",
-            Style::default().fg(colors().text_muted),
-        ),
     ];
 
+    for row in FORMATS {
+        lines.push(Line::from(vec![
+            Span::styled(
+                format!("  [{key}]", key = row.key),
+                Style::default().fg(colors().accent).bold(),
+            ),
+            Span::styled(
+                format!("  {name:<10}", name = row.name),
+                Style::default().fg(colors().text),
+            ),
+            Span::styled(
+                format!("  {desc}", desc = row.desc),
+                Style::default().fg(colors().text_muted),
+            ),
+        ]));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(
+        Line::styled("Press Esc to cancel", Style::default().fg(colors().text_muted))
+            .alignment(Alignment::Center),
+    );
+
     let title = format!(" Export {scope} ");
-    let export = Paragraph::new(export_text)
+    let export = Paragraph::new(lines)
         .block(
             Block::default()
                 .title(title)
@@ -78,7 +69,7 @@ pub fn render_export_dialog(frame: &mut Frame, area: Rect, scope: &str, centered
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(colors().primary)),
         )
-        .alignment(Alignment::Center);
+        .alignment(Alignment::Left);
 
     frame.render_widget(export, popup_area);
 }
