@@ -477,6 +477,9 @@ impl CycloneDxParser {
                                 .filter_map(|ver| ver.version.clone())
                                 .collect();
                         }
+                        if let Some(vex) = &vex_status {
+                            v.vex_status = Some(vex.clone());
+                        }
                         comp.vulnerabilities.push(v);
                         if let Some(vex) = &vex_status {
                             comp.vex_status = Some(vex.clone());

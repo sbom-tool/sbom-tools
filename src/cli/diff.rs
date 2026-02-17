@@ -70,6 +70,13 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
         }
     }
 
+    // Enrich with VEX data if VEX documents provided
+    #[cfg(feature = "enrichment")]
+    if !config.enrichment.vex_paths.is_empty() {
+        crate::pipeline::enrich_vex(old_parsed.sbom_mut(), &config.enrichment.vex_paths, quiet);
+        crate::pipeline::enrich_vex(new_parsed.sbom_mut(), &config.enrichment.vex_paths, quiet);
+    }
+
     #[cfg(not(feature = "enrichment"))]
     {
         if config.enrichment.enabled && !quiet {

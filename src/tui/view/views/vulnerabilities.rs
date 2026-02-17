@@ -447,6 +447,8 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                         affected_versions: vuln.affected_versions.clone(),
                         source: vuln.source.to_string(),
                         is_kev: vuln.is_kev,
+                        vex_state: vuln.vex_status.as_ref().map(|v| v.status.clone())
+                            .or_else(|| comp.vex_status.as_ref().map(|v| v.status.clone())),
                         grouped_components: Vec::new(),
                     });
             }
@@ -517,6 +519,8 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                     affected_versions: vuln.affected_versions.clone(),
                     source: vuln.source.to_string(),
                     is_kev: vuln.is_kev,
+                    vex_state: vuln.vex_status.as_ref().map(|v| v.status.clone())
+                        .or_else(|| comp.vex_status.as_ref().map(|v| v.status.clone())),
                     grouped_components: Vec::new(),
                 });
             }
@@ -706,6 +710,26 @@ fn render_vuln_table_panel(
                 let v = &vulns[*idx];
                 let sev_color = SeverityBadge::fg_color(&v.severity);
 
+                // Build ID cell with optional KEV + VEX badges
+                let mut id_spans: Vec<Span<'static>> = Vec::new();
+                if v.is_kev {
+                    id_spans.push(Span::styled(
+                        "KEV",
+                        Style::default()
+                            .fg(scheme.kev_badge_fg())
+                            .bg(scheme.kev())
+                            .bold(),
+                    ));
+                    id_spans.push(Span::raw(" "));
+                }
+                id_spans.extend(crate::tui::shared::vulnerabilities::render_vex_badge_spans(
+                    v.vex_state.as_ref(), &scheme,
+                ));
+                id_spans.push(Span::styled(
+                    truncate_str(&v.vuln_id, 16),
+                    Style::default().fg(sev_color).bold(),
+                ));
+
                 let mut cells = vec![
                     Cell::from(Span::styled(
                         SeverityBadge::indicator(&v.severity),
@@ -714,10 +738,7 @@ fn render_vuln_table_panel(
                             .bg(sev_color)
                             .bold(),
                     )),
-                    Cell::from(Span::styled(
-                        truncate_str(&v.vuln_id, 16),
-                        Style::default().fg(sev_color).bold(),
-                    )),
+                    Cell::from(Line::from(id_spans)),
                 ];
 
                 if show_cvss {
@@ -849,29 +870,38 @@ fn render_vuln_detail_panel(
     // Build detail content
     let mut lines: Vec<Line> = Vec::new();
 
-    // CVE ID with severity badge
-    lines.push(Line::from(vec![
-        Span::styled(
-            format!(" {} ", SeverityBadge::indicator(&v.severity)),
-            Style::default()
-                .fg(scheme.severity_badge_fg(&v.severity))
-                .bg(sev_color)
-                .bold(),
-        ),
-        Span::raw(" "),
-        Span::styled(&v.vuln_id, Style::default().fg(sev_color).bold()),
-        if v.is_kev {
+    // CVE ID with severity badge + KEV + VEX badges
+    {
+        let mut id_line_spans = vec![
             Span::styled(
-                " KEV",
+                format!(" {} ", SeverityBadge::indicator(&v.severity)),
+                Style::default()
+                    .fg(scheme.severity_badge_fg(&v.severity))
+                    .bg(sev_color)
+                    .bold(),
+            ),
+            Span::raw(" "),
+            Span::styled(&v.vuln_id, Style::default().fg(sev_color).bold()),
+        ];
+        if v.is_kev {
+            id_line_spans.push(Span::raw(" "));
+            id_line_spans.push(Span::styled(
+                "KEV",
                 Style::default()
                     .fg(scheme.kev_badge_fg())
                     .bg(scheme.kev())
                     .bold(),
-            )
-        } else {
-            Span::raw("")
-        },
-    ]));
+            ));
+        }
+        let vex_spans = crate::tui::shared::vulnerabilities::render_vex_badge_spans(
+            v.vex_state.as_ref(), &scheme,
+        );
+        if !vex_spans.is_empty() {
+            id_line_spans.push(Span::raw(" "));
+            id_line_spans.extend(vex_spans);
+        }
+        lines.push(Line::from(id_line_spans));
+    }
 
     // Severity + CVSS on one line
     let mut sev_spans = vec![
@@ -901,6 +931,20 @@ fn render_vuln_detail_panel(
         ));
     }
     lines.push(Line::from(meta_spans));
+
+    // VEX status detail
+    if let Some(ref vex_state) = v.vex_state {
+        let (vex_label, vex_color) = match vex_state {
+            crate::model::VexState::NotAffected => ("Not Affected", scheme.low),
+            crate::model::VexState::Fixed => ("Fixed", scheme.low),
+            crate::model::VexState::Affected => ("Affected", scheme.critical),
+            crate::model::VexState::UnderInvestigation => ("Under Investigation", scheme.medium),
+        };
+        lines.push(Line::from(vec![
+            Span::styled("VEX: ", Style::default().fg(scheme.muted)),
+            Span::styled(vex_label, Style::default().fg(vex_color).bold()),
+        ]));
+    }
 
     // Affected versions
     if !v.affected_versions.is_empty() {
@@ -1375,6 +1419,8 @@ pub struct VulnRow {
     pub source: String,
     /// Whether in KEV catalog
     pub is_kev: bool,
+    /// VEX state for this vulnerability (per-vuln or component-level)
+    pub vex_state: Option<crate::model::VexState>,
     /// Grouped display names for affected components (dedupe smart grouping)
     pub grouped_components: Vec<(String, usize)>,
 }

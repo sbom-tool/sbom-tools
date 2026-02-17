@@ -23,6 +23,7 @@ pub mod osv;
 pub mod staleness;
 mod stats;
 mod traits;
+pub mod vex;
 
 pub use cache::{CacheKey, FileCache};
 pub use eol::{EolClientConfig, EolEnrichmentStats, EolEnricher};
@@ -31,6 +32,7 @@ pub use osv::{OsvEnricher, OsvEnricherConfig};
 pub use staleness::{RegistryConfig, StalenessEnricher, StalenessEnrichmentStats};
 pub use stats::{EnrichmentError, EnrichmentStats};
 pub use traits::{NoOpEnricher, VulnerabilityEnricher};
+pub use vex::{VexEnricher, VexEnrichmentStats};
 
 use std::path::PathBuf;
 use std::time::Duration;

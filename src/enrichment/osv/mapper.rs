@@ -22,6 +22,7 @@ pub fn map_osv_to_vulnerability_ref(osv: &OsvVulnerability) -> VulnerabilityRef 
         modified: parse_datetime(osv.modified.as_ref()),
         is_kev: false,  // Will be enriched by KEV client
         kev_info: None,
+        vex_status: None,
     }
 }
 

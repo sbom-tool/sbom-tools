@@ -139,6 +139,10 @@ struct DiffArgs {
     #[arg(long)]
     enrich_eol: bool,
 
+    /// Apply external VEX document(s) (OpenVEX format). Can be specified multiple times.
+    #[arg(long = "vex", value_name = "PATH")]
+    vex: Vec<PathBuf>,
+
     /// Cache directory for vulnerability data
     #[arg(long)]
     vuln_cache_dir: Option<PathBuf>,
@@ -237,6 +241,10 @@ struct ViewArgs {
     /// Enable end-of-life detection via endoflife.date
     #[arg(long)]
     enrich_eol: bool,
+
+    /// Apply external VEX document(s) (OpenVEX format). Can be specified multiple times.
+    #[arg(long = "vex", value_name = "PATH")]
+    vex: Vec<PathBuf>,
 
     /// Cache directory for enrichment data
     #[arg(long)]
@@ -437,6 +445,10 @@ struct QueryArgs {
     #[arg(long)]
     enrich_eol: bool,
 
+    /// Apply external VEX document(s) (OpenVEX format). Can be specified multiple times.
+    #[arg(long = "vex", value_name = "PATH")]
+    vex: Vec<PathBuf>,
+
     /// Cache directory for enrichment data
     #[arg(long)]
     vuln_cache_dir: Option<PathBuf>,
@@ -527,6 +539,7 @@ fn main() -> Result<()> {
                 bypass_cache: args.refresh_vulns,
                 timeout_secs: args.osv_timeout,
                 enable_eol: args.enrich_eol,
+                vex_paths: args.vex,
             };
 
             let config = DiffConfig {
@@ -597,6 +610,7 @@ fn main() -> Result<()> {
                 bypass_cache: args.refresh_vulns,
                 timeout_secs: args.api_timeout,
                 enable_eol: args.enrich_eol,
+                vex_paths: args.vex,
             };
 
             let config = ViewConfig {
@@ -682,6 +696,7 @@ fn main() -> Result<()> {
                 bypass_cache: args.refresh_vulns,
                 timeout_secs: args.api_timeout,
                 enable_eol: args.enrich_eol,
+                vex_paths: args.vex,
             };
 
             let filter = cli::QueryFilter {

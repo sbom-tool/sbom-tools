@@ -94,6 +94,38 @@ pub fn render_ransomware_badge_spans(
     }
 }
 
+/// Render VEX status badge spans for use in vulnerability row ID cells.
+///
+/// - `NotAffected` → green "NA" badge
+/// - `Fixed` → green "FX" badge
+/// - `Affected` → red "AF" badge
+/// - `UnderInvestigation` → yellow "UI" badge
+pub fn render_vex_badge_spans(
+    vex_state: Option<&crate::model::VexState>,
+    scheme: &crate::tui::theme::ColorScheme,
+) -> Vec<Span<'static>> {
+    let Some(state) = vex_state else {
+        return vec![];
+    };
+    use crate::model::VexState;
+    let (label, bg_color) = match state {
+        VexState::NotAffected => ("NA", scheme.low),
+        VexState::Fixed => ("FX", scheme.low),
+        VexState::Affected => ("AF", scheme.critical),
+        VexState::UnderInvestigation => ("UI", scheme.medium),
+    };
+    vec![
+        Span::styled(
+            label,
+            Style::default()
+                .fg(scheme.badge_fg_dark)
+                .bg(bg_color)
+                .bold(),
+        ),
+        Span::raw(" "),
+    ]
+}
+
 /// Color for a CVSS score value (red ≥9.0, orange ≥7.0, yellow ≥4.0, green <4.0).
 pub fn cvss_score_color(score: f32, scheme: &crate::tui::theme::ColorScheme) -> Color {
     if score >= 9.0 {

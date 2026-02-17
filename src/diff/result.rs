@@ -752,6 +752,12 @@ pub struct VulnerabilityDetail {
     /// VEX state for this vulnerability's component (if available)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub vex_state: Option<crate::model::VexState>,
+    /// VEX justification (from per-vuln or component-level VEX)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vex_justification: Option<crate::model::VexJustification>,
+    /// VEX impact statement (from per-vuln or component-level VEX)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vex_impact_statement: Option<String>,
 }
 
 impl VulnerabilityDetail {
@@ -814,7 +820,18 @@ impl VulnerabilityDetail {
             kev_due_date,
             days_since_published,
             days_until_due,
-            vex_state: component.vex_status.as_ref().map(|v| v.status.clone()),
+            vex_state: {
+                let vex_source = vuln.vex_status.as_ref().or(component.vex_status.as_ref());
+                vex_source.map(|v| v.status.clone())
+            },
+            vex_justification: {
+                let vex_source = vuln.vex_status.as_ref().or(component.vex_status.as_ref());
+                vex_source.and_then(|v| v.justification.clone())
+            },
+            vex_impact_statement: {
+                let vex_source = vuln.vex_status.as_ref().or(component.vex_status.as_ref());
+                vex_source.and_then(|v| v.impact_statement.clone())
+            },
         }
     }
 

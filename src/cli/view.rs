@@ -40,6 +40,12 @@ pub fn run_view(config: ViewConfig) -> Result<()> {
         crate::pipeline::enrich_eol(parsed.sbom_mut(), &eol_config, false);
     }
 
+    // Enrich with VEX data if VEX documents provided
+    #[cfg(feature = "enrichment")]
+    if !config.enrichment.vex_paths.is_empty() {
+        crate::pipeline::enrich_vex(parsed.sbom_mut(), &config.enrichment.vex_paths, false);
+    }
+
     // Warn if enrichment requested but feature not enabled
     #[cfg(not(feature = "enrichment"))]
     if config.enrichment.enabled || config.enrichment.enable_eol {

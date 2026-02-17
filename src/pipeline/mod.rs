@@ -14,7 +14,7 @@ pub use parse::{parse_sbom_with_context, ParsedSbom};
 pub use report_stage::output_report;
 
 #[cfg(feature = "enrichment")]
-pub use parse::{build_enrichment_config, enrich_eol, enrich_sbom};
+pub use parse::{build_enrichment_config, enrich_eol, enrich_sbom, enrich_vex};
 
 /// Structured pipeline error types for better diagnostics.
 #[derive(Debug, thiserror::Error)]

@@ -58,7 +58,7 @@ impl ReportGenerator for CsvReporter {
 
         // Vulnerabilities CSV
         content.push_str("\n# Vulnerabilities\n");
-        content.push_str("Status,ID,Severity,Type,SLA,Component,Description\n");
+        content.push_str("Status,ID,Severity,Type,SLA,Component,Description,VEX\n");
 
         for vuln in &result.vulnerabilities.introduced {
             write_vuln_line(&mut content, "Introduced", vuln);
@@ -162,17 +162,25 @@ fn write_vuln_line(content: &mut String, status: &str, vuln: &VulnerabilityDetai
         .as_deref()
         .map(escape_csv)
         .unwrap_or_default();
+    let vex_display = match vuln.vex_state.as_ref() {
+        Some(crate::model::VexState::NotAffected) => "Not Affected",
+        Some(crate::model::VexState::Fixed) => "Fixed",
+        Some(crate::model::VexState::Affected) => "Affected",
+        Some(crate::model::VexState::UnderInvestigation) => "Under Investigation",
+        None => "",
+    };
 
     let _ = writeln!(
         content,
-        "{},\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"",
+        "{},\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"",
         status,
         escape_csv(&vuln.id),
         escape_csv(&vuln.severity),
         depth_label,
         sla_display,
         escape_csv(&vuln.component_name),
-        desc
+        desc,
+        vex_display,
     );
 }
 

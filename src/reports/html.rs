@@ -226,6 +226,7 @@ fn write_diff_vuln_table(html: &mut String, result: &DiffResult) -> std::fmt::Re
     writeln!(html, "                <th>Type</th>")?;
     writeln!(html, "                <th>Component</th>")?;
     writeln!(html, "                <th>Version</th>")?;
+    writeln!(html, "                <th>VEX</th>")?;
     writeln!(html, "            </tr>")?;
     writeln!(html, "        </thead>")?;
     writeln!(html, "        <tbody>")?;
@@ -277,6 +278,9 @@ fn write_diff_vuln_table(html: &mut String, result: &DiffResult) -> std::fmt::Re
         }
         writeln!(html, "                <td>{}</td>", escape_html(&vuln.component_name))?;
         writeln!(html, "                <td>{}</td>", escape_html_opt(vuln.version.as_deref()))?;
+        // VEX status
+        let vex_display = format_vex_html(vuln.vex_state.as_ref());
+        writeln!(html, "                <td>{vex_display}</td>")?;
         writeln!(html, "            </tr>")?;
     }
 
@@ -356,6 +360,7 @@ fn write_view_vuln_table(html: &mut String, sbom: &NormalizedSbom) -> std::fmt::
     writeln!(html, "                <th>SLA</th>")?;
     writeln!(html, "                <th>Component</th>")?;
     writeln!(html, "                <th>Version</th>")?;
+    writeln!(html, "                <th>VEX</th>")?;
     writeln!(html, "            </tr>")?;
     writeln!(html, "        </thead>")?;
     writeln!(html, "        <tbody>")?;
@@ -431,6 +436,10 @@ fn write_view_vuln_table(html: &mut String, sbom: &NormalizedSbom) -> std::fmt::
         }
         writeln!(html, "                <td>{}</td>", escape_html(comp_name))?;
         writeln!(html, "                <td>{}</td>", escape_html_opt(version))?;
+        // VEX status from per-vuln
+        let vex_state = vuln.and_then(|v| v.vex_status.as_ref().map(|vs| &vs.status));
+        let vex_display = format_vex_html(vex_state);
+        writeln!(html, "                <td>{vex_display}</td>")?;
         writeln!(html, "            </tr>")?;
     }
 
@@ -483,6 +492,25 @@ fn format_sla_html(vuln: &VulnerabilityDetail) -> (String, &'static str) {
                 .days_since_published.map_or_else(|| "-".to_string(), |d| format!("{d}d old"));
             (text, "sla-unknown")
         }
+    }
+}
+
+/// Format VEX state as an HTML badge string.
+fn format_vex_html(vex_state: Option<&crate::model::VexState>) -> String {
+    match vex_state {
+        Some(crate::model::VexState::NotAffected) => {
+            "<span class=\"badge badge-added\">Not Affected</span>".to_string()
+        }
+        Some(crate::model::VexState::Fixed) => {
+            "<span class=\"badge badge-added\">Fixed</span>".to_string()
+        }
+        Some(crate::model::VexState::Affected) => {
+            "<span class=\"badge badge-removed\">Affected</span>".to_string()
+        }
+        Some(crate::model::VexState::UnderInvestigation) => {
+            "<span class=\"badge badge-medium\">Under Investigation</span>".to_string()
+        }
+        None => "-".to_string(),
     }
 }
 

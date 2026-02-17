@@ -217,6 +217,47 @@ pub fn enrich_eol(
     }
 }
 
+/// Enrich an SBOM with VEX data from external OpenVEX documents.
+///
+/// Returns enrichment statistics if any VEX documents were successfully loaded.
+#[cfg(feature = "enrichment")]
+pub fn enrich_vex(
+    sbom: &mut NormalizedSbom,
+    vex_paths: &[std::path::PathBuf],
+    quiet: bool,
+) -> Option<crate::enrichment::VexEnrichmentStats> {
+    if vex_paths.is_empty() {
+        return None;
+    }
+
+    if !quiet {
+        tracing::info!(
+            "Enriching SBOM with VEX data from {} document(s)...",
+            vex_paths.len()
+        );
+    }
+
+    match crate::enrichment::VexEnricher::from_files(vex_paths) {
+        Ok(mut enricher) => {
+            let stats = enricher.enrich_sbom(sbom);
+            if !quiet {
+                tracing::info!(
+                    "VEX enrichment: {} documents, {} statements, {} vulns matched, {} components",
+                    stats.documents_loaded,
+                    stats.statements_parsed,
+                    stats.vulns_matched,
+                    stats.components_with_vex,
+                );
+            }
+            Some(stats)
+        }
+        Err(e) => {
+            tracing::warn!("Failed to load VEX documents: {}", e);
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

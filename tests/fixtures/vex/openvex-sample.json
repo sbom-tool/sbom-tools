@@ -1,0 +1,45 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://example.com/vex/2024-001",
+  "author": "Example Vendor",
+  "timestamp": "2024-01-15T00:00:00Z",
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2021-23337",
+        "aliases": ["GHSA-35jh-r3h4-6jhm"]
+      },
+      "status": "not_affected",
+      "products": [
+        { "@id": "pkg:npm/lodash@4.17.20" }
+      ],
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The vulnerable template function is not used in our application"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2020-28469"
+      },
+      "status": "affected",
+      "products": [
+        { "identifiers": { "purl": "pkg:npm/express@4.17.1" } }
+      ],
+      "action_statement": "Upgrade express to 4.18.2 or later"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2022-24999"
+      },
+      "status": "fixed",
+      "products": [
+        { "@id": "pkg:npm/express@4.17.1" }
+      ]
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2099-99999"
+      },
+      "status": "under_investigation"
+    }
+  ]
+}

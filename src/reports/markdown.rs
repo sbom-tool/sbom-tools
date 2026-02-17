@@ -311,8 +311,8 @@ impl ReportGenerator for MarkdownReporter {
 
             if !result.vulnerabilities.introduced.is_empty() {
                 writeln!(md, "### Introduced Vulnerabilities\n")?;
-                writeln!(md, "| ID | Severity | CVSS | SLA | Type | Component | Version |")?;
-                writeln!(md, "|----|----------|------|-----|------|-----------|---------|")?;
+                writeln!(md, "| ID | Severity | CVSS | SLA | Type | Component | Version | VEX |")?;
+                writeln!(md, "|----|----------|------|-----|------|-----------|---------|-----|")?;
                 for vuln in &result.vulnerabilities.introduced {
                     let depth_label = match vuln.component_depth {
                         Some(1) => "Direct",
@@ -320,9 +320,10 @@ impl ReportGenerator for MarkdownReporter {
                         None => "-",
                     };
                     let sla_display = format_sla_display(vuln);
+                    let vex_display = format_vex_display(vuln.vex_state.as_ref());
                     writeln!(
                         md,
-                        "| {} | {} | {} | {} | {} | {} | {} |",
+                        "| {} | {} | {} | {} | {} | {} | {} | {} |",
                         escape_markdown_table(&vuln.id),
                         escape_markdown_table(&vuln.severity),
                         vuln.cvss_score
@@ -332,7 +333,8 @@ impl ReportGenerator for MarkdownReporter {
                         escape_markdown_table(&sla_display),
                         depth_label,
                         escape_markdown_table(&vuln.component_name),
-                        escape_md_opt(vuln.version.as_deref())
+                        escape_md_opt(vuln.version.as_deref()),
+                        vex_display,
                     )?;
                 }
                 writeln!(md)?;
@@ -340,8 +342,8 @@ impl ReportGenerator for MarkdownReporter {
 
             if !result.vulnerabilities.resolved.is_empty() {
                 writeln!(md, "### Resolved Vulnerabilities\n")?;
-                writeln!(md, "| ID | Severity | SLA | Type | Component |")?;
-                writeln!(md, "|----|----------|-----|------|-----------|")?;
+                writeln!(md, "| ID | Severity | SLA | Type | Component | VEX |")?;
+                writeln!(md, "|----|----------|-----|------|-----------|-----|")?;
                 for vuln in &result.vulnerabilities.resolved {
                     let depth_label = match vuln.component_depth {
                         Some(1) => "Direct",
@@ -349,14 +351,16 @@ impl ReportGenerator for MarkdownReporter {
                         None => "-",
                     };
                     let sla_display = format_sla_display(vuln);
+                    let vex_display = format_vex_display(vuln.vex_state.as_ref());
                     writeln!(
                         md,
-                        "| {} | {} | {} | {} | {} |",
+                        "| {} | {} | {} | {} | {} | {} |",
                         escape_markdown_table(&vuln.id),
                         escape_markdown_table(&vuln.severity),
                         escape_markdown_table(&sla_display),
                         depth_label,
-                        escape_markdown_table(&vuln.component_name)
+                        escape_markdown_table(&vuln.component_name),
+                        vex_display,
                     )?;
                 }
                 writeln!(md)?;
@@ -706,5 +710,15 @@ fn format_sla_display(vuln: &VulnerabilityDetail) -> String {
         SlaStatus::DueSoon(days) | SlaStatus::OnTrack(days) => format!("{days}d left"),
         SlaStatus::NoDueDate => vuln
             .days_since_published.map_or_else(|| "-".to_string(), |d| format!("{d}d old")),
+    }
+}
+
+fn format_vex_display(vex_state: Option<&crate::model::VexState>) -> &'static str {
+    match vex_state {
+        Some(crate::model::VexState::NotAffected) => "Not Affected",
+        Some(crate::model::VexState::Fixed) => "Fixed",
+        Some(crate::model::VexState::Affected) => "Affected",
+        Some(crate::model::VexState::UnderInvestigation) => "Under Investigation",
+        None => "-",
     }
 }

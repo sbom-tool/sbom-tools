@@ -28,6 +28,9 @@ struct VulnDetailInfo {
     affected_versions: Vec<String>,
     cvss_vector: Option<String>,
     published_age_days: Option<i64>,
+    vex_state: Option<crate::model::VexState>,
+    vex_justification: Option<crate::model::VexJustification>,
+    vex_impact_statement: Option<String>,
 }
 
 /// Render item for grouped vulnerability display.
@@ -691,7 +694,7 @@ fn build_single_diff_row(
     item: &DiffVulnItem<'_>,
     scheme: &crate::tui::theme::ColorScheme,
 ) -> Row<'static> {
-    use crate::tui::shared::vulnerabilities::{render_kev_badge_spans, render_depth_badge_spans};
+    use crate::tui::shared::vulnerabilities::{render_kev_badge_spans, render_depth_badge_spans, render_vex_badge_spans};
 
     let (status_label, status_bg, status_fg, row_style) = match item.status {
         DiffVulnStatus::Introduced => (
@@ -716,10 +719,11 @@ fn build_single_diff_row(
 
     let vuln = item.vuln;
 
-    // Build ID cell with KEV and DIR/TRN badges
+    // Build ID cell with KEV, DIR/TRN, and VEX badges
     let mut id_spans: Vec<Span<'_>> = Vec::new();
     id_spans.extend(render_kev_badge_spans(vuln.is_kev, scheme));
     id_spans.extend(render_depth_badge_spans(vuln.component_depth.map(|d| d as usize), scheme));
+    id_spans.extend(render_vex_badge_spans(vuln.vex_state.as_ref(), scheme));
     id_spans.push(Span::raw(vuln.id.clone()));
 
     let sla_cell = format_sla_cell(
@@ -773,7 +777,7 @@ fn build_single_view_row(
 ) -> Row<'static> {
     use crate::tui::shared::vulnerabilities::{
         render_kev_badge_spans, render_depth_badge_spans, render_ransomware_badge_spans,
-        cvss_score_color,
+        render_vex_badge_spans, cvss_score_color,
     };
 
     let (comp, vuln) = item;
@@ -789,6 +793,8 @@ fn build_single_view_row(
     let comp_id = comp.canonical_id.to_string();
     let depth = cached_depths.get(&comp_id).copied();
     id_spans.extend(render_depth_badge_spans(depth, scheme));
+    let vex_state = vuln.vex_status.as_ref().map(|v| &v.status);
+    id_spans.extend(render_vex_badge_spans(vex_state, scheme));
     id_spans.push(Span::raw(vuln.id.clone()));
 
     let sla_cell = format_view_vuln_sla_cell(vuln, &severity, scheme);
@@ -847,6 +853,9 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
                     affected_versions: Vec::new(),
                     cvss_vector: None,
                     published_age_days: None,
+                    vex_state: None,
+                    vex_justification: None,
+                    vex_impact_statement: None,
                 })
             }
             None => None,
@@ -899,6 +908,15 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
                 Style::default().fg(scheme.badge_fg_light).bg(scheme.critical).bold(),
             ));
         }
+        {
+            let vex_badge = crate::tui::shared::vulnerabilities::render_vex_badge_spans(
+                info.vex_state.as_ref(), &scheme,
+            );
+            if !vex_badge.is_empty() {
+                badge_spans.push(Span::raw(" "));
+                badge_spans.extend(vex_badge);
+            }
+        }
 
         let mut lines = vec![
             Line::from(badge_spans),
@@ -950,6 +968,41 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
                     Span::styled("Affects: ", Style::default().fg(scheme.text_muted)),
                     Span::styled(versions_str, Style::default().fg(scheme.text)),
                 ]));
+            }
+        }
+
+        // === VEX Exploitability Context ===
+        if info.vex_state.is_some() {
+            lines.push(Line::from(""));
+            if let Some(ref state) = info.vex_state {
+                let (vex_label, vex_color) = match state {
+                    crate::model::VexState::NotAffected => ("Not Affected", scheme.low),
+                    crate::model::VexState::Fixed => ("Fixed", scheme.low),
+                    crate::model::VexState::Affected => ("Affected", scheme.critical),
+                    crate::model::VexState::UnderInvestigation => ("Under Investigation", scheme.medium),
+                };
+                lines.push(Line::from(vec![
+                    Span::styled("VEX Status: ", Style::default().fg(scheme.text_muted)),
+                    Span::styled(vex_label, Style::default().fg(vex_color).bold()),
+                ]));
+            }
+            if let Some(ref justification) = info.vex_justification {
+                lines.push(Line::from(vec![
+                    Span::styled("Justification: ", Style::default().fg(scheme.text_muted)),
+                    Span::styled(format!("{justification:?}"), Style::default().fg(scheme.text)),
+                ]));
+            }
+            if let Some(ref impact) = info.vex_impact_statement {
+                let max_width = area.width.saturating_sub(4) as usize;
+                lines.push(Line::from(Span::styled(
+                    "Impact: ", Style::default().fg(scheme.text_muted),
+                )));
+                for wrapped in crate::tui::shared::vulnerabilities::word_wrap(impact, max_width) {
+                    lines.push(Line::from(Span::styled(
+                        format!("  {wrapped}"),
+                        Style::default().fg(scheme.text),
+                    )));
+                }
             }
         }
 
@@ -1115,6 +1168,9 @@ fn get_diff_vuln_at(
             affected_versions: Vec::new(),
             cvss_vector: None,
             published_age_days: vuln.days_since_published,
+            vex_state: vuln.vex_state.clone(),
+            vex_justification: vuln.vex_justification.clone(),
+            vex_impact_statement: vuln.vex_impact_statement.clone(),
         }
     })
 }
@@ -1156,9 +1212,12 @@ fn collect_view_vulns(
                     cached_depths.get(&comp_id).is_some_and(|&d| d > 1)
                 }
                 VulnFilter::VexActionable => {
-                    // Exclude components with VEX status NotAffected or Fixed
+                    // Exclude vulns with VEX status NotAffected or Fixed
+                    // Per-vuln VEX takes priority over component-level
+                    let vex_state = vuln.vex_status.as_ref().map(|v| &v.status)
+                        .or_else(|| comp.vex_status.as_ref().map(|v| &v.status));
                     !matches!(
-                        comp.vex_status.as_ref().map(|v| &v.status),
+                        vex_state,
                         Some(crate::model::VexState::NotAffected | crate::model::VexState::Fixed)
                     )
                 }
@@ -1243,6 +1302,7 @@ fn get_view_vuln_at(
             let today = chrono::Utc::now().date_naive();
             (today - dt.date_naive()).num_days()
         });
+        let vex_source = vuln.vex_status.as_ref().or(comp.vex_status.as_ref());
         VulnDetailInfo {
             status: "Present".to_string(),
             id: vuln.id.clone(),
@@ -1259,6 +1319,9 @@ fn get_view_vuln_at(
             affected_versions: vuln.affected_versions.clone(),
             cvss_vector: vuln.cvss.first().and_then(|c| c.vector.clone()),
             published_age_days,
+            vex_state: vex_source.map(|v| v.status.clone()),
+            vex_justification: vex_source.and_then(|v| v.justification.clone()),
+            vex_impact_statement: vex_source.and_then(|v| v.impact_statement.clone()),
         }
     })
 }

@@ -105,16 +105,18 @@ impl ReportGenerator for SarifReporter {
                     None => "",
                 };
                 let sla_label = format_sla_label(vuln);
+                let vex_label = format_vex_label(vuln.vex_state.as_ref());
                 results.push(SarifResult {
                     rule_id: "SBOM-TOOLS-005".to_string(),
                     level: severity_to_level(&vuln.severity),
                     message: SarifMessage {
                         text: format!(
-                            "Vulnerability introduced: {} ({}){}{} in {} {}",
+                            "Vulnerability introduced: {} ({}){}{}{} in {} {}",
                             vuln.id,
                             vuln.severity,
                             depth_label,
                             sla_label,
+                            vex_label,
                             vuln.component_name,
                             vuln.version.as_deref().unwrap_or("")
                         ),
@@ -131,13 +133,14 @@ impl ReportGenerator for SarifReporter {
                         None => "",
                     };
                     let sla_label = format_sla_label(vuln);
+                    let vex_label = format_vex_label(vuln.vex_state.as_ref());
                     results.push(SarifResult {
                         rule_id: "SBOM-TOOLS-006".to_string(),
                         level: SarifLevel::Note,
                         message: SarifMessage {
                             text: format!(
-                                "Vulnerability resolved: {} ({}){}{} was in {}",
-                                vuln.id, vuln.severity, depth_label, sla_label, vuln.component_name
+                                "Vulnerability resolved: {} ({}){}{}{} was in {}",
+                                vuln.id, vuln.severity, depth_label, sla_label, vex_label, vuln.component_name
                             ),
                         },
                         locations: vec![],
@@ -253,14 +256,18 @@ impl ReportGenerator for SarifReporter {
             let severity_str = vuln
                 .severity
                 .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
+            let vex_state = vuln.vex_status.as_ref().map(|v| &v.status)
+                .or_else(|| comp.vex_status.as_ref().map(|v| &v.status));
+            let vex_label = format_vex_label(vex_state);
             results.push(SarifResult {
                 rule_id: "SBOM-VIEW-001".to_string(),
                 level: severity_to_level(&severity_str),
                 message: SarifMessage {
                     text: format!(
-                        "Vulnerability {} ({}) in {} {}",
+                        "Vulnerability {} ({}){} in {} {}",
                         vuln.id,
                         severity_str,
+                        vex_label,
                         comp.name,
                         comp.version.as_deref().unwrap_or("")
                     ),
@@ -339,6 +346,16 @@ fn format_sla_label(vuln: &VulnerabilityDetail) -> String {
             .days_since_published
             .map(|d| format!(" [Age: {d}d]"))
             .unwrap_or_default(),
+    }
+}
+
+fn format_vex_label(vex_state: Option<&crate::model::VexState>) -> String {
+    match vex_state {
+        Some(crate::model::VexState::NotAffected) => " [VEX: Not Affected]".to_string(),
+        Some(crate::model::VexState::Fixed) => " [VEX: Fixed]".to_string(),
+        Some(crate::model::VexState::Affected) => " [VEX: Affected]".to_string(),
+        Some(crate::model::VexState::UnderInvestigation) => " [VEX: Under Investigation]".to_string(),
+        None => String::new(),
     }
 }
 

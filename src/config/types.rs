@@ -599,6 +599,9 @@ pub struct EnrichmentConfig {
     pub timeout_secs: u64,
     /// Enable end-of-life detection via endoflife.date API
     pub enable_eol: bool,
+    /// Paths to external VEX documents (OpenVEX format)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub vex_paths: Vec<std::path::PathBuf>,
 }
 
 impl Default for EnrichmentConfig {
@@ -612,6 +615,7 @@ impl Default for EnrichmentConfig {
             bypass_cache: false,
             timeout_secs: 30,
             enable_eol: false,
+            vex_paths: Vec::new(),
         }
     }
 }
@@ -652,6 +656,13 @@ impl EnrichmentConfig {
     #[must_use]
     pub const fn with_timeout_secs(mut self, secs: u64) -> Self {
         self.timeout_secs = secs;
+        self
+    }
+
+    /// Set VEX document paths.
+    #[must_use]
+    pub fn with_vex_paths(mut self, paths: Vec<std::path::PathBuf>) -> Self {
+        self.vex_paths = paths;
         self
     }
 }

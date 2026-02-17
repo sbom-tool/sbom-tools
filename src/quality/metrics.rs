@@ -413,7 +413,9 @@ impl VulnerabilityMetrics {
                 }
             }
 
-            if comp.vex_status.is_some() {
+            if comp.vex_status.is_some()
+                || comp.vulnerabilities.iter().any(|v| v.vex_status.is_some())
+            {
                 with_vex += 1;
             }
         }

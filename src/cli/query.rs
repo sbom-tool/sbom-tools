@@ -421,6 +421,12 @@ fn enrich_if_needed(
     mut sboms: Vec<NormalizedSbom>,
     config: &crate::config::EnrichmentConfig,
 ) -> Result<Vec<NormalizedSbom>> {
+    // VEX enrichment
+    if !config.vex_paths.is_empty() {
+        for sbom in &mut sboms {
+            crate::pipeline::enrich_vex(sbom, &config.vex_paths, false);
+        }
+    }
     if config.enabled {
         let osv_config = crate::pipeline::build_enrichment_config(config);
         for sbom in &mut sboms {

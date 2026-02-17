@@ -272,6 +272,8 @@ mod tests {
             days_since_published: None,
             days_until_due: None,
             vex_state: None,
+            vex_justification: None,
+            vex_impact_statement: None,
         }
     }
 
