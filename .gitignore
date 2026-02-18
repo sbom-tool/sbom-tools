@@ -34,3 +34,6 @@ Thumbs.db
 
 # Demo recording artifacts
 docs/demo/
+
+# Scripts (local tooling)
+scripts/
