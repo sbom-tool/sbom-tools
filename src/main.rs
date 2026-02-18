@@ -16,10 +16,11 @@ use sbom_tools::{
     config::{
         BehaviorConfig, DiffConfig, DiffPaths, EcosystemRulesConfig, EnrichmentConfig,
         FilterConfig, GraphAwareDiffConfig, MatchingConfig, MatchingRulesPathConfig, OutputConfig,
-        QueryConfig, ViewConfig,
+        QueryConfig, ViewConfig, WatchConfig,
     },
     pipeline::dirs,
     reports::{ReportFormat, ReportType},
+    watch::parse_duration,
 };
 use std::io;
 use std::path::{Path, PathBuf};
@@ -474,6 +475,75 @@ struct QueryArgs {
     group_by_sbom: bool,
 }
 
+/// Arguments for the `watch` subcommand
+#[derive(Parser)]
+struct WatchArgs {
+    /// Directories to watch for SBOM file changes
+    #[arg(long = "dir", short = 'd', required = true)]
+    dirs: Vec<PathBuf>,
+
+    /// Polling interval for file changes (e.g., 30s, 5m, 1h)
+    #[arg(long, short = 'i', default_value = "5m")]
+    interval: String,
+
+    /// Enrichment refresh interval (e.g., 1h, 6h, 1d)
+    #[arg(long, default_value = "6h")]
+    enrich_interval: String,
+
+    /// Output format (summary for human, json for NDJSON streaming)
+    #[arg(short, long, default_value = "auto")]
+    output: ReportFormat,
+
+    /// Output file path (stdout if not specified)
+    #[arg(short = 'O', long)]
+    output_file: Option<PathBuf>,
+
+    /// Optional webhook URL for alerts (requires enrichment feature)
+    #[arg(long)]
+    webhook: Option<String>,
+
+    /// Enable OSV vulnerability enrichment
+    #[arg(long)]
+    enrich_vulns: bool,
+
+    /// Enable end-of-life detection via endoflife.date
+    #[arg(long)]
+    enrich_eol: bool,
+
+    /// Apply external VEX document(s) (OpenVEX format). Can be specified multiple times.
+    #[arg(long = "vex", value_name = "PATH")]
+    vex: Vec<PathBuf>,
+
+    /// Cache directory for enrichment data
+    #[arg(long)]
+    vuln_cache_dir: Option<PathBuf>,
+
+    /// Cache TTL in hours (default: 24)
+    #[arg(long, default_value = "24")]
+    vuln_cache_ttl: u64,
+
+    /// Bypass cache and fetch fresh data
+    #[arg(long)]
+    refresh_vulns: bool,
+
+    /// API timeout in seconds (default: 30)
+    #[arg(long, default_value = "30")]
+    api_timeout: u64,
+
+    /// Debounce duration — wait after detecting a change before processing,
+    /// to coalesce rapid writes (e.g., 2s, 500ms). Use 0s to disable.
+    #[arg(long, default_value = "2s")]
+    debounce: String,
+
+    /// Exit after the first change is detected (CI mode)
+    #[arg(long)]
+    exit_on_change: bool,
+
+    /// Maximum number of diff snapshots to retain per SBOM
+    #[arg(long, default_value = "10")]
+    max_snapshots: usize,
+}
+
 #[derive(Subcommand)]
 enum Commands {
     /// Compare two SBOMs
@@ -499,6 +569,9 @@ enum Commands {
 
     /// Search for components across multiple SBOMs
     Query(QueryArgs),
+
+    /// Continuously monitor SBOMs for file changes and new vulnerabilities
+    Watch(WatchArgs),
 
     /// Generate shell completions
     Completions {
@@ -725,6 +798,41 @@ fn main() -> Result<()> {
             };
 
             cli::run_query(config, filter)
+        }
+
+        Commands::Watch(args) => {
+            let enrichment = EnrichmentConfig {
+                enabled: args.enrich_vulns,
+                provider: "osv".to_string(),
+                cache_ttl_hours: args.vuln_cache_ttl,
+                max_concurrent: 10,
+                cache_dir: args.vuln_cache_dir.or_else(|| Some(dirs::osv_cache_dir())),
+                bypass_cache: args.refresh_vulns,
+                timeout_secs: args.api_timeout,
+                enable_eol: args.enrich_eol,
+                vex_paths: args.vex,
+            };
+
+            let config = WatchConfig {
+                watch_dirs: args.dirs,
+                poll_interval: parse_duration(&args.interval)?,
+                enrich_interval: parse_duration(&args.enrich_interval)?,
+                debounce: parse_duration(&args.debounce)?,
+                output: OutputConfig {
+                    format: args.output,
+                    file: args.output_file,
+                    report_types: ReportType::All,
+                    no_color: cli.no_color,
+                    streaming: sbom_tools::config::StreamingConfig::default(),
+                },
+                enrichment,
+                webhook_url: args.webhook,
+                exit_on_change: args.exit_on_change,
+                max_snapshots: args.max_snapshots,
+                quiet: cli.quiet,
+            };
+
+            cli::run_watch(config)
         }
 
         Commands::Completions { shell } => {

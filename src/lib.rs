@@ -59,6 +59,7 @@ pub mod quality;
 pub mod reports;
 pub mod tui;
 pub mod utils;
+pub mod watch;
 
 // Re-export main types for convenience
 pub use config::{AppConfig, AppConfigBuilder, ConfigPreset, EnrichmentConfig, TuiConfig};

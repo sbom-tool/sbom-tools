@@ -11,6 +11,9 @@ keywords = ["sbom", "cyclonedx", "spdx", "diff", "security"]
 categories = ["command-line-utilities", "development-tools", "security"]
 
 [dependencies]
+# Signal Handling
+ctrlc = "3.4"
+
 # SBOM Parsing
 spdx = "0.13"
 

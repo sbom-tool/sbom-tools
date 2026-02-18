@@ -58,6 +58,7 @@ pub use types::{
     MatchingRulesPathConfig, MatrixConfig, MultiDiffConfig, OutputConfig, QueryConfig,
     StreamingConfig, TimelineConfig, TuiConfig, TuiPreferences, ViewConfig,
 };
+pub use crate::watch::WatchConfig;
 pub use validation::{ConfigError, Validatable};
 
 // Re-export file utilities
