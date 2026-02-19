@@ -199,12 +199,11 @@ impl EolClient {
     #[cfg(feature = "enrichment")]
     fn fetch_product_list(&self, stats: &mut EolEnrichmentStats) -> Result<Vec<String>, EnrichmentError> {
         let cache_key = "eol_products";
-        if self.is_cache_valid(cache_key, self.config.product_list_ttl) {
-            if let Some(products) = self.load_from_cache::<Vec<String>>(cache_key) {
+        if self.is_cache_valid(cache_key, self.config.product_list_ttl)
+            && let Some(products) = self.load_from_cache::<Vec<String>>(cache_key) {
                 stats.cache_hits += 1;
                 return Ok(products);
             }
-        }
 
         let url = format!("{}/api/all.json", self.config.base_url);
         let client = reqwest::blocking::Client::builder()
@@ -249,12 +248,11 @@ impl EolClient {
         stats: &mut EolEnrichmentStats,
     ) -> Result<Vec<EolCycle>, EnrichmentError> {
         let cache_key = format!("eol_{product}");
-        if self.is_cache_valid(&cache_key, self.config.cache_ttl) {
-            if let Some(cycles) = self.load_from_cache::<Vec<EolCycle>>(&cache_key) {
+        if self.is_cache_valid(&cache_key, self.config.cache_ttl)
+            && let Some(cycles) = self.load_from_cache::<Vec<EolCycle>>(&cache_key) {
                 stats.cache_hits += 1;
                 return Ok(cycles);
             }
-        }
 
         let url = format!("{}/api/{}.json", self.config.base_url, product);
         let client = reqwest::blocking::Client::builder()
@@ -310,13 +308,11 @@ impl EolClient {
         if !cache_path.exists() {
             return false;
         }
-        if let Ok(metadata) = fs::metadata(&cache_path) {
-            if let Ok(modified) = metadata.modified() {
-                if let Ok(elapsed) = SystemTime::now().duration_since(modified) {
+        if let Ok(metadata) = fs::metadata(&cache_path)
+            && let Ok(modified) = metadata.modified()
+                && let Ok(elapsed) = SystemTime::now().duration_since(modified) {
                     return elapsed < ttl;
                 }
-            }
-        }
         false
     }
 
@@ -550,18 +546,16 @@ fn compute_eol_status(
     }
 
     // 2. Approaching EOL (within 180 days)
-    if let Some(days) = days_until_eol {
-        if (0..=180).contains(&days) {
+    if let Some(days) = days_until_eol
+        && (0..=180).contains(&days) {
             return EolStatus::ApproachingEol;
         }
-    }
 
     // 3. Active support ended → security-only phase
-    if let Some(support) = support {
-        if support.is_reached() {
+    if let Some(support) = support
+        && support.is_reached() {
             return EolStatus::SecurityOnly;
         }
-    }
 
     // 4. Fully supported
     EolStatus::Supported

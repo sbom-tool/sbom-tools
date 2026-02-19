@@ -53,15 +53,14 @@ pub fn render_compliance(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     render_help_bar(frame, chunks[3], severity_filter);
 
     // Render detail overlay if active
-    if show_detail {
-        if let Some(violation) = app
+    if show_detail
+        && let Some(violation) = app
             .compliance_results.as_ref()
             .and_then(|rs| rs.get(selected_standard))
             .and_then(|r| r.violations.get(selected_violation))
         {
             shared_compliance::render_violation_detail_overlay(frame, area, violation);
         }
-    }
 }
 
 fn render_standard_selector(frame: &mut Frame, area: Rect, app: &ViewApp) {

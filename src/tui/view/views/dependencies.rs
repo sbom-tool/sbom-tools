@@ -331,8 +331,8 @@ fn flatten_node(
         ancestors_last: current_ancestors.clone(),
     });
 
-    if is_expanded {
-        if let Some(children) = deps.edges.get(node_id) {
+    if is_expanded
+        && let Some(children) = deps.edges.get(node_id) {
             for (i, child_id) in children.iter().enumerate() {
                 let child_is_last = i == children.len() - 1;
                 flatten_node(
@@ -347,7 +347,6 @@ fn flatten_node(
                 );
             }
         }
-    }
 
     visited.remove(node_id);
 }
@@ -476,14 +475,13 @@ fn render_dependency_stats(
                 ]));
             }
 
-            if let Some(ref purl) = comp.identifiers.purl {
-                if purl != &node_id {
+            if let Some(ref purl) = comp.identifiers.purl
+                && purl != &node_id {
                     lines.push(Line::from(vec![
                         Span::styled("PURL: ", Style::default().fg(scheme.muted)),
                         Span::styled(purl, Style::default().fg(scheme.accent)),
                     ]));
                 }
-            }
         }
 
         if let Some(children) = deps.edges.get(&node_id) {
@@ -510,8 +508,8 @@ fn render_dependency_stats(
             ),
         ]));
 
-        if let Some(vuln_count) = deps.vuln_counts.get(&node_id) {
-            if *vuln_count > 0 {
+        if let Some(vuln_count) = deps.vuln_counts.get(&node_id)
+            && *vuln_count > 0 {
                 lines.push(Line::from(vec![
                     Span::styled("Vulnerabilities: ", Style::default().fg(scheme.muted)),
                     Span::styled(
@@ -520,7 +518,6 @@ fn render_dependency_stats(
                     ),
                 ]));
             }
-        }
 
         // Canonical ID (dimmed, for reference when it differs from name)
         if deps.names.get(&node_id).is_some_and(|name| name != &node_id) {

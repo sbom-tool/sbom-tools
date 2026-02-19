@@ -179,7 +179,7 @@ impl<'w, W: Write> StreamingJsonWriter<'w, W> {
         }
 
         self.items_written += 1;
-        if self.items_written % self.flush_interval == 0 {
+        if self.items_written.is_multiple_of(self.flush_interval) {
             self.writer.flush()?;
         }
 
@@ -415,7 +415,7 @@ impl<'w, W: Write> NdjsonWriter<'w, W> {
         self.writer.write_all(b"\n")?;
 
         self.items_written += 1;
-        if self.items_written % self.flush_interval == 0 {
+        if self.items_written.is_multiple_of(self.flush_interval) {
             self.writer.flush()?;
         }
 

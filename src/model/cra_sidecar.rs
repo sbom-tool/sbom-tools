@@ -104,11 +104,10 @@ impl CraSidecarMetadata {
 
         for pattern in &patterns {
             let sidecar_path = parent.join(pattern);
-            if sidecar_path.exists() {
-                if let Ok(metadata) = Self::from_file(&sidecar_path) {
+            if sidecar_path.exists()
+                && let Ok(metadata) = Self::from_file(&sidecar_path) {
                     return Some(metadata);
                 }
-            }
         }
 
         None

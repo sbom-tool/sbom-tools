@@ -113,11 +113,10 @@ fn get_active_expandable_node(
     if !item.is_expandable {
         return None;
     }
-    if let Some(must_be_expanded) = require_expanded {
-        if item.is_expanded != must_be_expanded {
+    if let Some(must_be_expanded) = require_expanded
+        && item.is_expanded != must_be_expanded {
             return None;
         }
-    }
     Some(item.node_id.clone())
 }
 

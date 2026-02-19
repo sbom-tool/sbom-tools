@@ -54,11 +54,10 @@ fn compute_depths(sbom: &NormalizedSbom) -> HashMap<CanonicalId, u32> {
 
     while let Some((id, depth)) = queue.pop_front() {
         // Skip if we've already found a shorter path
-        if let Some(&existing) = depths.get(id) {
-            if depth >= existing {
+        if let Some(&existing) = depths.get(id)
+            && depth >= existing {
                 continue;
             }
-        }
         depths.insert(id.clone(), depth);
 
         // Process children at depth + 1

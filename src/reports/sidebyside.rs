@@ -567,12 +567,11 @@ fn strip_ansi(s: &str) -> String {
 fn short_id(id: &str) -> String {
     if id.starts_with("pkg:") {
         // Extract name@version from PURL
-        if let Some(rest) = id.strip_prefix("pkg:") {
-            if let Some(slash_pos) = rest.find('/') {
+        if let Some(rest) = id.strip_prefix("pkg:")
+            && let Some(slash_pos) = rest.find('/') {
                 let name_ver = &rest[slash_pos + 1..];
                 return name_ver.to_string();
             }
-        }
     }
     id.to_string()
 }

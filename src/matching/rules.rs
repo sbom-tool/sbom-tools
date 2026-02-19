@@ -301,11 +301,10 @@ impl EcosystemRules {
         let name_lower = name.to_lowercase();
         let canonical_lower = canonical.to_lowercase();
 
-        if let Some(eco_config) = self.config.ecosystems.get(&eco_key) {
-            if let Some(aliases) = eco_config.aliases.get(&canonical_lower) {
+        if let Some(eco_config) = self.config.ecosystems.get(&eco_key)
+            && let Some(aliases) = eco_config.aliases.get(&canonical_lower) {
                 return aliases.iter().any(|a| a.to_lowercase() == name_lower);
             }
-        }
 
         false
     }
@@ -445,13 +444,11 @@ impl EcosystemRules {
                 for member in &group.members {
                     if member.contains('*') {
                         // Use pre-compiled pattern
-                        if let Some(group_patterns) = compiled_patterns {
-                            if let Some(patterns) = group_patterns.get(group_name) {
-                                if patterns.iter().any(|re| re.is_match(&name_lower)) {
+                        if let Some(group_patterns) = compiled_patterns
+                            && let Some(patterns) = group_patterns.get(group_name)
+                                && patterns.iter().any(|re| re.is_match(&name_lower)) {
                                     return Some(group_name);
                                 }
-                            }
-                        }
                     } else if member.to_lowercase() == name_lower {
                         return Some(group_name);
                     }

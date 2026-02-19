@@ -125,11 +125,10 @@ impl FuzzyMatcher {
         }
 
         // Layer 3: Rule-based ecosystem normalization
-        if let Some(score) = self.check_ecosystem_rules(a, b) {
-            if score >= 0.90 {
+        if let Some(score) = self.check_ecosystem_rules(a, b)
+            && score >= 0.90 {
                 return score;
             }
-        }
 
         // Layer 4: Multi-field weighted scoring (if configured) or fuzzy string similarity
         if let Some(ref weights) = self.config.field_weights {
@@ -174,11 +173,10 @@ impl FuzzyMatcher {
         names.extend(comp.identifiers.aliases.clone());
 
         // Extract name from PURL if available
-        if let Some(purl) = &comp.identifiers.purl {
-            if let Some(name) = self.extract_name_from_purl(purl) {
+        if let Some(purl) = &comp.identifiers.purl
+            && let Some(name) = self.extract_name_from_purl(purl) {
                 names.push(name);
             }
-        }
 
         names
     }
@@ -411,8 +409,8 @@ impl ComponentMatcher for FuzzyMatcher {
         }
 
         // Layer 3: Rule-based ecosystem normalization
-        if let Some(score) = self.check_ecosystem_rules(a, b) {
-            if score >= 0.90 {
+        if let Some(score) = self.check_ecosystem_rules(a, b)
+            && score >= 0.90 {
                 return MatchResult::with_metadata(
                     score,
                     MatchTier::EcosystemRule,
@@ -423,7 +421,6 @@ impl ComponentMatcher for FuzzyMatcher {
                     },
                 );
             }
-        }
 
         // Layer 4: Fuzzy string similarity
         let fuzzy_score = self.compute_fuzzy_score(a, b);
@@ -483,8 +480,8 @@ impl ComponentMatcher for FuzzyMatcher {
         }
 
         // Layer 3: Rule-based ecosystem normalization
-        if let Some(score) = self.check_ecosystem_rules(a, b) {
-            if score >= 0.90 {
+        if let Some(score) = self.check_ecosystem_rules(a, b)
+            && score >= 0.90 {
                 let ecosystem = a
                     .ecosystem
                     .as_ref().map_or_else(|| "unknown".to_string(), std::string::ToString::to_string);
@@ -498,7 +495,6 @@ impl ComponentMatcher for FuzzyMatcher {
                 )
                 .with_normalization(format!("{ecosystem}_normalization"));
             }
-        }
 
         // Layer 4: Fuzzy string similarity - compute detailed breakdown
         let name_a = a.name.to_lowercase();

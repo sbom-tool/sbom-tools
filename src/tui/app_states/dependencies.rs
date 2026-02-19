@@ -271,11 +271,10 @@ impl DependenciesState {
             .collect();
 
         while let Some((node, depth)) = queue.pop_front() {
-            if let Some(&existing_depth) = self.cached_depths.get(node.as_str()) {
-                if existing_depth <= depth {
+            if let Some(&existing_depth) = self.cached_depths.get(node.as_str())
+                && existing_depth <= depth {
                     continue; // Already visited with smaller or equal depth
                 }
-            }
 
             // Enqueue children before consuming node
             if let Some(children) = self.cached_graph.get(node.as_str()) {
@@ -387,11 +386,10 @@ impl DependenciesState {
         for (node_id, node_name) in all_node_names {
             if node_name.to_lowercase().contains(&query_lower) {
                 self.search_matches.insert(node_id.clone());
-            } else if let Some(display_name) = self.cached_display_names.get(node_id) {
-                if display_name.to_lowercase().contains(&query_lower) {
+            } else if let Some(display_name) = self.cached_display_names.get(node_id)
+                && display_name.to_lowercase().contains(&query_lower) {
                     self.search_matches.insert(node_id.clone());
                 }
-            }
         }
     }
 

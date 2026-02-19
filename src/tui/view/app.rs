@@ -298,8 +298,8 @@ impl ViewApp {
                     version: comp.version.clone(),
                     match_field: "name".to_string(),
                 });
-            } else if let Some(purl) = &comp.identifiers.purl {
-                if purl.to_lowercase().contains(&query_lower) {
+            } else if let Some(purl) = &comp.identifiers.purl
+                && purl.to_lowercase().contains(&query_lower) {
                     results.push(SearchResult::Component {
                         id: id.value().to_string(),
                         name: comp.name.clone(),
@@ -307,7 +307,6 @@ impl ViewApp {
                         match_field: "purl".to_string(),
                     });
                 }
-            }
         }
 
         // Search vulnerabilities
@@ -371,14 +370,13 @@ impl ViewApp {
             return true;
         }
 
-        if let Some(group_id) = group_id {
-            if let Some(index) = flat_items
+        if let Some(group_id) = group_id
+            && let Some(index) = flat_items
                 .iter()
                 .position(|item| matches!(item, SelectedTreeNode::Group(id) if id == &group_id))
             {
                 self.tree_state.selected = index;
             }
-        }
 
         false
     }
@@ -804,8 +802,8 @@ impl ViewApp {
             }
             ViewTab::Vulnerabilities => {
                 // In grouped mode, check if we're on a group header
-                if self.vuln_state.group_by != VulnGroupBy::Flat {
-                    if let Some(cache) = &self.vuln_state.cached_data {
+                if self.vuln_state.group_by != VulnGroupBy::Flat
+                    && let Some(cache) = &self.vuln_state.cached_data {
                         let items = super::views::build_display_items(
                             &cache.vulns,
                             &self.vuln_state.group_by,
@@ -824,7 +822,6 @@ impl ViewApp {
                             }
                         }
                     }
-                }
                 // Select vulnerability's component - push breadcrumb for back navigation
                 if let Some((comp_id, vuln)) = self.vuln_state.get_selected(&self.sbom) {
                     // Push breadcrumb so we can go back
@@ -859,8 +856,8 @@ impl ViewApp {
             }
             ViewTab::Source => {
                 // Toggle expand/collapse in tree mode
-                if self.source_state.view_mode == crate::tui::app_states::SourceViewMode::Tree {
-                    if let Some(ref tree) = self.source_state.json_tree {
+                if self.source_state.view_mode == crate::tui::app_states::SourceViewMode::Tree
+                    && let Some(ref tree) = self.source_state.json_tree {
                         let mut items = Vec::new();
                         crate::tui::shared::source::flatten_json_tree(
                             tree,
@@ -871,14 +868,12 @@ impl ViewApp {
                             true,
                             &[],
                         );
-                        if let Some(item) = items.get(self.source_state.selected) {
-                            if item.is_expandable {
+                        if let Some(item) = items.get(self.source_state.selected)
+                            && item.is_expandable {
                                 let node_id = item.node_id.clone();
                                 self.source_state.toggle_expand(&node_id);
                             }
-                        }
                     }
-                }
             }
             ViewTab::Quality => {
                 if self.quality_state.view_mode == QualityViewMode::Summary {
@@ -1044,13 +1039,12 @@ impl ViewApp {
         visited.insert(node_id.to_string());
         nodes.push(node_id.to_string());
 
-        if self.dependency_state.is_expanded(node_id) {
-            if let Some(children) = edges.get(node_id) {
+        if self.dependency_state.is_expanded(node_id)
+            && let Some(children) = edges.get(node_id) {
                 for child in children {
                     self.collect_dep_nodes_recursive(child, edges, nodes, visited);
                 }
             }
-        }
     }
 
     /// Get the currently selected tree node.
@@ -1372,18 +1366,16 @@ impl ViewApp {
         }
 
         // Match against version
-        if let Some(ref version) = comp.version {
-            if version.to_lowercase().contains(&query_lower) {
+        if let Some(ref version) = comp.version
+            && version.to_lowercase().contains(&query_lower) {
                 return true;
             }
-        }
 
         // Match against ecosystem
-        if let Some(ref eco) = comp.ecosystem {
-            if eco.to_string().to_lowercase().contains(&query_lower) {
+        if let Some(ref eco) = comp.ecosystem
+            && eco.to_string().to_lowercase().contains(&query_lower) {
                 return true;
             }
-        }
 
         false
     }

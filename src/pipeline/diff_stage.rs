@@ -47,21 +47,20 @@ pub fn compute_diff(
     }
 
     // Apply matching rules if loaded and not in dry-run mode
-    if let Some(rules) = matching_rules {
-        if !config.rules.dry_run {
+    if let Some(rules) = matching_rules
+        && !config.rules.dry_run {
             let rule_engine = crate::matching::RuleEngine::new(rules)
                 .map_err(|e| anyhow::anyhow!("Failed to initialize matching rule engine: {e}"))?;
             engine = engine.with_rule_engine(rule_engine);
         }
-    }
 
     let mut result = engine.diff(old_sbom, new_sbom).map_err(|e| {
         super::PipelineError::DiffFailed { source: e.into() }
     })?;
 
     // Report on graph changes if enabled
-    if config.graph_diff.enabled && !quiet {
-        if let Some(ref summary) = result.graph_summary {
+    if config.graph_diff.enabled && !quiet
+        && let Some(ref summary) = result.graph_summary {
             tracing::info!(
                 "Graph changes: {} total ({} added, {} removed, {} reparented, {} depth changes)",
                 summary.total_changes,
@@ -71,7 +70,6 @@ pub fn compute_diff(
                 summary.depth_changed
             );
         }
-    }
 
     // Apply severity filtering if specified
     if let Some(ref sev) = config.filtering.min_severity {

@@ -120,13 +120,12 @@ impl VulnerabilityEnricher for OsvEnricher {
         let mut to_fetch: Vec<(usize, CacheKey, OsvQuery)> = Vec::new();
 
         for (idx, key, query) in queries {
-            if !self.bypass_cache {
-                if let Some(cached_vulns) = self.cache.get(&key) {
+            if !self.bypass_cache
+                && let Some(cached_vulns) = self.cache.get(&key) {
                     cached_results.push((idx, cached_vulns));
                     stats.cache_hits += 1;
                     continue;
                 }
-            }
             to_fetch.push((idx, key, query));
         }
 

@@ -90,8 +90,8 @@ impl CycloneDxParser {
         let mut id_map: HashMap<String, CanonicalId> = HashMap::new();
 
         // Handle metadata.component as primary/root product component (CRA requirement)
-        if let Some(meta) = &cdx.metadata {
-            if let Some(meta_comp) = &meta.component {
+        if let Some(meta) = &cdx.metadata
+            && let Some(meta_comp) = &meta.component {
                 let comp = self.convert_component(meta_comp);
                 let bom_ref = meta_comp
                     .bom_ref
@@ -140,7 +140,6 @@ impl CycloneDxParser {
 
                 sbom.add_component(comp);
             }
-        }
 
         if let Some(components) = cdx.components {
             for cdx_comp in components {
@@ -190,8 +189,8 @@ impl CycloneDxParser {
             .and_then(|t| DateTime::parse_from_rfc3339(t).ok()).map_or_else(Utc::now, |dt| dt.with_timezone(&Utc));
 
         let mut creators = Vec::new();
-        if let Some(meta) = &cdx.metadata {
-            if let Some(tools) = &meta.tools {
+        if let Some(meta) = &cdx.metadata
+            && let Some(tools) = &meta.tools {
                 for tool in tools {
                     creators.push(Creator {
                         creator_type: CreatorType::Tool,
@@ -206,7 +205,6 @@ impl CycloneDxParser {
                     });
                 }
             }
-        }
 
         // Extract lifecycle phase from CycloneDX 1.5+ metadata
         let lifecycle_phase = cdx
@@ -448,11 +446,10 @@ impl CycloneDxParser {
         }
 
         // Fallback: derive severity from CVSS score if no explicit severity was provided
-        if vuln_ref.severity.is_none() {
-            if let Some(max_score) = vuln_ref.max_cvss_score() {
+        if vuln_ref.severity.is_none()
+            && let Some(max_score) = vuln_ref.max_cvss_score() {
                 vuln_ref.severity = Some(Severity::from_cvss(max_score));
             }
-        }
 
         // Parse CWEs
         if let Some(cwes) = &vuln.cwes {
@@ -512,8 +509,8 @@ impl CycloneDxParser {
         // Apply vulnerability to affected components
         if let Some(affects) = &vuln.affects {
             for affect in affects {
-                if let Some(canonical_id) = id_map.get(&affect.ref_field) {
-                    if let Some(comp) = sbom.components.get_mut(canonical_id) {
+                if let Some(canonical_id) = id_map.get(&affect.ref_field)
+                    && let Some(comp) = sbom.components.get_mut(canonical_id) {
                         let mut v = vuln_ref.clone();
                         if let Some(versions) = &affect.versions {
                             v.affected_versions = versions
@@ -529,7 +526,6 @@ impl CycloneDxParser {
                             comp.vex_status = Some(vex.clone());
                         }
                     }
-                }
             }
         }
 

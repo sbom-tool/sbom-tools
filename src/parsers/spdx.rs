@@ -166,18 +166,16 @@ impl SpdxParser {
                         }
                     }
                     "ExternalRef" => {
-                        if let Some(ref mut pkg) = current_package {
-                            if let Some(ext_ref) = self.parse_external_ref_line(value) {
+                        if let Some(ref mut pkg) = current_package
+                            && let Some(ext_ref) = self.parse_external_ref_line(value) {
                                 pkg.external_refs.get_or_insert_with(Vec::new).push(ext_ref);
                             }
-                        }
                     }
                     "PackageChecksum" => {
-                        if let Some(ref mut pkg) = current_package {
-                            if let Some(checksum) = self.parse_checksum_line(value) {
+                        if let Some(ref mut pkg) = current_package
+                            && let Some(checksum) = self.parse_checksum_line(value) {
                                 pkg.checksums.get_or_insert_with(Vec::new).push(checksum);
                             }
-                        }
                     }
                     _ => {}
                 }
@@ -461,27 +459,24 @@ impl SpdxParser {
                             }
                         }
                         "Relationship" => {
-                            if let Some(rel) = current_relationship.take() {
-                                if !rel.spdx_element_id.is_empty()
+                            if let Some(rel) = current_relationship.take()
+                                && !rel.spdx_element_id.is_empty()
                                     && !rel.related_spdx_element.is_empty()
                                 {
                                     relationships.push(rel);
                                 }
-                            }
                         }
                         "Checksum" => {
-                            if let Some(checksum) = current_checksum.take() {
-                                if let Some(ref mut pkg) = current_package {
+                            if let Some(checksum) = current_checksum.take()
+                                && let Some(ref mut pkg) = current_package {
                                     pkg.checksums.get_or_insert_with(Vec::new).push(checksum);
                                 }
-                            }
                         }
                         "ExternalRef" => {
-                            if let Some(ext_ref) = current_external_ref.take() {
-                                if let Some(ref mut pkg) = current_package {
+                            if let Some(ext_ref) = current_external_ref.take()
+                                && let Some(ref mut pkg) = current_package {
                                     pkg.external_refs.get_or_insert_with(Vec::new).push(ext_ref);
                                 }
-                            }
                         }
                         // Document-level fields
                         "specVersion" | "spdxVersion" => {
@@ -538,18 +533,16 @@ impl SpdxParser {
                             }
                         }
                         "licenseConcluded" => {
-                            if let Some(ref mut pkg) = current_package {
-                                if pkg.license_concluded.is_none() && !current_text.is_empty() {
+                            if let Some(ref mut pkg) = current_package
+                                && pkg.license_concluded.is_none() && !current_text.is_empty() {
                                     pkg.license_concluded = Some(current_text.clone());
                                 }
-                            }
                         }
                         "licenseDeclared" => {
-                            if let Some(ref mut pkg) = current_package {
-                                if pkg.license_declared.is_none() && !current_text.is_empty() {
+                            if let Some(ref mut pkg) = current_package
+                                && pkg.license_declared.is_none() && !current_text.is_empty() {
                                     pkg.license_declared = Some(current_text.clone());
                                 }
-                            }
                         }
                         "copyrightText" => {
                             if let Some(ref mut pkg) = current_package {
@@ -567,11 +560,10 @@ impl SpdxParser {
                             }
                         }
                         "description" | "summary" => {
-                            if let Some(ref mut pkg) = current_package {
-                                if pkg.description.is_none() {
+                            if let Some(ref mut pkg) = current_package
+                                && pkg.description.is_none() {
                                     pkg.description = Some(current_text.clone());
                                 }
-                            }
                         }
                         // Checksum fields
                         "checksumValue" => {
@@ -591,11 +583,10 @@ impl SpdxParser {
                             }
                         }
                         "referenceCategory" => {
-                            if let Some(ref mut ext_ref) = current_external_ref {
-                                if ext_ref.reference_category.is_empty() {
+                            if let Some(ref mut ext_ref) = current_external_ref
+                                && ext_ref.reference_category.is_empty() {
                                     ext_ref.reference_category.clone_from(&current_text);
                                 }
-                            }
                         }
                         // Relationship fields
                         "relationshipType" => {
@@ -615,20 +606,18 @@ impl SpdxParser {
                             }
                         }
                         "spdxElementId" => {
-                            if let Some(ref mut rel) = current_relationship {
-                                if rel.spdx_element_id.is_empty() {
+                            if let Some(ref mut rel) = current_relationship
+                                && rel.spdx_element_id.is_empty() {
                                     rel.spdx_element_id =
                                         Self::extract_spdx_id_from_uri(&current_text);
                                 }
-                            }
                         }
                         "relatedSpdxElement" => {
-                            if let Some(ref mut rel) = current_relationship {
-                                if rel.related_spdx_element.is_empty() {
+                            if let Some(ref mut rel) = current_relationship
+                                && rel.related_spdx_element.is_empty() {
                                     rel.related_spdx_element =
                                         Self::extract_spdx_id_from_uri(&current_text);
                                 }
-                            }
                         }
                         _ => {}
                     }
@@ -716,8 +705,8 @@ impl SpdxParser {
                         || rel.spdx_element_id == "SPDXRef-DOCUMENT")
                 {
                     // Set the first described package as primary component
-                    if sbom.primary_component_id.is_none() {
-                        if let Some(primary_id) = id_map.get(&rel.related_spdx_element) {
+                    if sbom.primary_component_id.is_none()
+                        && let Some(primary_id) = id_map.get(&rel.related_spdx_element) {
                             sbom.set_primary_component(primary_id.clone());
 
                             // Try to extract security contact from primary component
@@ -732,7 +721,6 @@ impl SpdxParser {
                                 }
                             }
                         }
-                    }
                 }
 
                 let dep_type = match rel.relationship_type.as_str() {
@@ -758,8 +746,8 @@ impl SpdxParser {
                     _ => None,
                 };
 
-                if let Some(dep_type) = dep_type {
-                    if let (Some(from_id), Some(to_id)) = (
+                if let Some(dep_type) = dep_type
+                    && let (Some(from_id), Some(to_id)) = (
                         id_map.get(&rel.spdx_element_id),
                         id_map.get(&rel.related_spdx_element),
                     ) {
@@ -769,7 +757,6 @@ impl SpdxParser {
                             dep_type,
                         ));
                     }
-                }
             }
         }
 
@@ -860,17 +847,15 @@ impl SpdxParser {
         comp.component_type = ComponentType::Library;
 
         // Set licenses
-        if let Some(declared) = &pkg.license_declared {
-            if declared != "NOASSERTION" && declared != "NONE" {
+        if let Some(declared) = &pkg.license_declared
+            && declared != "NOASSERTION" && declared != "NONE" {
                 comp.licenses
                     .add_declared(LicenseExpression::new(declared.clone()));
             }
-        }
-        if let Some(concluded) = &pkg.license_concluded {
-            if concluded != "NOASSERTION" && concluded != "NONE" {
+        if let Some(concluded) = &pkg.license_concluded
+            && concluded != "NOASSERTION" && concluded != "NONE" {
                 comp.licenses.concluded = Some(LicenseExpression::new(concluded.clone()));
             }
-        }
 
         // Set supplier
         if let Some(supplier) = &pkg.supplier {

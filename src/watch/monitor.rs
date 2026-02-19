@@ -119,8 +119,8 @@ impl FileMonitor {
             let path = entry.path();
             if path.is_dir() {
                 Self::scan_dir_metadata(&path, out);
-            } else if is_sbom_file(&path) {
-                if let Ok(meta) = std::fs::metadata(&path) {
+            } else if is_sbom_file(&path)
+                && let Ok(meta) = std::fs::metadata(&path) {
                     let mtime = meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
                     out.insert(
                         path,
@@ -131,7 +131,6 @@ impl FileMonitor {
                         },
                     );
                 }
-            }
         }
     }
 }

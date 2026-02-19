@@ -128,32 +128,30 @@ impl ChangeComputer for ComponentChangeComputer {
 
         // Find removed components
         for (old_id, new_id_opt) in matches {
-            if new_id_opt.is_none() {
-                if let Some(old_comp) = old.components.get(old_id) {
+            if new_id_opt.is_none()
+                && let Some(old_comp) = old.components.get(old_id) {
                     result.removed.push(ComponentChange::removed(
                         old_comp,
                         self.cost_model.component_removed,
                     ));
                 }
-            }
         }
 
         // Find added components
         for new_id in new.components.keys() {
-            if !matched_new_ids.contains(new_id) {
-                if let Some(new_comp) = new.components.get(new_id) {
+            if !matched_new_ids.contains(new_id)
+                && let Some(new_comp) = new.components.get(new_id) {
                     result.added.push(ComponentChange::added(
                         new_comp,
                         self.cost_model.component_added,
                     ));
                 }
-            }
         }
 
         // Find modified components
         for (old_id, new_id_opt) in matches {
-            if let Some(new_id) = new_id_opt {
-                if let (Some(old_comp), Some(new_comp)) =
+            if let Some(new_id) = new_id_opt
+                && let (Some(old_comp), Some(new_comp)) =
                     (old.components.get(old_id), new.components.get(new_id))
                 {
                     // Check if component was actually modified
@@ -169,7 +167,6 @@ impl ChangeComputer for ComponentChangeComputer {
                         }
                     }
                 }
-            }
         }
 
         result

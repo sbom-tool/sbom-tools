@@ -136,14 +136,13 @@ fn resolve_grouped_selection(app: &mut App, selected: usize) -> GroupedSelection
 
                 if app.tabs.vulnerabilities.is_group_expanded(comp_name) {
                     for &idx in vuln_indices {
-                        if pos == selected {
-                            if let Some(item) = items.get(idx) {
+                        if pos == selected
+                            && let Some(item) = items.get(idx) {
                                 return GroupedSelection::Vuln(
                                     item.vuln.id.clone(),
                                     item.vuln.component_name.clone(),
                                 );
                             }
-                        }
                         pos += 1;
                     }
                 }
@@ -216,14 +215,13 @@ fn resolve_grouped_selection(app: &mut App, selected: usize) -> GroupedSelection
 
                 if app.tabs.vulnerabilities.is_group_expanded(comp_name) {
                     for &idx in vuln_indices {
-                        if pos == selected {
-                            if let Some((comp, vuln)) = vulns.get(idx) {
+                        if pos == selected
+                            && let Some((comp, vuln)) = vulns.get(idx) {
                                 return GroupedSelection::Vuln(
                                     vuln.id.clone(),
                                     comp.name.clone(),
                                 );
                             }
-                        }
                         pos += 1;
                     }
                 }

@@ -135,13 +135,11 @@ impl KevClient {
         }
 
         // Check cache age
-        if let Ok(metadata) = fs::metadata(&cache_path) {
-            if let Ok(modified) = metadata.modified() {
-                if let Ok(elapsed) = SystemTime::now().duration_since(modified) {
+        if let Ok(metadata) = fs::metadata(&cache_path)
+            && let Ok(modified) = metadata.modified()
+                && let Ok(elapsed) = SystemTime::now().duration_since(modified) {
                     return elapsed < self.config.cache_ttl;
                 }
-            }
-        }
 
         false
     }
@@ -214,12 +212,11 @@ impl KevClient {
         }
 
         // Try cache first
-        if self.is_cache_valid() {
-            if let Some(catalog) = self.load_from_cache() {
+        if self.is_cache_valid()
+            && let Some(catalog) = self.load_from_cache() {
                 self.catalog = Some(catalog);
                 return Ok(());
             }
-        }
 
         // Fetch from API
         let catalog = self.fetch_from_api()?;

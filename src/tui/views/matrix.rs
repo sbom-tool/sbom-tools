@@ -142,11 +142,10 @@ fn render_similarity_matrix(f: &mut Frame, area: Rect, result: &MatrixResult, st
         .enumerate()
         .filter(|(i, _)| {
             // In focus mode, only show focused row
-            if state.focus_mode {
-                if let Some(focus_row) = state.focus_row {
+            if state.focus_mode
+                && let Some(focus_row) = state.focus_row {
                     return *i == focus_row;
                 }
-            }
             true
         })
         .map(|(i, row_sbom)| {
@@ -171,13 +170,11 @@ fn render_similarity_matrix(f: &mut Frame, area: Rect, result: &MatrixResult, st
 
             for j in 0..result.sboms.len() {
                 // In focus mode with column focus, only show focused column
-                if state.focus_mode {
-                    if let Some(focus_col) = state.focus_col {
-                        if j != focus_col && i != selected_row {
+                if state.focus_mode
+                    && let Some(focus_col) = state.focus_col
+                        && j != focus_col && i != selected_row {
                             // Skip this column in focus mode
                         }
-                    }
-                }
 
                 let similarity = result.get_similarity(i, j);
                 let is_selected = i == selected_row && j == selected_col;

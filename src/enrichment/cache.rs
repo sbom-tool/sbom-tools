@@ -150,13 +150,11 @@ impl FileCache {
                         stats.total_size += metadata.len();
 
                         // Check if expired
-                        if let Ok(modified) = metadata.modified() {
-                            if let Ok(age) = modified.elapsed() {
-                                if age > self.ttl {
+                        if let Ok(modified) = metadata.modified()
+                            && let Ok(age) = modified.elapsed()
+                                && age > self.ttl {
                                     stats.expired_entries += 1;
                                 }
-                            }
-                        }
                     }
                 }
             }

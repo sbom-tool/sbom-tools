@@ -142,7 +142,7 @@ impl ScoreStats {
         let min = sorted[0];
         let max = sorted[sorted.len() - 1];
         let mean = scores.iter().sum::<f64>() / scores.len() as f64;
-        let median = if sorted.len() % 2 == 0 {
+        let median = if sorted.len().is_multiple_of(2) {
             f64::midpoint(sorted[sorted.len() / 2 - 1], sorted[sorted.len() / 2])
         } else {
             sorted[sorted.len() / 2]

@@ -24,21 +24,19 @@ pub(super) fn handle_timeline_keys(app: &mut App, key: KeyEvent) {
             }
             KeyCode::Left | KeyCode::Char('h') => {
                 // Move compare version left
-                if let Some(v) = app.tabs.timeline.compare_version {
-                    if v > 0 && v - 1 != app.tabs.timeline.selected_version {
+                if let Some(v) = app.tabs.timeline.compare_version
+                    && v > 0 && v - 1 != app.tabs.timeline.selected_version {
                         app.tabs.timeline.set_compare_version(v - 1);
                     }
-                }
             }
             KeyCode::Right | KeyCode::Char('l') => {
                 // Move compare version right
-                if let Some(v) = app.tabs.timeline.compare_version {
-                    if v + 1 < app.tabs.timeline.total_versions
+                if let Some(v) = app.tabs.timeline.compare_version
+                    && v + 1 < app.tabs.timeline.total_versions
                         && v + 1 != app.tabs.timeline.selected_version
                     {
                         app.tabs.timeline.set_compare_version(v + 1);
                     }
-                }
             }
             _ => {}
         }

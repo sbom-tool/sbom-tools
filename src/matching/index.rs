@@ -178,11 +178,10 @@ impl ComponentIndex {
     /// Extract ecosystem from a PURL.
     fn extract_ecosystem(purl: &str) -> Option<String> {
         // PURL format: pkg:ecosystem/namespace/name@version
-        if let Some(rest) = purl.strip_prefix("pkg:") {
-            if let Some(slash_pos) = rest.find('/') {
+        if let Some(rest) = purl.strip_prefix("pkg:")
+            && let Some(slash_pos) = rest.find('/') {
                 return Some(rest[..slash_pos].to_lowercase());
             }
-        }
         None
     }
 
@@ -276,8 +275,8 @@ impl ComponentIndex {
         let mut seen: HashSet<Arc<CanonicalId>> = HashSet::new();
 
         // Priority 1: Same ecosystem candidates
-        if let Some(ref eco) = source_entry.ecosystem {
-            if let Some(ids) = self.by_ecosystem.get(eco) {
+        if let Some(ref eco) = source_entry.ecosystem
+            && let Some(ids) = self.by_ecosystem.get(eco) {
                 for id in ids {
                     if id.as_ref() != source_id && !seen.contains(id) {
                         // Apply length filter
@@ -293,14 +292,13 @@ impl ComponentIndex {
                     }
                 }
             }
-        }
 
         // Priority 2: Same prefix candidates (cross-ecosystem fallback)
-        if candidates.len() < max_candidates && !source_entry.prefix.is_empty() {
-            if let Some(ids) = self.by_prefix.get(&source_entry.prefix) {
+        if candidates.len() < max_candidates && !source_entry.prefix.is_empty()
+            && let Some(ids) = self.by_prefix.get(&source_entry.prefix) {
                 for id in ids {
-                    if id.as_ref() != source_id && !seen.contains(id) {
-                        if let Some(entry) = self.entries.get(id.as_ref()) {
+                    if id.as_ref() != source_id && !seen.contains(id)
+                        && let Some(entry) = self.entries.get(id.as_ref()) {
                             let len_diff = (source_entry.name_length as i32
                                 - entry.name_length as i32)
                                 .unsigned_abs() as usize;
@@ -309,13 +307,11 @@ impl ComponentIndex {
                                 seen.insert(Arc::clone(id));
                             }
                         }
-                    }
                     if candidates.len() >= max_candidates {
                         break;
                     }
                 }
             }
-        }
 
         // Priority 3: Similar prefixes (1-char difference in prefix)
         if candidates.len() < max_candidates && source_entry.prefix.len() >= 2 {
@@ -323,8 +319,8 @@ impl ComponentIndex {
             for (prefix, ids) in &self.by_prefix {
                 if prefix.starts_with(prefix_2) && prefix != &source_entry.prefix {
                     for id in ids {
-                        if id.as_ref() != source_id && !seen.contains(id) {
-                            if let Some(entry) = self.entries.get(id.as_ref()) {
+                        if id.as_ref() != source_id && !seen.contains(id)
+                            && let Some(entry) = self.entries.get(id.as_ref()) {
                                 let len_diff = (source_entry.name_length as i32
                                     - entry.name_length as i32)
                                     .unsigned_abs()
@@ -334,7 +330,6 @@ impl ComponentIndex {
                                     seen.insert(Arc::clone(id));
                                 }
                             }
-                        }
                         if candidates.len() >= max_candidates {
                             break;
                         }

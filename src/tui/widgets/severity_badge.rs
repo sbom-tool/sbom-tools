@@ -66,11 +66,10 @@ impl Widget for SeverityBadge {
         let y = area.y;
 
         for (i, ch) in text.chars().enumerate() {
-            if i < area.width as usize {
-                if let Some(cell) = buf.cell_mut((x + i as u16, y)) {
+            if i < area.width as usize
+                && let Some(cell) = buf.cell_mut((x + i as u16, y)) {
                     cell.set_char(ch).set_style(style);
                 }
-            }
         }
     }
 }

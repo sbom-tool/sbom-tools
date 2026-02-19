@@ -639,14 +639,13 @@ impl Component {
         self.canonical_id = self.identifiers.canonical_id();
 
         // Try to extract ecosystem from PURL
-        if let Some(purl_str) = &self.identifiers.purl {
-            if let Some(purl_type) = purl_str
+        if let Some(purl_str) = &self.identifiers.purl
+            && let Some(purl_type) = purl_str
                 .strip_prefix("pkg:")
                 .and_then(|s| s.split('/').next())
             {
                 self.ecosystem = Some(Ecosystem::from_purl_type(purl_type));
             }
-        }
 
         self
     }

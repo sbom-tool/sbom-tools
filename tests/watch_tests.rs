@@ -145,8 +145,8 @@ fn test_watch_loop_initial_scan_parses_fixtures() {
 
     // Write an SPDX fixture if available
     let spdx_dir = PathBuf::from("tests/fixtures/spdx");
-    if spdx_dir.exists() {
-        if let Some(Ok(entry)) = std::fs::read_dir(&spdx_dir)
+    if spdx_dir.exists()
+        && let Some(Ok(entry)) = std::fs::read_dir(&spdx_dir)
             .ok()
             .and_then(|mut entries| entries.find(|e| {
                 e.as_ref().is_ok_and(|e| {
@@ -159,7 +159,6 @@ fn test_watch_loop_initial_scan_parses_fixtures() {
                 std::fs::write(dir.path().join("lib.spdx.json"), content).expect("write spdx");
             }
         }
-    }
 
     let config = WatchConfig {
         watch_dirs: vec![dir.path().to_path_buf()],

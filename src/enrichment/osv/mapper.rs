@@ -81,11 +81,10 @@ fn parse_cvss_score(score_str: &str) -> Option<f32> {
     if score_str.contains('/') {
         // Look for explicit score field
         for part in score_str.split('/') {
-            if part.to_lowercase().starts_with("score:") {
-                if let Ok(score) = part[6..].parse::<f32>() {
+            if part.to_lowercase().starts_with("score:")
+                && let Ok(score) = part[6..].parse::<f32>() {
                     return Some(score);
                 }
-            }
         }
     }
 
@@ -103,11 +102,10 @@ fn extract_affected_versions(affected: &[OsvAffected]) -> Vec<String> {
         // Add version ranges as strings
         for range in &aff.ranges {
             for event in &range.events {
-                if let Some(ref introduced) = event.introduced {
-                    if introduced != "0" {
+                if let Some(ref introduced) = event.introduced
+                    && introduced != "0" {
                         versions.push(format!(">= {introduced}"));
                     }
-                }
                 if let Some(ref fixed) = event.fixed {
                     versions.push(format!("< {fixed} (fixed)"));
                 }

@@ -510,13 +510,11 @@ fn hungarian_assignment(
     // Convert assignment back to result
     let mut result = Vec::new();
     for (old_i, new_i) in assignment.into_iter().enumerate() {
-        if old_i < old_ids.len() && new_i < new_ids.len() {
-            if let Some(&score) = scores.get(&(old_i, new_i)) {
-                if score > 0.0 {
+        if old_i < old_ids.len() && new_i < new_ids.len()
+            && let Some(&score) = scores.get(&(old_i, new_i))
+                && score > 0.0 {
                     result.push((old_ids[old_i].clone(), new_ids[new_i].clone(), score));
                 }
-            }
-        }
     }
 
     result

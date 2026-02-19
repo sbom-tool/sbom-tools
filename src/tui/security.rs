@@ -322,11 +322,10 @@ pub fn analyze_downgrade(old_version: &str, new_version: &str) -> Option<Downgra
     let new_parts = parse_version_parts(new_version)?;
 
     // Check if major version decreased
-    if let (Some(&old_major), Some(&new_major)) = (old_parts.first(), new_parts.first()) {
-        if new_major < old_major {
+    if let (Some(&old_major), Some(&new_major)) = (old_parts.first(), new_parts.first())
+        && new_major < old_major {
             return Some(DowngradeSeverity::Major);
         }
-    }
 
     // Check for suspicious patterns (security-related version strings)
     let old_lower = old_version.to_lowercase();
@@ -845,9 +844,9 @@ pub fn check_compliance(
                     }
                 }
                 PolicyRule::NoPreRelease { reason } => {
-                    if let Some(ver) = version {
-                        if let Some(parts) = parse_version_parts(ver) {
-                            if parts.first() == Some(&0) {
+                    if let Some(ver) = version
+                        && let Some(parts) = parse_version_parts(ver)
+                            && parts.first() == Some(&0) {
                                 result.violations.push(PolicyViolation {
                                     rule_name: rule.name().to_string(),
                                     severity: rule.severity(),
@@ -858,8 +857,6 @@ pub fn check_compliance(
                                     ),
                                 });
                             }
-                        }
-                    }
                 }
                 PolicyRule::MaxVulnerabilitySeverity { max_severity, reason } => {
                     let max_rank = severity_to_rank(max_severity);

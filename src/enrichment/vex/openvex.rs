@@ -116,11 +116,10 @@ pub(crate) fn parse_justification(s: &str) -> Option<VexJustification> {
 /// Extract a PURL from a VEX product. Tries `@id` first (if it starts with `pkg:`),
 /// then falls back to `identifiers.purl`.
 pub(crate) fn extract_product_purl(product: &VexProduct) -> Option<&str> {
-    if let Some(ref id) = product.id {
-        if id.starts_with("pkg:") {
+    if let Some(ref id) = product.id
+        && id.starts_with("pkg:") {
             return Some(id.as_str());
         }
-    }
     product
         .identifiers
         .as_ref()

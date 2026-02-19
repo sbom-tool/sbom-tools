@@ -1159,11 +1159,10 @@ impl LifecycleMetrics {
                 enriched += 1;
             }
 
-            if let Some(ref eol_info) = comp.eol {
-                if eol_info.status == EolStatus::EndOfLife {
+            if let Some(ref eol_info) = comp.eol
+                && eol_info.status == EolStatus::EndOfLife {
                     eol += 1;
                 }
-            }
 
             if let Some(ref stale_info) = comp.staleness {
                 match stale_info.level {
@@ -1243,11 +1242,10 @@ fn is_valid_purl(purl: &str) -> bool {
 
 fn extract_ecosystem_from_purl(purl: &str) -> Option<String> {
     // Extract type from pkg:type/...
-    if let Some(rest) = purl.strip_prefix("pkg:") {
-        if let Some(slash_idx) = rest.find('/') {
+    if let Some(rest) = purl.strip_prefix("pkg:")
+        && let Some(slash_idx) = rest.find('/') {
             return Some(rest[..slash_idx].to_string());
         }
-    }
     None
 }
 

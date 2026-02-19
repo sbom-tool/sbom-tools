@@ -29,25 +29,22 @@ const CONFIG_FILE_NAMES: &[&str] = &[
 #[must_use] 
 pub fn discover_config_file(explicit_path: Option<&Path>) -> Option<PathBuf> {
     // 1. Use explicit path if provided
-    if let Some(path) = explicit_path {
-        if path.exists() {
+    if let Some(path) = explicit_path
+        && path.exists() {
             return Some(path.to_path_buf());
         }
-    }
 
     // 2. Search current directory
-    if let Ok(cwd) = std::env::current_dir() {
-        if let Some(path) = find_config_in_dir(&cwd) {
+    if let Ok(cwd) = std::env::current_dir()
+        && let Some(path) = find_config_in_dir(&cwd) {
             return Some(path);
         }
-    }
 
     // 3. Search git root (if in a repo)
-    if let Some(git_root) = find_git_root() {
-        if let Some(path) = find_config_in_dir(&git_root) {
+    if let Some(git_root) = find_git_root()
+        && let Some(path) = find_config_in_dir(&git_root) {
             return Some(path);
         }
-    }
 
     // 4. Search user config directory
     if let Some(config_dir) = dirs::config_dir() {
@@ -58,11 +55,10 @@ pub fn discover_config_file(explicit_path: Option<&Path>) -> Option<PathBuf> {
     }
 
     // 5. Search home directory
-    if let Some(home) = dirs::home_dir() {
-        if let Some(path) = find_config_in_dir(&home) {
+    if let Some(home) = dirs::home_dir()
+        && let Some(path) = find_config_in_dir(&home) {
             return Some(path);
         }
-    }
 
     None
 }

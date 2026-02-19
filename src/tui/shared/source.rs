@@ -64,8 +64,8 @@ pub fn flatten_json_tree(
         ancestors_last: ancestors_last.to_vec(),
     });
 
-    if is_expanded {
-        if let Some(children) = node.children() {
+    if is_expanded
+        && let Some(children) = node.children() {
             let mut current_ancestors = ancestors_last.to_vec();
             current_ancestors.push(is_last_sibling);
             for (i, child) in children.iter().enumerate() {
@@ -81,7 +81,6 @@ pub fn flatten_json_tree(
                 );
             }
         }
-    }
 }
 
 /// Render a source panel (dispatches to tree or raw based on view mode).

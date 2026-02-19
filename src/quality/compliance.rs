@@ -394,9 +394,9 @@ impl ComplianceChecker {
 
             // Validate manufacturer email format if present
             for creator in &sbom.document.creators {
-                if creator.creator_type == CreatorType::Organization {
-                    if let Some(email) = &creator.email {
-                        if !is_valid_email_format(email) {
+                if creator.creator_type == CreatorType::Organization
+                    && let Some(email) = &creator.email
+                        && !is_valid_email_format(email) {
                             violations.push(Violation {
                                 severity: ViolationSeverity::Warning,
                                 category: ViolationCategory::DocumentMetadata,
@@ -407,8 +407,6 @@ impl ComplianceChecker {
                                 requirement: "CRA Art. 13(15): Valid contact information".to_string(),
                             });
                         }
-                    }
-                }
             }
 
             if sbom.document.name.is_none() {
@@ -502,9 +500,9 @@ impl ComplianceChecker {
             // CRA Annex I, Part II, 1: Unique product identifier traceability
             // The primary/root component should have a stable unique identifier (PURL or CPE)
             // that can be traced across software updates.
-            if let Some(ref primary_id) = sbom.primary_component_id {
-                if let Some(primary) = sbom.components.get(primary_id) {
-                    if primary.identifiers.purl.is_none() && primary.identifiers.cpe.is_empty() {
+            if let Some(ref primary_id) = sbom.primary_component_id
+                && let Some(primary) = sbom.components.get(primary_id)
+                    && primary.identifiers.purl.is_none() && primary.identifiers.cpe.is_empty() {
                         violations.push(Violation {
                             severity: ViolationSeverity::Warning,
                             category: ViolationCategory::ComponentIdentification,
@@ -516,8 +514,6 @@ impl ComplianceChecker {
                             requirement: "CRA Annex I, Part II, 1: Product identifier traceability across updates".to_string(),
                         });
                     }
-                }
-            }
         }
 
         // CRA Phase 2-only checks (deadline: 11 Dec 2029)
@@ -965,8 +961,8 @@ impl ComplianceChecker {
                 });
             }
 
-            if let Some(remediation) = &vuln.remediation {
-                if remediation.fixed_version.is_none() && remediation.description.is_none() {
+            if let Some(remediation) = &vuln.remediation
+                && remediation.fixed_version.is_none() && remediation.description.is_none() {
                     violations.push(Violation {
                         severity: ViolationSeverity::Info,
                         category: ViolationCategory::SecurityInfo,
@@ -978,7 +974,6 @@ impl ComplianceChecker {
                         requirement: "CRA Art. 13(6): Remediation detail".to_string(),
                     });
                 }
-            }
         }
     }
 

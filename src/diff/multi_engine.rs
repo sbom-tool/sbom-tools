@@ -727,11 +727,10 @@ fn calculate_major_version_spread(versions: &[String]) -> u32 {
             major_versions.insert(v.major);
         } else {
             // Fallback: try to extract leading number
-            if let Some(major_str) = version.split(['.', '-', '_']).next() {
-                if let Ok(major) = major_str.parse::<u64>() {
+            if let Some(major_str) = version.split(['.', '-', '_']).next()
+                && let Ok(major) = major_str.parse::<u64>() {
                     major_versions.insert(major);
                 }
-            }
         }
     }
 

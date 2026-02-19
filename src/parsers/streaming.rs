@@ -373,7 +373,7 @@ impl StreamingIterator {
                 if component_index < components.len() {
                     let comp = components[component_index].clone();
                     self.progress.components_parsed += 1;
-                    if self.progress.components_parsed % 100 == 0 {
+                    if self.progress.components_parsed.is_multiple_of(100) {
                         self.report_progress();
                     }
                     self.state = StreamingState::Emitting {

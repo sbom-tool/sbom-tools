@@ -705,14 +705,13 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
                     ]));
                 }
 
-                if let Some(ref purl) = comp.identifiers.purl {
-                    if purl != component_id {
+                if let Some(ref purl) = comp.identifiers.purl
+                    && purl != component_id {
                         lines.push(Line::from(vec![
                             Span::styled("PURL: ", Style::default().fg(scheme.text_muted)),
                             Span::styled(purl, Style::default().fg(scheme.accent)),
                         ]));
                     }
-                }
 
                 if !comp.vulnerabilities.is_empty() {
                     lines.push(Line::from(vec![
@@ -1912,8 +1911,8 @@ fn truncate_component(id: &str, max_width: usize) -> String {
     }
 
     // PURL: strip "pkg:type/" prefix to get "name@version"
-    if let Some(rest) = id.strip_prefix("pkg:") {
-        if let Some(slash_pos) = rest.find('/') {
+    if let Some(rest) = id.strip_prefix("pkg:")
+        && let Some(slash_pos) = rest.find('/') {
             let name_ver = &rest[slash_pos + 1..];
             let clean = name_ver.split('?').next().unwrap_or(name_ver);
             if UnicodeWidthStr::width(clean) <= max_width {
@@ -1922,7 +1921,6 @@ fn truncate_component(id: &str, max_width: usize) -> String {
             // Still too long — fall through to general truncation on the clean name
             return truncate_by_width(clean, max_width);
         }
-    }
 
     // Path-like: show last segments that fit, prepend "…/"
     if id.contains('/') && max_width > 4 {

@@ -65,12 +65,11 @@ impl StatusMessage {
     /// Get the current message (checking auto-clear if configured).
     pub fn message(&mut self) -> Option<&str> {
         // Check auto-clear
-        if let (Some(set_at), Some(duration)) = (self.set_at, self.auto_clear_after) {
-            if set_at.elapsed() >= duration {
+        if let (Some(set_at), Some(duration)) = (self.set_at, self.auto_clear_after)
+            && set_at.elapsed() >= duration {
                 self.message = None;
                 self.set_at = None;
             }
-        }
         self.message.as_deref()
     }
 

@@ -63,35 +63,30 @@ impl QueryFilter {
             }
         }
 
-        if let Some(ref version) = self.version {
-            if !self.matches_version(component, version) {
+        if let Some(ref version) = self.version
+            && !self.matches_version(component, version) {
                 return false;
             }
-        }
 
-        if let Some(ref license) = self.license {
-            if !self.matches_license(component, license) {
+        if let Some(ref license) = self.license
+            && !self.matches_license(component, license) {
                 return false;
             }
-        }
 
-        if let Some(ref ecosystem) = self.ecosystem {
-            if !self.matches_ecosystem(component, ecosystem) {
+        if let Some(ref ecosystem) = self.ecosystem
+            && !self.matches_ecosystem(component, ecosystem) {
                 return false;
             }
-        }
 
-        if let Some(ref supplier) = self.supplier {
-            if !self.matches_supplier(component, supplier) {
+        if let Some(ref supplier) = self.supplier
+            && !self.matches_supplier(component, supplier) {
                 return false;
             }
-        }
 
-        if let Some(ref vuln_id) = self.affected_by {
-            if !self.matches_vuln(component, vuln_id) {
+        if let Some(ref vuln_id) = self.affected_by
+            && !self.matches_vuln(component, vuln_id) {
                 return false;
             }
-        }
 
         true
     }
@@ -111,13 +106,11 @@ impl QueryFilter {
             || trimmed.starts_with('^')
             || trimmed.contains(',');
 
-        if has_operator {
-            if let Ok(req) = semver::VersionReq::parse(trimmed) {
-                if let Ok(ver) = semver::Version::parse(comp_version) {
+        if has_operator
+            && let Ok(req) = semver::VersionReq::parse(trimmed)
+                && let Ok(ver) = semver::Version::parse(comp_version) {
                     return req.matches(&ver);
                 }
-            }
-        }
 
         // Exact string match (case-insensitive)
         comp_version.to_lowercase() == version_filter.to_lowercase()

@@ -162,13 +162,11 @@ impl RegistryClient {
             return false;
         }
 
-        if let Ok(metadata) = fs::metadata(&cache_path) {
-            if let Ok(modified) = metadata.modified() {
-                if let Ok(elapsed) = SystemTime::now().duration_since(modified) {
+        if let Ok(metadata) = fs::metadata(&cache_path)
+            && let Ok(modified) = metadata.modified()
+                && let Ok(elapsed) = SystemTime::now().duration_since(modified) {
                     return elapsed < self.config.cache_ttl;
                 }
-            }
-        }
 
         false
     }
@@ -434,12 +432,11 @@ impl RegistryClient {
         }
 
         // Check disk cache
-        if self.is_cache_valid(&cache_key) {
-            if let Some(metadata) = self.load_from_cache(&cache_key) {
+        if self.is_cache_valid(&cache_key)
+            && let Some(metadata) = self.load_from_cache(&cache_key) {
                 self.cache.insert(cache_key.clone(), metadata.clone());
                 return Ok(Some(metadata));
             }
-        }
 
         // Query registry
         let result = match ecosystem {

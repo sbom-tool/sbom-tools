@@ -34,16 +34,14 @@ impl ProductMapper {
         let version = component.version.as_deref()?;
 
         // Strategy 1: PURL-based static mapping
-        if let Some(purl) = &component.identifiers.purl {
-            if let Some((purl_type, purl_name)) = parse_purl_type_name(purl) {
-                if let Some(product) = static_purl_to_product(&purl_type, &purl_name) {
+        if let Some(purl) = &component.identifiers.purl
+            && let Some((purl_type, purl_name)) = parse_purl_type_name(purl)
+                && let Some(product) = static_purl_to_product(&purl_type, &purl_name) {
                     return Some(ResolvedProduct {
                         product: product.to_string(),
                         version: version.to_string(),
                     });
                 }
-            }
-        }
 
         // Strategy 2: Runtime detection (component IS the runtime)
         if let Some(ecosystem) = &component.ecosystem {
@@ -78,11 +76,10 @@ impl ProductMapper {
 
         // Strip common suffixes and retry
         for suffix in &["-server", "-client", "-core", "-runtime", "-lib"] {
-            if let Some(stripped) = lower.strip_suffix(suffix) {
-                if self.product_list.contains(&stripped.to_string()) {
+            if let Some(stripped) = lower.strip_suffix(suffix)
+                && self.product_list.contains(&stripped.to_string()) {
                     return Some(stripped.to_string());
                 }
-            }
         }
 
         None

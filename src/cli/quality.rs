@@ -73,8 +73,8 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
     write_output(&output_text, &output_target, false)?;
 
     // Check minimum score threshold
-    if let Some(threshold) = config.min_score {
-        if report.overall_score < threshold {
+    if let Some(threshold) = config.min_score
+        && report.overall_score < threshold {
             tracing::error!(
                 "Quality score {:.1} is below minimum threshold {:.1}",
                 report.overall_score,
@@ -82,7 +82,6 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
             );
             return Ok(exit_codes::CHANGES_DETECTED);
         }
-    }
 
     Ok(exit_codes::SUCCESS)
 }

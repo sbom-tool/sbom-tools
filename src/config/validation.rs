@@ -76,14 +76,13 @@ impl Validatable for MatchingConfig {
             });
         }
 
-        if let Some(threshold) = self.threshold {
-            if !(0.0..=1.0).contains(&threshold) {
+        if let Some(threshold) = self.threshold
+            && !(0.0..=1.0).contains(&threshold) {
                 errors.push(ConfigError {
                     field: "matching.threshold".to_string(),
                     message: format!("Threshold must be between 0.0 and 1.0, got {threshold}"),
                 });
             }
-        }
 
         errors
     }
@@ -114,16 +113,14 @@ impl Validatable for OutputConfig {
         let mut errors = Vec::new();
 
         // Validate output file path if specified
-        if let Some(ref file_path) = self.file {
-            if let Some(parent) = file_path.parent() {
-                if !parent.as_os_str().is_empty() && !parent.exists() {
+        if let Some(ref file_path) = self.file
+            && let Some(parent) = file_path.parent()
+                && !parent.as_os_str().is_empty() && !parent.exists() {
                     errors.push(ConfigError {
                         field: "output.file".to_string(),
                         message: format!("Parent directory does not exist: {}", parent.display()),
                     });
                 }
-            }
-        }
 
         // Warn about contradictory streaming configuration
         if self.streaming.disabled && self.streaming.force {
@@ -226,24 +223,22 @@ impl Validatable for DiffConfig {
         errors.extend(self.filtering.validate());
 
         // Validate rules file if specified
-        if let Some(ref rules_file) = self.rules.rules_file {
-            if !rules_file.exists() {
+        if let Some(ref rules_file) = self.rules.rules_file
+            && !rules_file.exists() {
                 errors.push(ConfigError {
                     field: "rules.rules_file".to_string(),
                     message: format!("Rules file not found: {}", rules_file.display()),
                 });
             }
-        }
 
         // Validate ecosystem rules file if specified
-        if let Some(ref config_file) = self.ecosystem_rules.config_file {
-            if !config_file.exists() {
+        if let Some(ref config_file) = self.ecosystem_rules.config_file
+            && !config_file.exists() {
                 errors.push(ConfigError {
                     field: "ecosystem_rules.config_file".to_string(),
                     message: format!("Ecosystem rules file not found: {}", config_file.display()),
                 });
             }
-        }
 
         errors
     }

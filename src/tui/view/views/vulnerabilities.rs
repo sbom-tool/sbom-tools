@@ -394,11 +394,10 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                 let sev = resolve_severity(vuln);
 
                 // Apply severity filter
-                if let Some(ref filter) = app.vuln_state.filter_severity {
-                    if sev.to_lowercase() != *filter {
+                if let Some(ref filter) = app.vuln_state.filter_severity
+                    && sev.to_lowercase() != *filter {
                         continue;
                     }
-                }
 
                 // Apply search filter
                 if has_search {
@@ -421,11 +420,10 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                         existing.affected_count += 1;
                         existing.affected_components.push(comp.name.clone());
                         // Keep the highest CVSS score
-                        if let Some(new_cvss) = cvss {
-                            if existing.cvss.is_none_or(|c| new_cvss > c) {
+                        if let Some(new_cvss) = cvss
+                            && existing.cvss.is_none_or(|c| new_cvss > c) {
                                 existing.cvss = Some(new_cvss);
                             }
-                        }
                         // Merge affected versions
                         for v in &vuln.affected_versions {
                             if !existing.affected_versions.contains(v) {
@@ -475,11 +473,10 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                 let sev = resolve_severity(vuln);
 
                 // Apply severity filter
-                if let Some(ref filter) = app.vuln_state.filter_severity {
-                    if sev.to_lowercase() != *filter {
+                if let Some(ref filter) = app.vuln_state.filter_severity
+                    && sev.to_lowercase() != *filter {
                         continue;
                     }
-                }
 
                 // Apply search filter
                 if has_search {
@@ -1125,11 +1122,10 @@ fn extract_component_display_name(name: &str, description: Option<&str>) -> Stri
     }
 
     // Name is cryptic - try to extract from description
-    if let Some(desc) = description {
-        if let Some(pkg_name) = extract_package_from_description(desc) {
+    if let Some(desc) = description
+        && let Some(pkg_name) = extract_package_from_description(desc) {
             return pkg_name;
         }
-    }
 
     // Fall back to cleaning up the file path
     clean_component_name(name)
@@ -1174,8 +1170,8 @@ fn is_cryptic_name(name: &str) -> bool {
 
 /// Clean up a component name (remove path prefixes, extensions)
 fn clean_component_name(name: &str) -> String {
-    if name.starts_with("./") || name.starts_with('/') || name.contains('/') {
-        if let Some(filename) = name.rsplit('/').next() {
+    if (name.starts_with("./") || name.starts_with('/') || name.contains('/'))
+        && let Some(filename) = name.rsplit('/').next() {
             let clean = filename
                 .trim_end_matches(".squ")
                 .trim_end_matches(".squashfs")
@@ -1187,7 +1183,6 @@ fn clean_component_name(name: &str) -> String {
             }
             return clean.to_string();
         }
-    }
     name.to_string()
 }
 
@@ -1294,8 +1289,8 @@ fn extract_package_from_description(description: &str) -> Option<String> {
     }
 
     // Strategy 3: Look for "in X," or "in X " early in the description
-    if let Some(in_pos) = desc_lower.find(" in ") {
-        if in_pos < 50 {
+    if let Some(in_pos) = desc_lower.find(" in ")
+        && in_pos < 50 {
             // Only look near the start
             let after_in = &description[in_pos + 4..];
             if let Some(pkg) = extract_first_word(after_in) {
@@ -1305,7 +1300,6 @@ fn extract_package_from_description(description: &str) -> Option<String> {
                 }
             }
         }
-    }
 
     None
 }

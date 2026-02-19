@@ -266,8 +266,8 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
 
                 // Add enrichment stats if available
                 #[cfg(feature = "enrichment")]
-                if let Some(stats) = app.combined_enrichment_stats() {
-                    if stats.total_vulns_found > 0 {
+                if let Some(stats) = app.combined_enrichment_stats()
+                    && stats.total_vulns_found > 0 {
                         spans.extend(vec![
                             Span::styled("  │ ", Style::default().fg(scheme.border)),
                             Span::styled("OSV ", Style::default().fg(scheme.accent).bold()),
@@ -277,7 +277,6 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
                             ),
                         ]);
                     }
-                }
             }
         }
         AppMode::View => {

@@ -443,12 +443,11 @@ impl<M: ComponentMatcher> CachedMatcher<M> {
     fn get_cached(&self, key: &CacheKey) -> Option<CacheEntry> {
         self.stats
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        if let Ok(cache) = self.cache.read() {
-            if let Some(entry) = cache.get(key) {
+        if let Ok(cache) = self.cache.read()
+            && let Some(entry) = cache.get(key) {
                 self.hits.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 return Some(entry.clone());
             }
-        }
         None
     }
 
@@ -515,11 +514,10 @@ impl<M: ComponentMatcher> ComponentMatcher for CachedMatcher<M> {
         let key = CacheKey::new(a.canonical_id.value(), b.canonical_id.value());
 
         // Check cache for detailed result
-        if let Some(entry) = self.get_cached(&key) {
-            if let Some(detailed) = entry.detailed {
+        if let Some(entry) = self.get_cached(&key)
+            && let Some(detailed) = entry.detailed {
                 return detailed;
             }
-        }
 
         // Compute and cache
         let result = self.inner.match_detailed(a, b);

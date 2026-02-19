@@ -325,24 +325,22 @@ impl LshIndex {
         }
 
         // Add ecosystem token (helps group components by ecosystem)
-        if self.config.include_ecosystem_token {
-            if let Some(ref eco) = ecosystem {
+        if self.config.include_ecosystem_token
+            && let Some(ref eco) = ecosystem {
                 let mut hasher = std::collections::hash_map::DefaultHasher::new();
                 "__eco:".hash(&mut hasher);
                 eco.to_lowercase().hash(&mut hasher);
                 shingles.insert(hasher.finish());
             }
-        }
 
         // Add group/namespace token (useful for Maven group IDs, npm scopes)
-        if self.config.include_group_token {
-            if let Some(ref group) = component.group {
+        if self.config.include_group_token
+            && let Some(ref group) = component.group {
                 let mut hasher = std::collections::hash_map::DefaultHasher::new();
                 "__grp:".hash(&mut hasher);
                 group.to_lowercase().hash(&mut hasher);
                 shingles.insert(hasher.finish());
             }
-        }
 
         shingles
     }

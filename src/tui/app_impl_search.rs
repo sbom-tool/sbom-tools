@@ -133,8 +133,8 @@ impl App {
         }
 
         // Search through single SBOM if available (View mode)
-        if self.data.diff_result.is_none() {
-            if let Some(ref sbom) = self.data.sbom {
+        if self.data.diff_result.is_none()
+            && let Some(ref sbom) = self.data.sbom {
                 // Search components by name
                 for comp in sbom.components.values() {
                     if comp.name.to_lowercase().contains(&query_lower) {
@@ -173,7 +173,6 @@ impl App {
                     }
                 }
             }
-        }
 
         // Limit results
         results.truncate(50);

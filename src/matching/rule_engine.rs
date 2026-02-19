@@ -213,20 +213,18 @@ impl RuleEngine {
                 }
 
                 // Check name
-                if let Some(n) = name {
-                    if !component.name.to_lowercase().contains(&n.to_lowercase()) {
+                if let Some(n) = name
+                    && !component.name.to_lowercase().contains(&n.to_lowercase()) {
                         return false;
                     }
-                }
 
                 // Check pre-compiled glob pattern
                 if pattern.is_some() {
                     if let Some(purl) = &component.identifiers.purl {
-                        if let Some(Some(re)) = self.compiled_exclusion_globs.get(rule_idx) {
-                            if !re.is_match(purl) {
+                        if let Some(Some(re)) = self.compiled_exclusion_globs.get(rule_idx)
+                            && !re.is_match(purl) {
                                 return false;
                             }
-                        }
                     } else {
                         return false;
                     }
@@ -303,41 +301,36 @@ impl RuleEngine {
                     let mut matched = false;
 
                     // Check pre-compiled glob pattern
-                    if let Some(Some(re)) = alias_globs.and_then(|v| v.get(alias_idx)) {
-                        if re.is_match(purl) {
+                    if let Some(Some(re)) = alias_globs.and_then(|v| v.get(alias_idx))
+                        && re.is_match(purl) {
                             matched = true;
                         }
-                    }
 
                     // Check regex
-                    if let Some(Some(re)) = alias_regexes.and_then(|v| v.get(alias_idx)) {
-                        if re.is_match(purl) {
+                    if let Some(Some(re)) = alias_regexes.and_then(|v| v.get(alias_idx))
+                        && re.is_match(purl) {
                             matched = true;
                         }
-                    }
 
                     // Check ecosystem match in PURL
                     if let Some(eco) = ecosystem {
                         let purl_lower = purl.to_lowercase();
                         let eco_lower = eco.to_lowercase();
                         // Check if PURL starts with pkg:<ecosystem>/
-                        if purl_lower.starts_with("pkg:") {
-                            if let Some(rest) = purl_lower.strip_prefix("pkg:") {
-                                if rest.starts_with(&eco_lower)
+                        if purl_lower.starts_with("pkg:")
+                            && let Some(rest) = purl_lower.strip_prefix("pkg:")
+                                && rest.starts_with(&eco_lower)
                                     && rest[eco_lower.len()..].starts_with('/')
                                 {
                                     matched = true;
                                 }
-                            }
-                        }
                     }
 
                     // Check name match in PURL
-                    if let Some(n) = name {
-                        if purl.to_lowercase().contains(&n.to_lowercase()) {
+                    if let Some(n) = name
+                        && purl.to_lowercase().contains(&n.to_lowercase()) {
                             matched = true;
                         }
-                    }
 
                     matched
                 }
@@ -369,19 +362,16 @@ impl RuleEngine {
                 }
                 ExclusionRule::Conditional { pattern, .. } => {
                     // Check pre-compiled glob pattern
-                    if pattern.is_some() {
-                        if let Some(Some(re)) = self.compiled_exclusion_globs.get(idx) {
-                            if re.is_match(purl) {
+                    if pattern.is_some()
+                        && let Some(Some(re)) = self.compiled_exclusion_globs.get(idx)
+                            && re.is_match(purl) {
                                 return true;
                             }
-                        }
-                    }
                     // Check pre-compiled regex
-                    if let Some(Some(re)) = self.compiled_exclusion_regexes.get(idx) {
-                        if re.is_match(purl) {
+                    if let Some(Some(re)) = self.compiled_exclusion_regexes.get(idx)
+                        && re.is_match(purl) {
                             return true;
                         }
-                    }
                 }
             }
         }

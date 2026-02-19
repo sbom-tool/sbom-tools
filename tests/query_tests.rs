@@ -125,7 +125,7 @@ fn test_query_license_filter() {
     let result: serde_json::Value = serde_json::from_str(&output).expect("parse JSON");
 
     let matches = result["matches"].as_array().expect("matches array");
-    assert!(matches.len() >= 1);
+    assert!(!matches.is_empty());
     assert!(matches
         .iter()
         .all(|m| m["license"].as_str().unwrap_or("").contains("Apache")));

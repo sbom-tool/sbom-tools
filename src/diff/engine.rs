@@ -207,8 +207,7 @@ impl DiffEngine {
                 // Use stored canonical IDs directly instead of reconstructing from name+version
                 if let (Some(old_id), Some(new_id)) =
                     (&change.old_canonical_id, &change.canonical_id)
-                {
-                    if let (Some(old_comp), Some(new_comp)) =
+                    && let (Some(old_comp), Some(new_comp)) =
                         (old.components.get(old_id), new.components.get(new_id))
                     {
                         let explanation = matcher.explain_match(old_comp, new_comp);
@@ -223,7 +222,6 @@ impl DiffEngine {
 
                         change = change.with_match_info(match_info);
                     }
-                }
                 change
             })
             .collect();

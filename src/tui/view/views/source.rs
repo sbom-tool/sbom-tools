@@ -93,12 +93,11 @@ fn compute_raw_line_starts(raw_lines: &[String]) -> Vec<(String, usize)> {
     let mut result = Vec::new();
     for (i, line) in raw_lines.iter().enumerate() {
         let trimmed = line.trim_start();
-        if line.starts_with("  \"") && !line.starts_with("    ") {
-            if let Some(end) = trimmed.find("\":") {
+        if line.starts_with("  \"") && !line.starts_with("    ")
+            && let Some(end) = trimmed.find("\":") {
                 let key = trimmed[1..end].to_string();
                 result.push((key, i));
             }
-        }
     }
     result
 }
@@ -192,11 +191,10 @@ fn compute_section_match_counts(
     match state.view_mode {
         SourceViewMode::Tree => {
             for &idx in &state.search_matches {
-                if let Some(item) = state.cached_flat_items.get(idx) {
-                    if let Some(section) = current_section_from_node_id(&item.node_id) {
+                if let Some(item) = state.cached_flat_items.get(idx)
+                    && let Some(section) = current_section_from_node_id(&item.node_id) {
                         *counts.entry(section).or_insert(0) += 1;
                     }
-                }
             }
         }
         SourceViewMode::Raw => {
@@ -715,8 +713,8 @@ fn render_context(
 
     // Component context
     if let (Some(section), Some(idx)) = (&section_name, array_idx) {
-        if section == "components" {
-            if let Some(comp) = app.sbom.components.values().nth(idx) {
+        if section == "components"
+            && let Some(comp) = app.sbom.components.values().nth(idx) {
                 let is_primary = app
                     .sbom
                     .primary_component_id
@@ -846,7 +844,6 @@ fn render_context(
                 );
                 return;
             }
-        }
 
         if section == "vulnerabilities" {
             render_str(

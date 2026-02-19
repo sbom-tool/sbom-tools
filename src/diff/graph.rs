@@ -115,11 +115,10 @@ impl<'a> DependencyGraph<'a> {
 
         while let Some((id, depth)) = queue.pop_front() {
             // Check if we've found a shorter path to this node
-            if let Some(&existing_depth) = depths.get(&id) {
-                if depth >= existing_depth {
+            if let Some(&existing_depth) = depths.get(&id)
+                && depth >= existing_depth {
                     continue; // Already have a shorter or equal path
                 }
-            }
 
             // Record this depth (it's either new or shorter than existing)
             depths.insert(id.clone(), depth);
@@ -282,8 +281,8 @@ fn detect_depth_changes(
             let old_depth = old_graph.get_depth(old_id);
             let new_depth = new_graph.get_depth(new_id);
 
-            if let (Some(od), Some(nd)) = (old_depth, new_depth) {
-                if od != nd {
+            if let (Some(od), Some(nd)) = (old_depth, new_depth)
+                && od != nd {
                     let component_name = new_graph.get_component_name(new_id);
 
                     let impact = if nd < od && new_graph.is_vulnerable(new_id) {
@@ -306,7 +305,6 @@ fn detect_depth_changes(
                         impact,
                     });
                 }
-            }
         }
     }
 }

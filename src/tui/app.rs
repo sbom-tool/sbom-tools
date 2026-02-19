@@ -201,8 +201,8 @@ pub struct App {
 impl App {
     /// Lazily compute compliance results for all standards when first needed.
     pub fn ensure_compliance_results(&mut self) {
-        if self.data.old_compliance_results.is_none() {
-            if let Some(old_sbom) = &self.data.old_sbom {
+        if self.data.old_compliance_results.is_none()
+            && let Some(old_sbom) = &self.data.old_sbom {
                 self.data.old_compliance_results = Some(
                     crate::quality::ComplianceLevel::all()
                         .iter()
@@ -210,9 +210,8 @@ impl App {
                         .collect(),
                 );
             }
-        }
-        if self.data.new_compliance_results.is_none() {
-            if let Some(new_sbom) = &self.data.new_sbom {
+        if self.data.new_compliance_results.is_none()
+            && let Some(new_sbom) = &self.data.new_sbom {
                 self.data.new_compliance_results = Some(
                     crate::quality::ComplianceLevel::all()
                         .iter()
@@ -220,7 +219,6 @@ impl App {
                         .collect(),
                 );
             }
-        }
     }
 
     /// Toggle help overlay

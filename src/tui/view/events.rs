@@ -381,12 +381,10 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                 app.source_state.ensure_flat_cache();
                 if let Some(item) =
                     app.source_state.cached_flat_items.get(app.source_state.selected)
-                {
-                    if item.is_expandable {
+                    && item.is_expandable {
                         let node_id = item.node_id.clone();
                         app.source_state.toggle_expand(&node_id);
                     }
-                }
             } else {
                 app.handle_enter();
             }
@@ -396,12 +394,10 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                 app.source_state.ensure_flat_cache();
                 if let Some(item) =
                     app.source_state.cached_flat_items.get(app.source_state.selected)
-                {
-                    if item.is_expandable {
+                    && item.is_expandable {
                         let node_id = item.node_id.clone();
                         app.source_state.toggle_expand(&node_id);
                     }
-                }
             }
         }
         // 'l' or Right arrow with Ctrl to toggle focus between panels
@@ -476,19 +472,17 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
             match app.active_tab {
                 ViewTab::Tree => {
                     // Collapse current node or go to parent
-                    if let Some(node_id) = get_selected_node_id(app) {
-                        if app.tree_state.is_expanded(&node_id) {
+                    if let Some(node_id) = get_selected_node_id(app)
+                        && app.tree_state.is_expanded(&node_id) {
                             app.tree_state.collapse(&node_id);
                         }
-                    }
                 }
                 ViewTab::Dependencies => {
                     // Collapse current dependency node
-                    if let Some(node_id) = app.get_selected_dependency_node_id() {
-                        if app.dependency_state.is_expanded(&node_id) {
+                    if let Some(node_id) = app.get_selected_dependency_node_id()
+                        && app.dependency_state.is_expanded(&node_id) {
                             app.dependency_state.expanded.remove(&node_id);
                         }
-                    }
                 }
                 ViewTab::Compliance => {
                     // Switch to previous compliance standard
@@ -497,12 +491,11 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                 ViewTab::Source => {
                     if app.source_state.view_mode == SourceViewMode::Tree {
                         app.source_state.ensure_flat_cache();
-                        if let Some(item) = app.source_state.cached_flat_items.get(app.source_state.selected) {
-                            if item.is_expandable && item.is_expanded {
+                        if let Some(item) = app.source_state.cached_flat_items.get(app.source_state.selected)
+                            && item.is_expandable && item.is_expanded {
                                 let node_id = item.node_id.clone();
                                 app.source_state.toggle_expand(&node_id);
                             }
-                        }
                     }
                 }
                 _ => {}
@@ -533,12 +526,11 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                 ViewTab::Source => {
                     if app.source_state.view_mode == SourceViewMode::Tree {
                         app.source_state.ensure_flat_cache();
-                        if let Some(item) = app.source_state.cached_flat_items.get(app.source_state.selected) {
-                            if item.is_expandable && !item.is_expanded {
+                        if let Some(item) = app.source_state.cached_flat_items.get(app.source_state.selected)
+                            && item.is_expandable && !item.is_expanded {
                                 let node_id = item.node_id.clone();
                                 app.source_state.toggle_expand(&node_id);
                             }
-                        }
                     }
                 }
                 _ => {}
@@ -570,11 +562,10 @@ fn flatten_tree_ids(
 ) {
     for node in nodes {
         items.push(node.id().to_string());
-        if state.is_expanded(node.id()) {
-            if let Some(children) = node.children() {
+        if state.is_expanded(node.id())
+            && let Some(children) = node.children() {
                 flatten_tree_ids(children, state, items);
             }
-        }
     }
 }
 
@@ -775,10 +766,9 @@ fn count_visible_tree_nodes(
 ) {
     for node in nodes {
         *count += 1;
-        if state.is_expanded(node.id()) {
-            if let Some(children) = node.children() {
+        if state.is_expanded(node.id())
+            && let Some(children) = node.children() {
                 count_visible_tree_nodes(children, state, count);
             }
-        }
     }
 }

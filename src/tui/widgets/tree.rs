@@ -61,12 +61,11 @@ impl TreeNode {
                     display_name
                 };
                 // Append ecosystem tag if present and not "Unknown"
-                if let Some(eco) = ecosystem {
-                    if eco != "Unknown" {
+                if let Some(eco) = ecosystem
+                    && eco != "Unknown" {
                         use std::fmt::Write;
                         let _ = write!(result, " [{eco}]");
                     }
-                }
                 // Prepend bookmark star
                 if *is_bookmarked {
                     result = format!("\u{2605} {result}");
@@ -345,11 +344,10 @@ impl<'a> Tree<'a> {
             });
 
             // Recursively add children if expanded
-            if is_expanded {
-                if let Some(children) = node.children() {
+            if is_expanded
+                && let Some(children) = node.children() {
                     self.flatten_nodes(children, depth + 1, state, items, &current_ancestors);
                 }
-            }
         }
     }
 }

@@ -70,11 +70,10 @@ pub fn render_diff_compliance(frame: &mut Frame, area: Rect, app: &mut App) {
     render_help_bar(frame, chunks[3], app);
 
     // Render detail overlay if active
-    if app.tabs.diff_compliance.show_detail {
-        if let Some(violation) = get_selected_diff_violation(app) {
+    if app.tabs.diff_compliance.show_detail
+        && let Some(violation) = get_selected_diff_violation(app) {
             shared_compliance::render_violation_detail_overlay(frame, area, violation);
         }
-    }
 }
 
 fn render_standard_selector(frame: &mut Frame, area: Rect, app: &App) {
