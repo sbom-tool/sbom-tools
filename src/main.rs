@@ -8,7 +8,7 @@
     clippy::needless_pass_by_value
 )]
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell};
 use sbom_tools::{
@@ -22,7 +22,7 @@ use sbom_tools::{
     reports::{ReportFormat, ReportType},
     watch::parse_duration,
 };
-use std::io;
+use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -78,6 +78,16 @@ struct Cli {
     /// Disable colored output (also respects `NO_COLOR` env)
     #[arg(long, global = true)]
     no_color: bool,
+
+    /// Export filename template for TUI exports
+    ///
+    /// Placeholders: {date}, {time}, {format}, {command}
+    #[arg(long, global = true)]
+    export_template: Option<String>,
+
+    /// Path to configuration file
+    #[arg(long, global = true)]
+    config: Option<PathBuf>,
 
     #[command(subcommand)]
     command: Commands,
@@ -234,6 +244,10 @@ struct ViewArgs {
     /// Filter by ecosystem (e.g., npm, cargo, pypi, maven)
     #[arg(long)]
     ecosystem: Option<String>,
+
+    /// Exit with code 2 if vulnerabilities are present (for CI pipelines)
+    #[arg(long)]
+    fail_on_vuln: bool,
 
     /// Enable OSV vulnerability enrichment
     #[arg(long)]
@@ -542,6 +556,10 @@ struct WatchArgs {
     /// Maximum number of diff snapshots to retain per SBOM
     #[arg(long, default_value = "10")]
     max_snapshots: usize,
+
+    /// Scan once and print discovered SBOMs, then exit (useful for testing watch configuration)
+    #[arg(long)]
+    dry_run: bool,
 }
 
 #[derive(Subcommand)]
@@ -586,6 +604,26 @@ enum Commands {
         #[arg(short, long)]
         output: Option<PathBuf>,
     },
+
+    /// Show, discover, or initialize configuration
+    Config {
+        #[command(subcommand)]
+        action: ConfigAction,
+    },
+
+    /// Generate a man page and print it to stdout
+    Man,
+}
+
+/// Sub-subcommands for the `config` command
+#[derive(Subcommand)]
+enum ConfigAction {
+    /// Print current effective configuration (merged from defaults + file)
+    Show,
+    /// Print config file search paths and discovered config file
+    Path,
+    /// Generate an example .sbom-tools.yaml in the current directory
+    Init,
 }
 
 fn main() -> Result<()> {
@@ -631,6 +669,7 @@ fn main() -> Result<()> {
                         disabled: false,
                         stream_stdin: true,
                     },
+                    export_template: cli.export_template.clone(),
                 },
                 matching: MatchingConfig {
                     fuzzy_preset: args.fuzzy_preset,
@@ -694,14 +733,20 @@ fn main() -> Result<()> {
                     report_types: ReportType::All,
                     no_color: cli.no_color,
                     streaming: sbom_tools::config::StreamingConfig::default(),
+                    export_template: cli.export_template.clone(),
                 },
                 validate_ntia: args.validate_ntia,
                 min_severity: args.severity,
                 vulnerable_only: args.vulnerable_only,
                 ecosystem_filter: args.ecosystem,
+                fail_on_vuln: args.fail_on_vuln,
                 enrichment,
             };
-            cli::run_view(config)
+            let exit_code = cli::run_view(config)?;
+            if exit_code != 0 {
+                std::process::exit(exit_code);
+            }
+            Ok(())
         }
 
         Commands::Validate(args) => cli::run_validate(
@@ -791,6 +836,7 @@ fn main() -> Result<()> {
                     report_types: ReportType::All,
                     no_color: cli.no_color,
                     streaming: sbom_tools::config::StreamingConfig::default(),
+                    export_template: None,
                 },
                 enrichment,
                 limit: args.limit,
@@ -824,12 +870,14 @@ fn main() -> Result<()> {
                     report_types: ReportType::All,
                     no_color: cli.no_color,
                     streaming: sbom_tools::config::StreamingConfig::default(),
+                    export_template: None,
                 },
                 enrichment,
                 webhook_url: args.webhook,
                 exit_on_change: args.exit_on_change,
                 max_snapshots: args.max_snapshots,
                 quiet: cli.quiet,
+                dry_run: args.dry_run,
             };
 
             cli::run_watch(config)
@@ -851,6 +899,78 @@ fn main() -> Result<()> {
                     println!("{schema}");
                 }
             }
+            Ok(())
+        }
+
+        Commands::Config { action } => {
+            match action {
+                ConfigAction::Show => {
+                    let (config, loaded_from) =
+                        sbom_tools::config::load_or_default(cli.config.as_deref());
+                    if let Some(path) = &loaded_from {
+                        eprintln!("# Loaded from: {}", path.display());
+                    } else {
+                        eprintln!("# No config file found; showing defaults");
+                    }
+                    let yaml = serde_yaml_ng::to_string(&config)
+                        .context("failed to serialize config")?;
+                    print!("{yaml}");
+                    Ok(())
+                }
+                ConfigAction::Path => {
+                    let search_paths: [Option<String>; 3] = [
+                        std::env::current_dir().ok().map(|p| p.display().to_string()),
+                        ::dirs::config_dir().map(|p| p.join("sbom-tools").display().to_string()),
+                        ::dirs::home_dir().map(|p| p.display().to_string()),
+                    ];
+                    eprintln!("Config file search paths (in order):");
+                    for path in search_paths.into_iter().flatten() {
+                        eprintln!("  {path}");
+                    }
+                    eprintln!();
+                    eprintln!("Recognized file names:");
+                    for name in &[
+                        ".sbom-tools.yaml",
+                        ".sbom-tools.yml",
+                        "sbom-tools.yaml",
+                        "sbom-tools.yml",
+                        ".sbom-toolsrc",
+                    ] {
+                        eprintln!("  {name}");
+                    }
+                    eprintln!();
+                    match sbom_tools::config::discover_config_file(cli.config.as_deref()) {
+                        Some(path) => eprintln!("Active config file: {}", path.display()),
+                        None => eprintln!("No config file found."),
+                    }
+                    Ok(())
+                }
+                ConfigAction::Init => {
+                    let target = std::env::current_dir()
+                        .context("cannot determine current directory")?
+                        .join(".sbom-tools.yaml");
+                    if target.exists() {
+                        anyhow::bail!(
+                            "{} already exists. Remove it first to re-initialize.",
+                            target.display()
+                        );
+                    }
+                    let content = sbom_tools::config::generate_full_example_config();
+                    std::fs::write(&target, content)
+                        .with_context(|| format!("failed to write {}", target.display()))?;
+                    eprintln!("Created {}", target.display());
+                    Ok(())
+                }
+            }
+        }
+
+        Commands::Man => {
+            let cmd = Cli::command();
+            let man = clap_mangen::Man::new(cmd);
+            let mut buf = Vec::new();
+            man.render(&mut buf)
+                .context("failed to render man page")?;
+            io::stdout().write_all(&buf)?;
             Ok(())
         }
     }

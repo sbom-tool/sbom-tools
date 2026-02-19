@@ -20,6 +20,7 @@ fn base_config(paths: Vec<PathBuf>) -> QueryConfig {
             report_types: sbom_tools::reports::ReportType::All,
             no_color: true,
             streaming: StreamingConfig::default(),
+            export_template: None,
         },
         enrichment: EnrichmentConfig::default(),
         limit: None,

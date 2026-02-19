@@ -13,7 +13,7 @@ use anyhow::Result;
 
 /// Run the view command
 #[allow(clippy::needless_pass_by_value)]
-pub fn run_view(config: ViewConfig) -> Result<()> {
+pub fn run_view(config: ViewConfig) -> Result<i32> {
     let mut parsed = parse_sbom_with_context(&config.sbom_path, false)?;
 
     // Enrich with OSV vulnerability data if enabled
@@ -83,9 +83,18 @@ pub fn run_view(config: ViewConfig) -> Result<()> {
     let output_target = OutputTarget::from_option(config.output.file.clone());
     let effective_output = auto_detect_format(config.output.format, &output_target);
 
+    // Check for vulnerabilities before rendering (for --fail-on-vuln exit code)
+    let vuln_count: usize = parsed
+        .sbom()
+        .components
+        .values()
+        .map(|c| c.vulnerabilities.len())
+        .sum();
+
     if effective_output == ReportFormat::Tui {
         let (sbom, raw_content) = parsed.into_parts();
         let mut app = ViewApp::new(sbom, &raw_content);
+        app.export_template = config.output.export_template.clone();
 
         // Show enrichment warnings in TUI footer
         #[cfg(feature = "enrichment")]
@@ -100,7 +109,11 @@ pub fn run_view(config: ViewConfig) -> Result<()> {
         output_view_report(&config, parsed.sbom(), &output_target)?;
     }
 
-    Ok(())
+    if config.fail_on_vuln && vuln_count > 0 {
+        return Ok(crate::pipeline::exit_codes::VULNS_INTRODUCED);
+    }
+
+    Ok(crate::pipeline::exit_codes::SUCCESS)
 }
 
 /// Apply view filters to the SBOM, returns number of components removed
@@ -260,11 +273,13 @@ mod tests {
                 report_types: crate::reports::ReportType::All,
                 no_color: false,
                 streaming: crate::config::StreamingConfig::default(),
+                export_template: None,
             },
             validate_ntia: false,
             min_severity: None,
             vulnerable_only: false,
             ecosystem_filter: None,
+            fail_on_vuln: false,
             enrichment: crate::config::EnrichmentConfig::default(),
         };
 

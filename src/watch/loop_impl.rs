@@ -53,6 +53,24 @@ pub fn run_watch_loop(config: &WatchConfig) -> anyhow::Result<()> {
     // Emit initial status
     emit_status(&state, &mut sinks);
 
+    // Dry-run mode: print discovered files and exit
+    if config.dry_run {
+        if !config.quiet {
+            let healthy = state.count_status(MonitorStatus::Healthy);
+            let errors = state.count_status(MonitorStatus::Error);
+            eprintln!("Dry run complete: {healthy} SBOM(s) parsed successfully, {errors} error(s)");
+            for (path, entry) in &state.sboms {
+                let status = match entry.status {
+                    MonitorStatus::Healthy => format!("OK ({} components, {} vulns, {} EOL)", entry.component_count, entry.vuln_count, entry.eol_count),
+                    MonitorStatus::Error => format!("ERROR: {}", entry.last_error.as_deref().unwrap_or("unknown")),
+                    _ => format!("{}", entry.status),
+                };
+                eprintln!("  {} — {}", path.display(), status);
+            }
+        }
+        return Ok(());
+    }
+
     // If exit_on_change and we already discovered files, we wait for _changes_
     // (initial discovery doesn't count).
 

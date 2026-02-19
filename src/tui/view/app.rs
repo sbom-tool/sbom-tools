@@ -103,6 +103,9 @@ pub struct ViewApp {
 
     /// Bookmarked component canonical IDs (in-memory, no persistence)
     pub(crate) bookmarked: HashSet<String>,
+
+    /// Optional export filename template (from `--export-template` CLI arg).
+    pub(crate) export_template: Option<String>,
 }
 
 impl ViewApp {
@@ -130,9 +133,16 @@ impl ViewApp {
             tree_state.expand(&format!("eco:{eco}"));
         }
 
+        // Restore last active tab from preferences
+        let initial_tab = crate::config::TuiPreferences::load()
+            .last_view_tab
+            .as_deref()
+            .and_then(ViewTab::from_str_opt)
+            .unwrap_or(ViewTab::Overview);
+
         Self {
             sbom,
-            active_tab: ViewTab::Overview,
+            active_tab: initial_tab,
             tree_state,
             tree_group_by: TreeGroupBy::Ecosystem,
             tree_filter: TreeFilter::All,
@@ -161,6 +171,7 @@ impl ViewApp {
             sbom_index,
             source_state,
             bookmarked: HashSet::new(),
+            export_template: None,
         }
     }
 
@@ -595,7 +606,7 @@ impl ViewApp {
 
         let report_type = view_tab_to_report_type(self.active_tab);
         let config = ReportConfig::with_types(vec![report_type]);
-        let result = export_view(format, &self.sbom, None, &config);
+        let result = export_view(format, &self.sbom, None, &config, self.export_template.as_deref());
 
         if result.success {
             self.set_status_message(result.message);
@@ -623,6 +634,7 @@ impl ViewApp {
             results,
             self.compliance_state.selected_standard,
             None,
+            self.export_template.as_deref(),
         );
         if result.success {
             self.set_status_message(result.message);
@@ -1481,7 +1493,7 @@ impl ViewTab {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn shortcut(&self) -> &'static str {
         match self {
             Self::Overview => "1",
@@ -1492,6 +1504,37 @@ impl ViewTab {
             Self::Quality => "6",
             Self::Compliance => "7",
             Self::Source => "8",
+        }
+    }
+
+    /// Stable string identifier for persistence.
+    #[must_use]
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Overview => "overview",
+            Self::Tree => "tree",
+            Self::Vulnerabilities => "vulnerabilities",
+            Self::Licenses => "licenses",
+            Self::Dependencies => "dependencies",
+            Self::Quality => "quality",
+            Self::Compliance => "compliance",
+            Self::Source => "source",
+        }
+    }
+
+    /// Parse from a persisted string identifier.
+    #[must_use]
+    pub fn from_str_opt(s: &str) -> Option<Self> {
+        match s {
+            "overview" => Some(Self::Overview),
+            "tree" => Some(Self::Tree),
+            "vulnerabilities" => Some(Self::Vulnerabilities),
+            "licenses" => Some(Self::Licenses),
+            "dependencies" => Some(Self::Dependencies),
+            "quality" => Some(Self::Quality),
+            "compliance" => Some(Self::Compliance),
+            "source" => Some(Self::Source),
+            _ => None,
         }
     }
 }

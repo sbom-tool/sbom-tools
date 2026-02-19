@@ -455,6 +455,7 @@ const fn context_name(context: ShortcutsContext) -> &'static str {
         ShortcutsContext::Timeline => "Timeline",
         ShortcutsContext::Matrix => "Matrix",
         ShortcutsContext::Diff => "Diff",
+        ShortcutsContext::View => "View",
     }
 }
 
@@ -544,9 +545,35 @@ fn get_shortcuts_for_context(context: ShortcutsContext) -> Vec<ShortcutSection> 
                 items: vec![
                     ("f", "Filter/toggle options"),
                     ("s", "Sort/cycle options"),
+                    ("d", "Toggle deduplication"),
+                    ("t", "Toggle transitive deps"),
                     ("v", "Multi-select mode"),
                     ("Enter", "View details"),
-                    ("n/N", "Navigate to related"),
+                    ("n/N", "Navigate to next/prev match"),
+                    ("p", "Toggle panel focus"),
+                    ("h/l", "Collapse/expand (tree tabs)"),
+                    ("E", "Export compliance (compliance tab)"),
+                ],
+            });
+        }
+        ShortcutsContext::View => {
+            sections.push(ShortcutSection {
+                title: "View Mode",
+                items: vec![
+                    ("f", "Filter (tree/vulns/compliance)"),
+                    ("s", "Sort (vulnerabilities)"),
+                    ("d", "Toggle deduplication (vulns)"),
+                    ("g", "Toggle grouping (tree/vulns/licenses)"),
+                    ("v", "Toggle view mode (quality/source)"),
+                    ("p", "Toggle panel focus"),
+                    ("m", "Bookmark component (tree)"),
+                    ("h/l", "Collapse/expand, prev/next standard"),
+                    ("Enter", "Select / expand node"),
+                    ("[/]", "Prev/next detail tab"),
+                    ("E", "Export compliance"),
+                    ("n/N", "Next/prev search match (source)"),
+                    ("H/L", "Collapse/expand all (source)"),
+                    ("w", "Toggle focus (source)"),
                 ],
             });
         }

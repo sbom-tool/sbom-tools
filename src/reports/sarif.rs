@@ -329,6 +329,38 @@ pub fn generate_compliance_sarif(result: &ComplianceResult) -> Result<String, Re
         .map_err(|e| ReportError::SerializationError(e.to_string()))
 }
 
+/// Generate SARIF output for multiple compliance standards merged into one report.
+pub fn generate_multi_compliance_sarif(results: &[ComplianceResult]) -> Result<String, ReportError> {
+    // Merge rules from all standards
+    let mut all_rules = Vec::new();
+    let mut all_results = Vec::new();
+
+    for result in results {
+        let rules = get_sarif_rules_for_standard(result.level);
+        all_rules.extend(rules);
+        all_results.extend(compliance_results_to_sarif(result, None));
+    }
+
+    let sarif = SarifReport {
+        schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
+        version: "2.1.0".to_string(),
+        runs: vec![SarifRun {
+            tool: SarifTool {
+                driver: SarifDriver {
+                    name: "sbom-tools".to_string(),
+                    version: env!("CARGO_PKG_VERSION").to_string(),
+                    information_uri: "https://github.com/binarly-io/sbom-tools".to_string(),
+                    rules: all_rules,
+                },
+            },
+            results: all_results,
+        }],
+    };
+
+    serde_json::to_string_pretty(&sarif)
+        .map_err(|e| ReportError::SerializationError(e.to_string()))
+}
+
 fn severity_to_level(severity: &str) -> SarifLevel {
     match severity.to_lowercase().as_str() {
         "critical" | "high" => SarifLevel::Error,

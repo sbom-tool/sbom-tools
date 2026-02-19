@@ -229,16 +229,21 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
 
     // Global key bindings
     match key.code {
-        KeyCode::Char('q') => app.should_quit = true,
+        KeyCode::Char('q') => {
+            // Save last active tab before quitting
+            let mut prefs = crate::config::TuiPreferences::load();
+            prefs.last_tab = Some(app.active_tab.as_str().to_string());
+            let _ = prefs.save();
+            app.should_quit = true;
+        }
         KeyCode::Char('?') => app.toggle_help(),
         KeyCode::Char('e') => app.toggle_export(),
         KeyCode::Char('l') => app.toggle_legend(),
         KeyCode::Char('T') => {
             // Toggle theme (dark -> light -> high-contrast) and save preference
             let theme_name = toggle_theme();
-            let prefs = TuiPreferences {
-                theme: theme_name.to_string(),
-            };
+            let mut prefs = TuiPreferences::load();
+            prefs.theme = theme_name.to_string();
             let _ = prefs.save();
         }
         // View switcher (V key in multi-comparison modes)

@@ -164,12 +164,20 @@ impl AppConfigBuilder {
 pub struct TuiPreferences {
     /// Theme name: "dark", "light", or "high-contrast"
     pub theme: String,
+    /// Last active tab in diff mode (e.g., "summary", "components")
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_tab: Option<String>,
+    /// Last active tab in view mode (e.g., "overview", "tree")
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_view_tab: Option<String>,
 }
 
 impl Default for TuiPreferences {
     fn default() -> Self {
         Self {
             theme: "dark".to_string(),
+            last_tab: None,
+            last_view_tab: None,
         }
     }
 }
@@ -285,6 +293,8 @@ pub struct ViewConfig {
     pub vulnerable_only: bool,
     /// Filter by ecosystem
     pub ecosystem_filter: Option<String>,
+    /// Exit with code 2 if vulnerabilities are present
+    pub fail_on_vuln: bool,
     /// Enrichment configuration
     pub enrichment: EnrichmentConfig,
 }
@@ -360,6 +370,12 @@ pub struct OutputConfig {
     pub no_color: bool,
     /// Streaming configuration for large SBOMs
     pub streaming: StreamingConfig,
+    /// Optional export filename template for TUI exports.
+    ///
+    /// Placeholders: `{date}` (YYYY-MM-DD), `{time}` (HHMMSS),
+    /// `{format}` (json/md/html), `{command}` (diff/view).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub export_template: Option<String>,
 }
 
 impl Default for OutputConfig {
@@ -370,6 +386,7 @@ impl Default for OutputConfig {
             report_types: ReportType::All,
             no_color: false,
             streaming: StreamingConfig::default(),
+            export_template: None,
         }
     }
 }

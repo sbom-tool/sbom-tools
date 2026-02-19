@@ -29,6 +29,8 @@ pub struct WatchConfig {
     pub max_snapshots: usize,
     /// Suppress non-essential output
     pub quiet: bool,
+    /// Dry-run mode: do initial scan only, then exit
+    pub dry_run: bool,
 }
 
 /// Parse a human-readable duration string into a [`Duration`].

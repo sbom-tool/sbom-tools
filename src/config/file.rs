@@ -198,6 +198,9 @@ impl AppConfig {
         if other.output.no_color {
             self.output.no_color = true;
         }
+        if other.output.export_template.is_some() {
+            self.output.export_template.clone_from(&other.output.export_template);
+        }
 
         // Filtering config
         if other.filtering.only_changes {

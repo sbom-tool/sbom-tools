@@ -126,6 +126,9 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
         #[cfg(not(feature = "enrichment"))]
         let mut app = App::new_diff(result, old_sbom, new_sbom, &old_raw, &new_raw);
 
+        // Set export template if configured
+        app.export_template = config.output.export_template.clone();
+
         // Show enrichment warnings in TUI footer
         #[cfg(feature = "enrichment")]
         if !enrichment_warnings.is_empty() {

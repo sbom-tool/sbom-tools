@@ -154,6 +154,7 @@ impl AppConfig {
                 report_types: crate::reports::ReportType::All,
                 no_color: true,
                 streaming: super::types::StreamingConfig::default(),
+                export_template: None,
             },
             filtering: FilterConfig {
                 only_changes: true,

@@ -16,7 +16,11 @@ impl App {
     fn base(mode: AppMode, components_len: usize, vulns_len: usize) -> Self {
         Self {
             mode,
-            active_tab: TabKind::Summary,
+            active_tab: crate::config::TuiPreferences::load()
+                .last_tab
+                .as_deref()
+                .and_then(TabKind::from_str_opt)
+                .unwrap_or(TabKind::Summary),
             data: DataContext {
                 diff_result: None,
                 old_sbom: None,
@@ -64,6 +68,7 @@ impl App {
             navigation_ctx: NavigationContext::new(),
             security_cache: crate::tui::security::SecurityAnalysisCache::new(),
             compliance_state: crate::tui::app_states::PolicyComplianceState::new(),
+            export_template: None,
             quality_view: Some(crate::tui::view_states::QualityView::new()),
         }
     }

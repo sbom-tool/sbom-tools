@@ -251,6 +251,10 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
     // Global keys
     match key.code {
         KeyCode::Char('q') | KeyCode::Esc => {
+            // Save last active tab before quitting
+            let mut prefs = TuiPreferences::load();
+            prefs.last_view_tab = Some(app.active_tab.as_str().to_string());
+            let _ = prefs.save();
             app.should_quit = true;
         }
         KeyCode::Char('?') => {
@@ -276,9 +280,8 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
         KeyCode::Char('T') => {
             // Toggle theme (dark -> light -> high-contrast) and save preference
             let theme_name = toggle_theme();
-            let prefs = TuiPreferences {
-                theme: theme_name.to_string(),
-            };
+            let mut prefs = TuiPreferences::load();
+            prefs.theme = theme_name.to_string();
             let _ = prefs.save();
         }
         KeyCode::Char('b') | KeyCode::Backspace => {

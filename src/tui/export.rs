@@ -9,7 +9,7 @@ use crate::tui::app::TabKind;
 use crate::tui::ViewTab;
 use std::fs::File;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Export format selection for TUI
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -112,6 +112,44 @@ pub const fn view_tab_export_scope(tab: ViewTab) -> &'static str {
     }
 }
 
+/// Expand a filename template with placeholders.
+///
+/// Supported placeholders:
+/// - `{date}` → YYYY-MM-DD
+/// - `{time}` → HHMMSS
+/// - `{format}` → json, md, html, etc.
+/// - `{command}` → diff, view, compliance, matrix
+fn expand_template(template: &str, command: &str, format: &ExportFormat) -> String {
+    let now = chrono::Local::now();
+    template
+        .replace("{date}", &now.format("%Y-%m-%d").to_string())
+        .replace("{time}", &now.format("%H%M%S").to_string())
+        .replace("{format}", format.extension())
+        .replace("{command}", command)
+}
+
+/// Build an export filename from an optional template, falling back to timestamp.
+fn build_export_filename(
+    template: Option<&str>,
+    command: &str,
+    format: &ExportFormat,
+    output_dir: Option<&str>,
+) -> PathBuf {
+    let filename = if let Some(tmpl) = template {
+        let expanded = expand_template(tmpl, command, format);
+        // Append extension if the template doesn't already have one
+        if std::path::Path::new(&expanded).extension().is_some() {
+            expanded
+        } else {
+            format!("{expanded}.{}", format.extension())
+        }
+    } else {
+        let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
+        format!("sbom_{command}_{timestamp}.{}", format.extension())
+    };
+    output_dir.map_or_else(|| PathBuf::from(&filename), |dir| PathBuf::from(dir).join(&filename))
+}
+
 /// Export diff results to a file
 pub fn export_diff(
     format: ExportFormat,
@@ -120,11 +158,9 @@ pub fn export_diff(
     new_sbom: &NormalizedSbom,
     output_dir: Option<&str>,
     config: &ReportConfig,
+    template: Option<&str>,
 ) -> ExportResult {
-    let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
-    let filename = format!("sbom_tools_{}.{}", timestamp, format.extension());
-    let path = output_dir.map_or_else(|| PathBuf::from(&filename), |dir| PathBuf::from(dir).join(&filename));
-
+    let path = build_export_filename(template, "diff", &format, output_dir);
     export_with_reporter(format.to_report_format(), result, old_sbom, new_sbom, &path, config)
 }
 
@@ -134,11 +170,9 @@ pub fn export_view(
     sbom: &NormalizedSbom,
     output_dir: Option<&str>,
     config: &ReportConfig,
+    template: Option<&str>,
 ) -> ExportResult {
-    let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
-    let filename = format!("sbom_report_{}.{}", timestamp, format.extension());
-    let path = output_dir.map_or_else(|| PathBuf::from(&filename), |dir| PathBuf::from(dir).join(&filename));
-
+    let path = build_export_filename(template, "view", &format, output_dir);
     export_view_with_reporter(format.to_report_format(), sbom, &path, config)
 }
 
@@ -147,26 +181,26 @@ fn export_with_reporter(
     result: &DiffResult,
     old_sbom: &NormalizedSbom,
     new_sbom: &NormalizedSbom,
-    path: &PathBuf,
+    path: &Path,
     config: &ReportConfig,
 ) -> ExportResult {
     let reporter = create_reporter(report_format);
 
     match reporter.generate_diff_report(result, old_sbom, new_sbom, config) {
         Ok(content) => match write_to_file(path, &content) {
-            Ok(()) => ExportResult {
-                path: path.clone(),
+            Ok(actual_path) => ExportResult {
+                message: format!("Exported to {}", display_path(&actual_path)),
+                path: actual_path,
                 success: true,
-                message: format!("Exported to {}", display_path(path)),
             },
             Err(e) => ExportResult {
-                path: path.clone(),
+                path: path.to_path_buf(),
                 success: false,
                 message: format!("Failed to write file: {e}"),
             },
         },
         Err(e) => ExportResult {
-            path: path.clone(),
+            path: path.to_path_buf(),
             success: false,
             message: format!("Failed to generate report: {e}"),
         },
@@ -176,26 +210,26 @@ fn export_with_reporter(
 fn export_view_with_reporter(
     report_format: ReportFormat,
     sbom: &NormalizedSbom,
-    path: &PathBuf,
+    path: &Path,
     config: &ReportConfig,
 ) -> ExportResult {
     let reporter = create_reporter(report_format);
 
     match reporter.generate_view_report(sbom, config) {
         Ok(content) => match write_to_file(path, &content) {
-            Ok(()) => ExportResult {
-                path: path.clone(),
+            Ok(actual_path) => ExportResult {
+                message: format!("Exported to {}", display_path(&actual_path)),
+                path: actual_path,
                 success: true,
-                message: format!("Exported to {}", display_path(path)),
             },
             Err(e) => ExportResult {
-                path: path.clone(),
+                path: path.to_path_buf(),
                 success: false,
                 message: format!("Failed to write file: {e}"),
             },
         },
         Err(e) => ExportResult {
-            path: path.clone(),
+            path: path.to_path_buf(),
             success: false,
             message: format!("Failed to generate report: {e}"),
         },
@@ -211,6 +245,7 @@ pub fn export_compliance(
     results: &[crate::quality::ComplianceResult],
     selected_standard: usize,
     output_dir: Option<&str>,
+    template: Option<&str>,
 ) -> ExportResult {
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
     let result = results.get(selected_standard);
@@ -238,15 +273,25 @@ pub fn export_compliance(
         }
     };
 
-    let level_name = result.map_or_else(|| "all".to_string(), |r| r.level.name().to_lowercase().replace(' ', "_"));
-    let filename = format!("compliance_{level_name}_{timestamp}.{ext}");
-    let path = output_dir.map_or_else(|| PathBuf::from(&filename), |dir| PathBuf::from(dir).join(&filename));
+    let path = if let Some(tmpl) = template {
+        let expanded = expand_template(tmpl, "compliance", &format);
+        let expanded = if std::path::Path::new(&expanded).extension().is_some() {
+            expanded
+        } else {
+            format!("{expanded}.{ext}")
+        };
+        output_dir.map_or_else(|| PathBuf::from(&expanded), |dir| PathBuf::from(dir).join(&expanded))
+    } else {
+        let level_name = result.map_or_else(|| "all".to_string(), |r| r.level.name().to_lowercase().replace(' ', "_"));
+        let filename = format!("compliance_{level_name}_{timestamp}.{ext}");
+        output_dir.map_or_else(|| PathBuf::from(&filename), |dir| PathBuf::from(dir).join(&filename))
+    };
 
     match write_to_file(&path, &content) {
-        Ok(()) => ExportResult {
-            path: path.clone(),
+        Ok(actual_path) => ExportResult {
+            message: format!("Compliance exported to {}", display_path(&actual_path)),
+            path: actual_path,
             success: true,
-            message: format!("Compliance exported to {}", display_path(&path)),
         },
         Err(e) => ExportResult {
             path,
@@ -465,10 +510,9 @@ fn csv_escape(s: &str) -> String {
 pub fn export_matrix(
     format: ExportFormat,
     result: &crate::diff::MatrixResult,
+    template: Option<&str>,
 ) -> ExportResult {
-    let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
-    let filename = format!("sbom_matrix_{}.{}", timestamp, format.extension());
-    let path = PathBuf::from(&filename);
+    let path = build_export_filename(template, "matrix", &format, None);
 
     let content = match format {
         ExportFormat::Json => matrix_to_json(result),
@@ -484,10 +528,10 @@ pub fn export_matrix(
     };
 
     match write_to_file(&path, &content) {
-        Ok(()) => ExportResult {
-            path: path.clone(),
+        Ok(actual_path) => ExportResult {
+            message: format!("Matrix exported to {}", display_path(&actual_path)),
+            path: actual_path,
             success: true,
-            message: format!("Matrix exported to {}", display_path(&path)),
         },
         Err(e) => ExportResult {
             path,
@@ -608,10 +652,48 @@ th { background: #313244; color: #89b4fa; font-weight: 600; }
     html
 }
 
-fn write_to_file(path: &PathBuf, content: &str) -> std::io::Result<()> {
-    let mut file = File::create(path)?;
+/// Write content to a file, auto-renaming if the path already exists.
+///
+/// Returns the actual path written to (which may differ from `path` if
+/// the original was renamed to avoid overwriting).
+fn write_to_file(path: &Path, content: &str) -> std::io::Result<PathBuf> {
+    let actual_path = find_available_path(path);
+    let mut file = File::create(&actual_path)?;
     file.write_all(content.as_bytes())?;
-    Ok(())
+    Ok(actual_path)
+}
+
+/// Find an available path by appending `_2`, `_3`, etc. if the path already exists.
+fn find_available_path(path: &Path) -> PathBuf {
+    if !path.exists() {
+        return path.to_path_buf();
+    }
+
+    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("export");
+    let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+    let parent = path.parent();
+
+    // Handle double extensions like .sarif.json
+    let (base_stem, full_ext) = if stem.ends_with(".sarif") && extension == "json" {
+        (stem.strip_suffix(".sarif").unwrap_or(stem), "sarif.json")
+    } else {
+        (stem, extension)
+    };
+
+    for i in 2..=99 {
+        let new_name = if full_ext.is_empty() {
+            format!("{base_stem}_{i}")
+        } else {
+            format!("{base_stem}_{i}.{full_ext}")
+        };
+        let new_path = parent.map_or_else(|| PathBuf::from(&new_name), |p| p.join(&new_name));
+        if !new_path.exists() {
+            return new_path;
+        }
+    }
+
+    // Fallback: just return the original path (will overwrite)
+    path.to_path_buf()
 }
 
 /// Resolve a path to an absolute path for display in status messages.
@@ -621,7 +703,7 @@ fn display_path(path: &PathBuf) -> String {
     } else {
         std::env::current_dir()
             .map(|cwd| cwd.join(path))
-            .unwrap_or_else(|_| path.clone())
+            .unwrap_or_else(|_| path.to_path_buf())
             .display()
             .to_string()
     }

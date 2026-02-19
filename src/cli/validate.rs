@@ -153,6 +153,9 @@ fn write_multi_compliance_output(
             serde_json::to_string_pretty(results)
                 .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?
         }
+        ReportFormat::Sarif => {
+            crate::reports::generate_multi_compliance_sarif(results)?
+        }
         _ => {
             let mut parts = Vec::new();
             for result in results {

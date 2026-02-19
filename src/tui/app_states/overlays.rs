@@ -207,6 +207,7 @@ pub enum ShortcutsContext {
     Timeline,
     Matrix,
     Diff,
+    View,
 }
 
 impl ShortcutsOverlayState {

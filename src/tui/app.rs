@@ -188,6 +188,8 @@ pub struct App {
     pub(crate) security_cache: crate::tui::security::SecurityAnalysisCache,
     /// Compliance/policy checking state
     pub(crate) compliance_state: crate::tui::app_states::PolicyComplianceState,
+    /// Optional export filename template (from `--export-template` CLI arg).
+    pub(crate) export_template: Option<String>,
     /// Quality tab `ViewState` implementation (proof of concept).
     ///
     /// When present, quality tab key events are dispatched through this
@@ -352,7 +354,7 @@ impl App {
                 if let (Some(diff_result), Some(old_sbom), Some(new_sbom)) =
                     (&self.data.diff_result, &self.data.old_sbom, &self.data.new_sbom)
                 {
-                    export_diff(format, diff_result, old_sbom, new_sbom, None, &config)
+                    export_diff(format, diff_result, old_sbom, new_sbom, None, &config, self.export_template.as_deref())
                 } else {
                     self.set_status_message("No diff data to export");
                     return;
@@ -360,7 +362,7 @@ impl App {
             }
             AppMode::View => {
                 if let Some(ref sbom) = self.data.sbom {
-                    export_view(format, sbom, None, &config)
+                    export_view(format, sbom, None, &config, self.export_template.as_deref())
                 } else {
                     self.set_status_message("No SBOM data to export");
                     return;
@@ -412,7 +414,7 @@ impl App {
             return;
         };
 
-        let result = export_compliance(format, results, selected, None);
+        let result = export_compliance(format, results, selected, None, self.export_template.as_deref());
         if result.success {
             self.last_export_path = Some(result.path.display().to_string());
             self.set_status_message(result.message);
@@ -431,7 +433,7 @@ impl App {
             return;
         };
 
-        let result = export_matrix(format, matrix_result);
+        let result = export_matrix(format, matrix_result, self.export_template.as_deref());
         if result.success {
             self.last_export_path = Some(result.path.display().to_string());
             self.set_status_message(result.message);
@@ -785,7 +787,7 @@ pub enum TabKind {
 }
 
 impl TabKind {
-    #[must_use] 
+    #[must_use]
     pub const fn title(&self) -> &'static str {
         match self {
             Self::Summary => "Summary",
@@ -798,6 +800,41 @@ impl TabKind {
             Self::SideBySide => "Side-by-Side",
             Self::GraphChanges => "Graph",
             Self::Source => "Source",
+        }
+    }
+
+    /// Stable string identifier for persistence.
+    #[must_use]
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Summary => "summary",
+            Self::Components => "components",
+            Self::Dependencies => "dependencies",
+            Self::Licenses => "licenses",
+            Self::Vulnerabilities => "vulnerabilities",
+            Self::Quality => "quality",
+            Self::Compliance => "compliance",
+            Self::SideBySide => "side-by-side",
+            Self::GraphChanges => "graph",
+            Self::Source => "source",
+        }
+    }
+
+    /// Parse from a persisted string identifier.
+    #[must_use]
+    pub fn from_str_opt(s: &str) -> Option<Self> {
+        match s {
+            "summary" => Some(Self::Summary),
+            "components" => Some(Self::Components),
+            "dependencies" => Some(Self::Dependencies),
+            "licenses" => Some(Self::Licenses),
+            "vulnerabilities" => Some(Self::Vulnerabilities),
+            "quality" => Some(Self::Quality),
+            "compliance" => Some(Self::Compliance),
+            "side-by-side" => Some(Self::SideBySide),
+            "graph" => Some(Self::GraphChanges),
+            "source" => Some(Self::Source),
+            _ => None,
         }
     }
 }

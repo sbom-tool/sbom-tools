@@ -59,6 +59,7 @@ fn test_watch_loop_no_files_returns_error() {
         exit_on_change: false,
         max_snapshots: 10,
         quiet: true,
+        dry_run: false,
     };
 
     let result = sbom_tools::watch::run_watch_loop(&config);
@@ -83,6 +84,7 @@ fn test_watch_loop_nonexistent_dir() {
         exit_on_change: false,
         max_snapshots: 10,
         quiet: true,
+        dry_run: false,
     };
 
     // The cli handler checks for dir existence; the loop itself may still
@@ -112,6 +114,7 @@ fn test_watch_loop_exit_on_change() {
         exit_on_change: true,
         max_snapshots: 10,
         quiet: true,
+        dry_run: false,
     };
 
     // Spawn the watch loop in a thread, modify the file, then verify it exits
@@ -169,6 +172,7 @@ fn test_watch_loop_initial_scan_parses_fixtures() {
         exit_on_change: true,
         max_snapshots: 10,
         quiet: true,
+        dry_run: false,
     };
 
     let config_clone = config.clone();
@@ -217,6 +221,7 @@ fn test_watch_ndjson_output_produces_valid_json() {
         exit_on_change: true,
         max_snapshots: 10,
         quiet: true,
+        dry_run: false,
     };
 
     let config_clone = config.clone();

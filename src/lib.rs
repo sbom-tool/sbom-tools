@@ -46,11 +46,11 @@
 //! The library will automatically detect the format and return a [`NormalizedSbom`].
 //!
 //! ```no_run
-//! use sbom_tools::pipeline::parse_sbom;
+//! use std::path::Path;
+//! use sbom_tools::parse_sbom;
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     let sbom_path = "path/to/your/sbom.json";
-//!     let sbom = parse_sbom(sbom_path)?;
+//!     let sbom = parse_sbom(Path::new("path/to/your/sbom.json"))?;
 //!
 //!     println!(
 //!         "Successfully parsed SBOM for '{}' with {} components.",
@@ -72,19 +72,22 @@
 //! and a "new" SBOM.
 //!
 //! ```no_run
-//! use sbom_tools::pipeline::{diff_sboms, parse_sbom};
+//! use std::path::Path;
+//! use sbom_tools::{parse_sbom, DiffEngine};
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     let old_sbom = parse_sbom("path/to/old-sbom.json")?;
-//!     let new_sbom = parse_sbom("path/to/new-sbom.json")?;
+//!     let old_sbom = parse_sbom(Path::new("path/to/old-sbom.json"))?;
+//!     let new_sbom = parse_sbom(Path::new("path/to/new-sbom.json"))?;
 //!
-//!     let diff = diff_sboms(&old_sbom, &new_sbom);
+//!     let engine = DiffEngine::new();
+//!     let diff = engine.diff(&old_sbom, &new_sbom)?;
 //!
 //!     println!("Components Added: {}", diff.components.added.len());
 //!     println!("Components Removed: {}", diff.components.removed.len());
 //!
-//!     for added_component in &diff.components.added {
-//!         println!("  + {} {}", added_component.name, added_component.version.as_deref().unwrap_or(""));
+//!     for added in &diff.components.added {
+//!         println!("  + {} {}", added.name,
+//!             added.new_version.as_deref().unwrap_or(""));
 //!     }
 //!
 //!     Ok(())
@@ -98,36 +101,36 @@
 //!
 //! *Note: This requires the `enrichment` feature flag to be enabled.*
 //!
-//! ```no_run
-//! use sbom_tools::pipeline::{process_sbom, PipelineConfig, StageConfig};
+//! ```ignore
+//! use sbom_tools::parse_sbom;
 //! use sbom_tools::model::EolStatus;
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     let sbom_path = "path/to/your/sbom.json";
+//!     let mut sbom = parse_sbom("path/to/your/sbom.json")?;
 //!
-//!     // Configure the pipeline to run enrichment
-//!     let config = PipelineConfig {
-//!         osv_enrichment: Some(StageConfig::default()), // Enable OSV
-//!         eol_enrichment: Some(StageConfig::default()), // Enable EOL
-//!         ..Default::default()
-//!     };
-//!
-//!     // Process the SBOM with the specified configuration
-//!     let report = process_sbom(sbom_path, config)?;
-//!     let sbom = report.sbom;
+//!     // Enrich with OSV vulnerability data (requires `enrichment` feature)
+//!     #[cfg(feature = "enrichment")]
+//!     {
+//!         use sbom_tools::{OsvEnricher, OsvEnricherConfig, VulnerabilityEnricher};
+//!         let enricher = OsvEnricher::new(OsvEnricherConfig::default());
+//!         enricher.enrich(&mut sbom)?;
+//!     }
 //!
 //!     println!("--- Vulnerability and EOL Report ---");
 //!     for component in sbom.components.values() {
 //!         if !component.vulnerabilities.is_empty() {
-//!             println!("\n[!] Component '{}' has {} vulnerabilities:", component.name, component.vulnerabilities.len());
+//!             println!("\n[!] Component '{}' has {} vulnerabilities:",
+//!                 component.name, component.vulnerabilities.len());
 //!             for vuln in &component.vulnerabilities {
-//!                 println!("    - {}: {}", vuln.id, vuln.summary.as_deref().unwrap_or("No summary"));
+//!                 println!("    - {}: {}", vuln.id,
+//!                     vuln.summary.as_deref().unwrap_or("No summary"));
 //!             }
 //!         }
 //!
 //!         if let Some(eol_info) = &component.eol {
 //!             if eol_info.status == EolStatus::EndOfLife {
-//!                 println!("\n[!] Component '{}' has reached End-of-Life!", component.name);
+//!                 println!("\n[!] Component '{}' has reached End-of-Life!",
+//!                     component.name);
 //!                 println!("    - Product: {}", eol_info.product);
 //!                 if let Some(eol_date) = eol_info.eol_date {
 //!                     println!("    - EOL Date: {}", eol_date);
@@ -146,11 +149,12 @@
 //! EU Cyber Resilience Act (CRA).
 //!
 //! ```no_run
-//! use sbom_tools::pipeline::parse_sbom;
-//! use sbom_tools::quality::compliance::{ComplianceChecker, ComplianceLevel};
+//! use std::path::Path;
+//! use sbom_tools::parse_sbom;
+//! use sbom_tools::quality::{ComplianceChecker, ComplianceLevel};
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     let sbom = parse_sbom("path/to/your/sbom.json")?;
+//!     let sbom = parse_sbom(Path::new("path/to/your/sbom.json"))?;
 //!
 //!     // Check against the EU CRA Phase 2 requirements
 //!     let checker = ComplianceChecker::new(ComplianceLevel::CraPhase2);
@@ -166,7 +170,8 @@
 //!         );
 //!
 //!         for violation in result.violations {
-//!             println!("[{}] {}: {}", violation.severity.to_string().to_uppercase(), violation.category.name(), violation.message);
+//!             println!("[{:?}] {}: {}",
+//!                 violation.severity, violation.category.name(), violation.message);
 //!         }
 //!     }
 //!

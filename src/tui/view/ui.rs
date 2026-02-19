@@ -118,7 +118,11 @@ fn render(frame: &mut Frame, app: &mut ViewApp) {
 
     // Render overlays
     if app.show_help {
-        render_help_overlay(frame, area);
+        let shortcuts_state = crate::tui::app::ShortcutsOverlayState {
+            visible: true,
+            context: crate::tui::app::ShortcutsContext::View,
+        };
+        crate::tui::views::render_shortcuts_overlay(frame, &shortcuts_state);
     }
 
     if app.search_state.active {
@@ -349,150 +353,6 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &ViewApp) {
     frame.render_widget(footer, area);
 }
 
-fn render_help_overlay(frame: &mut Frame, area: Rect) {
-    let popup_area = widgets::centered_rect(65, 75, area);
-    frame.render_widget(Clear, popup_area);
-
-    let help_text = vec![
-        Line::styled(
-            "━━━ SBOM Viewer Help ━━━",
-            Style::default().fg(colors().accent).bold(),
-        ),
-        Line::from(""),
-        Line::from(vec![Span::styled(
-            "Navigation",
-            Style::default().fg(colors().primary).bold(),
-        )]),
-        Line::from(vec![
-            Span::styled("  1-6            ", Style::default().fg(colors().accent)),
-            Span::styled(
-                "Jump to tab (Overview/Tree/Vulns/Licenses/Deps/Quality)",
-                Style::default().fg(colors().text),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("  Tab            ", Style::default().fg(colors().accent)),
-            Span::styled(
-                "Next tab / Shift+Tab previous tab",
-                Style::default().fg(colors().text),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("  p              ", Style::default().fg(colors().accent)),
-            Span::styled(
-                "Toggle focus between list and detail panel",
-                Style::default().fg(colors().text),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("  ↑/↓ or j/k     ", Style::default().fg(colors().accent)),
-            Span::styled("Navigate items up/down", Style::default().fg(colors().text)),
-        ]),
-        Line::from(vec![
-            Span::styled("  Enter/→        ", Style::default().fg(colors().accent)),
-            Span::styled("Expand/select item", Style::default().fg(colors().text)),
-        ]),
-        Line::from(vec![
-            Span::styled("  ←/h            ", Style::default().fg(colors().accent)),
-            Span::styled("Collapse item", Style::default().fg(colors().text)),
-        ]),
-        Line::from(vec![
-            Span::styled("  PgUp/PgDown    ", Style::default().fg(colors().accent)),
-            Span::styled(
-                "Page up/down (page)",
-                Style::default().fg(colors().text),
-            ),
-        ]),
-        Line::from(""),
-        Line::from(vec![Span::styled(
-            "Tree/Component View",
-            Style::default().fg(colors().primary).bold(),
-        )]),
-        Line::from(vec![
-            Span::styled("  g              ", Style::default().fg(colors().accent)),
-            Span::styled(
-                "Cycle grouping (Ecosystem→License→VulnStatus→Flat)",
-                Style::default().fg(colors().text),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("  f              ", Style::default().fg(colors().accent)),
-            Span::styled(
-                "Cycle filter (All→HasVulns→Critical)",
-                Style::default().fg(colors().text),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("  [ / ]          ", Style::default().fg(colors().accent)),
-            Span::styled(
-                "Cycle component detail tabs",
-                Style::default().fg(colors().text),
-            ),
-        ]),
-        Line::from(""),
-        Line::from(vec![Span::styled(
-            "Actions",
-            Style::default().fg(colors().primary).bold(),
-        )]),
-        Line::from(vec![
-            Span::styled("  /              ", Style::default().fg(colors().accent)),
-            Span::styled(
-                "Search components and vulnerabilities",
-                Style::default().fg(colors().text),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("  e              ", Style::default().fg(colors().accent)),
-            Span::styled(
-                "Export report (JSON/Markdown/CSV)",
-                Style::default().fg(colors().text),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("  b / Backspace  ", Style::default().fg(colors().accent)),
-            Span::styled(
-                "Go back (when navigation history exists)",
-                Style::default().fg(colors().text),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("  l              ", Style::default().fg(colors().accent)),
-            Span::styled("Show color legend", Style::default().fg(colors().text)),
-        ]),
-        Line::from(vec![
-            Span::styled("  T              ", Style::default().fg(colors().accent)),
-            Span::styled(
-                "Toggle theme (dark/light/high-contrast)",
-                Style::default().fg(colors().text),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("  ?              ", Style::default().fg(colors().accent)),
-            Span::styled("Toggle this help", Style::default().fg(colors().text)),
-        ]),
-        Line::from(vec![
-            Span::styled("  q / Esc        ", Style::default().fg(colors().accent)),
-            Span::styled("Quit / Close overlay", Style::default().fg(colors().text)),
-        ]),
-        Line::from(""),
-        Line::styled(
-            "Press any key to close",
-            Style::default().fg(colors().text_muted),
-        ),
-    ];
-
-    let help = Paragraph::new(help_text)
-        .block(
-            Block::default()
-                .title(" Help ")
-                .title_style(Style::default().fg(colors().accent).bold())
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(colors().accent)),
-        )
-        .style(Style::default().fg(colors().text));
-
-    frame.render_widget(help, popup_area);
-}
 
 fn render_search_overlay(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let search = &app.search_state;
