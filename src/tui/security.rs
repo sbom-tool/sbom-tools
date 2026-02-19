@@ -415,7 +415,7 @@ pub fn open_in_browser(url: &str) -> Result<(), String> {
         std::process::Command::new("xdg-open")
             .arg(url)
             .spawn()
-            .map_err(|e| format!("Failed to open browser: {}", e))?;
+            .map_err(|e| format!("Failed to open browser: {e}"))?;
     }
 
     #[cfg(target_os = "windows")]
@@ -427,7 +427,7 @@ pub fn open_in_browser(url: &str) -> Result<(), String> {
         std::process::Command::new("explorer")
             .arg(url)
             .spawn()
-            .map_err(|e| format!("Failed to open browser: {}", e))?;
+            .map_err(|e| format!("Failed to open browser: {e}"))?;
     }
 
     Ok(())
@@ -468,17 +468,17 @@ pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
                 .args(["--clipboard", "--input"])
                 .stdin(std::process::Stdio::piped())
                 .spawn()
-                .map_err(|e| format!("Failed to copy to clipboard: {}", e))?,
+                .map_err(|e| format!("Failed to copy to clipboard: {e}"))?,
         };
 
         if let Some(stdin) = child.stdin.as_mut() {
             stdin
                 .write_all(text.as_bytes())
-                .map_err(|e| format!("Failed to write to clipboard: {}", e))?;
+                .map_err(|e| format!("Failed to write to clipboard: {e}"))?;
         }
         child
             .wait()
-            .map_err(|e| format!("Clipboard command failed: {}", e))?;
+            .map_err(|e| format!("Clipboard command failed: {e}"))?;
     }
 
     #[cfg(target_os = "windows")]
@@ -488,16 +488,16 @@ pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
         let mut child = std::process::Command::new("clip")
             .stdin(std::process::Stdio::piped())
             .spawn()
-            .map_err(|e| format!("Failed to copy to clipboard: {}", e))?;
+            .map_err(|e| format!("Failed to copy to clipboard: {e}"))?;
 
         if let Some(stdin) = child.stdin.as_mut() {
             stdin
                 .write_all(text.as_bytes())
-                .map_err(|e| format!("Failed to write to clipboard: {}", e))?;
+                .map_err(|e| format!("Failed to write to clipboard: {e}"))?;
         }
         child
             .wait()
-            .map_err(|e| format!("Clipboard command failed: {}", e))?;
+            .map_err(|e| format!("Clipboard command failed: {e}"))?;
     }
 
     Ok(())
