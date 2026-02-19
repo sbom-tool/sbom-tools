@@ -2,8 +2,9 @@
 
 use chrono::{TimeZone, Utc};
 use sbom_tools::model::{
-    Component, Creator, CreatorType, DocumentMetadata, ExternalRefType, ExternalReference,
-    NormalizedSbom, Organization, SbomFormat, VulnerabilityRef, VulnerabilitySource,
+    Component, CompletenessDeclaration, Creator, CreatorType, DocumentMetadata, ExternalRefType,
+    ExternalReference, NormalizedSbom, Organization, SbomFormat, VulnerabilityRef,
+    VulnerabilitySource,
 };
 use sbom_tools::diff::DiffEngine;
 use sbom_tools::parsers::parse_sbom_str;
@@ -26,6 +27,9 @@ fn base_document_metadata() -> DocumentMetadata {
         security_contact: None,
         vulnerability_disclosure_url: None,
         support_end_date: None,
+        lifecycle_phase: None,
+        completeness_declaration: CompletenessDeclaration::Unknown,
+        signature: None,
     }
 }
 

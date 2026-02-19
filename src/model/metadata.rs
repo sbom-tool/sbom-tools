@@ -42,6 +42,56 @@ pub struct DocumentMetadata {
     pub vulnerability_disclosure_url: Option<String>,
     /// Support/end-of-life date for security updates
     pub support_end_date: Option<DateTime<Utc>>,
+    /// SBOM lifecycle phase (e.g., "build", "pre-build", "operations")
+    pub lifecycle_phase: Option<String>,
+    /// Self-declared completeness level (from CycloneDX compositions)
+    pub completeness_declaration: CompletenessDeclaration,
+    /// Digital signature information (from CycloneDX signature field)
+    pub signature: Option<SignatureInfo>,
+}
+
+/// Self-declared completeness level of the SBOM
+///
+/// Derived from CycloneDX compositions aggregate field, which declares
+/// whether the SBOM inventory is complete, incomplete, or unknown.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum CompletenessDeclaration {
+    /// SBOM author declares the inventory is complete
+    Complete,
+    /// SBOM author declares the inventory includes only first-party components
+    IncompleteFirstPartyOnly,
+    /// SBOM author declares the inventory includes only third-party components
+    IncompleteThirdPartyOnly,
+    /// SBOM author declares the inventory is incomplete
+    Incomplete,
+    /// No completeness declaration or explicitly unknown
+    #[default]
+    Unknown,
+    /// Completeness was declared but with an unrecognized value
+    NotSpecified,
+}
+
+impl std::fmt::Display for CompletenessDeclaration {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Complete => write!(f, "complete"),
+            Self::IncompleteFirstPartyOnly => write!(f, "incomplete (first-party only)"),
+            Self::IncompleteThirdPartyOnly => write!(f, "incomplete (third-party only)"),
+            Self::Incomplete => write!(f, "incomplete"),
+            Self::Unknown => write!(f, "unknown"),
+            Self::NotSpecified => write!(f, "not specified"),
+        }
+    }
+}
+
+/// Digital signature information for the SBOM document
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignatureInfo {
+    /// Signature algorithm (e.g., "ES256", "RS256", "Ed25519")
+    pub algorithm: String,
+    /// Whether the signature appears structurally valid (has algorithm + value)
+    pub has_value: bool,
 }
 
 impl Default for DocumentMetadata {
@@ -57,6 +107,9 @@ impl Default for DocumentMetadata {
             security_contact: None,
             vulnerability_disclosure_url: None,
             support_end_date: None,
+            lifecycle_phase: None,
+            completeness_declaration: CompletenessDeclaration::default(),
+            signature: None,
         }
     }
 }

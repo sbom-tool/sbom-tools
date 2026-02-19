@@ -37,9 +37,10 @@ pub use compliance::{
     ViolationSeverity,
 };
 pub use metrics::{
-    CompletenessMetrics, DependencyMetrics, IdentifierMetrics, LicenseMetrics, VulnerabilityMetrics,
+    AuditabilityMetrics, CompletenessMetrics, DependencyMetrics, HashQualityMetrics,
+    IdentifierMetrics, LicenseMetrics, LifecycleMetrics, ProvenanceMetrics, VulnerabilityMetrics,
 };
 pub use scorer::{
     QualityGrade, QualityReport, QualityScorer, Recommendation, RecommendationCategory,
-    ScoringProfile,
+    ScoringProfile, SCORING_ENGINE_VERSION,
 };

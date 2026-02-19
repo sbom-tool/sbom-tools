@@ -828,6 +828,9 @@ impl SpdxParser {
             security_contact: None,
             vulnerability_disclosure_url: None,
             support_end_date: None,
+            lifecycle_phase: None, // SPDX does not have lifecycle phase metadata
+            completeness_declaration: crate::model::CompletenessDeclaration::Unknown,
+            signature: None,
         }
     }
 

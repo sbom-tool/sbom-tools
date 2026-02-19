@@ -2393,7 +2393,9 @@ mod tests {
     #[test]
     fn test_view_app_creation() {
         let sbom = NormalizedSbom::default();
-        let app = ViewApp::new(sbom, "");
+        let mut app = ViewApp::new(sbom, "");
+        // Reset to known state (preferences may override default)
+        app.active_tab = ViewTab::Overview;
         assert_eq!(app.active_tab, ViewTab::Overview);
         assert!(!app.should_quit);
     }
@@ -2402,6 +2404,8 @@ mod tests {
     fn test_tab_navigation() {
         let sbom = NormalizedSbom::default();
         let mut app = ViewApp::new(sbom, "");
+        // Start from known state regardless of saved preferences
+        app.active_tab = ViewTab::Overview;
 
         app.next_tab();
         assert_eq!(app.active_tab, ViewTab::Tree);

@@ -3,11 +3,11 @@
 //! Supports `CycloneDX` versions 1.4, 1.5, and 1.6 in JSON and XML formats.
 
 use crate::model::{
-    CanonicalId, Component, ComponentType, Creator, CreatorType, CvssScore, CvssVersion,
-    DependencyEdge, DependencyType, DocumentMetadata, ExternalRefType, ExternalReference, Hash,
-    HashAlgorithm, LicenseExpression, NormalizedSbom, Organization, Property, Remediation,
-    RemediationType, SbomFormat, Severity, VexJustification, VexResponse, VexState, VexStatus,
-    VulnerabilityRef, VulnerabilitySource,
+    CanonicalId, Component, ComponentType, CompletenessDeclaration, Creator, CreatorType,
+    CvssScore, CvssVersion, DependencyEdge, DependencyType, DocumentMetadata, ExternalRefType,
+    ExternalReference, Hash, HashAlgorithm, LicenseExpression, NormalizedSbom, Organization,
+    Property, Remediation, RemediationType, SbomFormat, Severity, SignatureInfo, VexJustification,
+    VexResponse, VexState, VexStatus, VulnerabilityRef, VulnerabilitySource,
 };
 use crate::parsers::traits::{ParseError, SbomParser};
 use chrono::{DateTime, Utc};
@@ -74,6 +74,8 @@ impl CycloneDxParser {
             components: cdx.components.map(|c| c.component),
             dependencies: cdx.dependencies.map(|d| d.dependency),
             vulnerabilities: cdx.vulnerabilities.map(|v| v.vulnerability),
+            compositions: None,
+            signature: None,
         };
 
         Ok(self.convert_to_normalized(bom))
@@ -206,6 +208,45 @@ impl CycloneDxParser {
             }
         }
 
+        // Extract lifecycle phase from CycloneDX 1.5+ metadata
+        let lifecycle_phase = cdx
+            .metadata
+            .as_ref()
+            .and_then(|m| m.lifecycles.as_ref())
+            .and_then(|lcs| lcs.first())
+            .and_then(|lc| lc.phase.clone().or_else(|| lc.name.clone()));
+
+        // Extract completeness declaration from compositions
+        let completeness_declaration = cdx
+            .compositions
+            .as_ref()
+            .and_then(|comps| comps.first())
+            .and_then(|comp| comp.aggregate.as_deref())
+            .map_or(CompletenessDeclaration::Unknown, |agg| {
+                match agg {
+                    "complete" => CompletenessDeclaration::Complete,
+                    "incomplete" => CompletenessDeclaration::Incomplete,
+                    "incomplete_first_party_only" => {
+                        CompletenessDeclaration::IncompleteFirstPartyOnly
+                    }
+                    "incomplete_third_party_only" => {
+                        CompletenessDeclaration::IncompleteThirdPartyOnly
+                    }
+                    "unknown" => CompletenessDeclaration::Unknown,
+                    "not_specified" => CompletenessDeclaration::NotSpecified,
+                    _ => CompletenessDeclaration::Unknown,
+                }
+            });
+
+        // Extract signature info
+        let signature = cdx.signature.as_ref().map(|sig| SignatureInfo {
+            algorithm: sig
+                .algorithm
+                .clone()
+                .unwrap_or_else(|| "unknown".to_string()),
+            has_value: sig.value.as_ref().is_some_and(|v| !v.is_empty()),
+        });
+
         DocumentMetadata {
             format: SbomFormat::CycloneDx,
             format_version: cdx.spec_version.clone(),
@@ -221,6 +262,9 @@ impl CycloneDxParser {
             security_contact: None,
             vulnerability_disclosure_url: None,
             support_end_date: None,
+            lifecycle_phase,
+            completeness_declaration,
+            signature,
         }
     }
 
@@ -652,6 +696,31 @@ struct CycloneDxBom {
     components: Option<Vec<CdxComponent>>,
     dependencies: Option<Vec<CdxDependency>>,
     vulnerabilities: Option<Vec<CdxVulnerability>>,
+    compositions: Option<Vec<CdxComposition>>,
+    signature: Option<CdxSignature>,
+}
+
+/// CycloneDX composition entry (1.4+)
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+struct CdxComposition {
+    /// Aggregate completeness: complete, incomplete, incomplete_first_party_only,
+    /// incomplete_third_party_only, unknown, not_specified
+    aggregate: Option<String>,
+    /// References to components included in this composition
+    assemblies: Option<Vec<String>>,
+}
+
+/// CycloneDX JSF signature (JSON Signature Format)
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+struct CdxSignature {
+    /// Signature algorithm (e.g., "ES256", "RS256", "Ed25519")
+    algorithm: Option<String>,
+    /// Signature value (base64 encoded)
+    value: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
