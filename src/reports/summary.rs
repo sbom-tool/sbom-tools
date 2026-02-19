@@ -31,7 +31,7 @@ pub struct SummaryReporter {
 
 impl SummaryReporter {
     /// Create a new summary reporter
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self { colored: true }
     }
@@ -175,16 +175,12 @@ impl ReportGenerator for SummaryReporter {
                     parts.push(self.color(&format!("{} EOL", eol_counts.eol), "red"));
                 }
                 if eol_counts.approaching > 0 {
-                    parts.push(self.color(
-                        &format!("{} approaching", eol_counts.approaching),
-                        "yellow",
-                    ));
+                    parts.push(
+                        self.color(&format!("{} approaching", eol_counts.approaching), "yellow"),
+                    );
                 }
                 if eol_counts.supported > 0 {
-                    parts.push(self.color(
-                        &format!("{} supported", eol_counts.supported),
-                        "green",
-                    ));
+                    parts.push(self.color(&format!("{} supported", eol_counts.supported), "green"));
                 }
                 if eol_counts.security_only > 0 {
                     parts.push(format!("{} security-only", eol_counts.security_only));
@@ -247,7 +243,11 @@ impl ReportGenerator for SummaryReporter {
         ));
 
         // Ecosystems
-        let ecosystems: Vec<_> = sbom.ecosystems().iter().map(std::string::ToString::to_string).collect();
+        let ecosystems: Vec<_> = sbom
+            .ecosystems()
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect();
         if !ecosystems.is_empty() {
             lines.push(format!(
                 "{}  {}",
@@ -304,7 +304,7 @@ pub struct TableReporter {
 
 impl TableReporter {
     /// Create a new table reporter
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self { colored: true }
     }

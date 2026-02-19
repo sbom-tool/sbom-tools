@@ -12,7 +12,7 @@ use std::fmt::Write;
 pub struct CsvReporter;
 
 impl CsvReporter {
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self
     }
@@ -83,7 +83,9 @@ impl ReportGenerator for CsvReporter {
         // Pre-allocate based on component count
         let mut content = String::with_capacity(sbom.components.len() * 150 + 100);
 
-        content.push_str("Name,Version,Ecosystem,Type,PURL,Licenses,Vulnerabilities,EOL Status,EOL Date\n");
+        content.push_str(
+            "Name,Version,Ecosystem,Type,PURL,Licenses,Vulnerabilities,EOL Status,EOL Date\n",
+        );
 
         for (_, comp) in &sbom.components {
             let licenses = comp
@@ -94,16 +96,10 @@ impl ReportGenerator for CsvReporter {
                 .collect::<Vec<_>>()
                 .join("; ");
             let vuln_count = comp.vulnerabilities.len();
-            let ecosystem = comp
-                .ecosystem
-                .as_ref()
-                .map(|e| format!("{e:?}"));
+            let ecosystem = comp.ecosystem.as_ref().map(|e| format!("{e:?}"));
             let ecosystem = ecosystem.as_deref().unwrap_or("-");
 
-            let eol_status = comp
-                .eol
-                .as_ref()
-                .map_or("-", |e| e.status.label());
+            let eol_status = comp.eol.as_ref().map_or("-", |e| e.status.label());
             let eol_date = comp
                 .eol
                 .as_ref()
@@ -195,6 +191,7 @@ fn format_sla_csv(vuln: &VulnerabilityDetail) -> String {
         SlaStatus::Overdue(days) => format!("{days}d late"),
         SlaStatus::DueSoon(days) | SlaStatus::OnTrack(days) => format!("{days}d left"),
         SlaStatus::NoDueDate => vuln
-            .days_since_published.map_or_else(|| "-".to_string(), |d| format!("{d}d old")),
+            .days_since_published
+            .map_or_else(|| "-".to_string(), |d| format!("{d}d old")),
     }
 }

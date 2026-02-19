@@ -224,4 +224,3 @@ impl ShortcutsOverlayState {
         self.visible = false;
     }
 }
-

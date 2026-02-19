@@ -300,7 +300,6 @@ impl ConflictDetector {
 
         conflicts
     }
-
 }
 
 impl Default for ConflictDetector {
@@ -335,7 +334,10 @@ mod tests {
         let conflicts = detector.detect_conflicts(&license_map);
 
         assert!(!conflicts.is_empty());
-        assert_eq!(conflicts[0].rule.conflict_type, ConflictType::BinaryIncompatible);
+        assert_eq!(
+            conflicts[0].rule.conflict_type,
+            ConflictType::BinaryIncompatible
+        );
         assert_eq!(conflicts[0].rule.severity, ConflictSeverity::Error);
     }
 
@@ -369,5 +371,4 @@ mod tests {
 
         assert!(conflicts.is_empty());
     }
-
 }

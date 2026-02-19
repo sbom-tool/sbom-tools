@@ -519,4 +519,3 @@ impl Default for SideBySideState {
         Self::new()
     }
 }
-

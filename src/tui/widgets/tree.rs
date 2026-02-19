@@ -62,10 +62,11 @@ impl TreeNode {
                 };
                 // Append ecosystem tag if present and not "Unknown"
                 if let Some(eco) = ecosystem
-                    && eco != "Unknown" {
-                        use std::fmt::Write;
-                        let _ = write!(result, " [{eco}]");
-                    }
+                    && eco != "Unknown"
+                {
+                    use std::fmt::Write;
+                    let _ = write!(result, " [{eco}]");
+                }
                 // Prepend bookmark star
                 if *is_bookmarked {
                     result = format!("\u{2605} {result}");
@@ -257,7 +258,6 @@ impl TreeState {
             self.selected = self.visible_count - 1;
         }
     }
-
 }
 
 /// A flattened tree item for rendering.
@@ -344,10 +344,9 @@ impl<'a> Tree<'a> {
             });
 
             // Recursively add children if expanded
-            if is_expanded
-                && let Some(children) = node.children() {
-                    self.flatten_nodes(children, depth + 1, state, items, &current_ancestors);
-                }
+            if is_expanded && let Some(children) = node.children() {
+                self.flatten_nodes(children, depth + 1, state, items, &current_ancestors);
+            }
         }
     }
 }
@@ -412,11 +411,7 @@ impl StatefulWidget for Tree<'_> {
 
             // Add expand/collapse indicator for groups
             let expand_indicator = if item.is_group {
-                if item.is_expanded {
-                    "▼ "
-                } else {
-                    "▶ "
-                }
+                if item.is_expanded { "▼ " } else { "▶ " }
             } else {
                 "  "
             };
@@ -488,15 +483,18 @@ impl StatefulWidget for Tree<'_> {
             // Vulnerability indicator with severity badge
             if item.vuln_count > 0 {
                 // Get severity color
-                let (sev_char, sev_color) = item.max_severity.as_ref().map_or(('!', scheme.warning), |sev| {
-                    match sev.to_lowercase().as_str() {
-                        "critical" => ('C', scheme.critical),
-                        "high" => ('H', scheme.high),
-                        "medium" => ('M', scheme.medium),
-                        "low" => ('L', scheme.low),
-                        _ => ('!', scheme.warning),
-                    }
-                });
+                let (sev_char, sev_color) =
+                    item.max_severity
+                        .as_ref()
+                        .map_or(('!', scheme.warning), |sev| {
+                            match sev.to_lowercase().as_str() {
+                                "critical" => ('C', scheme.critical),
+                                "high" => ('H', scheme.high),
+                                "medium" => ('M', scheme.medium),
+                                "low" => ('L', scheme.low),
+                                _ => ('!', scheme.warning),
+                            }
+                        });
 
                 // Space before indicator
                 if x < area.x + area.width {

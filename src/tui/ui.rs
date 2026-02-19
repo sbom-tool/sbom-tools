@@ -3,17 +3,17 @@
 use super::app::{
     App, AppMode, ChangeType, DiffSearchResult, DiffSearchState, TabKind, VulnChangeType,
 };
-use super::events::{handle_key_event, handle_mouse_event, Event, EventHandler};
-use super::theme::{colors, render_footer_hints, set_theme, FooterHints, Theme};
+use super::events::{Event, EventHandler, handle_key_event, handle_mouse_event};
+use super::theme::{FooterHints, Theme, colors, render_footer_hints, set_theme};
 use super::views;
 use super::widgets::{
-    check_terminal_size, render_mode_indicator, render_size_warning, MIN_HEIGHT, MIN_WIDTH,
+    MIN_HEIGHT, MIN_WIDTH, check_terminal_size, render_mode_indicator, render_size_warning,
 };
 use crate::config::TuiPreferences;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{
     prelude::*,
@@ -176,12 +176,14 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
     let (mode_name, subtitle) = match app.mode {
         AppMode::Diff => {
             let old_name = app
-                .data.old_sbom
+                .data
+                .old_sbom
                 .as_ref()
                 .and_then(|s| s.document.name.clone())
                 .unwrap_or_else(|| "SBOM A".to_string());
             let new_name = app
-                .data.new_sbom
+                .data
+                .new_sbom
                 .as_ref()
                 .and_then(|s| s.document.name.clone())
                 .unwrap_or_else(|| "SBOM B".to_string());
@@ -189,7 +191,8 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
         }
         AppMode::View => {
             let name = app
-                .data.sbom
+                .data
+                .sbom
                 .as_ref()
                 .and_then(|s| s.document.name.clone())
                 .unwrap_or_else(|| "SBOM".to_string());
@@ -231,7 +234,8 @@ fn render_tabs(frame: &mut Frame, area: Rect, app: &App) {
 
     // Add graph changes tab if graph diff data is available
     let has_graph_changes = app
-        .data.diff_result
+        .data
+        .diff_result
         .as_ref()
         .is_some_and(|r| !r.graph_changes.is_empty());
     if has_graph_changes {
@@ -307,8 +311,7 @@ fn render_status_bar(frame: &mut Frame, area: Rect, app: &App) {
         AppMode::Diff => {
             let result = app.data.diff_result.as_ref();
             let comp = result.map_or(0, |r| r.summary.total_changes);
-            let vuln = result
-                .map_or(0, |r| r.summary.vulnerabilities_introduced);
+            let vuln = result.map_or(0, |r| r.summary.vulnerabilities_introduced);
             let score = result.map_or(0.0, |r| r.semantic_score);
             (comp, vuln, Some(score))
         }
@@ -323,18 +326,16 @@ fn render_status_bar(frame: &mut Frame, area: Rect, app: &App) {
     };
 
     let critical_count = match app.mode {
-        AppMode::Diff => app
-            .data.diff_result
-            .as_ref()
-            .map_or(0, |r| {
-                r.vulnerabilities
-                    .introduced
-                    .iter()
-                    .filter(|v| v.severity == "Critical")
-                    .count()
-            }),
+        AppMode::Diff => app.data.diff_result.as_ref().map_or(0, |r| {
+            r.vulnerabilities
+                .introduced
+                .iter()
+                .filter(|v| v.severity == "Critical")
+                .count()
+        }),
         AppMode::View => app
-            .data.sbom
+            .data
+            .sbom
             .as_ref()
             .map_or(0, |s| s.vulnerability_counts().critical),
         AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => 0,
@@ -475,10 +476,7 @@ fn render_help_overlay(frame: &mut Frame, area: Rect) {
         ]),
         Line::from(vec![
             Span::styled("  PgUp/PgDown    ", Style::default().fg(colors().accent)),
-            Span::styled(
-                "Page up/down (page)",
-                Style::default().fg(colors().text),
-            ),
+            Span::styled("Page up/down (page)", Style::default().fg(colors().text)),
         ]),
         Line::from(vec![
             Span::styled("  Home/End       ", Style::default().fg(colors().accent)),
@@ -683,10 +681,12 @@ fn render_search_overlay(frame: &mut Frame, area: Rect, search_state: &DiffSearc
                         ),
                         version.as_ref().map_or_else(
                             || Span::raw(""),
-                            |v| Span::styled(
-                                format!(" @ {v}"),
-                                Style::default().fg(colors().text_muted),
-                            ),
+                            |v| {
+                                Span::styled(
+                                    format!(" @ {v}"),
+                                    Style::default().fg(colors().text_muted),
+                                )
+                            },
                         ),
                     ])
                 }

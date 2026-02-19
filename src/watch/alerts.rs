@@ -55,7 +55,11 @@ impl AlertSink for StdoutAlertSink {
             parts.push(format!("~{} modified", snapshot.components_modified));
         }
         if !snapshot.new_vulns.is_empty() {
-            parts.push(format!("+{} vulns ({})", snapshot.new_vulns.len(), snapshot.new_vulns.join(", ")));
+            parts.push(format!(
+                "+{} vulns ({})",
+                snapshot.new_vulns.len(),
+                snapshot.new_vulns.join(", ")
+            ));
         }
         if !snapshot.resolved_vulns.is_empty() {
             parts.push(format!("-{} vulns resolved", snapshot.resolved_vulns.len()));

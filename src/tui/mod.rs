@@ -25,20 +25,20 @@ pub(crate) mod export;
 pub(crate) mod license_conflicts;
 pub(crate) mod license_utils;
 pub(crate) mod security;
+pub(crate) mod shared;
 pub mod state;
 pub mod theme;
 pub mod traits;
 mod ui;
 pub mod view;
-pub mod viewmodel;
-pub(crate) mod shared;
 pub(crate) mod view_states;
+pub mod viewmodel;
 pub(crate) mod views;
 pub(crate) mod widgets;
 
 // Theme exports
 pub use theme::{
-    colors, current_theme_name, set_theme, toggle_theme, ColorScheme, FooterHints, Styles, Theme,
+    ColorScheme, FooterHints, Styles, Theme, colors, current_theme_name, set_theme, toggle_theme,
 };
 
 // Trait exports for view state machines
@@ -62,4 +62,4 @@ pub use events::Event;
 pub use ui::run_tui;
 
 // New View TUI exports
-pub use view::{run_view_tui, ViewApp, ViewTab};
+pub use view::{ViewApp, ViewTab, run_view_tui};

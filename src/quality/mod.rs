@@ -42,5 +42,5 @@ pub use metrics::{
 };
 pub use scorer::{
     QualityGrade, QualityReport, QualityScorer, Recommendation, RecommendationCategory,
-    ScoringProfile, SCORING_ENGINE_VERSION,
+    SCORING_ENGINE_VERSION, ScoringProfile,
 };

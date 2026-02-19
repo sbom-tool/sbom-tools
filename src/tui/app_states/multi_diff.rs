@@ -312,7 +312,6 @@ impl MultiDiffState {
             self.selected_variable_component -= 1;
         }
     }
-
 }
 
 impl Default for MultiDiffState {
@@ -320,4 +319,3 @@ impl Default for MultiDiffState {
         Self::new()
     }
 }
-

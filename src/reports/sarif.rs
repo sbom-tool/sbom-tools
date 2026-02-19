@@ -14,7 +14,7 @@ pub struct SarifReporter {
 
 impl SarifReporter {
     /// Create a new SARIF reporter
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self { include_info: true }
     }
@@ -140,7 +140,12 @@ impl ReportGenerator for SarifReporter {
                         message: SarifMessage {
                             text: format!(
                                 "Vulnerability resolved: {} ({}){}{}{} was in {}",
-                                vuln.id, vuln.severity, depth_label, sla_label, vex_label, vuln.component_name
+                                vuln.id,
+                                vuln.severity,
+                                depth_label,
+                                sla_label,
+                                vex_label,
+                                vuln.component_name
                             ),
                         },
                         locations: vec![],
@@ -215,12 +220,14 @@ impl ReportGenerator for SarifReporter {
         }
 
         // Add CRA compliance results for old and new SBOMs (use pre-computed if available)
-        let cra_old = config.old_cra_compliance.clone().unwrap_or_else(|| {
-            ComplianceChecker::new(ComplianceLevel::CraPhase2).check(old_sbom)
-        });
-        let cra_new = config.new_cra_compliance.clone().unwrap_or_else(|| {
-            ComplianceChecker::new(ComplianceLevel::CraPhase2).check(new_sbom)
-        });
+        let cra_old = config
+            .old_cra_compliance
+            .clone()
+            .unwrap_or_else(|| ComplianceChecker::new(ComplianceLevel::CraPhase2).check(old_sbom));
+        let cra_new = config
+            .new_cra_compliance
+            .clone()
+            .unwrap_or_else(|| ComplianceChecker::new(ComplianceLevel::CraPhase2).check(new_sbom));
         results.extend(compliance_results_to_sarif(&cra_old, Some("Old SBOM")));
         results.extend(compliance_results_to_sarif(&cra_new, Some("New SBOM")));
 
@@ -255,8 +262,12 @@ impl ReportGenerator for SarifReporter {
         for (comp, vuln) in sbom.all_vulnerabilities() {
             let severity_str = vuln
                 .severity
-                .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
-            let vex_state = vuln.vex_status.as_ref().map(|v| &v.status)
+                .as_ref()
+                .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
+            let vex_state = vuln
+                .vex_status
+                .as_ref()
+                .map(|v| &v.status)
                 .or_else(|| comp.vex_status.as_ref().map(|v| &v.status));
             let vex_label = format_vex_label(vex_state);
             results.push(SarifResult {
@@ -277,9 +288,10 @@ impl ReportGenerator for SarifReporter {
         }
 
         // Add CRA compliance results (use pre-computed if available)
-        let cra_result = config.view_cra_compliance.clone().unwrap_or_else(|| {
-            ComplianceChecker::new(ComplianceLevel::CraPhase2).check(sbom)
-        });
+        let cra_result = config
+            .view_cra_compliance
+            .clone()
+            .unwrap_or_else(|| ComplianceChecker::new(ComplianceLevel::CraPhase2).check(sbom));
         results.extend(compliance_results_to_sarif(&cra_result, None));
 
         let sarif = SarifReport {
@@ -325,12 +337,13 @@ pub fn generate_compliance_sarif(result: &ComplianceResult) -> Result<String, Re
         }],
     };
 
-    serde_json::to_string_pretty(&sarif)
-        .map_err(|e| ReportError::SerializationError(e.to_string()))
+    serde_json::to_string_pretty(&sarif).map_err(|e| ReportError::SerializationError(e.to_string()))
 }
 
 /// Generate SARIF output for multiple compliance standards merged into one report.
-pub fn generate_multi_compliance_sarif(results: &[ComplianceResult]) -> Result<String, ReportError> {
+pub fn generate_multi_compliance_sarif(
+    results: &[ComplianceResult],
+) -> Result<String, ReportError> {
     // Merge rules from all standards
     let mut all_rules = Vec::new();
     let mut all_results = Vec::new();
@@ -357,8 +370,7 @@ pub fn generate_multi_compliance_sarif(results: &[ComplianceResult]) -> Result<S
         }],
     };
 
-    serde_json::to_string_pretty(&sarif)
-        .map_err(|e| ReportError::SerializationError(e.to_string()))
+    serde_json::to_string_pretty(&sarif).map_err(|e| ReportError::SerializationError(e.to_string()))
 }
 
 fn severity_to_level(severity: &str) -> SarifLevel {
@@ -386,7 +398,9 @@ fn format_vex_label(vex_state: Option<&crate::model::VexState>) -> String {
         Some(crate::model::VexState::NotAffected) => " [VEX: Not Affected]".to_string(),
         Some(crate::model::VexState::Fixed) => " [VEX: Fixed]".to_string(),
         Some(crate::model::VexState::Affected) => " [VEX: Affected]".to_string(),
-        Some(crate::model::VexState::UnderInvestigation) => " [VEX: Under Investigation]".to_string(),
+        Some(crate::model::VexState::UnderInvestigation) => {
+            " [VEX: Under Investigation]".to_string()
+        }
         None => String::new(),
     }
 }
@@ -682,7 +696,9 @@ fn get_sarif_ntia_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "NTIA Minimum Elements: Author/creator information".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
         },
         SarifRule {
             id: "SBOM-NTIA-NAME".to_string(),
@@ -690,7 +706,9 @@ fn get_sarif_ntia_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "NTIA Minimum Elements: Component name".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
         },
         SarifRule {
             id: "SBOM-NTIA-VERSION".to_string(),
@@ -698,7 +716,9 @@ fn get_sarif_ntia_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "NTIA Minimum Elements: Component version string".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
         SarifRule {
             id: "SBOM-NTIA-SUPPLIER".to_string(),
@@ -706,7 +726,9 @@ fn get_sarif_ntia_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "NTIA Minimum Elements: Supplier name".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
         SarifRule {
             id: "SBOM-NTIA-IDENTIFIER".to_string(),
@@ -714,7 +736,9 @@ fn get_sarif_ntia_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "NTIA Minimum Elements: Unique identifier (PURL/CPE/SWID)".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
         SarifRule {
             id: "SBOM-NTIA-DEPENDENCY".to_string(),
@@ -722,7 +746,9 @@ fn get_sarif_ntia_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "NTIA Minimum Elements: Dependency relationship".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
         },
         SarifRule {
             id: "SBOM-NTIA-GENERAL".to_string(),
@@ -730,7 +756,9 @@ fn get_sarif_ntia_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "NTIA Minimum Elements: General requirement".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
     ]
 }
@@ -743,7 +771,9 @@ fn get_sarif_fda_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "FDA Medical Device: SBOM creator/manufacturer information".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
         SarifRule {
             id: "SBOM-FDA-NAMESPACE".to_string(),
@@ -751,7 +781,9 @@ fn get_sarif_fda_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "FDA Medical Device: SBOM serial number or document namespace".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
         SarifRule {
             id: "SBOM-FDA-NAME".to_string(),
@@ -759,7 +791,9 @@ fn get_sarif_fda_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "FDA Medical Device: SBOM document name/title".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
         SarifRule {
             id: "SBOM-FDA-SUPPLIER".to_string(),
@@ -767,7 +801,9 @@ fn get_sarif_fda_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "FDA Medical Device: Component supplier/manufacturer information".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
         },
         SarifRule {
             id: "SBOM-FDA-HASH".to_string(),
@@ -775,7 +811,9 @@ fn get_sarif_fda_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "FDA Medical Device: Component cryptographic hash".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
         },
         SarifRule {
             id: "SBOM-FDA-IDENTIFIER".to_string(),
@@ -783,7 +821,9 @@ fn get_sarif_fda_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "FDA Medical Device: Component unique identifier (PURL/CPE/SWID)".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
         },
         SarifRule {
             id: "SBOM-FDA-VERSION".to_string(),
@@ -791,7 +831,9 @@ fn get_sarif_fda_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "FDA Medical Device: Component version information".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
         },
         SarifRule {
             id: "SBOM-FDA-DEPENDENCY".to_string(),
@@ -799,7 +841,9 @@ fn get_sarif_fda_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "FDA Medical Device: Dependency relationships".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
         },
         SarifRule {
             id: "SBOM-FDA-SUPPORT".to_string(),
@@ -807,7 +851,9 @@ fn get_sarif_fda_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "FDA Medical Device: Component support/contact information".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Note },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Note,
+            },
         },
         SarifRule {
             id: "SBOM-FDA-SECURITY".to_string(),
@@ -815,7 +861,9 @@ fn get_sarif_fda_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "FDA Medical Device: Security vulnerability information".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
         SarifRule {
             id: "SBOM-FDA-GENERAL".to_string(),
@@ -823,7 +871,9 @@ fn get_sarif_fda_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "FDA Medical Device: General SBOM requirement".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
     ]
 }
@@ -836,15 +886,20 @@ fn get_sarif_ssdf_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "NIST SSDF PS.1: Provenance and creator identification".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
         },
         SarifRule {
             id: "SBOM-SSDF-PS2".to_string(),
             name: "SsdfBuildIntegrity".to_string(),
             short_description: SarifMessage {
-                text: "NIST SSDF PS.2: Build integrity — component cryptographic hashes".to_string(),
+                text: "NIST SSDF PS.2: Build integrity — component cryptographic hashes"
+                    .to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
         SarifRule {
             id: "SBOM-SSDF-PS3".to_string(),
@@ -852,7 +907,9 @@ fn get_sarif_ssdf_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "NIST SSDF PS.3: Supplier identification for components".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
         SarifRule {
             id: "SBOM-SSDF-PO1".to_string(),
@@ -860,7 +917,9 @@ fn get_sarif_ssdf_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "NIST SSDF PO.1: Source code provenance — VCS references".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
         SarifRule {
             id: "SBOM-SSDF-PO3".to_string(),
@@ -868,7 +927,9 @@ fn get_sarif_ssdf_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "NIST SSDF PO.3: Build provenance — build system metadata".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Note },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Note,
+            },
         },
         SarifRule {
             id: "SBOM-SSDF-PW4".to_string(),
@@ -876,15 +937,20 @@ fn get_sarif_ssdf_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "NIST SSDF PW.4: Dependency management — relationships".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
         },
         SarifRule {
             id: "SBOM-SSDF-PW6".to_string(),
             name: "SsdfVulnerabilityInfo".to_string(),
             short_description: SarifMessage {
-                text: "NIST SSDF PW.6: Vulnerability information and security references".to_string(),
+                text: "NIST SSDF PW.6: Vulnerability information and security references"
+                    .to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Note },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Note,
+            },
         },
         SarifRule {
             id: "SBOM-SSDF-RV1".to_string(),
@@ -892,7 +958,9 @@ fn get_sarif_ssdf_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "NIST SSDF RV.1: Component identification — unique identifiers".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
         SarifRule {
             id: "SBOM-SSDF-GENERAL".to_string(),
@@ -900,7 +968,9 @@ fn get_sarif_ssdf_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "NIST SSDF: General secure development requirement".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
     ]
 }
@@ -913,7 +983,9 @@ fn get_sarif_eo14028_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "EO 14028 Sec 4(e): Machine-readable SBOM format requirement".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
         },
         SarifRule {
             id: "SBOM-EO14028-AUTOGEN".to_string(),
@@ -921,7 +993,9 @@ fn get_sarif_eo14028_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "EO 14028 Sec 4(e): Automated SBOM generation".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
         SarifRule {
             id: "SBOM-EO14028-CREATOR".to_string(),
@@ -929,7 +1003,9 @@ fn get_sarif_eo14028_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "EO 14028 Sec 4(e): SBOM creator identification".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
         },
         SarifRule {
             id: "SBOM-EO14028-IDENTIFIER".to_string(),
@@ -937,7 +1013,9 @@ fn get_sarif_eo14028_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "EO 14028 Sec 4(e): Component unique identification".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
         },
         SarifRule {
             id: "SBOM-EO14028-DEPENDENCY".to_string(),
@@ -945,7 +1023,9 @@ fn get_sarif_eo14028_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "EO 14028 Sec 4(e): Dependency relationship information".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
         },
         SarifRule {
             id: "SBOM-EO14028-VERSION".to_string(),
@@ -953,7 +1033,9 @@ fn get_sarif_eo14028_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "EO 14028 Sec 4(e): Component version information".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Error,
+            },
         },
         SarifRule {
             id: "SBOM-EO14028-INTEGRITY".to_string(),
@@ -961,7 +1043,9 @@ fn get_sarif_eo14028_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "EO 14028 Sec 4(e): Component integrity verification (hashes)".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
         SarifRule {
             id: "SBOM-EO14028-DISCLOSURE".to_string(),
@@ -969,7 +1053,9 @@ fn get_sarif_eo14028_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "EO 14028 Sec 4(g): Vulnerability disclosure process".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
         SarifRule {
             id: "SBOM-EO14028-SUPPLIER".to_string(),
@@ -977,7 +1063,9 @@ fn get_sarif_eo14028_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "EO 14028 Sec 4(e): Supplier identification".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
         SarifRule {
             id: "SBOM-EO14028-GENERAL".to_string(),
@@ -985,7 +1073,9 @@ fn get_sarif_eo14028_rules() -> Vec<SarifRule> {
             short_description: SarifMessage {
                 text: "EO 14028: General SBOM requirement".to_string(),
             },
-            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Warning,
+            },
         },
     ]
 }

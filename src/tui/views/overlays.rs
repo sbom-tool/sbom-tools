@@ -8,11 +8,11 @@ use crate::tui::app::{
 };
 use crate::tui::theme::colors;
 use ratatui::{
+    Frame,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph, Wrap},
-    Frame,
 };
 
 /// Render the view switcher overlay
@@ -238,10 +238,7 @@ fn render_deep_dive_tabs(f: &mut Frame, area: Rect, state: &ComponentDeepDiveSta
                         .add_modifier(Modifier::BOLD),
                 )
             } else {
-                Span::styled(
-                    format!(" {label} "),
-                    Style::default().fg(scheme.text_muted),
-                )
+                Span::styled(format!(" {label} "), Style::default().fg(scheme.text_muted))
             }
         })
         .collect();

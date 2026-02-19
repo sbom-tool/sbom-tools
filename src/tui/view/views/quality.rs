@@ -1,9 +1,9 @@
 //! Quality tab for `ViewApp` - delegates to shared rendering functions.
 
 use crate::tui::shared::quality as shared;
-use crate::tui::view::app::ViewApp;
 use crate::tui::view::app::QualityViewMode;
-use ratatui::{prelude::*, Frame};
+use crate::tui::view::app::ViewApp;
+use ratatui::{Frame, prelude::*};
 
 pub fn render_quality(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     let report = &app.quality_report;

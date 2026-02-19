@@ -161,7 +161,10 @@ pub enum ComponentSort {
     Ecosystem,
 }
 
-pub fn sort_component_changes(items: &mut Vec<&crate::diff::ComponentChange>, sort_by: ComponentSort) {
+pub fn sort_component_changes(
+    items: &mut Vec<&crate::diff::ComponentChange>,
+    sort_by: ComponentSort,
+) {
     match sort_by {
         ComponentSort::Name => {
             items.sort_by_key(|comp| {
@@ -307,7 +310,11 @@ mod tests {
         state.multi_selected.insert(3);
 
         state.toggle_view_filter();
-        assert_eq!(state.selected(), 0, "Selection should reset on filter change");
+        assert_eq!(
+            state.selected(),
+            0,
+            "Selection should reset on filter change"
+        );
         assert!(
             state.multi_selected.is_empty(),
             "Multi-selection should clear on filter change"
@@ -324,4 +331,3 @@ mod tests {
         assert_eq!(state.filter, ComponentFilter::EolOnly);
     }
 }
-

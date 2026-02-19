@@ -7,41 +7,73 @@ use crate::model::{NormalizedSbom, NormalizedSbomIndex};
 use crate::quality::{ComplianceResult, QualityReport};
 use crate::tui::views::ThresholdTuningState;
 
-
 // Re-export state types from app_states module for backwards compatibility
 #[allow(unused_imports)]
 pub use super::app_states::{
+    // Side-by-side states
+    AlignmentMode,
+    // Navigation states
+    Breadcrumb,
+    // Search states
+    ChangeType,
+    ChangeTypeFilter,
+    // Component deep dive states
+    ComponentDeepDiveData,
+    ComponentDeepDiveState,
     // Component states
-    ComponentFilter, ComponentSort, ComponentsState, sort_component_changes, sort_components,
+    ComponentFilter,
+    ComponentSimilarityInfo,
+    ComponentSort,
+    ComponentTargetPresence,
+    ComponentVersionEntry,
+    ComponentVulnInfo,
+    ComponentsState,
     // Dependencies state
     DependenciesState,
-    // License states
-    LicenseGroupBy, LicenseRiskFilter, LicenseSort, LicensesState,
+    DiffSearchResult,
+    DiffSearchState,
     // Vulnerability states
-    DiffVulnItem, DiffVulnStatus, VulnFilter, VulnSort, VulnerabilitiesState,
-    // Quality states
-    QualityState, QualityViewMode,
+    DiffVulnItem,
+    DiffVulnStatus,
     // Graph changes state
     GraphChangesState,
-    // Side-by-side states
-    AlignmentMode, ChangeTypeFilter, ScrollSyncMode, SideBySideState,
-    // Multi-view states
-    MultiDiffState, MultiViewFilterPreset, MultiViewSearchState, MultiViewSortBy, SortDirection,
-    // Timeline states
-    TimelineComponentFilter, TimelineSortBy, TimelineState,
+    // License states
+    LicenseGroupBy,
+    LicenseRiskFilter,
+    LicenseSort,
+    LicensesState,
     // Matrix states
-    MatrixSortBy, MatrixState, SimilarityThreshold,
-    // Search states
-    ChangeType, DiffSearchResult, DiffSearchState, VulnChangeType,
-    // Navigation states
-    Breadcrumb, NavigationContext,
+    MatrixSortBy,
+    MatrixState,
+    // Multi-view states
+    MultiDiffState,
+    MultiViewFilterPreset,
+    MultiViewSearchState,
+    MultiViewSortBy,
     // View switcher states
-    MultiViewType, ViewSwitcherState,
-    // Component deep dive states
-    ComponentDeepDiveData, ComponentDeepDiveState, ComponentSimilarityInfo,
-    ComponentTargetPresence, ComponentVersionEntry, ComponentVulnInfo,
+    MultiViewType,
+    NavigationContext,
+    // Quality states
+    QualityState,
+    QualityViewMode,
+    ScrollSyncMode,
     // Shortcuts overlay states
-    ShortcutsContext, ShortcutsOverlayState,
+    ShortcutsContext,
+    ShortcutsOverlayState,
+    SideBySideState,
+    SimilarityThreshold,
+    SortDirection,
+    // Timeline states
+    TimelineComponentFilter,
+    TimelineSortBy,
+    TimelineState,
+    ViewSwitcherState,
+    VulnChangeType,
+    VulnFilter,
+    VulnSort,
+    VulnerabilitiesState,
+    sort_component_changes,
+    sort_components,
 };
 
 /// Per-tab UI state container.
@@ -202,23 +234,25 @@ impl App {
     /// Lazily compute compliance results for all standards when first needed.
     pub fn ensure_compliance_results(&mut self) {
         if self.data.old_compliance_results.is_none()
-            && let Some(old_sbom) = &self.data.old_sbom {
-                self.data.old_compliance_results = Some(
-                    crate::quality::ComplianceLevel::all()
-                        .iter()
-                        .map(|level| crate::quality::ComplianceChecker::new(*level).check(old_sbom))
-                        .collect(),
-                );
-            }
+            && let Some(old_sbom) = &self.data.old_sbom
+        {
+            self.data.old_compliance_results = Some(
+                crate::quality::ComplianceLevel::all()
+                    .iter()
+                    .map(|level| crate::quality::ComplianceChecker::new(*level).check(old_sbom))
+                    .collect(),
+            );
+        }
         if self.data.new_compliance_results.is_none()
-            && let Some(new_sbom) = &self.data.new_sbom {
-                self.data.new_compliance_results = Some(
-                    crate::quality::ComplianceLevel::all()
-                        .iter()
-                        .map(|level| crate::quality::ComplianceChecker::new(*level).check(new_sbom))
-                        .collect(),
-                );
-            }
+            && let Some(new_sbom) = &self.data.new_sbom
+        {
+            self.data.new_compliance_results = Some(
+                crate::quality::ComplianceLevel::all()
+                    .iter()
+                    .map(|level| crate::quality::ComplianceChecker::new(*level).check(new_sbom))
+                    .collect(),
+            );
+        }
     }
 
     /// Toggle help overlay
@@ -242,7 +276,7 @@ impl App {
     }
 
     /// Check if any overlay is open
-    #[must_use] 
+    #[must_use]
     pub const fn has_overlay(&self) -> bool {
         self.overlays.has_active()
     }
@@ -264,20 +298,27 @@ impl App {
         // Get total components count
         let total = match self.mode {
             AppMode::Diff => {
-                self.data.old_sbom
+                self.data
+                    .old_sbom
                     .as_ref()
                     .map_or(0, crate::model::NormalizedSbom::component_count)
-                    + self.data
+                    + self
+                        .data
                         .new_sbom
                         .as_ref()
                         .map_or(0, crate::model::NormalizedSbom::component_count)
             }
-            AppMode::View => self.data.sbom.as_ref().map_or(0, crate::model::NormalizedSbom::component_count),
+            AppMode::View => self
+                .data
+                .sbom
+                .as_ref()
+                .map_or(0, crate::model::NormalizedSbom::component_count),
             _ => 0,
         };
 
         // Initialize threshold tuning state
-        self.overlays.threshold_tuning = ThresholdTuningState::new(self.data.matching_threshold, total);
+        self.overlays.threshold_tuning =
+            ThresholdTuningState::new(self.data.matching_threshold, total);
         self.update_threshold_preview();
     }
 
@@ -306,7 +347,9 @@ impl App {
             0
         };
 
-        self.overlays.threshold_tuning.set_estimated_matches(estimated);
+        self.overlays
+            .threshold_tuning
+            .set_estimated_matches(estimated);
     }
 
     /// Apply the tuned threshold and potentially re-diff
@@ -349,10 +392,20 @@ impl App {
 
         let result = match self.mode {
             AppMode::Diff => {
-                if let (Some(diff_result), Some(old_sbom), Some(new_sbom)) =
-                    (&self.data.diff_result, &self.data.old_sbom, &self.data.new_sbom)
-                {
-                    export_diff(format, diff_result, old_sbom, new_sbom, None, &config, self.export_template.as_deref())
+                if let (Some(diff_result), Some(old_sbom), Some(new_sbom)) = (
+                    &self.data.diff_result,
+                    &self.data.old_sbom,
+                    &self.data.new_sbom,
+                ) {
+                    export_diff(
+                        format,
+                        diff_result,
+                        old_sbom,
+                        new_sbom,
+                        None,
+                        &config,
+                        self.export_template.as_deref(),
+                    )
                 } else {
                     self.set_status_message("No diff data to export");
                     return;
@@ -412,7 +465,13 @@ impl App {
             return;
         };
 
-        let result = export_compliance(format, results, selected, None, self.export_template.as_deref());
+        let result = export_compliance(
+            format,
+            results,
+            selected,
+            None,
+            self.export_template.as_deref(),
+        );
         if result.success {
             self.last_export_path = Some(result.path.display().to_string());
             self.set_status_message(result.message);
@@ -447,7 +506,7 @@ impl App {
 
     /// Run compliance check against the current policy
     pub fn run_compliance_check(&mut self) {
-        use crate::tui::security::{check_compliance, SecurityPolicy};
+        use crate::tui::security::{SecurityPolicy, check_compliance};
 
         let preset = self.compliance_state.policy_preset;
 
@@ -483,10 +542,7 @@ impl App {
         self.compliance_state.selected_violation = 0;
 
         if passes {
-            self.set_status_message(format!(
-                "Policy: {} - PASS (score: {})",
-                policy.name, score
-            ));
+            self.set_status_message(format!("Policy: {} - PASS (score: {})", policy.name, score));
         } else {
             self.set_status_message(format!(
                 "Policy: {} - FAIL ({} violations, score: {})",
@@ -499,7 +555,9 @@ impl App {
     /// the result into a PolicyViolation-based `ComplianceResult` for unified display.
     fn run_standards_compliance_check(&mut self, preset: super::app_states::PolicyPreset) {
         use crate::quality::{ComplianceChecker, ViolationSeverity};
-        use crate::tui::security::{ComplianceResult as PolicyResult, PolicySeverity, PolicyViolation};
+        use crate::tui::security::{
+            ComplianceResult as PolicyResult, PolicySeverity, PolicyViolation,
+        };
 
         let Some(level) = preset.compliance_level() else {
             return;
@@ -539,11 +597,14 @@ impl App {
             .collect();
 
         // Calculate score: errors weigh 10pts, warnings 5pts, info 1pt
-        let penalty: u32 = violations.iter().map(|v| match v.severity {
-            PolicySeverity::High | PolicySeverity::Critical => 10,
-            PolicySeverity::Medium => 5,
-            PolicySeverity::Low => 1,
-        }).sum();
+        let penalty: u32 = violations
+            .iter()
+            .map(|v| match v.severity {
+                PolicySeverity::High | PolicySeverity::Critical => 10,
+                PolicySeverity::Medium => 5,
+                PolicySeverity::Low => 1,
+            })
+            .sum();
         let score = 100u8.saturating_sub(penalty.min(100) as u8);
 
         let passes = std_result.is_compliant;
@@ -563,9 +624,7 @@ impl App {
         self.compliance_state.selected_violation = 0;
 
         if passes {
-            self.set_status_message(format!(
-                "{policy_name} - COMPLIANT (score: {score})"
-            ));
+            self.set_status_message(format!("{policy_name} - COMPLIANT (score: {score})"));
         } else {
             self.set_status_message(format!(
                 "{policy_name} - NON-COMPLIANT ({violation_count} violations, score: {score})"
@@ -574,9 +633,7 @@ impl App {
     }
 
     /// Collect component data for compliance checking
-    fn collect_compliance_data(
-        &self,
-    ) -> Vec<crate::tui::security::ComplianceComponentData> {
+    fn collect_compliance_data(&self) -> Vec<crate::tui::security::ComplianceComponentData> {
         let mut components = Vec::new();
 
         match self.mode {
@@ -593,18 +650,14 @@ impl App {
                             .vulnerabilities
                             .iter()
                             .map(|v| {
-                                let severity = v
-                                    .severity
-                                    .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
+                                let severity = v.severity.as_ref().map_or_else(
+                                    || "Unknown".to_string(),
+                                    std::string::ToString::to_string,
+                                );
                                 (v.id.clone(), severity)
                             })
                             .collect();
-                        components.push((
-                            comp.name.clone(),
-                            comp.version.clone(),
-                            licenses,
-                            vulns,
-                        ));
+                        components.push((comp.name.clone(), comp.version.clone(), licenses, vulns));
                     }
                 }
             }
@@ -621,18 +674,14 @@ impl App {
                             .vulnerabilities
                             .iter()
                             .map(|v| {
-                                let severity = v
-                                    .severity
-                                    .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
+                                let severity = v.severity.as_ref().map_or_else(
+                                    || "Unknown".to_string(),
+                                    std::string::ToString::to_string,
+                                );
                                 (v.id.clone(), severity)
                             })
                             .collect();
-                        components.push((
-                            comp.name.clone(),
-                            comp.version.clone(),
-                            licenses,
-                            vulns,
-                        ));
+                        components.push((comp.name.clone(), comp.version.clone(), licenses, vulns));
                     }
                 }
             }
@@ -661,7 +710,7 @@ impl App {
     // ========================================================================
 
     /// Get the current view mode for `ViewContext`
-    #[must_use] 
+    #[must_use]
     pub const fn view_mode(&self) -> super::traits::ViewMode {
         super::traits::ViewMode::from_app_mode(self.mode)
     }
@@ -712,13 +761,13 @@ impl App {
     }
 
     /// Get the current tab as a `TabTarget`
-    #[must_use] 
+    #[must_use]
     pub const fn current_tab_target(&self) -> super::traits::TabTarget {
         super::traits::TabTarget::from_tab_kind(self.active_tab)
     }
 
     /// Get keyboard shortcuts for the current view
-    #[must_use] 
+    #[must_use]
     pub fn current_shortcuts(&self) -> Vec<super::traits::Shortcut> {
         use super::traits::Shortcut;
 

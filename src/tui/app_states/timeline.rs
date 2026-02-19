@@ -1,7 +1,7 @@
 //! Timeline state types.
 
-use crate::tui::views::TimelinePanel;
 use super::multi_diff::{MultiViewSearchState, SortDirection};
+use crate::tui::views::TimelinePanel;
 
 /// State for timeline view
 pub struct TimelineState {
@@ -221,7 +221,6 @@ impl TimelineState {
             self.chart_scroll += 1;
         }
     }
-
 }
 
 impl Default for TimelineState {
@@ -292,4 +291,3 @@ impl TimelineComponentFilter {
         }
     }
 }
-

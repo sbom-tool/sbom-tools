@@ -5,7 +5,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Output format for reports
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum, Serialize, Deserialize, JsonSchema)]
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum, Serialize, Deserialize, JsonSchema,
+)]
 #[non_exhaustive]
 pub enum ReportFormat {
     /// Auto-detect: TUI if TTY, summary otherwise
@@ -50,7 +52,9 @@ impl std::fmt::Display for ReportFormat {
 }
 
 /// Types of reports that can be generated
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum, Serialize, Deserialize, JsonSchema)]
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum, Serialize, Deserialize, JsonSchema,
+)]
 pub enum ReportType {
     /// All report types
     #[default]
@@ -78,7 +82,7 @@ pub enum MinSeverity {
 
 impl MinSeverity {
     /// Parse severity from string. Returns None for unrecognized values.
-    #[must_use] 
+    #[must_use]
     pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "low" => Some(Self::Low),
@@ -90,7 +94,7 @@ impl MinSeverity {
     }
 
     /// Check if a severity string meets this minimum threshold
-    #[must_use] 
+    #[must_use]
     pub fn meets_threshold(&self, severity: &str) -> bool {
         let sev = match severity.to_lowercase().as_str() {
             "critical" => Self::Critical,
@@ -153,13 +157,13 @@ impl Default for ReportConfig {
 
 impl ReportConfig {
     /// Create a config for all report types
-    #[must_use] 
+    #[must_use]
     pub fn all() -> Self {
         Self::default()
     }
 
     /// Create a config for specific report types
-    #[must_use] 
+    #[must_use]
     pub fn with_types(types: Vec<ReportType>) -> Self {
         Self {
             report_types: types,
@@ -168,7 +172,7 @@ impl ReportConfig {
     }
 
     /// Check if a report type should be included
-    #[must_use] 
+    #[must_use]
     pub fn includes(&self, report_type: ReportType) -> bool {
         self.report_types.contains(&ReportType::All) || self.report_types.contains(&report_type)
     }
@@ -190,7 +194,7 @@ pub struct ReportMetadata {
 }
 
 impl ReportMetadata {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             tool_version: env!("CARGO_PKG_VERSION").to_string(),

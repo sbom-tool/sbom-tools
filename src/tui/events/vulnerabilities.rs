@@ -1,7 +1,7 @@
 //! Vulnerabilities tab event handlers.
 
-use crate::tui::app::AppMode;
 use crate::tui::App;
+use crate::tui::app::AppMode;
 use crossterm::event::{KeyCode, KeyEvent};
 
 pub(super) fn handle_vulnerabilities_keys(app: &mut App, key: KeyEvent) {
@@ -109,20 +109,18 @@ fn resolve_grouped_selection(app: &mut App, selected: usize) -> GroupedSelection
 
             // Sort groups by max severity
             groups.sort_by(|a, b| {
-                let max_a = a
-                    .1
-                    .iter()
-                    .filter_map(|&i| items.get(i))
-                    .map(|it| severity_rank(&it.vuln.severity))
-                    .min()
-                    .unwrap_or(99);
-                let max_b = b
-                    .1
-                    .iter()
-                    .filter_map(|&i| items.get(i))
-                    .map(|it| severity_rank(&it.vuln.severity))
-                    .min()
-                    .unwrap_or(99);
+                let max_a =
+                    a.1.iter()
+                        .filter_map(|&i| items.get(i))
+                        .map(|it| severity_rank(&it.vuln.severity))
+                        .min()
+                        .unwrap_or(99);
+                let max_b =
+                    b.1.iter()
+                        .filter_map(|&i| items.get(i))
+                        .map(|it| severity_rank(&it.vuln.severity))
+                        .min()
+                        .unwrap_or(99);
                 max_a.cmp(&max_b)
             });
 
@@ -137,12 +135,13 @@ fn resolve_grouped_selection(app: &mut App, selected: usize) -> GroupedSelection
                 if app.tabs.vulnerabilities.is_group_expanded(comp_name) {
                     for &idx in vuln_indices {
                         if pos == selected
-                            && let Some(item) = items.get(idx) {
-                                return GroupedSelection::Vuln(
-                                    item.vuln.id.clone(),
-                                    item.vuln.component_name.clone(),
-                                );
-                            }
+                            && let Some(item) = items.get(idx)
+                        {
+                            return GroupedSelection::Vuln(
+                                item.vuln.id.clone(),
+                                item.vuln.component_name.clone(),
+                            );
+                        }
                         pos += 1;
                     }
                 }
@@ -173,36 +172,34 @@ fn resolve_grouped_selection(app: &mut App, selected: usize) -> GroupedSelection
             }
 
             groups.sort_by(|a, b| {
-                let max_a = a
-                    .1
-                    .iter()
-                    .filter_map(|&i| vulns.get(i))
-                    .map(|it| {
-                        severity_rank(
-                            &it.1
-                                .severity
-                                .as_ref()
-                                .map(std::string::ToString::to_string)
-                                .unwrap_or_default(),
-                        )
-                    })
-                    .min()
-                    .unwrap_or(99);
-                let max_b = b
-                    .1
-                    .iter()
-                    .filter_map(|&i| vulns.get(i))
-                    .map(|it| {
-                        severity_rank(
-                            &it.1
-                                .severity
-                                .as_ref()
-                                .map(std::string::ToString::to_string)
-                                .unwrap_or_default(),
-                        )
-                    })
-                    .min()
-                    .unwrap_or(99);
+                let max_a =
+                    a.1.iter()
+                        .filter_map(|&i| vulns.get(i))
+                        .map(|it| {
+                            severity_rank(
+                                &it.1
+                                    .severity
+                                    .as_ref()
+                                    .map(std::string::ToString::to_string)
+                                    .unwrap_or_default(),
+                            )
+                        })
+                        .min()
+                        .unwrap_or(99);
+                let max_b =
+                    b.1.iter()
+                        .filter_map(|&i| vulns.get(i))
+                        .map(|it| {
+                            severity_rank(
+                                &it.1
+                                    .severity
+                                    .as_ref()
+                                    .map(std::string::ToString::to_string)
+                                    .unwrap_or_default(),
+                            )
+                        })
+                        .min()
+                        .unwrap_or(99);
                 max_a.cmp(&max_b)
             });
 
@@ -216,12 +213,10 @@ fn resolve_grouped_selection(app: &mut App, selected: usize) -> GroupedSelection
                 if app.tabs.vulnerabilities.is_group_expanded(comp_name) {
                     for &idx in vuln_indices {
                         if pos == selected
-                            && let Some((comp, vuln)) = vulns.get(idx) {
-                                return GroupedSelection::Vuln(
-                                    vuln.id.clone(),
-                                    comp.name.clone(),
-                                );
-                            }
+                            && let Some((comp, vuln)) = vulns.get(idx)
+                        {
+                            return GroupedSelection::Vuln(vuln.id.clone(), comp.name.clone());
+                        }
                         pos += 1;
                     }
                 }
@@ -248,18 +243,16 @@ fn collect_all_group_names(app: &mut App) -> Vec<String> {
             }
             names
         }
-        AppMode::View => {
-            app.data.sbom.as_ref().map_or_else(Vec::new, |sbom| {
-                let mut seen = std::collections::HashSet::new();
-                let mut names = Vec::new();
-                for (comp, _) in sbom.all_vulnerabilities() {
-                    if seen.insert(comp.name.clone()) {
-                        names.push(comp.name.clone());
-                    }
+        AppMode::View => app.data.sbom.as_ref().map_or_else(Vec::new, |sbom| {
+            let mut seen = std::collections::HashSet::new();
+            let mut names = Vec::new();
+            for (comp, _) in sbom.all_vulnerabilities() {
+                if seen.insert(comp.name.clone()) {
+                    names.push(comp.name.clone());
                 }
-                names
-            })
-        }
+            }
+            names
+        }),
         _ => Vec::new(),
     }
 }

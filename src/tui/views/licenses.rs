@@ -2,11 +2,11 @@
 
 use crate::tui::app::{App, AppMode, LicenseGroupBy, LicenseRiskFilter, LicenseSort};
 use crate::tui::license_conflicts::{ConflictDetector, ConflictSeverity};
-use crate::tui::state::ListNavigation;
 use crate::tui::license_utils::{
-    analyze_license_compatibility, LicenseCategory, LicenseInfo, LicenseStats, RiskLevel,
-    SpdxExpression,
+    LicenseCategory, LicenseInfo, LicenseStats, RiskLevel, SpdxExpression,
+    analyze_license_compatibility,
 };
+use crate::tui::state::ListNavigation;
 use crate::tui::theme::colors;
 use crate::tui::widgets;
 use ratatui::{
@@ -116,7 +116,10 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
             "Removed"
         };
         spans.push(Span::styled("  │  ", Style::default().fg(scheme.border)));
-        spans.push(Span::styled("Focus: ", Style::default().fg(scheme.text_muted)));
+        spans.push(Span::styled(
+            "Focus: ",
+            Style::default().fg(scheme.text_muted),
+        ));
         spans.push(Span::styled(
             format!(" {focus_label} "),
             Style::default()
@@ -133,18 +136,33 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
     // Keyboard hints
     spans.push(Span::styled("  │  ", Style::default().fg(scheme.border)));
     spans.push(Span::styled("[g]", Style::default().fg(scheme.accent)));
-    spans.push(Span::styled(" grp ", Style::default().fg(scheme.text_muted)));
+    spans.push(Span::styled(
+        " grp ",
+        Style::default().fg(scheme.text_muted),
+    ));
     spans.push(Span::styled("[s]", Style::default().fg(scheme.accent)));
-    spans.push(Span::styled(" sort ", Style::default().fg(scheme.text_muted)));
+    spans.push(Span::styled(
+        " sort ",
+        Style::default().fg(scheme.text_muted),
+    ));
     spans.push(Span::styled("[r]", Style::default().fg(scheme.accent)));
-    spans.push(Span::styled(" risk ", Style::default().fg(scheme.text_muted)));
+    spans.push(Span::styled(
+        " risk ",
+        Style::default().fg(scheme.text_muted),
+    ));
     spans.push(Span::styled("[c]", Style::default().fg(scheme.accent)));
-    spans.push(Span::styled(" compat", Style::default().fg(scheme.text_muted)));
+    spans.push(Span::styled(
+        " compat",
+        Style::default().fg(scheme.text_muted),
+    ));
 
     // Panel switch hint only in Diff mode
     if is_diff_mode {
         spans.push(Span::styled(" [Tab]", Style::default().fg(scheme.accent)));
-        spans.push(Span::styled(" panel", Style::default().fg(scheme.text_muted)));
+        spans.push(Span::styled(
+            " panel",
+            Style::default().fg(scheme.text_muted),
+        ));
     }
 
     let paragraph = Paragraph::new(Line::from(spans)).block(
@@ -299,7 +317,10 @@ fn render_compatibility_panel(frame: &mut Frame, area: Rect, app: &App) {
     };
 
     lines.push(Line::from(vec![
-        Span::styled("Compatibility Score: ", Style::default().fg(scheme.text_muted)),
+        Span::styled(
+            "Compatibility Score: ",
+            Style::default().fg(scheme.text_muted),
+        ),
         Span::styled(
             format!("{}%", report.overall_score),
             Style::default().fg(score_color).bold(),
@@ -366,7 +387,10 @@ fn render_compatibility_panel(frame: &mut Frame, area: Rect, app: &App) {
 
             lines.push(Line::from(vec![
                 Span::styled(format!("  {icon} "), Style::default().fg(color)),
-                Span::raw(widgets::truncate_str(&issue.message, area.width as usize - 6)),
+                Span::raw(widgets::truncate_str(
+                    &issue.message,
+                    area.width as usize - 6,
+                )),
             ]));
         }
 
@@ -419,12 +443,10 @@ fn render_compatibility_panel(frame: &mut Frame, area: Rect, app: &App) {
                     Style::default().fg(color).bold(),
                 ),
             ]));
-            lines.push(Line::from(vec![
-                Span::styled(
-                    format!("    {}: ", conflict.rule.conflict_type),
-                    Style::default().fg(scheme.text_muted),
-                ),
-            ]));
+            lines.push(Line::from(vec![Span::styled(
+                format!("    {}: ", conflict.rule.conflict_type),
+                Style::default().fg(scheme.text_muted),
+            )]));
             // Show truncated description
             let desc = widgets::truncate_str(&conflict.rule.description, area.width as usize - 6);
             lines.push(Line::from(vec![
@@ -740,9 +762,8 @@ fn render_license_details(
 
     lines.push(Line::from(""));
 
-    lines.extend(crate::tui::shared::licenses::render_license_characteristics_lines(
-        &entry.license,
-    ));
+    lines
+        .extend(crate::tui::shared::licenses::render_license_characteristics_lines(&entry.license));
 
     lines.push(Line::from(""));
 
@@ -755,14 +776,13 @@ fn render_license_details(
     let max_components = (area.height as usize).saturating_sub(22).max(3);
     for comp in entry.components.iter().take(max_components) {
         // Check if component has vulnerabilities
-        let has_vulns = diff_result
-            .is_some_and(|r| {
-                r.vulnerabilities
-                    .introduced
-                    .iter()
-                    .chain(r.vulnerabilities.resolved.iter())
-                    .any(|v| v.component_name == *comp)
-            });
+        let has_vulns = diff_result.is_some_and(|r| {
+            r.vulnerabilities
+                .introduced
+                .iter()
+                .chain(r.vulnerabilities.resolved.iter())
+                .any(|v| v.component_name == *comp)
+        });
 
         let vuln_indicator = if has_vulns {
             Span::styled(" ⚠", Style::default().fg(scheme.critical))
@@ -878,7 +898,9 @@ fn render_view_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
         }
         LicenseSort::Count => {
             licenses.sort_by(|a, b| {
-                b.components.len().cmp(&a.components.len())
+                b.components
+                    .len()
+                    .cmp(&a.components.len())
                     .then_with(|| a.license.cmp(&b.license))
             });
         }
@@ -892,7 +914,8 @@ fn render_view_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
         }
         LicenseSort::Risk => {
             licenses.sort_by(|a, b| {
-                b.risk_level.cmp(&a.risk_level)
+                b.risk_level
+                    .cmp(&a.risk_level)
                     .then_with(|| a.license.cmp(&b.license))
             });
         }
@@ -1037,18 +1060,12 @@ fn render_view_stats_panel(frame: &mut Frame, area: Rect, licenses: &[LicenseEnt
                 format!("  {:14}", cat.as_str()),
                 Style::default().fg(cat_color),
             ),
-            Span::styled(
-                "█".repeat(filled),
-                Style::default().fg(cat_color),
-            ),
+            Span::styled("█".repeat(filled), Style::default().fg(cat_color)),
             Span::styled(
                 "░".repeat(bar_width.saturating_sub(filled)),
                 Style::default().fg(scheme.border),
             ),
-            Span::styled(
-                format!(" {pct}%"),
-                Style::default().fg(scheme.text_muted),
-            ),
+            Span::styled(format!(" {pct}%"), Style::default().fg(scheme.text_muted)),
         ]));
     }
 
@@ -1129,9 +1146,8 @@ fn render_view_license_details(frame: &mut Frame, area: Rect, entry: Option<&Lic
 
     lines.push(Line::from(""));
 
-    lines.extend(crate::tui::shared::licenses::render_license_characteristics_lines(
-        &entry.license,
-    ));
+    lines
+        .extend(crate::tui::shared::licenses::render_license_characteristics_lines(&entry.license));
 
     lines.push(Line::from(""));
 
@@ -1170,5 +1186,8 @@ fn render_view_license_details(frame: &mut Frame, area: Rect, entry: Option<&Lic
 
 /// Categorize a license by type (legacy function for compatibility)
 pub fn categorize_license(license: &str) -> String {
-    LicenseInfo::from_spdx(license).category.as_str().to_string()
+    LicenseInfo::from_spdx(license)
+        .category
+        .as_str()
+        .to_string()
 }

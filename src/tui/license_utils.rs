@@ -27,20 +27,14 @@ impl SpdxExpression {
         if let Some(pos) = find_operator(expr, " OR ") {
             let left = &expr[..pos];
             let right = &expr[pos + 4..];
-            return Self::Or(
-                Box::new(Self::parse(left)),
-                Box::new(Self::parse(right)),
-            );
+            return Self::Or(Box::new(Self::parse(left)), Box::new(Self::parse(right)));
         }
 
         // Handle AND operator
         if let Some(pos) = find_operator(expr, " AND ") {
             let left = &expr[..pos];
             let right = &expr[pos + 5..];
-            return Self::And(
-                Box::new(Self::parse(left)),
-                Box::new(Self::parse(right)),
-            );
+            return Self::And(Box::new(Self::parse(left)), Box::new(Self::parse(right)));
         }
 
         // Handle WITH exception
@@ -65,7 +59,6 @@ impl SpdxExpression {
             _ => false,
         }
     }
-
 }
 
 /// Find operator position, respecting parentheses
@@ -385,24 +378,25 @@ pub fn check_compatibility(license_a: &str, license_b: &str) -> CompatibilityRes
             && !a_lower.contains("gpl-3")
             && !b_lower.contains("gpl-3")
         {
-            warnings.push(
-                "Apache-2.0 has patent clauses incompatible with GPL-2.0".to_string(),
-            );
+            warnings.push("Apache-2.0 has patent clauses incompatible with GPL-2.0".to_string());
             score = score.saturating_sub(30);
         }
     }
 
     // Network copyleft warning
     if info_a.network_copyleft || info_b.network_copyleft {
-        warnings.push("Network copyleft license (AGPL) requires source disclosure for network use".to_string());
+        warnings.push(
+            "Network copyleft license (AGPL) requires source disclosure for network use"
+                .to_string(),
+        );
         score = score.saturating_sub(20);
     }
 
     // Mixed copyleft strengths
     if info_a.category != info_b.category {
-        let strength_diff =
-            (info_a.category.copyleft_strength() as i8 - info_b.category.copyleft_strength() as i8)
-                .unsigned_abs();
+        let strength_diff = (info_a.category.copyleft_strength() as i8
+            - info_b.category.copyleft_strength() as i8)
+            .unsigned_abs();
 
         if strength_diff > 1 {
             warnings.push(format!(
@@ -443,7 +437,11 @@ pub fn analyze_license_compatibility(licenses: &[&str]) -> LicenseCompatibilityR
     }
 
     // Check pairwise compatibility for problematic combinations
-    let unique: Vec<_> = licenses.iter().collect::<HashSet<_>>().into_iter().collect();
+    let unique: Vec<_> = licenses
+        .iter()
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
     for (i, &license_a) in unique.iter().enumerate() {
         for &license_b in unique.iter().skip(i + 1) {
             let result = check_compatibility(license_a, license_b);
@@ -537,10 +535,7 @@ impl LicenseStats {
 
             *stats.by_category.entry(info.category).or_default() += 1;
             *stats.by_risk.entry(info.risk_level).or_default() += 1;
-            *stats
-                .by_family
-                .entry(info.family.to_string())
-                .or_default() += 1;
+            *stats.by_family.entry(info.family.to_string()).or_default() += 1;
 
             match info.category {
                 LicenseCategory::Permissive | LicenseCategory::PublicDomain => {

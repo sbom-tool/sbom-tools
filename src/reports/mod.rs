@@ -31,8 +31,8 @@ pub use csv::CsvReporter;
 pub use html::HtmlReporter;
 pub use json::JsonReporter;
 pub use markdown::MarkdownReporter;
-pub use sarif::{generate_compliance_sarif, generate_multi_compliance_sarif};
 pub use sarif::SarifReporter;
+pub use sarif::{generate_compliance_sarif, generate_multi_compliance_sarif};
 pub use sidebyside::SideBySideReporter;
 pub use streaming::{NdjsonReporter, NdjsonWriter, StreamingJsonReporter, StreamingJsonWriter};
 pub use summary::{SummaryReporter, TableReporter};
@@ -192,13 +192,13 @@ impl<T: ReportGenerator> WriterReporter for T {
 impl<T: WriterReporter> StreamingReporter for T {}
 
 /// Create a report generator for the given format
-#[must_use] 
+#[must_use]
 pub fn create_reporter(format: ReportFormat) -> Box<dyn ReportGenerator> {
     create_reporter_with_options(format, true)
 }
 
 /// Create a report generator with color control
-#[must_use] 
+#[must_use]
 pub fn create_reporter_with_options(
     format: ReportFormat,
     use_color: bool,

@@ -1,7 +1,7 @@
 //! Dependency change computer implementation.
 
-use crate::diff::traits::{ChangeComputer, ComponentMatches, DependencyChangeSet};
 use crate::diff::DependencyChange;
+use crate::diff::traits::{ChangeComputer, ComponentMatches, DependencyChangeSet};
 use crate::model::NormalizedSbom;
 use std::collections::HashSet;
 
@@ -10,7 +10,7 @@ pub struct DependencyChangeComputer;
 
 impl DependencyChangeComputer {
     /// Create a new dependency change computer.
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self
     }
@@ -38,10 +38,12 @@ impl ChangeComputer for DependencyChangeComputer {
         for edge in &old.edges {
             let from = matches
                 .get(&edge.from)
-                .and_then(|v| v.as_ref()).map_or_else(|| edge.from.to_string(), std::string::ToString::to_string);
+                .and_then(|v| v.as_ref())
+                .map_or_else(|| edge.from.to_string(), std::string::ToString::to_string);
             let to = matches
                 .get(&edge.to)
-                .and_then(|v| v.as_ref()).map_or_else(|| edge.to.to_string(), std::string::ToString::to_string);
+                .and_then(|v| v.as_ref())
+                .map_or_else(|| edge.to.to_string(), std::string::ToString::to_string);
             normalized_old_edges.insert((from, to));
         }
 
@@ -64,10 +66,12 @@ impl ChangeComputer for DependencyChangeComputer {
         for edge in &old.edges {
             let from = matches
                 .get(&edge.from)
-                .and_then(|v| v.as_ref()).map_or_else(|| edge.from.to_string(), std::string::ToString::to_string);
+                .and_then(|v| v.as_ref())
+                .map_or_else(|| edge.from.to_string(), std::string::ToString::to_string);
             let to = matches
                 .get(&edge.to)
-                .and_then(|v| v.as_ref()).map_or_else(|| edge.to.to_string(), std::string::ToString::to_string);
+                .and_then(|v| v.as_ref())
+                .map_or_else(|| edge.to.to_string(), std::string::ToString::to_string);
 
             if !normalized_new_edges.contains(&(from, to)) {
                 result.removed.push(DependencyChange::removed(edge));

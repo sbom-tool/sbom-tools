@@ -6,10 +6,10 @@
 use crate::diff::MultiDiffEngine;
 use crate::matching::FuzzyMatchConfig;
 use crate::model::NormalizedSbom;
-use crate::pipeline::{parse_sbom_with_context, write_output, OutputTarget};
+use crate::pipeline::{OutputTarget, parse_sbom_with_context, write_output};
 use crate::reports::ReportFormat;
-use crate::tui::{run_tui, App};
-use anyhow::{bail, Result};
+use crate::tui::{App, run_tui};
+use anyhow::{Result, bail};
 use std::path::{Path, PathBuf};
 
 /// Run the diff-multi command (1:N comparison)
@@ -61,12 +61,15 @@ pub fn run_diff_multi(
     );
 
     // Output result
-    output_multi_result(output, output_file, || {
-        let mut app = App::new_multi_diff(result.clone());
-        run_tui(&mut app).map_err(Into::into)
-    }, || {
-        serde_json::to_string_pretty(&result).map_err(Into::into)
-    })
+    output_multi_result(
+        output,
+        output_file,
+        || {
+            let mut app = App::new_multi_diff(result.clone());
+            run_tui(&mut app).map_err(Into::into)
+        },
+        || serde_json::to_string_pretty(&result).map_err(Into::into),
+    )
 }
 
 /// Run the timeline command
@@ -104,12 +107,15 @@ pub fn run_timeline(
     );
 
     // Output result
-    output_multi_result(output, output_file, || {
-        let mut app = App::new_timeline(result.clone());
-        run_tui(&mut app).map_err(Into::into)
-    }, || {
-        serde_json::to_string_pretty(&result).map_err(Into::into)
-    })
+    output_multi_result(
+        output,
+        output_file,
+        || {
+            let mut app = App::new_timeline(result.clone());
+            run_tui(&mut app).map_err(Into::into)
+        },
+        || serde_json::to_string_pretty(&result).map_err(Into::into),
+    )
 }
 
 /// Run the matrix command (N×N comparison)
@@ -160,12 +166,15 @@ pub fn run_matrix(
     }
 
     // Output result
-    output_multi_result(output, output_file, || {
-        let mut app = App::new_matrix(result.clone());
-        run_tui(&mut app).map_err(Into::into)
-    }, || {
-        serde_json::to_string_pretty(&result).map_err(Into::into)
-    })
+    output_multi_result(
+        output,
+        output_file,
+        || {
+            let mut app = App::new_matrix(result.clone());
+            run_tui(&mut app).map_err(Into::into)
+        },
+        || serde_json::to_string_pretty(&result).map_err(Into::into),
+    )
 }
 
 /// Parse multiple SBOMs using the pipeline (with structured error context).
@@ -191,7 +200,10 @@ fn get_fuzzy_config(preset: &str) -> FuzzyMatchConfig {
 
 /// Get SBOM name from path
 pub(crate) fn get_sbom_name(path: &Path) -> String {
-    path.file_stem().map_or_else(|| "unknown".to_string(), |s| s.to_string_lossy().to_string())
+    path.file_stem().map_or_else(
+        || "unknown".to_string(),
+        |s| s.to_string_lossy().to_string(),
+    )
 }
 
 /// Prepare SBOM references with names and paths
@@ -268,10 +280,7 @@ mod tests {
         let sbom1 = NormalizedSbom::default();
         let sbom2 = NormalizedSbom::default();
         let sboms = vec![sbom1, sbom2];
-        let paths = vec![
-            PathBuf::from("first.json"),
-            PathBuf::from("second.json"),
-        ];
+        let paths = vec![PathBuf::from("first.json"), PathBuf::from("second.json")];
 
         let refs = prepare_sbom_refs(&sboms, &paths);
         assert_eq!(refs.len(), 2);

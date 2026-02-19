@@ -81,7 +81,7 @@ pub struct KevEntry {
 
 impl KevEntry {
     /// Create from raw KEV vulnerability
-    #[must_use] 
+    #[must_use]
     pub fn from_raw(raw: &KevVulnerability) -> Option<Self> {
         let date_added = parse_kev_date(&raw.date_added)?;
         let due_date = parse_kev_date(&raw.due_date)?;
@@ -102,13 +102,13 @@ impl KevEntry {
     }
 
     /// Check if remediation is overdue
-    #[must_use] 
+    #[must_use]
     pub fn is_overdue(&self) -> bool {
         Utc::now() > self.due_date
     }
 
     /// Days until due date (negative if overdue)
-    #[must_use] 
+    #[must_use]
     pub fn days_until_due(&self) -> i64 {
         (self.due_date - Utc::now()).num_days()
     }
@@ -129,7 +129,7 @@ pub struct KevCatalog {
 
 impl KevCatalog {
     /// Create an empty catalog
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             entries: HashMap::new(),
@@ -140,7 +140,7 @@ impl KevCatalog {
     }
 
     /// Create from catalog response
-    #[must_use] 
+    #[must_use]
     pub fn from_response(response: KevCatalogResponse) -> Self {
         let mut entries = HashMap::new();
 
@@ -161,7 +161,7 @@ impl KevCatalog {
     }
 
     /// Check if a CVE ID is in the KEV catalog
-    #[must_use] 
+    #[must_use]
     pub fn contains(&self, cve_id: &str) -> bool {
         // Normalize the CVE ID for lookup
         let normalized = normalize_cve_id(cve_id);
@@ -169,21 +169,20 @@ impl KevCatalog {
     }
 
     /// Get entry for a CVE ID
-    #[must_use] 
+    #[must_use]
     pub fn get(&self, cve_id: &str) -> Option<&KevEntry> {
         let normalized = normalize_cve_id(cve_id);
         self.entries.get(&normalized)
     }
 
     /// Check if CVE is known to be used in ransomware
-    #[must_use] 
+    #[must_use]
     pub fn is_ransomware_related(&self, cve_id: &str) -> bool {
-        self.get(cve_id)
-            .is_some_and(|e| e.known_ransomware_use)
+        self.get(cve_id).is_some_and(|e| e.known_ransomware_use)
     }
 
     /// Get all ransomware-related CVEs
-    #[must_use] 
+    #[must_use]
     pub fn ransomware_cves(&self) -> Vec<&KevEntry> {
         self.entries
             .values()
@@ -192,7 +191,7 @@ impl KevCatalog {
     }
 
     /// Get all overdue CVEs
-    #[must_use] 
+    #[must_use]
     pub fn overdue_cves(&self) -> Vec<&KevEntry> {
         self.entries.values().filter(|e| e.is_overdue()).collect()
     }
@@ -203,13 +202,13 @@ impl KevCatalog {
     }
 
     /// Get entry count
-    #[must_use] 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
     /// Check if catalog is empty
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }

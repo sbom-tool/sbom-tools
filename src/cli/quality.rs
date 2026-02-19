@@ -2,10 +2,12 @@
 //!
 //! Implements the `quality` subcommand for assessing SBOM quality.
 
-use crate::pipeline::{exit_codes, parse_sbom_with_context, write_output, OutputTarget};
-use crate::quality::{QualityGrade, QualityReport, QualityScorer, ScoringProfile, ViolationSeverity};
+use crate::pipeline::{OutputTarget, exit_codes, parse_sbom_with_context, write_output};
+use crate::quality::{
+    QualityGrade, QualityReport, QualityScorer, ScoringProfile, ViolationSeverity,
+};
 use crate::reports::ReportFormat;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde_json::json;
 use std::path::PathBuf;
 
@@ -74,14 +76,15 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
 
     // Check minimum score threshold
     if let Some(threshold) = config.min_score
-        && report.overall_score < threshold {
-            tracing::error!(
-                "Quality score {:.1} is below minimum threshold {:.1}",
-                report.overall_score,
-                threshold
-            );
-            return Ok(exit_codes::CHANGES_DETECTED);
-        }
+        && report.overall_score < threshold
+    {
+        tracing::error!(
+            "Quality score {:.1} is below minimum threshold {:.1}",
+            report.overall_score,
+            threshold
+        );
+        return Ok(exit_codes::CHANGES_DETECTED);
+    }
 
     Ok(exit_codes::SUCCESS)
 }
@@ -235,7 +238,10 @@ fn format_quality_report(report: &QualityReport, config: &QualityConfig) -> Stri
         "  Identifiers:     {:.1}/100",
         report.identifier_score
     ));
-    lines.push(format!("  Licenses:        {:.1}/100", report.license_score));
+    lines.push(format!(
+        "  Licenses:        {:.1}/100",
+        report.license_score
+    ));
     lines.push(format!(
         "  Vulnerabilities: {:.1}/100",
         report.vulnerability_score

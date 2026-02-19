@@ -389,9 +389,7 @@ fn add_context_to_error(err: SbomDiffError, new_ctx: &str) -> SbomDiffError {
             source,
         },
         SbomDiffError::Config(msg) => SbomDiffError::Config(chain_context(new_ctx, &msg)),
-        SbomDiffError::Validation(msg) => {
-            SbomDiffError::Validation(chain_context(new_ctx, &msg))
-        }
+        SbomDiffError::Validation(msg) => SbomDiffError::Validation(chain_context(new_ctx, &msg)),
     }
 }
 

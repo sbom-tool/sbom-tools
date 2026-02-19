@@ -40,7 +40,7 @@ pub struct DiffCacheKey {
 
 impl DiffCacheKey {
     /// Create a cache key from two SBOMs.
-    #[must_use] 
+    #[must_use]
     pub const fn from_sboms(old: &NormalizedSbom, new: &NormalizedSbom) -> Self {
         Self {
             old_hash: old.content_hash,
@@ -64,7 +64,7 @@ pub struct SectionHashes {
 
 impl SectionHashes {
     /// Compute section hashes for an SBOM.
-    #[must_use] 
+    #[must_use]
     pub fn from_sbom(sbom: &NormalizedSbom) -> Self {
         use std::collections::hash_map::DefaultHasher;
 
@@ -114,7 +114,7 @@ impl SectionHashes {
     }
 
     /// Check which sections differ between two hash sets.
-    #[must_use] 
+    #[must_use]
     pub const fn changed_sections(&self, other: &Self) -> ChangedSections {
         ChangedSections {
             components: self.components != other.components,
@@ -136,19 +136,19 @@ pub struct ChangedSections {
 
 impl ChangedSections {
     /// Check if any section changed.
-    #[must_use] 
+    #[must_use]
     pub const fn any(&self) -> bool {
         self.components || self.dependencies || self.licenses || self.vulnerabilities
     }
 
     /// Check if all sections changed.
-    #[must_use] 
+    #[must_use]
     pub const fn all(&self) -> bool {
         self.components && self.dependencies && self.licenses && self.vulnerabilities
     }
 
     /// Count how many sections changed.
-    #[must_use] 
+    #[must_use]
     pub fn count(&self) -> usize {
         [
             self.components,
@@ -183,7 +183,7 @@ pub struct CachedDiffResult {
 
 impl CachedDiffResult {
     /// Create a new cached result.
-    #[must_use] 
+    #[must_use]
     pub fn new(result: DiffResult, old_hashes: SectionHashes, new_hashes: SectionHashes) -> Self {
         Self {
             result: Arc::new(result),
@@ -195,13 +195,13 @@ impl CachedDiffResult {
     }
 
     /// Check if this entry is still valid (not expired).
-    #[must_use] 
+    #[must_use]
     pub fn is_valid(&self, ttl: Duration) -> bool {
         self.computed_at.elapsed() < ttl
     }
 
     /// Get age of this cache entry.
-    #[must_use] 
+    #[must_use]
     pub fn age(&self) -> Duration {
         self.computed_at.elapsed()
     }
@@ -264,7 +264,7 @@ pub struct CacheStats {
 
 impl CacheStats {
     /// Get the cache hit rate.
-    #[must_use] 
+    #[must_use]
     pub fn hit_rate(&self) -> f64 {
         if self.lookups == 0 {
             0.0
@@ -276,13 +276,13 @@ impl CacheStats {
 
 impl DiffCache {
     /// Create a new diff cache with default configuration.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::with_config(DiffCacheConfig::default())
     }
 
     /// Create a new diff cache with custom configuration.
-    #[must_use] 
+    #[must_use]
     pub fn with_config(config: DiffCacheConfig) -> Self {
         Self {
             cache: RwLock::new(HashMap::new()),
@@ -407,7 +407,7 @@ pub struct IncrementalDiffEngine {
 
 impl IncrementalDiffEngine {
     /// Create a new incremental diff engine.
-    #[must_use] 
+    #[must_use]
     pub fn new(engine: DiffEngine) -> Self {
         Self {
             engine,
@@ -418,7 +418,7 @@ impl IncrementalDiffEngine {
     }
 
     /// Create with custom cache configuration.
-    #[must_use] 
+    #[must_use]
     pub fn with_cache_config(engine: DiffEngine, config: DiffCacheConfig) -> Self {
         Self {
             engine,
@@ -482,8 +482,7 @@ impl IncrementalDiffEngine {
         };
 
         // Full computation (for now - true incremental would require more complex logic)
-        let result = self.engine.diff(old, new)
-            .unwrap_or_default();
+        let result = self.engine.diff(old, new).unwrap_or_default();
 
         // Cache the result
         self.cache.put(
@@ -577,7 +576,7 @@ impl IncrementalDiffResult {
     }
 
     /// Check if this was a cache hit.
-    #[must_use] 
+    #[must_use]
     pub fn was_cached(&self) -> bool {
         self.cache_hit == CacheHitType::Full
     }

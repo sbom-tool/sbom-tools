@@ -14,18 +14,43 @@ struct FormatRow {
 }
 
 const FORMATS: &[FormatRow] = &[
-    FormatRow { key: "j", name: "JSON",     desc: "Structured data for automation" },
-    FormatRow { key: "s", name: "SARIF",    desc: "CI/CD integration (GitHub, etc.)" },
-    FormatRow { key: "m", name: "Markdown", desc: "Documentation & PRs" },
-    FormatRow { key: "h", name: "HTML",     desc: "Stakeholder report" },
-    FormatRow { key: "c", name: "CSV",      desc: "Spreadsheet import" },
+    FormatRow {
+        key: "j",
+        name: "JSON",
+        desc: "Structured data for automation",
+    },
+    FormatRow {
+        key: "s",
+        name: "SARIF",
+        desc: "CI/CD integration (GitHub, etc.)",
+    },
+    FormatRow {
+        key: "m",
+        name: "Markdown",
+        desc: "Documentation & PRs",
+    },
+    FormatRow {
+        key: "h",
+        name: "HTML",
+        desc: "Stakeholder report",
+    },
+    FormatRow {
+        key: "c",
+        name: "CSV",
+        desc: "Spreadsheet import",
+    },
 ];
 
 /// Render the export format selection dialog.
 ///
 /// `scope` describes what will be exported (e.g. "Components", "Vulnerabilities",
 /// "Report"). It is shown in both the title bar and the header line.
-pub fn render_export_dialog(frame: &mut Frame, area: Rect, scope: &str, centered_rect_fn: fn(u16, u16, Rect) -> Rect) {
+pub fn render_export_dialog(
+    frame: &mut Frame,
+    area: Rect,
+    scope: &str,
+    centered_rect_fn: fn(u16, u16, Rect) -> Rect,
+) {
     let popup_area = centered_rect_fn(50, 45, area);
     frame.render_widget(Clear, popup_area);
 
@@ -56,8 +81,11 @@ pub fn render_export_dialog(frame: &mut Frame, area: Rect, scope: &str, centered
 
     lines.push(Line::from(""));
     lines.push(
-        Line::styled("Press Esc to cancel", Style::default().fg(colors().text_muted))
-            .alignment(Alignment::Center),
+        Line::styled(
+            "Press Esc to cancel",
+            Style::default().fg(colors().text_muted),
+        )
+        .alignment(Alignment::Center),
     );
 
     let title = format!(" Export {scope} ");

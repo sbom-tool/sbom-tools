@@ -6,11 +6,11 @@ use crate::diff::{TimelineResult, VersionChangeType};
 use crate::tui::app::{TimelineComponentFilter, TimelineState};
 use crate::tui::theme::colors;
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Bar, BarChart, BarGroup, Block, Borders, Cell, Clear, Paragraph, Row, Table, Wrap},
-    Frame,
 };
 
 /// Render the timeline analysis view
@@ -174,13 +174,14 @@ fn render_statistics_panel(f: &mut Frame, area: Rect, result: &TimelineResult) {
     } else {
         format!("{}/{} pass CRA", cra_pass_count, compliance_trend.len())
     };
-    let compliance_color = if cra_pass_count == compliance_trend.len() && !compliance_trend.is_empty() {
-        scheme.success
-    } else if cra_pass_count > 0 {
-        scheme.warning
-    } else {
-        scheme.error
-    };
+    let compliance_color =
+        if cra_pass_count == compliance_trend.len() && !compliance_trend.is_empty() {
+            scheme.success
+        } else if cra_pass_count > 0 {
+            scheme.warning
+        } else {
+            scheme.error
+        };
 
     let text = vec![
         Line::from(vec![
@@ -303,10 +304,9 @@ fn render_versions_list(f: &mut Frame, area: Rect, result: &TimelineResult, stat
         .map(|(i, sbom)| {
             // Get diff info if available
             let (added, removed) = if i > 0 {
-                result
-                    .incremental_diffs
-                    .get(i - 1)
-                    .map_or((0, 0), |d| (d.summary.components_added, d.summary.components_removed))
+                result.incremental_diffs.get(i - 1).map_or((0, 0), |d| {
+                    (d.summary.components_added, d.summary.components_removed)
+                })
             } else {
                 (sbom.component_count, 0)
             };
@@ -344,28 +344,29 @@ fn render_versions_list(f: &mut Frame, area: Rect, result: &TimelineResult, stat
             };
 
             // CRA Phase 2 compliance indicator for this version
-            let compliance_indicator = result
-                .evolution_summary
-                .compliance_trend
-                .get(i)
-                .map_or(("-", scheme.text_muted), |snap| {
+            let compliance_indicator = result.evolution_summary.compliance_trend.get(i).map_or(
+                ("-", scheme.text_muted),
+                |snap| {
                     // Find CRA Phase 2 score
-                    let cra = snap.scores.iter().find(|s| s.standard.contains("CRA Phase 2"));
+                    let cra = snap
+                        .scores
+                        .iter()
+                        .find(|s| s.standard.contains("CRA Phase 2"));
                     match cra {
                         Some(s) if s.is_compliant && s.warning_count == 0 => ("✓", scheme.success),
                         Some(s) if s.is_compliant => ("⚠", scheme.warning),
                         Some(_) => ("✗", scheme.error),
                         None => ("-", scheme.text_muted),
                     }
-                });
+                },
+            );
 
             Row::new(vec![
                 Cell::from(format!("{}.", i + 1)).style(style),
                 Cell::from(sbom.name.clone()).style(name_style),
                 Cell::from(sbom.component_count.to_string()).style(style),
                 Cell::from(change_str).style(style.fg(change_color)),
-                Cell::from(compliance_indicator.0)
-                    .style(style.fg(compliance_indicator.1)),
+                Cell::from(compliance_indicator.0).style(style.fg(compliance_indicator.1)),
             ])
         })
         .collect();
@@ -794,7 +795,9 @@ fn render_component_history_modal(
                 VersionChangeType::PatchUpgrade => Style::default().fg(scheme.primary),
                 VersionChangeType::Downgrade => Style::default().fg(scheme.removed),
                 VersionChangeType::Unchanged => Style::default().fg(scheme.text_muted),
-                VersionChangeType::Removed | VersionChangeType::Absent => Style::default().fg(scheme.muted),
+                VersionChangeType::Removed | VersionChangeType::Absent => {
+                    Style::default().fg(scheme.muted)
+                }
             };
 
             lines.push(Line::from(vec![

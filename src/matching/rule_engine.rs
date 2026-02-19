@@ -68,14 +68,14 @@ impl RuleEngine {
             .iter()
             .map(|rule| match rule {
                 ExclusionRule::Exact(_) => Ok(None),
-                ExclusionRule::Conditional { regex, .. } => {
-                    regex.as_ref().map_or_else(
-                        || Ok(None),
-                        |re| Regex::new(re)
+                ExclusionRule::Conditional { regex, .. } => regex.as_ref().map_or_else(
+                    || Ok(None),
+                    |re| {
+                        Regex::new(re)
                             .map(Some)
-                            .map_err(|e| format!("Invalid exclusion regex '{re}': {e}")),
-                    )
-                }
+                            .map_err(|e| format!("Invalid exclusion regex '{re}': {e}"))
+                    },
+                ),
             })
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -85,9 +85,9 @@ impl RuleEngine {
             .iter()
             .map(|rule| match rule {
                 ExclusionRule::Exact(_) => Ok(None),
-                ExclusionRule::Conditional { pattern, .. } => {
-                    pattern.as_ref().map_or_else(|| Ok(None), |pat| compile_glob(pat).map(Some))
-                }
+                ExclusionRule::Conditional { pattern, .. } => pattern
+                    .as_ref()
+                    .map_or_else(|| Ok(None), |pat| compile_glob(pat).map(Some)),
             })
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -100,14 +100,14 @@ impl RuleEngine {
                     .iter()
                     .map(|alias| match alias {
                         AliasPattern::Exact(_) => Ok(None),
-                        AliasPattern::Pattern { regex, .. } => {
-                            regex.as_ref().map_or_else(
-                                || Ok(None),
-                                |re| Regex::new(re)
+                        AliasPattern::Pattern { regex, .. } => regex.as_ref().map_or_else(
+                            || Ok(None),
+                            |re| {
+                                Regex::new(re)
                                     .map(Some)
-                                    .map_err(|e| format!("Invalid alias regex '{re}': {e}")),
-                            )
-                        }
+                                    .map_err(|e| format!("Invalid alias regex '{re}': {e}"))
+                            },
+                        ),
                     })
                     .collect::<Result<Vec<_>, _>>()
             })
@@ -122,9 +122,9 @@ impl RuleEngine {
                     .iter()
                     .map(|alias| match alias {
                         AliasPattern::Exact(_) => Ok(None),
-                        AliasPattern::Pattern { pattern, .. } => {
-                            pattern.as_ref().map_or_else(|| Ok(None), |pat| compile_glob(pat).map(Some))
-                        }
+                        AliasPattern::Pattern { pattern, .. } => pattern
+                            .as_ref()
+                            .map_or_else(|| Ok(None), |pat| compile_glob(pat).map(Some)),
                     })
                     .collect::<Result<Vec<_>, _>>()
             })
@@ -140,7 +140,7 @@ impl RuleEngine {
     }
 
     /// Apply rules to a set of components
-    #[must_use] 
+    #[must_use]
     pub fn apply(&self, components: &IndexMap<CanonicalId, Component>) -> RuleApplicationResult {
         let mut result = RuleApplicationResult::default();
 
@@ -214,17 +214,19 @@ impl RuleEngine {
 
                 // Check name
                 if let Some(n) = name
-                    && !component.name.to_lowercase().contains(&n.to_lowercase()) {
-                        return false;
-                    }
+                    && !component.name.to_lowercase().contains(&n.to_lowercase())
+                {
+                    return false;
+                }
 
                 // Check pre-compiled glob pattern
                 if pattern.is_some() {
                     if let Some(purl) = &component.identifiers.purl {
                         if let Some(Some(re)) = self.compiled_exclusion_globs.get(rule_idx)
-                            && !re.is_match(purl) {
-                                return false;
-                            }
+                            && !re.is_match(purl)
+                        {
+                            return false;
+                        }
                     } else {
                         return false;
                     }
@@ -302,15 +304,17 @@ impl RuleEngine {
 
                     // Check pre-compiled glob pattern
                     if let Some(Some(re)) = alias_globs.and_then(|v| v.get(alias_idx))
-                        && re.is_match(purl) {
-                            matched = true;
-                        }
+                        && re.is_match(purl)
+                    {
+                        matched = true;
+                    }
 
                     // Check regex
                     if let Some(Some(re)) = alias_regexes.and_then(|v| v.get(alias_idx))
-                        && re.is_match(purl) {
-                            matched = true;
-                        }
+                        && re.is_match(purl)
+                    {
+                        matched = true;
+                    }
 
                     // Check ecosystem match in PURL
                     if let Some(eco) = ecosystem {
@@ -319,18 +323,19 @@ impl RuleEngine {
                         // Check if PURL starts with pkg:<ecosystem>/
                         if purl_lower.starts_with("pkg:")
                             && let Some(rest) = purl_lower.strip_prefix("pkg:")
-                                && rest.starts_with(&eco_lower)
-                                    && rest[eco_lower.len()..].starts_with('/')
-                                {
-                                    matched = true;
-                                }
+                            && rest.starts_with(&eco_lower)
+                            && rest[eco_lower.len()..].starts_with('/')
+                        {
+                            matched = true;
+                        }
                     }
 
                     // Check name match in PURL
                     if let Some(n) = name
-                        && purl.to_lowercase().contains(&n.to_lowercase()) {
-                            matched = true;
-                        }
+                        && purl.to_lowercase().contains(&n.to_lowercase())
+                    {
+                        matched = true;
+                    }
 
                     matched
                 }
@@ -345,13 +350,13 @@ impl RuleEngine {
     }
 
     /// Get the configuration
-    #[must_use] 
+    #[must_use]
     pub const fn config(&self) -> &MatchingRulesConfig {
         &self.config
     }
 
     /// Check if a PURL is excluded by any rule
-    #[must_use] 
+    #[must_use]
     pub fn is_excluded(&self, purl: &str) -> bool {
         for (idx, rule) in self.config.exclusions.iter().enumerate() {
             match rule {
@@ -364,14 +369,16 @@ impl RuleEngine {
                     // Check pre-compiled glob pattern
                     if pattern.is_some()
                         && let Some(Some(re)) = self.compiled_exclusion_globs.get(idx)
-                            && re.is_match(purl) {
-                                return true;
-                            }
+                        && re.is_match(purl)
+                    {
+                        return true;
+                    }
                     // Check pre-compiled regex
                     if let Some(Some(re)) = self.compiled_exclusion_regexes.get(idx)
-                        && re.is_match(purl) {
-                            return true;
-                        }
+                        && re.is_match(purl)
+                    {
+                        return true;
+                    }
                 }
             }
         }
@@ -379,7 +386,7 @@ impl RuleEngine {
     }
 
     /// Get the canonical PURL for a given PURL, if any equivalence applies
-    #[must_use] 
+    #[must_use]
     pub fn get_canonical(&self, purl: &str) -> Option<String> {
         for (eq_idx, eq) in self.config.equivalences.iter().enumerate() {
             if purl == eq.canonical {
@@ -520,22 +527,30 @@ mod tests {
         let result = engine.apply(&components);
 
         // lodash-es should be mapped to canonical lodash
-        assert!(result
-            .canonical_map
-            .contains_key(&CanonicalId::from_purl("pkg:npm/lodash-es")));
+        assert!(
+            result
+                .canonical_map
+                .contains_key(&CanonicalId::from_purl("pkg:npm/lodash-es"))
+        );
 
         // jest should be excluded
-        assert!(result
-            .excluded
-            .contains(&CanonicalId::from_purl("pkg:npm/jest")));
+        assert!(
+            result
+                .excluded
+                .contains(&CanonicalId::from_purl("pkg:npm/jest"))
+        );
 
         // react should have no rules applied
-        assert!(!result
-            .canonical_map
-            .contains_key(&CanonicalId::from_purl("pkg:npm/react")));
-        assert!(!result
-            .excluded
-            .contains(&CanonicalId::from_purl("pkg:npm/react")));
+        assert!(
+            !result
+                .canonical_map
+                .contains_key(&CanonicalId::from_purl("pkg:npm/react"))
+        );
+        assert!(
+            !result
+                .excluded
+                .contains(&CanonicalId::from_purl("pkg:npm/react"))
+        );
 
         // Check applied rules
         assert_eq!(result.applied_rules.len(), 2);

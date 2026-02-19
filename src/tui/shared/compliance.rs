@@ -16,8 +16,12 @@ pub fn render_violation_detail_overlay(
 ) {
     let scheme = colors();
 
-    let overlay_width = (f32::from(area.width) * 0.7).max(40.0).min(f32::from(area.width)) as u16;
-    let overlay_height = (f32::from(area.height) * 0.6).max(12.0).min(f32::from(area.height)) as u16;
+    let overlay_width = (f32::from(area.width) * 0.7)
+        .max(40.0)
+        .min(f32::from(area.width)) as u16;
+    let overlay_height = (f32::from(area.height) * 0.6)
+        .max(12.0)
+        .min(f32::from(area.height)) as u16;
     let x = area.x + (area.width.saturating_sub(overlay_width)) / 2;
     let y = area.y + (area.height.saturating_sub(overlay_height)) / 2;
     let overlay_area = Rect::new(x, y, overlay_width, overlay_height);
@@ -42,10 +46,7 @@ pub fn render_violation_detail_overlay(
         ]),
         Line::from(vec![
             Span::styled("Category:    ", Style::default().fg(scheme.muted)),
-            Span::styled(
-                violation.category.name(),
-                Style::default().fg(scheme.text),
-            ),
+            Span::styled(violation.category.name(), Style::default().fg(scheme.text)),
         ]),
         Line::from(vec![
             Span::styled("Requirement: ", Style::default().fg(scheme.muted)),

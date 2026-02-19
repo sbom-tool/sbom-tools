@@ -92,10 +92,7 @@ mod vex_diff_filter {
         // filter_by_vex with no VEX data should not remove any vulns
         result.filter_by_vex();
 
-        assert_eq!(
-            result.vulnerabilities.introduced.len(),
-            intro_count_before
-        );
+        assert_eq!(result.vulnerabilities.introduced.len(), intro_count_before);
     }
 }
 

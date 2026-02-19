@@ -6,11 +6,11 @@ use crate::diff::{MultiDiffResult, SecurityImpact};
 use crate::tui::app::{MultiDiffState, MultiViewFilterPreset, MultiViewSortBy, SortDirection};
 use crate::tui::theme::colors;
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Cell, Clear, Gauge, Paragraph, Row, Table, Wrap},
-    Frame,
 };
 
 /// Render the multi-diff dashboard
@@ -924,18 +924,8 @@ fn render_variable_drill_down(
     for (_i, comp) in result.comparisons.iter().enumerate().take(10) {
         // Check if this target has the component - use ID-based lookup
         let has_component = comp.diff.components.added.iter().any(|c| c.id == vc.id)
-            || comp
-                .diff
-                .components
-                .removed
-                .iter()
-                .any(|c| c.id == vc.id)
-            || comp
-                .diff
-                .components
-                .modified
-                .iter()
-                .any(|c| c.id == vc.id);
+            || comp.diff.components.removed.iter().any(|c| c.id == vc.id)
+            || comp.diff.components.modified.iter().any(|c| c.id == vc.id);
 
         if has_component {
             lines.push(Line::from(vec![

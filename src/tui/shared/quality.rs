@@ -4,7 +4,7 @@
 //! and have no dependency on App or `ViewApp` state.
 
 use crate::quality::{
-    QualityGrade, QualityReport, RecommendationCategory, ScoringProfile, SCORING_ENGINE_VERSION,
+    QualityGrade, QualityReport, RecommendationCategory, SCORING_ENGINE_VERSION, ScoringProfile,
 };
 use crate::tui::theme::colors;
 use ratatui::{
@@ -241,10 +241,7 @@ pub fn generate_key_factors(report: &QualityReport) -> Vec<Line<'static>> {
     if report.provenance_metrics.has_signature {
         lines.push(Line::from(vec![
             Span::styled("   + ", Style::default().fg(scheme.success)),
-            Span::styled(
-                "SBOM is digitally signed",
-                Style::default().fg(scheme.text),
-            ),
+            Span::styled("SBOM is digitally signed", Style::default().fg(scheme.text)),
         ]));
     }
 
@@ -556,10 +553,7 @@ fn render_compact_header(frame: &mut Frame, area: Rect, report: &QualityReport) 
             format!(" {} ", report.grade.letter()),
             Style::default().fg(gauge_color).bold(),
         ),
-        Span::styled(
-            format!("{grade_label} "),
-            Style::default().fg(scheme.text),
-        ),
+        Span::styled(format!("{grade_label} "), Style::default().fg(scheme.text)),
         Span::styled(bar_str, Style::default().fg(gauge_color)),
         Span::styled(
             format!(" {score}/100"),
@@ -585,7 +579,10 @@ fn render_compact_header(frame: &mut Frame, area: Rect, report: &QualityReport) 
         ),
     ];
     if weakest.1 < 70.0 {
-        line2_spans.push(Span::styled("  Focus: ", Style::default().fg(scheme.warning)));
+        line2_spans.push(Span::styled(
+            "  Focus: ",
+            Style::default().fg(scheme.warning),
+        ));
         line2_spans.push(Span::styled(
             format!("{} ({:.0}%)", weakest.0, weakest.1),
             Style::default().fg(scheme.text),
@@ -624,14 +621,8 @@ fn render_completeness_checklist(frame: &mut Frame, area: Rect, report: &Quality
         let empty = width.saturating_sub(filled);
         let bar: String = "\u{2588}".repeat(filled) + &"\u{2591}".repeat(empty);
         Line::from(vec![
-            Span::styled(
-                format!("  {label:<10}"),
-                Style::default().fg(scheme.muted),
-            ),
-            Span::styled(
-                format!("{pct:>3.0}%  "),
-                score_style(pct),
-            ),
+            Span::styled(format!("  {label:<10}"), Style::default().fg(scheme.muted)),
+            Span::styled(format!("{pct:>3.0}%  "), score_style(pct)),
             Span::styled(bar, score_style(pct)),
         ])
     };
@@ -1132,10 +1123,7 @@ fn render_integrity_provenance_details(frame: &mut Frame, area: Rect, report: &Q
                 format!("{}", h.components_with_strong_hash),
                 Style::default().fg(scheme.success),
             ),
-            Span::styled(
-                " (SHA-256+, BLAKE)",
-                Style::default().fg(scheme.text_muted),
-            ),
+            Span::styled(" (SHA-256+, BLAKE)", Style::default().fg(scheme.text_muted)),
         ]),
         Line::from(vec![
             Span::styled("Weak only:   ", Style::default().fg(scheme.text_muted)),
@@ -1147,10 +1135,7 @@ fn render_integrity_provenance_details(frame: &mut Frame, area: Rect, report: &Q
                     Style::default().fg(scheme.success)
                 },
             ),
-            Span::styled(
-                " (MD5/SHA-1 only)",
-                Style::default().fg(scheme.text_muted),
-            ),
+            Span::styled(" (MD5/SHA-1 only)", Style::default().fg(scheme.text_muted)),
         ]),
         Line::from(vec![
             Span::styled("Signature:   ", Style::default().fg(scheme.text_muted)),

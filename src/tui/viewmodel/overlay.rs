@@ -41,25 +41,25 @@ pub struct OverlayState {
 
 impl OverlayState {
     /// Create a new overlay state with no overlay visible.
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self { current: None }
     }
 
     /// Check if any overlay is currently visible.
-    #[must_use] 
+    #[must_use]
     pub const fn has_overlay(&self) -> bool {
         self.current.is_some()
     }
 
     /// Check if a specific overlay is visible.
-    #[must_use] 
+    #[must_use]
     pub fn is_showing(&self, kind: OverlayKind) -> bool {
         self.current == Some(kind)
     }
 
     /// Get the currently visible overlay.
-    #[must_use] 
+    #[must_use]
     pub const fn current(&self) -> Option<OverlayKind> {
         self.current
     }
@@ -108,19 +108,19 @@ impl OverlayState {
     // Convenience accessors for backwards compatibility
 
     /// Check if help overlay is visible.
-    #[must_use] 
+    #[must_use]
     pub fn show_help(&self) -> bool {
         self.is_showing(OverlayKind::Help)
     }
 
     /// Check if export overlay is visible.
-    #[must_use] 
+    #[must_use]
     pub fn show_export(&self) -> bool {
         self.is_showing(OverlayKind::Export)
     }
 
     /// Check if legend overlay is visible.
-    #[must_use] 
+    #[must_use]
     pub fn show_legend(&self) -> bool {
         self.is_showing(OverlayKind::Legend)
     }

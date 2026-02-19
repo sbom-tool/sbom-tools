@@ -5,9 +5,7 @@
 //! and quality scoring.
 
 use sbom_tools::enrichment::eol::{EolClientConfig, EolEnrichmentStats};
-use sbom_tools::model::{
-    Component, EolInfo, EolStatus, NormalizedSbom,
-};
+use sbom_tools::model::{Component, EolInfo, EolStatus, NormalizedSbom};
 
 // ============================================================================
 // Helper: build components with EOL data pre-attached
@@ -105,7 +103,13 @@ fn make_eol_sbom() -> NormalizedSbom {
 
     // 5. Unknown cycle: a component that was found but version didn't match
     let mut mystery = make_component("some-tool", "99.0.0", None);
-    mystery.eol = Some(make_eol_info(EolStatus::Unknown, "some-tool", "", None, None));
+    mystery.eol = Some(make_eol_info(
+        EolStatus::Unknown,
+        "some-tool",
+        "",
+        None,
+        None,
+    ));
     sbom.add_component(mystery);
 
     // 6. No EOL data: component without enrichment
@@ -242,11 +246,7 @@ mod mapping_tests {
     fn mapper_resolve_system_package() {
         let mapper = ProductMapper::new(vec!["postgresql".to_string()]);
         // System packages without namespace in PURL
-        let comp = make_component(
-            "postgresql-15",
-            "15.4",
-            Some("pkg:deb/postgresql-15@15.4"),
-        );
+        let comp = make_component("postgresql-15", "15.4", Some("pkg:deb/postgresql-15@15.4"));
         let resolved = mapper.resolve(&comp);
 
         assert!(resolved.is_some());
@@ -388,14 +388,25 @@ mod sbom_tests {
         let sbom = make_eol_sbom();
 
         // Node.js 18.19.0 has latest_in_cycle = 18.20.1 → update available
-        let nodejs = sbom.components.values().find(|c| c.name == "nodejs").unwrap();
+        let nodejs = sbom
+            .components
+            .values()
+            .find(|c| c.name == "nodejs")
+            .unwrap();
         let eol = nodejs.eol.as_ref().unwrap();
         let current_version = nodejs.version.as_deref().unwrap();
         let latest = eol.latest_in_cycle.as_deref().unwrap();
-        assert_ne!(current_version, latest, "Node.js 18 has an update available");
+        assert_ne!(
+            current_version, latest,
+            "Node.js 18 has an update available"
+        );
 
         // Python 2.7.18 has latest_in_cycle = 2.7.18 → up to date (within cycle)
-        let python = sbom.components.values().find(|c| c.name == "python").unwrap();
+        let python = sbom
+            .components
+            .values()
+            .find(|c| c.name == "python")
+            .unwrap();
         let eol = python.eol.as_ref().unwrap();
         let current_version = python.version.as_deref().unwrap();
         let latest = eol.latest_in_cycle.as_deref().unwrap();
@@ -422,13 +433,19 @@ mod config_tests {
     #[test]
     fn enrichment_config_eol_default_disabled() {
         let config = sbom_tools::config::EnrichmentConfig::default();
-        assert!(!config.enable_eol, "EOL enrichment should be disabled by default");
+        assert!(
+            !config.enable_eol,
+            "EOL enrichment should be disabled by default"
+        );
     }
 
     #[test]
     fn enricher_config_eol_default_disabled() {
         let config = sbom_tools::enrichment::EnricherConfig::default();
-        assert!(!config.enable_eol, "EOL enrichment should be disabled by default");
+        assert!(
+            !config.enable_eol,
+            "EOL enrichment should be disabled by default"
+        );
     }
 
     #[test]
@@ -455,7 +472,7 @@ mod config_tests {
 mod report_tests {
     use super::*;
     use sbom_tools::parsers::parse_sbom;
-    use sbom_tools::reports::{create_reporter, ReportConfig, ReportFormat};
+    use sbom_tools::reports::{ReportConfig, ReportFormat, create_reporter};
     use std::path::Path;
 
     const FIXTURES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
@@ -475,10 +492,22 @@ mod report_tests {
         let output = report.unwrap();
 
         // Verify EOL fields are present in JSON
-        assert!(output.contains("eol_status"), "JSON should include eol_status field");
-        assert!(output.contains("End of Life"), "JSON should contain EOL status value");
-        assert!(output.contains("Approaching EOL"), "JSON should contain Approaching EOL");
-        assert!(output.contains("Supported"), "JSON should contain Supported status");
+        assert!(
+            output.contains("eol_status"),
+            "JSON should include eol_status field"
+        );
+        assert!(
+            output.contains("End of Life"),
+            "JSON should contain EOL status value"
+        );
+        assert!(
+            output.contains("Approaching EOL"),
+            "JSON should contain Approaching EOL"
+        );
+        assert!(
+            output.contains("Supported"),
+            "JSON should contain Supported status"
+        );
     }
 
     #[test]
@@ -493,12 +522,24 @@ mod report_tests {
 
         // CSV header should include EOL columns
         let first_line = output.lines().next().unwrap_or("");
-        assert!(first_line.contains("EOL Status"), "CSV header should include EOL Status");
-        assert!(first_line.contains("EOL Date"), "CSV header should include EOL Date");
+        assert!(
+            first_line.contains("EOL Status"),
+            "CSV header should include EOL Status"
+        );
+        assert!(
+            first_line.contains("EOL Date"),
+            "CSV header should include EOL Date"
+        );
 
         // Data rows should contain EOL values
-        assert!(output.contains("End of Life"), "CSV should contain EOL status");
-        assert!(output.contains("2020-01-01"), "CSV should contain Python 2.7 EOL date");
+        assert!(
+            output.contains("End of Life"),
+            "CSV should contain EOL status"
+        );
+        assert!(
+            output.contains("2020-01-01"),
+            "CSV should contain Python 2.7 EOL date"
+        );
     }
 
     #[test]
@@ -519,7 +560,9 @@ mod report_tests {
         new_sbom.add_component(extra);
 
         let engine = sbom_tools::diff::DiffEngine::default();
-        let diff = engine.diff(&old_sbom, &new_sbom).expect("diff should succeed");
+        let diff = engine
+            .diff(&old_sbom, &new_sbom)
+            .expect("diff should succeed");
 
         let reporter = create_reporter(ReportFormat::Summary);
         let config = ReportConfig::default();
@@ -558,7 +601,9 @@ mod report_tests {
         }
 
         let engine = sbom_tools::diff::DiffEngine::default();
-        let diff = engine.diff(&old_sbom, &new_sbom).expect("diff should succeed");
+        let diff = engine
+            .diff(&old_sbom, &new_sbom)
+            .expect("diff should succeed");
         let config = ReportConfig::default();
 
         // Markdown report
@@ -573,13 +618,16 @@ mod report_tests {
 
         // SARIF report
         let sarif_reporter = create_reporter(ReportFormat::Sarif);
-        let sarif_report = sarif_reporter.generate_diff_report(&diff, &old_sbom, &new_sbom, &config);
+        let sarif_report =
+            sarif_reporter.generate_diff_report(&diff, &old_sbom, &new_sbom, &config);
         assert!(sarif_report.is_ok());
         let sarif_output = sarif_report.unwrap();
         // SARIF rules should include EOL rules
         assert!(
-            sarif_output.contains("SBOM-EOL-001") || sarif_output.contains("SBOM-EOL-002")
-                || sarif_output.contains("ComponentEndOfLife") || sarif_output.contains("ComponentApproachingEol"),
+            sarif_output.contains("SBOM-EOL-001")
+                || sarif_output.contains("SBOM-EOL-002")
+                || sarif_output.contains("ComponentEndOfLife")
+                || sarif_output.contains("ComponentApproachingEol"),
             "SARIF should contain EOL rules definitions"
         );
     }

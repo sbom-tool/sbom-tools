@@ -48,7 +48,7 @@ mod vertex;
 
 pub use cost::CostModel;
 pub use engine::{DiffEngine, LargeSbomConfig};
-pub use graph::{diff_dependency_graph, GraphDiffConfig};
+pub use graph::{GraphDiffConfig, diff_dependency_graph};
 pub use incremental::{
     CacheHitType, CacheStats, ChangedSections, DiffCache, DiffCacheConfig, DiffCacheKey,
     IncrementalDiffEngine, IncrementalDiffResult, SectionHashes,

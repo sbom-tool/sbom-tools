@@ -65,4 +65,3 @@ pub(super) fn get_selected_component_name(app: &App) -> Option<String> {
         }
     }
 }
-

@@ -55,7 +55,7 @@ impl Default for AdaptiveThresholdConfig {
 
 impl AdaptiveThresholdConfig {
     /// Configure for target match ratio search.
-    #[must_use] 
+    #[must_use]
     pub fn for_target_ratio(ratio: f64) -> Self {
         Self {
             target_match_ratio: Some(ratio.clamp(0.0, 1.0)),
@@ -64,7 +64,7 @@ impl AdaptiveThresholdConfig {
     }
 
     /// Configure for Otsu's method (automatic threshold).
-    #[must_use] 
+    #[must_use]
     pub fn otsu() -> Self {
         Self {
             target_match_ratio: None,
@@ -122,7 +122,7 @@ pub struct ScoreStats {
 
 impl ScoreStats {
     /// Compute statistics from a set of scores.
-    #[must_use] 
+    #[must_use]
     pub fn from_scores(scores: &[f64]) -> Self {
         if scores.is_empty() {
             return Self {
@@ -174,13 +174,13 @@ pub struct AdaptiveThreshold {
 
 impl AdaptiveThreshold {
     /// Create a new adaptive threshold adjuster with the given config.
-    #[must_use] 
+    #[must_use]
     pub const fn new(config: AdaptiveThresholdConfig) -> Self {
         Self { config }
     }
 
     /// Compute the optimal threshold for matching between two SBOMs.
-    #[must_use] 
+    #[must_use]
     pub fn compute_threshold(
         &self,
         old_sbom: &NormalizedSbom,

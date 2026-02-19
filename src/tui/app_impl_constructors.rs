@@ -1,14 +1,14 @@
 //! Constructor methods for App.
 
+use super::app::{App, AppMode, AppOverlays, DataContext, TabKind, TabStates};
+use super::app_states::{
+    ComponentsState, DependenciesState, GraphChangesState, LicensesState, MatrixState,
+    MultiDiffState, NavigationContext, QualityState, SideBySideState, SourceDiffState,
+    TimelineState, VulnerabilitiesState,
+};
 use crate::diff::{DiffResult, MatrixResult, MultiDiffResult, TimelineResult};
 use crate::model::NormalizedSbom;
 use crate::quality::{ComplianceChecker, ComplianceLevel, QualityScorer, ScoringProfile};
-use super::app::{App, AppMode, AppOverlays, DataContext, TabKind, TabStates};
-use super::app_states::{
-    ComponentsState, DependenciesState, GraphChangesState, LicensesState,
-    MatrixState, MultiDiffState, NavigationContext, QualityState,
-    SideBySideState, SourceDiffState, TimelineState, VulnerabilitiesState,
-};
 
 impl App {
     /// Shared default initialization for all mode-independent fields.
@@ -74,7 +74,7 @@ impl App {
     }
 
     /// Create a new app for diff mode
-    #[must_use] 
+    #[must_use]
     pub fn new_diff(
         diff_result: DiffResult,
         old_sbom: NormalizedSbom,
@@ -93,8 +93,10 @@ impl App {
         let new_quality = Some(scorer.score(&new_sbom));
 
         // Compute only CRA Phase2 for the summary card; full compliance is lazy
-        let old_cra_compliance = Some(ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&old_sbom));
-        let new_cra_compliance = Some(ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&new_sbom));
+        let old_cra_compliance =
+            Some(ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&old_sbom));
+        let new_cra_compliance =
+            Some(ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&new_sbom));
 
         // Build indexes for fast lookups (O(1) instead of O(n))
         let old_sbom_index = Some(old_sbom.build_index());
@@ -129,9 +131,12 @@ impl App {
 
     /// Get combined enrichment stats for display
     #[cfg(feature = "enrichment")]
-    #[must_use] 
+    #[must_use]
     pub fn combined_enrichment_stats(&self) -> Option<crate::enrichment::EnrichmentStats> {
-        match (&self.data.enrichment_stats_old, &self.data.enrichment_stats_new) {
+        match (
+            &self.data.enrichment_stats_old,
+            &self.data.enrichment_stats_new,
+        ) {
             (Some(old), Some(new)) => {
                 let mut combined = old.clone();
                 combined.merge(new);
@@ -143,7 +148,7 @@ impl App {
     }
 
     /// Create a new app for view mode
-    #[must_use] 
+    #[must_use]
     pub fn new_view(sbom: NormalizedSbom) -> Self {
         let components_len = sbom.component_count();
         let vulns_len = sbom.all_vulnerabilities().len();
@@ -163,7 +168,7 @@ impl App {
     }
 
     /// Create a new app for multi-diff mode
-    #[must_use] 
+    #[must_use]
     pub fn new_multi_diff(result: MultiDiffResult) -> Self {
         let target_count = result.comparisons.len();
 
@@ -174,7 +179,7 @@ impl App {
     }
 
     /// Create a new app for timeline mode
-    #[must_use] 
+    #[must_use]
     pub fn new_timeline(result: TimelineResult) -> Self {
         let version_count = result.sboms.len();
 
@@ -185,7 +190,7 @@ impl App {
     }
 
     /// Create a new app for matrix mode
-    #[must_use] 
+    #[must_use]
     pub fn new_matrix(result: MatrixResult) -> Self {
         let sbom_count = result.sboms.len();
 

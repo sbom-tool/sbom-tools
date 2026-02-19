@@ -4,11 +4,11 @@
 
 use crate::config::DiffConfig;
 use crate::pipeline::{
-    auto_detect_format, compute_diff, exit_codes, output_report, parse_sbom_with_context,
-    OutputTarget,
+    OutputTarget, auto_detect_format, compute_diff, exit_codes, output_report,
+    parse_sbom_with_context,
 };
 use crate::reports::ReportFormat;
-use crate::tui::{run_tui, App};
+use crate::tui::{App, run_tui};
 use anyhow::Result;
 
 /// Run the diff command, returning the desired exit code.
@@ -43,10 +43,8 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
     let enrichment_stats = {
         if config.enrichment.enabled {
             let osv_config = crate::pipeline::build_enrichment_config(&config.enrichment);
-            let stats_old =
-                crate::pipeline::enrich_sbom(old_parsed.sbom_mut(), &osv_config, quiet);
-            let stats_new =
-                crate::pipeline::enrich_sbom(new_parsed.sbom_mut(), &osv_config, quiet);
+            let stats_old = crate::pipeline::enrich_sbom(old_parsed.sbom_mut(), &osv_config, quiet);
+            let stats_new = crate::pipeline::enrich_sbom(new_parsed.sbom_mut(), &osv_config, quiet);
             if stats_old.is_none() || stats_new.is_none() {
                 enrichment_warnings.push("OSV vulnerability enrichment failed");
             }
@@ -82,8 +80,10 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
     // Enrich with VEX data if VEX documents provided
     #[cfg(feature = "enrichment")]
     if !config.enrichment.vex_paths.is_empty() {
-        let vex_old = crate::pipeline::enrich_vex(old_parsed.sbom_mut(), &config.enrichment.vex_paths, quiet);
-        let vex_new = crate::pipeline::enrich_vex(new_parsed.sbom_mut(), &config.enrichment.vex_paths, quiet);
+        let vex_old =
+            crate::pipeline::enrich_vex(old_parsed.sbom_mut(), &config.enrichment.vex_paths, quiet);
+        let vex_new =
+            crate::pipeline::enrich_vex(new_parsed.sbom_mut(), &config.enrichment.vex_paths, quiet);
         if vex_old.is_none() || vex_new.is_none() {
             enrichment_warnings.push("VEX enrichment failed");
         }

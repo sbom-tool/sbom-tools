@@ -22,7 +22,7 @@ pub struct CacheKey {
 
 impl CacheKey {
     /// Create a cache key from component data.
-    #[must_use] 
+    #[must_use]
     pub const fn new(
         purl: Option<String>,
         name: String,
@@ -38,7 +38,7 @@ impl CacheKey {
     }
 
     /// Convert to a filesystem-safe filename using SHA256 hash.
-    #[must_use] 
+    #[must_use]
     pub fn to_filename(&self) -> String {
         let mut hasher = Sha256::new();
         hasher.update(format!(
@@ -50,7 +50,7 @@ impl CacheKey {
     }
 
     /// Check if this key can be used for an OSV query.
-    #[must_use] 
+    #[must_use]
     pub const fn is_queryable(&self) -> bool {
         // Need either a PURL or name + ecosystem + version
         self.purl.is_some() || (self.ecosystem.is_some() && self.version.is_some())
@@ -78,7 +78,7 @@ impl FileCache {
     /// Get cached vulnerabilities for a key.
     ///
     /// Returns None if not cached or cache is expired.
-    #[must_use] 
+    #[must_use]
     pub fn get(&self, key: &CacheKey) -> Option<Vec<VulnerabilityRef>> {
         let path = self.cache_dir.join(key.to_filename());
 
@@ -121,11 +121,7 @@ impl FileCache {
         if self.cache_dir.exists() {
             for entry in fs::read_dir(&self.cache_dir)? {
                 let entry = entry?;
-                if entry
-                    .path()
-                    .extension()
-                    .is_some_and(|e| e == "json")
-                {
+                if entry.path().extension().is_some_and(|e| e == "json") {
                     let _ = fs::remove_file(entry.path());
                 }
             }
@@ -134,17 +130,13 @@ impl FileCache {
     }
 
     /// Get cache statistics.
-    #[must_use] 
+    #[must_use]
     pub fn stats(&self) -> CacheStats {
         let mut stats = CacheStats::default();
 
         if let Ok(entries) = fs::read_dir(&self.cache_dir) {
             for entry in entries.flatten() {
-                if entry
-                    .path()
-                    .extension()
-                    .is_some_and(|e| e == "json")
-                {
+                if entry.path().extension().is_some_and(|e| e == "json") {
                     stats.total_entries += 1;
                     if let Ok(metadata) = entry.metadata() {
                         stats.total_size += metadata.len();
@@ -152,9 +144,10 @@ impl FileCache {
                         // Check if expired
                         if let Ok(modified) = metadata.modified()
                             && let Ok(age) = modified.elapsed()
-                                && age > self.ttl {
-                                    stats.expired_entries += 1;
-                                }
+                            && age > self.ttl
+                        {
+                            stats.expired_entries += 1;
+                        }
                     }
                 }
             }

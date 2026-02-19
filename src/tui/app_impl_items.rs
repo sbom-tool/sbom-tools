@@ -2,8 +2,8 @@
 
 use super::app::App;
 use super::app_states::{
-    sort_component_changes, sort_components, ChangeType, ComponentFilter, DiffVulnItem,
-    DiffVulnStatus, VulnFilter,
+    ChangeType, ComponentFilter, DiffVulnItem, DiffVulnStatus, VulnFilter, sort_component_changes,
+    sort_components,
 };
 use crate::diff::SlaStatus;
 
@@ -15,15 +15,12 @@ fn eol_filter_matches(comp: &crate::model::Component, filter: ComponentFilter) -
             .eol
             .as_ref()
             .is_some_and(|e| e.status == EolStatus::EndOfLife),
-        ComponentFilter::EolRisk => comp
-            .eol
-            .as_ref()
-            .is_some_and(|e| {
-                matches!(
-                    e.status,
-                    EolStatus::EndOfLife | EolStatus::ApproachingEol | EolStatus::SecurityOnly
-                )
-            }),
+        ComponentFilter::EolRisk => comp.eol.as_ref().is_some_and(|e| {
+            matches!(
+                e.status,
+                EolStatus::EndOfLife | EolStatus::ApproachingEol | EolStatus::SecurityOnly
+            )
+        }),
         _ => true,
     }
 }
@@ -101,8 +98,7 @@ impl App {
                 let matches_name = comp.name.to_lowercase() == name_lower;
                 let matches_version = version_lower.as_ref().is_none_or(|v| {
                     comp.new_version.as_deref().map(str::to_lowercase) == Some(v.clone())
-                        || comp.old_version.as_deref().map(str::to_lowercase)
-                            == Some(v.clone())
+                        || comp.old_version.as_deref().map(str::to_lowercase) == Some(v.clone())
                 });
 
                 matches_type && matches_name && matches_version
@@ -110,7 +106,7 @@ impl App {
     }
 
     /// Build diff-mode components list in the same order as the table.
-    #[must_use] 
+    #[must_use]
     pub fn diff_component_items(
         &self,
         filter: ComponentFilter,
@@ -169,7 +165,10 @@ impl App {
         if filter == ComponentFilter::All || !filter.is_view_filter() {
             sbom.component_count()
         } else {
-            sbom.components.values().filter(|c| eol_filter_matches(c, filter)).count()
+            sbom.components
+                .values()
+                .filter(|c| eol_filter_matches(c, filter))
+                .count()
         }
     }
 
@@ -183,14 +182,17 @@ impl App {
         let mut items: Vec<_> = if filter == ComponentFilter::All || !filter.is_view_filter() {
             sbom.components.values().collect()
         } else {
-            sbom.components.values().filter(|c| eol_filter_matches(c, filter)).collect()
+            sbom.components
+                .values()
+                .filter(|c| eol_filter_matches(c, filter))
+                .collect()
         };
         sort_components(&mut items, self.tabs.components.sort_by);
         items
     }
 
     /// Build diff-mode vulnerabilities list in the same order as the table.
-    #[must_use] 
+    #[must_use]
     pub fn diff_vulnerability_items(&self) -> Vec<DiffVulnItem<'_>> {
         let Some(diff) = self.data.diff_result.as_ref() else {
             return Vec::new();
@@ -273,7 +275,9 @@ impl App {
                 all_vulns.sort_by(|a, b| {
                     let score_a = a.vuln.cvss_score.unwrap_or(0.0);
                     let score_b = b.vuln.cvss_score.unwrap_or(0.0);
-                    score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+                    score_b
+                        .partial_cmp(&score_a)
+                        .unwrap_or(std::cmp::Ordering::Equal)
                 });
             }
             super::app_states::VulnSort::SlaUrgency => {
@@ -294,7 +298,10 @@ impl App {
     /// Call this before `diff_vulnerability_items_from_cache()` to guarantee
     /// the cache is warm.
     pub fn ensure_vulnerability_cache(&mut self) {
-        let current_key = (self.tabs.vulnerabilities.filter, self.tabs.vulnerabilities.sort_by);
+        let current_key = (
+            self.tabs.vulnerabilities.filter,
+            self.tabs.vulnerabilities.sort_by,
+        );
 
         if self.tabs.vulnerabilities.cached_key == Some(current_key)
             && !self.tabs.vulnerabilities.cached_indices.is_empty()
@@ -304,26 +311,27 @@ impl App {
 
         // Cache miss: compute full list, extract stable indices, then drop items
         let items = self.diff_vulnerability_items();
-        let indices: Vec<(DiffVulnStatus, usize)> = self.data.diff_result.as_ref().map_or_else(
-            Vec::new,
-            |diff| {
-                items
-                    .iter()
-                    .filter_map(|item| {
-                        let list = match item.status {
-                            DiffVulnStatus::Introduced => &diff.vulnerabilities.introduced,
-                            DiffVulnStatus::Resolved => &diff.vulnerabilities.resolved,
-                            DiffVulnStatus::Persistent => &diff.vulnerabilities.persistent,
-                        };
-                        // Find the index by pointer identity
-                        let ptr = item.vuln as *const crate::diff::VulnerabilityDetail;
-                        list.iter()
-                            .position(|v| std::ptr::eq(v, ptr))
-                            .map(|idx| (item.status, idx))
-                    })
-                    .collect()
-            },
-        );
+        let indices: Vec<(DiffVulnStatus, usize)> =
+            self.data
+                .diff_result
+                .as_ref()
+                .map_or_else(Vec::new, |diff| {
+                    items
+                        .iter()
+                        .filter_map(|item| {
+                            let list = match item.status {
+                                DiffVulnStatus::Introduced => &diff.vulnerabilities.introduced,
+                                DiffVulnStatus::Resolved => &diff.vulnerabilities.resolved,
+                                DiffVulnStatus::Persistent => &diff.vulnerabilities.persistent,
+                            };
+                            // Find the index by pointer identity
+                            let ptr = item.vuln as *const crate::diff::VulnerabilityDetail;
+                            list.iter()
+                                .position(|v| std::ptr::eq(v, ptr))
+                                .map(|idx| (item.status, idx))
+                        })
+                        .collect()
+                });
         drop(items);
 
         self.tabs.vulnerabilities.cached_key = Some(current_key);
@@ -334,7 +342,7 @@ impl App {
     ///
     /// Panics if the cache has not been populated. Call `ensure_vulnerability_cache()`
     /// first.
-    #[must_use] 
+    #[must_use]
     pub fn diff_vulnerability_items_from_cache(&self) -> Vec<DiffVulnItem<'_>> {
         let Some(diff) = self.data.diff_result.as_ref() else {
             return Vec::new();
@@ -359,7 +367,7 @@ impl App {
 
     /// Count diff-mode vulnerabilities matching the current filter (without building full list).
     /// More efficient than `diff_vulnerability_items().len()` for just getting a count.
-    #[must_use] 
+    #[must_use]
     pub fn diff_vulnerability_count(&self) -> usize {
         let Some(diff) = self.data.diff_result.as_ref() else {
             return 0;
@@ -411,34 +419,43 @@ impl App {
     /// Get the sort key for a component in the new SBOM (diff mode).
     ///
     /// Returns pre-computed lowercase strings to avoid repeated allocations during sorting.
-    #[must_use] 
+    #[must_use]
     pub fn get_new_sbom_sort_key(
         &self,
         id: &crate::model::CanonicalId,
     ) -> Option<&crate::model::ComponentSortKey> {
-        self.data.new_sbom_index.as_ref().and_then(|idx| idx.sort_key(id))
+        self.data
+            .new_sbom_index
+            .as_ref()
+            .and_then(|idx| idx.sort_key(id))
     }
 
     /// Get the sort key for a component in the old SBOM (diff mode).
-    #[must_use] 
+    #[must_use]
     pub fn get_old_sbom_sort_key(
         &self,
         id: &crate::model::CanonicalId,
     ) -> Option<&crate::model::ComponentSortKey> {
-        self.data.old_sbom_index.as_ref().and_then(|idx| idx.sort_key(id))
+        self.data
+            .old_sbom_index
+            .as_ref()
+            .and_then(|idx| idx.sort_key(id))
     }
 
     /// Get the sort key for a component in the single SBOM (view mode).
-    #[must_use] 
+    #[must_use]
     pub fn get_sbom_sort_key(
         &self,
         id: &crate::model::CanonicalId,
     ) -> Option<&crate::model::ComponentSortKey> {
-        self.data.sbom_index.as_ref().and_then(|idx| idx.sort_key(id))
+        self.data
+            .sbom_index
+            .as_ref()
+            .and_then(|idx| idx.sort_key(id))
     }
 
     /// Get dependencies of a component using the cached index (O(k) instead of O(edges)).
-    #[must_use] 
+    #[must_use]
     pub fn get_dependencies_indexed(
         &self,
         id: &crate::model::CanonicalId,
@@ -453,7 +470,7 @@ impl App {
     }
 
     /// Get dependents of a component using the cached index (O(k) instead of O(edges)).
-    #[must_use] 
+    #[must_use]
     pub fn get_dependents_indexed(
         &self,
         id: &crate::model::CanonicalId,

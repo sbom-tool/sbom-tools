@@ -7,14 +7,13 @@ use crate::config::DiffConfig;
 use crate::diff::DiffResult;
 use crate::model::NormalizedSbom;
 use crate::reports::{
-    create_reporter_with_options, ReportConfig, ReportFormat, StreamingJsonReporter,
-    WriterReporter,
+    ReportConfig, ReportFormat, StreamingJsonReporter, WriterReporter, create_reporter_with_options,
 };
 use anyhow::Result;
 use std::fs::File;
 use std::io::BufWriter;
 
-use super::{auto_detect_format, should_use_color, write_output, OutputTarget};
+use super::{OutputTarget, auto_detect_format, should_use_color, write_output};
 
 /// Output a diff report to the configured destination.
 ///
@@ -75,13 +74,9 @@ pub fn output_report(
 fn should_use_streaming(config: &DiffConfig) -> bool {
     let streaming_config = &config.output.streaming;
 
-    let old_size = std::fs::metadata(&config.paths.old)
-        .map(|m| m.len())
-        .ok();
+    let old_size = std::fs::metadata(&config.paths.old).map(|m| m.len()).ok();
 
-    let new_size = std::fs::metadata(&config.paths.new)
-        .map(|m| m.len())
-        .ok();
+    let new_size = std::fs::metadata(&config.paths.new).map(|m| m.len()).ok();
 
     let old_should_stream = streaming_config.should_stream(old_size, false);
     let new_should_stream = streaming_config.should_stream(new_size, false);
@@ -102,26 +97,14 @@ fn output_streaming(
     if let Some(path) = &config.output.file {
         let file = File::create(path)?;
         let mut writer = BufWriter::new(file);
-        streaming_reporter.write_diff_to(
-            result,
-            old_sbom,
-            new_sbom,
-            report_config,
-            &mut writer,
-        )?;
+        streaming_reporter.write_diff_to(result, old_sbom, new_sbom, report_config, &mut writer)?;
         if !config.behavior.quiet {
             tracing::info!("Streaming report written to {:?}", path);
         }
     } else {
         let stdout = std::io::stdout();
         let mut writer = BufWriter::new(stdout.lock());
-        streaming_reporter.write_diff_to(
-            result,
-            old_sbom,
-            new_sbom,
-            report_config,
-            &mut writer,
-        )?;
+        streaming_reporter.write_diff_to(result, old_sbom, new_sbom, report_config, &mut writer)?;
     }
 
     Ok(())

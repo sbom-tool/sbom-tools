@@ -3,13 +3,13 @@
 //! Implements the `validate` subcommand for validating SBOMs against compliance standards.
 
 use crate::model::{CreatorType, ExternalRefType, HashAlgorithm, NormalizedSbom, Severity};
-use crate::pipeline::{parse_sbom_with_context, write_output, OutputTarget};
+use crate::pipeline::{OutputTarget, parse_sbom_with_context, write_output};
 use crate::quality::{
     ComplianceChecker, ComplianceLevel, ComplianceResult, Violation, ViolationCategory,
     ViolationSeverity,
 };
-use crate::reports::{generate_compliance_sarif, ReportFormat};
-use anyhow::{bail, Result};
+use crate::reports::{ReportFormat, generate_compliance_sarif};
+use anyhow::{Result, bail};
 use std::collections::HashSet;
 use std::path::PathBuf;
 
@@ -113,10 +113,7 @@ struct ComplianceSummary {
     info: usize,
 }
 
-fn write_compliance_summary(
-    result: &ComplianceResult,
-    output_file: Option<PathBuf>,
-) -> Result<()> {
+fn write_compliance_summary(result: &ComplianceResult, output_file: Option<PathBuf>) -> Result<()> {
     let target = OutputTarget::from_option(output_file);
     let total = result.violations.len() + 1;
     let issues = result.error_count + result.warning_count;
@@ -149,13 +146,9 @@ fn write_multi_compliance_output(
     let target = OutputTarget::from_option(output_file);
 
     let content = match output {
-        ReportFormat::Json => {
-            serde_json::to_string_pretty(results)
-                .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?
-        }
-        ReportFormat::Sarif => {
-            crate::reports::generate_multi_compliance_sarif(results)?
-        }
+        ReportFormat::Json => serde_json::to_string_pretty(results)
+            .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
+        ReportFormat::Sarif => crate::reports::generate_multi_compliance_sarif(results)?,
         _ => {
             let mut parts = Vec::new();
             for result in results {
@@ -205,10 +198,7 @@ fn write_multi_compliance_summary(
 
 fn format_compliance_text(result: &ComplianceResult) -> String {
     let mut lines = Vec::new();
-    lines.push(format!(
-        "Compliance ({})",
-        result.level.name()
-    ));
+    lines.push(format!("Compliance ({})", result.level.name()));
     lines.push(format!(
         "Status: {} ({} errors, {} warnings, {} info)",
         if result.is_compliant {
@@ -641,9 +631,7 @@ fn validate_fda_relationships(sbom: &NormalizedSbom, issues: &mut Vec<FdaIssue>)
         issues.push(FdaIssue {
             severity: FdaSeverity::Error,
             category: "Dependency",
-            message: format!(
-                "No dependency relationships defined for {total} components"
-            ),
+            message: format!("No dependency relationships defined for {total} components"),
         });
     }
 
@@ -695,7 +683,6 @@ fn validate_fda_vulnerabilities(sbom: &NormalizedSbom, issues: &mut Vec<FdaIssue
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

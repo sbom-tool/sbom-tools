@@ -6,11 +6,11 @@ use crate::diff::MatrixResult;
 use crate::tui::app::MatrixState;
 use crate::tui::theme::colors;
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table, Wrap},
-    Frame,
 };
 
 /// Render the matrix comparison view
@@ -143,9 +143,10 @@ fn render_similarity_matrix(f: &mut Frame, area: Rect, result: &MatrixResult, st
         .filter(|(i, _)| {
             // In focus mode, only show focused row
             if state.focus_mode
-                && let Some(focus_row) = state.focus_row {
-                    return *i == focus_row;
-                }
+                && let Some(focus_row) = state.focus_row
+            {
+                return *i == focus_row;
+            }
             true
         })
         .map(|(i, row_sbom)| {
@@ -172,9 +173,11 @@ fn render_similarity_matrix(f: &mut Frame, area: Rect, result: &MatrixResult, st
                 // In focus mode with column focus, only show focused column
                 if state.focus_mode
                     && let Some(focus_col) = state.focus_col
-                        && j != focus_col && i != selected_row {
-                            // Skip this column in focus mode
-                        }
+                    && j != focus_col
+                    && i != selected_row
+                {
+                    // Skip this column in focus mode
+                }
 
                 let similarity = result.get_similarity(i, j);
                 let is_selected = i == selected_row && j == selected_col;
@@ -354,10 +357,12 @@ fn render_pair_details(f: &mut Frame, area: Rect, result: &MatrixResult, state: 
 fn render_clustering(f: &mut Frame, area: Rect, result: &MatrixResult, state: &MatrixState) {
     let scheme = colors();
     let text = result.clustering.as_ref().map_or_else(
-        || vec![Line::from(vec![Span::styled(
-            "No clustering computed",
-            Style::default().fg(scheme.text_muted),
-        )])],
+        || {
+            vec![Line::from(vec![Span::styled(
+                "No clustering computed",
+                Style::default().fg(scheme.text_muted),
+            )])]
+        },
         |clustering| {
             let mut lines = vec![
                 Line::from(vec![
@@ -431,10 +436,7 @@ fn render_clustering(f: &mut Frame, area: Rect, result: &MatrixResult, state: &M
     let block = Block::default()
         .title(format!(
             " Clustering ({} clusters) [C: details] ",
-            result
-                .clustering
-                .as_ref()
-                .map_or(0, |c| c.clusters.len())
+            result.clustering.as_ref().map_or(0, |c| c.clusters.len())
         ))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(scheme.critical));

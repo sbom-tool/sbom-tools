@@ -1,8 +1,8 @@
 //! Source tab event handling for App (diff mode).
 
 use crate::tui::app::App;
-use crate::tui::app_states::source::SourceDiffState;
 use crate::tui::app_states::SourceViewMode;
+use crate::tui::app_states::source::SourceDiffState;
 use crossterm::event::{KeyCode, KeyEvent};
 
 /// Handle source-tab-specific key events.
@@ -114,9 +114,10 @@ fn get_active_expandable_node(
         return None;
     }
     if let Some(must_be_expanded) = require_expanded
-        && item.is_expanded != must_be_expanded {
-            return None;
-        }
+        && item.is_expanded != must_be_expanded
+    {
+        return None;
+    }
     Some(item.node_id.clone())
 }
 

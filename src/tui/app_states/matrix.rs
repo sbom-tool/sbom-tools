@@ -1,7 +1,7 @@
 //! Matrix state types.
 
-use crate::tui::views::MatrixPanel;
 use super::multi_diff::{MultiViewSearchState, SortDirection};
+use crate::tui::views::MatrixPanel;
 
 pub struct MatrixState {
     pub selected_row: usize,
@@ -207,7 +207,6 @@ impl MatrixState {
             SimilarityThreshold::Low => similarity < 0.5,
         }
     }
-
 }
 
 impl Default for MatrixState {
@@ -278,4 +277,3 @@ impl MatrixSortBy {
         }
     }
 }
-

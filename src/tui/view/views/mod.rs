@@ -9,7 +9,7 @@ mod source;
 mod tree;
 mod vulnerabilities;
 
-pub use compliance::{compute_compliance_results, render_compliance, StandardComplianceState};
+pub use compliance::{StandardComplianceState, compute_compliance_results, render_compliance};
 pub use dependencies::render_dependencies;
 pub use licenses::render_licenses;
 pub use overview::render_overview;
@@ -17,5 +17,5 @@ pub use quality::render_quality;
 pub use source::render_source;
 pub use tree::render_tree;
 pub use vulnerabilities::{
-    build_display_items, render_vulnerabilities, VulnCache, VulnCacheRef, VulnDisplayItem,
+    VulnCache, VulnCacheRef, VulnDisplayItem, build_display_items, render_vulnerabilities,
 };

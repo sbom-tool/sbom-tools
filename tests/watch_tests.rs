@@ -1,6 +1,6 @@
 //! Integration tests for the watch subsystem.
 
-use sbom_tools::watch::{parse_duration, WatchConfig};
+use sbom_tools::watch::{WatchConfig, parse_duration};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -99,8 +99,7 @@ fn test_watch_loop_exit_on_change() {
     let fixture_path = dir.path().join("test.cdx.json");
 
     // Copy a real fixture for initial scan
-    let demo = std::fs::read_to_string("tests/fixtures/demo-old.cdx.json")
-        .expect("read fixture");
+    let demo = std::fs::read_to_string("tests/fixtures/demo-old.cdx.json").expect("read fixture");
     std::fs::write(&fixture_path, &demo).expect("write fixture");
 
     let config = WatchConfig {
@@ -124,8 +123,8 @@ fn test_watch_loop_exit_on_change() {
 
     // Wait a bit for initial scan, then modify the file
     std::thread::sleep(Duration::from_millis(100));
-    let demo_new = std::fs::read_to_string("tests/fixtures/demo-new.cdx.json")
-        .expect("read new fixture");
+    let demo_new =
+        std::fs::read_to_string("tests/fixtures/demo-new.cdx.json").expect("read new fixture");
     std::fs::write(&fixture_clone, &demo_new).expect("modify fixture");
 
     // Watch loop should exit within a few poll intervals
@@ -139,26 +138,28 @@ fn test_watch_loop_initial_scan_parses_fixtures() {
     let dir = tempfile::tempdir().expect("create temp dir");
 
     // Write a CycloneDX fixture
-    let cdx = std::fs::read_to_string("tests/fixtures/demo-old.cdx.json")
-        .expect("read fixture");
+    let cdx = std::fs::read_to_string("tests/fixtures/demo-old.cdx.json").expect("read fixture");
     std::fs::write(dir.path().join("app.cdx.json"), &cdx).expect("write");
 
     // Write an SPDX fixture if available
     let spdx_dir = PathBuf::from("tests/fixtures/spdx");
     if spdx_dir.exists()
-        && let Some(Ok(entry)) = std::fs::read_dir(&spdx_dir)
-            .ok()
-            .and_then(|mut entries| entries.find(|e| {
+        && let Some(Ok(entry)) = std::fs::read_dir(&spdx_dir).ok().and_then(|mut entries| {
+            entries.find(|e| {
                 e.as_ref().is_ok_and(|e| {
-                    e.file_name().to_string_lossy().to_lowercase().ends_with(".spdx.json")
+                    e.file_name()
+                        .to_string_lossy()
+                        .to_lowercase()
+                        .ends_with(".spdx.json")
                 })
-            }))
-        {
-            let content = std::fs::read_to_string(entry.path()).unwrap_or_default();
-            if !content.is_empty() {
-                std::fs::write(dir.path().join("lib.spdx.json"), content).expect("write spdx");
-            }
+            })
+        })
+    {
+        let content = std::fs::read_to_string(entry.path()).unwrap_or_default();
+        if !content.is_empty() {
+            std::fs::write(dir.path().join("lib.spdx.json"), content).expect("write spdx");
         }
+    }
 
     let config = WatchConfig {
         watch_dirs: vec![dir.path().to_path_buf()],
@@ -181,8 +182,8 @@ fn test_watch_loop_initial_scan_parses_fixtures() {
 
     // Trigger a change so it exits
     std::thread::sleep(Duration::from_millis(100));
-    let cdx_new = std::fs::read_to_string("tests/fixtures/demo-new.cdx.json")
-        .expect("read new fixture");
+    let cdx_new =
+        std::fs::read_to_string("tests/fixtures/demo-new.cdx.json").expect("read new fixture");
     std::fs::write(dir_path.join("app.cdx.json"), &cdx_new).expect("modify");
 
     let result = handle.join().expect("thread join");
@@ -200,8 +201,7 @@ fn test_watch_ndjson_output_produces_valid_json() {
     let dir = tempfile::tempdir().expect("create temp dir");
     let output_file = dir.path().join("events.ndjson");
 
-    let demo = std::fs::read_to_string("tests/fixtures/demo-old.cdx.json")
-        .expect("read fixture");
+    let demo = std::fs::read_to_string("tests/fixtures/demo-old.cdx.json").expect("read fixture");
     let fixture_path = dir.path().join("test.cdx.json");
     std::fs::write(&fixture_path, &demo).expect("write fixture");
 
@@ -229,8 +229,8 @@ fn test_watch_ndjson_output_produces_valid_json() {
     let handle = std::thread::spawn(move || sbom_tools::watch::run_watch_loop(&config_clone));
 
     std::thread::sleep(Duration::from_millis(100));
-    let demo_new = std::fs::read_to_string("tests/fixtures/demo-new.cdx.json")
-        .expect("read new fixture");
+    let demo_new =
+        std::fs::read_to_string("tests/fixtures/demo-new.cdx.json").expect("read new fixture");
     std::fs::write(&fixture_clone, &demo_new).expect("modify fixture");
 
     let result = handle.join().expect("thread join");

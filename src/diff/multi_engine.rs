@@ -5,7 +5,13 @@
 //! recomputation when the same SBOM pair is compared multiple times.
 
 use super::incremental::IncrementalDiffEngine;
-use super::multi::{MultiDiffResult, SbomInfo, ComparisonResult, MultiDiffSummary, VariableComponent, VersionSpread, InconsistentComponent, DivergentComponent, DivergenceType, TimelineResult, EvolutionSummary, VersionAtPoint, ComponentEvolution, VersionChangeType, VulnerabilitySnapshot, DependencySnapshot, ComplianceSnapshot, ComplianceScoreEntry, MatrixResult, SbomClustering, SbomCluster, SecurityImpact, VulnerabilityMatrix};
+use super::multi::{
+    ComparisonResult, ComplianceScoreEntry, ComplianceSnapshot, ComponentEvolution,
+    DependencySnapshot, DivergenceType, DivergentComponent, EvolutionSummary,
+    InconsistentComponent, MatrixResult, MultiDiffResult, MultiDiffSummary, SbomCluster,
+    SbomClustering, SbomInfo, SecurityImpact, TimelineResult, VariableComponent, VersionAtPoint,
+    VersionChangeType, VersionSpread, VulnerabilityMatrix, VulnerabilitySnapshot,
+};
 use super::{DiffEngine, DiffResult};
 use crate::matching::FuzzyMatchConfig;
 use crate::model::{NormalizedSbom, VulnerabilityCounts};
@@ -26,7 +32,7 @@ pub struct MultiDiffEngine {
 }
 
 impl MultiDiffEngine {
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             fuzzy_config: None,
@@ -728,9 +734,10 @@ fn calculate_major_version_spread(versions: &[String]) -> u32 {
         } else {
             // Fallback: try to extract leading number
             if let Some(major_str) = version.split(['.', '-', '_']).next()
-                && let Ok(major) = major_str.parse::<u64>() {
-                    major_versions.insert(major);
-                }
+                && let Ok(major) = major_str.parse::<u64>()
+            {
+                major_versions.insert(major);
+            }
         }
     }
 

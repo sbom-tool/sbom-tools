@@ -86,7 +86,6 @@ impl LicensesState {
         };
         self.selected = 0;
     }
-
 }
 
 impl ListNavigation for LicensesState {
@@ -137,4 +136,3 @@ pub enum LicenseRiskFilter {
     High,
     Critical,
 }
-

@@ -77,7 +77,7 @@ impl EventResult {
     }
 
     /// Create a navigation result
-    #[must_use] 
+    #[must_use]
     pub const fn navigate(target: TabTarget) -> Self {
         Self::NavigateTo(target)
     }
@@ -104,14 +104,16 @@ pub enum TabTarget {
 
 impl TabTarget {
     /// Convert to `TabKind` if this is a simple tab navigation
-    #[must_use] 
+    #[must_use]
     pub const fn to_tab_kind(&self) -> Option<super::app::TabKind> {
         match self {
             Self::Summary => Some(super::app::TabKind::Summary),
             Self::Components | Self::ComponentByName(_) => Some(super::app::TabKind::Components),
             Self::Dependencies => Some(super::app::TabKind::Dependencies),
             Self::Licenses => Some(super::app::TabKind::Licenses),
-            Self::Vulnerabilities | Self::VulnerabilityById(_) => Some(super::app::TabKind::Vulnerabilities),
+            Self::Vulnerabilities | Self::VulnerabilityById(_) => {
+                Some(super::app::TabKind::Vulnerabilities)
+            }
             Self::Quality => Some(super::app::TabKind::Quality),
             Self::Compliance => Some(super::app::TabKind::Compliance),
             Self::SideBySide => Some(super::app::TabKind::SideBySide),
@@ -121,7 +123,7 @@ impl TabTarget {
     }
 
     /// Convert from `TabKind`
-    #[must_use] 
+    #[must_use]
     pub const fn from_tab_kind(kind: super::app::TabKind) -> Self {
         match kind {
             super::app::TabKind::Summary => Self::Summary,
@@ -224,7 +226,7 @@ pub enum ViewMode {
 
 impl ViewMode {
     /// Convert from the legacy `AppMode` enum
-    #[must_use] 
+    #[must_use]
     pub const fn from_app_mode(mode: super::app::AppMode) -> Self {
         match mode {
             super::app::AppMode::Diff => Self::Diff,

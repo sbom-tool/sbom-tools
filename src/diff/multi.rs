@@ -34,7 +34,7 @@ pub struct SbomInfo {
 }
 
 impl SbomInfo {
-    #[must_use] 
+    #[must_use]
     pub fn from_sbom(sbom: &NormalizedSbom, name: String, file_path: String) -> Self {
         Self {
             name,
@@ -166,7 +166,7 @@ pub enum SecurityImpact {
 }
 
 impl SecurityImpact {
-    #[must_use] 
+    #[must_use]
     pub const fn label(&self) -> &'static str {
         match self {
             Self::Critical => "CRITICAL",
@@ -275,7 +275,7 @@ pub enum VersionChangeType {
 }
 
 impl VersionChangeType {
-    #[must_use] 
+    #[must_use]
     pub const fn symbol(&self) -> &'static str {
         match self {
             Self::Initial => "●",
@@ -369,7 +369,7 @@ pub struct MatrixResult {
 
 impl MatrixResult {
     /// Get diff between sboms[i] and sboms[j]
-    #[must_use] 
+    #[must_use]
     pub fn get_diff(&self, i: usize, j: usize) -> Option<&DiffResult> {
         if i == j {
             return None;
@@ -380,7 +380,7 @@ impl MatrixResult {
     }
 
     /// Get similarity between sboms[i] and sboms[j]
-    #[must_use] 
+    #[must_use]
     pub fn get_similarity(&self, i: usize, j: usize) -> f64 {
         if i == j {
             return 1.0;
@@ -398,7 +398,7 @@ impl MatrixResult {
     }
 
     /// Number of pairs (n choose 2)
-    #[must_use] 
+    #[must_use]
     pub fn num_pairs(&self) -> usize {
         let n = self.sboms.len();
         n * (n - 1) / 2
@@ -450,7 +450,7 @@ pub struct IncrementalChange {
 }
 
 impl IncrementalChange {
-    #[must_use] 
+    #[must_use]
     pub fn from_diff(
         from_idx: usize,
         to_idx: usize,

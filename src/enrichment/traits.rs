@@ -63,7 +63,7 @@ pub struct NoOpEnricher;
 
 impl NoOpEnricher {
     /// Create a new no-op enricher.
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self
     }

@@ -24,8 +24,7 @@ pub struct BlastRadius {
     pub critical_paths: Vec<Vec<String>>,
 }
 
-impl BlastRadius {
-}
+impl BlastRadius {}
 
 /// Risk level for a component
 #[allow(dead_code)]
@@ -37,7 +36,6 @@ pub enum RiskLevel {
     High,
     Critical,
 }
-
 
 /// Risk indicators for a component
 #[allow(dead_code)]
@@ -63,15 +61,14 @@ pub struct RiskIndicators {
     pub risk_level: RiskLevel,
 }
 
-
 /// License risk level
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum LicenseRisk {
     #[default]
     None,
-    Low,      // Permissive (MIT, Apache, BSD)
-    Medium,   // Weak copyleft (LGPL, MPL)
-    High,     // Strong copyleft (GPL, AGPL) or Unknown
+    Low,    // Permissive (MIT, Apache, BSD)
+    Medium, // Weak copyleft (LGPL, MPL)
+    High,   // Strong copyleft (GPL, AGPL) or Unknown
 }
 
 impl LicenseRisk {
@@ -290,16 +287,9 @@ fn parse_version_parts(version: &str) -> Option<Vec<u32>> {
         .next()
         .unwrap_or(version);
 
-    let parts: Vec<u32> = cleaned
-        .split('.')
-        .filter_map(|p| p.parse().ok())
-        .collect();
+    let parts: Vec<u32> = cleaned.split('.').filter_map(|p| p.parse().ok()).collect();
 
-    if parts.is_empty() {
-        None
-    } else {
-        Some(parts)
-    }
+    if parts.is_empty() { None } else { Some(parts) }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -323,9 +313,10 @@ pub fn analyze_downgrade(old_version: &str, new_version: &str) -> Option<Downgra
 
     // Check if major version decreased
     if let (Some(&old_major), Some(&new_major)) = (old_parts.first(), new_parts.first())
-        && new_major < old_major {
-            return Some(DowngradeSeverity::Major);
-        }
+        && new_major < old_major
+    {
+        return Some(DowngradeSeverity::Major);
+    }
 
     // Check for suspicious patterns (security-related version strings)
     let old_lower = old_version.to_lowercase();
@@ -354,7 +345,10 @@ fn sanitize_vuln_id(id: &str) -> String {
 pub fn cve_url(cve_id: &str) -> String {
     let safe_id = sanitize_vuln_id(cve_id);
     if safe_id.to_uppercase().starts_with("CVE-") {
-        format!("https://nvd.nist.gov/vuln/detail/{}", safe_id.to_uppercase())
+        format!(
+            "https://nvd.nist.gov/vuln/detail/{}",
+            safe_id.to_uppercase()
+        )
     } else if safe_id.to_uppercase().starts_with("GHSA-") {
         format!("https://github.com/advisories/{}", safe_id.to_uppercase())
     } else if safe_id.starts_with("RUSTSEC-") {
@@ -376,8 +370,28 @@ fn is_safe_url(url: &str) -> bool {
         c.is_ascii_alphanumeric()
             || matches!(
                 c,
-                ':' | '/' | '.' | '-' | '_' | '~' | '?' | '#' | '[' | ']' | '@' | '!' | '$'
-                    | '&' | '\'' | '(' | ')' | '*' | '+' | ',' | ';' | '=' | '%'
+                ':' | '/'
+                    | '.'
+                    | '-'
+                    | '_'
+                    | '~'
+                    | '?'
+                    | '#'
+                    | '['
+                    | ']'
+                    | '@'
+                    | '!'
+                    | '$'
+                    | '&'
+                    | '\''
+                    | '('
+                    | ')'
+                    | '*'
+                    | '+'
+                    | ','
+                    | ';'
+                    | '='
+                    | '%'
             )
     })
 }
@@ -609,11 +623,7 @@ pub fn find_root_components(
 ) -> Vec<String> {
     all_components
         .iter()
-        .filter(|comp| {
-            reverse_graph
-                .get(*comp)
-                .is_none_or(std::vec::Vec::is_empty)
-        })
+        .filter(|comp| reverse_graph.get(*comp).is_none_or(std::vec::Vec::is_empty))
         .cloned()
         .collect()
 }
@@ -626,19 +636,11 @@ pub fn find_root_components(
 #[derive(Debug, Clone)]
 pub enum PolicyRule {
     /// Ban specific licenses (e.g., GPL in proprietary projects)
-    BannedLicense {
-        pattern: String,
-        reason: String,
-    },
+    BannedLicense { pattern: String, reason: String },
     /// Ban specific components by name pattern
-    BannedComponent {
-        pattern: String,
-        reason: String,
-    },
+    BannedComponent { pattern: String, reason: String },
     /// No pre-release versions (0.x.x)
-    NoPreRelease {
-        reason: String,
-    },
+    NoPreRelease { reason: String },
     /// Maximum vulnerability severity allowed
     MaxVulnerabilitySeverity {
         max_severity: String,
@@ -658,7 +660,9 @@ impl PolicyRule {
 
     pub(crate) const fn severity(&self) -> PolicySeverity {
         match self {
-            Self::BannedLicense { .. } | Self::MaxVulnerabilitySeverity { .. } => PolicySeverity::High,
+            Self::BannedLicense { .. } | Self::MaxVulnerabilitySeverity { .. } => {
+                PolicySeverity::High
+            }
             Self::BannedComponent { .. } => PolicySeverity::Critical,
             Self::NoPreRelease { .. } => PolicySeverity::Low,
         }
@@ -673,7 +677,6 @@ pub enum PolicySeverity {
     High,
     Critical,
 }
-
 
 /// A policy violation
 #[allow(dead_code)]
@@ -794,7 +797,6 @@ impl ComplianceResult {
             .filter(|v| v.severity == severity)
             .count()
     }
-
 }
 
 /// Check compliance of components against a policy
@@ -846,19 +848,21 @@ pub fn check_compliance(
                 PolicyRule::NoPreRelease { reason } => {
                     if let Some(ver) = version
                         && let Some(parts) = parse_version_parts(ver)
-                            && parts.first() == Some(&0) {
-                                result.violations.push(PolicyViolation {
-                                    rule_name: rule.name().to_string(),
-                                    severity: rule.severity(),
-                                    component: Some(name.clone()),
-                                    description: format!("Pre-release version '{ver}' (0.x.x)"),
-                                    remediation: format!(
-                                        "Upgrade to stable version (1.0+). {reason}"
-                                    ),
-                                });
-                            }
+                        && parts.first() == Some(&0)
+                    {
+                        result.violations.push(PolicyViolation {
+                            rule_name: rule.name().to_string(),
+                            severity: rule.severity(),
+                            component: Some(name.clone()),
+                            description: format!("Pre-release version '{ver}' (0.x.x)"),
+                            remediation: format!("Upgrade to stable version (1.0+). {reason}"),
+                        });
+                    }
                 }
-                PolicyRule::MaxVulnerabilitySeverity { max_severity, reason } => {
+                PolicyRule::MaxVulnerabilitySeverity {
+                    max_severity,
+                    reason,
+                } => {
                     let max_rank = severity_to_rank(max_severity);
                     for (vuln_id, vuln_sev) in vulns {
                         let vuln_rank = severity_to_rank(vuln_sev);
@@ -923,7 +927,10 @@ mod tests {
     fn test_sanitize_vuln_id_strips_shell_metacharacters() {
         // Normal IDs pass through unchanged
         assert_eq!(sanitize_vuln_id("CVE-2021-44228"), "CVE-2021-44228");
-        assert_eq!(sanitize_vuln_id("GHSA-abcd-1234-efgh"), "GHSA-abcd-1234-efgh");
+        assert_eq!(
+            sanitize_vuln_id("GHSA-abcd-1234-efgh"),
+            "GHSA-abcd-1234-efgh"
+        );
 
         // Shell metacharacters are stripped
         assert_eq!(sanitize_vuln_id("CVE-2021&whoami"), "CVE-2021whoami");
@@ -944,7 +951,9 @@ mod tests {
 
     #[test]
     fn test_is_safe_url() {
-        assert!(is_safe_url("https://nvd.nist.gov/vuln/detail/CVE-2021-44228"));
+        assert!(is_safe_url(
+            "https://nvd.nist.gov/vuln/detail/CVE-2021-44228"
+        ));
         assert!(is_safe_url("https://example.com/path?q=1&a=2"));
         // Shell injection attempts
         assert!(!is_safe_url("https://evil.com\"; rm -rf /"));

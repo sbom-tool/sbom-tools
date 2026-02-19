@@ -10,7 +10,7 @@ pub(crate) mod loop_impl;
 pub(crate) mod monitor;
 pub(crate) mod state;
 
-pub use config::{parse_duration, WatchConfig};
+pub use config::{WatchConfig, parse_duration};
 pub use loop_impl::run_watch_loop;
 
 /// Errors specific to the watch subsystem.

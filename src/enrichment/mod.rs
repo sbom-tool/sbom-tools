@@ -26,8 +26,8 @@ mod traits;
 pub mod vex;
 
 pub use cache::{CacheKey, FileCache};
-pub use eol::{EolClientConfig, EolEnrichmentStats, EolEnricher};
-pub use kev::{KevClient, KevClientConfig, KevCatalog, KevEnrichmentStats};
+pub use eol::{EolClientConfig, EolEnricher, EolEnrichmentStats};
+pub use kev::{KevCatalog, KevClient, KevClientConfig, KevEnrichmentStats};
 pub use osv::{OsvEnricher, OsvEnricherConfig};
 pub use staleness::{RegistryConfig, StalenessEnricher, StalenessEnrichmentStats};
 pub use stats::{EnrichmentError, EnrichmentStats};

@@ -26,25 +26,28 @@ const CONFIG_FILE_NAMES: &[&str] = &[
 /// 3. Git repository root (if in a repo)
 /// 4. User config directory (~/.config/sbom-tools/)
 /// 5. Home directory
-#[must_use] 
+#[must_use]
 pub fn discover_config_file(explicit_path: Option<&Path>) -> Option<PathBuf> {
     // 1. Use explicit path if provided
     if let Some(path) = explicit_path
-        && path.exists() {
-            return Some(path.to_path_buf());
-        }
+        && path.exists()
+    {
+        return Some(path.to_path_buf());
+    }
 
     // 2. Search current directory
     if let Ok(cwd) = std::env::current_dir()
-        && let Some(path) = find_config_in_dir(&cwd) {
-            return Some(path);
-        }
+        && let Some(path) = find_config_in_dir(&cwd)
+    {
+        return Some(path);
+    }
 
     // 3. Search git root (if in a repo)
     if let Some(git_root) = find_git_root()
-        && let Some(path) = find_config_in_dir(&git_root) {
-            return Some(path);
-        }
+        && let Some(path) = find_config_in_dir(&git_root)
+    {
+        return Some(path);
+    }
 
     // 4. Search user config directory
     if let Some(config_dir) = dirs::config_dir() {
@@ -56,9 +59,10 @@ pub fn discover_config_file(explicit_path: Option<&Path>) -> Option<PathBuf> {
 
     // 5. Search home directory
     if let Some(home) = dirs::home_dir()
-        && let Some(path) = find_config_in_dir(&home) {
-            return Some(path);
-        }
+        && let Some(path) = find_config_in_dir(&home)
+    {
+        return Some(path);
+    }
 
     None
 }
@@ -150,7 +154,7 @@ pub fn load_config_file(path: &Path) -> Result<AppConfig, ConfigFileError> {
 }
 
 /// Load config from discovered file, or return default.
-#[must_use] 
+#[must_use]
 pub fn load_or_default(explicit_path: Option<&Path>) -> (AppConfig, Option<PathBuf>) {
     discover_config_file(explicit_path).map_or_else(
         || (AppConfig::default(), None),
@@ -175,7 +179,9 @@ impl AppConfig {
     pub fn merge(&mut self, other: &Self) {
         // Matching config
         if other.matching.fuzzy_preset != "balanced" {
-            self.matching.fuzzy_preset.clone_from(&other.matching.fuzzy_preset);
+            self.matching
+                .fuzzy_preset
+                .clone_from(&other.matching.fuzzy_preset);
         }
         if other.matching.threshold.is_some() {
             self.matching.threshold = other.matching.threshold;
@@ -195,7 +201,9 @@ impl AppConfig {
             self.output.no_color = true;
         }
         if other.output.export_template.is_some() {
-            self.output.export_template.clone_from(&other.output.export_template);
+            self.output
+                .export_template
+                .clone_from(&other.output.export_template);
         }
 
         // Filtering config
@@ -203,7 +211,9 @@ impl AppConfig {
             self.filtering.only_changes = true;
         }
         if other.filtering.min_severity.is_some() {
-            self.filtering.min_severity.clone_from(&other.filtering.min_severity);
+            self.filtering
+                .min_severity
+                .clone_from(&other.filtering.min_severity);
         }
 
         // Behavior config (booleans - if set to true, override)
@@ -238,7 +248,9 @@ impl AppConfig {
 
         // Ecosystem rules config
         if other.ecosystem_rules.config_file.is_some() {
-            self.ecosystem_rules.config_file.clone_from(&other.ecosystem_rules.config_file);
+            self.ecosystem_rules
+                .config_file
+                .clone_from(&other.ecosystem_rules.config_file);
         }
         if other.ecosystem_rules.disabled {
             self.ecosystem_rules.disabled = true;
@@ -259,7 +271,7 @@ impl AppConfig {
     }
 
     /// Load from file and merge with CLI overrides.
-    #[must_use] 
+    #[must_use]
     pub fn from_file_with_overrides(
         config_path: Option<&Path>,
         cli_overrides: &Self,
@@ -275,7 +287,7 @@ impl AppConfig {
 // ============================================================================
 
 /// Generate an example config file content.
-#[must_use] 
+#[must_use]
 pub fn generate_example_config() -> String {
     let example = AppConfig::default();
     format!(
@@ -289,7 +301,7 @@ pub fn generate_example_config() -> String {
 }
 
 /// Generate a commented example config with all options.
-#[must_use] 
+#[must_use]
 pub fn generate_full_example_config() -> String {
     r"# SBOM Diff Configuration File
 # ==============================

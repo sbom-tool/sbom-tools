@@ -4,11 +4,11 @@
 //! compliance standards, with violation diff (new/resolved/persistent).
 
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Cell, Gauge, Paragraph, Row, Table, Tabs},
-    Frame,
 };
 
 use crate::quality::{ComplianceLevel, ComplianceResult, ViolationSeverity};
@@ -45,8 +45,16 @@ pub fn diff_compliance_violation_count(app: &App) -> usize {
 pub fn render_diff_compliance(frame: &mut Frame, area: Rect, app: &mut App) {
     app.ensure_compliance_results();
 
-    let old_empty = app.data.old_compliance_results.as_ref().is_none_or(std::vec::Vec::is_empty);
-    let new_empty = app.data.new_compliance_results.as_ref().is_none_or(std::vec::Vec::is_empty);
+    let old_empty = app
+        .data
+        .old_compliance_results
+        .as_ref()
+        .is_none_or(std::vec::Vec::is_empty);
+    let new_empty = app
+        .data
+        .new_compliance_results
+        .as_ref()
+        .is_none_or(std::vec::Vec::is_empty);
     if old_empty || new_empty {
         let msg = Paragraph::new("No compliance data available")
             .block(Block::default().borders(Borders::ALL).title(" Compliance "));
@@ -57,8 +65,8 @@ pub fn render_diff_compliance(frame: &mut Frame, area: Rect, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Standard selector
-            Constraint::Length(7),  // Side-by-side summary
+            Constraint::Length(3), // Standard selector
+            Constraint::Length(7), // Side-by-side summary
             Constraint::Min(10),   // Violations / overview
             Constraint::Length(2), // Help bar
         ])
@@ -71,9 +79,10 @@ pub fn render_diff_compliance(frame: &mut Frame, area: Rect, app: &mut App) {
 
     // Render detail overlay if active
     if app.tabs.diff_compliance.show_detail
-        && let Some(violation) = get_selected_diff_violation(app) {
-            shared_compliance::render_violation_detail_overlay(frame, area, violation);
-        }
+        && let Some(violation) = get_selected_diff_violation(app)
+    {
+        shared_compliance::render_violation_detail_overlay(frame, area, violation);
+    }
 }
 
 fn render_standard_selector(frame: &mut Frame, area: Rect, app: &App) {
@@ -90,12 +99,8 @@ fn render_standard_selector(frame: &mut Frame, area: Rect, app: &App) {
         .iter()
         .enumerate()
         .map(|(i, level)| {
-            let old_ok = old_results
-                .get(i)
-                .is_some_and(|r| r.is_compliant);
-            let new_ok = new_results
-                .get(i)
-                .is_some_and(|r| r.is_compliant);
+            let old_ok = old_results.get(i).is_some_and(|r| r.is_compliant);
+            let new_ok = new_results.get(i).is_some_and(|r| r.is_compliant);
 
             let indicator = match (old_ok, new_ok) {
                 (true, true) => ("✓", colors().success),
@@ -113,7 +118,10 @@ fn render_standard_selector(frame: &mut Frame, area: Rect, app: &App) {
             };
 
             Line::from(vec![
-                Span::styled(format!("{} ", indicator.0), Style::default().fg(indicator.1)),
+                Span::styled(
+                    format!("{} ", indicator.0),
+                    Style::default().fg(indicator.1),
+                ),
                 Span::styled(level.name(), style),
             ])
         })
@@ -137,8 +145,16 @@ fn render_standard_selector(frame: &mut Frame, area: Rect, app: &App) {
 
 fn render_sidebyside_summary(frame: &mut Frame, area: Rect, app: &App) {
     let idx = app.tabs.diff_compliance.selected_standard;
-    let old = app.data.old_compliance_results.as_ref().and_then(|r| r.get(idx));
-    let new = app.data.new_compliance_results.as_ref().and_then(|r| r.get(idx));
+    let old = app
+        .data
+        .old_compliance_results
+        .as_ref()
+        .and_then(|r| r.get(idx));
+    let new = app
+        .data
+        .new_compliance_results
+        .as_ref()
+        .and_then(|r| r.get(idx));
 
     let halves = Layout::default()
         .direction(Direction::Horizontal)
@@ -174,11 +190,7 @@ fn render_compliance_gauge(frame: &mut Frame, area: Rect, result: &ComplianceRes
         colors().error
     };
 
-    let status_text = if result.is_compliant {
-        "PASS"
-    } else {
-        "FAIL"
-    };
+    let status_text = if result.is_compliant { "PASS" } else { "FAIL" };
 
     let inner = Layout::default()
         .direction(Direction::Vertical)
@@ -220,10 +232,20 @@ fn render_compliance_gauge(frame: &mut Frame, area: Rect, result: &ComplianceRes
 
 fn render_violations_panel(frame: &mut Frame, area: Rect, app: &mut App) {
     let idx = app.tabs.diff_compliance.selected_standard;
-    let Some(old) = app.data.old_compliance_results.as_ref().and_then(|r| r.get(idx)) else {
+    let Some(old) = app
+        .data
+        .old_compliance_results
+        .as_ref()
+        .and_then(|r| r.get(idx))
+    else {
         return;
     };
-    let Some(new) = app.data.new_compliance_results.as_ref().and_then(|r| r.get(idx)) else {
+    let Some(new) = app
+        .data
+        .new_compliance_results
+        .as_ref()
+        .and_then(|r| r.get(idx))
+    else {
         return;
     };
 
@@ -241,19 +263,59 @@ fn render_violations_panel(frame: &mut Frame, area: Rect, app: &mut App) {
         }
         DiffComplianceViewMode::NewViolations => {
             let violations = compute_new_violations(old, new);
-            render_violation_table(frame, area, &violations, selected, scroll_offset, "New Violations (introduced)", colors().error);
+            render_violation_table(
+                frame,
+                area,
+                &violations,
+                selected,
+                scroll_offset,
+                "New Violations (introduced)",
+                colors().error,
+            );
         }
         DiffComplianceViewMode::ResolvedViolations => {
             let violations = compute_resolved_violations(old, new);
-            render_violation_table(frame, area, &violations, selected, scroll_offset, "Resolved Violations (fixed)", colors().success);
+            render_violation_table(
+                frame,
+                area,
+                &violations,
+                selected,
+                scroll_offset,
+                "Resolved Violations (fixed)",
+                colors().success,
+            );
         }
         DiffComplianceViewMode::OldViolations => {
-            let violations: Vec<_> = old.violations.iter().map(ViolationEntry::from_violation).collect();
-            render_violation_table(frame, area, &violations, selected, scroll_offset, "Old SBOM — All Violations", colors().text_muted);
+            let violations: Vec<_> = old
+                .violations
+                .iter()
+                .map(ViolationEntry::from_violation)
+                .collect();
+            render_violation_table(
+                frame,
+                area,
+                &violations,
+                selected,
+                scroll_offset,
+                "Old SBOM — All Violations",
+                colors().text_muted,
+            );
         }
         DiffComplianceViewMode::NewSbomViolations => {
-            let violations: Vec<_> = new.violations.iter().map(ViolationEntry::from_violation).collect();
-            render_violation_table(frame, area, &violations, selected, scroll_offset, "New SBOM — All Violations", colors().text_muted);
+            let violations: Vec<_> = new
+                .violations
+                .iter()
+                .map(ViolationEntry::from_violation)
+                .collect();
+            render_violation_table(
+                frame,
+                area,
+                &violations,
+                selected,
+                scroll_offset,
+                "New SBOM — All Violations",
+                colors().text_muted,
+            );
         }
     }
 }
@@ -264,9 +326,12 @@ fn render_overview(frame: &mut Frame, area: Rect, old: &ComplianceResult, new: &
 
     let mut lines = vec![
         Line::from(""),
-        Line::from(vec![
-            Span::styled("  Violation Diff:  ", Style::default().fg(colors().text).add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "  Violation Diff:  ",
+            Style::default()
+                .fg(colors().text)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(""),
     ];
 
@@ -306,7 +371,9 @@ fn render_overview(frame: &mut Frame, area: Rect, old: &ComplianceResult, new: &
             } else {
                 format!("  - {} violations resolved  ", resolved_violations.len())
             },
-            Style::default().fg(resolved_color).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(resolved_color)
+                .add_modifier(Modifier::BOLD),
         ),
     ]));
 
@@ -343,7 +410,10 @@ fn render_overview(frame: &mut Frame, area: Rect, old: &ComplianceResult, new: &
 
     lines.push(Line::from(vec![
         Span::raw("    Error count:  "),
-        Span::styled(format!("{old_errors}"), Style::default().fg(colors().text_muted)),
+        Span::styled(
+            format!("{old_errors}"),
+            Style::default().fg(colors().text_muted),
+        ),
         Span::raw(" → "),
         Span::styled(format!("{new_errors}"), Style::default().fg(colors().text)),
         Span::raw("  ("),
@@ -352,12 +422,10 @@ fn render_overview(frame: &mut Frame, area: Rect, old: &ComplianceResult, new: &
     ]));
 
     lines.push(Line::from(""));
-    lines.push(Line::from(vec![
-        Span::styled(
-            "    Press Tab to cycle through: Overview → New → Resolved → Old → New SBOM",
-            Style::default().fg(colors().text_muted),
-        ),
-    ]));
+    lines.push(Line::from(vec![Span::styled(
+        "    Press Tab to cycle through: Overview → New → Resolved → Old → New SBOM",
+        Style::default().fg(colors().text_muted),
+    )]));
 
     let block = Block::default()
         .borders(Borders::ALL)
@@ -413,14 +481,10 @@ fn render_violation_table(
                 Style::default().fg(colors().success),
             )),
         ])
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(Span::styled(
-                    format!(" {title} (0) "),
-                    Style::default().fg(title_color),
-                )),
-        );
+        .block(Block::default().borders(Borders::ALL).title(Span::styled(
+            format!(" {title} (0) "),
+            Style::default().fg(title_color),
+        )));
         frame.render_widget(msg, area);
         return;
     }
@@ -429,10 +493,26 @@ fn render_violation_table(
     let visible_end = (scroll_offset + viewport_height).min(violations.len());
 
     let header = Row::new(vec![
-        Cell::from("Severity").style(Style::default().fg(colors().text).add_modifier(Modifier::BOLD)),
-        Cell::from("Category").style(Style::default().fg(colors().text).add_modifier(Modifier::BOLD)),
-        Cell::from("Issue").style(Style::default().fg(colors().text).add_modifier(Modifier::BOLD)),
-        Cell::from("Element").style(Style::default().fg(colors().text).add_modifier(Modifier::BOLD)),
+        Cell::from("Severity").style(
+            Style::default()
+                .fg(colors().text)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Cell::from("Category").style(
+            Style::default()
+                .fg(colors().text)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Cell::from("Issue").style(
+            Style::default()
+                .fg(colors().text)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Cell::from("Element").style(
+            Style::default()
+                .fg(colors().text)
+                .add_modifier(Modifier::BOLD),
+        ),
     ])
     .height(1);
 
@@ -502,7 +582,10 @@ fn render_help_bar(frame: &mut Frame, area: Rect, app: &App) {
 
     let help = Line::from(vec![
         Span::styled("←/→", Style::default().fg(colors().accent)),
-        Span::styled(" switch standard  ", Style::default().fg(colors().text_muted)),
+        Span::styled(
+            " switch standard  ",
+            Style::default().fg(colors().text_muted),
+        ),
         Span::styled("Tab", Style::default().fg(colors().accent)),
         Span::styled(
             format!(" cycle view [{mode_name}]  "),
@@ -521,10 +604,7 @@ fn render_help_bar(frame: &mut Frame, area: Rect, app: &App) {
 }
 
 /// Compute violations present in new but not in old (by message matching).
-fn compute_new_violations(
-    old: &ComplianceResult,
-    new: &ComplianceResult,
-) -> Vec<ViolationEntry> {
+fn compute_new_violations(old: &ComplianceResult, new: &ComplianceResult) -> Vec<ViolationEntry> {
     let old_messages: std::collections::HashSet<&str> =
         old.violations.iter().map(|v| v.message.as_str()).collect();
 
@@ -579,4 +659,3 @@ fn get_selected_diff_violation(app: &App) -> Option<&crate::quality::Violation> 
         DiffComplianceViewMode::NewSbomViolations => new.violations.get(selected),
     }
 }
-

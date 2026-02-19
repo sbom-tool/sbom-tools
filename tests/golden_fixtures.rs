@@ -1,12 +1,10 @@
-use sbom_tools::{parse_sbom, DiffEngine};
+use sbom_tools::{DiffEngine, parse_sbom};
 use std::path::Path;
 
 #[test]
 fn golden_parse_cyclonedx_minimal() {
-    let sbom = parse_sbom(Path::new(
-        "tests/fixtures/cyclonedx/minimal.cdx.json",
-    ))
-    .expect("failed to parse minimal CycloneDX fixture");
+    let sbom = parse_sbom(Path::new("tests/fixtures/cyclonedx/minimal.cdx.json"))
+        .expect("failed to parse minimal CycloneDX fixture");
 
     // 3 components: metadata.component (test-app) + lodash + express
     assert_eq!(sbom.component_count(), 3);
@@ -47,7 +45,9 @@ fn golden_diff_demo_pair() {
     let new_sbom = parse_sbom(Path::new("tests/fixtures/demo-new.cdx.json"))
         .expect("failed to parse demo-new fixture");
 
-    let diff = DiffEngine::new().diff(&old_sbom, &new_sbom).expect("diff should succeed");
+    let diff = DiffEngine::new()
+        .diff(&old_sbom, &new_sbom)
+        .expect("diff should succeed");
 
     // Both SBOMs now include metadata.component as primary component
     // Old: acme-webapp@1.0.0 + 8 libs = 9 components

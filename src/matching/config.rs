@@ -45,7 +45,6 @@ pub struct MultiFieldWeights {
     pub group: f64,
 
     // Penalty fields (applied on top of weighted score)
-
     /// Penalty applied when ecosystems are different (negative value, e.g., -0.15)
     #[serde(default)]
     pub ecosystem_mismatch_penalty: f64,
@@ -74,7 +73,7 @@ const fn default_version_minor_penalty() -> f64 {
 
 impl MultiFieldWeights {
     /// Default weights emphasizing name matching.
-    #[must_use] 
+    #[must_use]
     pub const fn name_focused() -> Self {
         Self {
             name: 0.80,
@@ -91,7 +90,7 @@ impl MultiFieldWeights {
     }
 
     /// Balanced weights across all fields.
-    #[must_use] 
+    #[must_use]
     pub const fn balanced() -> Self {
         Self {
             name: 0.60,
@@ -108,7 +107,7 @@ impl MultiFieldWeights {
     }
 
     /// Weights for security-focused matching (emphasizes ecosystem and version).
-    #[must_use] 
+    #[must_use]
     pub const fn security_focused() -> Self {
         Self {
             name: 0.50,
@@ -128,7 +127,7 @@ impl MultiFieldWeights {
     ///
     /// Use this preset when you want the old binary scoring behavior
     /// without ecosystem mismatch penalties or version divergence scoring.
-    #[must_use] 
+    #[must_use]
     pub const fn legacy() -> Self {
         Self {
             name: 0.60,
@@ -137,7 +136,7 @@ impl MultiFieldWeights {
             licenses: 0.08,
             supplier: 0.04,
             group: 0.03,
-            ecosystem_mismatch_penalty: 0.0, // No penalty
+            ecosystem_mismatch_penalty: 0.0,   // No penalty
             version_divergence_enabled: false, // Binary scoring
             version_major_penalty: 0.0,
             version_minor_penalty: 0.0,
@@ -146,7 +145,7 @@ impl MultiFieldWeights {
 
     /// Check if weights are properly normalized (sum to ~1.0).
     /// Note: Penalty fields are not included in normalization check.
-    #[must_use] 
+    #[must_use]
     pub fn is_normalized(&self) -> bool {
         let sum =
             self.name + self.version + self.ecosystem + self.licenses + self.supplier + self.group;
@@ -177,7 +176,7 @@ impl Default for MultiFieldWeights {
 
 impl FuzzyMatchConfig {
     /// Strict matching for security-critical scenarios
-    #[must_use] 
+    #[must_use]
     pub const fn strict() -> Self {
         Self {
             threshold: 0.95,
@@ -191,7 +190,7 @@ impl FuzzyMatchConfig {
     }
 
     /// Balanced matching for general diff operations
-    #[must_use] 
+    #[must_use]
     pub const fn balanced() -> Self {
         Self {
             threshold: 0.85,
@@ -205,7 +204,7 @@ impl FuzzyMatchConfig {
     }
 
     /// Permissive matching for discovery/exploration
-    #[must_use] 
+    #[must_use]
     pub const fn permissive() -> Self {
         Self {
             threshold: 0.70,
@@ -233,13 +232,13 @@ impl FuzzyMatchConfig {
     }
 
     /// Strict matching with multi-field scoring for security scenarios.
-    #[must_use] 
+    #[must_use]
     pub const fn strict_multi_field() -> Self {
         Self::strict().with_multi_field(MultiFieldWeights::security_focused())
     }
 
     /// Balanced matching with multi-field scoring.
-    #[must_use] 
+    #[must_use]
     pub const fn balanced_multi_field() -> Self {
         Self::balanced().with_multi_field(MultiFieldWeights::balanced())
     }
@@ -249,7 +248,7 @@ impl FuzzyMatchConfig {
     /// Supported presets:
     /// - "strict", "balanced", "permissive" - single-field (name only)
     /// - "strict-multi", "balanced-multi" - multi-field scoring enabled
-    #[must_use] 
+    #[must_use]
     pub fn from_preset(name: &str) -> Option<Self> {
         match name.to_lowercase().as_str() {
             "strict" => Some(Self::strict()),
@@ -301,7 +300,7 @@ impl Default for CrossEcosystemConfig {
 
 impl CrossEcosystemConfig {
     /// Disabled cross-ecosystem matching.
-    #[must_use] 
+    #[must_use]
     pub fn disabled() -> Self {
         Self {
             enabled: false,
@@ -310,7 +309,7 @@ impl CrossEcosystemConfig {
     }
 
     /// Strict settings for high-confidence matches only.
-    #[must_use] 
+    #[must_use]
     pub const fn strict() -> Self {
         Self {
             enabled: true,
@@ -322,7 +321,7 @@ impl CrossEcosystemConfig {
     }
 
     /// Permissive settings for discovery/exploration.
-    #[must_use] 
+    #[must_use]
     pub const fn permissive() -> Self {
         Self {
             enabled: true,

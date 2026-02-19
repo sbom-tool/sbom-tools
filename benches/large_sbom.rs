@@ -6,7 +6,7 @@
 //! 1. Incremental diffing with caching
 //! 2. BatchCandidateGenerator with LSH for large SBOMs
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use sbom_tools::diff::{DiffEngine, IncrementalDiffEngine, LargeSbomConfig};
 use sbom_tools::model::{Component, DocumentMetadata, Ecosystem, NormalizedSbom};
 use std::hint::black_box;

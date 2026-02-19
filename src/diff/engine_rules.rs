@@ -91,7 +91,9 @@ pub fn remap_match_result(
             .get(new_id)
             .cloned()
             .unwrap_or_else(|| new_id.clone());
-        remapped.pairs.insert((canonical_old, canonical_new), *score);
+        remapped
+            .pairs
+            .insert((canonical_old, canonical_new), *score);
     }
 
     remapped

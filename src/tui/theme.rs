@@ -121,7 +121,7 @@ impl ColorScheme {
     }
 
     /// Dark theme (default)
-    #[must_use] 
+    #[must_use]
     pub const fn dark() -> Self {
         Self {
             // Change status
@@ -176,7 +176,7 @@ impl ColorScheme {
     }
 
     /// Light theme
-    #[must_use] 
+    #[must_use]
     pub const fn light() -> Self {
         Self {
             // Change status
@@ -231,7 +231,7 @@ impl ColorScheme {
     }
 
     /// High contrast theme (accessibility)
-    #[must_use] 
+    #[must_use]
     pub const fn high_contrast() -> Self {
         Self {
             // Change status
@@ -286,7 +286,7 @@ impl ColorScheme {
     }
 
     /// Get color for severity level
-    #[must_use] 
+    #[must_use]
     pub fn severity_color(&self, severity: &str) -> Color {
         match severity.to_lowercase().as_str() {
             "critical" => self.critical,
@@ -299,7 +299,7 @@ impl ColorScheme {
     }
 
     /// Get a subtle background tint for severity (used for row highlighting)
-    #[must_use] 
+    #[must_use]
     pub fn severity_bg_tint(&self, severity: &str) -> Color {
         match severity.to_lowercase().as_str() {
             "critical" => Color::Rgb(50, 15, 50),
@@ -311,7 +311,7 @@ impl ColorScheme {
     }
 
     /// Get color for change status
-    #[must_use] 
+    #[must_use]
     pub fn change_color(&self, status: &str) -> Color {
         match status.to_lowercase().as_str() {
             "added" | "new" | "introduced" => self.added,
@@ -322,7 +322,7 @@ impl ColorScheme {
     }
 
     /// Get color for license category
-    #[must_use] 
+    #[must_use]
     pub fn license_color(&self, category: &str) -> Color {
         match category.to_lowercase().as_str() {
             "permissive" => self.permissive,
@@ -335,7 +335,7 @@ impl ColorScheme {
 
     /// Get appropriate foreground color for severity badges
     /// Returns light fg for dark backgrounds (critical, high, info) and dark fg for bright backgrounds
-    #[must_use] 
+    #[must_use]
     pub fn severity_badge_fg(&self, severity: &str) -> Color {
         match severity.to_lowercase().as_str() {
             "critical" | "high" | "info" | "informational" => self.badge_fg_light,
@@ -345,38 +345,38 @@ impl ColorScheme {
 
     /// Get KEV (Known Exploited Vulnerabilities) badge color
     /// Returns a bright red/orange color to indicate active exploitation
-    #[must_use] 
+    #[must_use]
     pub const fn kev(&self) -> Color {
         Color::Rgb(255, 100, 50) // Bright orange-red for urgency
     }
 
     /// Get KEV badge foreground color
-    #[must_use] 
+    #[must_use]
     pub const fn kev_badge_fg(&self) -> Color {
         self.badge_fg_dark
     }
 
     /// Get direct dependency badge background color (green - easy to fix)
-    #[must_use] 
+    #[must_use]
     pub const fn direct_dep(&self) -> Color {
         Color::Rgb(46, 160, 67) // GitHub green
     }
 
     /// Get transitive dependency badge background color (gray - harder to fix)
-    #[must_use] 
+    #[must_use]
     pub const fn transitive_dep(&self) -> Color {
         Color::Rgb(110, 118, 129) // Muted gray
     }
 
     /// Get appropriate foreground color for change status badges
     /// All change colors (green, red, yellow) work best with dark foreground
-    #[must_use] 
+    #[must_use]
     pub const fn change_badge_fg(&self) -> Color {
         self.badge_fg_dark
     }
 
     /// Get appropriate foreground color for license category badges
-    #[must_use] 
+    #[must_use]
     pub fn license_badge_fg(&self, category: &str) -> Color {
         match category.to_lowercase().as_str() {
             "proprietary" | "commercial" => self.badge_fg_light,
@@ -385,7 +385,7 @@ impl ColorScheme {
     }
 
     /// Chart color palette for visualizations
-    #[must_use] 
+    #[must_use]
     pub const fn chart_palette(&self) -> [Color; 5] {
         [
             self.primary,
@@ -422,7 +422,7 @@ impl Theme {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn dark() -> Self {
         Self {
             colors: ColorScheme::dark(),
@@ -430,7 +430,7 @@ impl Theme {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn light() -> Self {
         Self {
             colors: ColorScheme::light(),
@@ -438,7 +438,7 @@ impl Theme {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn high_contrast() -> Self {
         Self {
             colors: ColorScheme::high_contrast(),
@@ -446,7 +446,7 @@ impl Theme {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn from_name(name: &str) -> Self {
         match name.to_lowercase().as_str() {
             "light" => Self::light(),
@@ -497,55 +497,55 @@ pub struct Styles;
 
 impl Styles {
     /// Header title style
-    #[must_use] 
+    #[must_use]
     pub fn header_title() -> Style {
         Style::default().fg(colors().primary).bold()
     }
 
     /// Section title style
-    #[must_use] 
+    #[must_use]
     pub fn section_title() -> Style {
         Style::default().fg(colors().primary).bold()
     }
 
     /// Subsection title style
-    #[must_use] 
+    #[must_use]
     pub fn subsection_title() -> Style {
         Style::default().fg(colors().primary)
     }
 
     /// Normal text style
-    #[must_use] 
+    #[must_use]
     pub fn text() -> Style {
         Style::default().fg(colors().text)
     }
 
     /// Muted/secondary text style
-    #[must_use] 
+    #[must_use]
     pub fn text_muted() -> Style {
         Style::default().fg(colors().text_muted)
     }
 
     /// Label text style
-    #[must_use] 
+    #[must_use]
     pub fn label() -> Style {
         Style::default().fg(colors().muted)
     }
 
     /// Value text style (for data values)
-    #[must_use] 
+    #[must_use]
     pub fn value() -> Style {
         Style::default().fg(colors().text).bold()
     }
 
     /// Highlighted/accent style
-    #[must_use] 
+    #[must_use]
     pub fn highlight() -> Style {
         Style::default().fg(colors().highlight).bold()
     }
 
     /// Selection style (for selected items)
-    #[must_use] 
+    #[must_use]
     pub fn selected() -> Style {
         Style::default()
             .bg(colors().selection)
@@ -554,91 +554,91 @@ impl Styles {
     }
 
     /// Border style (unfocused)
-    #[must_use] 
+    #[must_use]
     pub fn border() -> Style {
         Style::default().fg(colors().border)
     }
 
     /// Border style (focused)
-    #[must_use] 
+    #[must_use]
     pub fn border_focused() -> Style {
         Style::default().fg(colors().border_focused)
     }
 
     /// Status bar background style
-    #[must_use] 
+    #[must_use]
     pub fn status_bar() -> Style {
         Style::default().bg(colors().background_alt)
     }
 
     /// Keyboard shortcut style
-    #[must_use] 
+    #[must_use]
     pub fn shortcut_key() -> Style {
         Style::default().fg(colors().accent)
     }
 
     /// Shortcut description style
-    #[must_use] 
+    #[must_use]
     pub fn shortcut_desc() -> Style {
         Style::default().fg(colors().text_muted)
     }
 
     /// Success style
-    #[must_use] 
+    #[must_use]
     pub fn success() -> Style {
         Style::default().fg(colors().success)
     }
 
     /// Warning style
-    #[must_use] 
+    #[must_use]
     pub fn warning() -> Style {
         Style::default().fg(colors().warning)
     }
 
     /// Error style
-    #[must_use] 
+    #[must_use]
     pub fn error() -> Style {
         Style::default().fg(colors().error)
     }
 
     /// Added item style
-    #[must_use] 
+    #[must_use]
     pub fn added() -> Style {
         Style::default().fg(colors().added)
     }
 
     /// Removed item style
-    #[must_use] 
+    #[must_use]
     pub fn removed() -> Style {
         Style::default().fg(colors().removed)
     }
 
     /// Modified item style
-    #[must_use] 
+    #[must_use]
     pub fn modified() -> Style {
         Style::default().fg(colors().modified)
     }
 
     /// Critical severity style
-    #[must_use] 
+    #[must_use]
     pub fn critical() -> Style {
         Style::default().fg(colors().critical).bold()
     }
 
     /// High severity style
-    #[must_use] 
+    #[must_use]
     pub fn high() -> Style {
         Style::default().fg(colors().high).bold()
     }
 
     /// Medium severity style
-    #[must_use] 
+    #[must_use]
     pub fn medium() -> Style {
         Style::default().fg(colors().medium)
     }
 
     /// Low severity style
-    #[must_use] 
+    #[must_use]
     pub fn low() -> Style {
         Style::default().fg(colors().low)
     }
@@ -649,7 +649,7 @@ impl Styles {
 // ============================================================================
 
 /// Render a status badge with consistent styling
-#[must_use] 
+#[must_use]
 pub fn status_badge(status: &str) -> Span<'static> {
     let scheme = colors();
     let (label, color, symbol) = match status.to_lowercase().as_str() {
@@ -669,7 +669,7 @@ pub fn status_badge(status: &str) -> Span<'static> {
 }
 
 /// Render a severity badge with consistent styling
-#[must_use] 
+#[must_use]
 pub fn severity_badge(severity: &str) -> Span<'static> {
     let scheme = colors();
     let (label, bg_color, is_unknown) = match severity.to_lowercase().as_str() {
@@ -693,7 +693,7 @@ pub fn severity_badge(severity: &str) -> Span<'static> {
 }
 
 /// Render a compact severity indicator (single char)
-#[must_use] 
+#[must_use]
 pub fn severity_indicator(severity: &str) -> Span<'static> {
     let scheme = colors();
     let (symbol, bg_color, is_unknown) = match severity.to_lowercase().as_str() {
@@ -717,7 +717,7 @@ pub fn severity_indicator(severity: &str) -> Span<'static> {
 }
 
 /// Render a count badge
-#[must_use] 
+#[must_use]
 pub fn count_badge(count: usize, bg_color: Color) -> Span<'static> {
     let scheme = colors();
     Span::styled(
@@ -730,14 +730,11 @@ pub fn count_badge(count: usize, bg_color: Color) -> Span<'static> {
 }
 
 /// Render a filter/group badge showing current state
-#[must_use] 
+#[must_use]
 pub fn filter_badge(label: &str, value: &str) -> Vec<Span<'static>> {
     let scheme = colors();
     vec![
-        Span::styled(
-            format!("{label}: "),
-            Style::default().fg(scheme.text_muted),
-        ),
+        Span::styled(format!("{label}: "), Style::default().fg(scheme.text_muted)),
         Span::styled(
             format!(" {value} "),
             Style::default()
@@ -753,7 +750,7 @@ pub fn filter_badge(label: &str, value: &str) -> Vec<Span<'static>> {
 // ============================================================================
 
 /// Render a mode indicator badge
-#[must_use] 
+#[must_use]
 pub fn mode_badge(mode: &str) -> Span<'static> {
     let scheme = colors();
     let color = match mode.to_lowercase().as_str() {
@@ -780,7 +777,7 @@ pub struct FooterHints;
 
 impl FooterHints {
     /// Get hints for a specific tab in diff mode
-    #[must_use] 
+    #[must_use]
     pub fn for_diff_tab(tab: &str) -> Vec<(&'static str, &'static str)> {
         let mut hints = Self::global();
 
@@ -822,7 +819,7 @@ impl FooterHints {
     }
 
     /// Get hints for a specific tab in view mode
-    #[must_use] 
+    #[must_use]
     pub fn for_view_tab(tab: &str) -> Vec<(&'static str, &'static str)> {
         let mut hints = Self::global();
 
@@ -864,7 +861,7 @@ impl FooterHints {
     }
 
     /// Global hints (always shown)
-    #[must_use] 
+    #[must_use]
     pub fn global() -> Vec<(&'static str, &'static str)> {
         vec![
             ("Tab", "switch"),
@@ -880,7 +877,7 @@ impl FooterHints {
 }
 
 /// Render footer hints as spans
-#[must_use] 
+#[must_use]
 pub fn render_footer_hints(hints: &[(&str, &str)]) -> Vec<Span<'static>> {
     let mut spans = Vec::new();
 

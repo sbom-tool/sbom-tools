@@ -17,5 +17,5 @@
 mod client;
 mod mapping;
 
-pub use client::{EolClientConfig, EolEnrichmentStats, EolEnricher};
+pub use client::{EolClientConfig, EolEnricher, EolEnrichmentStats};
 pub use mapping::ProductMapper;

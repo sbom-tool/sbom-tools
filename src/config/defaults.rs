@@ -2,7 +2,10 @@
 //!
 //! Provides named presets for common use cases and default values.
 
-use super::types::{AppConfig, MatchingConfig, OutputConfig, FilterConfig, BehaviorConfig, GraphAwareDiffConfig, MatchingRulesPathConfig, EcosystemRulesConfig, TuiConfig, EnrichmentConfig};
+use super::types::{
+    AppConfig, BehaviorConfig, EcosystemRulesConfig, EnrichmentConfig, FilterConfig,
+    GraphAwareDiffConfig, MatchingConfig, MatchingRulesPathConfig, OutputConfig, TuiConfig,
+};
 
 // ============================================================================
 // Configuration Presets
@@ -25,7 +28,7 @@ pub enum ConfigPreset {
 
 impl ConfigPreset {
     /// Get the preset name as a string.
-    #[must_use] 
+    #[must_use]
     pub const fn name(&self) -> &'static str {
         match self {
             Self::Default => "default",
@@ -37,7 +40,7 @@ impl ConfigPreset {
     }
 
     /// Parse a preset from a string name.
-    #[must_use] 
+    #[must_use]
     pub fn from_name(name: &str) -> Option<Self> {
         match name.to_lowercase().as_str() {
             "default" | "balanced" => Some(Self::Default),
@@ -50,13 +53,11 @@ impl ConfigPreset {
     }
 
     /// Get a description of this preset.
-    #[must_use] 
+    #[must_use]
     pub const fn description(&self) -> &'static str {
         match self {
             Self::Default => "Balanced settings suitable for most SBOM comparisons",
-            Self::Security => {
-                "Strict matching with vulnerability detection and CI failure modes"
-            }
+            Self::Security => "Strict matching with vulnerability detection and CI failure modes",
             Self::CiCd => "Machine-readable output optimized for CI/CD pipelines",
             Self::Permissive => "Loose matching for SBOMs with inconsistent naming",
             Self::Strict => "Exact matching for well-maintained, consistent SBOMs",
@@ -64,7 +65,7 @@ impl ConfigPreset {
     }
 
     /// Get all available presets.
-    #[must_use] 
+    #[must_use]
     pub const fn all() -> &'static [Self] {
         &[
             Self::Default,
@@ -88,7 +89,7 @@ impl std::fmt::Display for ConfigPreset {
 
 impl AppConfig {
     /// Create an `AppConfig` from a named preset.
-    #[must_use] 
+    #[must_use]
     pub fn from_preset(preset: ConfigPreset) -> Self {
         match preset {
             ConfigPreset::Default => Self::default(),
@@ -104,7 +105,7 @@ impl AppConfig {
     /// - Strict matching to avoid false negatives
     /// - Fail on new vulnerabilities
     /// - Enable typosquat detection
-    #[must_use] 
+    #[must_use]
     pub fn security_preset() -> Self {
         Self {
             matching: MatchingConfig {
@@ -138,7 +139,7 @@ impl AppConfig {
     /// - JSON output for machine parsing
     /// - Fail on any changes
     /// - Quiet mode to reduce noise
-    #[must_use] 
+    #[must_use]
     pub fn ci_cd_preset() -> Self {
         use crate::reports::ReportFormat;
 
@@ -181,7 +182,7 @@ impl AppConfig {
     /// - Low matching threshold
     /// - Include unchanged for full picture
     /// - No fail modes
-    #[must_use] 
+    #[must_use]
     pub fn permissive_preset() -> Self {
         Self {
             matching: MatchingConfig {
@@ -205,7 +206,7 @@ impl AppConfig {
     /// - High matching threshold
     /// - Graph-aware diffing
     /// - Detailed explanations available
-    #[must_use] 
+    #[must_use]
     pub fn strict_preset() -> Self {
         Self {
             matching: MatchingConfig {

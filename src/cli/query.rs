@@ -5,9 +5,9 @@
 
 use crate::config::QueryConfig;
 use crate::model::{Component, NormalizedSbom, NormalizedSbomIndex};
-use crate::pipeline::{auto_detect_format, write_output, OutputTarget};
+use crate::pipeline::{OutputTarget, auto_detect_format, write_output};
 use crate::reports::ReportFormat;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde::Serialize;
 use std::collections::HashMap;
 
@@ -41,7 +41,11 @@ pub struct QueryFilter {
 
 impl QueryFilter {
     /// Check if a component matches all active filters.
-    pub fn matches(&self, component: &Component, sort_key: &crate::model::ComponentSortKey) -> bool {
+    pub fn matches(
+        &self,
+        component: &Component,
+        sort_key: &crate::model::ComponentSortKey,
+    ) -> bool {
         if let Some(ref pattern) = self.pattern {
             let pattern_lower = pattern.to_lowercase();
             if !sort_key.contains(&pattern_lower) {
@@ -64,29 +68,34 @@ impl QueryFilter {
         }
 
         if let Some(ref version) = self.version
-            && !self.matches_version(component, version) {
-                return false;
-            }
+            && !self.matches_version(component, version)
+        {
+            return false;
+        }
 
         if let Some(ref license) = self.license
-            && !self.matches_license(component, license) {
-                return false;
-            }
+            && !self.matches_license(component, license)
+        {
+            return false;
+        }
 
         if let Some(ref ecosystem) = self.ecosystem
-            && !self.matches_ecosystem(component, ecosystem) {
-                return false;
-            }
+            && !self.matches_ecosystem(component, ecosystem)
+        {
+            return false;
+        }
 
         if let Some(ref supplier) = self.supplier
-            && !self.matches_supplier(component, supplier) {
-                return false;
-            }
+            && !self.matches_supplier(component, supplier)
+        {
+            return false;
+        }
 
         if let Some(ref vuln_id) = self.affected_by
-            && !self.matches_vuln(component, vuln_id) {
-                return false;
-            }
+            && !self.matches_vuln(component, vuln_id)
+        {
+            return false;
+        }
 
         true
     }
@@ -108,9 +117,10 @@ impl QueryFilter {
 
         if has_operator
             && let Ok(req) = semver::VersionReq::parse(trimmed)
-                && let Ok(ver) = semver::Version::parse(comp_version) {
-                    return req.matches(&ver);
-                }
+            && let Ok(ver) = semver::Version::parse(comp_version)
+        {
+            return req.matches(&ver);
+        }
 
         // Exact string match (case-insensitive)
         comp_version.to_lowercase() == version_filter.to_lowercase()
@@ -252,7 +262,9 @@ pub fn run_query(config: QueryConfig, filter: QueryFilter) -> Result<()> {
     }
 
     if filter.is_empty() {
-        bail!("No query filters specified. Provide a search pattern or use --name, --purl, --version, --license, --ecosystem, --supplier, or --affected-by");
+        bail!(
+            "No query filters specified. Provide a search pattern or use --name, --purl, --version, --license, --ecosystem, --supplier, or --affected-by"
+        );
     }
 
     let sboms = super::multi::parse_multiple_sboms(&config.sbom_paths)?;
@@ -303,7 +315,11 @@ pub fn run_query(config: QueryConfig, filter: QueryFilter) -> Result<()> {
                     existing.found_in.push(source.clone());
                     for vid in &component.vulnerabilities {
                         let id_upper = vid.id.to_uppercase();
-                        if !existing.vuln_ids.iter().any(|v| v.to_uppercase() == id_upper) {
+                        if !existing
+                            .vuln_ids
+                            .iter()
+                            .any(|v| v.to_uppercase() == id_upper)
+                        {
                             existing.vuln_ids.push(vid.id.clone());
                         }
                     }
@@ -369,7 +385,11 @@ pub fn run_query(config: QueryConfig, filter: QueryFilter) -> Result<()> {
 
 /// Build a `QueryMatch` from a component and its source.
 fn build_query_match(component: &Component, source: SbomSource) -> QueryMatch {
-    let vuln_ids: Vec<String> = component.vulnerabilities.iter().map(|v| v.id.clone()).collect();
+    let vuln_ids: Vec<String> = component
+        .vulnerabilities
+        .iter()
+        .map(|v| v.id.clone())
+        .collect();
     let license = component
         .licenses
         .all_licenses()
@@ -386,11 +406,7 @@ fn build_query_match(component: &Component, source: SbomSource) -> QueryMatch {
             .as_ref()
             .map_or_else(String::new, ToString::to_string),
         license,
-        purl: component
-            .identifiers
-            .purl
-            .clone()
-            .unwrap_or_default(),
+        purl: component.identifiers.purl.clone().unwrap_or_default(),
         supplier: component
             .supplier
             .as_ref()
@@ -574,7 +590,9 @@ fn format_table_grouped(result: &QueryResult) -> String {
 
 /// Format results as CSV.
 fn format_csv_output(result: &QueryResult) -> String {
-    let mut out = String::from("Component,Version,Ecosystem,License,Vulns,Vulnerability IDs,Supplier,EOL Status,Found In\n");
+    let mut out = String::from(
+        "Component,Version,Ecosystem,License,Vulns,Vulnerability IDs,Supplier,EOL Status,Found In\n",
+    );
 
     for m in &result.matches {
         let found_in: Vec<&str> = m.found_in.iter().map(|s| s.name.as_str()).collect();
@@ -640,7 +658,11 @@ mod tests {
             ..Default::default()
         };
 
-        let comp = make_component("log4j-core", "2.14.1", Some("pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"));
+        let comp = make_component(
+            "log4j-core",
+            "2.14.1",
+            Some("pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"),
+        );
         let key = ComponentSortKey::from_component(&comp);
         assert!(filter.matches(&comp, &key));
 
@@ -747,10 +769,11 @@ mod tests {
         };
 
         let mut comp = make_component("log4j-core", "2.14.1", None);
-        comp.vulnerabilities.push(crate::model::VulnerabilityRef::new(
-            "CVE-2021-44228".to_string(),
-            crate::model::VulnerabilitySource::Osv,
-        ));
+        comp.vulnerabilities
+            .push(crate::model::VulnerabilityRef::new(
+                "CVE-2021-44228".to_string(),
+                crate::model::VulnerabilitySource::Osv,
+            ));
         let key = ComponentSortKey::from_component(&comp);
         assert!(filter.matches(&comp, &key));
 
@@ -799,11 +822,9 @@ mod tests {
         let key = ("lodash".to_string(), "4.17.21".to_string());
 
         dedup_map.insert(key.clone(), build_query_match(&comp, source1));
-        dedup_map
-            .entry(key)
-            .and_modify(|existing| {
-                existing.found_in.push(source2);
-            });
+        dedup_map.entry(key).and_modify(|existing| {
+            existing.found_in.push(source2);
+        });
 
         let match_entry = dedup_map.values().next().expect("should have one entry");
         assert_eq!(match_entry.found_in.len(), 2);

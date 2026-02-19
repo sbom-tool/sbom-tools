@@ -91,12 +91,12 @@ pub struct ListState {
 }
 
 impl ListState {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn with_total(total: usize) -> Self {
         Self {
             selected: 0,

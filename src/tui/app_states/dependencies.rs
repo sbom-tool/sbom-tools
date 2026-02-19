@@ -182,8 +182,16 @@ impl DependenciesState {
         let padding = 2.min(self.viewport_height.saturating_sub(1)); // Clamp padding to viewport
         if self.selected < self.scroll_offset.saturating_add(padding) {
             self.scroll_offset = self.selected.saturating_sub(padding);
-        } else if self.selected >= self.scroll_offset.saturating_add(self.viewport_height.saturating_sub(padding)) {
-            self.scroll_offset = self.selected.saturating_sub(self.viewport_height.saturating_sub(padding).saturating_sub(1));
+        } else if self.selected
+            >= self
+                .scroll_offset
+                .saturating_add(self.viewport_height.saturating_sub(padding))
+        {
+            self.scroll_offset = self.selected.saturating_sub(
+                self.viewport_height
+                    .saturating_sub(padding)
+                    .saturating_sub(1),
+            );
         }
     }
 
@@ -264,17 +272,15 @@ impl DependenciesState {
         }
 
         // Compute depths using BFS from roots
-        let mut queue: std::collections::VecDeque<(String, usize)> = self
-            .cached_roots
-            .iter()
-            .map(|r| (r.clone(), 0))
-            .collect();
+        let mut queue: std::collections::VecDeque<(String, usize)> =
+            self.cached_roots.iter().map(|r| (r.clone(), 0)).collect();
 
         while let Some((node, depth)) = queue.pop_front() {
             if let Some(&existing_depth) = self.cached_depths.get(node.as_str())
-                && existing_depth <= depth {
-                    continue; // Already visited with smaller or equal depth
-                }
+                && existing_depth <= depth
+            {
+                continue; // Already visited with smaller or equal depth
+            }
 
             // Enqueue children before consuming node
             if let Some(children) = self.cached_graph.get(node.as_str()) {
@@ -323,7 +329,9 @@ impl DependenciesState {
 
     /// Get the node ID for the currently selected item
     pub fn get_selected_node_id(&self) -> Option<&str> {
-        self.visible_nodes.get(self.selected).map(std::string::String::as_str)
+        self.visible_nodes
+            .get(self.selected)
+            .map(std::string::String::as_str)
     }
 
     /// Set the visible nodes and update total (called during rendering)
@@ -387,9 +395,10 @@ impl DependenciesState {
             if node_name.to_lowercase().contains(&query_lower) {
                 self.search_matches.insert(node_id.clone());
             } else if let Some(display_name) = self.cached_display_names.get(node_id)
-                && display_name.to_lowercase().contains(&query_lower) {
-                    self.search_matches.insert(node_id.clone());
-                }
+                && display_name.to_lowercase().contains(&query_lower)
+            {
+                self.search_matches.insert(node_id.clone());
+            }
         }
     }
 
@@ -525,7 +534,6 @@ impl DependenciesState {
             .collect::<Vec<_>>()
             .join(" → ")
     }
-
 }
 
 impl ListNavigation for DependenciesState {
@@ -581,4 +589,3 @@ impl Default for DependenciesState {
         Self::new()
     }
 }
-

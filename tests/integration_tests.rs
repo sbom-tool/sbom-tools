@@ -663,19 +663,13 @@ mod report_security_tests {
     #[test]
     fn test_markdown_link_injection() {
         let escaped = escape_markdown_table(MD_LINK_INJECT);
-        assert!(
-            escaped.contains("\\["),
-            "Square brackets should be escaped"
-        );
+        assert!(escaped.contains("\\["), "Square brackets should be escaped");
     }
 
     #[test]
     fn test_markdown_code_block_injection() {
         let escaped = escape_markdown_table(MD_CODE_INJECT);
-        assert!(
-            !escaped.contains("```"),
-            "Backticks should be escaped"
-        );
+        assert!(!escaped.contains("```"), "Backticks should be escaped");
         assert!(
             escaped.contains("\\`"),
             "Backticks should be backslash-escaped"
@@ -806,10 +800,7 @@ mod report_security_tests {
             .expect("Should generate report");
 
         // Title's hash marks should be escaped
-        assert!(
-            md.contains("\\#"),
-            "Hash marks in title should be escaped"
-        );
+        assert!(md.contains("\\#"), "Hash marks in title should be escaped");
     }
 
     #[test]
@@ -925,10 +916,7 @@ mod id_stable_selection_tests {
 
         // Original IDs should still resolve to same components
         for original_id_str in &original_order {
-            let original_id = ids
-                .iter()
-                .find(|id| id.value() == original_id_str)
-                .unwrap();
+            let original_id = ids.iter().find(|id| id.value() == original_id_str).unwrap();
             assert!(
                 sbom.components.contains_key(original_id),
                 "Original ID '{}' should still resolve",
@@ -988,7 +976,10 @@ mod id_stable_selection_tests {
 
         // Test name search
         let matches = index.search_by_name("component-5");
-        assert!(!matches.is_empty(), "Should find components matching 'component-5'");
+        assert!(
+            !matches.is_empty(),
+            "Should find components matching 'component-5'"
+        );
     }
 
     #[test]
@@ -1003,7 +994,10 @@ mod id_stable_selection_tests {
         let id3 = CanonicalId::synthetic(Some("org"), "package", Some("1.0.0"));
         let id4 = CanonicalId::synthetic(Some("org"), "package", Some("1.0.0"));
 
-        assert_eq!(id3, id4, "Same synthetic ID params should produce equal IDs");
+        assert_eq!(
+            id3, id4,
+            "Same synthetic ID params should produce equal IDs"
+        );
     }
 
     #[test]
@@ -1013,8 +1007,7 @@ mod id_stable_selection_tests {
         assert!(purl_id.is_stable(), "PURL-based ID should be stable");
 
         // UUID-like format ID should not be stable
-        let uuid_id =
-            CanonicalId::from_format_id("550e8400-e29b-41d4-a716-446655440000");
+        let uuid_id = CanonicalId::from_format_id("550e8400-e29b-41d4-a716-446655440000");
         assert!(!uuid_id.is_stable(), "UUID format ID should not be stable");
 
         // Synthetic ID should be stable
@@ -1597,7 +1590,10 @@ mod streaming_tests {
 
     #[test]
     fn test_streaming_config_stdin_disabled() {
-        let config = StreamingConfig { stream_stdin: false, ..StreamingConfig::default() };
+        let config = StreamingConfig {
+            stream_stdin: false,
+            ..StreamingConfig::default()
+        };
         // stdin with stream_stdin=false should not trigger streaming
         assert!(!config.should_stream(None, true));
     }
@@ -1630,8 +1626,8 @@ mod streaming_tests {
 
     #[test]
     fn test_streaming_json_reporter_implements_writer_reporter() {
-        use sbom_tools::reports::StreamingJsonReporter;
         use sbom_tools::WriterReporter;
+        use sbom_tools::reports::StreamingJsonReporter;
 
         let reporter = StreamingJsonReporter::new();
         assert_eq!(
@@ -1643,8 +1639,8 @@ mod streaming_tests {
 
     #[test]
     fn test_ndjson_reporter_implements_writer_reporter() {
-        use sbom_tools::reports::NdjsonReporter;
         use sbom_tools::WriterReporter;
+        use sbom_tools::reports::NdjsonReporter;
 
         let reporter = NdjsonReporter::new();
         assert_eq!(

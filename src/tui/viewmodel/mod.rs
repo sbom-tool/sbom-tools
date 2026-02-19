@@ -109,7 +109,7 @@ impl Default for QualityViewState {
 }
 
 impl QualityViewState {
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             view_mode: QualityViewMode::Summary,
@@ -119,7 +119,7 @@ impl QualityViewState {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn with_recommendations(total: usize) -> Self {
         Self {
             view_mode: QualityViewMode::Summary,

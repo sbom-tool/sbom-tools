@@ -36,7 +36,8 @@ pub fn render_components(frame: &mut Frame, area: Rect, app: &mut App) {
     let total_unfiltered = match app.mode {
         AppMode::Diff => {
             app.tabs.components.total = app.diff_component_count(app.tabs.components.filter);
-            app.data.diff_result
+            app.data
+                .diff_result
                 .as_ref()
                 .map_or(0, |r| r.components.total())
         }
@@ -206,10 +207,17 @@ fn render_component_table(
 ) {
     let is_diff = matches!(component_data, ComponentListData::Diff(_));
     let header_cells: Vec<Cell> = if is_diff {
-        ["", "Name", "Old Version", "New Version", "Ecosystem", "Changes"]
-            .into_iter()
-            .map(|h| Cell::from(h).style(Style::default().fg(colors().accent).bold()))
-            .collect()
+        [
+            "",
+            "Name",
+            "Old Version",
+            "New Version",
+            "Ecosystem",
+            "Changes",
+        ]
+        .into_iter()
+        .map(|h| Cell::from(h).style(Style::default().fg(colors().accent).bold()))
+        .collect()
     } else {
         ["", "Name", "Version", "", "Ecosystem", "Staleness", "EOL"]
             .into_iter()
@@ -419,28 +427,33 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
 
         // Downgrade attack detection
         if let (Some(old_ver), Some(new_ver)) = (&comp.old_version, &comp.new_version) {
-            use crate::tui::security::{detect_version_downgrade, analyze_downgrade, VersionChange};
+            use crate::tui::security::{
+                VersionChange, analyze_downgrade, detect_version_downgrade,
+            };
             let version_change = detect_version_downgrade(old_ver, new_ver);
             if version_change == VersionChange::Downgrade {
                 let downgrade_severity = analyze_downgrade(old_ver, new_ver);
                 let (warning_text, warning_color) = match downgrade_severity {
-                    Some(crate::tui::security::DowngradeSeverity::Major) => {
-                        ("⚠ MAJOR DOWNGRADE - Supply chain attack risk!", colors().critical)
-                    }
-                    Some(crate::tui::security::DowngradeSeverity::Suspicious) => {
-                        ("⚠ SUSPICIOUS - Security patch may be removed!", colors().critical)
-                    }
+                    Some(crate::tui::security::DowngradeSeverity::Major) => (
+                        "⚠ MAJOR DOWNGRADE - Supply chain attack risk!",
+                        colors().critical,
+                    ),
+                    Some(crate::tui::security::DowngradeSeverity::Suspicious) => (
+                        "⚠ SUSPICIOUS - Security patch may be removed!",
+                        colors().critical,
+                    ),
                     Some(crate::tui::security::DowngradeSeverity::Minor) => {
                         ("⚠ Version Downgrade Detected", colors().warning)
                     }
                     None => ("⚠ Downgrade", colors().warning),
                 };
-                lines.push(Line::from(vec![
-                    Span::styled(
-                        format!(" {warning_text} "),
-                        Style::default().fg(colors().badge_fg_dark).bg(warning_color).bold(),
-                    ),
-                ]));
+                lines.push(Line::from(vec![Span::styled(
+                    format!(" {warning_text} "),
+                    Style::default()
+                        .fg(colors().badge_fg_dark)
+                        .bg(warning_color)
+                        .bold(),
+                )]));
             }
         }
 
@@ -493,13 +506,14 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
 
         // Related vulnerabilities - look up by ID, not by name
         let related_vulns: Vec<_> = app
-            .data.diff_result
+            .data
+            .diff_result
             .as_ref()
             .map(|r| {
                 r.vulnerabilities
                     .introduced
                     .iter()
-                    .filter(|v| v.component_id == comp.id)  // ID-based lookup
+                    .filter(|v| v.component_id == comp.id) // ID-based lookup
                     .collect::<Vec<_>>()
             })
             .unwrap_or_default();
@@ -519,31 +533,38 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
                 .iter()
                 .map(|v| (v.severity.as_str(), v.id.as_str(), v.description.as_deref()))
                 .collect();
-            lines.extend(crate::tui::shared::components::render_vulnerability_list_lines(
-                &vuln_entries,
-                5,
-                related_vulns.len(),
-                area.width,
-            ));
+            lines.extend(
+                crate::tui::shared::components::render_vulnerability_list_lines(
+                    &vuln_entries,
+                    5,
+                    related_vulns.len(),
+                    area.width,
+                ),
+            );
         }
 
         // Security Analysis section (Diff mode)
         let reverse_graph = &app.tabs.dependencies.cached_reverse_graph;
         let (direct_deps, transitive_count) =
             crate::tui::shared::components::compute_blast_radius(&comp.name, reverse_graph);
-        let license_text = app.data.new_sbom.as_ref()
+        let license_text = app
+            .data
+            .new_sbom
+            .as_ref()
             .and_then(|sbom| {
                 let canonical_id = crate::model::CanonicalId::from_format_id(&comp.id);
                 sbom.components.get(&canonical_id)
             })
             .and_then(|c| c.licenses.declared.first())
             .map_or("Unknown", |l| l.expression.as_str());
-        lines.extend(crate::tui::shared::components::render_security_analysis_lines(
-            related_vulns.len(),
-            direct_deps,
-            transitive_count,
-            license_text,
-        ));
+        lines.extend(
+            crate::tui::shared::components::render_security_analysis_lines(
+                related_vulns.len(),
+                direct_deps,
+                transitive_count,
+                license_text,
+            ),
+        );
 
         // Flagged indicator and analyst notes
         let is_flagged = app.security_cache.is_flagged(&comp.name);
@@ -660,7 +681,8 @@ fn render_view_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
                 .iter()
                 .map(|v| {
                     v.severity
-                        .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string)
+                        .as_ref()
+                        .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string)
                 })
                 .collect();
             let vuln_entries: Vec<(&str, &str, Option<&str>)> = comp
@@ -669,12 +691,14 @@ fn render_view_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
                 .zip(sev_strings.iter())
                 .map(|(v, sev)| (sev.as_str(), v.id.as_str(), None))
                 .collect();
-            lines.extend(crate::tui::shared::components::render_vulnerability_list_lines(
-                &vuln_entries,
-                5,
-                comp.vulnerabilities.len(),
-                area.width,
-            ));
+            lines.extend(
+                crate::tui::shared::components::render_vulnerability_list_lines(
+                    &vuln_entries,
+                    5,
+                    comp.vulnerabilities.len(),
+                    area.width,
+                ),
+            );
         }
 
         // Hashes
@@ -732,7 +756,10 @@ fn render_view_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
                 Span::styled("  Status: ", Style::default().fg(colors().text_muted)),
                 Span::styled(
                     format!(" {} ", eol.status.label()),
-                    Style::default().fg(colors().badge_fg_dark).bg(status_color).bold(),
+                    Style::default()
+                        .fg(colors().badge_fg_dark)
+                        .bg(status_color)
+                        .bold(),
                 ),
                 Span::styled(days_text, Style::default().fg(status_color)),
             ]));
@@ -765,18 +792,28 @@ fn render_view_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
                     Span::styled("  LTS: ", Style::default().fg(colors().text_muted)),
                     Span::styled(
                         " LTS ",
-                        Style::default().fg(colors().badge_fg_dark).bg(colors().success).bold(),
+                        Style::default()
+                            .fg(colors().badge_fg_dark)
+                            .bg(colors().success)
+                            .bold(),
                     ),
                 ]));
             }
             // Latest available version in cycle
             if let Some(latest) = &eol.latest_in_cycle {
-                let is_outdated = comp.version.as_deref().is_some_and(|v| v != latest.as_str());
+                let is_outdated = comp
+                    .version
+                    .as_deref()
+                    .is_some_and(|v| v != latest.as_str());
                 lines.push(Line::from(vec![
                     Span::styled("  Latest: ", Style::default().fg(colors().text_muted)),
                     Span::styled(
                         latest,
-                        Style::default().fg(if is_outdated { colors().warning } else { colors().success }),
+                        Style::default().fg(if is_outdated {
+                            colors().warning
+                        } else {
+                            colors().success
+                        }),
                     ),
                     if is_outdated {
                         Span::styled(" (update available)", Style::default().fg(colors().warning))
@@ -791,14 +828,19 @@ fn render_view_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
         let reverse_graph = &app.tabs.dependencies.cached_reverse_graph;
         let (direct_deps, transitive_count) =
             crate::tui::shared::components::compute_blast_radius(&comp.name, reverse_graph);
-        let license_text = comp.licenses.declared.first()
+        let license_text = comp
+            .licenses
+            .declared
+            .first()
             .map_or("Unknown", |l| l.expression.as_str());
-        lines.extend(crate::tui::shared::components::render_security_analysis_lines(
-            comp.vulnerabilities.len(),
-            direct_deps,
-            transitive_count,
-            license_text,
-        ));
+        lines.extend(
+            crate::tui::shared::components::render_security_analysis_lines(
+                comp.vulnerabilities.len(),
+                direct_deps,
+                transitive_count,
+                license_text,
+            ),
+        );
 
         // Flagged indicator and analyst notes
         let is_flagged = app.security_cache.is_flagged(&comp.name);
@@ -846,11 +888,7 @@ fn get_diff_rows(app: &App, components: &[&ComponentChange]) -> Vec<Row<'static>
         .map(|(idx, comp)| {
             let is_selected = app.tabs.components.is_selected(idx);
             let checkbox = if multi_select {
-                if is_selected {
-                    "☑ "
-                } else {
-                    "☐ "
-                }
+                if is_selected { "☑ " } else { "☐ " }
             } else {
                 ""
             };
@@ -895,8 +933,16 @@ fn get_diff_rows(app: &App, components: &[&ComponentChange]) -> Vec<Row<'static>
                     Style::default().fg(status_fg).bg(status_bg).bold(),
                 )),
                 Cell::from(comp.name.clone()),
-                Cell::from(comp.old_version.clone().unwrap_or_else(|| "\u{2014}".to_string())),
-                Cell::from(comp.new_version.clone().unwrap_or_else(|| "\u{2014}".to_string())),
+                Cell::from(
+                    comp.old_version
+                        .clone()
+                        .unwrap_or_else(|| "\u{2014}".to_string()),
+                ),
+                Cell::from(
+                    comp.new_version
+                        .clone()
+                        .unwrap_or_else(|| "\u{2014}".to_string()),
+                ),
                 Cell::from(comp.ecosystem.clone().unwrap_or_else(|| "-".to_string())),
                 Cell::from(if comp.field_changes.is_empty() {
                     "-".to_string()
@@ -918,11 +964,7 @@ fn get_view_rows(app: &App, components: &[&crate::model::Component]) -> Vec<Row<
         .map(|(idx, comp)| {
             let is_selected = app.tabs.components.is_selected(idx);
             let checkbox = if multi_select {
-                if is_selected {
-                    "☑ "
-                } else {
-                    "☐ "
-                }
+                if is_selected { "☑ " } else { "☐ " }
             } else {
                 ""
             };
@@ -965,11 +1007,16 @@ fn get_view_rows(app: &App, components: &[&crate::model::Component]) -> Vec<Row<
                     Cell::from(Span::styled(
                         format!(" {label} "),
                         Style::default()
-                            .fg(if matches!(info.level, StalenessLevel::Fresh | StalenessLevel::Aging) {
-                                scheme.badge_fg_dark
-                            } else {
-                                scheme.badge_fg_light
-                            })
+                            .fg(
+                                if matches!(
+                                    info.level,
+                                    StalenessLevel::Fresh | StalenessLevel::Aging
+                                ) {
+                                    scheme.badge_fg_dark
+                                } else {
+                                    scheme.badge_fg_light
+                                },
+                            )
                             .bg(color)
                             .bold(),
                     ))
@@ -992,10 +1039,8 @@ fn get_view_rows(app: &App, components: &[&crate::model::Component]) -> Vec<Row<
                         format!(" {label} "),
                         Style::default()
                             .fg(
-                                if matches!(
-                                    info.status,
-                                    EolStatus::Supported | EolStatus::Unknown
-                                ) {
+                                if matches!(info.status, EolStatus::Supported | EolStatus::Unknown)
+                                {
                                     scheme.badge_fg_dark
                                 } else {
                                     scheme.badge_fg_light
@@ -1010,11 +1055,16 @@ fn get_view_rows(app: &App, components: &[&crate::model::Component]) -> Vec<Row<
             Row::new(vec![
                 Cell::from(vuln_indicator),
                 Cell::from(comp.name.clone()),
-                Cell::from(comp.version.clone().unwrap_or_else(|| "\u{2014}".to_string())),
+                Cell::from(
+                    comp.version
+                        .clone()
+                        .unwrap_or_else(|| "\u{2014}".to_string()),
+                ),
                 Cell::from(""),
                 Cell::from(
                     comp.ecosystem
-                        .as_ref().map_or_else(|| "-".to_string(), std::string::ToString::to_string),
+                        .as_ref()
+                        .map_or_else(|| "-".to_string(), std::string::ToString::to_string),
                 ),
                 staleness_cell,
                 eol_cell,

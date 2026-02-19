@@ -104,7 +104,7 @@ impl Default for EolClientConfig {
     fn default() -> Self {
         Self {
             cache_dir: default_cache_dir(),
-            cache_ttl: Duration::from_secs(24 * 3600),      // 24 hours
+            cache_ttl: Duration::from_secs(24 * 3600), // 24 hours
             product_list_ttl: Duration::from_secs(7 * 24 * 3600), // 7 days
             timeout: Duration::from_secs(15),
             bypass_cache: false,
@@ -197,13 +197,17 @@ impl EolClient {
 
     /// Fetch the list of all known products.
     #[cfg(feature = "enrichment")]
-    fn fetch_product_list(&self, stats: &mut EolEnrichmentStats) -> Result<Vec<String>, EnrichmentError> {
+    fn fetch_product_list(
+        &self,
+        stats: &mut EolEnrichmentStats,
+    ) -> Result<Vec<String>, EnrichmentError> {
         let cache_key = "eol_products";
         if self.is_cache_valid(cache_key, self.config.product_list_ttl)
-            && let Some(products) = self.load_from_cache::<Vec<String>>(cache_key) {
-                stats.cache_hits += 1;
-                return Ok(products);
-            }
+            && let Some(products) = self.load_from_cache::<Vec<String>>(cache_key)
+        {
+            stats.cache_hits += 1;
+            return Ok(products);
+        }
 
         let url = format!("{}/api/all.json", self.config.base_url);
         let client = reqwest::blocking::Client::builder()
@@ -234,7 +238,10 @@ impl EolClient {
     }
 
     #[cfg(not(feature = "enrichment"))]
-    fn fetch_product_list(&self, _stats: &mut EolEnrichmentStats) -> Result<Vec<String>, EnrichmentError> {
+    fn fetch_product_list(
+        &self,
+        _stats: &mut EolEnrichmentStats,
+    ) -> Result<Vec<String>, EnrichmentError> {
         Err(EnrichmentError::ApiError(
             "enrichment feature not enabled".to_string(),
         ))
@@ -249,10 +256,11 @@ impl EolClient {
     ) -> Result<Vec<EolCycle>, EnrichmentError> {
         let cache_key = format!("eol_{product}");
         if self.is_cache_valid(&cache_key, self.config.cache_ttl)
-            && let Some(cycles) = self.load_from_cache::<Vec<EolCycle>>(&cache_key) {
-                stats.cache_hits += 1;
-                return Ok(cycles);
-            }
+            && let Some(cycles) = self.load_from_cache::<Vec<EolCycle>>(&cache_key)
+        {
+            stats.cache_hits += 1;
+            return Ok(cycles);
+        }
 
         let url = format!("{}/api/{}.json", self.config.base_url, product);
         let client = reqwest::blocking::Client::builder()
@@ -310,9 +318,10 @@ impl EolClient {
         }
         if let Ok(metadata) = fs::metadata(&cache_path)
             && let Ok(modified) = metadata.modified()
-                && let Ok(elapsed) = SystemTime::now().duration_since(modified) {
-                    return elapsed < ttl;
-                }
+            && let Ok(elapsed) = SystemTime::now().duration_since(modified)
+        {
+            return elapsed < ttl;
+        }
         false
     }
 
@@ -329,13 +338,11 @@ impl EolClient {
     ) -> Result<(), EnrichmentError> {
         let cache_path = self.cache_file(key);
         if let Some(parent) = cache_path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
+            fs::create_dir_all(parent).map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
         }
-        let content = serde_json::to_string(data)
-            .map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
-        fs::write(&cache_path, content)
-            .map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
+        let content =
+            serde_json::to_string(data).map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
+        fs::write(&cache_path, content).map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
         Ok(())
     }
 }
@@ -503,13 +510,10 @@ fn compute_eol_info(product: &str, cycle: &EolCycle) -> EolInfo {
         .as_ref()
         .and_then(|s| NaiveDate::parse_from_str(s, "%Y-%m-%d").ok());
 
-    let is_lts = cycle
-        .lts
-        .as_ref()
-        .is_some_and(|v| match v {
-            DateOrBool::Bool(b) => *b,
-            DateOrBool::Date(_) => true, // If there's an LTS date, it's LTS
-        });
+    let is_lts = cycle.lts.as_ref().is_some_and(|v| match v {
+        DateOrBool::Bool(b) => *b,
+        DateOrBool::Date(_) => true, // If there's an LTS date, it's LTS
+    });
 
     let days_until_eol = eol_date.map(|d| (d - today).num_days());
 
@@ -547,15 +551,17 @@ fn compute_eol_status(
 
     // 2. Approaching EOL (within 180 days)
     if let Some(days) = days_until_eol
-        && (0..=180).contains(&days) {
-            return EolStatus::ApproachingEol;
-        }
+        && (0..=180).contains(&days)
+    {
+        return EolStatus::ApproachingEol;
+    }
 
     // 3. Active support ended → security-only phase
     if let Some(support) = support
-        && support.is_reached() {
-            return EolStatus::SecurityOnly;
-        }
+        && support.is_reached()
+    {
+        return EolStatus::SecurityOnly;
+    }
 
     // 4. Fully supported
     EolStatus::Supported
@@ -682,11 +688,7 @@ mod tests {
 
     #[test]
     fn test_compute_eol_status_eol() {
-        let status = compute_eol_status(
-            &DateOrBool::Bool(true),
-            None,
-            None,
-        );
+        let status = compute_eol_status(&DateOrBool::Bool(true), None, None);
         assert_eq!(status, EolStatus::EndOfLife);
     }
 
@@ -714,7 +716,7 @@ mod tests {
     fn test_compute_eol_status_security_only() {
         let status = compute_eol_status(
             &DateOrBool::Date("2099-12-31".to_string()), // Far future EOL
-            Some(&DateOrBool::Bool(true)),                // Support ended
+            Some(&DateOrBool::Bool(true)),               // Support ended
             Some(27000),
         );
         assert_eq!(status, EolStatus::SecurityOnly);

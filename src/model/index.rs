@@ -65,7 +65,7 @@ pub struct ComponentSortKey {
 
 impl ComponentSortKey {
     /// Build sort key from a component
-    #[must_use] 
+    #[must_use]
     pub fn from_component(comp: &Component) -> Self {
         Self {
             name_lower: comp.name.to_lowercase(),
@@ -87,7 +87,7 @@ impl ComponentSortKey {
     }
 
     /// Check if any field contains the query (case-insensitive)
-    #[must_use] 
+    #[must_use]
     pub fn contains(&self, query_lower: &str) -> bool {
         self.name_lower.contains(query_lower)
             || self.version_lower.contains(query_lower)
@@ -96,7 +96,7 @@ impl ComponentSortKey {
     }
 
     /// Check if name contains the query
-    #[must_use] 
+    #[must_use]
     pub fn name_contains(&self, query_lower: &str) -> bool {
         self.name_lower.contains(query_lower)
     }
@@ -171,7 +171,7 @@ impl NormalizedSbomIndex {
     /// Get dependencies of a component as edges.
     ///
     /// O(k) where k = number of dependencies (much faster than O(edges)).
-    #[must_use] 
+    #[must_use]
     pub fn dependencies_of<'a>(
         &self,
         id: &CanonicalId,
@@ -186,7 +186,7 @@ impl NormalizedSbomIndex {
     /// Get dependents of a component as edges.
     ///
     /// O(k) where k = number of dependents (much faster than O(edges)).
-    #[must_use] 
+    #[must_use]
     pub fn dependents_of<'a>(
         &self,
         id: &CanonicalId,
@@ -211,7 +211,7 @@ impl NormalizedSbomIndex {
     ///
     /// `O(unique_names)` - still iterates but only over unique lowercased names,
     /// not all components.
-    #[must_use] 
+    #[must_use]
     pub fn search_by_name(&self, query_lower: &str) -> Vec<CanonicalId> {
         self.by_name_lower
             .iter()
@@ -223,38 +223,32 @@ impl NormalizedSbomIndex {
     /// Get the pre-computed sort key for a component.
     ///
     /// O(1) lookup, avoids repeated `to_lowercase()` calls during sorting.
-    #[must_use] 
+    #[must_use]
     pub fn sort_key(&self, id: &CanonicalId) -> Option<&ComponentSortKey> {
         self.sort_keys.get(id)
     }
 
     /// Get all sort keys for iteration.
-    #[must_use] 
+    #[must_use]
     pub const fn sort_keys(&self) -> &HashMap<CanonicalId, ComponentSortKey> {
         &self.sort_keys
     }
 
     /// Check if component has any dependencies.
-    #[must_use] 
+    #[must_use]
     pub fn has_dependencies(&self, id: &CanonicalId) -> bool {
-        self.edges_by_source
-            .get(id)
-            .is_some_and(|v| !v.is_empty())
+        self.edges_by_source.get(id).is_some_and(|v| !v.is_empty())
     }
 
     /// Check if component has any dependents.
-    #[must_use] 
+    #[must_use]
     pub fn has_dependents(&self, id: &CanonicalId) -> bool {
-        self.edges_by_target
-            .get(id)
-            .is_some_and(|v| !v.is_empty())
+        self.edges_by_target.get(id).is_some_and(|v| !v.is_empty())
     }
 
     /// Get count of dependencies for a component.
     pub fn dependency_count(&self, id: &CanonicalId) -> usize {
-        self.edges_by_source
-            .get(id)
-            .map_or(0, std::vec::Vec::len)
+        self.edges_by_source.get(id).map_or(0, std::vec::Vec::len)
     }
 
     /// Get count of dependents for a component.
@@ -263,19 +257,19 @@ impl NormalizedSbomIndex {
     }
 
     /// Get total component count.
-    #[must_use] 
+    #[must_use]
     pub const fn component_count(&self) -> usize {
         self.component_count
     }
 
     /// Get total edge count.
-    #[must_use] 
+    #[must_use]
     pub const fn edge_count(&self) -> usize {
         self.edge_count
     }
 
     /// Get count of root components (no incoming edges).
-    #[must_use] 
+    #[must_use]
     pub fn root_count(&self) -> usize {
         self.component_count
             .saturating_sub(self.edges_by_target.len())
@@ -287,7 +281,7 @@ impl NormalizedSbomIndex {
     }
 
     /// Get count of leaf components (no outgoing edges).
-    #[must_use] 
+    #[must_use]
     pub fn leaf_count(&self) -> usize {
         self.component_count
             .saturating_sub(self.edges_by_source.len())

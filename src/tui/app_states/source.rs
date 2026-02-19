@@ -106,9 +106,9 @@ impl JsonTreeNode {
         let key_part = match self {
             Self::Object { key, index, .. }
             | Self::Array { key, index, .. }
-            | Self::Leaf { key, index, .. } => {
-                index.as_ref().map_or_else(|| key.clone(), |i| format!("[{i}]"))
-            }
+            | Self::Leaf { key, index, .. } => index
+                .as_ref()
+                .map_or_else(|| key.clone(), |i| format!("[{i}]")),
         };
         if parent_path.is_empty() {
             key_part
@@ -118,17 +118,12 @@ impl JsonTreeNode {
     }
 
     pub const fn is_expandable(&self) -> bool {
-        matches!(
-            self,
-            Self::Object { .. } | Self::Array { .. }
-        )
+        matches!(self, Self::Object { .. } | Self::Array { .. })
     }
 
     pub fn children(&self) -> Option<&[Self]> {
         match self {
-            Self::Object { children, .. } | Self::Array { children, .. } => {
-                Some(children)
-            }
+            Self::Object { children, .. } | Self::Array { children, .. } => Some(children),
             Self::Leaf { .. } => None,
         }
     }
@@ -149,9 +144,9 @@ impl JsonTreeNode {
         match self {
             Self::Object { key, index, .. }
             | Self::Array { key, index, .. }
-            | Self::Leaf { key, index, .. } => {
-                index.as_ref().map_or_else(|| key.clone(), |i| format!("[{i}]"))
-            }
+            | Self::Leaf { key, index, .. } => index
+                .as_ref()
+                .map_or_else(|| key.clone(), |i| format!("[{i}]")),
         }
     }
 }
@@ -337,20 +332,27 @@ pub struct SourcePanelState {
 impl SourcePanelState {
     /// Create a new panel state by parsing raw SBOM content.
     pub fn new(raw_content: &str) -> Self {
-        let (json_tree, raw_lines) = serde_json::from_str::<serde_json::Value>(raw_content).map_or_else(
-            |_| {
-                // Not valid JSON (e.g. XML, tag-value) — raw mode only
-                let lines: Vec<String> = raw_content.lines().map(std::string::ToString::to_string).collect();
-                (None, lines)
-            },
-            |value| {
-                let tree = JsonTreeNode::from_value("root".to_string(), None, &value);
-                let pretty = serde_json::to_string_pretty(&value)
-                    .unwrap_or_else(|_| raw_content.to_string());
-                let lines: Vec<String> = pretty.lines().map(std::string::ToString::to_string).collect();
-                (Some(tree), lines)
-            },
-        );
+        let (json_tree, raw_lines) = serde_json::from_str::<serde_json::Value>(raw_content)
+            .map_or_else(
+                |_| {
+                    // Not valid JSON (e.g. XML, tag-value) — raw mode only
+                    let lines: Vec<String> = raw_content
+                        .lines()
+                        .map(std::string::ToString::to_string)
+                        .collect();
+                    (None, lines)
+                },
+                |value| {
+                    let tree = JsonTreeNode::from_value("root".to_string(), None, &value);
+                    let pretty = serde_json::to_string_pretty(&value)
+                        .unwrap_or_else(|_| raw_content.to_string());
+                    let lines: Vec<String> = pretty
+                        .lines()
+                        .map(std::string::ToString::to_string)
+                        .collect();
+                    (Some(tree), lines)
+                },
+            );
 
         // Auto-expand root in tree mode
         let mut expanded = HashSet::new();
@@ -407,7 +409,13 @@ impl SourcePanelState {
         self.cached_flat_items.clear();
         if let Some(ref tree) = self.json_tree {
             crate::tui::shared::source::flatten_json_tree(
-                tree, "", 0, &self.expanded, &mut self.cached_flat_items, true, &[],
+                tree,
+                "",
+                0,
+                &self.expanded,
+                &mut self.cached_flat_items,
+                true,
+                &[],
             );
         }
         self.flat_cache_valid = true;

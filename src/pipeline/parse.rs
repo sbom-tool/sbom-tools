@@ -19,7 +19,7 @@ pub struct ParsedSbom {
 
 impl ParsedSbom {
     /// Create a new `ParsedSbom` without enrichment
-    #[must_use] 
+    #[must_use]
     pub const fn new(sbom: NormalizedSbom, raw_content: String) -> Self {
         Self {
             sbom,
@@ -30,7 +30,7 @@ impl ParsedSbom {
     }
 
     /// Get a reference to the SBOM
-    #[must_use] 
+    #[must_use]
     pub const fn sbom(&self) -> &NormalizedSbom {
         &self.sbom
     }
@@ -41,19 +41,19 @@ impl ParsedSbom {
     }
 
     /// Get a reference to the original file content
-    #[must_use] 
+    #[must_use]
     pub fn raw_content(&self) -> &str {
         &self.raw_content
     }
 
     /// Consume and return the inner SBOM
-    #[must_use] 
+    #[must_use]
     pub fn into_sbom(self) -> NormalizedSbom {
         self.sbom
     }
 
     /// Consume and return both the SBOM and the raw content
-    #[must_use] 
+    #[must_use]
     pub fn into_parts(self) -> (NormalizedSbom, String) {
         (self.sbom, self.raw_content)
     }
@@ -74,12 +74,11 @@ pub fn parse_sbom_with_context(path: &Path, quiet: bool) -> Result<ParsedSbom> {
 
     let path_display = path.display().to_string();
 
-    let raw_content = std::fs::read_to_string(path).map_err(|e| {
-        super::PipelineError::ParseFailed {
+    let raw_content =
+        std::fs::read_to_string(path).map_err(|e| super::PipelineError::ParseFailed {
             path: path_display.clone(),
             source: e.into(),
-        }
-    })?;
+        })?;
     let sbom = crate::parsers::parse_sbom_str(&raw_content).map_err(|e| {
         super::PipelineError::ParseFailed {
             path: path_display,
@@ -126,7 +125,10 @@ pub fn enrich_sbom(
     use crate::enrichment::{OsvEnricher, VulnerabilityEnricher};
 
     if !quiet {
-        eprintln!("Enriching SBOM with OSV vulnerability data ({} components)...", sbom.component_count());
+        eprintln!(
+            "Enriching SBOM with OSV vulnerability data ({} components)...",
+            sbom.component_count()
+        );
     }
 
     match OsvEnricher::new(config.clone()) {
@@ -145,8 +147,7 @@ pub fn enrich_sbom(
                     if !quiet {
                         eprintln!(
                             "Enriched: {} components with vulns, {} total vulns found",
-                            stats.components_with_vulns,
-                            stats.total_vulns_found
+                            stats.components_with_vulns, stats.total_vulns_found
                         );
                     }
                     // Update SBOM with enriched components

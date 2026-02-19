@@ -46,7 +46,7 @@ impl MatchResult {
     }
 
     /// Check if this represents a successful match
-    #[must_use] 
+    #[must_use]
     pub fn is_match(&self) -> bool {
         self.score > 0.0 && self.tier != MatchTier::None
     }
@@ -72,7 +72,7 @@ pub enum MatchTier {
 
 impl MatchTier {
     /// Get the default confidence score for this tier
-    #[must_use] 
+    #[must_use]
     pub const fn default_score(&self) -> f64 {
         match self {
             Self::None => 0.0,
@@ -170,7 +170,7 @@ impl MatchExplanation {
     }
 
     /// Generate a human-readable summary of the match.
-    #[must_use] 
+    #[must_use]
     pub fn summary(&self) -> String {
         if self.is_match {
             format!(
@@ -185,7 +185,7 @@ impl MatchExplanation {
     }
 
     /// Generate a detailed multi-line explanation.
-    #[must_use] 
+    #[must_use]
     pub fn detailed(&self) -> String {
         let mut lines = vec![self.summary()];
 
@@ -317,7 +317,7 @@ impl Default for CacheConfig {
 
 impl CacheConfig {
     /// Create a config optimized for small SBOMs.
-    #[must_use] 
+    #[must_use]
     pub const fn small() -> Self {
         Self {
             max_entries: 10_000,
@@ -326,7 +326,7 @@ impl CacheConfig {
     }
 
     /// Create a config optimized for large SBOMs.
-    #[must_use] 
+    #[must_use]
     pub const fn large() -> Self {
         Self {
             max_entries: 500_000,
@@ -444,10 +444,11 @@ impl<M: ComponentMatcher> CachedMatcher<M> {
         self.stats
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         if let Ok(cache) = self.cache.read()
-            && let Some(entry) = cache.get(key) {
-                self.hits.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                return Some(entry.clone());
-            }
+            && let Some(entry) = cache.get(key)
+        {
+            self.hits.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            return Some(entry.clone());
+        }
         None
     }
 
@@ -515,9 +516,10 @@ impl<M: ComponentMatcher> ComponentMatcher for CachedMatcher<M> {
 
         // Check cache for detailed result
         if let Some(entry) = self.get_cached(&key)
-            && let Some(detailed) = entry.detailed {
-                return detailed;
-            }
+            && let Some(detailed) = entry.detailed
+        {
+            return detailed;
+        }
 
         // Compute and cache
         let result = self.inner.match_detailed(a, b);
@@ -566,7 +568,7 @@ impl CompositeMatcherBuilder {
     }
 
     /// Build the composite matcher.
-    #[must_use] 
+    #[must_use]
     pub fn build(self) -> CompositeMatcher {
         CompositeMatcher {
             matchers: self.matchers,

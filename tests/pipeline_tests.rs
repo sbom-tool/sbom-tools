@@ -5,8 +5,8 @@
 
 use sbom_tools::config::DiffConfigBuilder;
 use sbom_tools::pipeline::{
-    auto_detect_format, compute_diff, output_report, parse_sbom_with_context, write_output,
-    OutputTarget, PipelineError,
+    OutputTarget, PipelineError, auto_detect_format, compute_diff, output_report,
+    parse_sbom_with_context, write_output,
 };
 use sbom_tools::reports::ReportFormat;
 use std::path::{Path, PathBuf};
@@ -169,8 +169,7 @@ mod diff_stage {
     #[test]
     fn compute_diff_cross_format() {
         // CycloneDX vs SPDX - same libraries should match
-        let config =
-            demo_diff_config("cyclonedx/minimal.cdx.json", "spdx/minimal.spdx.json");
+        let config = demo_diff_config("cyclonedx/minimal.cdx.json", "spdx/minimal.spdx.json");
 
         let old = parse_sbom_with_context(&config.paths.old, true)
             .expect("parse old")
@@ -183,7 +182,10 @@ mod diff_stage {
 
         // Both have lodash and express, CycloneDX also has test-app (primary)
         // Should detect some matches via fuzzy matching
-        assert!(result.semantic_score > 0.0, "Cross-format diff should find some similarity");
+        assert!(
+            result.semantic_score > 0.0,
+            "Cross-format diff should find some similarity"
+        );
     }
 
     #[test]
@@ -331,10 +333,7 @@ mod report_stage {
         output_report(&config, &result, &old, &new).expect("report should succeed");
 
         let content = std::fs::read_to_string(&out_path).expect("read output");
-        assert!(
-            !content.is_empty(),
-            "CSV report should not be empty"
-        );
+        assert!(!content.is_empty(), "CSV report should not be empty");
     }
 
     #[test]

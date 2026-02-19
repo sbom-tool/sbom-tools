@@ -12,7 +12,7 @@ pub struct ComponentChangeComputer {
 
 impl ComponentChangeComputer {
     /// Create a new component change computer with the given cost model.
-    #[must_use] 
+    #[must_use]
     pub const fn new(cost_model: CostModel) -> Self {
         Self { cost_model }
     }
@@ -124,28 +124,33 @@ impl ChangeComputer for ComponentChangeComputer {
         matches: &ComponentMatches,
     ) -> ComponentChangeSet {
         let mut result = ComponentChangeSet::new();
-        let matched_new_ids: HashSet<_> = matches.values().filter_map(std::clone::Clone::clone).collect();
+        let matched_new_ids: HashSet<_> = matches
+            .values()
+            .filter_map(std::clone::Clone::clone)
+            .collect();
 
         // Find removed components
         for (old_id, new_id_opt) in matches {
             if new_id_opt.is_none()
-                && let Some(old_comp) = old.components.get(old_id) {
-                    result.removed.push(ComponentChange::removed(
-                        old_comp,
-                        self.cost_model.component_removed,
-                    ));
-                }
+                && let Some(old_comp) = old.components.get(old_id)
+            {
+                result.removed.push(ComponentChange::removed(
+                    old_comp,
+                    self.cost_model.component_removed,
+                ));
+            }
         }
 
         // Find added components
         for new_id in new.components.keys() {
             if !matched_new_ids.contains(new_id)
-                && let Some(new_comp) = new.components.get(new_id) {
-                    result.added.push(ComponentChange::added(
-                        new_comp,
-                        self.cost_model.component_added,
-                    ));
-                }
+                && let Some(new_comp) = new.components.get(new_id)
+            {
+                result.added.push(ComponentChange::added(
+                    new_comp,
+                    self.cost_model.component_added,
+                ));
+            }
         }
 
         // Find modified components
@@ -153,20 +158,20 @@ impl ChangeComputer for ComponentChangeComputer {
             if let Some(new_id) = new_id_opt
                 && let (Some(old_comp), Some(new_comp)) =
                     (old.components.get(old_id), new.components.get(new_id))
-                {
-                    // Check if component was actually modified
-                    if old_comp.content_hash != new_comp.content_hash {
-                        let (field_changes, cost) = self.compute_field_changes(old_comp, new_comp);
-                        if !field_changes.is_empty() {
-                            result.modified.push(ComponentChange::modified(
-                                old_comp,
-                                new_comp,
-                                field_changes,
-                                cost,
-                            ));
-                        }
+            {
+                // Check if component was actually modified
+                if old_comp.content_hash != new_comp.content_hash {
+                    let (field_changes, cost) = self.compute_field_changes(old_comp, new_comp);
+                    if !field_changes.is_empty() {
+                        result.modified.push(ComponentChange::modified(
+                            old_comp,
+                            new_comp,
+                            field_changes,
+                            cost,
+                        ));
                     }
                 }
+            }
         }
 
         result

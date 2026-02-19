@@ -48,6 +48,7 @@ mod types;
 mod validation;
 
 // Re-export main types
+pub use crate::watch::WatchConfig;
 pub use defaults::{
     ConfigPreset, DEFAULT_CLUSTER_THRESHOLD, DEFAULT_ENRICHMENT_CACHE_TTL,
     DEFAULT_ENRICHMENT_MAX_CONCURRENT, DEFAULT_MATCHING_THRESHOLD,
@@ -58,13 +59,12 @@ pub use types::{
     MatchingRulesPathConfig, MatrixConfig, MultiDiffConfig, OutputConfig, QueryConfig,
     StreamingConfig, TimelineConfig, TuiConfig, TuiPreferences, ViewConfig,
 };
-pub use crate::watch::WatchConfig;
 pub use validation::{ConfigError, Validatable};
 
 // Re-export file utilities
 pub use file::{
-    discover_config_file, generate_example_config, generate_full_example_config, load_config_file,
-    load_or_default, ConfigFileError,
+    ConfigFileError, discover_config_file, generate_example_config, generate_full_example_config,
+    load_config_file, load_or_default,
 };
 
 /// Generate a JSON Schema for the `AppConfig` configuration format.
@@ -72,7 +72,7 @@ pub use file::{
 /// This schema documents all configuration options that can be set in
 /// `.sbom-tools.yaml` config files. It can be used by editors for
 /// validation and autocompletion.
-#[must_use] 
+#[must_use]
 pub fn generate_json_schema() -> String {
     let schema = schemars::schema_for!(AppConfig);
     serde_json::to_string_pretty(&schema).expect("schema serialization should not fail")

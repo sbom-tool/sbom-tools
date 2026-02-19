@@ -2,17 +2,17 @@
 //!
 //! Coordinates file monitoring, parsing, diffing, enrichment, and alerting.
 
-use super::alerts::{build_alert_sinks, AlertSink};
+use super::WatchError;
+use super::alerts::{AlertSink, build_alert_sinks};
 use super::config::WatchConfig;
 use super::monitor::{FileChange, FileMonitor};
 use super::state::{DiffSnapshot, MonitorStatus, WatchState, WatchSummary};
-use super::WatchError;
 use crate::diff::DiffEngine;
 use crate::matching::FuzzyMatchConfig;
 use crate::model::NormalizedSbom;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 
 /// Run the main watch loop.
@@ -61,8 +61,14 @@ pub fn run_watch_loop(config: &WatchConfig) -> anyhow::Result<()> {
             eprintln!("Dry run complete: {healthy} SBOM(s) parsed successfully, {errors} error(s)");
             for (path, entry) in &state.sboms {
                 let status = match entry.status {
-                    MonitorStatus::Healthy => format!("OK ({} components, {} vulns, {} EOL)", entry.component_count, entry.vuln_count, entry.eol_count),
-                    MonitorStatus::Error => format!("ERROR: {}", entry.last_error.as_deref().unwrap_or("unknown")),
+                    MonitorStatus::Healthy => format!(
+                        "OK ({} components, {} vulns, {} EOL)",
+                        entry.component_count, entry.vuln_count, entry.eol_count
+                    ),
+                    MonitorStatus::Error => format!(
+                        "ERROR: {}",
+                        entry.last_error.as_deref().unwrap_or("unknown")
+                    ),
                     _ => format!("{}", entry.status),
                 };
                 eprintln!("  {} — {}", path.display(), status);
@@ -287,7 +293,11 @@ fn process_sbom_change(
 }
 
 /// Build a [`DiffSnapshot`] by diffing two SBOMs.
-fn build_diff_snapshot(old: &NormalizedSbom, new: &NormalizedSbom, engine: &DiffEngine) -> DiffSnapshot {
+fn build_diff_snapshot(
+    old: &NormalizedSbom,
+    new: &NormalizedSbom,
+    engine: &DiffEngine,
+) -> DiffSnapshot {
     match engine.diff(old, new) {
         Ok(result) => {
             let new_vulns: Vec<String> = result

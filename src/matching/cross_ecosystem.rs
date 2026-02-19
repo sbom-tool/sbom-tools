@@ -91,7 +91,7 @@ impl PackageFamily {
     }
 
     /// Check if this family contains a package name in a specific ecosystem.
-    #[must_use] 
+    #[must_use]
     pub fn contains(&self, ecosystem: &Ecosystem, name: &str) -> bool {
         self.ecosystem_names
             .get(ecosystem)
@@ -100,7 +100,9 @@ impl PackageFamily {
 
     /// Get all names for a specific ecosystem.
     pub fn names_for(&self, ecosystem: &Ecosystem) -> Option<&[String]> {
-        self.ecosystem_names.get(ecosystem).map(std::vec::Vec::as_slice)
+        self.ecosystem_names
+            .get(ecosystem)
+            .map(std::vec::Vec::as_slice)
     }
 
     /// Get all ecosystems this family spans.
@@ -109,7 +111,7 @@ impl PackageFamily {
     }
 
     /// Check if two packages (in different ecosystems) are equivalent.
-    #[must_use] 
+    #[must_use]
     pub fn are_equivalent(
         &self,
         eco_a: &Ecosystem,
@@ -131,7 +133,7 @@ pub struct CrossEcosystemDb {
 
 impl CrossEcosystemDb {
     /// Create a new empty database.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             families: Vec::new(),
@@ -140,7 +142,7 @@ impl CrossEcosystemDb {
     }
 
     /// Create a database with built-in well-known mappings.
-    #[must_use] 
+    #[must_use]
     pub fn with_builtin_mappings() -> Self {
         let mut db = Self::new();
         db.add_builtin_mappings();
@@ -165,7 +167,7 @@ impl CrossEcosystemDb {
     }
 
     /// Look up package families by name and ecosystem.
-    #[must_use] 
+    #[must_use]
     pub fn lookup(&self, ecosystem: &Ecosystem, name: &str) -> Vec<&PackageFamily> {
         let key = (ecosystem.clone(), name.to_lowercase());
         self.name_index
@@ -175,7 +177,7 @@ impl CrossEcosystemDb {
     }
 
     /// Find equivalent packages in other ecosystems.
-    #[must_use] 
+    #[must_use]
     pub fn find_equivalents(&self, ecosystem: &Ecosystem, name: &str) -> Vec<CrossEcosystemMatch> {
         let families = self.lookup(ecosystem, name);
         let mut matches = Vec::new();
@@ -201,7 +203,7 @@ impl CrossEcosystemDb {
     }
 
     /// Check if two packages in different ecosystems are equivalent.
-    #[must_use] 
+    #[must_use]
     pub fn are_equivalent(
         &self,
         eco_a: &Ecosystem,
@@ -219,7 +221,7 @@ impl CrossEcosystemDb {
     }
 
     /// Get statistics about the database.
-    #[must_use] 
+    #[must_use]
     pub fn stats(&self) -> CrossEcosystemDbStats {
         let total_families = self.families.len();
         let verified_families = self.families.iter().filter(|f| f.verified).count();

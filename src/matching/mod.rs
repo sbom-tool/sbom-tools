@@ -65,12 +65,12 @@ pub use lsh::{LshConfig, LshIndex, LshIndexStats, MinHashSignature};
 pub use purl::PurlNormalizer;
 pub use rule_engine::{AppliedRule, AppliedRuleType, RuleApplicationResult, RuleEngine};
 pub use rules::EcosystemRules;
+pub use scoring::MultiFieldScoreResult;
 pub use traits::{
     CacheConfig, CacheStats, CachedMatcher, ComponentMatcher, CompositeMatcher,
     CompositeMatcherBuilder, MatchExplanation, MatchMetadata, MatchResult, MatchTier,
     ScoreComponent,
 };
-pub use scoring::MultiFieldScoreResult;
 
 use crate::model::Component;
 use strsim::{jaro_winkler, levenshtein};
@@ -96,7 +96,7 @@ impl FuzzyMatcher {
     }
 
     /// Get the current configuration.
-    #[must_use] 
+    #[must_use]
     pub const fn config(&self) -> &FuzzyMatchConfig {
         &self.config
     }
@@ -126,9 +126,10 @@ impl FuzzyMatcher {
 
         // Layer 3: Rule-based ecosystem normalization
         if let Some(score) = self.check_ecosystem_rules(a, b)
-            && score >= 0.90 {
-                return score;
-            }
+            && score >= 0.90
+        {
+            return score;
+        }
 
         // Layer 4: Multi-field weighted scoring (if configured) or fuzzy string similarity
         if let Some(ref weights) = self.config.field_weights {
@@ -174,9 +175,10 @@ impl FuzzyMatcher {
 
         // Extract name from PURL if available
         if let Some(purl) = &comp.identifiers.purl
-            && let Some(name) = self.extract_name_from_purl(purl) {
-                names.push(name);
-            }
+            && let Some(name) = self.extract_name_from_purl(purl)
+        {
+            names.push(name);
+        }
 
         names
     }
@@ -241,14 +243,18 @@ impl FuzzyMatcher {
         let phonetic_score = Self::compute_phonetic_similarity(&name_a, &name_b);
 
         // Weighted combination of character-based scores
-        let char_score = jw_score.mul_add(self.config.jaro_winkler_weight, lev_score * self.config.levenshtein_weight);
+        let char_score = jw_score.mul_add(
+            self.config.jaro_winkler_weight,
+            lev_score * self.config.levenshtein_weight,
+        );
 
         // Use the MAXIMUM of character, token, and phonetic scores
         // This allows each method to catch different types of variations
         let combined = char_score.max(token_score).max(phonetic_score * 0.85);
 
         // Version-aware boost (semantic version similarity)
-        let version_boost = Self::compute_version_similarity(a.version.as_ref(), b.version.as_ref());
+        let version_boost =
+            Self::compute_version_similarity(a.version.as_ref(), b.version.as_ref());
 
         (combined + version_boost).min(1.0)
     }
@@ -264,7 +270,7 @@ impl FuzzyMatcher {
     }
 
     /// Compute phonetic similarity using Soundex.
-    #[must_use] 
+    #[must_use]
     pub fn compute_phonetic_similarity(name_a: &str, name_b: &str) -> f64 {
         string_similarity::compute_phonetic_similarity(name_a, name_b)
     }
@@ -272,7 +278,7 @@ impl FuzzyMatcher {
     /// Compute multi-field weighted score.
     ///
     /// Combines scores from multiple component fields based on configured weights.
-    #[must_use] 
+    #[must_use]
     pub fn compute_multi_field_score(
         &self,
         a: &Component,
@@ -410,17 +416,18 @@ impl ComponentMatcher for FuzzyMatcher {
 
         // Layer 3: Rule-based ecosystem normalization
         if let Some(score) = self.check_ecosystem_rules(a, b)
-            && score >= 0.90 {
-                return MatchResult::with_metadata(
-                    score,
-                    MatchTier::EcosystemRule,
-                    MatchMetadata {
-                        matched_fields: vec!["name".to_string(), "ecosystem".to_string()],
-                        normalization: Some("ecosystem_rules".to_string()),
-                        rule_id: None,
-                    },
-                );
-            }
+            && score >= 0.90
+        {
+            return MatchResult::with_metadata(
+                score,
+                MatchTier::EcosystemRule,
+                MatchMetadata {
+                    matched_fields: vec!["name".to_string(), "ecosystem".to_string()],
+                    normalization: Some("ecosystem_rules".to_string()),
+                    rule_id: None,
+                },
+            );
+        }
 
         // Layer 4: Fuzzy string similarity
         let fuzzy_score = self.compute_fuzzy_score(a, b);
@@ -458,9 +465,7 @@ impl ComponentMatcher for FuzzyMatcher {
                 return MatchExplanation::matched(
                     MatchTier::ExactIdentifier,
                     1.0,
-                    format!(
-                        "Exact PURL match: '{purl_a}' equals '{purl_b}' after normalization"
-                    ),
+                    format!("Exact PURL match: '{purl_a}' equals '{purl_b}' after normalization"),
                 )
                 .with_normalization("purl_normalized");
             }
@@ -481,20 +486,22 @@ impl ComponentMatcher for FuzzyMatcher {
 
         // Layer 3: Rule-based ecosystem normalization
         if let Some(score) = self.check_ecosystem_rules(a, b)
-            && score >= 0.90 {
-                let ecosystem = a
-                    .ecosystem
-                    .as_ref().map_or_else(|| "unknown".to_string(), std::string::ToString::to_string);
-                return MatchExplanation::matched(
-                    MatchTier::EcosystemRule,
-                    score,
-                    format!(
-                        "Names match after {} ecosystem normalization: '{}' -> '{}'",
-                        ecosystem, a.name, b.name
-                    ),
-                )
-                .with_normalization(format!("{ecosystem}_normalization"));
-            }
+            && score >= 0.90
+        {
+            let ecosystem = a
+                .ecosystem
+                .as_ref()
+                .map_or_else(|| "unknown".to_string(), std::string::ToString::to_string);
+            return MatchExplanation::matched(
+                MatchTier::EcosystemRule,
+                score,
+                format!(
+                    "Names match after {} ecosystem normalization: '{}' -> '{}'",
+                    ecosystem, a.name, b.name
+                ),
+            )
+            .with_normalization(format!("{ecosystem}_normalization"));
+        }
 
         // Layer 4: Fuzzy string similarity - compute detailed breakdown
         let name_a = a.name.to_lowercase();
@@ -816,7 +823,8 @@ mod tests {
     #[test]
     fn test_token_similarity_different_delimiters() {
         // Different delimiters should still work
-        let score = string_similarity::compute_token_similarity("my_package_name", "my-package-name");
+        let score =
+            string_similarity::compute_token_similarity("my_package_name", "my-package-name");
         assert_eq!(score, 1.0, "Different delimiters should match");
     }
 

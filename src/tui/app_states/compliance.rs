@@ -100,7 +100,6 @@ impl PolicyComplianceState {
     pub fn passes(&self) -> bool {
         self.result.as_ref().is_none_or(|r| r.passes)
     }
-
 }
 
 /// State for compliance tab in diff mode (side-by-side multi-standard comparison)
@@ -205,4 +204,3 @@ impl DiffComplianceState {
         }
     }
 }
-

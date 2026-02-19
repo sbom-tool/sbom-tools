@@ -210,4 +210,3 @@ pub struct DiffVulnItem<'a> {
     pub status: DiffVulnStatus,
     pub vuln: &'a crate::diff::VulnerabilityDetail,
 }
-

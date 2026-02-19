@@ -3,7 +3,7 @@
 use crate::model::{Component, EolStatus};
 use crate::tui::theme::colors;
 use crate::tui::view::app::{ComponentDetailTab, FocusPanel, ViewApp};
-use crate::tui::widgets::{truncate_str, SeverityBadge, Tree};
+use crate::tui::widgets::{SeverityBadge, Tree, truncate_str};
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Paragraph, Wrap},
@@ -101,7 +101,10 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
     // Show search query if present
     if !app.tree_search_query.is_empty() {
         spans.push(Span::raw("  "));
-        spans.push(Span::styled("Search: ", Style::default().fg(scheme.text_muted)));
+        spans.push(Span::styled(
+            "Search: ",
+            Style::default().fg(scheme.text_muted),
+        ));
         spans.push(Span::styled(
             format!("\"{}\"", app.tree_search_query),
             Style::default().fg(scheme.info),
@@ -338,16 +341,16 @@ fn render_overview_tab(frame: &mut Frame, area: Rect, comp: &Component, border_c
             Span::styled("Staleness: ", Style::default().fg(scheme.text_muted)),
             Span::styled(
                 format!(" {} ", staleness.level.label()),
-                Style::default().fg(scheme.badge_fg_dark).bg(stale_color).bold(),
+                Style::default()
+                    .fg(scheme.badge_fg_dark)
+                    .bg(stale_color)
+                    .bold(),
             ),
         ]));
         if let Some(days) = staleness.days_since_update {
             lines.push(Line::from(vec![
                 Span::styled("  Last release: ", Style::default().fg(scheme.text_muted)),
-                Span::styled(
-                    format!("{days} days ago"),
-                    Style::default().fg(stale_color),
-                ),
+                Span::styled(format!("{days} days ago"), Style::default().fg(stale_color)),
             ]));
         }
     }
@@ -370,7 +373,10 @@ fn render_overview_tab(frame: &mut Frame, area: Rect, comp: &Component, border_c
             ),
             Span::styled(
                 format!(" {} ", eol.status.label()),
-                Style::default().fg(scheme.badge_fg_dark).bg(eol_color).bold(),
+                Style::default()
+                    .fg(scheme.badge_fg_dark)
+                    .bg(eol_color)
+                    .bold(),
             ),
         ]));
         // Days countdown
@@ -409,18 +415,28 @@ fn render_overview_tab(frame: &mut Frame, area: Rect, comp: &Component, border_c
                 Span::styled("  LTS: ", Style::default().fg(scheme.text_muted)),
                 Span::styled(
                     " Yes ",
-                    Style::default().fg(scheme.badge_fg_dark).bg(scheme.info).bold(),
+                    Style::default()
+                        .fg(scheme.badge_fg_dark)
+                        .bg(scheme.info)
+                        .bold(),
                 ),
             ]));
         }
         // Latest version in cycle
         if let Some(latest) = &eol.latest_in_cycle {
-            let is_outdated = comp.version.as_deref().is_some_and(|v| v != latest.as_str());
+            let is_outdated = comp
+                .version
+                .as_deref()
+                .is_some_and(|v| v != latest.as_str());
             lines.push(Line::from(vec![
                 Span::styled("  Latest: ", Style::default().fg(scheme.text_muted)),
                 Span::styled(
                     latest,
-                    Style::default().fg(if is_outdated { scheme.warning } else { scheme.success }),
+                    Style::default().fg(if is_outdated {
+                        scheme.warning
+                    } else {
+                        scheme.success
+                    }),
                 ),
                 if is_outdated {
                     Span::styled(" (update available)", Style::default().fg(scheme.warning))
@@ -600,7 +616,8 @@ fn render_vulnerabilities_tab(
         for vuln in &comp.vulnerabilities {
             let sev = vuln
                 .severity
-                .as_ref().map_or_else(|| "?".to_string(), std::string::ToString::to_string);
+                .as_ref()
+                .map_or_else(|| "?".to_string(), std::string::ToString::to_string);
             let sev_color = SeverityBadge::fg_color(&sev);
 
             // Vuln ID line
@@ -1141,18 +1158,14 @@ fn render_group_stats_panel(
                     truncate_str(&display, width.saturating_sub(10)),
                     Style::default().fg(scheme.text),
                 ),
-                Span::styled(
-                    format!(" ({count})"),
-                    Style::default().fg(scheme.high),
-                ),
+                Span::styled(format!(" ({count})"), Style::default().fg(scheme.high)),
             ]));
         }
         lines.push(Line::from(""));
     }
 
     // Ecosystem breakdown
-    let mut eco_counts: std::collections::HashMap<String, usize> =
-        std::collections::HashMap::new();
+    let mut eco_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
     for comp in &group_comps {
         let eco = comp
             .ecosystem

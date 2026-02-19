@@ -9,8 +9,8 @@ use crate::model::{
 };
 use crate::parsers::traits::{ParseError, SbomParser};
 use chrono::{DateTime, Utc};
-use quick_xml::events::Event;
 use quick_xml::Reader;
+use quick_xml::events::Event;
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -23,13 +23,13 @@ pub struct SpdxParser {
 
 impl SpdxParser {
     /// Create a new SPDX parser
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self { strict: false }
     }
 
     /// Create a strict parser
-    #[must_use] 
+    #[must_use]
     pub const fn strict() -> Self {
         Self { strict: true }
     }
@@ -167,15 +167,17 @@ impl SpdxParser {
                     }
                     "ExternalRef" => {
                         if let Some(ref mut pkg) = current_package
-                            && let Some(ext_ref) = self.parse_external_ref_line(value) {
-                                pkg.external_refs.get_or_insert_with(Vec::new).push(ext_ref);
-                            }
+                            && let Some(ext_ref) = self.parse_external_ref_line(value)
+                        {
+                            pkg.external_refs.get_or_insert_with(Vec::new).push(ext_ref);
+                        }
                     }
                     "PackageChecksum" => {
                         if let Some(ref mut pkg) = current_package
-                            && let Some(checksum) = self.parse_checksum_line(value) {
-                                pkg.checksums.get_or_insert_with(Vec::new).push(checksum);
-                            }
+                            && let Some(checksum) = self.parse_checksum_line(value)
+                        {
+                            pkg.checksums.get_or_insert_with(Vec::new).push(checksum);
+                        }
                     }
                     _ => {}
                 }
@@ -411,11 +413,9 @@ impl SpdxParser {
                                         let uri = String::from_utf8_lossy(&attr.value).to_string();
                                         // Extract algorithm from URI like http://spdx.org/rdf/terms#checksumAlgorithm_sha256
                                         if let Some(idx) = uri.rfind("checksumAlgorithm_") {
-                                            checksum.algorithm =
-                                                uri[idx + 18..].to_uppercase();
+                                            checksum.algorithm = uri[idx + 18..].to_uppercase();
                                         } else if let Some(idx) = uri.rfind('#') {
-                                            checksum.algorithm =
-                                                uri[idx + 1..].to_uppercase();
+                                            checksum.algorithm = uri[idx + 1..].to_uppercase();
                                         }
                                     }
                                 }
@@ -461,22 +461,24 @@ impl SpdxParser {
                         "Relationship" => {
                             if let Some(rel) = current_relationship.take()
                                 && !rel.spdx_element_id.is_empty()
-                                    && !rel.related_spdx_element.is_empty()
-                                {
-                                    relationships.push(rel);
-                                }
+                                && !rel.related_spdx_element.is_empty()
+                            {
+                                relationships.push(rel);
+                            }
                         }
                         "Checksum" => {
                             if let Some(checksum) = current_checksum.take()
-                                && let Some(ref mut pkg) = current_package {
-                                    pkg.checksums.get_or_insert_with(Vec::new).push(checksum);
-                                }
+                                && let Some(ref mut pkg) = current_package
+                            {
+                                pkg.checksums.get_or_insert_with(Vec::new).push(checksum);
+                            }
                         }
                         "ExternalRef" => {
                             if let Some(ext_ref) = current_external_ref.take()
-                                && let Some(ref mut pkg) = current_package {
-                                    pkg.external_refs.get_or_insert_with(Vec::new).push(ext_ref);
-                                }
+                                && let Some(ref mut pkg) = current_package
+                            {
+                                pkg.external_refs.get_or_insert_with(Vec::new).push(ext_ref);
+                            }
                         }
                         // Document-level fields
                         "specVersion" | "spdxVersion" => {
@@ -534,15 +536,19 @@ impl SpdxParser {
                         }
                         "licenseConcluded" => {
                             if let Some(ref mut pkg) = current_package
-                                && pkg.license_concluded.is_none() && !current_text.is_empty() {
-                                    pkg.license_concluded = Some(current_text.clone());
-                                }
+                                && pkg.license_concluded.is_none()
+                                && !current_text.is_empty()
+                            {
+                                pkg.license_concluded = Some(current_text.clone());
+                            }
                         }
                         "licenseDeclared" => {
                             if let Some(ref mut pkg) = current_package
-                                && pkg.license_declared.is_none() && !current_text.is_empty() {
-                                    pkg.license_declared = Some(current_text.clone());
-                                }
+                                && pkg.license_declared.is_none()
+                                && !current_text.is_empty()
+                            {
+                                pkg.license_declared = Some(current_text.clone());
+                            }
                         }
                         "copyrightText" => {
                             if let Some(ref mut pkg) = current_package {
@@ -561,9 +567,10 @@ impl SpdxParser {
                         }
                         "description" | "summary" => {
                             if let Some(ref mut pkg) = current_package
-                                && pkg.description.is_none() {
-                                    pkg.description = Some(current_text.clone());
-                                }
+                                && pkg.description.is_none()
+                            {
+                                pkg.description = Some(current_text.clone());
+                            }
                         }
                         // Checksum fields
                         "checksumValue" => {
@@ -584,9 +591,10 @@ impl SpdxParser {
                         }
                         "referenceCategory" => {
                             if let Some(ref mut ext_ref) = current_external_ref
-                                && ext_ref.reference_category.is_empty() {
-                                    ext_ref.reference_category.clone_from(&current_text);
-                                }
+                                && ext_ref.reference_category.is_empty()
+                            {
+                                ext_ref.reference_category.clone_from(&current_text);
+                            }
                         }
                         // Relationship fields
                         "relationshipType" => {
@@ -607,17 +615,18 @@ impl SpdxParser {
                         }
                         "spdxElementId" => {
                             if let Some(ref mut rel) = current_relationship
-                                && rel.spdx_element_id.is_empty() {
-                                    rel.spdx_element_id =
-                                        Self::extract_spdx_id_from_uri(&current_text);
-                                }
+                                && rel.spdx_element_id.is_empty()
+                            {
+                                rel.spdx_element_id = Self::extract_spdx_id_from_uri(&current_text);
+                            }
                         }
                         "relatedSpdxElement" => {
                             if let Some(ref mut rel) = current_relationship
-                                && rel.related_spdx_element.is_empty() {
-                                    rel.related_spdx_element =
-                                        Self::extract_spdx_id_from_uri(&current_text);
-                                }
+                                && rel.related_spdx_element.is_empty()
+                            {
+                                rel.related_spdx_element =
+                                    Self::extract_spdx_id_from_uri(&current_text);
+                            }
                         }
                         _ => {}
                     }
@@ -629,7 +638,7 @@ impl SpdxParser {
                         "Error parsing RDF/XML at position {}: {:?}",
                         reader.buffer_position(),
                         e
-                    )))
+                    )));
                 }
                 _ => {}
             }
@@ -652,13 +661,19 @@ impl SpdxParser {
     /// Extract local name from qualified XML name (strips namespace prefix)
     fn local_name(name: &[u8]) -> String {
         let name_str = String::from_utf8_lossy(name);
-        name_str.rfind(':').map_or_else(|| name_str.to_string(), |idx| name_str[idx + 1..].to_string())
+        name_str.rfind(':').map_or_else(
+            || name_str.to_string(),
+            |idx| name_str[idx + 1..].to_string(),
+        )
     }
 
     /// Extract SPDX ID from URI (e.g., "<http://example.org#SPDXRef-Package>" -> "SPDXRef-Package")
     fn extract_spdx_id_from_uri(uri: &str) -> String {
         uri.rfind('#').map_or_else(
-            || uri.rfind('/').map_or_else(|| uri.to_string(), |idx| uri[idx + 1..].to_string()),
+            || {
+                uri.rfind('/')
+                    .map_or_else(|| uri.to_string(), |idx| uri[idx + 1..].to_string())
+            },
             |idx| uri[idx + 1..].to_string(),
         )
     }
@@ -673,7 +688,10 @@ impl SpdxParser {
         }
         // Try to extract license ID from URL like http://spdx.org/licenses/MIT
         uri.rfind('/').map_or_else(
-            || uri.rfind('#').map_or_else(|| uri.to_string(), |idx| uri[idx + 1..].to_string()),
+            || {
+                uri.rfind('#')
+                    .map_or_else(|| uri.to_string(), |idx| uri[idx + 1..].to_string())
+            },
             |idx| uri[idx + 1..].to_string(),
         )
     }
@@ -706,21 +724,22 @@ impl SpdxParser {
                 {
                     // Set the first described package as primary component
                     if sbom.primary_component_id.is_none()
-                        && let Some(primary_id) = id_map.get(&rel.related_spdx_element) {
-                            sbom.set_primary_component(primary_id.clone());
+                        && let Some(primary_id) = id_map.get(&rel.related_spdx_element)
+                    {
+                        sbom.set_primary_component(primary_id.clone());
 
-                            // Try to extract security contact from primary component
-                            if let Some(comp) = sbom.components.get(primary_id) {
-                                for ext_ref in &comp.external_refs {
-                                    if matches!(ext_ref.ref_type, ExternalRefType::Advisories)
-                                        && sbom.document.vulnerability_disclosure_url.is_none()
-                                    {
-                                        sbom.document.vulnerability_disclosure_url =
-                                            Some(ext_ref.url.clone());
-                                    }
+                        // Try to extract security contact from primary component
+                        if let Some(comp) = sbom.components.get(primary_id) {
+                            for ext_ref in &comp.external_refs {
+                                if matches!(ext_ref.ref_type, ExternalRefType::Advisories)
+                                    && sbom.document.vulnerability_disclosure_url.is_none()
+                                {
+                                    sbom.document.vulnerability_disclosure_url =
+                                        Some(ext_ref.url.clone());
                                 }
                             }
                         }
+                    }
                 }
 
                 let dep_type = match rel.relationship_type.as_str() {
@@ -750,13 +769,14 @@ impl SpdxParser {
                     && let (Some(from_id), Some(to_id)) = (
                         id_map.get(&rel.spdx_element_id),
                         id_map.get(&rel.related_spdx_element),
-                    ) {
-                        sbom.add_edge(DependencyEdge::new(
-                            from_id.clone(),
-                            to_id.clone(),
-                            dep_type,
-                        ));
-                    }
+                    )
+                {
+                    sbom.add_edge(DependencyEdge::new(
+                        from_id.clone(),
+                        to_id.clone(),
+                        dep_type,
+                    ));
+                }
             }
         }
 
@@ -776,23 +796,28 @@ impl SpdxParser {
             .creation_info
             .as_ref()
             .and_then(|ci| ci.created.as_ref())
-            .and_then(|c| DateTime::parse_from_rfc3339(c).ok()).map_or_else(Utc::now, |dt| dt.with_timezone(&Utc));
+            .and_then(|c| DateTime::parse_from_rfc3339(c).ok())
+            .map_or_else(Utc::now, |dt| dt.with_timezone(&Utc));
 
         let mut creators = Vec::new();
         if let Some(creation_info) = &spdx.creation_info {
             for creator_str in &creation_info.creators {
                 // Parse creator type and name from SPDX format "Type: Name"
                 let (creator_type, name) = creator_str.strip_prefix("Tool:").map_or_else(
-                    || creator_str.strip_prefix("Organization:").map_or_else(
-                        || creator_str.strip_prefix("Person:").map_or_else(
+                    || {
+                        creator_str.strip_prefix("Organization:").map_or_else(
                             || {
-                                // Unknown format, treat as tool
-                                (CreatorType::Tool, creator_str.as_str())
+                                creator_str.strip_prefix("Person:").map_or_else(
+                                    || {
+                                        // Unknown format, treat as tool
+                                        (CreatorType::Tool, creator_str.as_str())
+                                    },
+                                    |name| (CreatorType::Person, name.trim()),
+                                )
                             },
-                            |name| (CreatorType::Person, name.trim()),
-                        ),
-                        |name| (CreatorType::Organization, name.trim()),
-                    ),
+                            |name| (CreatorType::Organization, name.trim()),
+                        )
+                    },
                     |name| (CreatorType::Tool, name.trim()),
                 );
 
@@ -848,14 +873,18 @@ impl SpdxParser {
 
         // Set licenses
         if let Some(declared) = &pkg.license_declared
-            && declared != "NOASSERTION" && declared != "NONE" {
-                comp.licenses
-                    .add_declared(LicenseExpression::new(declared.clone()));
-            }
+            && declared != "NOASSERTION"
+            && declared != "NONE"
+        {
+            comp.licenses
+                .add_declared(LicenseExpression::new(declared.clone()));
+        }
         if let Some(concluded) = &pkg.license_concluded
-            && concluded != "NOASSERTION" && concluded != "NONE" {
-                comp.licenses.concluded = Some(LicenseExpression::new(concluded.clone()));
-            }
+            && concluded != "NOASSERTION"
+            && concluded != "NONE"
+        {
+            comp.licenses.concluded = Some(LicenseExpression::new(concluded.clone()));
+        }
 
         // Set supplier
         if let Some(supplier) = &pkg.supplier {

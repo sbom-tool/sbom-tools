@@ -45,7 +45,7 @@ impl<R> Default for SearchState<R> {
 
 impl<R> SearchState<R> {
     /// Create a new empty search state.
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             active: false,
@@ -86,13 +86,13 @@ impl<R> SearchState<R> {
     }
 
     /// Check if the query is long enough to search.
-    #[must_use] 
+    #[must_use]
     pub fn has_valid_query(&self) -> bool {
         self.query.len() >= 2
     }
 
     /// Get the lowercased query for case-insensitive matching.
-    #[must_use] 
+    #[must_use]
     pub fn query_lower(&self) -> String {
         self.query.to_lowercase()
     }
@@ -104,7 +104,7 @@ impl<R> SearchState<R> {
     }
 
     /// Get the currently selected result.
-    #[must_use] 
+    #[must_use]
     pub fn selected_result(&self) -> Option<&R> {
         self.results.get(self.selected)
     }
@@ -124,13 +124,13 @@ impl<R> SearchState<R> {
     }
 
     /// Check if there are any results.
-    #[must_use] 
+    #[must_use]
     pub fn has_results(&self) -> bool {
         !self.results.is_empty()
     }
 
     /// Get the result count.
-    #[must_use] 
+    #[must_use]
     pub fn result_count(&self) -> usize {
         self.results.len()
     }
@@ -166,7 +166,7 @@ pub struct SearchStateCore {
 }
 
 impl SearchStateCore {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -188,12 +188,12 @@ impl SearchStateCore {
         self.query.pop();
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn has_valid_query(&self) -> bool {
         self.query.len() >= 2
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn query_lower(&self) -> String {
         self.query.to_lowercase()
     }

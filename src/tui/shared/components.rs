@@ -96,10 +96,7 @@ pub fn render_security_analysis_lines(
     // Blast radius
     if direct_deps == 0 && transitive_count == 0 {
         lines.push(Line::from(vec![
-            Span::styled(
-                "  Blast Radius: ",
-                Style::default().fg(colors().text_muted),
-            ),
+            Span::styled("  Blast Radius: ", Style::default().fg(colors().text_muted)),
             Span::styled(
                 "None (no dependents)",
                 Style::default().fg(colors().text_muted),
@@ -107,10 +104,7 @@ pub fn render_security_analysis_lines(
         ]));
     } else {
         lines.push(Line::from(vec![
-            Span::styled(
-                "  Blast Radius: ",
-                Style::default().fg(colors().text_muted),
-            ),
+            Span::styled("  Blast Radius: ", Style::default().fg(colors().text_muted)),
             Span::styled(
                 format!("{direct_deps} direct"),
                 Style::default().fg(if direct_deps > 5 {
@@ -157,10 +151,7 @@ pub fn render_security_analysis_lines(
         LicenseRisk::None => colors().text_muted,
     };
     lines.push(Line::from(vec![
-        Span::styled(
-            "  License Risk: ",
-            Style::default().fg(colors().text_muted),
-        ),
+        Span::styled("  License Risk: ", Style::default().fg(colors().text_muted)),
         Span::styled(
             license_risk.as_str(),
             Style::default().fg(license_risk_color),
@@ -184,7 +175,10 @@ pub fn render_quick_actions_hint(has_vulns: bool) -> Vec<Line<'static>> {
     if has_vulns {
         spans.push(Span::styled("  ", Style::default()));
         spans.push(Span::styled("[o]", Style::default().fg(colors().accent)));
-        spans.push(Span::styled(" CVE", Style::default().fg(colors().text_muted)));
+        spans.push(Span::styled(
+            " CVE",
+            Style::default().fg(colors().text_muted),
+        ));
     }
     vec![Line::from(""), Line::from(spans)]
 }
@@ -211,10 +205,7 @@ pub fn render_vulnerability_list_lines(
                     .bold(),
             ),
             Span::raw(" "),
-            Span::styled(
-                id.to_string(),
-                Style::default().fg(sev_color).bold(),
-            ),
+            Span::styled(id.to_string(), Style::default().fg(sev_color).bold()),
         ]));
 
         if let Some(desc) = description {
@@ -293,7 +284,11 @@ pub fn render_detail_block(
     focused: bool,
 ) {
     let scheme = colors();
-    let border_color = if focused { scheme.accent } else { scheme.border };
+    let border_color = if focused {
+        scheme.accent
+    } else {
+        scheme.border
+    };
     let title_style = if focused {
         Style::default().fg(scheme.accent).bold()
     } else {
@@ -324,7 +319,11 @@ pub fn render_empty_detail_panel(
     focused: bool,
 ) {
     let scheme = colors();
-    let border_color = if focused { scheme.accent } else { scheme.border };
+    let border_color = if focused {
+        scheme.accent
+    } else {
+        scheme.border
+    };
     let title_style = if focused {
         Style::default().fg(scheme.accent).bold()
     } else {

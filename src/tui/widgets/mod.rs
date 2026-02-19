@@ -6,16 +6,13 @@ mod severity_badge;
 mod tree;
 
 pub use severity_badge::{SeverityBadge, SeverityBar};
-pub use tree::{detect_component_type, extract_display_name, Tree, TreeNode, TreeState};
+pub use tree::{Tree, TreeNode, TreeState, detect_component_type, extract_display_name};
 
 use crate::tui::theme::colors;
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Paragraph},
 };
-
-
-
 
 /// Helper function to create a centered rectangle.
 pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
@@ -85,8 +82,6 @@ pub fn format_count(count: usize) -> String {
         count.to_string()
     }
 }
-
-
 
 /// Render an enhanced empty state with icon and action hint.
 pub fn render_empty_state_enhanced(

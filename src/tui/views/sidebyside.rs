@@ -101,12 +101,14 @@ fn render_grouped_mode(frame: &mut Frame, area: Rect, app: &mut App) {
 
     // Get SBOM names
     let old_name = app
-        .data.old_sbom
+        .data
+        .old_sbom
         .as_ref()
         .and_then(|s| s.document.name.clone())
         .unwrap_or_else(|| "Old SBOM".to_string());
     let new_name = app
-        .data.new_sbom
+        .data
+        .new_sbom
         .as_ref()
         .and_then(|s| s.document.name.clone())
         .unwrap_or_else(|| "New SBOM".to_string());
@@ -184,27 +186,32 @@ fn render_aligned_mode(frame: &mut Frame, area: Rect, app: &mut App) {
 
     // Get SBOM names for headers
     let old_name = app
-        .data.old_sbom
+        .data
+        .old_sbom
         .as_ref()
         .and_then(|s| s.document.name.clone())
         .unwrap_or_else(|| "Old SBOM".to_string());
     let new_name = app
-        .data.new_sbom
+        .data
+        .new_sbom
         .as_ref()
         .and_then(|s| s.document.name.clone())
         .unwrap_or_else(|| "New SBOM".to_string());
 
     for (idx, row) in rows.iter().enumerate().skip(scroll).take(visible_height) {
         let is_selected = idx == selected;
-        let is_search_match = search_query
-            .as_ref()
-            .is_some_and(|q| {
-                row.left_name.as_ref().is_some_and(|n| n.contains(q))
-                    || row.right_name.as_ref().is_some_and(|n| n.contains(q))
-            });
+        let is_search_match = search_query.as_ref().is_some_and(|q| {
+            row.left_name.as_ref().is_some_and(|n| n.contains(q))
+                || row.right_name.as_ref().is_some_and(|n| n.contains(q))
+        });
 
-        let (left_line, right_line) =
-            render_aligned_row(row, is_selected, is_search_match, search_query.as_ref(), &scheme);
+        let (left_line, right_line) = render_aligned_row(
+            row,
+            is_selected,
+            is_search_match,
+            search_query.as_ref(),
+            &scheme,
+        );
         left_lines.push(left_line);
         right_lines.push(right_line);
     }
@@ -263,7 +270,7 @@ fn build_aligned_rows(app: &App) -> Vec<AlignedRow> {
                     right_name: None,
                     right_version: None,
                     change_type: ChangeType::Removed,
-                    component_id: Some(comp.id.clone()),  // Use ID, not name
+                    component_id: Some(comp.id.clone()), // Use ID, not name
                 });
             }
         }
@@ -277,7 +284,7 @@ fn build_aligned_rows(app: &App) -> Vec<AlignedRow> {
                     right_name: Some(comp.name.clone()),
                     right_version: comp.new_version.clone(),
                     change_type: ChangeType::Modified,
-                    component_id: Some(comp.id.clone()),  // Use ID, not name
+                    component_id: Some(comp.id.clone()), // Use ID, not name
                 });
             }
         }
@@ -291,7 +298,7 @@ fn build_aligned_rows(app: &App) -> Vec<AlignedRow> {
                     right_name: Some(comp.name.clone()),
                     right_version: comp.new_version.clone(),
                     change_type: ChangeType::Added,
-                    component_id: Some(comp.id.clone()),  // Use ID, not name
+                    component_id: Some(comp.id.clone()), // Use ID, not name
                 });
             }
         }
@@ -317,10 +324,12 @@ fn render_aligned_row<'a>(
 
     // Left side
     let left_line = row.left_name.as_ref().map_or_else(
-        || Line::styled(
-            "  ...",
-            base_style.fg(scheme.muted).add_modifier(Modifier::DIM),
-        ),
+        || {
+            Line::styled(
+                "  ...",
+                base_style.fg(scheme.muted).add_modifier(Modifier::DIM),
+            )
+        },
         |name| {
             let version = row.left_version.as_deref().unwrap_or("");
             let (name_spans, version_spans) =
@@ -341,10 +350,12 @@ fn render_aligned_row<'a>(
 
     // Right side
     let right_line = row.right_name.as_ref().map_or_else(
-        || Line::styled(
-            "  ...",
-            base_style.fg(scheme.muted).add_modifier(Modifier::DIM),
-        ),
+        || {
+            Line::styled(
+                "  ...",
+                base_style.fg(scheme.muted).add_modifier(Modifier::DIM),
+            )
+        },
         |name| {
             let version = row.right_version.as_deref().unwrap_or("");
             let (name_spans, version_spans) =
@@ -388,10 +399,12 @@ fn highlight_with_search<'a>(
     };
 
     let name_spans = search_query.map_or_else(
-        || vec![Span::styled(
-            name.to_string(),
-            Style::default().fg(name_color),
-        )],
+        || {
+            vec![Span::styled(
+                name.to_string(),
+                Style::default().fg(name_color),
+            )]
+        },
         |query| {
             if query.is_empty() {
                 vec![Span::styled(
@@ -1148,7 +1161,7 @@ fn render_with_detail_modal(frame: &mut Frame, area: Rect, app: &mut App) {
                 .introduced
                 .iter()
                 .chain(result.vulnerabilities.resolved.iter())
-                .filter(|v| v.component_id == comp_id)  // ID-based lookup
+                .filter(|v| v.component_id == comp_id) // ID-based lookup
                 .collect();
 
             if !related_vulns.is_empty() {

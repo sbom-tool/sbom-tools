@@ -2,7 +2,7 @@
 
 use crate::tui::theme::colors;
 use crate::tui::view::app::{FocusPanel, ViewApp, VulnGroupBy};
-use crate::tui::widgets::{truncate_str, SeverityBadge};
+use crate::tui::widgets::{SeverityBadge, truncate_str};
 use ratatui::{
     prelude::*,
     widgets::{
@@ -156,7 +156,11 @@ fn render_severity_card(
 
 fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let scheme = colors();
-    let filter_label = app.vuln_state.filter_severity.as_ref().map_or_else(|| "All".to_string(), |s| s.to_uppercase());
+    let filter_label = app
+        .vuln_state
+        .filter_severity
+        .as_ref()
+        .map_or_else(|| "All".to_string(), |s| s.to_uppercase());
 
     let group_label = match app.vuln_state.group_by {
         VulnGroupBy::Severity => "Severity",
@@ -275,7 +279,8 @@ fn render_vuln_content(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
             let filter_label = app
                 .vuln_state
                 .filter_severity
-                .as_ref().map_or_else(|| "current".to_string(), |s| s.to_uppercase());
+                .as_ref()
+                .map_or_else(|| "current".to_string(), |s| s.to_uppercase());
             crate::tui::widgets::render_no_results_state(
                 frame,
                 area,
@@ -355,7 +360,10 @@ fn resolve_severity(vuln: &crate::model::VulnerabilityRef) -> String {
 
 /// Group affected component names by extracted package name for smart display.
 /// Returns (`package_display_name`, count) pairs.
-fn group_affected_components(components: &[String], description: Option<&str>) -> Vec<(String, usize)> {
+fn group_affected_components(
+    components: &[String],
+    description: Option<&str>,
+) -> Vec<(String, usize)> {
     use std::collections::HashMap;
     let mut groups: HashMap<String, usize> = HashMap::new();
 
@@ -395,15 +403,19 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
 
                 // Apply severity filter
                 if let Some(ref filter) = app.vuln_state.filter_severity
-                    && sev.to_lowercase() != *filter {
-                        continue;
-                    }
+                    && sev.to_lowercase() != *filter
+                {
+                    continue;
+                }
 
                 // Apply search filter
                 if has_search {
                     let matches = vuln.id.to_lowercase().contains(&search_query)
                         || comp.name.to_lowercase().contains(&search_query)
-                        || vuln.description.as_ref().is_some_and(|d| d.to_lowercase().contains(&search_query));
+                        || vuln
+                            .description
+                            .as_ref()
+                            .is_some_and(|d| d.to_lowercase().contains(&search_query));
                     if !matches {
                         continue;
                     }
@@ -421,9 +433,10 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                         existing.affected_components.push(comp.name.clone());
                         // Keep the highest CVSS score
                         if let Some(new_cvss) = cvss
-                            && existing.cvss.is_none_or(|c| new_cvss > c) {
-                                existing.cvss = Some(new_cvss);
-                            }
+                            && existing.cvss.is_none_or(|c| new_cvss > c)
+                        {
+                            existing.cvss = Some(new_cvss);
+                        }
                         // Merge affected versions
                         for v in &vuln.affected_versions {
                             if !existing.affected_versions.contains(v) {
@@ -445,7 +458,10 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                         affected_versions: vuln.affected_versions.clone(),
                         source: vuln.source.to_string(),
                         is_kev: vuln.is_kev,
-                        vex_state: vuln.vex_status.as_ref().map(|v| v.status.clone())
+                        vex_state: vuln
+                            .vex_status
+                            .as_ref()
+                            .map(|v| v.status.clone())
                             .or_else(|| comp.vex_status.as_ref().map(|v| v.status.clone())),
                         grouped_components: Vec::new(),
                     });
@@ -453,13 +469,14 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
         }
 
         // Build smart component groupings for each deduped vuln
-        vulns = vuln_map.into_values().map(|mut v| {
-            v.grouped_components = group_affected_components(
-                &v.affected_components,
-                v.description.as_deref(),
-            );
-            v
-        }).collect();
+        vulns = vuln_map
+            .into_values()
+            .map(|mut v| {
+                v.grouped_components =
+                    group_affected_components(&v.affected_components, v.description.as_deref());
+                v
+            })
+            .collect();
 
         // Compute all_same_component for dedup path
         if let Some(first) = vulns.first() {
@@ -474,15 +491,19 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
 
                 // Apply severity filter
                 if let Some(ref filter) = app.vuln_state.filter_severity
-                    && sev.to_lowercase() != *filter {
-                        continue;
-                    }
+                    && sev.to_lowercase() != *filter
+                {
+                    continue;
+                }
 
                 // Apply search filter
                 if has_search {
                     let matches = vuln.id.to_lowercase().contains(&search_query)
                         || comp.name.to_lowercase().contains(&search_query)
-                        || vuln.description.as_ref().is_some_and(|d| d.to_lowercase().contains(&search_query));
+                        || vuln
+                            .description
+                            .as_ref()
+                            .is_some_and(|d| d.to_lowercase().contains(&search_query));
                     if !matches {
                         continue;
                     }
@@ -516,7 +537,10 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                     affected_versions: vuln.affected_versions.clone(),
                     source: vuln.source.to_string(),
                     is_kev: vuln.is_kev,
-                    vex_state: vuln.vex_status.as_ref().map(|v| v.status.clone())
+                    vex_state: vuln
+                        .vex_status
+                        .as_ref()
+                        .map(|v| v.status.clone())
                         .or_else(|| comp.vex_status.as_ref().map(|v| v.status.clone())),
                     grouped_components: Vec::new(),
                 });
@@ -530,7 +554,9 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
             vulns.sort_by(|a, b| {
                 let ord = severity_rank(&a.severity).cmp(&severity_rank(&b.severity));
                 if ord == std::cmp::Ordering::Equal {
-                    b.cvss.partial_cmp(&a.cvss).unwrap_or(std::cmp::Ordering::Equal)
+                    b.cvss
+                        .partial_cmp(&a.cvss)
+                        .unwrap_or(std::cmp::Ordering::Equal)
                 } else {
                     ord
                 }
@@ -538,7 +564,9 @@ fn build_vuln_cache(app: &ViewApp) -> VulnCache {
         }
         VulnSortBy::Cvss => {
             vulns.sort_by(|a, b| {
-                b.cvss.partial_cmp(&a.cvss).unwrap_or(std::cmp::Ordering::Equal)
+                b.cvss
+                    .partial_cmp(&a.cvss)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             });
         }
         VulnSortBy::CveId => {
@@ -676,8 +704,10 @@ fn render_vuln_table_panel(
             } => {
                 let arrow = if *expanded { "▼" } else { "▶" };
                 let sev_color = SeverityBadge::fg_color(label);
-                let is_severity_group =
-                    matches!(app.vuln_state.group_by, crate::tui::view::app::VulnGroupBy::Severity);
+                let is_severity_group = matches!(
+                    app.vuln_state.group_by,
+                    crate::tui::view::app::VulnGroupBy::Severity
+                );
 
                 let mut cells = vec![
                     Cell::from(Span::styled(
@@ -685,9 +715,7 @@ fn render_vuln_table_panel(
                         Style::default().fg(scheme.accent).bold(),
                     )),
                     Cell::from(Span::styled(
-                        format!(
-                            "{label} ({count})"
-                        ),
+                        format!("{label} ({count})"),
                         Style::default()
                             .fg(if is_severity_group {
                                 sev_color
@@ -720,7 +748,8 @@ fn render_vuln_table_panel(
                     id_spans.push(Span::raw(" "));
                 }
                 id_spans.extend(crate::tui::shared::vulnerabilities::render_vex_badge_spans(
-                    v.vex_state.as_ref(), &scheme,
+                    v.vex_state.as_ref(),
+                    &scheme,
                 ));
                 id_spans.push(Span::styled(
                     truncate_str(&v.vuln_id, 16),
@@ -740,7 +769,8 @@ fn render_vuln_table_panel(
 
                 if show_cvss {
                     cells.push(Cell::from(
-                        v.cvss.map_or_else(|| "-".to_string(), |c| format!("{c:.1}")),
+                        v.cvss
+                            .map_or_else(|| "-".to_string(), |c| format!("{c:.1}")),
                     ));
                 }
 
@@ -766,7 +796,8 @@ fn render_vuln_table_panel(
 
                 cells.push(Cell::from(Span::styled(
                     v.description
-                        .as_ref().map_or_else(|| "-".to_string(), |d| truncate_str(d, desc_width.max(15))),
+                        .as_ref()
+                        .map_or_else(|| "-".to_string(), |d| truncate_str(d, desc_width.max(15))),
                     Style::default().fg(scheme.text),
                 )));
 
@@ -891,7 +922,8 @@ fn render_vuln_detail_panel(
             ));
         }
         let vex_spans = crate::tui::shared::vulnerabilities::render_vex_badge_spans(
-            v.vex_state.as_ref(), &scheme,
+            v.vex_state.as_ref(),
+            &scheme,
         );
         if !vex_spans.is_empty() {
             id_line_spans.push(Span::raw(" "));
@@ -921,7 +953,10 @@ fn render_vuln_detail_panel(
     ];
     if let Some(pub_date) = v.published {
         let age_days = (chrono::Utc::now() - pub_date).num_days();
-        meta_spans.push(Span::styled("  Published: ", Style::default().fg(scheme.muted)));
+        meta_spans.push(Span::styled(
+            "  Published: ",
+            Style::default().fg(scheme.muted),
+        ));
         meta_spans.push(Span::styled(
             format!("{} ({} days ago)", pub_date.format("%Y-%m-%d"), age_days),
             Style::default().fg(scheme.text),
@@ -945,7 +980,13 @@ fn render_vuln_detail_panel(
 
     // Affected versions
     if !v.affected_versions.is_empty() {
-        let versions_str = v.affected_versions.iter().take(3).cloned().collect::<Vec<_>>().join(", ");
+        let versions_str = v
+            .affected_versions
+            .iter()
+            .take(3)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join(", ");
         let suffix = if v.affected_versions.len() > 3 {
             format!(" +{} more", v.affected_versions.len() - 3)
         } else {
@@ -953,7 +994,10 @@ fn render_vuln_detail_panel(
         };
         lines.push(Line::from(vec![
             Span::styled("Versions: ", Style::default().fg(scheme.muted)),
-            Span::styled(format!("{versions_str}{suffix}"), Style::default().fg(scheme.text)),
+            Span::styled(
+                format!("{versions_str}{suffix}"),
+                Style::default().fg(scheme.text),
+            ),
         ]));
     }
 
@@ -1022,7 +1066,9 @@ fn render_vuln_detail_panel(
     }
 
     // CWEs (inline)
-    lines.extend(crate::tui::shared::vulnerabilities::render_vuln_cwe_lines(&v.cwes, 5));
+    lines.extend(crate::tui::shared::vulnerabilities::render_vuln_cwe_lines(
+        &v.cwes, 5,
+    ));
 
     lines.push(Line::from(""));
 
@@ -1123,9 +1169,10 @@ fn extract_component_display_name(name: &str, description: Option<&str>) -> Stri
 
     // Name is cryptic - try to extract from description
     if let Some(desc) = description
-        && let Some(pkg_name) = extract_package_from_description(desc) {
-            return pkg_name;
-        }
+        && let Some(pkg_name) = extract_package_from_description(desc)
+    {
+        return pkg_name;
+    }
 
     // Fall back to cleaning up the file path
     clean_component_name(name)
@@ -1146,7 +1193,11 @@ fn is_cryptic_name(name: &str) -> bool {
         .trim_end_matches(".a");
 
     // Check if it's mostly hex digits and dashes (hash-like)
-    if clean.chars().all(|c| c.is_ascii_hexdigit() || c == '-' || c == '_') && clean.len() > 8 {
+    if clean
+        .chars()
+        .all(|c| c.is_ascii_hexdigit() || c == '-' || c == '_')
+        && clean.len() > 8
+    {
         return true;
     }
 
@@ -1171,18 +1222,19 @@ fn is_cryptic_name(name: &str) -> bool {
 /// Clean up a component name (remove path prefixes, extensions)
 fn clean_component_name(name: &str) -> String {
     if (name.starts_with("./") || name.starts_with('/') || name.contains('/'))
-        && let Some(filename) = name.rsplit('/').next() {
-            let clean = filename
-                .trim_end_matches(".squ")
-                .trim_end_matches(".squashfs")
-                .trim_end_matches(".img")
-                .trim_end_matches(".bin");
+        && let Some(filename) = name.rsplit('/').next()
+    {
+        let clean = filename
+            .trim_end_matches(".squ")
+            .trim_end_matches(".squashfs")
+            .trim_end_matches(".img")
+            .trim_end_matches(".bin");
 
-            if clean.chars().all(|c| c.is_ascii_hexdigit() || c == '-') {
-                return format!("file:{}", truncate_str(clean, 12));
-            }
-            return clean.to_string();
+        if clean.chars().all(|c| c.is_ascii_hexdigit() || c == '-') {
+            return format!("file:{}", truncate_str(clean, 12));
         }
+        return clean.to_string();
+    }
     name.to_string()
 }
 
@@ -1200,49 +1252,138 @@ fn extract_package_from_description(description: &str) -> Option<String> {
     // List of known package names to look for (common embedded/system packages)
     const KNOWN_PACKAGES: &[&str] = &[
         // Libraries
-        "busybox", "glibc", "musl", "uclibc", "openssl", "libssl", "libcrypto",
-        "zlib", "bzip2", "xz", "lzma", "lz4", "zstd",
-        "pcre", "pcre2", "libpcre", "libpcre2",
-        "curl", "libcurl", "wget",
-        "sqlite", "sqlite3", "libsqlite",
-        "expat", "libexpat", "libxml2", "libxslt",
-        "libjpeg", "libpng", "libtiff", "libwebp", "giflib",
-        "freetype", "fontconfig", "harfbuzz",
-        "openldap", "libldap",
-        "libssh", "libssh2", "openssh",
-        "gnutls", "mbedtls", "wolfssl", "libressl",
-        "dbus", "systemd", "udev",
-        "linux", "kernel", "linux-kernel",
-        "bash", "dash", "ash", "sh",
-        "python", "perl", "ruby", "php", "lua",
-        "nginx", "apache", "httpd", "lighttpd",
-        "libuv", "libevent", "libev",
-        "protobuf", "grpc", "flatbuffers",
-        "boost", "poco", "qt",
-        "ncurses", "readline",
-        "icu", "libicu",
-        "libidn", "libidn2",
-        "nettle", "libgcrypt", "libsodium",
-        "nss", "nspr",
-        "krb5", "libkrb5",
-        "cyrus-sasl", "libsasl",
-        "pam", "libpam",
-        "audit", "libaudit",
-        "selinux", "libselinux",
-        "acl", "libacl", "attr", "libattr",
-        "cap", "libcap",
-        "util-linux", "coreutils", "findutils",
-        "binutils", "gcc", "llvm", "clang",
-        "dropbear", "dnsmasq", "hostapd", "wpa_supplicant",
-        "iptables", "nftables", "iproute2",
-        "tcpdump", "libpcap",
-        "snmp", "net-snmp",
-        "ntp", "chrony",
-        "samba", "cifs",
+        "busybox",
+        "glibc",
+        "musl",
+        "uclibc",
+        "openssl",
+        "libssl",
+        "libcrypto",
+        "zlib",
+        "bzip2",
+        "xz",
+        "lzma",
+        "lz4",
+        "zstd",
+        "pcre",
+        "pcre2",
+        "libpcre",
+        "libpcre2",
+        "curl",
+        "libcurl",
+        "wget",
+        "sqlite",
+        "sqlite3",
+        "libsqlite",
+        "expat",
+        "libexpat",
+        "libxml2",
+        "libxslt",
+        "libjpeg",
+        "libpng",
+        "libtiff",
+        "libwebp",
+        "giflib",
+        "freetype",
+        "fontconfig",
+        "harfbuzz",
+        "openldap",
+        "libldap",
+        "libssh",
+        "libssh2",
+        "openssh",
+        "gnutls",
+        "mbedtls",
+        "wolfssl",
+        "libressl",
+        "dbus",
+        "systemd",
+        "udev",
+        "linux",
+        "kernel",
+        "linux-kernel",
+        "bash",
+        "dash",
+        "ash",
+        "sh",
+        "python",
+        "perl",
+        "ruby",
+        "php",
+        "lua",
+        "nginx",
+        "apache",
+        "httpd",
+        "lighttpd",
+        "libuv",
+        "libevent",
+        "libev",
+        "protobuf",
+        "grpc",
+        "flatbuffers",
+        "boost",
+        "poco",
+        "qt",
+        "ncurses",
+        "readline",
+        "icu",
+        "libicu",
+        "libidn",
+        "libidn2",
+        "nettle",
+        "libgcrypt",
+        "libsodium",
+        "nss",
+        "nspr",
+        "krb5",
+        "libkrb5",
+        "cyrus-sasl",
+        "libsasl",
+        "pam",
+        "libpam",
+        "audit",
+        "libaudit",
+        "selinux",
+        "libselinux",
+        "acl",
+        "libacl",
+        "attr",
+        "libattr",
+        "cap",
+        "libcap",
+        "util-linux",
+        "coreutils",
+        "findutils",
+        "binutils",
+        "gcc",
+        "llvm",
+        "clang",
+        "dropbear",
+        "dnsmasq",
+        "hostapd",
+        "wpa_supplicant",
+        "iptables",
+        "nftables",
+        "iproute2",
+        "tcpdump",
+        "libpcap",
+        "snmp",
+        "net-snmp",
+        "ntp",
+        "chrony",
+        "samba",
+        "cifs",
         // Firmware/embedded specific
-        "u-boot", "grub", "barebox",
-        "mtd-utils", "squashfs", "jffs2", "ubifs",
-        "openwrt", "buildroot", "yocto",
+        "u-boot",
+        "grub",
+        "barebox",
+        "mtd-utils",
+        "squashfs",
+        "jffs2",
+        "ubifs",
+        "openwrt",
+        "buildroot",
+        "yocto",
     ];
 
     let desc_lower = description.to_lowercase();
@@ -1251,13 +1392,13 @@ fn extract_package_from_description(description: &str) -> Option<String> {
     for &pkg in KNOWN_PACKAGES {
         // Check various patterns where the package might appear
         let patterns = [
-            format!("{pkg} "),           // "busybox allows..."
-            format!(" {pkg} "),          // "in busybox before..."
-            format!("in {pkg}"),         // "vulnerability in busybox"
-            format!("{pkg} before"),     // "busybox before 1.35"
-            format!("{pkg} through"),    // "busybox through 1.35"
-            format!("{pkg} prior"),      // "busybox prior to"
-            format!("lib{pkg}"),         // "libcurl" when looking for "curl"
+            format!("{pkg} "),        // "busybox allows..."
+            format!(" {pkg} "),       // "in busybox before..."
+            format!("in {pkg}"),      // "vulnerability in busybox"
+            format!("{pkg} before"),  // "busybox before 1.35"
+            format!("{pkg} through"), // "busybox through 1.35"
+            format!("{pkg} prior"),   // "busybox prior to"
+            format!("lib{pkg}"),      // "libcurl" when looking for "curl"
         ];
 
         for pattern in &patterns {
@@ -1271,7 +1412,12 @@ fn extract_package_from_description(description: &str) -> Option<String> {
     // Strategy 2: Look for patterns like "X before/through/prior to VERSION"
     // This catches packages not in our known list
     let version_patterns = [
-        " before ", " through ", " prior to ", " up to ", " <= ", " < ",
+        " before ",
+        " through ",
+        " prior to ",
+        " up to ",
+        " <= ",
+        " < ",
     ];
 
     for pattern in version_patterns {
@@ -1290,16 +1436,17 @@ fn extract_package_from_description(description: &str) -> Option<String> {
 
     // Strategy 3: Look for "in X," or "in X " early in the description
     if let Some(in_pos) = desc_lower.find(" in ")
-        && in_pos < 50 {
-            // Only look near the start
-            let after_in = &description[in_pos + 4..];
-            if let Some(pkg) = extract_first_word(after_in) {
-                let pkg_lower = pkg.to_lowercase();
-                if !is_noise_word(&pkg_lower) && pkg.len() >= 2 && pkg.len() <= 30 {
-                    return Some(pkg.to_string());
-                }
+        && in_pos < 50
+    {
+        // Only look near the start
+        let after_in = &description[in_pos + 4..];
+        if let Some(pkg) = extract_first_word(after_in) {
+            let pkg_lower = pkg.to_lowercase();
+            if !is_noise_word(&pkg_lower) && pkg.len() >= 2 && pkg.len() <= 30 {
+                return Some(pkg.to_string());
             }
         }
+    }
 
     None
 }
@@ -1332,7 +1479,9 @@ fn capitalize_package_name(name: &str) -> String {
         _ => {
             // Default: capitalize first letter
             let mut chars = name.chars();
-            chars.next().map_or_else(String::new, |first| first.to_uppercase().chain(chars).collect())
+            chars.next().map_or_else(String::new, |first| {
+                first.to_uppercase().chain(chars).collect()
+            })
         }
     }
 }
@@ -1342,11 +1491,7 @@ fn extract_word_before(text: &str) -> Option<&str> {
     let trimmed = text.trim_end();
     let last_space = trimmed.rfind(|c: char| c.is_whitespace() || c == '(' || c == ',')?;
     let word = &trimmed[last_space + 1..];
-    if word.is_empty() {
-        None
-    } else {
-        Some(word)
-    }
+    if word.is_empty() { None } else { Some(word) }
 }
 
 /// Extract the first word from text
@@ -1354,40 +1499,154 @@ fn extract_first_word(text: &str) -> Option<&str> {
     let trimmed = text.trim_start();
     let end = trimmed.find(|c: char| c.is_whitespace() || c == ',' || c == ';' || c == '.')?;
     let word = &trimmed[..end];
-    if word.is_empty() {
-        None
-    } else {
-        Some(word)
-    }
+    if word.is_empty() { None } else { Some(word) }
 }
 
 /// Check if a word is likely not a package name
 fn is_noise_word(word: &str) -> bool {
     const NOISE: &[&str] = &[
-        "a", "an", "the", "this", "that", "these", "those",
-        "is", "are", "was", "were", "be", "been", "being",
-        "have", "has", "had", "do", "does", "did",
-        "will", "would", "could", "should", "may", "might", "must",
-        "vulnerability", "vulnerabilities", "issue", "issues", "flaw", "flaws",
-        "bug", "bugs", "error", "errors", "problem", "problems",
-        "attack", "attacker", "attackers", "remote", "local",
-        "user", "users", "function", "functions", "method", "methods",
-        "file", "files", "memory", "buffer", "heap", "stack",
-        "overflow", "underflow", "corruption", "leak", "injection",
-        "code", "execution", "denial", "service", "access", "control",
-        "certain", "some", "all", "any", "many", "multiple",
-        "allows", "allow", "allowed", "enabling", "enables", "enable",
-        "causes", "cause", "caused", "leading", "leads", "lead",
-        "via", "through", "using", "when", "where", "which", "what",
-        "version", "versions", "release", "releases",
-        "component", "components", "module", "modules", "package", "packages",
-        "application", "applications", "program", "programs", "software",
-        "system", "systems", "server", "servers", "client", "clients",
-        "library", "libraries", "framework", "frameworks",
-        "and", "or", "but", "not", "with", "without", "for", "from", "to",
-        "of", "on", "at", "by", "as", "if", "so", "than",
-        "discovered", "found", "identified", "reported", "fixed",
-        "cve", "nvd", "cwe",
+        "a",
+        "an",
+        "the",
+        "this",
+        "that",
+        "these",
+        "those",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "must",
+        "vulnerability",
+        "vulnerabilities",
+        "issue",
+        "issues",
+        "flaw",
+        "flaws",
+        "bug",
+        "bugs",
+        "error",
+        "errors",
+        "problem",
+        "problems",
+        "attack",
+        "attacker",
+        "attackers",
+        "remote",
+        "local",
+        "user",
+        "users",
+        "function",
+        "functions",
+        "method",
+        "methods",
+        "file",
+        "files",
+        "memory",
+        "buffer",
+        "heap",
+        "stack",
+        "overflow",
+        "underflow",
+        "corruption",
+        "leak",
+        "injection",
+        "code",
+        "execution",
+        "denial",
+        "service",
+        "access",
+        "control",
+        "certain",
+        "some",
+        "all",
+        "any",
+        "many",
+        "multiple",
+        "allows",
+        "allow",
+        "allowed",
+        "enabling",
+        "enables",
+        "enable",
+        "causes",
+        "cause",
+        "caused",
+        "leading",
+        "leads",
+        "lead",
+        "via",
+        "through",
+        "using",
+        "when",
+        "where",
+        "which",
+        "what",
+        "version",
+        "versions",
+        "release",
+        "releases",
+        "component",
+        "components",
+        "module",
+        "modules",
+        "package",
+        "packages",
+        "application",
+        "applications",
+        "program",
+        "programs",
+        "software",
+        "system",
+        "systems",
+        "server",
+        "servers",
+        "client",
+        "clients",
+        "library",
+        "libraries",
+        "framework",
+        "frameworks",
+        "and",
+        "or",
+        "but",
+        "not",
+        "with",
+        "without",
+        "for",
+        "from",
+        "to",
+        "of",
+        "on",
+        "at",
+        "by",
+        "as",
+        "if",
+        "so",
+        "than",
+        "discovered",
+        "found",
+        "identified",
+        "reported",
+        "fixed",
+        "cve",
+        "nvd",
+        "cwe",
     ];
     NOISE.contains(&word)
 }
@@ -1435,7 +1694,7 @@ pub enum VulnDisplayItem {
 
 /// Build display items from cached vulns based on grouping mode and expansion state.
 #[allow(clippy::implicit_hasher)]
-#[must_use] 
+#[must_use]
 pub fn build_display_items(
     vulns: &[VulnRow],
     group_by: &VulnGroupBy,
@@ -1458,7 +1717,8 @@ pub fn build_display_items(
                 if v.affected_count > 1 {
                     // Use smart grouped name if available
                     v.grouped_components
-                        .first().map_or_else(|| v.component_name.clone(), |(name, _)| name.clone())
+                        .first()
+                        .map_or_else(|| v.component_name.clone(), |(name, _)| name.clone())
                 } else {
                     extract_component_display_name(&v.component_name, v.description.as_deref())
                 }

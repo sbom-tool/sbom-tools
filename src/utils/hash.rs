@@ -3,7 +3,7 @@
 use xxhash_rust::xxh3::xxh3_64;
 
 /// Compute a content hash for arbitrary bytes
-#[must_use] 
+#[must_use]
 pub fn content_hash(data: &[u8]) -> u64 {
     xxh3_64(data)
 }

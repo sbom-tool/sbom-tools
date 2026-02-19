@@ -17,7 +17,7 @@ pub struct JsonReporter {
 
 impl JsonReporter {
     /// Create a new JSON reporter
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             summary_only: false,
@@ -26,7 +26,7 @@ impl JsonReporter {
     }
 
     /// Create a summary-only reporter
-    #[must_use] 
+    #[must_use]
     pub const fn summary_only() -> Self {
         Self {
             summary_only: true,
@@ -56,12 +56,14 @@ impl ReportGenerator for JsonReporter {
         new_sbom: &NormalizedSbom,
         config: &ReportConfig,
     ) -> Result<String, ReportError> {
-        let old_cra = config.old_cra_compliance.clone().unwrap_or_else(|| {
-            ComplianceChecker::new(ComplianceLevel::CraPhase2).check(old_sbom)
-        });
-        let new_cra = config.new_cra_compliance.clone().unwrap_or_else(|| {
-            ComplianceChecker::new(ComplianceLevel::CraPhase2).check(new_sbom)
-        });
+        let old_cra = config
+            .old_cra_compliance
+            .clone()
+            .unwrap_or_else(|| ComplianceChecker::new(ComplianceLevel::CraPhase2).check(old_sbom));
+        let new_cra = config
+            .new_cra_compliance
+            .clone()
+            .unwrap_or_else(|| ComplianceChecker::new(ComplianceLevel::CraPhase2).check(new_sbom));
         let cra_compliance = CraCompliance {
             old: CraComplianceDetail::from_result(old_cra),
             new: CraComplianceDetail::from_result(new_cra),
@@ -132,9 +134,15 @@ impl ReportGenerator for JsonReporter {
                     },
                     vulnerabilities: if config.includes(ReportType::Vulnerabilities) {
                         Some(VulnerabilitiesReport {
-                            introduced: VulnerabilityWithSla::from_slice(&result.vulnerabilities.introduced),
-                            resolved: VulnerabilityWithSla::from_slice(&result.vulnerabilities.resolved),
-                            persistent: VulnerabilityWithSla::from_slice(&result.vulnerabilities.persistent),
+                            introduced: VulnerabilityWithSla::from_slice(
+                                &result.vulnerabilities.introduced,
+                            ),
+                            resolved: VulnerabilityWithSla::from_slice(
+                                &result.vulnerabilities.resolved,
+                            ),
+                            persistent: VulnerabilityWithSla::from_slice(
+                                &result.vulnerabilities.persistent,
+                            ),
                         })
                     } else {
                         None
@@ -158,9 +166,10 @@ impl ReportGenerator for JsonReporter {
         sbom: &NormalizedSbom,
         config: &ReportConfig,
     ) -> Result<String, ReportError> {
-        let cra_result = config.view_cra_compliance.clone().unwrap_or_else(|| {
-            ComplianceChecker::new(ComplianceLevel::CraPhase2).check(sbom)
-        });
+        let cra_result = config
+            .view_cra_compliance
+            .clone()
+            .unwrap_or_else(|| ComplianceChecker::new(ComplianceLevel::CraPhase2).check(sbom));
         let compliance = CraComplianceDetail::from_result(cra_result);
 
         let report = JsonViewReport {
@@ -179,7 +188,11 @@ impl ReportGenerator for JsonReporter {
             summary: ViewSummary {
                 total_components: sbom.component_count(),
                 total_dependencies: sbom.edges.len(),
-                ecosystems: sbom.ecosystems().iter().map(std::string::ToString::to_string).collect(),
+                ecosystems: sbom
+                    .ecosystems()
+                    .iter()
+                    .map(std::string::ToString::to_string)
+                    .collect(),
                 vulnerability_counts: sbom.vulnerability_counts(),
             },
             compliance,

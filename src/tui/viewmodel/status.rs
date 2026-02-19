@@ -35,13 +35,13 @@ pub struct StatusMessage {
 
 impl StatusMessage {
     /// Create a new status message manager.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Create a status message manager with auto-clear after duration.
-    #[must_use] 
+    #[must_use]
     pub const fn with_auto_clear(duration: Duration) -> Self {
         Self {
             message: None,
@@ -66,23 +66,24 @@ impl StatusMessage {
     pub fn message(&mut self) -> Option<&str> {
         // Check auto-clear
         if let (Some(set_at), Some(duration)) = (self.set_at, self.auto_clear_after)
-            && set_at.elapsed() >= duration {
-                self.message = None;
-                self.set_at = None;
-            }
+            && set_at.elapsed() >= duration
+        {
+            self.message = None;
+            self.set_at = None;
+        }
         self.message.as_deref()
     }
 
     /// Get the current message without checking auto-clear.
     ///
     /// Use this when you don't want to mutate state.
-    #[must_use] 
+    #[must_use]
     pub fn peek(&self) -> Option<&str> {
         self.message.as_deref()
     }
 
     /// Check if there's an active message.
-    #[must_use] 
+    #[must_use]
     pub const fn has_message(&self) -> bool {
         self.message.is_some()
     }
@@ -90,7 +91,7 @@ impl StatusMessage {
     /// Get the message directly (for backwards compatibility).
     ///
     /// Returns a reference to the Option<String> without auto-clear logic.
-    #[must_use] 
+    #[must_use]
     pub const fn as_option(&self) -> &Option<String> {
         &self.message
     }

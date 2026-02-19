@@ -81,7 +81,8 @@ pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
             // Flag component for follow-up
             if let Some(comp_name) = get_components_tab_selected_name(app) {
                 let was_flagged = app.security_cache.is_flagged(&comp_name);
-                app.security_cache.toggle_flag(&comp_name, "Flagged for review");
+                app.security_cache
+                    .toggle_flag(&comp_name, "Flagged for review");
                 if was_flagged {
                     app.status_message = Some(format!("Unflagged: {comp_name}"));
                 } else {
@@ -146,18 +147,14 @@ pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
 pub(super) fn get_components_tab_selected_name(app: &App) -> Option<String> {
     let selected = app.tabs.components.selected;
     match app.mode {
-        AppMode::Diff => {
-            app.data.diff_result.as_ref().and_then(|_| {
-                let items = app.diff_component_items(app.tabs.components.filter);
-                items.get(selected).map(|c| c.name.clone())
-            })
-        }
-        AppMode::View => {
-            app.data.sbom.as_ref().and_then(|_| {
-                let items = app.view_component_items();
-                items.get(selected).map(|c| c.name.clone())
-            })
-        }
+        AppMode::Diff => app.data.diff_result.as_ref().and_then(|_| {
+            let items = app.diff_component_items(app.tabs.components.filter);
+            items.get(selected).map(|c| c.name.clone())
+        }),
+        AppMode::View => app.data.sbom.as_ref().and_then(|_| {
+            let items = app.view_component_items();
+            items.get(selected).map(|c| c.name.clone())
+        }),
         _ => None,
     }
 }
@@ -170,13 +167,18 @@ pub(super) fn get_components_tab_clipboard_info(app: &App, comp_name: &str) -> S
             let items = app.diff_component_items(app.tabs.components.filter);
             items.get(selected).map_or_else(
                 || comp_name.to_string(),
-                |comp| format!(
-                    "Component: {}\nID: {}\nVersion: {}\nEcosystem: {}",
-                    comp.name,
-                    comp.id,
-                    comp.new_version.as_deref().or(comp.old_version.as_deref()).unwrap_or("unknown"),
-                    comp.ecosystem.as_deref().unwrap_or("unknown")
-                ),
+                |comp| {
+                    format!(
+                        "Component: {}\nID: {}\nVersion: {}\nEcosystem: {}",
+                        comp.name,
+                        comp.id,
+                        comp.new_version
+                            .as_deref()
+                            .or(comp.old_version.as_deref())
+                            .unwrap_or("unknown"),
+                        comp.ecosystem.as_deref().unwrap_or("unknown")
+                    )
+                },
             )
         }
         AppMode::View => {
@@ -184,13 +186,21 @@ pub(super) fn get_components_tab_clipboard_info(app: &App, comp_name: &str) -> S
             items.get(selected).map_or_else(
                 || comp_name.to_string(),
                 |comp| {
-                    let vulns: Vec<_> = comp.vulnerabilities.iter().map(|v| v.id.as_str()).collect();
+                    let vulns: Vec<_> =
+                        comp.vulnerabilities.iter().map(|v| v.id.as_str()).collect();
                     format!(
                         "Component: {}\nVersion: {}\nEcosystem: {}\nVulnerabilities: {}",
                         comp.name,
                         comp.version.as_deref().unwrap_or("unknown"),
-                        comp.ecosystem.as_ref().map_or_else(|| "unknown".to_string(), std::string::ToString::to_string),
-                        if vulns.is_empty() { "None".to_string() } else { vulns.join(", ") }
+                        comp.ecosystem.as_ref().map_or_else(
+                            || "unknown".to_string(),
+                            std::string::ToString::to_string
+                        ),
+                        if vulns.is_empty() {
+                            "None".to_string()
+                        } else {
+                            vulns.join(", ")
+                        }
                     )
                 },
             )
@@ -203,25 +213,22 @@ pub(super) fn get_components_tab_clipboard_info(app: &App, comp_name: &str) -> S
 pub(super) fn get_components_tab_selected_vuln(app: &App) -> Option<String> {
     let selected = app.tabs.components.selected;
     match app.mode {
-        AppMode::Diff => {
-            app.data.diff_result.as_ref().and_then(|r| {
-                let items = app.diff_component_items(app.tabs.components.filter);
-                items.get(selected).and_then(|comp| {
-                    r.vulnerabilities.introduced.iter()
-                        .find(|v| v.component_id == comp.id)
-                        .map(|v| v.id.clone())
-                })
+        AppMode::Diff => app.data.diff_result.as_ref().and_then(|r| {
+            let items = app.diff_component_items(app.tabs.components.filter);
+            items.get(selected).and_then(|comp| {
+                r.vulnerabilities
+                    .introduced
+                    .iter()
+                    .find(|v| v.component_id == comp.id)
+                    .map(|v| v.id.clone())
             })
-        }
-        AppMode::View => {
-            app.data.sbom.as_ref().and_then(|_| {
-                let items = app.view_component_items();
-                items.get(selected).and_then(|comp| {
-                    comp.vulnerabilities.first().map(|v| v.id.clone())
-                })
-            })
-        }
+        }),
+        AppMode::View => app.data.sbom.as_ref().and_then(|_| {
+            let items = app.view_component_items();
+            items
+                .get(selected)
+                .and_then(|comp| comp.vulnerabilities.first().map(|v| v.id.clone()))
+        }),
         _ => None,
     }
 }
-

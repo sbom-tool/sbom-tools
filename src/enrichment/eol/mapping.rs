@@ -36,12 +36,13 @@ impl ProductMapper {
         // Strategy 1: PURL-based static mapping
         if let Some(purl) = &component.identifiers.purl
             && let Some((purl_type, purl_name)) = parse_purl_type_name(purl)
-                && let Some(product) = static_purl_to_product(&purl_type, &purl_name) {
-                    return Some(ResolvedProduct {
-                        product: product.to_string(),
-                        version: version.to_string(),
-                    });
-                }
+            && let Some(product) = static_purl_to_product(&purl_type, &purl_name)
+        {
+            return Some(ResolvedProduct {
+                product: product.to_string(),
+                version: version.to_string(),
+            });
+        }
 
         // Strategy 2: Runtime detection (component IS the runtime)
         if let Some(ecosystem) = &component.ecosystem {
@@ -77,9 +78,10 @@ impl ProductMapper {
         // Strip common suffixes and retry
         for suffix in &["-server", "-client", "-core", "-runtime", "-lib"] {
             if let Some(stripped) = lower.strip_suffix(suffix)
-                && self.product_list.contains(&stripped.to_string()) {
-                    return Some(stripped.to_string());
-                }
+                && self.product_list.contains(&stripped.to_string())
+            {
+                return Some(stripped.to_string());
+            }
         }
 
         None
@@ -137,8 +139,9 @@ fn static_purl_to_product(purl_type: &str, purl_name: &str) -> Option<&'static s
         ("maven", "spring-boot") | ("maven", "org.springframework.boot/spring-boot") => {
             "spring-boot"
         }
-        ("maven", "spring-framework")
-        | ("maven", "org.springframework/spring-core") => "spring-framework",
+        ("maven", "spring-framework") | ("maven", "org.springframework/spring-core") => {
+            "spring-framework"
+        }
         ("maven", "tomcat") | ("maven", "org.apache.tomcat/tomcat") => "tomcat",
         ("maven", "log4j") | ("maven", "org.apache.logging.log4j/log4j-core") => "log4j",
 
@@ -274,30 +277,18 @@ mod tests {
 
     #[test]
     fn test_static_purl_to_product() {
-        assert_eq!(
-            static_purl_to_product("pypi", "django"),
-            Some("django")
-        );
+        assert_eq!(static_purl_to_product("pypi", "django"), Some("django"));
         assert_eq!(
             static_purl_to_product("npm", "@angular/core"),
             Some("angular")
         );
-        assert_eq!(
-            static_purl_to_product("cargo", "tokio"),
-            Some("tokio")
-        );
+        assert_eq!(static_purl_to_product("cargo", "tokio"), Some("tokio"));
         assert_eq!(
             static_purl_to_product("deb", "postgresql-15"),
             Some("postgresql")
         );
-        assert_eq!(
-            static_purl_to_product("rpm", "nginx"),
-            Some("nginx")
-        );
-        assert_eq!(
-            static_purl_to_product("pypi", "unknown-package"),
-            None
-        );
+        assert_eq!(static_purl_to_product("rpm", "nginx"), Some("nginx"));
+        assert_eq!(static_purl_to_product("pypi", "unknown-package"), None);
     }
 
     #[test]
@@ -325,8 +316,14 @@ mod tests {
         ]);
 
         // Exact case-insensitive match
-        assert_eq!(mapper.fuzzy_match_product("Django"), Some("django".to_string()));
-        assert_eq!(mapper.fuzzy_match_product("NGINX"), Some("nginx".to_string()));
+        assert_eq!(
+            mapper.fuzzy_match_product("Django"),
+            Some("django".to_string())
+        );
+        assert_eq!(
+            mapper.fuzzy_match_product("NGINX"),
+            Some("nginx".to_string())
+        );
 
         // Suffix stripping
         assert_eq!(

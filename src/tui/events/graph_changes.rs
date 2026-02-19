@@ -1,7 +1,7 @@
 //! Graph changes tab event handlers.
 
-use crate::tui::state::ListNavigation;
 use crate::tui::App;
+use crate::tui::state::ListNavigation;
 use crossterm::event::{KeyCode, KeyEvent};
 
 pub(super) fn handle_graph_changes_keys(app: &mut App, key: KeyEvent) {
@@ -15,4 +15,3 @@ pub(super) fn handle_graph_changes_keys(app: &mut App, key: KeyEvent) {
         _ => {}
     }
 }
-

@@ -106,9 +106,7 @@ pub(crate) fn parse_justification(s: &str) -> Option<VexJustification> {
         "vulnerable_code_cannot_be_controlled_by_adversary" => {
             Some(VexJustification::VulnerableCodeCannotBeControlledByAdversary)
         }
-        "inline_mitigations_already_exist" => {
-            Some(VexJustification::InlineMitigationsAlreadyExist)
-        }
+        "inline_mitigations_already_exist" => Some(VexJustification::InlineMitigationsAlreadyExist),
         _ => None,
     }
 }
@@ -117,9 +115,10 @@ pub(crate) fn parse_justification(s: &str) -> Option<VexJustification> {
 /// then falls back to `identifiers.purl`.
 pub(crate) fn extract_product_purl(product: &VexProduct) -> Option<&str> {
     if let Some(ref id) = product.id
-        && id.starts_with("pkg:") {
-            return Some(id.as_str());
-        }
+        && id.starts_with("pkg:")
+    {
+        return Some(id.as_str());
+    }
     product
         .identifiers
         .as_ref()
@@ -129,10 +128,7 @@ pub(crate) fn extract_product_purl(product: &VexProduct) -> Option<&str> {
 /// Build a `VexStatus` from an OpenVEX statement.
 pub(crate) fn vex_status_from_statement(stmt: &VexStatement) -> VexStatus {
     let status = parse_status(&stmt.status);
-    let justification = stmt
-        .justification
-        .as_deref()
-        .and_then(parse_justification);
+    let justification = stmt.justification.as_deref().and_then(parse_justification);
 
     VexStatus {
         status,
@@ -191,9 +187,7 @@ mod tests {
     fn test_parse_empty_statements() {
         let result = parse_openvex(r#"{"statements": []}"#);
         assert!(result.is_err());
-        assert!(
-            result.unwrap_err().to_string().contains("no statements"),
-        );
+        assert!(result.unwrap_err().to_string().contains("no statements"),);
     }
 
     #[test]

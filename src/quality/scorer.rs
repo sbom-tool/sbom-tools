@@ -387,13 +387,13 @@ impl QualityScorer {
         // Determine which categories are available
         let lifecycle_available = lifecycle_score.is_some();
         let available = [
-            true,               // completeness
-            true,               // identifiers
-            true,               // licenses
-            true,               // vulnerabilities
-            true,               // dependencies
-            true,               // integrity
-            true,               // provenance
+            true,                // completeness
+            true,                // identifiers
+            true,                // licenses
+            true,                // vulnerabilities
+            true,                // dependencies
+            true,                // integrity
+            true,                // provenance
             lifecycle_available, // lifecycle
         ];
 
@@ -411,11 +411,7 @@ impl QualityScorer {
             lifecycle_score.unwrap_or(0.0),
         ];
 
-        let mut overall_score: f32 = scores
-            .iter()
-            .zip(norm.iter())
-            .map(|(s, w)| s * w)
-            .sum();
+        let mut overall_score: f32 = scores.iter().zip(norm.iter()).map(|(s, w)| s * w).sum();
         overall_score = overall_score.min(100.0);
 
         // Apply hard penalty caps for critical issues
@@ -480,7 +476,8 @@ impl QualityScorer {
         hashes: &HashQualityMetrics,
         total_components: usize,
     ) -> f32 {
-        let is_security_profile = matches!(self.profile, ScoringProfile::Security | ScoringProfile::Cra);
+        let is_security_profile =
+            matches!(self.profile, ScoringProfile::Security | ScoringProfile::Cra);
 
         // EOL components: cap at D grade for security-focused profiles
         if is_security_profile && lifecycle.eol_components > 0 {
@@ -660,11 +657,9 @@ impl QualityScorer {
 
         // Priority 3: VCS URL coverage
         if total_components > 0 {
-            let missing_vcs = total_components
-                .saturating_sub(
-                    ((completeness.components_with_hashes / 100.0) * total_components as f32)
-                        as usize,
-                );
+            let missing_vcs = total_components.saturating_sub(
+                ((completeness.components_with_hashes / 100.0) * total_components as f32) as usize,
+            );
             if missing_vcs > total_components / 2 {
                 recommendations.push(Recommendation {
                     priority: 3,

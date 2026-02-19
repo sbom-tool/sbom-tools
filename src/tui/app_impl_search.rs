@@ -134,45 +134,46 @@ impl App {
 
         // Search through single SBOM if available (View mode)
         if self.data.diff_result.is_none()
-            && let Some(ref sbom) = self.data.sbom {
-                // Search components by name
-                for comp in sbom.components.values() {
-                    if comp.name.to_lowercase().contains(&query_lower) {
-                        results.push(DiffSearchResult::Component {
-                            name: comp.name.clone(),
-                            version: comp.version.clone(),
-                            change_type: ChangeType::Added, // reuse Added as "present"
+            && let Some(ref sbom) = self.data.sbom
+        {
+            // Search components by name
+            for comp in sbom.components.values() {
+                if comp.name.to_lowercase().contains(&query_lower) {
+                    results.push(DiffSearchResult::Component {
+                        name: comp.name.clone(),
+                        version: comp.version.clone(),
+                        change_type: ChangeType::Added, // reuse Added as "present"
+                    });
+                }
+            }
+
+            // Search vulnerabilities
+            for comp in sbom.components.values() {
+                for vuln in &comp.vulnerabilities {
+                    if vuln.id.to_lowercase().contains(&query_lower) {
+                        results.push(DiffSearchResult::Vulnerability {
+                            id: vuln.id.clone(),
+                            component_name: comp.name.clone(),
+                            severity: vuln.severity.as_ref().map(|s| format!("{s:?}")),
+                            change_type: VulnChangeType::Introduced, // reuse as "present"
                         });
                     }
                 }
+            }
 
-                // Search vulnerabilities
-                for comp in sbom.components.values() {
-                    for vuln in &comp.vulnerabilities {
-                        if vuln.id.to_lowercase().contains(&query_lower) {
-                            results.push(DiffSearchResult::Vulnerability {
-                                id: vuln.id.clone(),
-                                component_name: comp.name.clone(),
-                                severity: vuln.severity.as_ref().map(|s| format!("{s:?}")),
-                                change_type: VulnChangeType::Introduced, // reuse as "present"
-                            });
-                        }
-                    }
-                }
-
-                // Search licenses
-                for comp in sbom.components.values() {
-                    for lic in &comp.licenses.declared {
-                        if lic.expression.to_lowercase().contains(&query_lower) {
-                            results.push(DiffSearchResult::License {
-                                license: lic.expression.clone(),
-                                component_name: comp.name.clone(),
-                                change_type: ChangeType::Added, // reuse as "present"
-                            });
-                        }
+            // Search licenses
+            for comp in sbom.components.values() {
+                for lic in &comp.licenses.declared {
+                    if lic.expression.to_lowercase().contains(&query_lower) {
+                        results.push(DiffSearchResult::License {
+                            license: lic.expression.clone(),
+                            component_name: comp.name.clone(),
+                            change_type: ChangeType::Added, // reuse as "present"
+                        });
                     }
                 }
             }
+        }
 
         // Limit results
         results.truncate(50);
@@ -183,7 +184,8 @@ impl App {
     /// Jump to the currently selected search result
     pub fn jump_to_search_result(&mut self) {
         if let Some(result) = self
-            .overlays.search
+            .overlays
+            .search
             .results
             .get(self.overlays.search.selected)
             .cloned()

@@ -71,4 +71,3 @@ impl Default for QualityState {
         Self::new()
     }
 }
-

@@ -4,9 +4,9 @@
 
 use crate::diff::DiffResult;
 use crate::model::NormalizedSbom;
-use crate::reports::{create_reporter, ReportConfig, ReportFormat, ReportType};
-use crate::tui::app::TabKind;
+use crate::reports::{ReportConfig, ReportFormat, ReportType, create_reporter};
 use crate::tui::ViewTab;
+use crate::tui::app::TabKind;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -81,10 +81,9 @@ pub const fn view_tab_to_report_type(tab: ViewTab) -> ReportType {
         ViewTab::Vulnerabilities => ReportType::Vulnerabilities,
         ViewTab::Licenses => ReportType::Licenses,
         ViewTab::Dependencies => ReportType::Dependencies,
-        ViewTab::Overview
-        | ViewTab::Quality
-        | ViewTab::Compliance
-        | ViewTab::Source => ReportType::All,
+        ViewTab::Overview | ViewTab::Quality | ViewTab::Compliance | ViewTab::Source => {
+            ReportType::All
+        }
     }
 }
 
@@ -147,7 +146,10 @@ fn build_export_filename(
         let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
         format!("sbom_{command}_{timestamp}.{}", format.extension())
     };
-    output_dir.map_or_else(|| PathBuf::from(&filename), |dir| PathBuf::from(dir).join(&filename))
+    output_dir.map_or_else(
+        || PathBuf::from(&filename),
+        |dir| PathBuf::from(dir).join(&filename),
+    )
 }
 
 /// Export diff results to a file
@@ -161,7 +163,14 @@ pub fn export_diff(
     template: Option<&str>,
 ) -> ExportResult {
     let path = build_export_filename(template, "diff", &format, output_dir);
-    export_with_reporter(format.to_report_format(), result, old_sbom, new_sbom, &path, config)
+    export_with_reporter(
+        format.to_report_format(),
+        result,
+        old_sbom,
+        new_sbom,
+        &path,
+        config,
+    )
 }
 
 /// Export single SBOM to a file (view mode)
@@ -236,7 +245,6 @@ fn export_view_with_reporter(
     }
 }
 
-
 /// Export compliance results to a file.
 ///
 /// All five export formats are supported: JSON, SARIF, Markdown, HTML, CSV.
@@ -280,11 +288,20 @@ pub fn export_compliance(
         } else {
             format!("{expanded}.{ext}")
         };
-        output_dir.map_or_else(|| PathBuf::from(&expanded), |dir| PathBuf::from(dir).join(&expanded))
+        output_dir.map_or_else(
+            || PathBuf::from(&expanded),
+            |dir| PathBuf::from(dir).join(&expanded),
+        )
     } else {
-        let level_name = result.map_or_else(|| "all".to_string(), |r| r.level.name().to_lowercase().replace(' ', "_"));
+        let level_name = result.map_or_else(
+            || "all".to_string(),
+            |r| r.level.name().to_lowercase().replace(' ', "_"),
+        );
         let filename = format!("compliance_{level_name}_{timestamp}.{ext}");
-        output_dir.map_or_else(|| PathBuf::from(&filename), |dir| PathBuf::from(dir).join(&filename))
+        output_dir.map_or_else(
+            || PathBuf::from(&filename),
+            |dir| PathBuf::from(dir).join(&filename),
+        )
     };
 
     match write_to_file(&path, &content) {
@@ -301,11 +318,8 @@ pub fn export_compliance(
     }
 }
 
-fn compliance_to_json(
-    results: &[crate::quality::ComplianceResult],
-    selected: usize,
-) -> String {
-    use serde_json::{json, Value};
+fn compliance_to_json(results: &[crate::quality::ComplianceResult], selected: usize) -> String {
+    use serde_json::{Value, json};
 
     let to_value = |r: &crate::quality::ComplianceResult| -> Value {
         let violations: Vec<Value> = r
@@ -345,9 +359,7 @@ fn compliance_to_json(
 }
 
 /// Delegate to the proper SARIF generator in `reports::sarif`.
-fn compliance_to_sarif(
-    result: Option<&crate::quality::ComplianceResult>,
-) -> String {
+fn compliance_to_sarif(result: Option<&crate::quality::ComplianceResult>) -> String {
     let Some(result) = result else {
         return r#"{"error": "no compliance result selected"}"#.to_string();
     };
@@ -356,10 +368,7 @@ fn compliance_to_sarif(
         .unwrap_or_else(|e| format!(r#"{{"error": "{e}"}}"#))
 }
 
-fn compliance_to_markdown(
-    results: &[crate::quality::ComplianceResult],
-    selected: usize,
-) -> String {
+fn compliance_to_markdown(results: &[crate::quality::ComplianceResult], selected: usize) -> String {
     let mut md = String::new();
 
     let items: Vec<&crate::quality::ComplianceResult> = results
@@ -367,7 +376,11 @@ fn compliance_to_markdown(
         .map_or_else(|| results.iter().collect(), |r| vec![r]);
 
     for r in items {
-        let status = if r.is_compliant { "COMPLIANT" } else { "NON-COMPLIANT" };
+        let status = if r.is_compliant {
+            "COMPLIANT"
+        } else {
+            "NON-COMPLIANT"
+        };
         md.push_str(&format!("# {} - {status}\n\n", r.level.name()));
         md.push_str(&format!(
             "Errors: {} | Warnings: {} | Info: {}\n\n",
@@ -398,11 +411,9 @@ fn compliance_to_markdown(
     md
 }
 
-fn compliance_to_csv(
-    results: &[crate::quality::ComplianceResult],
-    selected: usize,
-) -> String {
-    let mut lines = vec!["Standard,Severity,Category,Requirement,Element,Message,Remediation".to_string()];
+fn compliance_to_csv(results: &[crate::quality::ComplianceResult], selected: usize) -> String {
+    let mut lines =
+        vec!["Standard,Severity,Category,Requirement,Element,Message,Remediation".to_string()];
 
     let items: Vec<&crate::quality::ComplianceResult> = results
         .get(selected)
@@ -428,10 +439,7 @@ fn compliance_to_csv(
     lines.join("\n")
 }
 
-fn compliance_to_html(
-    results: &[crate::quality::ComplianceResult],
-    selected: usize,
-) -> String {
+fn compliance_to_html(results: &[crate::quality::ComplianceResult], selected: usize) -> String {
     use crate::reports::escape::escape_html;
 
     let items: Vec<&crate::quality::ComplianceResult> = results
@@ -461,7 +469,11 @@ th { background: #313244; color: #89b4fa; font-weight: 600; }
 
     for r in &items {
         let status_class = if r.is_compliant { "pass" } else { "fail" };
-        let status_label = if r.is_compliant { "COMPLIANT" } else { "NON-COMPLIANT" };
+        let status_label = if r.is_compliant {
+            "COMPLIANT"
+        } else {
+            "NON-COMPLIANT"
+        };
         html.push_str(&format!(
             "<h2>{} - <span class=\"{status_class}\">{status_label}</span></h2>\n",
             escape_html(r.level.name()),
@@ -669,7 +681,10 @@ fn find_available_path(path: &Path) -> PathBuf {
         return path.to_path_buf();
     }
 
-    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("export");
+    let stem = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("export");
     let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("");
     let parent = path.parent();
 
@@ -708,4 +723,3 @@ fn display_path(path: &PathBuf) -> String {
             .to_string()
     }
 }
-

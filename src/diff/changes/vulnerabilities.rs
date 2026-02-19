@@ -1,7 +1,7 @@
 //! Vulnerability change computer implementation.
 
-use crate::diff::traits::{ChangeComputer, ComponentMatches, VulnerabilityChangeSet};
 use crate::diff::VulnerabilityDetail;
+use crate::diff::traits::{ChangeComputer, ComponentMatches, VulnerabilityChangeSet};
 use crate::model::{CanonicalId, NormalizedSbom};
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -10,7 +10,7 @@ pub struct VulnerabilityChangeComputer;
 
 impl VulnerabilityChangeComputer {
     /// Create a new vulnerability change computer.
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self
     }
@@ -55,9 +55,10 @@ fn compute_depths(sbom: &NormalizedSbom) -> HashMap<CanonicalId, u32> {
     while let Some((id, depth)) = queue.pop_front() {
         // Skip if we've already found a shorter path
         if let Some(&existing) = depths.get(id)
-            && depth >= existing {
-                continue;
-            }
+            && depth >= existing
+        {
+            continue;
+        }
         depths.insert(id.clone(), depth);
 
         // Process children at depth + 1
@@ -91,8 +92,16 @@ impl ChangeComputer for VulnerabilityChangeComputer {
         let new_depths = compute_depths(new);
 
         // Estimate vulnerability counts for pre-allocation
-        let old_vuln_count: usize = old.components.values().map(|c| c.vulnerabilities.len()).sum();
-        let new_vuln_count: usize = new.components.values().map(|c| c.vulnerabilities.len()).sum();
+        let old_vuln_count: usize = old
+            .components
+            .values()
+            .map(|c| c.vulnerabilities.len())
+            .sum();
+        let new_vuln_count: usize = new
+            .components
+            .values()
+            .map(|c| c.vulnerabilities.len())
+            .sum();
 
         // Collect old vulnerabilities with depth info
         let mut old_vulns: HashMap<String, VulnerabilityDetail> =
@@ -101,7 +110,10 @@ impl ChangeComputer for VulnerabilityChangeComputer {
             let depth = old_depths.get(id).copied();
             for vuln in &comp.vulnerabilities {
                 let key = format!("{}:{}", vuln.id, id);
-                old_vulns.insert(key, VulnerabilityDetail::from_ref_with_depth(vuln, comp, depth));
+                old_vulns.insert(
+                    key,
+                    VulnerabilityDetail::from_ref_with_depth(vuln, comp, depth),
+                );
             }
         }
 
@@ -112,7 +124,10 @@ impl ChangeComputer for VulnerabilityChangeComputer {
             let depth = new_depths.get(id).copied();
             for vuln in &comp.vulnerabilities {
                 let key = format!("{}:{}", vuln.id, id);
-                new_vulns.insert(key, VulnerabilityDetail::from_ref_with_depth(vuln, comp, depth));
+                new_vulns.insert(
+                    key,
+                    VulnerabilityDetail::from_ref_with_depth(vuln, comp, depth),
+                );
             }
         }
 

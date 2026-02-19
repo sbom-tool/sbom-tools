@@ -3,14 +3,14 @@
 use super::app::{ViewApp, ViewTab};
 use super::views;
 use crate::config::TuiPreferences;
-use crate::tui::theme::{colors, render_footer_hints, set_theme, FooterHints, Theme};
+use crate::tui::theme::{FooterHints, Theme, colors, render_footer_hints, set_theme};
 use crate::tui::widgets::{
-    self, check_terminal_size, render_mode_indicator, render_size_warning, MIN_HEIGHT, MIN_WIDTH,
+    self, MIN_HEIGHT, MIN_WIDTH, check_terminal_size, render_mode_indicator, render_size_warning,
 };
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{
     prelude::*,
@@ -18,7 +18,7 @@ use ratatui::{
 };
 use std::io::{self, stdout};
 
-use super::events::{handle_key_event, handle_mouse_event, Event, EventHandler};
+use super::events::{Event, EventHandler, handle_key_event, handle_mouse_event};
 
 /// Run the `ViewApp` TUI.
 pub fn run_view_tui(app: &mut ViewApp) -> io::Result<()> {
@@ -131,7 +131,12 @@ fn render(frame: &mut Frame, app: &mut ViewApp) {
 
     if app.show_export {
         let scope = crate::tui::export::view_tab_export_scope(app.active_tab);
-        crate::tui::shared::export::render_export_dialog(frame, area, scope, widgets::centered_rect);
+        crate::tui::shared::export::render_export_dialog(
+            frame,
+            area,
+            scope,
+            widgets::centered_rect,
+        );
     }
 
     if app.show_legend {
@@ -353,7 +358,6 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &ViewApp) {
     frame.render_widget(footer, area);
 }
 
-
 fn render_search_overlay(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let search = &app.search_state;
 
@@ -432,7 +436,7 @@ fn render_search_overlay(frame: &mut Frame, area: Rect, app: &ViewApp) {
                 }
                 super::app::SearchResult::Vulnerability {
                     id,
-                    component_id: _,  // Not used for display
+                    component_id: _, // Not used for display
                     component_name,
                     severity,
                 } => {

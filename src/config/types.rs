@@ -43,7 +43,7 @@ pub struct AppConfig {
 
 impl AppConfig {
     /// Create a new `AppConfig` with default values.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -149,7 +149,7 @@ impl AppConfigBuilder {
     }
 
     /// Build the `AppConfig`.
-    #[must_use] 
+    #[must_use]
     pub fn build(self) -> AppConfig {
         self.config
     }
@@ -184,13 +184,13 @@ impl Default for TuiPreferences {
 
 impl TuiPreferences {
     /// Get the path to the preferences file.
-    #[must_use] 
+    #[must_use]
     pub fn config_path() -> Option<PathBuf> {
         dirs::config_dir().map(|p| p.join("sbom-tools").join("preferences.json"))
     }
 
     /// Load preferences from disk, or return defaults if not found.
-    #[must_use] 
+    #[must_use]
     pub fn load() -> Self {
         Self::config_path()
             .and_then(|p| std::fs::read_to_string(p).ok())
@@ -426,7 +426,7 @@ impl Default for StreamingConfig {
 
 impl StreamingConfig {
     /// Check if streaming should be used for a file of the given size.
-    #[must_use] 
+    #[must_use]
     pub fn should_stream(&self, file_size: Option<u64>, is_stdin: bool) -> bool {
         if self.disabled {
             return false;
@@ -441,7 +441,7 @@ impl StreamingConfig {
     }
 
     /// Create a streaming config that always streams.
-    #[must_use] 
+    #[must_use]
     pub fn always() -> Self {
         Self {
             force: true,
@@ -450,7 +450,7 @@ impl StreamingConfig {
     }
 
     /// Create a streaming config that never streams.
-    #[must_use] 
+    #[must_use]
     pub fn never() -> Self {
         Self {
             disabled: true,
@@ -492,7 +492,7 @@ impl Default for MatchingConfig {
 
 impl MatchingConfig {
     /// Convert preset name to `FuzzyMatchConfig`
-    #[must_use] 
+    #[must_use]
     pub fn to_fuzzy_config(&self) -> FuzzyMatchConfig {
         let mut config = FuzzyMatchConfig::from_preset(&self.fuzzy_preset).unwrap_or_else(|| {
             tracing::warn!(
@@ -555,7 +555,7 @@ pub struct GraphAwareDiffConfig {
 
 impl GraphAwareDiffConfig {
     /// Create enabled graph diff options with defaults
-    #[must_use] 
+    #[must_use]
     pub const fn enabled() -> Self {
         Self {
             enabled: true,
@@ -639,7 +639,7 @@ impl Default for EnrichmentConfig {
 
 impl EnrichmentConfig {
     /// Create an enabled enrichment config with OSV provider.
-    #[must_use] 
+    #[must_use]
     pub fn osv() -> Self {
         Self {
             enabled: true,
@@ -704,7 +704,7 @@ pub struct DiffConfigBuilder {
 }
 
 impl DiffConfigBuilder {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -858,8 +858,12 @@ impl DiffConfigBuilder {
     }
 
     pub fn build(self) -> anyhow::Result<DiffConfig> {
-        let old = self.old.ok_or_else(|| anyhow::anyhow!("old path is required"))?;
-        let new = self.new.ok_or_else(|| anyhow::anyhow!("new path is required"))?;
+        let old = self
+            .old
+            .ok_or_else(|| anyhow::anyhow!("old path is required"))?;
+        let new = self
+            .new
+            .ok_or_else(|| anyhow::anyhow!("new path is required"))?;
 
         Ok(DiffConfig {
             paths: DiffPaths { old, new },

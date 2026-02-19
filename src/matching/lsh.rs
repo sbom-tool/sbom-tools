@@ -44,7 +44,7 @@ impl LshConfig {
     ///
     /// The number of bands and rows are chosen to maximize the probability
     /// of finding pairs with similarity >= threshold while minimizing false positives.
-    #[must_use] 
+    #[must_use]
     pub fn for_threshold(threshold: f64) -> Self {
         // For threshold t, optimal parameters satisfy: t ≈ (1/b)^(1/r)
         // where b = bands, r = rows per band, and b × r = num_hashes
@@ -71,31 +71,31 @@ impl LshConfig {
             num_bands,
             shingle_size: 3, // Trigrams work well for package names
             target_threshold: threshold,
-            include_ecosystem_token: true,  // Helps group by ecosystem
-            include_group_token: false,     // Optional, disabled by default
+            include_ecosystem_token: true, // Helps group by ecosystem
+            include_group_token: false,    // Optional, disabled by default
         }
     }
 
     /// Default config for balanced matching (~0.8 threshold).
-    #[must_use] 
+    #[must_use]
     pub fn default_balanced() -> Self {
         Self::for_threshold(0.8)
     }
 
     /// Config for strict matching (~0.9 threshold).
-    #[must_use] 
+    #[must_use]
     pub fn strict() -> Self {
         Self::for_threshold(0.9)
     }
 
     /// Config for permissive matching (~0.5 threshold).
-    #[must_use] 
+    #[must_use]
     pub fn permissive() -> Self {
         Self::for_threshold(0.5)
     }
 
     /// Get rows per band (signature elements per band).
-    #[must_use] 
+    #[must_use]
     pub const fn rows_per_band(&self) -> usize {
         self.num_hashes / self.num_bands
     }
@@ -116,7 +116,7 @@ pub struct MinHashSignature {
 
 impl MinHashSignature {
     /// Compute the estimated Jaccard similarity between two signatures.
-    #[must_use] 
+    #[must_use]
     pub fn estimated_similarity(&self, other: &Self) -> f64 {
         if self.values.len() != other.values.len() {
             return 0.0;
@@ -149,7 +149,7 @@ pub struct LshIndex {
 
 impl LshIndex {
     /// Create a new LSH index with the given configuration.
-    #[must_use] 
+    #[must_use]
     pub fn new(config: LshConfig) -> Self {
         use std::collections::hash_map::RandomState;
         use std::hash::BuildHasher;
@@ -181,7 +181,7 @@ impl LshIndex {
     }
 
     /// Build an LSH index from an SBOM.
-    #[must_use] 
+    #[must_use]
     pub fn build(sbom: &NormalizedSbom, config: LshConfig) -> Self {
         let mut index = Self::new(config);
 
@@ -211,7 +211,7 @@ impl LshIndex {
     ///
     /// Returns component IDs that are likely similar based on LSH buckets.
     /// These candidates should be verified with exact similarity computation.
-    #[must_use] 
+    #[must_use]
     pub fn find_candidates(&self, component: &Component) -> Vec<CanonicalId> {
         let shingles = self.compute_shingles(component);
         let signature = self.compute_minhash(&shingles);
@@ -220,7 +220,7 @@ impl LshIndex {
     }
 
     /// Find candidates using a pre-computed signature.
-    #[must_use] 
+    #[must_use]
     pub fn find_candidates_by_signature(&self, signature: &MinHashSignature) -> Vec<CanonicalId> {
         let mut candidates = HashSet::new();
         let rows_per_band = self.config.rows_per_band();
@@ -242,17 +242,19 @@ impl LshIndex {
     ///
     /// Useful for diffing: build index from new SBOM, query with old SBOM components.
     pub fn find_candidates_for_id(&self, id: &CanonicalId) -> Vec<CanonicalId> {
-        self.signatures.get(id).map_or_else(Vec::new, |signature| self.find_candidates_by_signature(signature))
+        self.signatures.get(id).map_or_else(Vec::new, |signature| {
+            self.find_candidates_by_signature(signature)
+        })
     }
 
     /// Get the `MinHash` signature for a component.
-    #[must_use] 
+    #[must_use]
     pub fn get_signature(&self, id: &CanonicalId) -> Option<&MinHashSignature> {
         self.signatures.get(id)
     }
 
     /// Estimate similarity between two components in the index.
-    #[must_use] 
+    #[must_use]
     pub fn estimate_similarity(&self, id_a: &CanonicalId, id_b: &CanonicalId) -> Option<f64> {
         let sig_a = self.signatures.get(id_a)?;
         let sig_b = self.signatures.get(id_b)?;
@@ -262,7 +264,11 @@ impl LshIndex {
     /// Get statistics about the index.
     pub fn stats(&self) -> LshIndexStats {
         let total_components = self.signatures.len();
-        let total_buckets: usize = self.buckets.iter().map(std::collections::HashMap::len).sum();
+        let total_buckets: usize = self
+            .buckets
+            .iter()
+            .map(std::collections::HashMap::len)
+            .sum();
         let max_bucket_size = self
             .buckets
             .iter()
@@ -298,7 +304,10 @@ impl LshIndex {
     /// and group tokens to improve candidate grouping.
     fn compute_shingles(&self, component: &Component) -> HashSet<u64> {
         // Get ecosystem for normalization
-        let ecosystem = component.ecosystem.as_ref().map(std::string::ToString::to_string);
+        let ecosystem = component
+            .ecosystem
+            .as_ref()
+            .map(std::string::ToString::to_string);
         let ecosystem_str = ecosystem.as_deref();
 
         // Use ComponentIndex's normalization for consistency
@@ -326,21 +335,23 @@ impl LshIndex {
 
         // Add ecosystem token (helps group components by ecosystem)
         if self.config.include_ecosystem_token
-            && let Some(ref eco) = ecosystem {
-                let mut hasher = std::collections::hash_map::DefaultHasher::new();
-                "__eco:".hash(&mut hasher);
-                eco.to_lowercase().hash(&mut hasher);
-                shingles.insert(hasher.finish());
-            }
+            && let Some(ref eco) = ecosystem
+        {
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            "__eco:".hash(&mut hasher);
+            eco.to_lowercase().hash(&mut hasher);
+            shingles.insert(hasher.finish());
+        }
 
         // Add group/namespace token (useful for Maven group IDs, npm scopes)
         if self.config.include_group_token
-            && let Some(ref group) = component.group {
-                let mut hasher = std::collections::hash_map::DefaultHasher::new();
-                "__grp:".hash(&mut hasher);
-                group.to_lowercase().hash(&mut hasher);
-                shingles.insert(hasher.finish());
-            }
+            && let Some(ref group) = component.group
+        {
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            "__grp:".hash(&mut hasher);
+            group.to_lowercase().hash(&mut hasher);
+            shingles.insert(hasher.finish());
+        }
 
         shingles
     }
@@ -525,7 +536,8 @@ mod tests {
         assert!(
             sim_12 > sim_13,
             "lodash vs lodash-es ({:.2}) should be more similar than lodash vs completely-different ({:.2})",
-            sim_12, sim_13
+            sim_12,
+            sim_13
         );
     }
 

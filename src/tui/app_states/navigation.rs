@@ -70,4 +70,3 @@ impl NavigationContext {
         self.target_vulnerability = None;
     }
 }
-

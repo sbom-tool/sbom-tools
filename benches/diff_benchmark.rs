@@ -1,6 +1,6 @@
 //! Benchmarks for the diff engine (small/medium) and cost model.
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use sbom_tools::diff::{CostModel, DiffEngine};
 use sbom_tools::model::{Component, DocumentMetadata, Ecosystem, NormalizedSbom};
 use std::hint::black_box;

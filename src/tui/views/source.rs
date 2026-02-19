@@ -14,11 +14,7 @@ pub fn render_source(frame: &mut Frame, area: Rect, app: &mut App) {
 
     let source = &mut app.tabs.source;
     let active = source.active_side;
-    let sync_label = if source.is_synced() {
-        " [sync]"
-    } else {
-        ""
-    };
+    let sync_label = if source.is_synced() { " [sync]" } else { "" };
 
     let old_title = format!("Old SBOM{sync_label}");
     let new_title = format!("New SBOM{sync_label}");

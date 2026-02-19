@@ -10,7 +10,7 @@
 
 use anyhow::{Context, Result};
 use clap::{CommandFactory, Parser, Subcommand};
-use clap_complete::{generate, Shell};
+use clap_complete::{Shell, generate};
 use sbom_tools::{
     cli,
     config::{
@@ -902,74 +902,73 @@ fn main() -> Result<()> {
             Ok(())
         }
 
-        Commands::Config { action } => {
-            match action {
-                ConfigAction::Show => {
-                    let (config, loaded_from) =
-                        sbom_tools::config::load_or_default(cli.config.as_deref());
-                    if let Some(path) = &loaded_from {
-                        eprintln!("# Loaded from: {}", path.display());
-                    } else {
-                        eprintln!("# No config file found; showing defaults");
-                    }
-                    let yaml = serde_yaml_ng::to_string(&config)
-                        .context("failed to serialize config")?;
-                    print!("{yaml}");
-                    Ok(())
+        Commands::Config { action } => match action {
+            ConfigAction::Show => {
+                let (config, loaded_from) =
+                    sbom_tools::config::load_or_default(cli.config.as_deref());
+                if let Some(path) = &loaded_from {
+                    eprintln!("# Loaded from: {}", path.display());
+                } else {
+                    eprintln!("# No config file found; showing defaults");
                 }
-                ConfigAction::Path => {
-                    let search_paths: [Option<String>; 3] = [
-                        std::env::current_dir().ok().map(|p| p.display().to_string()),
-                        ::dirs::config_dir().map(|p| p.join("sbom-tools").display().to_string()),
-                        ::dirs::home_dir().map(|p| p.display().to_string()),
-                    ];
-                    eprintln!("Config file search paths (in order):");
-                    for path in search_paths.into_iter().flatten() {
-                        eprintln!("  {path}");
-                    }
-                    eprintln!();
-                    eprintln!("Recognized file names:");
-                    for name in &[
-                        ".sbom-tools.yaml",
-                        ".sbom-tools.yml",
-                        "sbom-tools.yaml",
-                        "sbom-tools.yml",
-                        ".sbom-toolsrc",
-                    ] {
-                        eprintln!("  {name}");
-                    }
-                    eprintln!();
-                    match sbom_tools::config::discover_config_file(cli.config.as_deref()) {
-                        Some(path) => eprintln!("Active config file: {}", path.display()),
-                        None => eprintln!("No config file found."),
-                    }
-                    Ok(())
-                }
-                ConfigAction::Init => {
-                    let target = std::env::current_dir()
-                        .context("cannot determine current directory")?
-                        .join(".sbom-tools.yaml");
-                    if target.exists() {
-                        anyhow::bail!(
-                            "{} already exists. Remove it first to re-initialize.",
-                            target.display()
-                        );
-                    }
-                    let content = sbom_tools::config::generate_full_example_config();
-                    std::fs::write(&target, content)
-                        .with_context(|| format!("failed to write {}", target.display()))?;
-                    eprintln!("Created {}", target.display());
-                    Ok(())
-                }
+                let yaml =
+                    serde_yaml_ng::to_string(&config).context("failed to serialize config")?;
+                print!("{yaml}");
+                Ok(())
             }
-        }
+            ConfigAction::Path => {
+                let search_paths: [Option<String>; 3] = [
+                    std::env::current_dir()
+                        .ok()
+                        .map(|p| p.display().to_string()),
+                    ::dirs::config_dir().map(|p| p.join("sbom-tools").display().to_string()),
+                    ::dirs::home_dir().map(|p| p.display().to_string()),
+                ];
+                eprintln!("Config file search paths (in order):");
+                for path in search_paths.into_iter().flatten() {
+                    eprintln!("  {path}");
+                }
+                eprintln!();
+                eprintln!("Recognized file names:");
+                for name in &[
+                    ".sbom-tools.yaml",
+                    ".sbom-tools.yml",
+                    "sbom-tools.yaml",
+                    "sbom-tools.yml",
+                    ".sbom-toolsrc",
+                ] {
+                    eprintln!("  {name}");
+                }
+                eprintln!();
+                match sbom_tools::config::discover_config_file(cli.config.as_deref()) {
+                    Some(path) => eprintln!("Active config file: {}", path.display()),
+                    None => eprintln!("No config file found."),
+                }
+                Ok(())
+            }
+            ConfigAction::Init => {
+                let target = std::env::current_dir()
+                    .context("cannot determine current directory")?
+                    .join(".sbom-tools.yaml");
+                if target.exists() {
+                    anyhow::bail!(
+                        "{} already exists. Remove it first to re-initialize.",
+                        target.display()
+                    );
+                }
+                let content = sbom_tools::config::generate_full_example_config();
+                std::fs::write(&target, content)
+                    .with_context(|| format!("failed to write {}", target.display()))?;
+                eprintln!("Created {}", target.display());
+                Ok(())
+            }
+        },
 
         Commands::Man => {
             let cmd = Cli::command();
             let man = clap_mangen::Man::new(cmd);
             let mut buf = Vec::new();
-            man.render(&mut buf)
-                .context("failed to render man page")?;
+            man.render(&mut buf).context("failed to render man page")?;
             io::stdout().write_all(&buf)?;
             Ok(())
         }

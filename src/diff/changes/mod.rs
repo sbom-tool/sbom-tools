@@ -6,13 +6,13 @@
 mod components;
 mod dependencies;
 mod licenses;
-mod vulnerabilities;
 pub mod vuln_grouping;
+mod vulnerabilities;
 
 pub use components::ComponentChangeComputer;
 pub use dependencies::DependencyChangeComputer;
 pub use licenses::LicenseChangeComputer;
-pub use vulnerabilities::VulnerabilityChangeComputer;
 pub use vuln_grouping::{
-    group_vulnerabilities, VulnGroupStatus, VulnerabilityGroup, VulnerabilityGroupedView,
+    VulnGroupStatus, VulnerabilityGroup, VulnerabilityGroupedView, group_vulnerabilities,
 };
+pub use vulnerabilities::VulnerabilityChangeComputer;

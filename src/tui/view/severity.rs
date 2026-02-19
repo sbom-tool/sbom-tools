@@ -4,7 +4,7 @@ use crate::model::{Severity, VulnerabilityRef};
 
 /// Get numeric order for Severity enum (higher = more severe).
 #[inline]
-#[must_use] 
+#[must_use]
 pub const fn severity_enum_order(s: &Severity) -> u8 {
     match s {
         Severity::Critical => 4,
@@ -16,7 +16,7 @@ pub const fn severity_enum_order(s: &Severity) -> u8 {
 }
 
 /// Get the maximum severity from a list of vulnerabilities.
-#[must_use] 
+#[must_use]
 pub fn max_severity_from_vulns(vulns: &[VulnerabilityRef]) -> Option<String> {
     vulns
         .iter()
@@ -27,15 +27,14 @@ pub fn max_severity_from_vulns(vulns: &[VulnerabilityRef]) -> Option<String> {
 
 /// Check if a Severity enum matches a target string (case-insensitive).
 #[inline]
-#[must_use] 
+#[must_use]
 pub fn severity_matches(severity: Option<&Severity>, target: &str) -> bool {
-    severity
-        .is_some_and(|s| s.to_string().eq_ignore_ascii_case(target))
+    severity.is_some_and(|s| s.to_string().eq_ignore_ascii_case(target))
 }
 
 /// Categorize severity into buckets for grouping.
 /// Returns: "critical", "high", "medium", "low", or "clean"
-#[must_use] 
+#[must_use]
 pub fn severity_category(vulns: &[VulnerabilityRef]) -> &'static str {
     if vulns.is_empty() {
         return "clean";

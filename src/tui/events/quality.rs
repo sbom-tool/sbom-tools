@@ -11,8 +11,8 @@
 //! After each event: `quality_view.inner` fields are synced back to
 //! `tabs.quality` so the renderer sees the latest state.
 
-use crate::tui::traits::{EventResult, ViewContext, ViewMode, ViewState};
 use crate::tui::App;
+use crate::tui::traits::{EventResult, ViewContext, ViewMode, ViewState};
 use crossterm::event::KeyEvent;
 
 pub(super) fn handle_quality_keys(app: &mut App, key: KeyEvent) {

@@ -64,23 +64,22 @@ pub fn flatten_json_tree(
         ancestors_last: ancestors_last.to_vec(),
     });
 
-    if is_expanded
-        && let Some(children) = node.children() {
-            let mut current_ancestors = ancestors_last.to_vec();
-            current_ancestors.push(is_last_sibling);
-            for (i, child) in children.iter().enumerate() {
-                let child_is_last = i == children.len() - 1;
-                flatten_json_tree(
-                    child,
-                    &node_id,
-                    depth + 1,
-                    expanded,
-                    items,
-                    child_is_last,
-                    &current_ancestors,
-                );
-            }
+    if is_expanded && let Some(children) = node.children() {
+        let mut current_ancestors = ancestors_last.to_vec();
+        current_ancestors.push(is_last_sibling);
+        for (i, child) in children.iter().enumerate() {
+            let child_is_last = i == children.len() - 1;
+            flatten_json_tree(
+                child,
+                &node_id,
+                depth + 1,
+                expanded,
+                items,
+                child_is_last,
+                &current_ancestors,
+            );
         }
+    }
 }
 
 /// Render a source panel (dispatches to tree or raw based on view mode).
@@ -156,17 +155,30 @@ fn render_source_tree(
 
     // Render JSON path breadcrumb
     let inner = if inner.height > 3 {
-        let breadcrumb = state.cached_flat_items.get(state.selected).map_or_else(String::new, |selected_item| breadcrumb_from_node_id(&selected_item.node_id));
+        let breadcrumb = state
+            .cached_flat_items
+            .get(state.selected)
+            .map_or_else(String::new, |selected_item| {
+                breadcrumb_from_node_id(&selected_item.node_id)
+            });
         if !breadcrumb.is_empty() {
             let bc_style = Style::default().fg(scheme.text_muted).italic();
             let bc_width = inner.width as usize;
             let bc_display = if UnicodeWidthStr::width(breadcrumb.as_str()) > bc_width {
-                let trimmed = &breadcrumb[breadcrumb.len().saturating_sub(bc_width.saturating_sub(3))..];
+                let trimmed =
+                    &breadcrumb[breadcrumb.len().saturating_sub(bc_width.saturating_sub(3))..];
                 format!("...{trimmed}")
             } else {
                 breadcrumb
             };
-            render_str(frame.buffer_mut(), inner.x, inner.y, &bc_display, inner.width, bc_style);
+            render_str(
+                frame.buffer_mut(),
+                inner.x,
+                inner.y,
+                &bc_display,
+                inner.width,
+                bc_style,
+            );
         }
         Rect {
             x: inner.x,
@@ -189,7 +201,8 @@ fn render_source_tree(
     }
 
     // Render visible rows
-    for (i, item) in state.cached_flat_items
+    for (i, item) in state
+        .cached_flat_items
         .iter()
         .skip(state.scroll_offset)
         .take(visible_height)
@@ -203,7 +216,14 @@ fn render_source_tree(
 
         // Selection indicator
         let sel_str = if is_selected { "> " } else { "  " };
-        render_str(frame.buffer_mut(), x, y, sel_str, inner.width, Style::default().fg(scheme.accent).bold());
+        render_str(
+            frame.buffer_mut(),
+            x,
+            y,
+            sel_str,
+            inner.width,
+            Style::default().fg(scheme.accent).bold(),
+        );
         x += 2;
 
         // Tree connector lines
@@ -213,19 +233,44 @@ fn render_source_tree(
             for d in 0..item.depth - 1 {
                 let is_ancestor_last = item.ancestors_last.get(d + 1).copied().unwrap_or(false);
                 let connector = if is_ancestor_last { "   " } else { "│  " };
-                render_str(frame.buffer_mut(), x, y, connector, inner.width.saturating_sub(x - inner.x), connector_style);
+                render_str(
+                    frame.buffer_mut(),
+                    x,
+                    y,
+                    connector,
+                    inner.width.saturating_sub(x - inner.x),
+                    connector_style,
+                );
                 x += 3;
             }
             // Draw branch connector for this node
-            let branch = if item.is_last_sibling { "└─ " } else { "├─ " };
-            render_str(frame.buffer_mut(), x, y, branch, inner.width.saturating_sub(x - inner.x), connector_style);
+            let branch = if item.is_last_sibling {
+                "└─ "
+            } else {
+                "├─ "
+            };
+            render_str(
+                frame.buffer_mut(),
+                x,
+                y,
+                branch,
+                inner.width.saturating_sub(x - inner.x),
+                connector_style,
+            );
             x += 3;
         }
 
         // Expand/collapse indicator
         if item.is_expandable {
             let indicator = if item.is_expanded { "▼ " } else { "▶ " };
-            render_str(frame.buffer_mut(), x, y, indicator, inner.width.saturating_sub(x - inner.x), Style::default().fg(scheme.accent));
+            render_str(
+                frame.buffer_mut(),
+                x,
+                y,
+                indicator,
+                inner.width.saturating_sub(x - inner.x),
+                Style::default().fg(scheme.accent),
+            );
             x += 2;
         }
 
@@ -241,11 +286,25 @@ fn render_source_tree(
             } else {
                 &item.display_key
             };
-            render_str(frame.buffer_mut(), x, y, display_key, remaining - x, key_style);
+            render_str(
+                frame.buffer_mut(),
+                x,
+                y,
+                display_key,
+                remaining - x,
+                key_style,
+            );
             x += UnicodeWidthStr::width(display_key) as u16;
 
             if (!item.value_preview.is_empty() || item.is_expandable) && x + 2 < remaining {
-                render_str(frame.buffer_mut(), x, y, ": ", remaining - x, Style::default().fg(scheme.text_muted));
+                render_str(
+                    frame.buffer_mut(),
+                    x,
+                    y,
+                    ": ",
+                    remaining - x,
+                    Style::default().fg(scheme.text_muted),
+                );
                 x += 2;
             }
         }
@@ -260,7 +319,14 @@ fn render_source_tree(
                 } else {
                     label.as_str()
                 };
-                render_str(frame.buffer_mut(), x, y, display, remaining - x, Style::default().fg(scheme.text_muted));
+                render_str(
+                    frame.buffer_mut(),
+                    x,
+                    y,
+                    display,
+                    remaining - x,
+                    Style::default().fg(scheme.text_muted),
+                );
             } else if !item.value_preview.is_empty() {
                 let val_style = match item.value_type {
                     Some(JsonValueType::String) => Style::default().fg(scheme.success),
@@ -274,7 +340,14 @@ fn render_source_tree(
                 } else {
                     item.value_preview.clone()
                 };
-                render_str(frame.buffer_mut(), x, y, &display_val, remaining - x, val_style);
+                render_str(
+                    frame.buffer_mut(),
+                    x,
+                    y,
+                    &display_val,
+                    remaining - x,
+                    val_style,
+                );
             }
         }
 
@@ -288,7 +361,8 @@ fn render_source_tree(
         }
 
         // Search match highlighting
-        if !state.search_matches.is_empty() && state.search_matches.binary_search(&abs_idx).is_ok() {
+        if !state.search_matches.is_empty() && state.search_matches.binary_search(&abs_idx).is_ok()
+        {
             let is_current = state.search_matches.get(state.search_current) == Some(&abs_idx);
             let bg = if is_current {
                 scheme.search_highlight_bg
@@ -439,7 +513,8 @@ fn render_source_raw(
 
         // Search match highlighting
         let abs_idx = state.scroll_offset + i;
-        if !state.search_matches.is_empty() && state.search_matches.binary_search(&abs_idx).is_ok() {
+        if !state.search_matches.is_empty() && state.search_matches.binary_search(&abs_idx).is_ok()
+        {
             let is_current = state.search_matches.get(state.search_current) == Some(&abs_idx);
             let bg = if is_current {
                 scheme.search_highlight_bg
@@ -462,8 +537,7 @@ fn render_source_raw(
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .thumb_style(Style::default().fg(scheme.accent))
             .track_style(Style::default().fg(scheme.muted));
-        let mut sb_state =
-            ScrollbarState::new(state.raw_lines.len()).position(state.selected);
+        let mut sb_state = ScrollbarState::new(state.raw_lines.len()).position(state.selected);
         frame.render_stateful_widget(scrollbar, inner, &mut sb_state);
     }
 }
@@ -630,7 +704,11 @@ fn render_search_bar(
         if state.search_matches.is_empty() {
             " (no matches)".to_string()
         } else {
-            format!(" ({}/{})", state.search_current + 1, state.search_matches.len())
+            format!(
+                " ({}/{})",
+                state.search_current + 1,
+                state.search_matches.len()
+            )
         }
     } else {
         String::new()

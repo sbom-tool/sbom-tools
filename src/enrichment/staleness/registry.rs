@@ -132,7 +132,7 @@ pub struct RegistryClient {
 
 impl RegistryClient {
     /// Create a new registry client
-    #[must_use] 
+    #[must_use]
     pub fn new(config: RegistryConfig) -> Self {
         Self {
             config,
@@ -164,9 +164,10 @@ impl RegistryClient {
 
         if let Ok(metadata) = fs::metadata(&cache_path)
             && let Ok(modified) = metadata.modified()
-                && let Ok(elapsed) = SystemTime::now().duration_since(modified) {
-                    return elapsed < self.config.cache_ttl;
-                }
+            && let Ok(elapsed) = SystemTime::now().duration_since(modified)
+        {
+            return elapsed < self.config.cache_ttl;
+        }
 
         false
     }
@@ -183,15 +184,13 @@ impl RegistryClient {
         let cache_path = self.cache_file(key);
 
         if let Some(parent) = cache_path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
+            fs::create_dir_all(parent).map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
         }
 
         let content = serde_json::to_string(metadata)
             .map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
 
-        fs::write(&cache_path, content)
-            .map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
+        fs::write(&cache_path, content).map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
 
         Ok(())
     }
@@ -433,10 +432,11 @@ impl RegistryClient {
 
         // Check disk cache
         if self.is_cache_valid(&cache_key)
-            && let Some(metadata) = self.load_from_cache(&cache_key) {
-                self.cache.insert(cache_key.clone(), metadata.clone());
-                return Ok(Some(metadata));
-            }
+            && let Some(metadata) = self.load_from_cache(&cache_key)
+        {
+            self.cache.insert(cache_key.clone(), metadata.clone());
+            return Ok(Some(metadata));
+        }
 
         // Query registry
         let result = match ecosystem {
@@ -464,7 +464,7 @@ pub struct StalenessEnricher {
 
 impl StalenessEnricher {
     /// Create a new staleness enricher
-    #[must_use] 
+    #[must_use]
     pub fn new(config: RegistryConfig) -> Self {
         Self {
             client: RegistryClient::new(config.clone()),
@@ -594,14 +594,20 @@ mod tests {
             deprecation_message: None,
             repository_url: None,
         };
-        assert_eq!(enricher.calculate_staleness(&metadata), StalenessLevel::Fresh);
+        assert_eq!(
+            enricher.calculate_staleness(&metadata),
+            StalenessLevel::Fresh
+        );
 
         // Stale - 400 days ago
         let metadata = PackageMetadata {
             last_published: Some(Utc::now() - chrono::Duration::days(400)),
             ..metadata.clone()
         };
-        assert_eq!(enricher.calculate_staleness(&metadata), StalenessLevel::Stale);
+        assert_eq!(
+            enricher.calculate_staleness(&metadata),
+            StalenessLevel::Stale
+        );
 
         // Deprecated
         let metadata = PackageMetadata {

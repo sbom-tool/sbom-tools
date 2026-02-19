@@ -10,7 +10,7 @@ use crate::tui::state::ListNavigation;
 use crate::tui::widgets::TreeState;
 use std::collections::{HashMap, HashSet};
 
-use super::views::{compute_compliance_results, StandardComplianceState};
+use super::views::{StandardComplianceState, compute_compliance_results};
 
 /// Main application state for single SBOM viewing.
 pub struct ViewApp {
@@ -110,7 +110,7 @@ pub struct ViewApp {
 
 impl ViewApp {
     /// Create a new `ViewApp` for the given SBOM.
-    #[must_use] 
+    #[must_use]
     pub fn new(sbom: NormalizedSbom, raw_content: &str) -> Self {
         let stats = SbomStats::from_sbom(&sbom);
 
@@ -222,7 +222,7 @@ impl ViewApp {
     /// Get the sort key for a component using the cached index.
     ///
     /// Returns pre-computed lowercase strings to avoid repeated allocations during sorting.
-    #[must_use] 
+    #[must_use]
     pub fn get_sort_key(
         &self,
         id: &crate::model::CanonicalId,
@@ -231,7 +231,7 @@ impl ViewApp {
     }
 
     /// Get dependencies of a component using the cached index (O(k) instead of O(edges)).
-    #[must_use] 
+    #[must_use]
     pub fn get_dependencies(
         &self,
         id: &crate::model::CanonicalId,
@@ -240,7 +240,7 @@ impl ViewApp {
     }
 
     /// Get dependents of a component using the cached index (O(k) instead of O(edges)).
-    #[must_use] 
+    #[must_use]
     pub fn get_dependents(
         &self,
         id: &crate::model::CanonicalId,
@@ -249,7 +249,7 @@ impl ViewApp {
     }
 
     /// Search components by name using the cached index.
-    #[must_use] 
+    #[must_use]
     pub fn search_components_by_name(&self, query: &str) -> Vec<&crate::model::Component> {
         self.sbom.search_by_name_indexed(query, &self.sbom_index)
     }
@@ -299,14 +299,15 @@ impl ViewApp {
                     match_field: "name".to_string(),
                 });
             } else if let Some(purl) = &comp.identifiers.purl
-                && purl.to_lowercase().contains(&query_lower) {
-                    results.push(SearchResult::Component {
-                        id: id.value().to_string(),
-                        name: comp.name.clone(),
-                        version: comp.version.clone(),
-                        match_field: "purl".to_string(),
-                    });
-                }
+                && purl.to_lowercase().contains(&query_lower)
+            {
+                results.push(SearchResult::Component {
+                    id: id.value().to_string(),
+                    name: comp.name.clone(),
+                    version: comp.version.clone(),
+                    match_field: "purl".to_string(),
+                });
+            }
         }
 
         // Search vulnerabilities
@@ -315,7 +316,7 @@ impl ViewApp {
                 if vuln.id.to_lowercase().contains(&query_lower) {
                     results.push(SearchResult::Vulnerability {
                         id: vuln.id.clone(),
-                        component_id: comp.canonical_id.to_string(),  // Store ID for navigation
+                        component_id: comp.canonical_id.to_string(), // Store ID for navigation
                         component_name: comp.name.clone(),
                         severity: vuln.severity.as_ref().map(std::string::ToString::to_string),
                     });
@@ -329,7 +330,7 @@ impl ViewApp {
     }
 
     /// Get the currently selected component.
-    #[must_use] 
+    #[must_use]
     pub fn get_selected_component(&self) -> Option<&Component> {
         self.selected_component.as_ref().and_then(|selected_id| {
             self.sbom
@@ -374,9 +375,9 @@ impl ViewApp {
             && let Some(index) = flat_items
                 .iter()
                 .position(|item| matches!(item, SelectedTreeNode::Group(id) if id == &group_id))
-            {
-                self.tree_state.selected = index;
-            }
+        {
+            self.tree_state.selected = index;
+        }
 
         false
     }
@@ -568,7 +569,7 @@ impl ViewApp {
     }
 
     /// Check if any overlay is open.
-    #[must_use] 
+    #[must_use]
     pub const fn has_overlay(&self) -> bool {
         self.show_help
             || self.show_export
@@ -604,7 +605,13 @@ impl ViewApp {
 
         let report_type = view_tab_to_report_type(self.active_tab);
         let config = ReportConfig::with_types(vec![report_type]);
-        let result = export_view(format, &self.sbom, None, &config, self.export_template.as_deref());
+        let result = export_view(
+            format,
+            &self.sbom,
+            None,
+            &config,
+            self.export_template.as_deref(),
+        );
 
         if result.success {
             self.set_status_message(result.message);
@@ -803,25 +810,26 @@ impl ViewApp {
             ViewTab::Vulnerabilities => {
                 // In grouped mode, check if we're on a group header
                 if self.vuln_state.group_by != VulnGroupBy::Flat
-                    && let Some(cache) = &self.vuln_state.cached_data {
-                        let items = super::views::build_display_items(
-                            &cache.vulns,
-                            &self.vuln_state.group_by,
-                            &self.vuln_state.expanded_groups,
-                        );
-                        if let Some(item) = items.get(self.vuln_state.selected) {
-                            match item {
-                                super::views::VulnDisplayItem::GroupHeader { label, .. } => {
-                                    let label = label.clone();
-                                    self.vuln_state.toggle_vuln_group(&label);
-                                    return;
-                                }
-                                super::views::VulnDisplayItem::Vuln(_) => {
-                                    // Fall through to normal navigation
-                                }
+                    && let Some(cache) = &self.vuln_state.cached_data
+                {
+                    let items = super::views::build_display_items(
+                        &cache.vulns,
+                        &self.vuln_state.group_by,
+                        &self.vuln_state.expanded_groups,
+                    );
+                    if let Some(item) = items.get(self.vuln_state.selected) {
+                        match item {
+                            super::views::VulnDisplayItem::GroupHeader { label, .. } => {
+                                let label = label.clone();
+                                self.vuln_state.toggle_vuln_group(&label);
+                                return;
+                            }
+                            super::views::VulnDisplayItem::Vuln(_) => {
+                                // Fall through to normal navigation
                             }
                         }
                     }
+                }
                 // Select vulnerability's component - push breadcrumb for back navigation
                 if let Some((comp_id, vuln)) = self.vuln_state.get_selected(&self.sbom) {
                     // Push breadcrumb so we can go back
@@ -847,7 +855,8 @@ impl ViewApp {
                 self.ensure_compliance_results();
                 let idx = self.compliance_state.selected_standard;
                 let has_violations = self
-                    .compliance_results.as_ref()
+                    .compliance_results
+                    .as_ref()
                     .and_then(|r| r.get(idx))
                     .is_some_and(|r| !r.violations.is_empty());
                 if has_violations {
@@ -857,23 +866,25 @@ impl ViewApp {
             ViewTab::Source => {
                 // Toggle expand/collapse in tree mode
                 if self.source_state.view_mode == crate::tui::app_states::SourceViewMode::Tree
-                    && let Some(ref tree) = self.source_state.json_tree {
-                        let mut items = Vec::new();
-                        crate::tui::shared::source::flatten_json_tree(
-                            tree,
-                            "",
-                            0,
-                            &self.source_state.expanded,
-                            &mut items,
-                            true,
-                            &[],
-                        );
-                        if let Some(item) = items.get(self.source_state.selected)
-                            && item.is_expandable {
-                                let node_id = item.node_id.clone();
-                                self.source_state.toggle_expand(&node_id);
-                            }
+                    && let Some(ref tree) = self.source_state.json_tree
+                {
+                    let mut items = Vec::new();
+                    crate::tui::shared::source::flatten_json_tree(
+                        tree,
+                        "",
+                        0,
+                        &self.source_state.expanded,
+                        &mut items,
+                        true,
+                        &[],
+                    );
+                    if let Some(item) = items.get(self.source_state.selected)
+                        && item.is_expandable
+                    {
+                        let node_id = item.node_id.clone();
+                        self.source_state.toggle_expand(&node_id);
                     }
+                }
             }
             ViewTab::Quality => {
                 if self.quality_state.view_mode == QualityViewMode::Summary {
@@ -896,10 +907,7 @@ impl ViewApp {
         };
 
         // Find the Nth expandable section
-        let expandable: Vec<_> = children
-            .iter()
-            .filter(|c| c.is_expandable())
-            .collect();
+        let expandable: Vec<_> = children.iter().filter(|c| c.is_expandable()).collect();
 
         let target = match expandable.get(self.source_state.map_selected) {
             Some(t) => *t,
@@ -917,7 +925,13 @@ impl ViewApp {
                 // Flatten and find the target node's index
                 let mut items = Vec::new();
                 crate::tui::shared::source::flatten_json_tree(
-                    tree, "", 0, &self.source_state.expanded, &mut items, true, &[],
+                    tree,
+                    "",
+                    0,
+                    &self.source_state.expanded,
+                    &mut items,
+                    true,
+                    &[],
                 );
                 if let Some(idx) = items.iter().position(|item| item.node_id == target_id) {
                     self.source_state.selected = idx;
@@ -934,7 +948,8 @@ impl ViewApp {
                 // Search raw_lines for the top-level key
                 for (i, line) in self.source_state.raw_lines.iter().enumerate() {
                     let search = format!("\"{key}\":");
-                    if line.contains(&search) && line.starts_with("  ") && !line.starts_with("    ") {
+                    if line.contains(&search) && line.starts_with("  ") && !line.starts_with("    ")
+                    {
                         self.source_state.selected = i;
                         self.source_state.scroll_offset = i.saturating_sub(2);
                         break;
@@ -949,7 +964,7 @@ impl ViewApp {
 
     /// Get the component ID currently shown in the source map context footer.
     /// Returns the canonical ID value string if inside the "components" section.
-    #[must_use] 
+    #[must_use]
     pub fn get_map_context_component_id(&self) -> Option<String> {
         let tree = self.source_state.json_tree.as_ref()?;
         let mut items = Vec::new();
@@ -978,7 +993,7 @@ impl ViewApp {
     }
 
     /// Get the currently selected dependency node ID (if any).
-    #[must_use] 
+    #[must_use]
     pub fn get_selected_dependency_node_id(&self) -> Option<String> {
         // Build the flattened list of visible dependency nodes
         let mut visible_nodes = Vec::new();
@@ -1040,11 +1055,12 @@ impl ViewApp {
         nodes.push(node_id.to_string());
 
         if self.dependency_state.is_expanded(node_id)
-            && let Some(children) = edges.get(node_id) {
-                for child in children {
-                    self.collect_dep_nodes_recursive(child, edges, nodes, visited);
-                }
+            && let Some(children) = edges.get(node_id)
+        {
+            for child in children {
+                self.collect_dep_nodes_recursive(child, edges, nodes, visited);
             }
+        }
     }
 
     /// Get the currently selected tree node.
@@ -1057,7 +1073,7 @@ impl ViewApp {
     }
 
     /// Build tree nodes based on current grouping.
-    #[must_use] 
+    #[must_use]
     pub fn build_tree_nodes(&self) -> Vec<crate::tui::widgets::TreeNode> {
         match self.tree_group_by {
             TreeGroupBy::Ecosystem => self.build_ecosystem_tree(),
@@ -1079,7 +1095,8 @@ impl ViewApp {
             }
             let eco = comp
                 .ecosystem
-                .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
+                .as_ref()
+                .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
             ecosystem_map.entry(eco).or_default().push(comp);
         }
 
@@ -1116,8 +1133,16 @@ impl ViewApp {
 
         groups.sort_by(|a, b| match (a, b) {
             (
-                TreeNode::Group { item_count: ac, label: al, .. },
-                TreeNode::Group { item_count: bc, label: bl, .. },
+                TreeNode::Group {
+                    item_count: ac,
+                    label: al,
+                    ..
+                },
+                TreeNode::Group {
+                    item_count: bc,
+                    label: bl,
+                    ..
+                },
             ) => bc.cmp(ac).then_with(|| al.cmp(bl)),
             _ => std::cmp::Ordering::Equal,
         });
@@ -1175,8 +1200,16 @@ impl ViewApp {
 
         groups.sort_by(|a, b| match (a, b) {
             (
-                TreeNode::Group { item_count: ac, label: al, .. },
-                TreeNode::Group { item_count: bc, label: bl, .. },
+                TreeNode::Group {
+                    item_count: ac,
+                    label: al,
+                    ..
+                },
+                TreeNode::Group {
+                    item_count: bc,
+                    label: bl,
+                    ..
+                },
             ) => bc.cmp(ac).then_with(|| al.cmp(bl)),
             _ => std::cmp::Ordering::Equal,
         });
@@ -1185,8 +1218,8 @@ impl ViewApp {
     }
 
     fn build_vuln_status_tree(&self) -> Vec<crate::tui::widgets::TreeNode> {
-        use crate::tui::widgets::TreeNode;
         use super::severity::severity_category;
+        use crate::tui::widgets::TreeNode;
 
         let mut critical_comps = Vec::new();
         let mut high_comps = Vec::new();
@@ -1206,7 +1239,11 @@ impl ViewApp {
             }
         }
 
-        let build_group = |label: &str, id: &str, comps: Vec<&Component>, bookmarked: &HashSet<String>| -> TreeNode {
+        let build_group = |label: &str,
+                           id: &str,
+                           comps: Vec<&Component>,
+                           bookmarked: &HashSet<String>|
+         -> TreeNode {
             let vuln_count: usize = comps.iter().map(|c| c.vulnerabilities.len()).sum();
             let children: Vec<TreeNode> = comps
                 .into_iter()
@@ -1235,10 +1272,20 @@ impl ViewApp {
 
         let mut groups = Vec::new();
         if !critical_comps.is_empty() {
-            groups.push(build_group("Critical", "vuln:critical", critical_comps, &self.bookmarked));
+            groups.push(build_group(
+                "Critical",
+                "vuln:critical",
+                critical_comps,
+                &self.bookmarked,
+            ));
         }
         if !high_comps.is_empty() {
-            groups.push(build_group("High", "vuln:high", high_comps, &self.bookmarked));
+            groups.push(build_group(
+                "High",
+                "vuln:high",
+                high_comps,
+                &self.bookmarked,
+            ));
         }
         if !other_vuln_comps.is_empty() {
             groups.push(build_group(
@@ -1249,7 +1296,12 @@ impl ViewApp {
             ));
         }
         if !clean_comps.is_empty() {
-            groups.push(build_group("No Vulnerabilities", "vuln:clean", clean_comps, &self.bookmarked));
+            groups.push(build_group(
+                "No Vulnerabilities",
+                "vuln:clean",
+                clean_comps,
+                &self.bookmarked,
+            ));
         }
 
         groups
@@ -1367,15 +1419,17 @@ impl ViewApp {
 
         // Match against version
         if let Some(ref version) = comp.version
-            && version.to_lowercase().contains(&query_lower) {
-                return true;
-            }
+            && version.to_lowercase().contains(&query_lower)
+        {
+            return true;
+        }
 
         // Match against ecosystem
         if let Some(ref eco) = comp.ecosystem
-            && eco.to_string().to_lowercase().contains(&query_lower) {
-                return true;
-            }
+            && eco.to_string().to_lowercase().contains(&query_lower)
+        {
+            return true;
+        }
 
         false
     }
@@ -1385,7 +1439,8 @@ impl ViewApp {
             TreeGroupBy::Ecosystem => {
                 let eco = comp
                     .ecosystem
-                    .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
+                    .as_ref()
+                    .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
                 Some(format!("eco:{eco}"))
             }
             TreeGroupBy::License => {
@@ -1471,7 +1526,7 @@ pub enum ViewTab {
 }
 
 impl ViewTab {
-    #[must_use] 
+    #[must_use]
     pub const fn title(&self) -> &'static str {
         match self {
             Self::Overview => "Overview",
@@ -1542,7 +1597,7 @@ pub enum TreeGroupBy {
 }
 
 impl TreeGroupBy {
-    #[must_use] 
+    #[must_use]
     pub const fn label(&self) -> &'static str {
         match self {
             Self::Ecosystem => "Ecosystem",
@@ -1899,7 +1954,6 @@ impl QualityViewState {
         self.selected_recommendation = 0;
         self.scroll_offset = 0;
     }
-
 }
 
 impl ListNavigation for QualityViewState {
@@ -2240,7 +2294,8 @@ impl SbomStats {
             // Count ecosystems
             let eco = comp
                 .ecosystem
-                .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
+                .as_ref()
+                .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
             *ecosystem_counts.entry(eco).or_insert(0) += 1;
 
             // Count licenses
@@ -2256,7 +2311,8 @@ impl SbomStats {
                 vuln_count += 1;
                 let sev = vuln
                     .severity
-                    .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
+                    .as_ref()
+                    .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
                 *vuln_by_severity.entry(sev.clone()).or_insert(0) += 1;
 
                 match sev.to_lowercase().as_str() {
@@ -2326,7 +2382,7 @@ pub struct ViewNavigationContext {
 }
 
 impl ViewNavigationContext {
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             breadcrumbs: Vec::new(),
@@ -2355,13 +2411,13 @@ impl ViewNavigationContext {
     }
 
     /// Check if we have navigation history
-    #[must_use] 
+    #[must_use]
     pub fn has_history(&self) -> bool {
         !self.breadcrumbs.is_empty()
     }
 
     /// Get the current breadcrumb trail as a string
-    #[must_use] 
+    #[must_use]
     pub fn breadcrumb_trail(&self) -> String {
         self.breadcrumbs
             .iter()

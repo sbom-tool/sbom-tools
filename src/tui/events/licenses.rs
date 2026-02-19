@@ -21,4 +21,3 @@ pub(super) fn handle_licenses_keys(app: &mut App, key: KeyEvent) {
         _ => {}
     }
 }
-

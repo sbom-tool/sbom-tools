@@ -3,7 +3,7 @@
 //! Supports `CycloneDX` versions 1.4, 1.5, and 1.6 in JSON and XML formats.
 
 use crate::model::{
-    CanonicalId, Component, ComponentType, CompletenessDeclaration, Creator, CreatorType,
+    CanonicalId, CompletenessDeclaration, Component, ComponentType, Creator, CreatorType,
     CvssScore, CvssVersion, DependencyEdge, DependencyType, DocumentMetadata, ExternalRefType,
     ExternalReference, Hash, HashAlgorithm, LicenseExpression, NormalizedSbom, Organization,
     Property, Remediation, RemediationType, SbomFormat, Severity, SignatureInfo, VexJustification,
@@ -23,13 +23,13 @@ pub struct CycloneDxParser {
 
 impl CycloneDxParser {
     /// Create a new `CycloneDX` parser
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self { strict: false }
     }
 
     /// Create a strict parser that validates more thoroughly
-    #[must_use] 
+    #[must_use]
     pub const fn strict() -> Self {
         Self { strict: true }
     }
@@ -91,62 +91,66 @@ impl CycloneDxParser {
 
         // Handle metadata.component as primary/root product component (CRA requirement)
         if let Some(meta) = &cdx.metadata
-            && let Some(meta_comp) = &meta.component {
-                let comp = self.convert_component(meta_comp);
-                let bom_ref = meta_comp
-                    .bom_ref
-                    .clone()
-                    .unwrap_or_else(|| comp.name.clone());
-                let canonical_id = comp.canonical_id.clone();
-                id_map.insert(bom_ref, canonical_id.clone());
+            && let Some(meta_comp) = &meta.component
+        {
+            let comp = self.convert_component(meta_comp);
+            let bom_ref = meta_comp
+                .bom_ref
+                .clone()
+                .unwrap_or_else(|| comp.name.clone());
+            let canonical_id = comp.canonical_id.clone();
+            id_map.insert(bom_ref, canonical_id.clone());
 
-                // Set as primary component
-                sbom.set_primary_component(canonical_id);
+            // Set as primary component
+            sbom.set_primary_component(canonical_id);
 
-                // Extract security contact from primary component's external references
-                for ext_ref in &comp.external_refs {
-                    match ext_ref.ref_type {
-                        ExternalRefType::SecurityContact => {
-                            sbom.document.security_contact = Some(ext_ref.url.clone());
-                        }
-                        ExternalRefType::Advisories | ExternalRefType::Support => {
-                            if sbom.document.vulnerability_disclosure_url.is_none() {
-                                sbom.document.vulnerability_disclosure_url =
-                                    Some(ext_ref.url.clone());
-                            }
-                        }
-                        _ => {}
+            // Extract security contact from primary component's external references
+            for ext_ref in &comp.external_refs {
+                match ext_ref.ref_type {
+                    ExternalRefType::SecurityContact => {
+                        sbom.document.security_contact = Some(ext_ref.url.clone());
                     }
-                }
-
-                // Extract support_end_date from primary component properties
-                if let Some(props) = &meta_comp.properties {
-                    for prop in props {
-                        let name_lower = prop.name.to_lowercase();
-                        if name_lower.contains("endofsupport")
-                            || name_lower.contains("end-of-support")
-                            || name_lower.contains("eol")
-                            || name_lower.contains("supportend")
-                            || name_lower.contains("support_end")
-                        {
-                            if let Ok(dt) = DateTime::parse_from_rfc3339(&prop.value) {
-                                sbom.document.support_end_date = Some(dt.with_timezone(&Utc));
-                            } else if let Ok(dt) = chrono::NaiveDate::parse_from_str(&prop.value, "%Y-%m-%d") {
-                                sbom.document.support_end_date = Some(dt.and_hms_opt(0, 0, 0).expect("midnight is always valid").and_utc());
-                            }
+                    ExternalRefType::Advisories | ExternalRefType::Support => {
+                        if sbom.document.vulnerability_disclosure_url.is_none() {
+                            sbom.document.vulnerability_disclosure_url = Some(ext_ref.url.clone());
                         }
                     }
+                    _ => {}
                 }
-
-                sbom.add_component(comp);
             }
+
+            // Extract support_end_date from primary component properties
+            if let Some(props) = &meta_comp.properties {
+                for prop in props {
+                    let name_lower = prop.name.to_lowercase();
+                    if name_lower.contains("endofsupport")
+                        || name_lower.contains("end-of-support")
+                        || name_lower.contains("eol")
+                        || name_lower.contains("supportend")
+                        || name_lower.contains("support_end")
+                    {
+                        if let Ok(dt) = DateTime::parse_from_rfc3339(&prop.value) {
+                            sbom.document.support_end_date = Some(dt.with_timezone(&Utc));
+                        } else if let Ok(dt) =
+                            chrono::NaiveDate::parse_from_str(&prop.value, "%Y-%m-%d")
+                        {
+                            sbom.document.support_end_date = Some(
+                                dt.and_hms_opt(0, 0, 0)
+                                    .expect("midnight is always valid")
+                                    .and_utc(),
+                            );
+                        }
+                    }
+                }
+            }
+
+            sbom.add_component(comp);
+        }
 
         if let Some(components) = cdx.components {
             for cdx_comp in components {
                 let comp = self.convert_component(&cdx_comp);
-                let bom_ref = cdx_comp
-                    .bom_ref
-                    .unwrap_or_else(|| comp.name.clone());
+                let bom_ref = cdx_comp.bom_ref.unwrap_or_else(|| comp.name.clone());
                 id_map.insert(bom_ref, comp.canonical_id.clone());
                 sbom.add_component(comp);
             }
@@ -186,25 +190,27 @@ impl CycloneDxParser {
             .metadata
             .as_ref()
             .and_then(|m| m.timestamp.as_ref())
-            .and_then(|t| DateTime::parse_from_rfc3339(t).ok()).map_or_else(Utc::now, |dt| dt.with_timezone(&Utc));
+            .and_then(|t| DateTime::parse_from_rfc3339(t).ok())
+            .map_or_else(Utc::now, |dt| dt.with_timezone(&Utc));
 
         let mut creators = Vec::new();
         if let Some(meta) = &cdx.metadata
-            && let Some(tools) = &meta.tools {
-                for tool in tools {
-                    creators.push(Creator {
-                        creator_type: CreatorType::Tool,
-                        name: format!(
-                            "{} {}",
-                            tool.name.as_deref().unwrap_or("unknown"),
-                            tool.version.as_deref().unwrap_or("")
-                        )
-                        .trim()
-                        .to_string(),
-                        email: None,
-                    });
-                }
+            && let Some(tools) = &meta.tools
+        {
+            for tool in tools {
+                creators.push(Creator {
+                    creator_type: CreatorType::Tool,
+                    name: format!(
+                        "{} {}",
+                        tool.name.as_deref().unwrap_or("unknown"),
+                        tool.version.as_deref().unwrap_or("")
+                    )
+                    .trim()
+                    .to_string(),
+                    email: None,
+                });
             }
+        }
 
         // Extract lifecycle phase from CycloneDX 1.5+ metadata
         let lifecycle_phase = cdx
@@ -220,20 +226,14 @@ impl CycloneDxParser {
             .as_ref()
             .and_then(|comps| comps.first())
             .and_then(|comp| comp.aggregate.as_deref())
-            .map_or(CompletenessDeclaration::Unknown, |agg| {
-                match agg {
-                    "complete" => CompletenessDeclaration::Complete,
-                    "incomplete" => CompletenessDeclaration::Incomplete,
-                    "incomplete_first_party_only" => {
-                        CompletenessDeclaration::IncompleteFirstPartyOnly
-                    }
-                    "incomplete_third_party_only" => {
-                        CompletenessDeclaration::IncompleteThirdPartyOnly
-                    }
-                    "unknown" => CompletenessDeclaration::Unknown,
-                    "not_specified" => CompletenessDeclaration::NotSpecified,
-                    _ => CompletenessDeclaration::Unknown,
-                }
+            .map_or(CompletenessDeclaration::Unknown, |agg| match agg {
+                "complete" => CompletenessDeclaration::Complete,
+                "incomplete" => CompletenessDeclaration::Incomplete,
+                "incomplete_first_party_only" => CompletenessDeclaration::IncompleteFirstPartyOnly,
+                "incomplete_third_party_only" => CompletenessDeclaration::IncompleteThirdPartyOnly,
+                "unknown" => CompletenessDeclaration::Unknown,
+                "not_specified" => CompletenessDeclaration::NotSpecified,
+                _ => CompletenessDeclaration::Unknown,
             });
 
         // Extract signature info
@@ -399,16 +399,15 @@ impl CycloneDxParser {
         vuln: &CdxVulnerability,
         id_map: &HashMap<String, CanonicalId>,
     ) {
-        let source = vuln
-            .source
-            .as_ref()
-            .map_or(VulnerabilitySource::Cve, |s| match s.name.to_lowercase().as_str() {
+        let source = vuln.source.as_ref().map_or(VulnerabilitySource::Cve, |s| {
+            match s.name.to_lowercase().as_str() {
                 "nvd" => VulnerabilitySource::Nvd,
                 "ghsa" | "github" => VulnerabilitySource::Ghsa,
                 "osv" => VulnerabilitySource::Osv,
                 "snyk" => VulnerabilitySource::Snyk,
                 other => VulnerabilitySource::Other(other.to_string()),
-            });
+            }
+        });
 
         let mut vuln_ref = VulnerabilityRef::new(vuln.id.clone(), source);
         vuln_ref.description.clone_from(&vuln.description);
@@ -447,9 +446,10 @@ impl CycloneDxParser {
 
         // Fallback: derive severity from CVSS score if no explicit severity was provided
         if vuln_ref.severity.is_none()
-            && let Some(max_score) = vuln_ref.max_cvss_score() {
-                vuln_ref.severity = Some(Severity::from_cvss(max_score));
-            }
+            && let Some(max_score) = vuln_ref.max_cvss_score()
+        {
+            vuln_ref.severity = Some(Severity::from_cvss(max_score));
+        }
 
         // Parse CWEs
         if let Some(cwes) = &vuln.cwes {
@@ -510,25 +510,25 @@ impl CycloneDxParser {
         if let Some(affects) = &vuln.affects {
             for affect in affects {
                 if let Some(canonical_id) = id_map.get(&affect.ref_field)
-                    && let Some(comp) = sbom.components.get_mut(canonical_id) {
-                        let mut v = vuln_ref.clone();
-                        if let Some(versions) = &affect.versions {
-                            v.affected_versions = versions
-                                .iter()
-                                .filter_map(|ver| ver.version.clone())
-                                .collect();
-                        }
-                        if let Some(vex) = &vex_status {
-                            v.vex_status = Some(vex.clone());
-                        }
-                        comp.vulnerabilities.push(v);
-                        if let Some(vex) = &vex_status {
-                            comp.vex_status = Some(vex.clone());
-                        }
+                    && let Some(comp) = sbom.components.get_mut(canonical_id)
+                {
+                    let mut v = vuln_ref.clone();
+                    if let Some(versions) = &affect.versions {
+                        v.affected_versions = versions
+                            .iter()
+                            .filter_map(|ver| ver.version.clone())
+                            .collect();
                     }
+                    if let Some(vex) = &vex_status {
+                        v.vex_status = Some(vex.clone());
+                    }
+                    comp.vulnerabilities.push(v);
+                    if let Some(vex) = &vex_status {
+                        comp.vex_status = Some(vex.clone());
+                    }
+                }
             }
         }
-
     }
 }
 

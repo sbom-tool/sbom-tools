@@ -121,11 +121,12 @@ impl VulnerabilityEnricher for OsvEnricher {
 
         for (idx, key, query) in queries {
             if !self.bypass_cache
-                && let Some(cached_vulns) = self.cache.get(&key) {
-                    cached_results.push((idx, cached_vulns));
-                    stats.cache_hits += 1;
-                    continue;
-                }
+                && let Some(cached_vulns) = self.cache.get(&key)
+            {
+                cached_results.push((idx, cached_vulns));
+                stats.cache_hits += 1;
+                continue;
+            }
             to_fetch.push((idx, key, query));
         }
 
@@ -153,8 +154,7 @@ impl VulnerabilityEnricher for OsvEnricher {
                         batch_responses
                             .into_iter()
                             .flat_map(|r| r.results.into_iter()),
-                    )
-                    {
+                    ) {
                         let vulns: Vec<_> = result
                             .vulns
                             .iter()

@@ -33,7 +33,6 @@ pub fn compute_diff(
         .with_fuzzy_config(fuzzy_config.clone())
         .include_unchanged(config.matching.include_unchanged);
 
-
     // Enable graph-aware diffing if requested
     if config.graph_diff.enabled {
         if !quiet {
@@ -48,28 +47,31 @@ pub fn compute_diff(
 
     // Apply matching rules if loaded and not in dry-run mode
     if let Some(rules) = matching_rules
-        && !config.rules.dry_run {
-            let rule_engine = crate::matching::RuleEngine::new(rules)
-                .map_err(|e| anyhow::anyhow!("Failed to initialize matching rule engine: {e}"))?;
-            engine = engine.with_rule_engine(rule_engine);
-        }
+        && !config.rules.dry_run
+    {
+        let rule_engine = crate::matching::RuleEngine::new(rules)
+            .map_err(|e| anyhow::anyhow!("Failed to initialize matching rule engine: {e}"))?;
+        engine = engine.with_rule_engine(rule_engine);
+    }
 
-    let mut result = engine.diff(old_sbom, new_sbom).map_err(|e| {
-        super::PipelineError::DiffFailed { source: e.into() }
-    })?;
+    let mut result = engine
+        .diff(old_sbom, new_sbom)
+        .map_err(|e| super::PipelineError::DiffFailed { source: e.into() })?;
 
     // Report on graph changes if enabled
-    if config.graph_diff.enabled && !quiet
-        && let Some(ref summary) = result.graph_summary {
-            tracing::info!(
-                "Graph changes: {} total ({} added, {} removed, {} reparented, {} depth changes)",
-                summary.total_changes,
-                summary.dependencies_added,
-                summary.dependencies_removed,
-                summary.reparented,
-                summary.depth_changed
-            );
-        }
+    if config.graph_diff.enabled
+        && !quiet
+        && let Some(ref summary) = result.graph_summary
+    {
+        tracing::info!(
+            "Graph changes: {} total ({} added, {} removed, {} reparented, {} depth changes)",
+            summary.total_changes,
+            summary.dependencies_added,
+            summary.dependencies_removed,
+            summary.reparented,
+            summary.depth_changed
+        );
+    }
 
     // Apply severity filtering if specified
     if let Some(ref sev) = config.filtering.min_severity {
@@ -162,10 +164,7 @@ fn print_match_explanations(result: &DiffResult) {
                 }
             }
             if !match_info.normalizations.is_empty() {
-                println!(
-                    "  Normalizations: {}",
-                    match_info.normalizations.join(", ")
-                );
+                println!("  Normalizations: {}", match_info.normalizations.join(", "));
             }
             println!();
         }

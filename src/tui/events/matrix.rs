@@ -200,9 +200,11 @@ pub(super) fn update_matrix_search_matches(app: &mut App) {
         return;
     }
 
-    let matches: Vec<usize> = app.data.matrix_result.as_ref().map_or_else(
-        Vec::new,
-        |result| {
+    let matches: Vec<usize> = app
+        .data
+        .matrix_result
+        .as_ref()
+        .map_or_else(Vec::new, |result| {
             result
                 .sboms
                 .iter()
@@ -210,9 +212,7 @@ pub(super) fn update_matrix_search_matches(app: &mut App) {
                 .filter(|(_, sbom)| sbom.name.to_lowercase().contains(&query))
                 .map(|(i, _)| i)
                 .collect()
-        },
-    );
+        });
 
     app.tabs.matrix.search.update_matches(matches);
 }
-

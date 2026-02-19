@@ -19,7 +19,7 @@ pub struct DiffVertex {
 
 impl DiffVertex {
     /// Create a new diff vertex
-    #[must_use] 
+    #[must_use]
     pub const fn new(left_pos: Option<CanonicalId>, right_pos: Option<CanonicalId>) -> Self {
         Self {
             left_pos,
@@ -29,13 +29,13 @@ impl DiffVertex {
     }
 
     /// Create the start vertex (both positions at beginning)
-    #[must_use] 
+    #[must_use]
     pub const fn start() -> Self {
         Self::new(None, None)
     }
 
     /// Check if this is the end vertex (both positions exhausted)
-    #[must_use] 
+    #[must_use]
     pub fn is_end(&self) -> bool {
         self.left_pos.is_none() && self.right_pos.is_none() && !self.processed_together.is_empty()
     }

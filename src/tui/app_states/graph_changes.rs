@@ -14,7 +14,6 @@ impl GraphChangesState {
             total: 0,
         }
     }
-
 }
 
 impl ListNavigation for GraphChangesState {
@@ -41,4 +40,3 @@ impl Default for GraphChangesState {
         Self::new()
     }
 }
-

@@ -47,7 +47,14 @@ pub fn render_compliance(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
 
     // Render violations with scroll + filter
     let severity_filter = app.compliance_state.severity_filter;
-    render_violations(frame, chunks[2], result, selected_violation, scroll_offset, severity_filter);
+    render_violations(
+        frame,
+        chunks[2],
+        result,
+        selected_violation,
+        scroll_offset,
+        severity_filter,
+    );
 
     // Render help bar
     render_help_bar(frame, chunks[3], severity_filter);
@@ -55,12 +62,13 @@ pub fn render_compliance(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     // Render detail overlay if active
     if show_detail
         && let Some(violation) = app
-            .compliance_results.as_ref()
+            .compliance_results
+            .as_ref()
             .and_then(|rs| rs.get(selected_standard))
             .and_then(|r| r.violations.get(selected_violation))
-        {
-            shared_compliance::render_violation_detail_overlay(frame, area, violation);
-        }
+    {
+        shared_compliance::render_violation_detail_overlay(frame, area, violation);
+    }
 }
 
 fn render_standard_selector(frame: &mut Frame, area: Rect, app: &ViewApp) {
@@ -440,7 +448,7 @@ impl Default for StandardComplianceState {
 }
 
 impl StandardComplianceState {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -487,7 +495,7 @@ impl StandardComplianceState {
 }
 
 /// Compute compliance results for all standards
-#[must_use] 
+#[must_use]
 pub fn compute_compliance_results(sbom: &crate::model::NormalizedSbom) -> Vec<ComplianceResult> {
     ComplianceLevel::all()
         .iter()

@@ -39,17 +39,17 @@ pub struct ComponentChangeSet {
 }
 
 impl ComponentChangeSet {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.added.is_empty() && self.removed.is_empty() && self.modified.is_empty()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn total(&self) -> usize {
         self.added.len() + self.removed.len() + self.modified.len()
     }
@@ -63,17 +63,17 @@ pub struct DependencyChangeSet {
 }
 
 impl DependencyChangeSet {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.added.is_empty() && self.removed.is_empty()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn total(&self) -> usize {
         self.added.len() + self.removed.len()
     }
@@ -88,12 +88,12 @@ pub struct LicenseChangeSet {
 }
 
 impl LicenseChangeSet {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.new_licenses.is_empty()
             && self.removed_licenses.is_empty()
@@ -110,12 +110,12 @@ pub struct VulnerabilityChangeSet {
 }
 
 impl VulnerabilityChangeSet {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.introduced.is_empty() && self.resolved.is_empty()
     }

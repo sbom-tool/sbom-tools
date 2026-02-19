@@ -1,8 +1,8 @@
 //! Summary view with visual gauges and charts.
 
+use crate::quality::ComplianceResult;
 use crate::tui::app::{App, AppMode};
 use crate::tui::theme::colors;
-use crate::quality::ComplianceResult;
 use ratatui::{
     prelude::*,
     widgets::{Bar, BarChart, BarGroup, Block, Borders, Gauge, Paragraph},
@@ -22,11 +22,13 @@ fn render_diff_summary(frame: &mut Frame, area: Rect, app: &App) {
         return;
     };
     let old_count = app
-        .data.old_sbom
+        .data
+        .old_sbom
         .as_ref()
         .map_or(0, crate::model::NormalizedSbom::component_count);
     let new_count = app
-        .data.new_sbom
+        .data
+        .new_sbom
         .as_ref()
         .map_or(0, crate::model::NormalizedSbom::component_count);
 
@@ -166,8 +168,9 @@ fn render_risk_verdict(frame: &mut Frame, area: Rect, result: &crate::diff::Diff
 
     // Build description fragments
     let mut parts: Vec<String> = Vec::new();
-    let total_changes =
-        result.summary.components_added + result.summary.components_removed + result.summary.components_modified;
+    let total_changes = result.summary.components_added
+        + result.summary.components_removed
+        + result.summary.components_modified;
     if total_changes > 0 {
         parts.push(format!("{total_changes} component changes"));
     }
@@ -179,7 +182,10 @@ fn render_risk_verdict(frame: &mut Frame, area: Rect, result: &crate::diff::Diff
     }
     let new_vulns = result.summary.vulnerabilities_introduced;
     if new_vulns > 0 {
-        parts.push(format!("{new_vulns} new vuln{}", if new_vulns == 1 { "" } else { "s" }));
+        parts.push(format!(
+            "{new_vulns} new vuln{}",
+            if new_vulns == 1 { "" } else { "s" }
+        ));
     }
 
     // Determine risk level
@@ -215,7 +221,10 @@ fn render_risk_verdict(frame: &mut Frame, area: Rect, result: &crate::diff::Diff
     let line = Line::from(vec![
         Span::styled(
             format!(" {risk_label} "),
-            Style::default().fg(scheme.badge_fg_dark).bg(risk_color).bold(),
+            Style::default()
+                .fg(scheme.badge_fg_dark)
+                .bg(risk_color)
+                .bold(),
         ),
         Span::raw("  "),
         Span::styled(description, Style::default().fg(scheme.text_muted)),
@@ -350,8 +359,10 @@ fn render_dependencies_card(frame: &mut Frame, area: Rect, result: &crate::diff:
 
 fn render_cra_card(frame: &mut Frame, area: Rect, app: &App) {
     let scheme = colors();
-    let (old_status, old_style, old_counts) = format_compliance_line(app.data.old_cra_compliance.as_ref(), &scheme);
-    let (new_status, new_style, new_counts) = format_compliance_line(app.data.new_cra_compliance.as_ref(), &scheme);
+    let (old_status, old_style, old_counts) =
+        format_compliance_line(app.data.old_cra_compliance.as_ref(), &scheme);
+    let (new_status, new_style, new_counts) =
+        format_compliance_line(app.data.new_cra_compliance.as_ref(), &scheme);
 
     let text = vec![
         Line::from(vec![
@@ -365,9 +376,10 @@ fn render_cra_card(frame: &mut Frame, area: Rect, app: &App) {
             Span::styled(format!(" {new_counts}"), Style::default().fg(scheme.muted)),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("CRA readiness checks", Style::default().fg(scheme.muted)),
-        ]),
+        Line::from(vec![Span::styled(
+            "CRA readiness checks",
+            Style::default().fg(scheme.muted),
+        )]),
     ];
 
     let paragraph = Paragraph::new(text).block(
@@ -510,11 +522,13 @@ fn format_compliance_line(
     scheme: &crate::tui::theme::ColorScheme,
 ) -> (String, Style, String) {
     result.map_or_else(
-        || (
-            "N/A".to_string(),
-            Style::default().fg(scheme.muted),
-            String::new(),
-        ),
+        || {
+            (
+                "N/A".to_string(),
+                Style::default().fg(scheme.muted),
+                String::new(),
+            )
+        },
         |r| {
             let status = if r.is_compliant { "OK" } else { "FAIL" };
             let style = if r.is_compliant {
@@ -744,7 +758,7 @@ fn render_top_changes(frame: &mut Frame, area: Rect, app: &App) {
             .vulnerabilities
             .introduced
             .iter()
-            .any(|v| v.component_id == comp.id);  // ID-based lookup
+            .any(|v| v.component_id == comp.id); // ID-based lookup
         let icon = if has_vuln { "⚠" } else { "+" };
         let style = if has_vuln {
             Style::default().fg(scheme.error)
@@ -781,26 +795,31 @@ fn render_top_changes(frame: &mut Frame, area: Rect, app: &App) {
 
     // Version changes with severity coloring
     for comp in result.components.modified.iter().take(2) {
-        let level =
-            version_change_level(comp.old_version.as_deref(), comp.new_version.as_deref());
+        let level = version_change_level(comp.old_version.as_deref(), comp.new_version.as_deref());
 
         let (name_color, level_label) = match level {
-            VersionLevel::Patch => (scheme.success, Some(Span::styled(
-                " patch",
-                Style::default().fg(scheme.success),
-            ))),
-            VersionLevel::Minor => (scheme.warning, Some(Span::styled(
-                " minor",
-                Style::default().fg(scheme.warning),
-            ))),
-            VersionLevel::Major => (scheme.error, Some(Span::styled(
-                " MAJOR",
-                Style::default().fg(scheme.error).bold(),
-            ))),
-            VersionLevel::Downgrade => (scheme.error, Some(Span::styled(
-                " ⚠ downgrade",
-                Style::default().fg(scheme.error).bold(),
-            ))),
+            VersionLevel::Patch => (
+                scheme.success,
+                Some(Span::styled(" patch", Style::default().fg(scheme.success))),
+            ),
+            VersionLevel::Minor => (
+                scheme.warning,
+                Some(Span::styled(" minor", Style::default().fg(scheme.warning))),
+            ),
+            VersionLevel::Major => (
+                scheme.error,
+                Some(Span::styled(
+                    " MAJOR",
+                    Style::default().fg(scheme.error).bold(),
+                )),
+            ),
+            VersionLevel::Downgrade => (
+                scheme.error,
+                Some(Span::styled(
+                    " ⚠ downgrade",
+                    Style::default().fg(scheme.error).bold(),
+                )),
+            ),
             VersionLevel::Unknown => (scheme.modified, None),
         };
 
@@ -960,7 +979,8 @@ fn render_view_summary(frame: &mut Frame, area: Rect, app: &App) {
         for comp in sbom.components.values() {
             let ecosystem = comp
                 .ecosystem
-                .as_ref().map_or_else(|| "unknown".to_string(), std::string::ToString::to_string);
+                .as_ref()
+                .map_or_else(|| "unknown".to_string(), std::string::ToString::to_string);
             *ecosystem_counts.entry(ecosystem).or_insert(0) += 1;
         }
 
@@ -1061,7 +1081,8 @@ fn render_view_summary(frame: &mut Frame, area: Rect, app: &App) {
         for (comp, vuln) in vulns.iter().take(5) {
             let severity = vuln
                 .severity
-                .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
+                .as_ref()
+                .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
             let severity_color = scheme.severity_color(&severity);
             let severity_style = match severity.to_lowercase().as_str() {
                 "critical" | "high" => Style::default().fg(severity_color).bold(),
@@ -1113,9 +1134,7 @@ enum VersionLevel {
 fn version_change_level(old: Option<&str>, new: Option<&str>) -> VersionLevel {
     match (old, new) {
         (Some(o), Some(n)) => {
-            if let (Ok(old_v), Ok(new_v)) =
-                (semver::Version::parse(o), semver::Version::parse(n))
-            {
+            if let (Ok(old_v), Ok(new_v)) = (semver::Version::parse(o), semver::Version::parse(n)) {
                 if new_v.major > old_v.major {
                     VersionLevel::Major
                 } else if new_v.major < old_v.major {

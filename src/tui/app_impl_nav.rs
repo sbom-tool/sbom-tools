@@ -8,7 +8,8 @@ impl App {
     /// Switch to next tab
     pub fn next_tab(&mut self) {
         let has_graph_changes = self
-            .data.diff_result
+            .data
+            .diff_result
             .as_ref()
             .is_some_and(|r| !r.graph_changes.is_empty());
 
@@ -41,7 +42,8 @@ impl App {
     /// Switch to previous tab
     pub fn prev_tab(&mut self) {
         let has_graph_changes = self
-            .data.diff_result
+            .data
+            .diff_result
             .as_ref()
             .is_some_and(|r| !r.graph_changes.is_empty());
 
@@ -240,13 +242,13 @@ impl App {
     }
 
     /// Check if we have navigation history
-    #[must_use] 
+    #[must_use]
     pub fn has_navigation_history(&self) -> bool {
         self.navigation_ctx.has_history()
     }
 
     /// Get the breadcrumb trail for display
-    #[must_use] 
+    #[must_use]
     pub fn breadcrumb_trail(&self) -> String {
         self.navigation_ctx.breadcrumb_trail()
     }

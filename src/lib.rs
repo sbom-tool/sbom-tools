@@ -190,7 +190,6 @@
 //! This documentation is for the `sbom-tools` library crate. If you are looking for the
 //! command-line tool, please refer to the project's README or install it via `cargo install sbom-tools`.
 
-
 // Lint to discourage unwrap() in production code - prefer explicit error handling
 #![warn(clippy::unwrap_used)]
 // Pedantic lints: allow categories that are design choices for this codebase
@@ -238,7 +237,9 @@ pub use config::{
     OutputConfig,
 };
 pub use config::{ConfigError, Validatable};
-pub use config::{DiffConfig, MatrixConfig, MultiDiffConfig, QueryConfig, TimelineConfig, ViewConfig};
+pub use config::{
+    DiffConfig, MatrixConfig, MultiDiffConfig, QueryConfig, TimelineConfig, ViewConfig,
+};
 pub use diff::{DiffEngine, DiffResult, GraphDiffConfig};
 #[cfg(feature = "enrichment")]
 pub use enrichment::{
@@ -253,7 +254,7 @@ pub use matching::{
 pub use model::{
     CanonicalId, Component, ComponentSortKey, NormalizedSbom, NormalizedSbomIndex, SbomIndexBuilder,
 };
-pub use parsers::{parse_sbom, parse_sbom_str, SbomParser};
+pub use parsers::{SbomParser, parse_sbom, parse_sbom_str};
 pub use quality::{QualityGrade, QualityReport, QualityScorer, ScoringProfile};
 #[allow(deprecated)]
 pub use reports::{ReportFormat, ReportGenerator, StreamingReporter, WriterReporter};

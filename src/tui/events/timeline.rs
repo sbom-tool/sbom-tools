@@ -25,18 +25,20 @@ pub(super) fn handle_timeline_keys(app: &mut App, key: KeyEvent) {
             KeyCode::Left | KeyCode::Char('h') => {
                 // Move compare version left
                 if let Some(v) = app.tabs.timeline.compare_version
-                    && v > 0 && v - 1 != app.tabs.timeline.selected_version {
-                        app.tabs.timeline.set_compare_version(v - 1);
-                    }
+                    && v > 0
+                    && v - 1 != app.tabs.timeline.selected_version
+                {
+                    app.tabs.timeline.set_compare_version(v - 1);
+                }
             }
             KeyCode::Right | KeyCode::Char('l') => {
                 // Move compare version right
                 if let Some(v) = app.tabs.timeline.compare_version
                     && v + 1 < app.tabs.timeline.total_versions
-                        && v + 1 != app.tabs.timeline.selected_version
-                    {
-                        app.tabs.timeline.set_compare_version(v + 1);
-                    }
+                    && v + 1 != app.tabs.timeline.selected_version
+                {
+                    app.tabs.timeline.set_compare_version(v + 1);
+                }
             }
             _ => {}
         }
@@ -169,9 +171,11 @@ pub(super) fn update_timeline_search_matches(app: &mut App) {
         return;
     }
 
-    let matches: Vec<usize> = app.data.timeline_result.as_ref().map_or_else(
-        Vec::new,
-        |result| {
+    let matches: Vec<usize> = app
+        .data
+        .timeline_result
+        .as_ref()
+        .map_or_else(Vec::new, |result| {
             result
                 .sboms
                 .iter()
@@ -179,8 +183,7 @@ pub(super) fn update_timeline_search_matches(app: &mut App) {
                 .filter(|(_, sbom)| sbom.name.to_lowercase().contains(&query))
                 .map(|(i, _)| i)
                 .collect()
-        },
-    );
+        });
 
     app.tabs.timeline.search.update_matches(matches);
 }
@@ -206,4 +209,3 @@ pub(super) fn handle_timeline_jump(app: &mut App, key: KeyEvent) {
         _ => {}
     }
 }
-

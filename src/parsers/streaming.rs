@@ -53,7 +53,7 @@ pub struct ParseProgress {
 
 impl ParseProgress {
     /// Get progress percentage (0-100), or None if total is unknown
-    #[must_use] 
+    #[must_use]
     pub fn percent(&self) -> f32 {
         match self.total_bytes {
             Some(total) if total > 0 => (self.bytes_read as f32 / total as f32) * 100.0,
@@ -62,9 +62,10 @@ impl ParseProgress {
     }
 
     /// Check if progress is complete
-    #[must_use] 
+    #[must_use]
     pub fn is_complete(&self) -> bool {
-        self.total_bytes.is_some_and(|total| self.bytes_read >= total)
+        self.total_bytes
+            .is_some_and(|total| self.bytes_read >= total)
     }
 }
 
@@ -171,13 +172,13 @@ pub struct StreamingParser {
 
 impl StreamingParser {
     /// Create a new streaming parser with the given configuration
-    #[must_use] 
+    #[must_use]
     pub const fn new(config: StreamingConfig) -> Self {
         Self { config }
     }
 
     /// Create a streaming parser with default configuration
-    #[must_use] 
+    #[must_use]
     pub fn default_config() -> Self {
         Self::new(StreamingConfig::default())
     }

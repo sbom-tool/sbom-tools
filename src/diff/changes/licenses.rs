@@ -1,7 +1,7 @@
 //! License change computer implementation.
 
-use crate::diff::traits::{ChangeComputer, ComponentMatches, LicenseChangeSet};
 use crate::diff::LicenseChange;
+use crate::diff::traits::{ChangeComputer, ComponentMatches, LicenseChangeSet};
 use crate::model::NormalizedSbom;
 use std::collections::HashMap;
 
@@ -10,7 +10,7 @@ pub struct LicenseChangeComputer;
 
 impl LicenseChangeComputer {
     /// Create a new license change computer.
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self
     }

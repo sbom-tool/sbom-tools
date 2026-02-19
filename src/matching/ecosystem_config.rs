@@ -296,7 +296,7 @@ pub struct CustomEquivalence {
 
 impl EcosystemRulesConfig {
     /// Create a new empty configuration
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             version: default_version(),
@@ -308,7 +308,7 @@ impl EcosystemRulesConfig {
     }
 
     /// Create configuration with built-in defaults
-    #[must_use] 
+    #[must_use]
     pub fn builtin() -> Self {
         let mut config = Self::new();
         config.load_builtin_rules();
@@ -708,13 +708,13 @@ impl EcosystemRulesConfig {
     }
 
     /// Get configuration for a specific ecosystem
-    #[must_use] 
+    #[must_use]
     pub fn get_ecosystem(&self, ecosystem: &str) -> Option<&EcosystemConfig> {
         self.ecosystems.get(&ecosystem.to_lowercase())
     }
 
     /// Check if configuration is empty
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.ecosystems.is_empty()
             && self.cross_ecosystem.is_empty()
@@ -881,10 +881,11 @@ custom_rules:
         assert_eq!(pypi.strip_prefixes, vec!["custom-"]);
 
         // Custom rules should be merged
-        assert!(base
-            .custom_rules
-            .internal_prefixes
-            .contains(&"@mycompany/".to_string()));
+        assert!(
+            base.custom_rules
+                .internal_prefixes
+                .contains(&"@mycompany/".to_string())
+        );
     }
 
     #[test]

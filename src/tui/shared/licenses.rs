@@ -78,10 +78,7 @@ pub fn render_license_metadata_lines(
     // Family
     lines.push(Line::from(vec![
         Span::styled("Family: ", Style::default().fg(scheme.text_muted)),
-        Span::styled(
-            family.to_string(),
-            Style::default().fg(scheme.accent),
-        ),
+        Span::styled(family.to_string(), Style::default().fg(scheme.accent)),
     ]));
 
     // Component count

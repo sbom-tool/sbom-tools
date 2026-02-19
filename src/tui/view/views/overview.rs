@@ -2,7 +2,7 @@
 
 use crate::tui::theme::colors;
 use crate::tui::view::app::ViewApp;
-use crate::tui::widgets::{extract_display_name, format_count, SeverityBar};
+use crate::tui::widgets::{SeverityBar, extract_display_name, format_count};
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Paragraph, Row, Table},
@@ -32,7 +32,7 @@ fn render_stats_panel(frame: &mut Frame, area: Rect, app: &ViewApp) {
                 Constraint::Length(8),          // EOL breakdown
                 Constraint::Length(8),          // Vulnerability breakdown
                 Constraint::Length(eco_height), // Ecosystem distribution (adaptive)
-                Constraint::Min(6),            // License distribution
+                Constraint::Min(6),             // License distribution
             ])
             .split(area);
 
@@ -48,7 +48,7 @@ fn render_stats_panel(frame: &mut Frame, area: Rect, app: &ViewApp) {
                 Constraint::Length(8),          // Summary cards
                 Constraint::Length(8),          // Vulnerability breakdown
                 Constraint::Length(eco_height), // Ecosystem distribution (adaptive)
-                Constraint::Min(6),            // License distribution
+                Constraint::Min(6),             // License distribution
             ])
             .split(area);
 
@@ -391,7 +391,11 @@ fn render_license_dist(frame: &mut Frame, area: Rect, app: &ViewApp) {
         let filled = (**count * bar_width / total).max(usize::from(**count > 0));
         let color = palette[i % palette.len()];
 
-        let display_name = if lic.len() > 12 { &lic[..12] } else { lic.as_str() };
+        let display_name = if lic.len() > 12 {
+            &lic[..12]
+        } else {
+            lic.as_str()
+        };
         lines.push(Line::from(vec![
             Span::styled(
                 format!("{display_name:>12} "),
@@ -450,7 +454,7 @@ fn render_details_panel(frame: &mut Frame, area: Rect, app: &ViewApp) {
             .constraints([
                 Constraint::Length(11),   // Document info
                 Constraint::Length(half), // Top vulnerable components
-                Constraint::Min(6),      // Top depended-on components
+                Constraint::Min(6),       // Top depended-on components
             ])
             .split(area)
     } else {
@@ -458,7 +462,7 @@ fn render_details_panel(frame: &mut Frame, area: Rect, app: &ViewApp) {
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Length(11), // Document info
-                Constraint::Min(6),    // Top components with vulns
+                Constraint::Min(6),     // Top components with vulns
             ])
             .split(area)
     };
@@ -640,9 +644,10 @@ fn render_top_depended_on(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let mut top_deps: Vec<_> = dependent_counts
         .iter()
         .filter_map(|(id, &dep_count)| {
-            app.sbom.components.get(*id).map(|c| {
-                (c.name.clone(), dep_count, c.vulnerabilities.len())
-            })
+            app.sbom
+                .components
+                .get(*id)
+                .map(|c| (c.name.clone(), dep_count, c.vulnerabilities.len()))
         })
         .collect();
 
@@ -680,10 +685,7 @@ fn render_top_depended_on(frame: &mut Frame, area: Rect, app: &ViewApp) {
 
     let table = Table::new(rows, widths).header(header).block(
         Block::default()
-            .title(format!(
-                " Top Depended-On Components ({}) ",
-                top_deps.len()
-            ))
+            .title(format!(" Top Depended-On Components ({}) ", top_deps.len()))
             .borders(Borders::ALL)
             .border_style(Style::default().fg(scheme.primary)),
     );

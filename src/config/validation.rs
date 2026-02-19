@@ -2,7 +2,10 @@
 //!
 //! Provides validation traits and implementations for all configuration types.
 
-use super::types::{AppConfig, MatchingConfig, FilterConfig, OutputConfig, BehaviorConfig, TuiConfig, EnrichmentConfig, DiffConfig, ViewConfig, MultiDiffConfig, TimelineConfig, MatrixConfig};
+use super::types::{
+    AppConfig, BehaviorConfig, DiffConfig, EnrichmentConfig, FilterConfig, MatchingConfig,
+    MatrixConfig, MultiDiffConfig, OutputConfig, TimelineConfig, TuiConfig, ViewConfig,
+};
 
 // ============================================================================
 // Configuration Error
@@ -77,12 +80,13 @@ impl Validatable for MatchingConfig {
         }
 
         if let Some(threshold) = self.threshold
-            && !(0.0..=1.0).contains(&threshold) {
-                errors.push(ConfigError {
-                    field: "matching.threshold".to_string(),
-                    message: format!("Threshold must be between 0.0 and 1.0, got {threshold}"),
-                });
-            }
+            && !(0.0..=1.0).contains(&threshold)
+        {
+            errors.push(ConfigError {
+                field: "matching.threshold".to_string(),
+                message: format!("Threshold must be between 0.0 and 1.0, got {threshold}"),
+            });
+        }
 
         errors
     }
@@ -115,12 +119,14 @@ impl Validatable for OutputConfig {
         // Validate output file path if specified
         if let Some(ref file_path) = self.file
             && let Some(parent) = file_path.parent()
-                && !parent.as_os_str().is_empty() && !parent.exists() {
-                    errors.push(ConfigError {
-                        field: "output.file".to_string(),
-                        message: format!("Parent directory does not exist: {}", parent.display()),
-                    });
-                }
+            && !parent.as_os_str().is_empty()
+            && !parent.exists()
+        {
+            errors.push(ConfigError {
+                field: "output.file".to_string(),
+                message: format!("Parent directory does not exist: {}", parent.display()),
+            });
+        }
 
         // Warn about contradictory streaming configuration
         if self.streaming.disabled && self.streaming.force {
@@ -224,21 +230,23 @@ impl Validatable for DiffConfig {
 
         // Validate rules file if specified
         if let Some(ref rules_file) = self.rules.rules_file
-            && !rules_file.exists() {
-                errors.push(ConfigError {
-                    field: "rules.rules_file".to_string(),
-                    message: format!("Rules file not found: {}", rules_file.display()),
-                });
-            }
+            && !rules_file.exists()
+        {
+            errors.push(ConfigError {
+                field: "rules.rules_file".to_string(),
+                message: format!("Rules file not found: {}", rules_file.display()),
+            });
+        }
 
         // Validate ecosystem rules file if specified
         if let Some(ref config_file) = self.ecosystem_rules.config_file
-            && !config_file.exists() {
-                errors.push(ConfigError {
-                    field: "ecosystem_rules.config_file".to_string(),
-                    message: format!("Ecosystem rules file not found: {}", config_file.display()),
-                });
-            }
+            && !config_file.exists()
+        {
+            errors.push(ConfigError {
+                field: "ecosystem_rules.config_file".to_string(),
+                message: format!("Ecosystem rules file not found: {}", config_file.display()),
+            });
+        }
 
         errors
     }

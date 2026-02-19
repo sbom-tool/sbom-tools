@@ -116,9 +116,10 @@ impl<'a> DependencyGraph<'a> {
         while let Some((id, depth)) = queue.pop_front() {
             // Check if we've found a shorter path to this node
             if let Some(&existing_depth) = depths.get(&id)
-                && depth >= existing_depth {
-                    continue; // Already have a shorter or equal path
-                }
+                && depth >= existing_depth
+            {
+                continue; // Already have a shorter or equal path
+            }
 
             // Record this depth (it's either new or shorter than existing)
             depths.insert(id.clone(), depth);
@@ -163,19 +164,20 @@ impl<'a> DependencyGraph<'a> {
     }
 
     fn get_component_name(&self, component_id: &CanonicalId) -> String {
-        self.sbom
-            .components
-            .get(component_id)
-            .map_or_else(
-                || component_id.to_string(),
-                |c| c.version.as_ref().map_or_else(|| c.name.clone(), |v| format!("{}@{}", c.name, v)),
-            )
+        self.sbom.components.get(component_id).map_or_else(
+            || component_id.to_string(),
+            |c| {
+                c.version
+                    .as_ref()
+                    .map_or_else(|| c.name.clone(), |v| format!("{}@{}", c.name, v))
+            },
+        )
     }
 }
 
 /// Perform graph-aware diff between two SBOMs
 #[allow(clippy::implicit_hasher)]
-#[must_use] 
+#[must_use]
 pub fn diff_dependency_graph(
     old_sbom: &NormalizedSbom,
     new_sbom: &NormalizedSbom,
@@ -282,29 +284,30 @@ fn detect_depth_changes(
             let new_depth = new_graph.get_depth(new_id);
 
             if let (Some(od), Some(nd)) = (old_depth, new_depth)
-                && od != nd {
-                    let component_name = new_graph.get_component_name(new_id);
+                && od != nd
+            {
+                let component_name = new_graph.get_component_name(new_id);
 
-                    let impact = if nd < od && new_graph.is_vulnerable(new_id) {
-                        // Vulnerable component moved closer to root
-                        GraphChangeImpact::High
-                    } else if nd == 1 && od > 1 {
-                        // Became direct dependency
-                        GraphChangeImpact::Medium
-                    } else {
-                        GraphChangeImpact::Low
-                    };
+                let impact = if nd < od && new_graph.is_vulnerable(new_id) {
+                    // Vulnerable component moved closer to root
+                    GraphChangeImpact::High
+                } else if nd == 1 && od > 1 {
+                    // Became direct dependency
+                    GraphChangeImpact::Medium
+                } else {
+                    GraphChangeImpact::Low
+                };
 
-                    changes.push(DependencyGraphChange {
-                        component_id: new_id.clone(),
-                        component_name,
-                        change: DependencyChangeType::DepthChanged {
-                            old_depth: od,
-                            new_depth: nd,
-                        },
-                        impact,
-                    });
-                }
+                changes.push(DependencyGraphChange {
+                    component_id: new_id.clone(),
+                    component_name,
+                    change: DependencyChangeType::DepthChanged {
+                        old_depth: od,
+                        new_depth: nd,
+                    },
+                    impact,
+                });
+            }
         }
     }
 }
@@ -329,7 +332,8 @@ fn detect_reparenting(
                 // Check if the parents are different (accounting for component matching)
                 let old_parent_matched = matches.get(old_parent).and_then(|opt| opt.as_ref());
 
-                let is_reparented = !old_parent_matched.is_some_and(|old_parent_in_new| old_parent_in_new == new_parent);
+                let is_reparented = !old_parent_matched
+                    .is_some_and(|old_parent_in_new| old_parent_in_new == new_parent);
 
                 if is_reparented {
                     let component_name = new_graph.get_component_name(new_id);

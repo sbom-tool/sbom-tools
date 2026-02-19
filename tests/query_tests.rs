@@ -1,6 +1,6 @@
 //! Integration tests for the multi-SBOM query command.
 
-use sbom_tools::cli::{run_query, QueryFilter};
+use sbom_tools::cli::{QueryFilter, run_query};
 use sbom_tools::config::{EnrichmentConfig, OutputConfig, QueryConfig, StreamingConfig};
 use sbom_tools::reports::ReportFormat;
 use std::path::{Path, PathBuf};
@@ -50,7 +50,11 @@ fn test_query_pattern_across_fixtures() {
     let result: serde_json::Value = serde_json::from_str(&output).expect("parse JSON");
 
     let matches = result["matches"].as_array().expect("matches array");
-    assert_eq!(matches.len(), 2, "lodash appears in both SBOMs with different versions");
+    assert_eq!(
+        matches.len(),
+        2,
+        "lodash appears in both SBOMs with different versions"
+    );
     assert!(matches.iter().all(|m| m["name"] == "lodash"));
     assert_eq!(result["sboms_searched"], 2);
 }
@@ -103,7 +107,11 @@ fn test_query_version_range_filter() {
     let result: serde_json::Value = serde_json::from_str(&output).expect("parse JSON");
 
     let matches = result["matches"].as_array().expect("matches array");
-    assert_eq!(matches.len(), 1, "only lodash 4.17.20 should match <4.17.21");
+    assert_eq!(
+        matches.len(),
+        1,
+        "only lodash 4.17.20 should match <4.17.21"
+    );
     assert_eq!(matches[0]["version"], "4.17.20");
 }
 
@@ -126,9 +134,11 @@ fn test_query_license_filter() {
 
     let matches = result["matches"].as_array().expect("matches array");
     assert!(!matches.is_empty());
-    assert!(matches
-        .iter()
-        .all(|m| m["license"].as_str().unwrap_or("").contains("Apache")));
+    assert!(
+        matches
+            .iter()
+            .all(|m| m["license"].as_str().unwrap_or("").contains("Apache"))
+    );
 }
 
 #[test]

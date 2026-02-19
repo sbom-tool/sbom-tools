@@ -47,4 +47,3 @@ pub(super) fn handle_diff_compliance_keys(app: &mut App, key: KeyEvent) {
         _ => {}
     }
 }
-

@@ -12,7 +12,7 @@ use super::config;
 /// - Same major.minor: 0.8 - (`patch_diff` * 0.01), min 0.5
 /// - Same major: 0.5 - (`minor_diff` * `minor_penalty`), min 0.2
 /// - Different major: 0.3 - (`major_diff` * `major_penalty`), min 0.0
-#[must_use] 
+#[must_use]
 pub fn compute_version_divergence_score(
     version_a: &Option<String>,
     version_b: &Option<String>,
@@ -26,19 +26,26 @@ pub fn compute_version_divergence_score(
             let parts_a = parse_semver_parts(va);
             let parts_b = parse_semver_parts(vb);
 
-            if let (Some((maj_a, min_a, patch_a)), Some((maj_b, min_b, patch_b))) = (parts_a, parts_b) {
+            if let (Some((maj_a, min_a, patch_a)), Some((maj_b, min_b, patch_b))) =
+                (parts_a, parts_b)
+            {
                 if maj_a == maj_b && min_a == min_b {
                     // Same major.minor - small penalty for patch difference
-                    let patch_diff = (i64::from(patch_a) - i64::from(patch_b)).unsigned_abs() as f64;
+                    let patch_diff =
+                        (i64::from(patch_a) - i64::from(patch_b)).unsigned_abs() as f64;
                     patch_diff.mul_add(-0.01, 0.8).max(0.5)
                 } else if maj_a == maj_b {
                     // Same major - moderate penalty for minor difference
                     let minor_diff = (i64::from(min_a) - i64::from(min_b)).unsigned_abs() as f64;
-                    minor_diff.mul_add(-weights.version_minor_penalty, 0.5).max(0.2)
+                    minor_diff
+                        .mul_add(-weights.version_minor_penalty, 0.5)
+                        .max(0.2)
                 } else {
                     // Different major - larger penalty
                     let major_diff = (i64::from(maj_a) - i64::from(maj_b)).unsigned_abs() as f64;
-                    major_diff.mul_add(-weights.version_major_penalty, 0.3).max(0.0)
+                    major_diff
+                        .mul_add(-weights.version_major_penalty, 0.3)
+                        .max(0.0)
                 }
             } else {
                 // Couldn't parse semver - fall back to string comparison
@@ -62,7 +69,7 @@ pub fn compute_version_divergence_score(
 
 /// Parse a version string into semver components (major, minor, patch).
 /// Returns None if the version cannot be parsed.
-#[must_use] 
+#[must_use]
 pub fn parse_semver_parts(version: &str) -> Option<(u32, u32, u32)> {
     // Strip common prefixes like 'v' or 'V'
     let version = version.trim_start_matches(['v', 'V']);
@@ -98,7 +105,7 @@ pub struct MultiFieldScoreResult {
 
 impl MultiFieldScoreResult {
     /// Get a human-readable summary of the score breakdown.
-    #[must_use] 
+    #[must_use]
     pub fn summary(&self) -> String {
         format!(
             "Total: {:.2} (name: {:.2}, version: {:.2}, ecosystem: {:.2}, licenses: {:.2}, supplier: {:.2}, group: {:.2})",

@@ -41,7 +41,6 @@ impl SeverityBadge {
             _ => "U",
         }
     }
-
 }
 
 impl Widget for SeverityBadge {
@@ -67,9 +66,10 @@ impl Widget for SeverityBadge {
 
         for (i, ch) in text.chars().enumerate() {
             if i < area.width as usize
-                && let Some(cell) = buf.cell_mut((x + i as u16, y)) {
-                    cell.set_char(ch).set_style(style);
-                }
+                && let Some(cell) = buf.cell_mut((x + i as u16, y))
+            {
+                cell.set_char(ch).set_style(style);
+            }
         }
     }
 }

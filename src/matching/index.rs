@@ -52,7 +52,7 @@ impl ComponentIndex {
     ///
     /// Uses `Arc<CanonicalId>` internally to avoid expensive cloning of IDs
     /// across multiple index structures.
-    #[must_use] 
+    #[must_use]
     pub fn build(sbom: &NormalizedSbom) -> Self {
         let mut by_ecosystem: HashMap<String, Vec<Arc<CanonicalId>>> = HashMap::new();
         let mut by_prefix: HashMap<String, Vec<Arc<CanonicalId>>> = HashMap::new();
@@ -103,14 +103,19 @@ impl ComponentIndex {
     }
 
     /// Normalize a component for indexing.
-    #[must_use] 
+    #[must_use]
     pub fn normalize_component(comp: &Component) -> NormalizedEntry {
         // Extract ecosystem from PURL
         let (ecosystem, normalized_purl) = comp.identifiers.purl.as_ref().map_or_else(
             || {
                 // Try to infer ecosystem from component type or other fields
                 // Convert Ecosystem enum to String for consistent comparison
-                (comp.ecosystem.as_ref().map(std::string::ToString::to_string), None)
+                (
+                    comp.ecosystem
+                        .as_ref()
+                        .map(std::string::ToString::to_string),
+                    None,
+                )
             },
             |purl| {
                 let eco = Self::extract_ecosystem(purl);
@@ -179,9 +184,10 @@ impl ComponentIndex {
     fn extract_ecosystem(purl: &str) -> Option<String> {
         // PURL format: pkg:ecosystem/namespace/name@version
         if let Some(rest) = purl.strip_prefix("pkg:")
-            && let Some(slash_pos) = rest.find('/') {
-                return Some(rest[..slash_pos].to_lowercase());
-            }
+            && let Some(slash_pos) = rest.find('/')
+        {
+            return Some(rest[..slash_pos].to_lowercase());
+        }
         None
     }
 
@@ -206,7 +212,7 @@ impl ComponentIndex {
     /// - Default: lowercase with underscore to hyphen conversion
     ///
     /// This is also used by LSH for consistent shingle computation.
-    #[must_use] 
+    #[must_use]
     pub fn normalize_name(name: &str, ecosystem: Option<&str>) -> String {
         let mut normalized = name.to_lowercase();
 
@@ -239,7 +245,7 @@ impl ComponentIndex {
     }
 
     /// Get normalized entry for a component.
-    #[must_use] 
+    #[must_use]
     pub fn get_entry(&self, id: &CanonicalId) -> Option<&NormalizedEntry> {
         // Arc<T>: Borrow<T> allows HashMap lookup with &CanonicalId
         self.entries.get(id)
@@ -249,7 +255,7 @@ impl ComponentIndex {
     ///
     /// Returns cloned `CanonicalIds` for API stability. The internal storage uses Arc
     /// to avoid expensive cloning during index building.
-    #[must_use] 
+    #[must_use]
     pub fn get_by_ecosystem(&self, ecosystem: &str) -> Option<Vec<CanonicalId>> {
         self.by_ecosystem
             .get(ecosystem)
@@ -263,7 +269,7 @@ impl ComponentIndex {
     ///
     /// Returns cloned `CanonicalIds` for API stability. The internal storage uses Arc
     /// to avoid expensive cloning during index building.
-    #[must_use] 
+    #[must_use]
     pub fn find_candidates(
         &self,
         source_id: &CanonicalId,
@@ -276,42 +282,45 @@ impl ComponentIndex {
 
         // Priority 1: Same ecosystem candidates
         if let Some(ref eco) = source_entry.ecosystem
-            && let Some(ids) = self.by_ecosystem.get(eco) {
-                for id in ids {
-                    if id.as_ref() != source_id && !seen.contains(id) {
-                        // Apply length filter
-                        if let Some(entry) = self.entries.get(id.as_ref()) {
-                            let len_diff = (source_entry.name_length as i32
-                                - entry.name_length as i32)
-                                .unsigned_abs() as usize;
-                            if len_diff <= max_length_diff {
-                                candidates.push(Arc::clone(id));
-                                seen.insert(Arc::clone(id));
-                            }
+            && let Some(ids) = self.by_ecosystem.get(eco)
+        {
+            for id in ids {
+                if id.as_ref() != source_id && !seen.contains(id) {
+                    // Apply length filter
+                    if let Some(entry) = self.entries.get(id.as_ref()) {
+                        let len_diff = (source_entry.name_length as i32 - entry.name_length as i32)
+                            .unsigned_abs() as usize;
+                        if len_diff <= max_length_diff {
+                            candidates.push(Arc::clone(id));
+                            seen.insert(Arc::clone(id));
                         }
                     }
                 }
             }
+        }
 
         // Priority 2: Same prefix candidates (cross-ecosystem fallback)
-        if candidates.len() < max_candidates && !source_entry.prefix.is_empty()
-            && let Some(ids) = self.by_prefix.get(&source_entry.prefix) {
-                for id in ids {
-                    if id.as_ref() != source_id && !seen.contains(id)
-                        && let Some(entry) = self.entries.get(id.as_ref()) {
-                            let len_diff = (source_entry.name_length as i32
-                                - entry.name_length as i32)
-                                .unsigned_abs() as usize;
-                            if len_diff <= max_length_diff {
-                                candidates.push(Arc::clone(id));
-                                seen.insert(Arc::clone(id));
-                            }
-                        }
-                    if candidates.len() >= max_candidates {
-                        break;
+        if candidates.len() < max_candidates
+            && !source_entry.prefix.is_empty()
+            && let Some(ids) = self.by_prefix.get(&source_entry.prefix)
+        {
+            for id in ids {
+                if id.as_ref() != source_id
+                    && !seen.contains(id)
+                    && let Some(entry) = self.entries.get(id.as_ref())
+                {
+                    let len_diff = (source_entry.name_length as i32 - entry.name_length as i32)
+                        .unsigned_abs() as usize;
+                    if len_diff <= max_length_diff {
+                        candidates.push(Arc::clone(id));
+                        seen.insert(Arc::clone(id));
                     }
                 }
+                if candidates.len() >= max_candidates {
+                    break;
+                }
             }
+        }
 
         // Priority 3: Similar prefixes (1-char difference in prefix)
         if candidates.len() < max_candidates && source_entry.prefix.len() >= 2 {
@@ -319,17 +328,18 @@ impl ComponentIndex {
             for (prefix, ids) in &self.by_prefix {
                 if prefix.starts_with(prefix_2) && prefix != &source_entry.prefix {
                     for id in ids {
-                        if id.as_ref() != source_id && !seen.contains(id)
-                            && let Some(entry) = self.entries.get(id.as_ref()) {
-                                let len_diff = (source_entry.name_length as i32
-                                    - entry.name_length as i32)
-                                    .unsigned_abs()
-                                    as usize;
-                                if len_diff <= max_length_diff {
-                                    candidates.push(Arc::clone(id));
-                                    seen.insert(Arc::clone(id));
-                                }
+                        if id.as_ref() != source_id
+                            && !seen.contains(id)
+                            && let Some(entry) = self.entries.get(id.as_ref())
+                        {
+                            let len_diff = (source_entry.name_length as i32
+                                - entry.name_length as i32)
+                                .unsigned_abs() as usize;
+                            if len_diff <= max_length_diff {
+                                candidates.push(Arc::clone(id));
+                                seen.insert(Arc::clone(id));
                             }
+                        }
                         if candidates.len() >= max_candidates {
                             break;
                         }
@@ -394,19 +404,19 @@ impl ComponentIndex {
     /// Get all component IDs (for fallback full scan).
     ///
     /// Returns cloned `CanonicalIds` for API stability.
-    #[must_use] 
+    #[must_use]
     pub fn all_ids(&self) -> Vec<CanonicalId> {
         self.all_ids.iter().map(|arc| (**arc).clone()).collect()
     }
 
     /// Get the number of indexed components.
-    #[must_use] 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
     /// Check if the index is empty.
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
@@ -417,7 +427,7 @@ impl ComponentIndex {
     /// for large SBOMs (1000+ components). Uses rayon for parallel iteration.
     ///
     /// Returns a vector of (`source_id`, candidates) pairs in the same order as input.
-    #[must_use] 
+    #[must_use]
     pub fn find_candidates_parallel<'a>(
         &self,
         sources: &[(&'a CanonicalId, &NormalizedEntry)],
@@ -438,17 +448,14 @@ impl ComponentIndex {
     ///
     /// Useful for diffing two SBOMs: build an index from the new SBOM,
     /// then find candidates for all components from the old SBOM.
-    #[must_use] 
+    #[must_use]
     pub fn find_all_candidates_from(
         &self,
         other: &Self,
         max_candidates: usize,
         max_length_diff: usize,
     ) -> Vec<(CanonicalId, Vec<CanonicalId>)> {
-        let sources: Vec<_> = other
-            .entries
-            .iter()
-            .collect();
+        let sources: Vec<_> = other.entries.iter().collect();
 
         sources
             .par_iter()
@@ -467,17 +474,29 @@ impl ComponentIndex {
         let prefixes = self.by_prefix.len();
         let trigrams = self.by_trigram.len();
         let avg_per_ecosystem = if ecosystems > 0 {
-            self.by_ecosystem.values().map(std::vec::Vec::len).sum::<usize>() / ecosystems
+            self.by_ecosystem
+                .values()
+                .map(std::vec::Vec::len)
+                .sum::<usize>()
+                / ecosystems
         } else {
             0
         };
         let avg_per_prefix = if prefixes > 0 {
-            self.by_prefix.values().map(std::vec::Vec::len).sum::<usize>() / prefixes
+            self.by_prefix
+                .values()
+                .map(std::vec::Vec::len)
+                .sum::<usize>()
+                / prefixes
         } else {
             0
         };
         let avg_per_trigram = if trigrams > 0 {
-            self.by_trigram.values().map(std::vec::Vec::len).sum::<usize>() / trigrams
+            self.by_trigram
+                .values()
+                .map(std::vec::Vec::len)
+                .sum::<usize>()
+                / trigrams
         } else {
             0
         };
@@ -496,7 +515,7 @@ impl ComponentIndex {
     /// Compute trigram similarity between two entries (Jaccard coefficient).
     ///
     /// Returns a value between 0.0 and 1.0 where 1.0 means identical trigram sets.
-    #[must_use] 
+    #[must_use]
     pub fn trigram_similarity(entry_a: &NormalizedEntry, entry_b: &NormalizedEntry) -> f64 {
         if entry_a.trigrams.is_empty() || entry_b.trigrams.is_empty() {
             return 0.0;
@@ -595,7 +614,7 @@ pub struct BatchCandidateResult {
 
 impl BatchCandidateGenerator {
     /// Create a new batch candidate generator from an SBOM.
-    #[must_use] 
+    #[must_use]
     pub fn build(sbom: &NormalizedSbom, config: BatchCandidateConfig) -> Self {
         let component_index = ComponentIndex::build(sbom);
 
@@ -653,9 +672,8 @@ impl BatchCandidateGenerator {
         }
 
         // 2. LSH candidates (additional ones not found by component index)
-        let lsh_candidates: Vec<CanonicalId> = self.lsh_index.as_ref().map_or_else(
-            Vec::new,
-            |lsh| {
+        let lsh_candidates: Vec<CanonicalId> =
+            self.lsh_index.as_ref().map_or_else(Vec::new, |lsh| {
                 let candidates: Vec<_> = lsh
                     .find_candidates(source_component)
                     .into_iter()
@@ -666,34 +684,32 @@ impl BatchCandidateGenerator {
                     seen.insert(id.clone());
                 }
                 candidates
-            },
-        );
+            });
 
         // 3. Cross-ecosystem candidates
-        let cross_ecosystem_candidates: Vec<CanonicalId> =
-            if let (Some(db), Some(eco)) =
-                (&self.cross_ecosystem_db, &source_component.ecosystem)
-            {
-                let candidates: Vec<_> = db
-                    .find_equivalents(eco, &source_component.name)
-                    .into_iter()
-                    .flat_map(|m| {
-                        // Look up components with these names in our index
-                        let target_eco_str = m.target_ecosystem.to_string().to_lowercase();
-                        self.component_index
-                            .get_by_ecosystem(&target_eco_str)
-                            .unwrap_or_default()
-                    })
-                    .filter(|id| id != source_id && !seen.contains(id))
-                    .take(self.config.max_candidates / 4) // Limit cross-ecosystem
-                    .collect();
-                for id in &candidates {
-                    seen.insert(id.clone());
-                }
-                candidates
-            } else {
-                Vec::new()
-            };
+        let cross_ecosystem_candidates: Vec<CanonicalId> = if let (Some(db), Some(eco)) =
+            (&self.cross_ecosystem_db, &source_component.ecosystem)
+        {
+            let candidates: Vec<_> = db
+                .find_equivalents(eco, &source_component.name)
+                .into_iter()
+                .flat_map(|m| {
+                    // Look up components with these names in our index
+                    let target_eco_str = m.target_ecosystem.to_string().to_lowercase();
+                    self.component_index
+                        .get_by_ecosystem(&target_eco_str)
+                        .unwrap_or_default()
+                })
+                .filter(|id| id != source_id && !seen.contains(id))
+                .take(self.config.max_candidates / 4) // Limit cross-ecosystem
+                .collect();
+            for id in &candidates {
+                seen.insert(id.clone());
+            }
+            candidates
+        } else {
+            Vec::new()
+        };
 
         let total_unique = seen.len();
 
@@ -707,7 +723,7 @@ impl BatchCandidateGenerator {
     }
 
     /// Generate candidates for multiple components in parallel.
-    #[must_use] 
+    #[must_use]
     pub fn find_candidates_batch(
         &self,
         sources: &[(&CanonicalId, &Component)],
@@ -719,7 +735,7 @@ impl BatchCandidateGenerator {
     }
 
     /// Get all unique candidates (deduplicated across all strategies).
-    #[must_use] 
+    #[must_use]
     pub fn all_candidates(
         &self,
         source_id: &CanonicalId,
@@ -733,19 +749,19 @@ impl BatchCandidateGenerator {
     }
 
     /// Get the underlying component index.
-    #[must_use] 
+    #[must_use]
     pub const fn component_index(&self) -> &ComponentIndex {
         &self.component_index
     }
 
     /// Check if LSH is enabled.
-    #[must_use] 
+    #[must_use]
     pub const fn has_lsh(&self) -> bool {
         self.lsh_index.is_some()
     }
 
     /// Check if cross-ecosystem matching is enabled.
-    #[must_use] 
+    #[must_use]
     pub const fn has_cross_ecosystem(&self) -> bool {
         self.cross_ecosystem_db.is_some()
     }
@@ -787,7 +803,7 @@ pub struct LazyComponentIndex {
 
 impl LazyComponentIndex {
     /// Create a new lazy index that will build from the given SBOM on first access.
-    #[must_use] 
+    #[must_use]
     pub const fn new(sbom: std::sync::Arc<NormalizedSbom>) -> Self {
         Self {
             sbom: Some(sbom),
@@ -796,7 +812,7 @@ impl LazyComponentIndex {
     }
 
     /// Create a lazy index from an already-built `ComponentIndex`.
-    #[must_use] 
+    #[must_use]
     pub fn from_index(index: ComponentIndex) -> Self {
         let lazy = Self {
             sbom: None,

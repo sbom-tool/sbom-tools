@@ -5,10 +5,10 @@ use super::changes::{
     VulnerabilityChangeComputer,
 };
 pub use super::engine_config::LargeSbomConfig;
-use super::engine_matching::{match_components, ComponentMatchResult};
+use super::engine_matching::{ComponentMatchResult, match_components};
 use super::engine_rules::{apply_rules, remap_match_result};
 use super::traits::ChangeComputer;
-use super::{diff_dependency_graph, CostModel, DiffResult, GraphDiffConfig, MatchInfo};
+use super::{CostModel, DiffResult, GraphDiffConfig, MatchInfo, diff_dependency_graph};
 use crate::error::SbomDiffError;
 use crate::matching::{
     ComponentMatcher, FuzzyMatchConfig, FuzzyMatcher, MatchingRulesConfig, RuleEngine,
@@ -91,32 +91,36 @@ impl DiffEngine {
     }
 
     /// Get the large SBOM configuration.
-    #[must_use] 
+    #[must_use]
     pub const fn large_sbom_config(&self) -> &LargeSbomConfig {
         &self.large_sbom_config
     }
 
     /// Check if a custom matcher is configured
-    #[must_use] 
+    #[must_use]
     pub fn has_custom_matcher(&self) -> bool {
         self.custom_matcher.is_some()
     }
 
     /// Check if graph diffing is enabled
-    #[must_use] 
+    #[must_use]
     pub const fn graph_diff_enabled(&self) -> bool {
         self.graph_diff_config.is_some()
     }
 
     /// Check if custom matching rules are configured
-    #[must_use] 
+    #[must_use]
     pub const fn has_matching_rules(&self) -> bool {
         self.rule_engine.is_some()
     }
 
     /// Compare two SBOMs and return the diff result
     #[must_use = "diff result contains all changes and should not be discarded"]
-    pub fn diff(&self, old: &NormalizedSbom, new: &NormalizedSbom) -> Result<DiffResult, SbomDiffError> {
+    pub fn diff(
+        &self,
+        old: &NormalizedSbom,
+        new: &NormalizedSbom,
+    ) -> Result<DiffResult, SbomDiffError> {
         let mut result = DiffResult::new();
 
         // Quick check: if content hashes match, SBOMs are identical
@@ -155,16 +159,27 @@ impl DiffEngine {
 
         // Apply canonical mappings from rule engine
         if let Some((old_canonical, new_canonical)) = &canonical_maps {
-            component_matches = remap_match_result(&component_matches, old_canonical, new_canonical);
+            component_matches =
+                remap_match_result(&component_matches, old_canonical, new_canonical);
         }
 
         // Compute changes using the modular change computers
-        self.compute_all_changes(&old_filtered, &new_filtered, &component_matches, matcher, &mut result);
+        self.compute_all_changes(
+            &old_filtered,
+            &new_filtered,
+            &component_matches,
+            matcher,
+            &mut result,
+        );
 
         // Perform graph-aware diffing if enabled
         if let Some(ref graph_config) = self.graph_diff_config {
-            let (graph_changes, graph_summary) =
-                diff_dependency_graph(&old_filtered, &new_filtered, &component_matches.matches, graph_config);
+            let (graph_changes, graph_summary) = diff_dependency_graph(
+                &old_filtered,
+                &new_filtered,
+                &component_matches.matches,
+                graph_config,
+            );
             result.graph_changes = graph_changes;
             result.graph_summary = Some(graph_summary);
         }
@@ -209,19 +224,18 @@ impl DiffEngine {
                     (&change.old_canonical_id, &change.canonical_id)
                     && let (Some(old_comp), Some(new_comp)) =
                         (old.components.get(old_id), new.components.get(new_id))
+                {
+                    let explanation = matcher.explain_match(old_comp, new_comp);
+                    let mut match_info = MatchInfo::from_explanation(&explanation);
+
+                    // Use the actual score from the matching phase if available
+                    if let Some(&score) = match_result.pairs.get(&(old_id.clone(), new_id.clone()))
                     {
-                        let explanation = matcher.explain_match(old_comp, new_comp);
-                        let mut match_info = MatchInfo::from_explanation(&explanation);
-
-                        // Use the actual score from the matching phase if available
-                        if let Some(&score) =
-                            match_result.pairs.get(&(old_id.clone(), new_id.clone()))
-                        {
-                            match_info.score = score;
-                        }
-
-                        change = change.with_match_info(match_info);
+                        match_info.score = score;
                     }
+
+                    change = change.with_match_info(match_info);
+                }
                 change
             })
             .collect();

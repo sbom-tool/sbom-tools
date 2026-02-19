@@ -32,7 +32,7 @@ pub struct SideBySideReporter {
 
 impl SideBySideReporter {
     /// Create a new side-by-side reporter
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         // Try to detect terminal width, default to 120
         let width = terminal_width().unwrap_or(120);
@@ -58,11 +58,7 @@ impl SideBySideReporter {
     }
 
     const fn col(&self, code: &'static str) -> &'static str {
-        if self.use_colors {
-            code
-        } else {
-            ""
-        }
+        if self.use_colors { code } else { "" }
     }
 
     fn format_header(&self, old_name: &str, new_name: &str) -> String {
@@ -512,7 +508,8 @@ impl ReportGenerator for SideBySideReporter {
             for (comp, vuln) in vulns {
                 let severity = vuln
                     .severity
-                    .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
+                    .as_ref()
+                    .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
                 out.push_str(&self.format_vulnerability_row(&vuln.id, &severity, &comp.name, true));
             }
         }
@@ -568,10 +565,11 @@ fn short_id(id: &str) -> String {
     if id.starts_with("pkg:") {
         // Extract name@version from PURL
         if let Some(rest) = id.strip_prefix("pkg:")
-            && let Some(slash_pos) = rest.find('/') {
-                let name_ver = &rest[slash_pos + 1..];
-                return name_ver.to_string();
-            }
+            && let Some(slash_pos) = rest.find('/')
+        {
+            let name_ver = &rest[slash_pos + 1..];
+            return name_ver.to_string();
+        }
     }
     id.to_string()
 }

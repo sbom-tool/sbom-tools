@@ -1,6 +1,8 @@
 //! Markdown report generator.
 
-use super::escape::{escape_markdown_inline, escape_markdown_list, escape_markdown_table, escape_md_opt};
+use super::escape::{
+    escape_markdown_inline, escape_markdown_list, escape_markdown_table, escape_md_opt,
+};
 use super::{ReportConfig, ReportError, ReportFormat, ReportGenerator, ReportType};
 use crate::diff::{DiffResult, SlaStatus, VulnerabilityDetail};
 use crate::model::NormalizedSbom;
@@ -15,7 +17,7 @@ pub struct MarkdownReporter {
 
 impl MarkdownReporter {
     /// Create a new Markdown reporter
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self { include_toc: true }
     }
@@ -311,8 +313,14 @@ impl ReportGenerator for MarkdownReporter {
 
             if !result.vulnerabilities.introduced.is_empty() {
                 writeln!(md, "### Introduced Vulnerabilities\n")?;
-                writeln!(md, "| ID | Severity | CVSS | SLA | Type | Component | Version | VEX |")?;
-                writeln!(md, "|----|----------|------|-----|------|-----------|---------|-----|")?;
+                writeln!(
+                    md,
+                    "| ID | Severity | CVSS | SLA | Type | Component | Version | VEX |"
+                )?;
+                writeln!(
+                    md,
+                    "|----|----------|------|-----|------|-----------|---------|-----|"
+                )?;
                 for vuln in &result.vulnerabilities.introduced {
                     let depth_label = match vuln.component_depth {
                         Some(1) => "Direct",
@@ -385,14 +393,8 @@ impl ReportGenerator for MarkdownReporter {
 
             if !eol_components.is_empty() {
                 writeln!(md, "## End-of-Life Components\n")?;
-                writeln!(
-                    md,
-                    "| Component | Version | Status | Product | EOL Date |"
-                )?;
-                writeln!(
-                    md,
-                    "|-----------|---------|--------|---------|----------|"
-                )?;
+                writeln!(md, "| Component | Version | Status | Product | EOL Date |")?;
+                writeln!(md, "|-----------|---------|--------|---------|----------|")?;
                 for comp in &eol_components {
                     let eol = comp.eol.as_ref().expect("filtered to eol.is_some()");
                     writeln!(
@@ -500,9 +502,10 @@ impl ReportGenerator for MarkdownReporter {
 
         // CRA Compliance section
         {
-            let cra = config.view_cra_compliance.clone().unwrap_or_else(|| {
-                ComplianceChecker::new(ComplianceLevel::CraPhase2).check(sbom)
-            });
+            let cra = config
+                .view_cra_compliance
+                .clone()
+                .unwrap_or_else(|| ComplianceChecker::new(ComplianceLevel::CraPhase2).check(sbom));
             write_cra_compliance_view(&mut md, &cra)?;
         }
 
@@ -519,9 +522,9 @@ fn delta_indicator(old_val: usize, new_val: usize, lower_is_better: bool) -> &'s
     if old_val == new_val {
         ""
     } else if (new_val < old_val) == lower_is_better {
-        " (+)"  // improvement
+        " (+)" // improvement
     } else {
-        " (!)"  // regression
+        " (!)" // regression
     }
 }
 
@@ -546,8 +549,16 @@ fn write_cra_compliance_diff(
     writeln!(md, "## CRA Compliance\n")?;
 
     // Status summary with delta indicators
-    let old_status = if old.is_compliant { "Compliant" } else { "Non-compliant" };
-    let new_status = if new.is_compliant { "Compliant" } else { "Non-compliant" };
+    let old_status = if old.is_compliant {
+        "Compliant"
+    } else {
+        "Non-compliant"
+    };
+    let new_status = if new.is_compliant {
+        "Compliant"
+    } else {
+        "Non-compliant"
+    };
     let old_score = compliance_score(old);
     let new_score = compliance_score(new);
     let err_delta = delta_indicator(old.error_count, new.error_count, true);
@@ -557,10 +568,26 @@ fn write_cra_compliance_diff(
     writeln!(md, "| | Old SBOM | New SBOM | Trend |")?;
     writeln!(md, "|--|----------|----------|-------|")?;
     writeln!(md, "| **Status** | {old_status} | {new_status} | |")?;
-    writeln!(md, "| **Score** | {old_score}% | {new_score}% | {score_delta} |")?;
-    writeln!(md, "| **Level** | {} | {} | |", old.level.name(), new.level.name())?;
-    writeln!(md, "| **Errors** | {} | {} | {err_delta} |", old.error_count, new.error_count)?;
-    writeln!(md, "| **Warnings** | {} | {} | {warn_delta} |", old.warning_count, new.warning_count)?;
+    writeln!(
+        md,
+        "| **Score** | {old_score}% | {new_score}% | {score_delta} |"
+    )?;
+    writeln!(
+        md,
+        "| **Level** | {} | {} | |",
+        old.level.name(),
+        new.level.name()
+    )?;
+    writeln!(
+        md,
+        "| **Errors** | {} | {} | {err_delta} |",
+        old.error_count, new.error_count
+    )?;
+    writeln!(
+        md,
+        "| **Warnings** | {} | {} | {warn_delta} |",
+        old.warning_count, new.warning_count
+    )?;
     writeln!(md)?;
 
     // Show new SBOM violations if any
@@ -576,7 +603,11 @@ fn write_cra_compliance_diff(
 fn write_cra_compliance_view(md: &mut String, result: &ComplianceResult) -> std::fmt::Result {
     writeln!(md, "## CRA Compliance\n")?;
 
-    let status = if result.is_compliant { "Compliant" } else { "Non-compliant" };
+    let status = if result.is_compliant {
+        "Compliant"
+    } else {
+        "Non-compliant"
+    };
     let score = compliance_score(result);
     writeln!(md, "**Status:** {status}  ")?;
     writeln!(md, "**Score:** {score}%  ")?;
@@ -627,10 +658,8 @@ fn aggregate_violations(violations: &[crate::quality::Violation]) -> Vec<Aggrega
                     count: 1,
                 }
             } else {
-                let elements: Vec<&str> = group
-                    .iter()
-                    .filter_map(|v| v.element.as_deref())
-                    .collect();
+                let elements: Vec<&str> =
+                    group.iter().filter_map(|v| v.element.as_deref()).collect();
                 let message = if elements.is_empty() {
                     group[0].message.clone()
                 } else {
@@ -675,8 +704,14 @@ fn write_violation_table(
     violations: &[crate::quality::Violation],
 ) -> std::fmt::Result {
     let aggregated = aggregate_violations(violations);
-    writeln!(md, "| Severity | Category | Requirement | Message | Remediation |")?;
-    writeln!(md, "|----------|----------|-------------|---------|-------------|")?;
+    writeln!(
+        md,
+        "| Severity | Category | Requirement | Message | Remediation |"
+    )?;
+    writeln!(
+        md,
+        "|----------|----------|-------------|---------|-------------|"
+    )?;
     for v in &aggregated {
         let severity = match v.severity {
             ViolationSeverity::Error => "Error",
@@ -709,7 +744,8 @@ fn format_sla_display(vuln: &VulnerabilityDetail) -> String {
         SlaStatus::Overdue(days) => format!("{days}d late"),
         SlaStatus::DueSoon(days) | SlaStatus::OnTrack(days) => format!("{days}d left"),
         SlaStatus::NoDueDate => vuln
-            .days_since_published.map_or_else(|| "-".to_string(), |d| format!("{d}d old")),
+            .days_since_published
+            .map_or_else(|| "-".to_string(), |d| format!("{d}d old")),
     }
 }
 

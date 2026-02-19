@@ -5,8 +5,8 @@
 //! - Event dispatch to the appropriate handlers
 //! - Integration with the `EventResult` type from `traits`
 
-mod components;
 mod compliance;
+mod components;
 mod dependencies;
 mod graph_changes;
 mod helpers;
@@ -326,7 +326,8 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
         KeyCode::Char('9') => {
             // Graph changes tab when graph diff data is available, otherwise Source
             let has_graph = app
-                .data.diff_result
+                .data
+                .diff_result
                 .as_ref()
                 .is_some_and(|r| !r.graph_changes.is_empty());
             if has_graph {
@@ -338,7 +339,8 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
         KeyCode::Char('0') => {
             // Source tab as 10th tab (only when graph changes exist)
             let has_graph = app
-                .data.diff_result
+                .data
+                .diff_result
                 .as_ref()
                 .is_some_and(|r| !r.graph_changes.is_empty());
             if has_graph && app.mode == super::AppMode::Diff {
@@ -389,4 +391,3 @@ fn dispatch_export(app: &mut super::App, format: crate::tui::export::ExportForma
         app.export(format);
     }
 }
-

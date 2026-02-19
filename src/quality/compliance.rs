@@ -80,11 +80,19 @@ impl ComplianceLevel {
             Self::Minimum => "Basic component identification only",
             Self::Standard => "Recommended fields for general use",
             Self::NtiaMinimum => "NTIA minimum elements for software transparency",
-            Self::CraPhase1 => "CRA reporting obligations — product ID, SBOM format, manufacturer (deadline: 11 Dec 2027)",
-            Self::CraPhase2 => "Full CRA compliance — adds vulnerability metadata, lifecycle, disclosure (deadline: 11 Dec 2029)",
+            Self::CraPhase1 => {
+                "CRA reporting obligations — product ID, SBOM format, manufacturer (deadline: 11 Dec 2027)"
+            }
+            Self::CraPhase2 => {
+                "Full CRA compliance — adds vulnerability metadata, lifecycle, disclosure (deadline: 11 Dec 2029)"
+            }
             Self::FdaMedicalDevice => "FDA premarket submission requirements for medical devices",
-            Self::NistSsdf => "Secure Software Development Framework — provenance, build integrity, VCS references",
-            Self::Eo14028 => "Executive Order 14028 — machine-readable SBOM, auto-generation, supply chain security",
+            Self::NistSsdf => {
+                "Secure Software Development Framework — provenance, build integrity, VCS references"
+            }
+            Self::Eo14028 => {
+                "Executive Order 14028 — machine-readable SBOM, auto-generation, supply chain security"
+            }
             Self::Comprehensive => "All recommended fields and best practices",
         }
     }
@@ -106,13 +114,13 @@ impl ComplianceLevel {
     }
 
     /// Whether this level is a CRA check (either phase)
-    #[must_use] 
+    #[must_use]
     pub const fn is_cra(&self) -> bool {
         matches!(self, Self::CraPhase1 | Self::CraPhase2)
     }
 
     /// Get CRA phase, if applicable
-    #[must_use] 
+    #[must_use]
     pub const fn cra_phase(&self) -> Option<CraPhase> {
         match self {
             Self::CraPhase1 => Some(CraPhase::Phase1),
@@ -139,7 +147,7 @@ pub struct Violation {
 
 impl Violation {
     /// Return remediation guidance for this violation based on the requirement.
-    #[must_use] 
+    #[must_use]
     pub fn remediation_guidance(&self) -> &'static str {
         let req = self.requirement.to_lowercase();
         if req.contains("art. 13(4)") {
@@ -227,7 +235,7 @@ pub enum ViolationCategory {
 }
 
 impl ViolationCategory {
-    #[must_use] 
+    #[must_use]
     pub const fn name(&self) -> &'static str {
         match self {
             Self::DocumentMetadata => "Document Metadata",
@@ -261,7 +269,7 @@ pub struct ComplianceResult {
 
 impl ComplianceResult {
     /// Create a new compliance result
-    #[must_use] 
+    #[must_use]
     pub fn new(level: ComplianceLevel, violations: Vec<Violation>) -> Self {
         let error_count = violations
             .iter()
@@ -287,7 +295,7 @@ impl ComplianceResult {
     }
 
     /// Get violations filtered by severity
-    #[must_use] 
+    #[must_use]
     pub fn violations_by_severity(&self, severity: ViolationSeverity) -> Vec<&Violation> {
         self.violations
             .iter()
@@ -296,7 +304,7 @@ impl ComplianceResult {
     }
 
     /// Get violations filtered by category
-    #[must_use] 
+    #[must_use]
     pub fn violations_by_category(&self, category: ViolationCategory) -> Vec<&Violation> {
         self.violations
             .iter()
@@ -314,7 +322,7 @@ pub struct ComplianceChecker {
 
 impl ComplianceChecker {
     /// Create a new compliance checker
-    #[must_use] 
+    #[must_use]
     pub const fn new(level: ComplianceLevel) -> Self {
         Self { level }
     }
@@ -385,8 +393,9 @@ impl ComplianceChecker {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::DocumentMetadata,
-                    message: "[CRA Art. 13(15)] SBOM should identify the manufacturer (organization)"
-                        .to_string(),
+                    message:
+                        "[CRA Art. 13(15)] SBOM should identify the manufacturer (organization)"
+                            .to_string(),
                     element: None,
                     requirement: "CRA Art. 13(15): Manufacturer identification".to_string(),
                 });
@@ -396,17 +405,18 @@ impl ComplianceChecker {
             for creator in &sbom.document.creators {
                 if creator.creator_type == CreatorType::Organization
                     && let Some(email) = &creator.email
-                        && !is_valid_email_format(email) {
-                            violations.push(Violation {
-                                severity: ViolationSeverity::Warning,
-                                category: ViolationCategory::DocumentMetadata,
-                                message: format!(
-                                    "[CRA Art. 13(15)] Manufacturer email '{email}' appears invalid"
-                                ),
-                                element: None,
-                                requirement: "CRA Art. 13(15): Valid contact information".to_string(),
-                            });
-                        }
+                    && !is_valid_email_format(email)
+                {
+                    violations.push(Violation {
+                        severity: ViolationSeverity::Warning,
+                        category: ViolationCategory::DocumentMetadata,
+                        message: format!(
+                            "[CRA Art. 13(15)] Manufacturer email '{email}' appears invalid"
+                        ),
+                        element: None,
+                        requirement: "CRA Art. 13(15): Valid contact information".to_string(),
+                    });
+                }
             }
 
             if sbom.document.name.is_none() {
@@ -502,8 +512,10 @@ impl ComplianceChecker {
             // that can be traced across software updates.
             if let Some(ref primary_id) = sbom.primary_component_id
                 && let Some(primary) = sbom.components.get(primary_id)
-                    && primary.identifiers.purl.is_none() && primary.identifiers.cpe.is_empty() {
-                        violations.push(Violation {
+                && primary.identifiers.purl.is_none()
+                && primary.identifiers.cpe.is_empty()
+            {
+                violations.push(Violation {
                             severity: ViolationSeverity::Warning,
                             category: ViolationCategory::ComponentIdentification,
                             message: format!(
@@ -513,7 +525,7 @@ impl ComplianceChecker {
                             element: Some(primary.name.clone()),
                             requirement: "CRA Annex I, Part II, 1: Product identifier traceability across updates".to_string(),
                         });
-                    }
+            }
         }
 
         // CRA Phase 2-only checks (deadline: 11 Dec 2029)
@@ -687,7 +699,10 @@ impl ComplianceChecker {
                     ),
                     ComplianceLevel::CraPhase1 | ComplianceLevel::CraPhase2 => (
                         "CRA Art. 13(12): Component version".to_string(),
-                        format!("[CRA Art. 13(12)] Component '{}' missing version", comp.name),
+                        format!(
+                            "[CRA Art. 13(12)] Component '{}' missing version",
+                            comp.name
+                        ),
                     ),
                     _ => (
                         "NTIA: Component version".to_string(),
@@ -717,7 +732,9 @@ impl ComplianceChecker {
             {
                 let severity = if matches!(
                     self.level,
-                    ComplianceLevel::FdaMedicalDevice | ComplianceLevel::CraPhase1 | ComplianceLevel::CraPhase2
+                    ComplianceLevel::FdaMedicalDevice
+                        | ComplianceLevel::CraPhase1
+                        | ComplianceLevel::CraPhase2
                 ) {
                     ViolationSeverity::Error
                 } else {
@@ -767,7 +784,9 @@ impl ComplianceChecker {
                 && comp.author.is_none()
             {
                 let severity = match self.level {
-                    ComplianceLevel::CraPhase1 | ComplianceLevel::CraPhase2 => ViolationSeverity::Warning,
+                    ComplianceLevel::CraPhase1 | ComplianceLevel::CraPhase2 => {
+                        ViolationSeverity::Warning
+                    }
                     _ => ViolationSeverity::Error,
                 };
                 let (message, requirement) = match self.level {
@@ -806,10 +825,7 @@ impl ComplianceChecker {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::LicenseInfo,
-                    message: format!(
-                        "Component '{}' should have license information",
-                        comp.name
-                    ),
+                    message: format!("Component '{}' should have license information", comp.name),
                     element: Some(comp.name.clone()),
                     requirement: "License declaration".to_string(),
                 });
@@ -920,10 +936,7 @@ impl ComplianceChecker {
         }
 
         // CRA: warn if multiple root components (no incoming edges) and no primary component set
-        if self.level.is_cra()
-            && sbom.components.len() > 1
-            && sbom.primary_component_id.is_none()
-        {
+        if self.level.is_cra() && sbom.components.len() > 1 && sbom.primary_component_id.is_none() {
             use std::collections::HashSet;
             let mut incoming: HashSet<&crate::model::CanonicalId> = HashSet::new();
             for edge in &sbom.edges {
@@ -962,8 +975,10 @@ impl ComplianceChecker {
             }
 
             if let Some(remediation) = &vuln.remediation
-                && remediation.fixed_version.is_none() && remediation.description.is_none() {
-                    violations.push(Violation {
+                && remediation.fixed_version.is_none()
+                && remediation.description.is_none()
+            {
+                violations.push(Violation {
                         severity: ViolationSeverity::Info,
                         category: ViolationCategory::SecurityInfo,
                         message: format!(
@@ -973,7 +988,7 @@ impl ComplianceChecker {
                         element: Some(comp.name.clone()),
                         requirement: "CRA Art. 13(6): Remediation detail".to_string(),
                     });
-                }
+            }
         }
     }
 
@@ -1047,9 +1062,10 @@ impl ComplianceChecker {
             violations.push(Violation {
                 severity: ViolationSeverity::Info,
                 category: ViolationCategory::SecurityInfo,
-                message: "[CRA Art. 13(9)] No vulnerability data or vulnerability assertion found; \
+                message:
+                    "[CRA Art. 13(9)] No vulnerability data or vulnerability assertion found; \
                     include vulnerability information or a statement of no known vulnerabilities"
-                    .to_string(),
+                        .to_string(),
                 element: None,
                 requirement: "CRA Art. 13(9): Known vulnerabilities statement".to_string(),
             });
@@ -1158,8 +1174,9 @@ impl ComplianceChecker {
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
                 category: ViolationCategory::DocumentMetadata,
-                message: "SBOM must identify its creator (tool or organization) for provenance tracking"
-                    .to_string(),
+                message:
+                    "SBOM must identify its creator (tool or organization) for provenance tracking"
+                        .to_string(),
                 element: None,
                 requirement: "NIST SSDF PS.1: Provenance — creator identification".to_string(),
             });
@@ -1446,9 +1463,7 @@ impl ComplianceChecker {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::IntegrityInfo,
-                message: format!(
-                    "{without_hash}/{total} components missing cryptographic hashes"
-                ),
+                message: format!("{without_hash}/{total} components missing cryptographic hashes"),
                 element: None,
                 requirement: "EO 14028 Sec 4(e): Component integrity verification".to_string(),
             });
@@ -1518,9 +1533,7 @@ impl ComplianceChecker {
             violations.push(Violation {
                 severity: ViolationSeverity::Info,
                 category: ViolationCategory::FormatSpecific,
-                message: format!(
-                    "CycloneDX {version} is outdated, consider upgrading to 1.5+"
-                ),
+                message: format!("CycloneDX {version} is outdated, consider upgrading to 1.5+"),
                 element: None,
                 requirement: "Current CycloneDX version".to_string(),
             });
@@ -1629,7 +1642,12 @@ mod tests {
         let checker = ComplianceChecker::new(ComplianceLevel::NistSsdf);
         let result = checker.check(&sbom);
         // Empty SBOM should have at least a creator violation
-        assert!(result.violations.iter().any(|v| v.requirement.contains("PS.1")));
+        assert!(
+            result
+                .violations
+                .iter()
+                .any(|v| v.requirement.contains("PS.1"))
+        );
     }
 
     #[test]
@@ -1637,7 +1655,12 @@ mod tests {
         let sbom = NormalizedSbom::default();
         let checker = ComplianceChecker::new(ComplianceLevel::Eo14028);
         let result = checker.check(&sbom);
-        assert!(result.violations.iter().any(|v| v.requirement.contains("EO 14028")));
+        assert!(
+            result
+                .violations
+                .iter()
+                .any(|v| v.requirement.contains("EO 14028"))
+        );
     }
 
     #[test]

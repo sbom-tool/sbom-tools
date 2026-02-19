@@ -39,7 +39,7 @@ pub struct CompletenessMetrics {
 
 impl CompletenessMetrics {
     /// Calculate completeness metrics from an SBOM
-    #[must_use] 
+    #[must_use]
     pub fn from_sbom(sbom: &NormalizedSbom) -> Self {
         let total = sbom.components.len();
         if total == 0 {
@@ -96,7 +96,7 @@ impl CompletenessMetrics {
     }
 
     /// Create empty metrics
-    #[must_use] 
+    #[must_use]
     pub const fn empty() -> Self {
         Self {
             components_with_version: 0.0,
@@ -114,7 +114,7 @@ impl CompletenessMetrics {
     }
 
     /// Calculate overall completeness score (0-100)
-    #[must_use] 
+    #[must_use]
     pub fn overall_score(&self, weights: &CompletenessWeights) -> f32 {
         let mut score = 0.0;
         let mut total_weight = 0.0;
@@ -334,7 +334,7 @@ pub struct IdentifierMetrics {
 
 impl IdentifierMetrics {
     /// Calculate identifier metrics from an SBOM
-    #[must_use] 
+    #[must_use]
     pub fn from_sbom(sbom: &NormalizedSbom) -> Self {
         let mut valid_purls = 0;
         let mut invalid_purls = 0;
@@ -393,7 +393,7 @@ impl IdentifierMetrics {
     }
 
     /// Calculate identifier quality score (0-100)
-    #[must_use] 
+    #[must_use]
     pub fn quality_score(&self, total_components: usize) -> f32 {
         if total_components == 0 {
             return 0.0;
@@ -519,8 +519,7 @@ impl LicenseMetrics {
             (self.noassertion_count as f32 / total_components.max(1) as f32) * 10.0;
 
         // Penalty for deprecated licenses (2 points each, capped)
-        let deprecated_penalty =
-            (self.deprecated_licenses as f32 * 2.0).min(10.0);
+        let deprecated_penalty = (self.deprecated_licenses as f32 * 2.0).min(10.0);
 
         (coverage + spdx_bonus - noassertion_penalty - deprecated_penalty).clamp(0.0, 100.0)
     }
@@ -545,7 +544,7 @@ pub struct VulnerabilityMetrics {
 
 impl VulnerabilityMetrics {
     /// Calculate vulnerability metrics from an SBOM
-    #[must_use] 
+    #[must_use]
     pub fn from_sbom(sbom: &NormalizedSbom) -> Self {
         let mut components_with_vulns = 0;
         let mut total_vulns = 0;
@@ -592,7 +591,7 @@ impl VulnerabilityMetrics {
 
     /// Calculate vulnerability documentation quality score (0-100)
     /// Note: This measures how well vulnerabilities are documented, not how many there are
-    #[must_use] 
+    #[must_use]
     pub fn documentation_score(&self) -> f32 {
         if self.total_vulnerabilities == 0 {
             return 100.0; // No vulns to document
@@ -602,7 +601,9 @@ impl VulnerabilityMetrics {
         let cwe_ratio = self.with_cwe as f32 / self.total_vulnerabilities as f32;
         let remediation_ratio = self.with_remediation as f32 / self.total_vulnerabilities as f32;
 
-        remediation_ratio.mul_add(30.0, cvss_ratio.mul_add(40.0, cwe_ratio * 30.0)).min(100.0)
+        remediation_ratio
+            .mul_add(30.0, cvss_ratio.mul_add(40.0, cwe_ratio * 30.0))
+            .min(100.0)
     }
 }
 
@@ -658,11 +659,7 @@ impl DependencyMetrics {
             has_incoming.insert(edge.to.value());
         }
 
-        let all_ids: Vec<&str> = sbom
-            .components
-            .keys()
-            .map(CanonicalId::value)
-            .collect();
+        let all_ids: Vec<&str> = sbom.components.keys().map(CanonicalId::value).collect();
 
         let orphans = all_ids
             .iter()
@@ -746,7 +743,10 @@ impl DependencyMetrics {
 }
 
 /// BFS from roots to compute max and average depth
-fn compute_depth(roots: &[&str], children: &HashMap<&str, Vec<&str>>) -> (Option<usize>, Option<f32>) {
+fn compute_depth(
+    roots: &[&str],
+    children: &HashMap<&str, Vec<&str>>,
+) -> (Option<usize>, Option<f32>) {
     use std::collections::VecDeque;
 
     if roots.is_empty() {
@@ -838,11 +838,8 @@ fn count_islands(all_nodes: &[&str], edges: &[crate::model::DependencyEdge]) -> 
     }
 
     // Map node IDs to indices
-    let node_idx: HashMap<&str, usize> = all_nodes
-        .iter()
-        .enumerate()
-        .map(|(i, &n)| (n, i))
-        .collect();
+    let node_idx: HashMap<&str, usize> =
+        all_nodes.iter().enumerate().map(|(i, &n)| (n, i)).collect();
 
     let mut parent: Vec<usize> = (0..all_nodes.len()).collect();
     let mut rank: Vec<u8> = vec![0; all_nodes.len()];
@@ -943,9 +940,7 @@ impl ProvenanceMetrics {
             .any(|c| c.creator_type == CreatorType::Organization);
         let has_contact_email = doc.creators.iter().any(|c| c.email.is_some());
 
-        let age_days = (chrono::Utc::now() - doc.created)
-            .num_days()
-            .max(0) as u32;
+        let age_days = (chrono::Utc::now() - doc.created).num_days().max(0) as u32;
 
         Self {
             has_tool_creator,
@@ -1099,11 +1094,7 @@ impl AuditabilityMetrics {
         let vcs_coverage = (self.components_with_vcs as f32 / total_components as f32) * 20.0;
 
         // Document-level security metadata
-        let security_contact_score = if self.has_security_contact {
-            20.0
-        } else {
-            0.0
-        };
+        let security_contact_score = if self.has_security_contact { 20.0 } else { 0.0 };
         let disclosure_score = if self.has_vuln_disclosure_url {
             20.0
         } else {
@@ -1160,9 +1151,10 @@ impl LifecycleMetrics {
             }
 
             if let Some(ref eol_info) = comp.eol
-                && eol_info.status == EolStatus::EndOfLife {
-                    eol += 1;
-                }
+                && eol_info.status == EolStatus::EndOfLife
+            {
+                eol += 1;
+            }
 
             if let Some(ref stale_info) = comp.staleness {
                 match stale_info.level {
@@ -1243,9 +1235,10 @@ fn is_valid_purl(purl: &str) -> bool {
 fn extract_ecosystem_from_purl(purl: &str) -> Option<String> {
     // Extract type from pkg:type/...
     if let Some(rest) = purl.strip_prefix("pkg:")
-        && let Some(slash_idx) = rest.find('/') {
-            return Some(rest[..slash_idx].to_string());
-        }
+        && let Some(slash_idx) = rest.find('/')
+    {
+        return Some(rest[..slash_idx].to_string());
+    }
     None
 }
 
@@ -1469,31 +1462,24 @@ mod tests {
 
     #[test]
     fn test_cycle_detection_no_cycles() {
-        let children: HashMap<&str, Vec<&str>> = HashMap::from([
-            ("a", vec!["b"]),
-            ("b", vec!["c"]),
-        ]);
+        let children: HashMap<&str, Vec<&str>> =
+            HashMap::from([("a", vec!["b"]), ("b", vec!["c"])]);
         let all_nodes = vec!["a", "b", "c"];
         assert_eq!(detect_cycles(&all_nodes, &children), 0);
     }
 
     #[test]
     fn test_cycle_detection_with_cycle() {
-        let children: HashMap<&str, Vec<&str>> = HashMap::from([
-            ("a", vec!["b"]),
-            ("b", vec!["c"]),
-            ("c", vec!["a"]),
-        ]);
+        let children: HashMap<&str, Vec<&str>> =
+            HashMap::from([("a", vec!["b"]), ("b", vec!["c"]), ("c", vec!["a"])]);
         let all_nodes = vec!["a", "b", "c"];
         assert_eq!(detect_cycles(&all_nodes, &children), 1);
     }
 
     #[test]
     fn test_depth_computation() {
-        let children: HashMap<&str, Vec<&str>> = HashMap::from([
-            ("root", vec!["a", "b"]),
-            ("a", vec!["c"]),
-        ]);
+        let children: HashMap<&str, Vec<&str>> =
+            HashMap::from([("root", vec!["a", "b"]), ("a", vec!["c"])]);
         let roots = vec!["root"];
         let (max_d, avg_d) = compute_depth(&roots, &children);
         assert_eq!(max_d, Some(2)); // root -> a -> c

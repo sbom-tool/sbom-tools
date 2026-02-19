@@ -65,7 +65,9 @@ fn update_view_mode_cache(app: &mut App) {
             }
 
             // Update graph cache
-            app.tabs.dependencies.update_graph_cache(by_source, roots, new_hash);
+            app.tabs
+                .dependencies
+                .update_graph_cache(by_source, roots, new_hash);
 
             // Update transitive caches (direct deps, reverse graph, depths)
             app.tabs.dependencies.update_transitive_cache();
@@ -83,10 +85,10 @@ fn update_view_mode_cache(app: &mut App) {
             let mut display_names = HashMap::new();
             for (id, comp) in &sbom.components {
                 let id_str = id.value().to_string();
-                let display = comp.version.as_ref().map_or_else(
-                    || comp.name.clone(),
-                    |v| format!("{}@{}", comp.name, v),
-                );
+                let display = comp
+                    .version
+                    .as_ref()
+                    .map_or_else(|| comp.name.clone(), |v| format!("{}@{}", comp.name, v));
                 display_names.insert(id_str, display);
             }
             app.tabs.dependencies.cached_display_names = display_names;
@@ -126,7 +128,9 @@ fn update_diff_mode_cache(app: &mut App) {
             let mut sources: Vec<String> = by_source.keys().cloned().collect();
             sources.sort();
 
-            app.tabs.dependencies.update_graph_cache(by_source, sources, new_hash);
+            app.tabs
+                .dependencies
+                .update_graph_cache(by_source, sources, new_hash);
 
             // Update transitive caches (direct deps, reverse graph, depths)
             app.tabs.dependencies.update_transitive_cache();
@@ -148,10 +152,9 @@ fn update_diff_mode_cache(app: &mut App) {
                 for (id, comp) in &sbom.components {
                     let id_str = id.value().to_string();
                     display_names.entry(id_str).or_insert_with(|| {
-                        comp.version.as_ref().map_or_else(
-                            || comp.name.clone(),
-                            |v| format!("{}@{}", comp.name, v),
-                        )
+                        comp.version
+                            .as_ref()
+                            .map_or_else(|| comp.name.clone(), |v| format!("{}@{}", comp.name, v))
                     });
                 }
             }
@@ -289,10 +292,7 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
         Span::styled("  ", Style::default().fg(scheme.border)),
         Span::styled("[s]", Style::default().fg(scheme.accent)),
         Span::raw(" Sort: "),
-        Span::styled(
-            sort_order,
-            Style::default().fg(scheme.primary).bold(),
-        ),
+        Span::styled(sort_order, Style::default().fg(scheme.primary).bold()),
         Span::styled("  │  ", Style::default().fg(scheme.border)),
         Span::styled("[e/E]", Style::default().fg(scheme.accent)),
         Span::raw(" expand/collapse all  "),
@@ -327,7 +327,14 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
     if vuln_count > 0 {
         line3.push(Span::styled("  │  ", Style::default().fg(scheme.border)));
         line3.push(Span::styled(
-            format!("⚠ {vuln_count} {}", if vuln_count == 1 { "vulnerability" } else { "vulnerabilities" }),
+            format!(
+                "⚠ {vuln_count} {}",
+                if vuln_count == 1 {
+                    "vulnerability"
+                } else {
+                    "vulnerabilities"
+                }
+            ),
             Style::default().fg(scheme.critical).bold(),
         ));
     }
@@ -421,7 +428,10 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
         let mut search_spans = vec![
             Span::styled("[/]", Style::default().fg(scheme.accent)),
             Span::styled(" Search: ", Style::default().fg(scheme.text_muted)),
-            Span::styled(format!("\"{query}\""), Style::default().fg(scheme.text_muted)),
+            Span::styled(
+                format!("\"{query}\""),
+                Style::default().fg(scheme.text_muted),
+            ),
             Span::styled(
                 format!(" ({match_count} matches)"),
                 Style::default().fg(scheme.text_muted),
@@ -429,7 +439,10 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
         ];
 
         if filter_mode {
-            search_spans.push(Span::styled(" [filtered]", Style::default().fg(scheme.warning)));
+            search_spans.push(Span::styled(
+                " [filtered]",
+                Style::default().fg(scheme.warning),
+            ));
         }
 
         search_spans.push(Span::styled("  ", Style::default()));
@@ -534,7 +547,9 @@ fn render_dependency_tree(frame: &mut Frame, area: Rect, app: &mut App) {
     }
 
     // Update state with visible nodes
-    app.tabs.dependencies.set_visible_nodes(visible_nodes.clone());
+    app.tabs
+        .dependencies
+        .set_visible_nodes(visible_nodes.clone());
 
     // Adjust scroll to keep selection visible
     app.tabs.dependencies.adjust_scroll_to_selection();
@@ -554,8 +569,7 @@ fn render_dependency_tree(frame: &mut Frame, area: Rect, app: &mut App) {
         .take(visible_end - visible_start)
         .map(|(idx, line)| {
             let node_id = visible_nodes.get(idx);
-            let is_match = node_id
-                .is_some_and(|id| has_search && search_matches.contains(id));
+            let is_match = node_id.is_some_and(|id| has_search && search_matches.contains(id));
 
             if idx == selected {
                 // Highlight selected line with selection background
@@ -588,14 +602,13 @@ fn render_dependency_tree(frame: &mut Frame, area: Rect, app: &mut App) {
     let total_nodes = visible_nodes.len();
 
     // Paragraph doesn't need scroll since we're doing virtual scrolling
-    let paragraph = Paragraph::new(highlighted_lines)
-        .block(
-            Block::default()
-                .title(" Dependency Tree ")
-                .title_style(Style::default().fg(scheme.primary).bold())
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(scheme.border)),
-        );
+    let paragraph = Paragraph::new(highlighted_lines).block(
+        Block::default()
+            .title(" Dependency Tree ")
+            .title_style(Style::default().fg(scheme.primary).bold())
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(scheme.border)),
+    );
 
     frame.render_widget(paragraph, tree_area);
 
@@ -651,10 +664,7 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
             };
 
             // Display name
-            let display_name = app
-                .tabs.dependencies
-                .cached_display_names
-                .get(component_id);
+            let display_name = app.tabs.dependencies.cached_display_names.get(component_id);
 
             if let Some(name) = display_name {
                 lines.push(Line::from(vec![
@@ -698,20 +708,18 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
                 if let Some(ref eco) = comp.ecosystem {
                     lines.push(Line::from(vec![
                         Span::styled("Ecosystem: ", Style::default().fg(scheme.text_muted)),
-                        Span::styled(
-                            format!("{eco:?}"),
-                            Style::default().fg(scheme.text),
-                        ),
+                        Span::styled(format!("{eco:?}"), Style::default().fg(scheme.text)),
                     ]));
                 }
 
                 if let Some(ref purl) = comp.identifiers.purl
-                    && purl != component_id {
-                        lines.push(Line::from(vec![
-                            Span::styled("PURL: ", Style::default().fg(scheme.text_muted)),
-                            Span::styled(purl, Style::default().fg(scheme.accent)),
-                        ]));
-                    }
+                    && purl != component_id
+                {
+                    lines.push(Line::from(vec![
+                        Span::styled("PURL: ", Style::default().fg(scheme.text_muted)),
+                        Span::styled(purl, Style::default().fg(scheme.accent)),
+                    ]));
+                }
 
                 if !comp.vulnerabilities.is_empty() {
                     lines.push(Line::from(vec![
@@ -726,12 +734,14 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
 
             // Dependency counts from cached graphs
             let dep_count = app
-                .tabs.dependencies
+                .tabs
+                .dependencies
                 .cached_graph
                 .get(component_id)
                 .map_or(0, Vec::len);
             let depended_on_count = app
-                .tabs.dependencies
+                .tabs
+                .dependencies
                 .cached_reverse_graph
                 .get(component_id)
                 .map_or(0, Vec::len);
@@ -739,10 +749,7 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
             lines.push(Line::from(""));
             lines.push(Line::from(vec![
                 Span::styled("Dependencies: ", Style::default().fg(scheme.text_muted)),
-                Span::styled(
-                    dep_count.to_string(),
-                    Style::default().fg(scheme.primary),
-                ),
+                Span::styled(dep_count.to_string(), Style::default().fg(scheme.primary)),
             ]));
             lines.push(Line::from(vec![
                 Span::styled("Depended-on-by: ", Style::default().fg(scheme.text_muted)),
@@ -784,10 +791,7 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
 }
 
 /// Look up a component by canonical ID in available SBOMs
-fn find_component_in_sboms<'a>(
-    id: &str,
-    app: &'a App,
-) -> Option<&'a crate::model::Component> {
+fn find_component_in_sboms<'a>(id: &str, app: &'a App) -> Option<&'a crate::model::Component> {
     // Try view-mode SBOM first, then diff-mode SBOMs
     for sbom in app
         .data
@@ -882,7 +886,8 @@ fn render_diff_tree(
             let added = added_by_source.get(**source);
             let removed = removed_by_source.get(**source);
 
-            let child_count = added.map_or(0, std::vec::Vec::len) + removed.map_or(0, std::vec::Vec::len);
+            let child_count =
+                added.map_or(0, std::vec::Vec::len) + removed.map_or(0, std::vec::Vec::len);
             let is_expanded = expanded.contains(**source);
             let is_last = idx == sources_to_show.len() - 1;
 
@@ -1271,11 +1276,7 @@ fn render_view_node_line(
     let expand_icon = if cycle_ref {
         "⟳"
     } else if child_count > 0 {
-        if is_expanded {
-            "▼"
-        } else {
-            "▶"
-        }
+        if is_expanded { "▼" } else { "▶" }
     } else {
         "─"
     };
@@ -1401,7 +1402,8 @@ fn render_diff_tree_cached(
             let added = added_by_source.get(source_str);
             let removed = removed_by_source.get(source_str);
 
-            let child_count = added.map_or(0, std::vec::Vec::len) + removed.map_or(0, std::vec::Vec::len);
+            let child_count =
+                added.map_or(0, std::vec::Vec::len) + removed.map_or(0, std::vec::Vec::len);
             let is_expanded = expanded.contains(*source);
             let is_last = idx == sources_to_show.len() - 1;
 
@@ -1465,7 +1467,8 @@ fn render_diff_tree_cached(
                         ];
 
                         if dep_has_vuln {
-                            dep_spans.push(Span::styled(" ⚠", Style::default().fg(scheme.critical)));
+                            dep_spans
+                                .push(Span::styled(" ⚠", Style::default().fg(scheme.critical)));
                         }
 
                         lines.push(Line::from(dep_spans));
@@ -1493,7 +1496,8 @@ fn render_diff_tree_cached(
                         ];
 
                         if dep_has_vuln {
-                            dep_spans.push(Span::styled(" ⚠", Style::default().fg(scheme.critical)));
+                            dep_spans
+                                .push(Span::styled(" ⚠", Style::default().fg(scheme.critical)));
                         }
 
                         lines.push(Line::from(dep_spans));
@@ -1872,7 +1876,10 @@ fn depth_exceeds_limit(
         if depth > max_depth {
             return true;
         }
-        if seen_depth.get(node.as_str()).is_some_and(|&seen| seen >= depth) {
+        if seen_depth
+            .get(node.as_str())
+            .is_some_and(|&seen| seen >= depth)
+        {
             continue;
         }
         // Enqueue children before consuming node
@@ -1912,15 +1919,16 @@ fn truncate_component(id: &str, max_width: usize) -> String {
 
     // PURL: strip "pkg:type/" prefix to get "name@version"
     if let Some(rest) = id.strip_prefix("pkg:")
-        && let Some(slash_pos) = rest.find('/') {
-            let name_ver = &rest[slash_pos + 1..];
-            let clean = name_ver.split('?').next().unwrap_or(name_ver);
-            if UnicodeWidthStr::width(clean) <= max_width {
-                return clean.to_string();
-            }
-            // Still too long — fall through to general truncation on the clean name
-            return truncate_by_width(clean, max_width);
+        && let Some(slash_pos) = rest.find('/')
+    {
+        let name_ver = &rest[slash_pos + 1..];
+        let clean = name_ver.split('?').next().unwrap_or(name_ver);
+        if UnicodeWidthStr::width(clean) <= max_width {
+            return clean.to_string();
         }
+        // Still too long — fall through to general truncation on the clean name
+        return truncate_by_width(clean, max_width);
+    }
 
     // Path-like: show last segments that fit, prepend "…/"
     if id.contains('/') && max_width > 4 {
@@ -2062,7 +2070,12 @@ fn render_deps_help_overlay(frame: &mut Frame, area: Rect) {
     let help_height = 22u16;
     let x = area.x + (area.width.saturating_sub(help_width)) / 2;
     let y = area.y + (area.height.saturating_sub(help_height)) / 2;
-    let help_area = Rect::new(x, y, help_width.min(area.width), help_height.min(area.height));
+    let help_area = Rect::new(
+        x,
+        y,
+        help_width.min(area.width),
+        help_height.min(area.height),
+    );
 
     // Clear the background
     frame.render_widget(Clear, help_area);
@@ -2073,9 +2086,10 @@ fn render_deps_help_overlay(frame: &mut Frame, area: Rect) {
             Style::default().fg(scheme.primary).bold(),
         )),
         Line::raw(""),
-        Line::from(vec![
-            Span::styled("Navigation", Style::default().fg(scheme.accent).bold()),
-        ]),
+        Line::from(vec![Span::styled(
+            "Navigation",
+            Style::default().fg(scheme.accent).bold(),
+        )]),
         Line::from(vec![
             Span::styled("  j/↓      ", Style::default().fg(scheme.text)),
             Span::styled("Move down", Style::default().fg(scheme.text_muted)),
@@ -2097,9 +2111,10 @@ fn render_deps_help_overlay(frame: &mut Frame, area: Rect) {
             Span::styled("Page scroll", Style::default().fg(scheme.text_muted)),
         ]),
         Line::raw(""),
-        Line::from(vec![
-            Span::styled("Tree Controls", Style::default().fg(scheme.accent).bold()),
-        ]),
+        Line::from(vec![Span::styled(
+            "Tree Controls",
+            Style::default().fg(scheme.accent).bold(),
+        )]),
         Line::from(vec![
             Span::styled("  Enter/→  ", Style::default().fg(scheme.text)),
             Span::styled("Expand node", Style::default().fg(scheme.text_muted)),
@@ -2117,24 +2132,34 @@ fn render_deps_help_overlay(frame: &mut Frame, area: Rect) {
             Span::styled("Collapse all", Style::default().fg(scheme.text_muted)),
         ]),
         Line::raw(""),
-        Line::from(vec![
-            Span::styled("Display Options", Style::default().fg(scheme.accent).bold()),
-        ]),
+        Line::from(vec![Span::styled(
+            "Display Options",
+            Style::default().fg(scheme.accent).bold(),
+        )]),
         Line::from(vec![
             Span::styled("  /        ", Style::default().fg(scheme.text)),
             Span::styled("Search nodes", Style::default().fg(scheme.text_muted)),
         ]),
         Line::from(vec![
             Span::styled("  t        ", Style::default().fg(scheme.text)),
-            Span::styled("Toggle transitive deps", Style::default().fg(scheme.text_muted)),
+            Span::styled(
+                "Toggle transitive deps",
+                Style::default().fg(scheme.text_muted),
+            ),
         ]),
         Line::from(vec![
             Span::styled("  h        ", Style::default().fg(scheme.text)),
-            Span::styled("Toggle highlight (diff)", Style::default().fg(scheme.text_muted)),
+            Span::styled(
+                "Toggle highlight (diff)",
+                Style::default().fg(scheme.text_muted),
+            ),
         ]),
         Line::from(vec![
             Span::styled("  y        ", Style::default().fg(scheme.text)),
-            Span::styled("Toggle cycle detection", Style::default().fg(scheme.text_muted)),
+            Span::styled(
+                "Toggle cycle detection",
+                Style::default().fg(scheme.text_muted),
+            ),
         ]),
         Line::from(vec![
             Span::styled("  b        ", Style::default().fg(scheme.text)),
@@ -2150,7 +2175,10 @@ fn render_deps_help_overlay(frame: &mut Frame, area: Rect) {
         ]),
         Line::from(vec![
             Span::styled("  c        ", Style::default().fg(scheme.text)),
-            Span::styled("Jump to component view", Style::default().fg(scheme.text_muted)),
+            Span::styled(
+                "Jump to component view",
+                Style::default().fg(scheme.text_muted),
+            ),
         ]),
         Line::raw(""),
         Line::from(vec![

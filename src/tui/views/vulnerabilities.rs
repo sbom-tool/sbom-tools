@@ -72,19 +72,18 @@ pub fn render_vulnerabilities(frame: &mut Frame, area: Rect, app: &mut App) {
         AppMode::Diff => {
             // Use efficient count method (doesn't build/sort full list)
             app.tabs.vulnerabilities.total = app.diff_vulnerability_count();
-            app.data.diff_result
-                .as_ref()
-                .map_or(0, |r| {
-                    r.vulnerabilities.introduced.len()
-                        + r.vulnerabilities.resolved.len()
-                        + r.vulnerabilities.persistent.len()
-                })
+            app.data.diff_result.as_ref().map_or(0, |r| {
+                r.vulnerabilities.introduced.len()
+                    + r.vulnerabilities.resolved.len()
+                    + r.vulnerabilities.persistent.len()
+            })
         }
         AppMode::View => {
             // For view mode, build list to count (filter logic is complex)
             let items = collect_view_vulns(app);
             let total = app
-                .data.sbom
+                .data
+                .sbom
                 .as_ref()
                 .map_or(0, |s| s.all_vulnerabilities().len());
             app.tabs.vulnerabilities.total = items.len();
@@ -129,16 +128,33 @@ pub fn render_vulnerabilities(frame: &mut Frame, area: Rect, app: &mut App) {
         .split(chunks[1]);
 
     // Vulnerability table (master)
-    render_vuln_table(frame, content_chunks[0], app, &vuln_data, total_unfiltered, grouped_items.as_deref());
+    render_vuln_table(
+        frame,
+        content_chunks[0],
+        app,
+        &vuln_data,
+        total_unfiltered,
+        grouped_items.as_deref(),
+    );
 
     // Detail panel
-    render_detail_panel(frame, content_chunks[1], app, &vuln_data, grouped_items.as_deref());
+    render_detail_panel(
+        frame,
+        content_chunks[1],
+        app,
+        &vuln_data,
+        grouped_items.as_deref(),
+    );
 
     // Update attack path cache for the currently selected component
     if matches!(app.mode, AppMode::Diff | AppMode::View) {
-        let selected_component = resolve_selected_component(app, &vuln_data, grouped_items.as_deref());
+        let selected_component =
+            resolve_selected_component(app, &vuln_data, grouped_items.as_deref());
         if let Some(comp) = selected_component {
-            let needs_update = app.tabs.vulnerabilities.cached_attack_paths
+            let needs_update = app
+                .tabs
+                .vulnerabilities
+                .cached_attack_paths
                 .as_ref()
                 .is_none_or(|(cached, _)| *cached != comp);
             if needs_update {
@@ -150,7 +166,11 @@ pub fn render_vulnerabilities(frame: &mut Frame, area: Rect, app: &mut App) {
 }
 
 /// Resolve the component name of the currently selected vulnerability (for cache keying).
-fn resolve_selected_component(app: &App, vuln_data: &VulnListData, grouped_items: Option<&[VulnRenderItem]>) -> Option<String> {
+fn resolve_selected_component(
+    app: &App,
+    vuln_data: &VulnListData,
+    grouped_items: Option<&[VulnRenderItem]>,
+) -> Option<String> {
     let selected = app.tabs.vulnerabilities.selected;
     if let Some(items) = grouped_items {
         match items.get(selected) {
@@ -221,7 +241,10 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
                 for (i, (label, bg, sev_name)) in sev_labels.iter().enumerate() {
                     spans.push(Span::styled(
                         format!(" {label} "),
-                        Style::default().fg(scheme.severity_badge_fg(sev_name)).bg(*bg).bold(),
+                        Style::default()
+                            .fg(scheme.severity_badge_fg(sev_name))
+                            .bg(*bg)
+                            .bold(),
                     ));
                     let net: i32 = intro[i] as i32 - resolved[i] as i32;
                     let delta_str = if net > 0 {
@@ -267,16 +290,17 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
                 // Add enrichment stats if available
                 #[cfg(feature = "enrichment")]
                 if let Some(stats) = app.combined_enrichment_stats()
-                    && stats.total_vulns_found > 0 {
-                        spans.extend(vec![
-                            Span::styled("  │ ", Style::default().fg(scheme.border)),
-                            Span::styled("OSV ", Style::default().fg(scheme.accent).bold()),
-                            Span::styled(
-                                format!("+{}", stats.total_vulns_found),
-                                Style::default().fg(scheme.accent),
-                            ),
-                        ]);
-                    }
+                    && stats.total_vulns_found > 0
+                {
+                    spans.extend(vec![
+                        Span::styled("  │ ", Style::default().fg(scheme.border)),
+                        Span::styled("OSV ", Style::default().fg(scheme.accent).bold()),
+                        Span::styled(
+                            format!("+{}", stats.total_vulns_found),
+                            Style::default().fg(scheme.accent),
+                        ),
+                    ]);
+                }
             }
         }
         AppMode::View => {
@@ -453,19 +477,17 @@ fn render_vuln_table(
             let hint = if total_unfiltered > 0 {
                 format!(
                     "{total_unfiltered} {} in unfiltered view",
-                    if total_unfiltered == 1 { "vulnerability" } else { "vulnerabilities" },
+                    if total_unfiltered == 1 {
+                        "vulnerability"
+                    } else {
+                        "vulnerabilities"
+                    },
                 )
             } else {
                 String::new()
             };
             let filter_label = app.tabs.vulnerabilities.filter.label();
-            widgets::render_no_results_state_with_hint(
-                frame,
-                area,
-                "Filter",
-                filter_label,
-                &hint,
-            );
+            widgets::render_no_results_state_with_hint(frame, area, "Filter", filter_label, &hint);
         }
         return;
     }
@@ -511,10 +533,7 @@ fn render_vuln_table(
 
 /// Build the grouped render items list from vulnerability data.
 /// Groups vulns by component name, renders headers with expand/collapse.
-fn build_grouped_render_items(
-    app: &App,
-    vuln_data: &VulnListData,
-) -> Vec<VulnRenderItem> {
+fn build_grouped_render_items(app: &App, vuln_data: &VulnListData) -> Vec<VulnRenderItem> {
     let mut items = Vec::new();
 
     match vuln_data {
@@ -532,8 +551,16 @@ fn build_grouped_render_items(
             // Sort groups by max severity
             let mut sorted_groups: Vec<_> = groups.into_iter().collect();
             sorted_groups.sort_by(|a, b| {
-                let max_sev_a = a.1.iter().map(|(_, it)| severity_rank(&it.vuln.severity)).min().unwrap_or(99);
-                let max_sev_b = b.1.iter().map(|(_, it)| severity_rank(&it.vuln.severity)).min().unwrap_or(99);
+                let max_sev_a =
+                    a.1.iter()
+                        .map(|(_, it)| severity_rank(&it.vuln.severity))
+                        .min()
+                        .unwrap_or(99);
+                let max_sev_b =
+                    b.1.iter()
+                        .map(|(_, it)| severity_rank(&it.vuln.severity))
+                        .min()
+                        .unwrap_or(99);
                 max_sev_a.cmp(&max_sev_b)
             });
 
@@ -562,24 +589,42 @@ fn build_grouped_render_items(
         }
         VulnListData::View(view_items) => {
             // Group by component name (track index only, look up items later)
-            let mut groups: indexmap::IndexMap<String, Vec<usize>> =
-                indexmap::IndexMap::new();
+            let mut groups: indexmap::IndexMap<String, Vec<usize>> = indexmap::IndexMap::new();
             for (idx, item) in view_items.iter().enumerate() {
-                groups
-                    .entry(item.0.name.clone())
-                    .or_default()
-                    .push(idx);
+                groups.entry(item.0.name.clone()).or_default().push(idx);
             }
 
             // Sort groups by max severity
             let mut sorted_groups: Vec<_> = groups.into_iter().collect();
             sorted_groups.sort_by(|a, b| {
-                let max_sev_a = a.1.iter().filter_map(|&i| view_items.get(i)).map(|it| {
-                    severity_rank(&it.1.severity.as_ref().map(std::string::ToString::to_string).unwrap_or_default())
-                }).min().unwrap_or(99);
-                let max_sev_b = b.1.iter().filter_map(|&i| view_items.get(i)).map(|it| {
-                    severity_rank(&it.1.severity.as_ref().map(std::string::ToString::to_string).unwrap_or_default())
-                }).min().unwrap_or(99);
+                let max_sev_a =
+                    a.1.iter()
+                        .filter_map(|&i| view_items.get(i))
+                        .map(|it| {
+                            severity_rank(
+                                &it.1
+                                    .severity
+                                    .as_ref()
+                                    .map(std::string::ToString::to_string)
+                                    .unwrap_or_default(),
+                            )
+                        })
+                        .min()
+                        .unwrap_or(99);
+                let max_sev_b =
+                    b.1.iter()
+                        .filter_map(|&i| view_items.get(i))
+                        .map(|it| {
+                            severity_rank(
+                                &it.1
+                                    .severity
+                                    .as_ref()
+                                    .map(std::string::ToString::to_string)
+                                    .unwrap_or_default(),
+                            )
+                        })
+                        .min()
+                        .unwrap_or(99);
                 max_sev_a.cmp(&max_sev_b)
             });
 
@@ -589,7 +634,8 @@ fn build_grouped_render_items(
                     .filter_map(|&i| view_items.get(i))
                     .map(|it| {
                         it.1.severity
-                            .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string)
+                            .as_ref()
+                            .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string)
                     })
                     .min_by_key(|s| severity_rank(s))
                     .unwrap_or_else(|| "Unknown".to_string());
@@ -647,41 +693,47 @@ fn build_grouped_rows(
                         .bold(),
                 ));
                 let name_cell = Cell::from(Line::from(vec![
-                    Span::styled(
-                        format!("{arrow} "),
-                        Style::default().fg(scheme.accent),
-                    ),
-                    Span::styled(
-                        name.clone(),
-                        Style::default().fg(scheme.text).bold(),
-                    ),
+                    Span::styled(format!("{arrow} "), Style::default().fg(scheme.accent)),
+                    Span::styled(name.clone(), Style::default().fg(scheme.text).bold()),
                 ]));
                 let count_cell = Cell::from(Span::styled(
-                    format!("{vuln_count} {}", if *vuln_count == 1 { "CVE" } else { "CVEs" }),
+                    format!(
+                        "{vuln_count} {}",
+                        if *vuln_count == 1 { "CVE" } else { "CVEs" }
+                    ),
                     Style::default().fg(scheme.text_muted),
                 ));
 
                 // Diff mode has 6 columns (extra Sev column), view mode has 5
                 let cells: Vec<Cell<'static>> = if app.mode == AppMode::Diff {
-                    vec![Cell::from(""), sev_badge, name_cell, Cell::from(""), count_cell, Cell::from("")]
+                    vec![
+                        Cell::from(""),
+                        sev_badge,
+                        name_cell,
+                        Cell::from(""),
+                        count_cell,
+                        Cell::from(""),
+                    ]
                 } else {
-                    vec![sev_badge, name_cell, Cell::from(""), count_cell, Cell::from("")]
+                    vec![
+                        sev_badge,
+                        name_cell,
+                        Cell::from(""),
+                        count_cell,
+                        Cell::from(""),
+                    ]
                 };
                 Row::new(cells).style(Style::default().bg(bg_tint))
             }
             VulnRenderItem::VulnRow(idx) => match vuln_data {
-                VulnListData::Diff(items) => {
-                    items.get(*idx).map_or_else(
-                        || Row::new(vec![Cell::from("")]),
-                        |row| build_single_diff_row(row, &scheme),
-                    )
-                }
-                VulnListData::View(items) => {
-                    items.get(*idx).map_or_else(
-                        || Row::new(vec![Cell::from("")]),
-                        |item| build_single_view_row(item, cached_depths, &scheme),
-                    )
-                }
+                VulnListData::Diff(items) => items.get(*idx).map_or_else(
+                    || Row::new(vec![Cell::from("")]),
+                    |row| build_single_diff_row(row, &scheme),
+                ),
+                VulnListData::View(items) => items.get(*idx).map_or_else(
+                    || Row::new(vec![Cell::from("")]),
+                    |item| build_single_view_row(item, cached_depths, &scheme),
+                ),
                 VulnListData::Empty => Row::new(vec![Cell::from("")]),
             },
         })
@@ -693,7 +745,9 @@ fn build_single_diff_row(
     item: &DiffVulnItem<'_>,
     scheme: &crate::tui::theme::ColorScheme,
 ) -> Row<'static> {
-    use crate::tui::shared::vulnerabilities::{render_kev_badge_spans, render_depth_badge_spans, render_vex_badge_spans};
+    use crate::tui::shared::vulnerabilities::{
+        render_depth_badge_spans, render_kev_badge_spans, render_vex_badge_spans,
+    };
 
     let (status_label, status_bg, status_fg, row_style) = match item.status {
         DiffVulnStatus::Introduced => (
@@ -721,15 +775,14 @@ fn build_single_diff_row(
     // Build ID cell with KEV, DIR/TRN, and VEX badges
     let mut id_spans: Vec<Span<'_>> = Vec::new();
     id_spans.extend(render_kev_badge_spans(vuln.is_kev, scheme));
-    id_spans.extend(render_depth_badge_spans(vuln.component_depth.map(|d| d as usize), scheme));
+    id_spans.extend(render_depth_badge_spans(
+        vuln.component_depth.map(|d| d as usize),
+        scheme,
+    ));
     id_spans.extend(render_vex_badge_spans(vuln.vex_state.as_ref(), scheme));
     id_spans.push(Span::raw(vuln.id.clone()));
 
-    let sla_cell = format_sla_cell(
-        vuln.sla_status(),
-        vuln.days_since_published,
-        scheme,
-    );
+    let sla_cell = format_sla_cell(vuln.sla_status(), vuln.days_since_published, scheme);
 
     let bg_tint = if item.status == DiffVulnStatus::Resolved {
         Color::Reset
@@ -742,10 +795,12 @@ fn build_single_diff_row(
     let sev_color = scheme.severity_color(&vuln.severity);
     let cvss_cell = vuln.cvss_score.map_or_else(
         || Cell::from("-".to_string()),
-        |s| Cell::from(Span::styled(
-            format!("{s:.1}"),
-            Style::default().fg(cvss_score_color(s, scheme)).bold(),
-        )),
+        |s| {
+            Cell::from(Span::styled(
+                format!("{s:.1}"),
+                Style::default().fg(cvss_score_color(s, scheme)).bold(),
+            ))
+        },
     );
 
     Row::new(vec![
@@ -775,19 +830,23 @@ fn build_single_view_row(
     scheme: &crate::tui::theme::ColorScheme,
 ) -> Row<'static> {
     use crate::tui::shared::vulnerabilities::{
-        render_kev_badge_spans, render_depth_badge_spans, render_ransomware_badge_spans,
-        render_vex_badge_spans, cvss_score_color,
+        cvss_score_color, render_depth_badge_spans, render_kev_badge_spans,
+        render_ransomware_badge_spans, render_vex_badge_spans,
     };
 
     let (comp, vuln) = item;
     let severity = vuln
         .severity
-        .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
+        .as_ref()
+        .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
     let sev_color = scheme.severity_color(&severity);
 
     let mut id_spans: Vec<Span<'_>> = Vec::new();
     id_spans.extend(render_kev_badge_spans(vuln.is_kev, scheme));
-    let is_ransomware = vuln.kev_info.as_ref().is_some_and(|k| k.known_ransomware_use);
+    let is_ransomware = vuln
+        .kev_info
+        .as_ref()
+        .is_some_and(|k| k.known_ransomware_use);
     id_spans.extend(render_ransomware_badge_spans(is_ransomware, scheme));
     let comp_id = comp.canonical_id.to_string();
     let depth = cached_depths.get(&comp_id).copied();
@@ -801,10 +860,12 @@ fn build_single_view_row(
 
     let cvss_cell = vuln.max_cvss_score().map_or_else(
         || Cell::from("-".to_string()),
-        |s| Cell::from(Span::styled(
-            format!("{s:.1}"),
-            Style::default().fg(cvss_score_color(s, scheme)).bold(),
-        )),
+        |s| {
+            Cell::from(Span::styled(
+                format!("{s:.1}"),
+                Style::default().fg(cvss_score_color(s, scheme)).bold(),
+            ))
+        },
     );
 
     Row::new(vec![
@@ -823,7 +884,13 @@ fn build_single_view_row(
     .style(Style::default().fg(scheme.text).bg(bg_tint))
 }
 
-fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &VulnListData, grouped_items: Option<&[VulnRenderItem]>) {
+fn render_detail_panel(
+    frame: &mut Frame,
+    area: Rect,
+    app: &App,
+    vuln_data: &VulnListData,
+    grouped_items: Option<&[VulnRenderItem]>,
+) {
     let selected = app.tabs.vulnerabilities.selected;
 
     // In grouped mode, resolve the selected index through the pre-computed render items
@@ -834,7 +901,12 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
                 VulnListData::View(items) => get_view_vuln_at(items, *idx),
                 VulnListData::Empty => None,
             },
-            Some(VulnRenderItem::ComponentHeader { name, vuln_count, max_severity, .. }) => {
+            Some(VulnRenderItem::ComponentHeader {
+                name,
+                vuln_count,
+                max_severity,
+                ..
+            }) => {
                 // Show a summary for the component group header
                 Some(VulnDetailInfo {
                     status: "Component Group".to_string(),
@@ -890,26 +962,36 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
             let cvss_color = crate::tui::shared::vulnerabilities::cvss_score_color(score, &scheme);
             badge_spans.push(Span::styled(
                 format!(" {score:.1} "),
-                Style::default().fg(scheme.severity_badge_fg(&info.severity)).bg(cvss_color).bold(),
+                Style::default()
+                    .fg(scheme.severity_badge_fg(&info.severity))
+                    .bg(cvss_color)
+                    .bold(),
             ));
         }
         if info.is_kev {
             badge_spans.push(Span::raw(" "));
             badge_spans.push(Span::styled(
                 "KEV",
-                Style::default().fg(scheme.kev_badge_fg()).bg(scheme.kev()).bold(),
+                Style::default()
+                    .fg(scheme.kev_badge_fg())
+                    .bg(scheme.kev())
+                    .bold(),
             ));
         }
         if info.is_ransomware {
             badge_spans.push(Span::raw(" "));
             badge_spans.push(Span::styled(
                 "RANSOMWARE",
-                Style::default().fg(scheme.badge_fg_light).bg(scheme.critical).bold(),
+                Style::default()
+                    .fg(scheme.badge_fg_light)
+                    .bg(scheme.critical)
+                    .bold(),
             ));
         }
         {
             let vex_badge = crate::tui::shared::vulnerabilities::render_vex_badge_spans(
-                info.vex_state.as_ref(), &scheme,
+                info.vex_state.as_ref(),
+                &scheme,
             );
             if !vex_badge.is_empty() {
                 badge_spans.push(Span::raw(" "));
@@ -945,15 +1027,16 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
         ];
 
         // === Section 2: Remediation (actionable fix) ===
-        if info.fixed_version.is_some() || info.remediation.is_some() || !info.affected_versions.is_empty() {
+        if info.fixed_version.is_some()
+            || info.remediation.is_some()
+            || !info.affected_versions.is_empty()
+        {
             lines.push(Line::from(""));
             if let Some(ref fix_ver) = info.fixed_version {
-                lines.push(Line::from(vec![
-                    Span::styled(
-                        format!("\u{2b06} Upgrade to {fix_ver}"),
-                        Style::default().fg(scheme.accent).bold(),
-                    ),
-                ]));
+                lines.push(Line::from(vec![Span::styled(
+                    format!("\u{2b06} Upgrade to {fix_ver}"),
+                    Style::default().fg(scheme.accent).bold(),
+                )]));
             }
             if let Some(ref rem) = info.remediation {
                 lines.push(Line::from(vec![
@@ -978,7 +1061,9 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
                     crate::model::VexState::NotAffected => ("Not Affected", scheme.low),
                     crate::model::VexState::Fixed => ("Fixed", scheme.low),
                     crate::model::VexState::Affected => ("Affected", scheme.critical),
-                    crate::model::VexState::UnderInvestigation => ("Under Investigation", scheme.medium),
+                    crate::model::VexState::UnderInvestigation => {
+                        ("Under Investigation", scheme.medium)
+                    }
                 };
                 lines.push(Line::from(vec![
                     Span::styled("VEX Status: ", Style::default().fg(scheme.text_muted)),
@@ -988,13 +1073,17 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
             if let Some(ref justification) = info.vex_justification {
                 lines.push(Line::from(vec![
                     Span::styled("Justification: ", Style::default().fg(scheme.text_muted)),
-                    Span::styled(format!("{justification:?}"), Style::default().fg(scheme.text)),
+                    Span::styled(
+                        format!("{justification:?}"),
+                        Style::default().fg(scheme.text),
+                    ),
                 ]));
             }
             if let Some(ref impact) = info.vex_impact_statement {
                 let max_width = area.width.saturating_sub(4) as usize;
                 lines.push(Line::from(Span::styled(
-                    "Impact: ", Style::default().fg(scheme.text_muted),
+                    "Impact: ",
+                    Style::default().fg(scheme.text_muted),
                 )));
                 for wrapped in crate::tui::shared::vulnerabilities::word_wrap(impact, max_width) {
                     lines.push(Line::from(Span::styled(
@@ -1010,7 +1099,9 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
             lines.push(Line::from(""));
         }
         // CWEs with names
-        lines.extend(crate::tui::shared::vulnerabilities::render_vuln_cwe_lines(&info.cwes, 3));
+        lines.extend(crate::tui::shared::vulnerabilities::render_vuln_cwe_lines(
+            &info.cwes, 3,
+        ));
         if let Some(ref vector) = info.cvss_vector {
             // Show abbreviated attack vector (e.g., AV:N/AC:L from full CVSS string)
             let brief = vector.split('/').take(2).collect::<Vec<_>>().join("/");
@@ -1049,12 +1140,10 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App, vuln_data: &Vul
 
             if !attack_paths.is_empty() {
                 lines.push(Line::from(""));
-                lines.push(Line::from(vec![
-                    Span::styled(
-                        format!("Attack Paths ({}): ", attack_paths.len()),
-                        Style::default().fg(colors().high).bold(),
-                    ),
-                ]));
+                lines.push(Line::from(vec![Span::styled(
+                    format!("Attack Paths ({}): ", attack_paths.len()),
+                    Style::default().fg(colors().high).bold(),
+                )]));
 
                 for (i, path) in attack_paths.iter().take(3).enumerate() {
                     let risk_color = if path.risk_score >= 70 {
@@ -1193,7 +1282,8 @@ fn collect_view_vulns(
             match filter {
                 VulnFilter::All | VulnFilter::Introduced | VulnFilter::Resolved => true, // Introduced/Resolved are diff-mode only
                 VulnFilter::Critical => {
-                    vuln.severity.as_ref().map(std::string::ToString::to_string) == Some("Critical".to_string())
+                    vuln.severity.as_ref().map(std::string::ToString::to_string)
+                        == Some("Critical".to_string())
                 }
                 VulnFilter::High => {
                     let sev = vuln.severity.as_ref().map(std::string::ToString::to_string);
@@ -1213,7 +1303,10 @@ fn collect_view_vulns(
                 VulnFilter::VexActionable => {
                     // Exclude vulns with VEX status NotAffected or Fixed
                     // Per-vuln VEX takes priority over component-level
-                    let vex_state = vuln.vex_status.as_ref().map(|v| &v.status)
+                    let vex_state = vuln
+                        .vex_status
+                        .as_ref()
+                        .map(|v| &v.status)
                         .or_else(|| comp.vex_status.as_ref().map(|v| &v.status));
                     !matches!(
                         vex_state,
@@ -1261,14 +1354,24 @@ fn collect_view_vulns(
             vulns.sort_by(|a, b| {
                 let score_a = a.1.max_cvss_score().unwrap_or(0.0);
                 let score_b = b.1.max_cvss_score().unwrap_or(0.0);
-                score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+                score_b
+                    .partial_cmp(&score_a)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             });
         }
         VulnSort::SlaUrgency => {
             // Sort by SLA urgency (most overdue first)
             vulns.sort_by(|a, b| {
-                let severity_a = a.1.severity.as_ref().map(std::string::ToString::to_string).unwrap_or_default();
-                let severity_b = b.1.severity.as_ref().map(std::string::ToString::to_string).unwrap_or_default();
+                let severity_a =
+                    a.1.severity
+                        .as_ref()
+                        .map(std::string::ToString::to_string)
+                        .unwrap_or_default();
+                let severity_b =
+                    b.1.severity
+                        .as_ref()
+                        .map(std::string::ToString::to_string)
+                        .unwrap_or_default();
                 let sla_a = calculate_view_vuln_sla_sort_key(a.1, &severity_a);
                 let sla_b = calculate_view_vuln_sla_sort_key(b.1, &severity_b);
                 sla_a.cmp(&sla_b)
@@ -1286,7 +1389,8 @@ fn get_view_vuln_at(
     items.get(index).map(|(comp, vuln)| {
         let severity = vuln
             .severity
-            .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
+            .as_ref()
+            .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
         let (remediation, fixed_version) = vuln.remediation.as_ref().map_or_else(
             || (None, None),
             |r| {
@@ -1314,7 +1418,10 @@ fn get_view_vuln_at(
             remediation,
             fixed_version,
             is_kev: vuln.is_kev,
-            is_ransomware: vuln.kev_info.as_ref().is_some_and(|k| k.known_ransomware_use),
+            is_ransomware: vuln
+                .kev_info
+                .as_ref()
+                .is_some_and(|k| k.known_ransomware_use),
             affected_versions: vuln.affected_versions.clone(),
             cvss_vector: vuln.cvss.first().and_then(|c| c.vector.clone()),
             published_age_days,
@@ -1327,7 +1434,10 @@ fn get_view_vuln_at(
 
 fn get_diff_vuln_rows(items: &[crate::tui::app::DiffVulnItem<'_>]) -> Vec<Row<'static>> {
     let scheme = colors();
-    items.iter().map(|item| build_single_diff_row(item, &scheme)).collect()
+    items
+        .iter()
+        .map(|item| build_single_diff_row(item, &scheme))
+        .collect()
 }
 
 fn get_view_vuln_rows(
@@ -1335,7 +1445,10 @@ fn get_view_vuln_rows(
     cached_depths: &std::collections::HashMap<String, usize>,
 ) -> Vec<Row<'static>> {
     let scheme = colors();
-    items.iter().map(|item| build_single_view_row(item, cached_depths, &scheme)).collect()
+    items
+        .iter()
+        .map(|item| build_single_view_row(item, cached_depths, &scheme))
+        .collect()
 }
 
 /// Format SLA cell for diff mode (using `VulnerabilityDetail`)
@@ -1357,15 +1470,15 @@ fn format_sla_cell(
             format!("{days}d left"),
             Style::default().fg(scheme.text_muted),
         )),
-        SlaStatus::NoDueDate => {
-            days_since_published.map_or_else(
-                || Cell::from("-".to_string()),
-                |age| Cell::from(Span::styled(
+        SlaStatus::NoDueDate => days_since_published.map_or_else(
+            || Cell::from("-".to_string()),
+            |age| {
+                Cell::from(Span::styled(
                     format!("{age}d old"),
                     Style::default().fg(scheme.text_muted),
-                )),
-            )
-        }
+                ))
+            },
+        ),
     }
 }
 
@@ -1382,7 +1495,10 @@ fn format_view_vuln_sla_cell(
     });
 
     // Get KEV due date info (days_until_due returns i64, wrap in Some)
-    let days_until_due = vuln.kev_info.as_ref().map(crate::model::KevInfo::days_until_due);
+    let days_until_due = vuln
+        .kev_info
+        .as_ref()
+        .map(crate::model::KevInfo::days_until_due);
 
     // Calculate SLA status
     let sla_status = calculate_sla_status(days_until_due, days_since_published, severity);
@@ -1436,7 +1552,10 @@ fn calculate_view_vuln_sla_sort_key(vuln: &VulnerabilityRef, severity: &str) -> 
     });
 
     // Get KEV due date info
-    let days_until_due = vuln.kev_info.as_ref().map(crate::model::KevInfo::days_until_due);
+    let days_until_due = vuln
+        .kev_info
+        .as_ref()
+        .map(crate::model::KevInfo::days_until_due);
 
     // Calculate SLA status
     let sla_status = calculate_sla_status(days_until_due, days_since_published, severity);
@@ -1458,7 +1577,8 @@ fn calculate_view_vuln_urgency(
     let (comp, vuln) = vuln_data;
     let severity = vuln
         .severity
-        .as_ref().map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
+        .as_ref()
+        .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
     let severity_rank = severity_to_rank(&severity);
     let cvss_score = vuln.max_cvss_score().unwrap_or(0.0);
 
@@ -1478,10 +1598,7 @@ fn calculate_view_vuln_urgency(
 }
 
 /// Compute attack paths for a component (used by both render and cache).
-fn compute_attack_paths(
-    component: &str,
-    app: &App,
-) -> Vec<crate::tui::security::AttackPath> {
+fn compute_attack_paths(component: &str, app: &App) -> Vec<crate::tui::security::AttackPath> {
     let forward_graph = &app.tabs.dependencies.cached_forward_graph;
     let reverse_graph = &app.tabs.dependencies.cached_reverse_graph;
     let all_components: Vec<String> = reverse_graph.keys().cloned().collect();

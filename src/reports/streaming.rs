@@ -539,7 +539,7 @@ impl<'w, W: Write> NdjsonWriter<'w, W> {
     }
 
     /// Get the number of items written.
-    #[must_use] 
+    #[must_use]
     pub const fn items_written(&self) -> usize {
         self.items_written
     }
@@ -560,13 +560,13 @@ pub struct StreamingJsonReporter {
 
 impl StreamingJsonReporter {
     /// Create a new streaming JSON reporter.
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self { pretty: true }
     }
 
     /// Create a compact (non-pretty) streaming JSON reporter.
-    #[must_use] 
+    #[must_use]
     pub const fn compact() -> Self {
         Self { pretty: false }
     }
@@ -613,7 +613,7 @@ pub struct NdjsonReporter;
 
 impl NdjsonReporter {
     /// Create a new NDJSON reporter.
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self
     }
@@ -671,7 +671,10 @@ impl WriterReporter for NdjsonReporter {
                 type_: "component",
                 name: &comp.name,
                 version: comp.version.as_deref(),
-                ecosystem: comp.ecosystem.as_ref().map(std::string::ToString::to_string),
+                ecosystem: comp
+                    .ecosystem
+                    .as_ref()
+                    .map(std::string::ToString::to_string),
             };
             ndjson.write_item(&line)?;
         }

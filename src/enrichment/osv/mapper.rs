@@ -20,7 +20,7 @@ pub fn map_osv_to_vulnerability_ref(osv: &OsvVulnerability) -> VulnerabilityRef 
         cwes: extract_cwes(osv.database_specific.as_ref()),
         published: parse_datetime(osv.published.as_ref()),
         modified: parse_datetime(osv.modified.as_ref()),
-        is_kev: false,  // Will be enriched by KEV client
+        is_kev: false, // Will be enriched by KEV client
         kev_info: None,
         vex_status: None,
     }
@@ -82,9 +82,10 @@ fn parse_cvss_score(score_str: &str) -> Option<f32> {
         // Look for explicit score field
         for part in score_str.split('/') {
             if part.to_lowercase().starts_with("score:")
-                && let Ok(score) = part[6..].parse::<f32>() {
-                    return Some(score);
-                }
+                && let Ok(score) = part[6..].parse::<f32>()
+            {
+                return Some(score);
+            }
         }
     }
 
@@ -103,9 +104,10 @@ fn extract_affected_versions(affected: &[OsvAffected]) -> Vec<String> {
         for range in &aff.ranges {
             for event in &range.events {
                 if let Some(ref introduced) = event.introduced
-                    && introduced != "0" {
-                        versions.push(format!(">= {introduced}"));
-                    }
+                    && introduced != "0"
+                {
+                    versions.push(format!(">= {introduced}"));
+                }
                 if let Some(ref fixed) = event.fixed {
                     versions.push(format!("< {fixed} (fixed)"));
                 }

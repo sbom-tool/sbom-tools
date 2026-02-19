@@ -5,10 +5,10 @@
 use crate::config::ViewConfig;
 use crate::model::{NormalizedSbom, Severity};
 use crate::pipeline::{
-    auto_detect_format, parse_sbom_with_context, should_use_color, write_output, OutputTarget,
+    OutputTarget, auto_detect_format, parse_sbom_with_context, should_use_color, write_output,
 };
-use crate::reports::{create_reporter_with_options, ReportConfig, ReportFormat};
-use crate::tui::{run_view_tui, ViewApp};
+use crate::reports::{ReportConfig, ReportFormat, create_reporter_with_options};
+use crate::tui::{ViewApp, run_view_tui};
 use anyhow::Result;
 
 /// Run the view command
@@ -50,7 +50,8 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
     // Enrich with VEX data if VEX documents provided
     #[cfg(feature = "enrichment")]
     if !config.enrichment.vex_paths.is_empty()
-        && crate::pipeline::enrich_vex(parsed.sbom_mut(), &config.enrichment.vex_paths, false).is_none()
+        && crate::pipeline::enrich_vex(parsed.sbom_mut(), &config.enrichment.vex_paths, false)
+            .is_none()
     {
         enrichment_warnings.push("VEX enrichment failed");
     }
@@ -121,10 +122,7 @@ pub fn apply_view_filters(sbom: &mut NormalizedSbom, config: &ViewConfig) -> usi
     let original_count = sbom.component_count();
 
     // Parse minimum severity if provided
-    let min_severity = config
-        .min_severity
-        .as_ref()
-        .map(|s| parse_severity(s));
+    let min_severity = config.min_severity.as_ref().map(|s| parse_severity(s));
 
     // Parse ecosystem filter if provided
     let ecosystem_filter = config.ecosystem_filter.as_ref().map(|e| e.to_lowercase());
@@ -212,8 +210,9 @@ fn output_view_report(
     let effective_output = auto_detect_format(config.output.format, output_target);
 
     // Pre-compute CRA compliance once for reporters
-    let cra_result = crate::quality::ComplianceChecker::new(crate::quality::ComplianceLevel::CraPhase2)
-        .check(sbom);
+    let cra_result =
+        crate::quality::ComplianceChecker::new(crate::quality::ComplianceLevel::CraPhase2)
+            .check(sbom);
 
     let report_config = ReportConfig {
         report_types: vec![config.output.report_types],
@@ -257,9 +256,15 @@ mod tests {
     #[test]
     fn test_severity_order() {
         assert!(severity_meets_minimum(&Severity::Critical, &Severity::Low));
-        assert!(severity_meets_minimum(&Severity::Critical, &Severity::Medium));
+        assert!(severity_meets_minimum(
+            &Severity::Critical,
+            &Severity::Medium
+        ));
         assert!(severity_meets_minimum(&Severity::Critical, &Severity::High));
-        assert!(severity_meets_minimum(&Severity::Critical, &Severity::Critical));
+        assert!(severity_meets_minimum(
+            &Severity::Critical,
+            &Severity::Critical
+        ));
     }
 
     #[test]

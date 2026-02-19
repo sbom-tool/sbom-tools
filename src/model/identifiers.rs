@@ -48,20 +48,16 @@ pub enum IdSource {
 
 impl IdSource {
     /// Returns true if this source produces stable identifiers
-    #[must_use] 
+    #[must_use]
     pub const fn is_stable(&self) -> bool {
         matches!(
             self,
-            Self::Purl
-                | Self::Cpe
-                | Self::Swid
-                | Self::NameVersion
-                | Self::Synthetic
+            Self::Purl | Self::Cpe | Self::Swid | Self::NameVersion | Self::Synthetic
         )
     }
 
     /// Returns the reliability rank (lower is better)
-    #[must_use] 
+    #[must_use]
     pub const fn reliability_rank(&self) -> u8 {
         match self {
             Self::Purl => 0,
@@ -76,7 +72,7 @@ impl IdSource {
 
 impl CanonicalId {
     /// Create a new canonical ID from a PURL
-    #[must_use] 
+    #[must_use]
     pub fn from_purl(purl: &str) -> Self {
         Self {
             value: Self::normalize_purl(purl),
@@ -86,9 +82,12 @@ impl CanonicalId {
     }
 
     /// Create a new canonical ID from name and version
-    #[must_use] 
+    #[must_use]
     pub fn from_name_version(name: &str, version: Option<&str>) -> Self {
-        let value = version.map_or_else(|| name.to_lowercase(), |v| format!("{}@{}", name.to_lowercase(), v));
+        let value = version.map_or_else(
+            || name.to_lowercase(),
+            |v| format!("{}@{}", name.to_lowercase(), v),
+        );
         Self {
             value,
             source: IdSource::NameVersion,
@@ -100,7 +99,7 @@ impl CanonicalId {
     ///
     /// This provides a stable identifier when primary identifiers (PURL, CPE, SWID)
     /// are not available. The format is: `group:name@version` or `name@version`.
-    #[must_use] 
+    #[must_use]
     pub fn synthetic(group: Option<&str>, name: &str, version: Option<&str>) -> Self {
         let value = match (group, version) {
             (Some(g), Some(v)) => format!("{}:{}@{}", g.to_lowercase(), name.to_lowercase(), v),
@@ -119,7 +118,7 @@ impl CanonicalId {
     ///
     /// **Warning**: Format-specific IDs (like bom-ref UUIDs) are often unstable
     /// across SBOM regenerations. Use `synthetic()` or other methods when possible.
-    #[must_use] 
+    #[must_use]
     pub fn from_format_id(id: &str) -> Self {
         // Check if this looks like a UUID (unstable)
         let looks_like_uuid = id.len() == 36
@@ -134,7 +133,7 @@ impl CanonicalId {
     }
 
     /// Create from CPE
-    #[must_use] 
+    #[must_use]
     pub fn from_cpe(cpe: &str) -> Self {
         Self {
             value: cpe.to_lowercase(),
@@ -144,7 +143,7 @@ impl CanonicalId {
     }
 
     /// Create from SWID tag
-    #[must_use] 
+    #[must_use]
     pub fn from_swid(swid: &str) -> Self {
         Self {
             value: swid.to_string(),
@@ -154,19 +153,19 @@ impl CanonicalId {
     }
 
     /// Get the canonical ID value
-    #[must_use] 
+    #[must_use]
     pub fn value(&self) -> &str {
         &self.value
     }
 
     /// Get the source of this identifier
-    #[must_use] 
+    #[must_use]
     pub const fn source(&self) -> &IdSource {
         &self.source
     }
 
     /// Returns true if this identifier is stable across SBOM regenerations
-    #[must_use] 
+    #[must_use]
     pub const fn is_stable(&self) -> bool {
         self.stable
     }
@@ -233,7 +232,7 @@ pub struct CanonicalIdResult {
 
 impl ComponentIdentifiers {
     /// Create a new empty set of identifiers
-    #[must_use] 
+    #[must_use]
     pub fn new(format_id: String) -> Self {
         Self {
             format_id,
@@ -245,7 +244,7 @@ impl ComponentIdentifiers {
     ///
     /// For better stability, prefer `canonical_id_with_context()` which can
     /// generate synthetic IDs from component metadata.
-    #[must_use] 
+    #[must_use]
     pub fn canonical_id(&self) -> CanonicalId {
         // Tiered fallback: PURL → CPE → SWID → format_id
         self.purl.as_ref().map_or_else(
@@ -274,7 +273,7 @@ impl ComponentIdentifiers {
     /// 5. Format-specific ID (least stable)
     ///
     /// Returns both the ID and any warnings about stability.
-    #[must_use] 
+    #[must_use]
     pub fn canonical_id_with_context(
         &self,
         name: &str,
@@ -336,13 +335,13 @@ impl ComponentIdentifiers {
     }
 
     /// Check if this component has any stable identifiers
-    #[must_use] 
+    #[must_use]
     pub fn has_stable_id(&self) -> bool {
         self.purl.is_some() || !self.cpe.is_empty() || self.swid.is_some()
     }
 
     /// Get the reliability level of available identifiers
-    #[must_use] 
+    #[must_use]
     pub fn id_reliability(&self) -> IdReliability {
         if self.purl.is_some() {
             IdReliability::High
@@ -405,7 +404,7 @@ pub enum Ecosystem {
 
 impl Ecosystem {
     /// Parse ecosystem from PURL type
-    #[must_use] 
+    #[must_use]
     pub fn from_purl_type(purl_type: &str) -> Self {
         match purl_type.to_lowercase().as_str() {
             "npm" => Self::Npm,
@@ -510,7 +509,7 @@ impl ComponentRef {
     }
 
     /// Create from a Component
-    #[must_use] 
+    #[must_use]
     pub fn from_component(component: &super::Component) -> Self {
         Self {
             id: component.canonical_id.clone(),
@@ -520,43 +519,45 @@ impl ComponentRef {
     }
 
     /// Get the canonical ID
-    #[must_use] 
+    #[must_use]
     pub const fn id(&self) -> &CanonicalId {
         &self.id
     }
 
     /// Get the ID as a string
-    #[must_use] 
+    #[must_use]
     pub fn id_str(&self) -> &str {
         self.id.value()
     }
 
     /// Get the display name
-    #[must_use] 
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
 
     /// Get the version if available
-    #[must_use] 
+    #[must_use]
     pub fn version(&self) -> Option<&str> {
         self.version.as_deref()
     }
 
     /// Get display string with version if available
-    #[must_use] 
+    #[must_use]
     pub fn display_with_version(&self) -> String {
-        self.version.as_ref().map_or_else(|| self.name.clone(), |v| format!("{}@{}", self.name, v))
+        self.version
+            .as_ref()
+            .map_or_else(|| self.name.clone(), |v| format!("{}@{}", self.name, v))
     }
 
     /// Check if this ref matches a given ID
-    #[must_use] 
+    #[must_use]
     pub fn matches_id(&self, id: &CanonicalId) -> bool {
         &self.id == id
     }
 
     /// Check if this ref matches a given ID string
-    #[must_use] 
+    #[must_use]
     pub fn matches_id_str(&self, id_str: &str) -> bool {
         self.id.value() == id_str
     }
@@ -593,13 +594,13 @@ impl VulnerabilityRef2 {
     }
 
     /// Get the component's canonical ID
-    #[must_use] 
+    #[must_use]
     pub const fn component_id(&self) -> &CanonicalId {
         self.component.id()
     }
 
     /// Get the component name for display
-    #[must_use] 
+    #[must_use]
     pub fn component_name(&self) -> &str {
         self.component.name()
     }

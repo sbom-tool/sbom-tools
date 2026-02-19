@@ -1,8 +1,8 @@
 //! Event handling for the `ViewApp`.
 
 use super::app::{ComponentDetailTab, FocusPanel, ViewApp, ViewTab};
-use crate::tui::app_states::SourceViewMode;
 use crate::config::TuiPreferences;
+use crate::tui::app_states::SourceViewMode;
 use crate::tui::toggle_theme;
 use crossterm::event::{
     self, Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers, MouseEventKind,
@@ -33,28 +33,30 @@ impl Default for EventHandler {
         let tick_rate = Duration::from_millis(100);
 
         let event_tx = tx.clone();
-        thread::spawn(move || loop {
-            if event::poll(tick_rate).unwrap_or(false) {
-                match event::read() {
-                    Ok(CrosstermEvent::Key(key)) => {
-                        if event_tx.send(Event::Key(key)).is_err() {
-                            break;
+        thread::spawn(move || {
+            loop {
+                if event::poll(tick_rate).unwrap_or(false) {
+                    match event::read() {
+                        Ok(CrosstermEvent::Key(key)) => {
+                            if event_tx.send(Event::Key(key)).is_err() {
+                                break;
+                            }
                         }
-                    }
-                    Ok(CrosstermEvent::Mouse(mouse)) => {
-                        if event_tx.send(Event::Mouse(mouse)).is_err() {
-                            break;
+                        Ok(CrosstermEvent::Mouse(mouse)) => {
+                            if event_tx.send(Event::Mouse(mouse)).is_err() {
+                                break;
+                            }
                         }
-                    }
-                    Ok(CrosstermEvent::Resize(w, h)) => {
-                        if event_tx.send(Event::Resize(w, h)).is_err() {
-                            break;
+                        Ok(CrosstermEvent::Resize(w, h)) => {
+                            if event_tx.send(Event::Resize(w, h)).is_err() {
+                                break;
+                            }
                         }
+                        _ => {}
                     }
-                    _ => {}
+                } else if event_tx.send(Event::Tick).is_err() {
+                    break;
                 }
-            } else if event_tx.send(Event::Tick).is_err() {
-                break;
             }
         });
 
@@ -64,9 +66,7 @@ impl Default for EventHandler {
 
 impl EventHandler {
     pub fn next(&self) -> io::Result<Event> {
-        self.rx
-            .recv()
-            .map_err(io::Error::other)
+        self.rx.recv().map_err(io::Error::other)
     }
 }
 
@@ -151,9 +151,7 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
             KeyCode::Char('e') if app.show_export => app.toggle_export(),
             KeyCode::Char('l') if app.show_legend => app.toggle_legend(),
             // Export format selection
-            KeyCode::Char('j' | 's' | 'm' | 'h' | 'c')
-                if app.show_export =>
-            {
+            KeyCode::Char('j' | 's' | 'm' | 'h' | 'c') if app.show_export => {
                 handle_export_key(app, key);
             }
             _ => {} // Ignore other keys when overlay is shown
@@ -379,12 +377,15 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                 && app.source_state.view_mode == SourceViewMode::Tree
             {
                 app.source_state.ensure_flat_cache();
-                if let Some(item) =
-                    app.source_state.cached_flat_items.get(app.source_state.selected)
-                    && item.is_expandable {
-                        let node_id = item.node_id.clone();
-                        app.source_state.toggle_expand(&node_id);
-                    }
+                if let Some(item) = app
+                    .source_state
+                    .cached_flat_items
+                    .get(app.source_state.selected)
+                    && item.is_expandable
+                {
+                    let node_id = item.node_id.clone();
+                    app.source_state.toggle_expand(&node_id);
+                }
             } else {
                 app.handle_enter();
             }
@@ -392,12 +393,15 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
         KeyCode::Char(' ') if app.active_tab == ViewTab::Source => {
             if app.source_state.view_mode == SourceViewMode::Tree {
                 app.source_state.ensure_flat_cache();
-                if let Some(item) =
-                    app.source_state.cached_flat_items.get(app.source_state.selected)
-                    && item.is_expandable {
-                        let node_id = item.node_id.clone();
-                        app.source_state.toggle_expand(&node_id);
-                    }
+                if let Some(item) = app
+                    .source_state
+                    .cached_flat_items
+                    .get(app.source_state.selected)
+                    && item.is_expandable
+                {
+                    let node_id = item.node_id.clone();
+                    app.source_state.toggle_expand(&node_id);
+                }
             }
         }
         // 'l' or Right arrow with Ctrl to toggle focus between panels
@@ -421,7 +425,8 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
         KeyCode::Char('J') => {
             if app.active_tab == ViewTab::Licenses {
                 // Calculate visible count based on typical panel height
-                app.license_state.scroll_components_down(crate::tui::constants::PAGE_SIZE);
+                app.license_state
+                    .scroll_components_down(crate::tui::constants::PAGE_SIZE);
             }
         }
         KeyCode::Char('m') => {
@@ -433,8 +438,7 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
             ViewTab::Tree => app.toggle_tree_filter(),
             ViewTab::Vulnerabilities => app.vuln_state.toggle_filter(),
             ViewTab::Compliance => {
-                app.compliance_state.severity_filter =
-                    app.compliance_state.severity_filter.next();
+                app.compliance_state.severity_filter = app.compliance_state.severity_filter.next();
                 app.compliance_state.selected_violation = 0;
                 app.compliance_state.scroll_offset = 0;
             }
@@ -473,16 +477,18 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                 ViewTab::Tree => {
                     // Collapse current node or go to parent
                     if let Some(node_id) = get_selected_node_id(app)
-                        && app.tree_state.is_expanded(&node_id) {
-                            app.tree_state.collapse(&node_id);
-                        }
+                        && app.tree_state.is_expanded(&node_id)
+                    {
+                        app.tree_state.collapse(&node_id);
+                    }
                 }
                 ViewTab::Dependencies => {
                     // Collapse current dependency node
                     if let Some(node_id) = app.get_selected_dependency_node_id()
-                        && app.dependency_state.is_expanded(&node_id) {
-                            app.dependency_state.expanded.remove(&node_id);
-                        }
+                        && app.dependency_state.is_expanded(&node_id)
+                    {
+                        app.dependency_state.expanded.remove(&node_id);
+                    }
                 }
                 ViewTab::Compliance => {
                     // Switch to previous compliance standard
@@ -491,11 +497,16 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                 ViewTab::Source => {
                     if app.source_state.view_mode == SourceViewMode::Tree {
                         app.source_state.ensure_flat_cache();
-                        if let Some(item) = app.source_state.cached_flat_items.get(app.source_state.selected)
-                            && item.is_expandable && item.is_expanded {
-                                let node_id = item.node_id.clone();
-                                app.source_state.toggle_expand(&node_id);
-                            }
+                        if let Some(item) = app
+                            .source_state
+                            .cached_flat_items
+                            .get(app.source_state.selected)
+                            && item.is_expandable
+                            && item.is_expanded
+                        {
+                            let node_id = item.node_id.clone();
+                            app.source_state.toggle_expand(&node_id);
+                        }
                     }
                 }
                 _ => {}
@@ -526,11 +537,16 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                 ViewTab::Source => {
                     if app.source_state.view_mode == SourceViewMode::Tree {
                         app.source_state.ensure_flat_cache();
-                        if let Some(item) = app.source_state.cached_flat_items.get(app.source_state.selected)
-                            && item.is_expandable && !item.is_expanded {
-                                let node_id = item.node_id.clone();
-                                app.source_state.toggle_expand(&node_id);
-                            }
+                        if let Some(item) = app
+                            .source_state
+                            .cached_flat_items
+                            .get(app.source_state.selected)
+                            && item.is_expandable
+                            && !item.is_expanded
+                        {
+                            let node_id = item.node_id.clone();
+                            app.source_state.toggle_expand(&node_id);
+                        }
                     }
                 }
                 _ => {}
@@ -563,9 +579,10 @@ fn flatten_tree_ids(
     for node in nodes {
         items.push(node.id().to_string());
         if state.is_expanded(node.id())
-            && let Some(children) = node.children() {
-                flatten_tree_ids(children, state, items);
-            }
+            && let Some(children) = node.children()
+        {
+            flatten_tree_ids(children, state, items);
+        }
     }
 }
 
@@ -767,8 +784,9 @@ fn count_visible_tree_nodes(
     for node in nodes {
         *count += 1;
         if state.is_expanded(node.id())
-            && let Some(children) = node.children() {
-                count_visible_tree_nodes(children, state, count);
-            }
+            && let Some(children) = node.children()
+        {
+            count_visible_tree_nodes(children, state, count);
+        }
     }
 }

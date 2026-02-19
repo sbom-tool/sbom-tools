@@ -77,7 +77,7 @@ impl<F: CycleFilter> Default for FilterState<F> {
 
 impl<F: CycleFilter> FilterState<F> {
     /// Create a new filter state with the default filter.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             current: F::default(),

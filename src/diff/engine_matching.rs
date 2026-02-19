@@ -105,11 +105,7 @@ pub fn match_components(
     };
 
     // Phase 4: Optimal assignment using Hungarian algorithm or fallback
-    let assignment = optimal_assignment(
-        &candidates,
-        &unmatched_old,
-        large_sbom_config,
-    );
+    let assignment = optimal_assignment(&candidates, &unmatched_old, large_sbom_config);
 
     // Apply assignment results
     for (old_id, new_id, score) in assignment {
@@ -286,9 +282,7 @@ fn match_with_component_index(
                             .collect();
 
                         // Cross-ecosystem candidates (secondary, with penalty)
-                        if let (Some(db), Some(old_eco)) =
-                            (&cross_eco_db, &old_comp.ecosystem)
-                        {
+                        if let (Some(db), Some(old_eco)) = (&cross_eco_db, &old_comp.ecosystem) {
                             let cross_matches = find_cross_ecosystem_candidates(
                                 old_id,
                                 old_comp,
@@ -315,12 +309,8 @@ fn match_with_component_index(
                 (old_index.get_entry(old_id), old.components.get(*old_id))
             {
                 // Same-ecosystem candidates (primary)
-                let candidate_ids = new_index.find_candidates(
-                    old_id,
-                    old_entry,
-                    max_candidates,
-                    max_length_diff,
-                );
+                let candidate_ids =
+                    new_index.find_candidates(old_id, old_entry, max_candidates, max_length_diff);
 
                 for new_id in candidate_ids {
                     if used_new_ids.contains(&new_id) {
@@ -364,7 +354,10 @@ fn find_cross_ecosystem_candidates(
     old_comp: &crate::model::Component,
     old_eco: &crate::model::Ecosystem,
     db: &CrossEcosystemDb,
-    new_by_ecosystem: &HashMap<crate::model::Ecosystem, Vec<(CanonicalId, &crate::model::Component)>>,
+    new_by_ecosystem: &HashMap<
+        crate::model::Ecosystem,
+        Vec<(CanonicalId, &crate::model::Component)>,
+    >,
     used_new_ids: &HashSet<CanonicalId>,
     matcher: &dyn ComponentMatcher,
     config: &crate::matching::CrossEcosystemConfig,
@@ -462,8 +455,10 @@ fn hungarian_assignment(
     }
 
     // Build index maps
-    let old_idx: HashMap<&CanonicalId, usize> = old_ids.iter().enumerate().map(|(i, id)| (id, i)).collect();
-    let new_idx: HashMap<&CanonicalId, usize> = new_ids.iter().enumerate().map(|(i, id)| (id, i)).collect();
+    let old_idx: HashMap<&CanonicalId, usize> =
+        old_ids.iter().enumerate().map(|(i, id)| (id, i)).collect();
+    let new_idx: HashMap<&CanonicalId, usize> =
+        new_ids.iter().enumerate().map(|(i, id)| (id, i)).collect();
 
     // Build score matrix (we need to track actual scores separately)
     let mut scores: HashMap<(usize, usize), f64> = HashMap::new();
@@ -510,18 +505,22 @@ fn hungarian_assignment(
     // Convert assignment back to result
     let mut result = Vec::new();
     for (old_i, new_i) in assignment.into_iter().enumerate() {
-        if old_i < old_ids.len() && new_i < new_ids.len()
+        if old_i < old_ids.len()
+            && new_i < new_ids.len()
             && let Some(&score) = scores.get(&(old_i, new_i))
-                && score > 0.0 {
-                    result.push((old_ids[old_i].clone(), new_ids[new_i].clone(), score));
-                }
+            && score > 0.0
+        {
+            result.push((old_ids[old_i].clone(), new_ids[new_i].clone(), score));
+        }
     }
 
     result
 }
 
 /// Simple greedy assignment (sort by score, assign greedily).
-fn greedy_assignment(candidates: &[(CanonicalId, CanonicalId, f64)]) -> Vec<(CanonicalId, CanonicalId, f64)> {
+fn greedy_assignment(
+    candidates: &[(CanonicalId, CanonicalId, f64)],
+) -> Vec<(CanonicalId, CanonicalId, f64)> {
     use std::cmp::Ordering;
 
     let mut sorted: Vec<_> = candidates.to_vec();
@@ -558,10 +557,8 @@ fn greedy_with_swaps(
     }
 
     // Build lookup for quick score access
-    let score_lookup: HashMap<(&CanonicalId, &CanonicalId), f64> = candidates
-        .iter()
-        .map(|(o, n, s)| ((o, n), *s))
-        .collect();
+    let score_lookup: HashMap<(&CanonicalId, &CanonicalId), f64> =
+        candidates.iter().map(|(o, n, s)| ((o, n), *s)).collect();
 
     // 2-opt: Try swapping pairs to improve total score
     let mut improved = true;

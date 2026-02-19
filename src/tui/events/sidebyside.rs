@@ -174,7 +174,8 @@ pub(super) fn handle_sidebyside_search_input(app: &mut App, key: KeyEvent) {
 
 pub(super) fn update_sidebyside_search_matches(app: &mut App) {
     let query = app
-        .tabs.side_by_side
+        .tabs
+        .side_by_side
         .search_query
         .clone()
         .unwrap_or_default();
@@ -268,4 +269,3 @@ pub(super) fn get_current_row_info(app: &App) -> Option<String> {
 
     None
 }
-

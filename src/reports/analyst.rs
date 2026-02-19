@@ -30,7 +30,7 @@ pub struct AnalystReport {
 
 impl AnalystReport {
     /// Create a new empty analyst report
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             metadata: AnalystReportMetadata::default(),
@@ -50,7 +50,7 @@ impl AnalystReport {
     }
 
     /// Export report to Markdown format
-    #[must_use] 
+    #[must_use]
     pub fn to_markdown(&self) -> String {
         // Estimate capacity: ~200 bytes per section, plus variable content
         let estimated_size = 2000
@@ -179,11 +179,7 @@ impl AnalystReport {
             "- **Total Components:** {}",
             self.component_findings.total_components
         );
-        let _ = writeln!(
-            md,
-            "- **Added:** {}",
-            self.component_findings.added_count
-        );
+        let _ = writeln!(md, "- **Added:** {}", self.component_findings.added_count);
         let _ = writeln!(
             md,
             "- **Removed:** {}",
@@ -253,11 +249,7 @@ impl AnalystReport {
                 md.push_str(&rec.description);
                 md.push_str("\n\n");
                 if !rec.affected_components.is_empty() {
-                    let _ = writeln!(
-                        md,
-                        "**Affected:** {}\n",
-                        rec.affected_components.join(", ")
-                    );
+                    let _ = writeln!(md, "**Affected:** {}\n", rec.affected_components.join(", "));
                 }
                 if let Some(effort) = &rec.effort {
                     let _ = writeln!(md, "**Estimated Effort:** {effort}\n");
@@ -281,11 +273,7 @@ impl AnalystReport {
                         note.target_type, id, fp_marker, note.note
                     );
                 } else {
-                    let _ = writeln!(
-                        md,
-                        "- **{}{}**: {}",
-                        note.target_type, fp_marker, note.note
-                    );
+                    let _ = writeln!(md, "- **{}{}**: {}", note.target_type, fp_marker, note.note);
                 }
             }
             md.push('\n');
@@ -355,7 +343,7 @@ pub enum RiskLevel {
 
 impl RiskLevel {
     /// Calculate from risk score
-    #[must_use] 
+    #[must_use]
     pub const fn from_score(score: u8) -> Self {
         match score {
             0..=25 => Self::Low,
@@ -366,7 +354,7 @@ impl RiskLevel {
     }
 
     /// Get display label
-    #[must_use] 
+    #[must_use]
     pub const fn label(&self) -> &'static str {
         match self {
             Self::Low => "Low",
@@ -402,7 +390,7 @@ pub struct VulnerabilityFindings {
 
 impl VulnerabilityFindings {
     /// Get all findings in priority order
-    #[must_use] 
+    #[must_use]
     pub fn all_findings(&self) -> Vec<&VulnFinding> {
         let capacity = self.kev_vulnerabilities.len()
             + self.critical_vulnerabilities.len()
@@ -454,7 +442,7 @@ pub struct VulnFinding {
 
 impl VulnFinding {
     /// Create a new vulnerability finding
-    #[must_use] 
+    #[must_use]
     pub fn new(id: String, component_name: String) -> Self {
         Self {
             id,
@@ -637,7 +625,7 @@ pub struct AnalystNote {
 
 impl AnalystNote {
     /// Create a new analyst note
-    #[must_use] 
+    #[must_use]
     pub fn new(target_type: NoteTargetType, note: String) -> Self {
         Self {
             target_type,
@@ -651,7 +639,7 @@ impl AnalystNote {
     }
 
     /// Create a note for a vulnerability
-    #[must_use] 
+    #[must_use]
     pub fn for_vulnerability(vuln_id: String, note: String) -> Self {
         Self {
             target_type: NoteTargetType::Vulnerability,
@@ -665,7 +653,7 @@ impl AnalystNote {
     }
 
     /// Create a note for a component
-    #[must_use] 
+    #[must_use]
     pub fn for_component(component_name: String, note: String) -> Self {
         Self {
             target_type: NoteTargetType::Component,
@@ -729,7 +717,7 @@ pub struct Recommendation {
 
 impl Recommendation {
     /// Create a new recommendation
-    #[must_use] 
+    #[must_use]
     pub const fn new(
         priority: RecommendationPriority,
         category: RecommendationCategory,

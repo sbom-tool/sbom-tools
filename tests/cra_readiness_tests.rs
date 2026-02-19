@@ -1,14 +1,16 @@
 //! CRA SBOM readiness tests.
 
 use chrono::{TimeZone, Utc};
+use sbom_tools::diff::DiffEngine;
 use sbom_tools::model::{
-    Component, CompletenessDeclaration, Creator, CreatorType, DocumentMetadata, ExternalRefType,
+    CompletenessDeclaration, Component, Creator, CreatorType, DocumentMetadata, ExternalRefType,
     ExternalReference, NormalizedSbom, Organization, SbomFormat, VulnerabilityRef,
     VulnerabilitySource,
 };
-use sbom_tools::diff::DiffEngine;
 use sbom_tools::parsers::parse_sbom_str;
-use sbom_tools::quality::{ComplianceChecker, ComplianceLevel, ViolationCategory, ViolationSeverity};
+use sbom_tools::quality::{
+    ComplianceChecker, ComplianceLevel, ViolationCategory, ViolationSeverity,
+};
 use sbom_tools::reports::{JsonReporter, ReportConfig, ReportGenerator, SarifReporter};
 
 fn base_document_metadata() -> DocumentMetadata {
@@ -98,8 +100,10 @@ fn cra_vulnerability_metadata_warning() {
         comment: None,
         hashes: Vec::new(),
     });
-    comp.vulnerabilities
-        .push(VulnerabilityRef::new("CVE-2026-0001".to_string(), VulnerabilitySource::Cve));
+    comp.vulnerabilities.push(VulnerabilityRef::new(
+        "CVE-2026-0001".to_string(),
+        VulnerabilitySource::Cve,
+    ));
     sbom.add_component(comp);
 
     let result = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&sbom);
@@ -161,10 +165,11 @@ fn cyclonedx_security_contact_is_parsed() {
         .find(|c| c.name == "lib-x")
         .expect("Component missing");
 
-    assert!(comp
-        .external_refs
-        .iter()
-        .any(|r| matches!(r.ref_type, ExternalRefType::SecurityContact)));
+    assert!(
+        comp.external_refs
+            .iter()
+            .any(|r| matches!(r.ref_type, ExternalRefType::SecurityContact))
+    );
 }
 
 #[test]
@@ -191,10 +196,12 @@ fn view_reports_include_cra_compliance() {
     let results = sarif_value["runs"][0]["results"]
         .as_array()
         .expect("Missing SARIF results");
-    assert!(results.iter().any(|r| r["ruleId"]
-        .as_str()
-        .map(|s| s.starts_with("SBOM-CRA-"))
-        .unwrap_or(false)));
+    assert!(results.iter().any(|r| {
+        r["ruleId"]
+            .as_str()
+            .map(|s| s.starts_with("SBOM-CRA-"))
+            .unwrap_or(false)
+    }));
 }
 
 #[test]
@@ -211,7 +218,9 @@ fn diff_reports_include_cra_compliance() {
     new_sbom.add_component(new_comp);
     new_sbom.calculate_content_hash();
 
-    let diff = DiffEngine::new().diff(&old_sbom, &new_sbom).expect("diff should succeed");
+    let diff = DiffEngine::new()
+        .diff(&old_sbom, &new_sbom)
+        .expect("diff should succeed");
     let config = ReportConfig::default();
 
     let json = JsonReporter::new()
@@ -220,7 +229,12 @@ fn diff_reports_include_cra_compliance() {
     let json_value: serde_json::Value =
         serde_json::from_str(&json).expect("Invalid JSON diff report");
     assert!(json_value.get("cra_compliance").is_some());
-    assert!(!json_value["cra_compliance"]["new"]["violations"].as_array().unwrap().is_empty());
+    assert!(
+        !json_value["cra_compliance"]["new"]["violations"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
 
     let sarif = SarifReporter::new()
         .generate_diff_report(&diff, &old_sbom, &new_sbom, &config)
@@ -230,8 +244,10 @@ fn diff_reports_include_cra_compliance() {
     let results = sarif_value["runs"][0]["results"]
         .as_array()
         .expect("Missing SARIF results");
-    assert!(results.iter().any(|r| r["ruleId"]
-        .as_str()
-        .map(|s| s.starts_with("SBOM-CRA-"))
-        .unwrap_or(false)));
+    assert!(results.iter().any(|r| {
+        r["ruleId"]
+            .as_str()
+            .map(|s| s.starts_with("SBOM-CRA-"))
+            .unwrap_or(false)
+    }));
 }

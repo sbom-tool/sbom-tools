@@ -120,17 +120,18 @@ impl FileMonitor {
             if path.is_dir() {
                 Self::scan_dir_metadata(&path, out);
             } else if is_sbom_file(&path)
-                && let Ok(meta) = std::fs::metadata(&path) {
-                    let mtime = meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
-                    out.insert(
-                        path,
-                        FileState {
-                            mtime,
-                            size: meta.len(),
-                            content_hash: 0, // filled lazily in poll()
-                        },
-                    );
-                }
+                && let Ok(meta) = std::fs::metadata(&path)
+            {
+                let mtime = meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+                out.insert(
+                    path,
+                    FileState {
+                        mtime,
+                        size: meta.len(),
+                        content_hash: 0, // filled lazily in poll()
+                    },
+                );
+            }
         }
     }
 }
@@ -145,10 +146,7 @@ fn hash_file_content(path: &Path) -> u64 {
 
 /// Check whether a path has a known SBOM file extension.
 fn is_sbom_file(path: &Path) -> bool {
-    let name = path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("");
+    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
     let lower = name.to_lowercase();
     SBOM_EXTENSIONS.iter().any(|ext| lower.ends_with(ext))
 }
@@ -208,7 +206,9 @@ mod tests {
 
         let changes = monitor.poll();
         assert!(
-            changes.iter().any(|c| matches!(c, FileChange::Modified(p) if p == &file_path)),
+            changes
+                .iter()
+                .any(|c| matches!(c, FileChange::Modified(p) if p == &file_path)),
             "expected Modified, got {changes:?}"
         );
     }

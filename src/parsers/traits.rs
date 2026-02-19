@@ -67,19 +67,19 @@ impl FormatConfidence {
     pub const CERTAIN: Self = Self(1.0);
 
     /// Create a new confidence value
-    #[must_use] 
+    #[must_use]
     pub const fn new(value: f32) -> Self {
         Self(value.clamp(0.0, 1.0))
     }
 
     /// Get the confidence value
-    #[must_use] 
+    #[must_use]
     pub const fn value(&self) -> f32 {
         self.0
     }
 
     /// Check if this confidence indicates the format can be parsed
-    #[must_use] 
+    #[must_use]
     pub fn can_parse(&self) -> bool {
         self.0 >= 0.25
     }
@@ -106,7 +106,7 @@ pub struct FormatDetection {
 
 impl FormatDetection {
     /// Create a detection result indicating no match
-    #[must_use] 
+    #[must_use]
     pub const fn no_match() -> Self {
         Self {
             confidence: FormatConfidence::NONE,
@@ -117,7 +117,7 @@ impl FormatDetection {
     }
 
     /// Create a detection result with confidence
-    #[must_use] 
+    #[must_use]
     pub const fn with_confidence(confidence: FormatConfidence) -> Self {
         Self {
             confidence,

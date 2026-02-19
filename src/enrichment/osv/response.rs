@@ -179,7 +179,7 @@ pub struct OsvReference {
 
 impl OsvQuery {
     /// Create a PURL-based query.
-    #[must_use] 
+    #[must_use]
     pub const fn from_purl(purl: String) -> Self {
         Self::Purl {
             package: OsvPackagePurl { purl },
@@ -187,7 +187,7 @@ impl OsvQuery {
     }
 
     /// Create a package-based query.
-    #[must_use] 
+    #[must_use]
     pub const fn from_package(name: String, ecosystem: String, version: String) -> Self {
         Self::Package {
             package: OsvPackageInfo { name, ecosystem },
@@ -312,7 +312,10 @@ mod tests {
         assert_eq!(affected.package.as_ref().unwrap().name, "lodash");
         assert_eq!(affected.ranges.len(), 1);
         assert_eq!(affected.ranges[0].events.len(), 2);
-        assert_eq!(affected.ranges[0].events[0].introduced.as_deref(), Some("0"));
+        assert_eq!(
+            affected.ranges[0].events[0].introduced.as_deref(),
+            Some("0")
+        );
         assert_eq!(
             affected.ranges[0].events[1].fixed.as_deref(),
             Some("4.17.21")

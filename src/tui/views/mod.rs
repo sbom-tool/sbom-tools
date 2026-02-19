@@ -20,15 +20,15 @@ pub use dependencies::render_dependencies;
 pub use diff_compliance::{diff_compliance_violation_count, render_diff_compliance};
 pub use graph_changes::render_graph_changes;
 pub use licenses::render_licenses;
-pub use matrix::{render_matrix, MatrixPanel};
-pub use multi_dashboard::{render_multi_dashboard, MultiDashboardPanel};
+pub use matrix::{MatrixPanel, render_matrix};
+pub use multi_dashboard::{MultiDashboardPanel, render_multi_dashboard};
 pub use overlays::{
-    render_component_deep_dive, render_shortcuts_overlay, render_threshold_tuning,
-    render_view_switcher, ThresholdTuningState,
+    ThresholdTuningState, render_component_deep_dive, render_shortcuts_overlay,
+    render_threshold_tuning, render_view_switcher,
 };
 pub use quality::render_quality;
 pub use sidebyside::render_sidebyside;
 pub use source::render_source;
 pub use summary::render_summary;
-pub use timeline::{render_timeline, TimelinePanel};
+pub use timeline::{TimelinePanel, render_timeline};
 pub use vulnerabilities::render_vulnerabilities;

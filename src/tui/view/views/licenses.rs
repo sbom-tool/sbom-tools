@@ -269,7 +269,10 @@ fn get_components_with_license(app: &ViewApp, license: &str) -> Vec<String> {
         };
 
         if has_license {
-            let name = comp.version.as_ref().map_or_else(|| comp.name.clone(), |v| format!("{}@{}", comp.name, v));
+            let name = comp
+                .version
+                .as_ref()
+                .map_or_else(|| comp.name.clone(), |v| format!("{}@{}", comp.name, v));
             components.push(name);
         }
     }

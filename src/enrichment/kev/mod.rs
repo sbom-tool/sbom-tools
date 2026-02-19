@@ -22,4 +22,4 @@ mod catalog;
 mod client;
 
 pub use catalog::{KevCatalog, KevCatalogResponse, KevEntry, KevVulnerability};
-pub use client::{KevClient, KevClientConfig, KevEnrichmentStats, KEV_CATALOG_URL};
+pub use client::{KEV_CATALOG_URL, KevClient, KevClientConfig, KevEnrichmentStats};

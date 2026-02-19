@@ -1,7 +1,7 @@
 //! Mouse event handlers.
 
 use crate::tui::{App, AppMode};
-use crossterm::event::{MouseEvent, MouseEventKind, MouseButton};
+use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
 
 pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent) {
     // Clear status message on any mouse action
@@ -122,4 +122,3 @@ pub(super) fn switch_to_view(app: &mut App, view: crate::tui::app_states::MultiV
         }
     }
 }
-

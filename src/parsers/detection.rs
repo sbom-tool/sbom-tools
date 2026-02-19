@@ -22,7 +22,7 @@ pub enum ParserKind {
 
 impl ParserKind {
     /// Get the human-readable name for this parser.
-    #[must_use] 
+    #[must_use]
     pub const fn name(&self) -> &'static str {
         match self {
             Self::CycloneDx => "CycloneDX",
@@ -48,7 +48,7 @@ pub struct DetectionResult {
 
 impl DetectionResult {
     /// Create a result indicating no format was detected.
-    #[must_use] 
+    #[must_use]
     pub fn unknown(reason: &str) -> Self {
         Self {
             parser: None,
@@ -60,7 +60,7 @@ impl DetectionResult {
     }
 
     /// Create a result for `CycloneDX` detection.
-    #[must_use] 
+    #[must_use]
     pub fn cyclonedx(detection: FormatDetection) -> Self {
         Self {
             parser: Some(ParserKind::CycloneDx),
@@ -72,7 +72,7 @@ impl DetectionResult {
     }
 
     /// Create a result for SPDX detection.
-    #[must_use] 
+    #[must_use]
     pub fn spdx(detection: FormatDetection) -> Self {
         Self {
             parser: Some(ParserKind::Spdx),
@@ -84,7 +84,7 @@ impl DetectionResult {
     }
 
     /// Check if the detection is confident enough to parse.
-    #[must_use] 
+    #[must_use]
     pub fn can_parse(&self) -> bool {
         self.parser.is_some() && self.confidence.value() >= MIN_CONFIDENCE_THRESHOLD
     }
@@ -107,7 +107,7 @@ impl Default for FormatDetector {
 
 impl FormatDetector {
     /// Create a new format detector with default settings.
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             cyclonedx: CycloneDxParser::new(),
@@ -117,7 +117,7 @@ impl FormatDetector {
     }
 
     /// Create a format detector with a custom confidence threshold.
-    #[must_use] 
+    #[must_use]
     pub const fn with_threshold(min_confidence: f32) -> Self {
         Self {
             cyclonedx: CycloneDxParser::new(),
@@ -129,7 +129,7 @@ impl FormatDetector {
     /// Detect format from full content string.
     ///
     /// This performs full detection using each parser's `detect()` method.
-    #[must_use] 
+    #[must_use]
     pub fn detect_from_content(&self, content: &str) -> DetectionResult {
         let cdx_detection = self.cyclonedx.detect(content);
         let spdx_detection = self.spdx.detect(content);
@@ -141,7 +141,7 @@ impl FormatDetector {
     ///
     /// This performs detection using a prefix of the content, suitable for
     /// streaming parsers that can only peek at the beginning of a file.
-    #[must_use] 
+    #[must_use]
     pub fn detect_from_peek(&self, peek: &[u8]) -> DetectionResult {
         // Find first non-whitespace byte
         let first_char = peek.iter().find(|&&b| !b.is_ascii_whitespace());
@@ -279,10 +279,8 @@ impl FormatDetector {
             }
             Some(ParserKind::Spdx) if detection.can_parse() => {
                 // Check variant - tag-value and RDF need string-based parsing
-                let needs_string = matches!(
-                    detection.variant.as_deref(),
-                    Some("tag-value" | "RDF")
-                );
+                let needs_string =
+                    matches!(detection.variant.as_deref(), Some("tag-value" | "RDF"));
                 if needs_string {
                     let mut content = String::new();
                     reader
@@ -300,13 +298,13 @@ impl FormatDetector {
     }
 
     /// Get a reference to the `CycloneDX` parser.
-    #[must_use] 
+    #[must_use]
     pub const fn cyclonedx_parser(&self) -> &CycloneDxParser {
         &self.cyclonedx
     }
 
     /// Get a reference to the SPDX parser.
-    #[must_use] 
+    #[must_use]
     pub const fn spdx_parser(&self) -> &SpdxParser {
         &self.spdx
     }

@@ -69,16 +69,10 @@ impl VexEnricher {
                 } else {
                     for product in &stmt.products {
                         if let Some(purl) = extract_product_purl(product) {
-                            lookup.insert(
-                                (vuln_id.clone(), purl.to_string()),
-                                status.clone(),
-                            );
+                            lookup.insert((vuln_id.clone(), purl.to_string()), status.clone());
                             // Also insert for aliases
                             for alias in &stmt.vulnerability.aliases {
-                                lookup.insert(
-                                    (alias.clone(), purl.to_string()),
-                                    status.clone(),
-                                );
+                                lookup.insert((alias.clone(), purl.to_string()), status.clone());
                             }
                         } else {
                             // Product without extractable PURL — treat as vuln-only
@@ -137,10 +131,7 @@ impl VexEnricher {
                 // Try (vuln_id, purl) match first
                 let matched = comp_purl
                     .as_ref()
-                    .and_then(|purl| {
-                        self.lookup
-                            .get(&(vuln.id.clone(), purl.clone()))
-                    })
+                    .and_then(|purl| self.lookup.get(&(vuln.id.clone(), purl.clone())))
                     .cloned()
                     .or_else(|| self.vuln_only.get(&vuln.id).cloned());
 
@@ -238,7 +229,10 @@ mod tests {
             if comp.name == "log4j-core" {
                 let vuln = &comp.vulnerabilities[0];
                 assert!(vuln.vex_status.is_some());
-                assert_eq!(vuln.vex_status.as_ref().unwrap().status, VexState::NotAffected);
+                assert_eq!(
+                    vuln.vex_status.as_ref().unwrap().status,
+                    VexState::NotAffected
+                );
             }
         }
     }
@@ -343,8 +337,7 @@ mod tests {
         // Pre-set VEX on the vuln
         for comp in sbom.components.values_mut() {
             if comp.name == "log4j-core" {
-                comp.vulnerabilities[0].vex_status =
-                    Some(VexStatus::new(VexState::NotAffected));
+                comp.vulnerabilities[0].vex_status = Some(VexStatus::new(VexState::NotAffected));
             }
         }
 
@@ -354,11 +347,7 @@ mod tests {
         for comp in sbom.components.values() {
             if comp.name == "log4j-core" {
                 assert_eq!(
-                    comp.vulnerabilities[0]
-                        .vex_status
-                        .as_ref()
-                        .unwrap()
-                        .status,
+                    comp.vulnerabilities[0].vex_status.as_ref().unwrap().status,
                     VexState::NotAffected,
                     "should not overwrite existing VEX"
                 );

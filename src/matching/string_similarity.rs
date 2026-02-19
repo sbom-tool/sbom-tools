@@ -9,7 +9,7 @@ use std::collections::HashSet;
 ///
 /// Splits names on common delimiters (-, _, ., @, /) and compares token sets.
 /// This catches reordered names like "react-dom" <-> "dom-react".
-#[must_use] 
+#[must_use]
 pub fn compute_token_similarity(name_a: &str, name_b: &str) -> f64 {
     let tokens_a: HashSet<&str> = name_a
         .split(['-', '_', '.', '@', '/'])
@@ -46,7 +46,7 @@ pub fn compute_token_similarity(name_a: &str, name_b: &str) -> f64 {
 /// - Same major: 0.04
 /// - Both present but different: 0.0
 /// - One or both missing: 0.0
-#[must_use] 
+#[must_use]
 pub fn compute_version_similarity(va: Option<&String>, vb: Option<&String>) -> f64 {
     match (va, vb) {
         (Some(a), Some(b)) if a == b => 0.10, // Exact match
@@ -98,7 +98,9 @@ pub fn soundex(name: &str) -> String {
     }
 
     let mut chars = name_upper.chars();
-    let first_char = chars.next().expect("name_upper is non-empty after empty check above");
+    let first_char = chars
+        .next()
+        .expect("name_upper is non-empty after empty check above");
     let mut code = String::with_capacity(4);
     code.push(first_char);
 
@@ -126,7 +128,7 @@ pub fn soundex(name: &str) -> String {
 }
 
 /// Get Soundex digit for a character.
-#[must_use] 
+#[must_use]
 pub const fn soundex_digit(c: char) -> char {
     match c {
         'B' | 'F' | 'P' | 'V' => '1',
@@ -143,7 +145,7 @@ pub const fn soundex_digit(c: char) -> char {
 ///
 /// Returns 1.0 if Soundex codes match, 0.0 otherwise.
 /// Also checks individual tokens for partial phonetic matches.
-#[must_use] 
+#[must_use]
 pub fn compute_phonetic_similarity(name_a: &str, name_b: &str) -> f64 {
     // Compare full name Soundex
     let soundex_a = soundex(name_a);

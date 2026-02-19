@@ -9,8 +9,8 @@ mod parse;
 mod report_stage;
 
 pub use diff_stage::compute_diff;
-pub use output::{auto_detect_format, should_use_color, write_output, OutputTarget};
-pub use parse::{parse_sbom_with_context, ParsedSbom};
+pub use output::{OutputTarget, auto_detect_format, should_use_color, write_output};
+pub use parse::{ParsedSbom, parse_sbom_with_context};
 pub use report_stage::output_report;
 
 #[cfg(feature = "enrichment")]
@@ -21,10 +21,7 @@ pub use parse::{build_enrichment_config, enrich_eol, enrich_sbom, enrich_vex};
 pub enum PipelineError {
     /// Failed to read or parse an SBOM file
     #[error("Parse failed for {path}: {source}")]
-    ParseFailed {
-        path: String,
-        source: anyhow::Error,
-    },
+    ParseFailed { path: String, source: anyhow::Error },
 
     /// Enrichment failed (non-fatal by default)
     #[error("Enrichment failed: {reason}")]
@@ -62,7 +59,7 @@ pub mod dirs {
     use std::path::PathBuf;
 
     /// Get the platform-specific cache directory
-    #[must_use] 
+    #[must_use]
     pub fn cache_dir() -> Option<PathBuf> {
         #[cfg(target_os = "macos")]
         {

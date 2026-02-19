@@ -146,7 +146,7 @@ pub struct Organization {
 
 impl Organization {
     /// Create a new organization with just a name
-    #[must_use] 
+    #[must_use]
     pub const fn new(name: String) -> Self {
         Self {
             name,
@@ -220,7 +220,7 @@ pub struct Hash {
 
 impl Hash {
     /// Create a new hash
-    #[must_use] 
+    #[must_use]
     pub const fn new(algorithm: HashAlgorithm, value: String) -> Self {
         Self { algorithm, value }
     }

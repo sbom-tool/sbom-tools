@@ -19,7 +19,11 @@ pub(super) fn handle_dependencies_keys(app: &mut App, key: KeyEvent) {
                 app.tabs.dependencies.search_pop();
                 update_dependencies_search_matches(app);
             }
-            KeyCode::Char('f') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+            KeyCode::Char('f')
+                if key
+                    .modifiers
+                    .contains(crossterm::event::KeyModifiers::CONTROL) =>
+            {
                 // Toggle filter mode
                 app.tabs.dependencies.toggle_filter_mode();
             }
@@ -146,26 +150,46 @@ pub(super) fn handle_dependencies_keys(app: &mut App, key: KeyEvent) {
         }
         KeyCode::Enter => {
             // Toggle expand/collapse of tree node
-            if let Some(node_id) = app.tabs.dependencies.get_selected_node_id().map(str::to_string) {
+            if let Some(node_id) = app
+                .tabs
+                .dependencies
+                .get_selected_node_id()
+                .map(str::to_string)
+            {
                 app.tabs.dependencies.toggle_node(&node_id);
             }
         }
         KeyCode::Char('c') => {
             // Navigate to component (go to components tab with this component selected)
-            if let Some(node_id) = app.tabs.dependencies.get_selected_node_id().map(str::to_string) {
+            if let Some(node_id) = app
+                .tabs
+                .dependencies
+                .get_selected_node_id()
+                .map(str::to_string)
+            {
                 // The node_id is often the component name or identifier
                 app.navigate_dep_to_component(&node_id);
             }
         }
         KeyCode::Left => {
             // Collapse node
-            if let Some(node_id) = app.tabs.dependencies.get_selected_node_id().map(str::to_string) {
+            if let Some(node_id) = app
+                .tabs
+                .dependencies
+                .get_selected_node_id()
+                .map(str::to_string)
+            {
                 app.tabs.dependencies.collapse(&node_id);
             }
         }
         KeyCode::Right => {
             // Expand node
-            if let Some(node_id) = app.tabs.dependencies.get_selected_node_id().map(str::to_string) {
+            if let Some(node_id) = app
+                .tabs
+                .dependencies
+                .get_selected_node_id()
+                .map(str::to_string)
+            {
                 app.tabs.dependencies.expand(&node_id);
             }
         }
@@ -208,7 +232,8 @@ pub(super) fn handle_dependencies_keys(app: &mut App, key: KeyEvent) {
 pub(super) fn update_dependencies_search_matches(app: &mut App) {
     // Collect all node names for search matching
     let all_nodes: Vec<(String, String)> = app
-        .tabs.dependencies
+        .tabs
+        .dependencies
         .visible_nodes
         .iter()
         .filter(|id| !id.starts_with("__"))
@@ -246,4 +271,3 @@ pub(super) fn skip_dependency_placeholders(app: &mut App, forward: bool) {
         }
     }
 }
-

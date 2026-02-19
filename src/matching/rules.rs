@@ -27,13 +27,13 @@ pub struct EcosystemRules {
 
 impl EcosystemRules {
     /// Create a new ecosystem rules instance with built-in defaults
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::with_config(EcosystemRulesConfig::builtin())
     }
 
     /// Create ecosystem rules with custom configuration
-    #[must_use] 
+    #[must_use]
     pub fn with_config(config: EcosystemRulesConfig) -> Self {
         let suspicious_patterns = Self::compile_suspicious_patterns(&config);
         let migration_patterns = Self::compile_migration_patterns(&config);
@@ -54,7 +54,7 @@ impl EcosystemRules {
     }
 
     /// Load configuration from default locations with precedence
-    #[must_use] 
+    #[must_use]
     pub fn from_default_locations() -> Self {
         let config = EcosystemRulesConfig::load_with_precedence(&[
             ".sbom-tools/ecosystem-rules.yaml",
@@ -145,13 +145,13 @@ impl EcosystemRules {
     }
 
     /// Get the underlying configuration
-    #[must_use] 
+    #[must_use]
     pub const fn config(&self) -> &EcosystemRulesConfig {
         &self.config
     }
 
     /// Normalize a package name according to ecosystem rules
-    #[must_use] 
+    #[must_use]
     pub fn normalize_name(&self, name: &str, ecosystem: &Ecosystem) -> String {
         let eco_key = Self::ecosystem_key(ecosystem);
 
@@ -206,16 +206,14 @@ impl EcosystemRules {
     fn normalize_scoped_name(&self, name: &str, norm: &NormalizationConfig) -> String {
         match norm.scope_handling {
             ScopeHandling::Lowercase => name.to_lowercase(),
-            ScopeHandling::PreserveScopeCase => {
-                name.find('/').map_or_else(
-                    || name.to_lowercase(),
-                    |slash_pos| {
-                        let scope = &name[..slash_pos];
-                        let pkg_name = &name[slash_pos + 1..];
-                        format!("{}/{}", scope.to_lowercase(), pkg_name.to_lowercase())
-                    },
-                )
-            }
+            ScopeHandling::PreserveScopeCase => name.find('/').map_or_else(
+                || name.to_lowercase(),
+                |slash_pos| {
+                    let scope = &name[..slash_pos];
+                    let pkg_name = &name[slash_pos + 1..];
+                    format!("{}/{}", scope.to_lowercase(), pkg_name.to_lowercase())
+                },
+            ),
             ScopeHandling::PreserveCase => name.to_string(),
         }
     }
@@ -253,7 +251,7 @@ impl EcosystemRules {
     }
 
     /// Check if two names match according to ecosystem rules
-    #[must_use] 
+    #[must_use]
     pub fn names_match(&self, name_a: &str, name_b: &str, ecosystem: &Ecosystem) -> bool {
         let norm_a = self.normalize_name(name_a, ecosystem);
         let norm_b = self.normalize_name(name_b, ecosystem);
@@ -261,7 +259,7 @@ impl EcosystemRules {
     }
 
     /// Get the canonical name for an alias
-    #[must_use] 
+    #[must_use]
     pub fn get_canonical(&self, name: &str, ecosystem: &Ecosystem) -> Option<String> {
         let eco_key = Self::ecosystem_key(ecosystem);
         let name_lower = name.to_lowercase();
@@ -295,46 +293,57 @@ impl EcosystemRules {
     }
 
     /// Check if a name is an alias of a canonical name
-    #[must_use] 
+    #[must_use]
     pub fn is_alias(&self, canonical: &str, name: &str, ecosystem: &Ecosystem) -> bool {
         let eco_key = Self::ecosystem_key(ecosystem);
         let name_lower = name.to_lowercase();
         let canonical_lower = canonical.to_lowercase();
 
         if let Some(eco_config) = self.config.ecosystems.get(&eco_key)
-            && let Some(aliases) = eco_config.aliases.get(&canonical_lower) {
-                return aliases.iter().any(|a| a.to_lowercase() == name_lower);
-            }
+            && let Some(aliases) = eco_config.aliases.get(&canonical_lower)
+        {
+            return aliases.iter().any(|a| a.to_lowercase() == name_lower);
+        }
 
         false
     }
 
     /// Get common suffixes to strip for a given ecosystem
-    #[must_use] 
+    #[must_use]
     pub fn get_strip_suffixes(&self, ecosystem: &Ecosystem) -> Vec<&str> {
         let eco_key = Self::ecosystem_key(ecosystem);
 
         self.config
             .ecosystems
             .get(&eco_key)
-            .map(|c| c.strip_suffixes.iter().map(std::string::String::as_str).collect())
+            .map(|c| {
+                c.strip_suffixes
+                    .iter()
+                    .map(std::string::String::as_str)
+                    .collect()
+            })
             .unwrap_or_default()
     }
 
     /// Get common prefixes to strip for a given ecosystem
-    #[must_use] 
+    #[must_use]
     pub fn get_strip_prefixes(&self, ecosystem: &Ecosystem) -> Vec<&str> {
         let eco_key = Self::ecosystem_key(ecosystem);
 
         self.config
             .ecosystems
             .get(&eco_key)
-            .map(|c| c.strip_prefixes.iter().map(std::string::String::as_str).collect())
+            .map(|c| {
+                c.strip_prefixes
+                    .iter()
+                    .map(std::string::String::as_str)
+                    .collect()
+            })
             .unwrap_or_default()
     }
 
     /// Normalize name by stripping common prefixes/suffixes
-    #[must_use] 
+    #[must_use]
     pub fn strip_affixes(&self, name: &str, ecosystem: &Ecosystem) -> String {
         let mut result = name.to_lowercase();
 
@@ -356,7 +365,7 @@ impl EcosystemRules {
     }
 
     /// Check if a package name is a known typosquat
-    #[must_use] 
+    #[must_use]
     pub fn is_typosquat(&self, name: &str, ecosystem: &Ecosystem) -> Option<&TyposquatEntry> {
         if !self.config.settings.enable_security_checks {
             return None;
@@ -377,7 +386,7 @@ impl EcosystemRules {
     }
 
     /// Check if a package name matches suspicious patterns
-    #[must_use] 
+    #[must_use]
     pub fn is_suspicious(&self, name: &str, ecosystem: &Ecosystem) -> bool {
         if !self.config.settings.enable_security_checks {
             return false;
@@ -385,11 +394,13 @@ impl EcosystemRules {
 
         let eco_key = Self::ecosystem_key(ecosystem);
 
-        self.suspicious_patterns.get(&eco_key).is_some_and(|patterns| patterns.iter().any(|re| re.is_match(name)))
+        self.suspicious_patterns
+            .get(&eco_key)
+            .is_some_and(|patterns| patterns.iter().any(|re| re.is_match(name)))
     }
 
     /// Check if a package is a known malicious package
-    #[must_use] 
+    #[must_use]
     pub fn is_known_malicious(&self, name: &str, ecosystem: &Ecosystem) -> bool {
         if !self.config.settings.enable_security_checks {
             return false;
@@ -398,17 +409,20 @@ impl EcosystemRules {
         let eco_key = Self::ecosystem_key(ecosystem);
         let name_lower = name.to_lowercase();
 
-        self.config.ecosystems.get(&eco_key).is_some_and(|eco_config| {
-            eco_config
-                .security
-                .known_malicious
-                .iter()
-                .any(|m| m.to_lowercase() == name_lower)
-        })
+        self.config
+            .ecosystems
+            .get(&eco_key)
+            .is_some_and(|eco_config| {
+                eco_config
+                    .security
+                    .known_malicious
+                    .iter()
+                    .any(|m| m.to_lowercase() == name_lower)
+            })
     }
 
     /// Get the migrated group ID (for Maven javax -> jakarta, etc.)
-    #[must_use] 
+    #[must_use]
     pub fn get_migrated_group(&self, group: &str, ecosystem: &Ecosystem) -> Option<String> {
         let eco_key = Self::ecosystem_key(ecosystem);
 
@@ -425,7 +439,7 @@ impl EcosystemRules {
     }
 
     /// Check if a package is part of a package group
-    #[must_use] 
+    #[must_use]
     pub fn get_package_group(&self, name: &str, ecosystem: &Ecosystem) -> Option<&str> {
         let eco_key = Self::ecosystem_key(ecosystem);
         let name_lower = name.to_lowercase();
@@ -446,9 +460,10 @@ impl EcosystemRules {
                         // Use pre-compiled pattern
                         if let Some(group_patterns) = compiled_patterns
                             && let Some(patterns) = group_patterns.get(group_name)
-                                && patterns.iter().any(|re| re.is_match(&name_lower)) {
-                                    return Some(group_name);
-                                }
+                            && patterns.iter().any(|re| re.is_match(&name_lower))
+                        {
+                            return Some(group_name);
+                        }
                     } else if member.to_lowercase() == name_lower {
                         return Some(group_name);
                     }
@@ -460,7 +475,7 @@ impl EcosystemRules {
     }
 
     /// Get cross-ecosystem equivalent package
-    #[must_use] 
+    #[must_use]
     pub fn get_cross_ecosystem_equivalent(
         &self,
         concept: &str,
@@ -476,7 +491,7 @@ impl EcosystemRules {
     }
 
     /// Check if a package is an internal/organization package
-    #[must_use] 
+    #[must_use]
     pub fn is_internal_package(&self, name: &str) -> bool {
         self.config
             .custom_rules
@@ -486,7 +501,7 @@ impl EcosystemRules {
     }
 
     /// Check if a package should be ignored in diffs
-    #[must_use] 
+    #[must_use]
     pub fn is_ignored(&self, name: &str) -> bool {
         let name_lower = name.to_lowercase();
         self.config

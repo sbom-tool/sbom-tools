@@ -104,7 +104,7 @@ pub struct KevClient {
 
 impl KevClient {
     /// Create a new KEV client
-    #[must_use] 
+    #[must_use]
     pub const fn new(config: KevClientConfig) -> Self {
         Self {
             config,
@@ -113,7 +113,7 @@ impl KevClient {
     }
 
     /// Create with default configuration
-    #[must_use] 
+    #[must_use]
     pub fn with_defaults() -> Self {
         Self::new(KevClientConfig::default())
     }
@@ -137,9 +137,10 @@ impl KevClient {
         // Check cache age
         if let Ok(metadata) = fs::metadata(&cache_path)
             && let Ok(modified) = metadata.modified()
-                && let Ok(elapsed) = SystemTime::now().duration_since(modified) {
-                    return elapsed < self.config.cache_ttl;
-                }
+            && let Ok(elapsed) = SystemTime::now().duration_since(modified)
+        {
+            return elapsed < self.config.cache_ttl;
+        }
 
         false
     }
@@ -157,15 +158,13 @@ impl KevClient {
 
         // Ensure cache directory exists
         if let Some(parent) = cache_path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
+            fs::create_dir_all(parent).map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
         }
 
         let content = serde_json::to_string(catalog)
             .map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
 
-        fs::write(&cache_path, content)
-            .map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
+        fs::write(&cache_path, content).map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
 
         Ok(())
     }
@@ -213,10 +212,11 @@ impl KevClient {
 
         // Try cache first
         if self.is_cache_valid()
-            && let Some(catalog) = self.load_from_cache() {
-                self.catalog = Some(catalog);
-                return Ok(());
-            }
+            && let Some(catalog) = self.load_from_cache()
+        {
+            self.catalog = Some(catalog);
+            return Ok(());
+        }
 
         // Fetch from API
         let catalog = self.fetch_from_api()?;
@@ -229,17 +229,15 @@ impl KevClient {
     }
 
     /// Get the loaded catalog (if any)
-    #[must_use] 
+    #[must_use]
     pub const fn catalog(&self) -> Option<&KevCatalog> {
         self.catalog.as_ref()
     }
 
     /// Check if a CVE is in the KEV catalog
-    #[must_use] 
+    #[must_use]
     pub fn is_kev(&self, cve_id: &str) -> bool {
-        self.catalog
-            .as_ref()
-            .is_some_and(|c| c.contains(cve_id))
+        self.catalog.as_ref().is_some_and(|c| c.contains(cve_id))
     }
 
     /// Enrich vulnerabilities with KEV information

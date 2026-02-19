@@ -14,13 +14,13 @@ pub struct AliasTable {
 
 impl AliasTable {
     /// Create a new empty alias table
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Create an alias table with built-in common aliases
-    #[must_use] 
+    #[must_use]
     pub fn with_builtins() -> Self {
         let mut table = Self::new();
         table.load_builtins();
@@ -90,22 +90,24 @@ impl AliasTable {
     }
 
     /// Get the canonical name for an alias
-    #[must_use] 
+    #[must_use]
     pub fn get_canonical(&self, alias: &str) -> Option<String> {
         self.alias_to_canonical.get(&alias.to_lowercase()).cloned()
     }
 
     /// Check if a name is an alias of a canonical name
-    #[must_use] 
+    #[must_use]
     pub fn is_alias(&self, canonical: &str, name: &str) -> bool {
         let canonical_lower = canonical.to_lowercase();
         let name_lower = name.to_lowercase();
 
-        self.canonical_to_aliases.get(&canonical_lower).is_some_and(|aliases| aliases.contains(&name_lower))
+        self.canonical_to_aliases
+            .get(&canonical_lower)
+            .is_some_and(|aliases| aliases.contains(&name_lower))
     }
 
     /// Get all aliases for a canonical name
-    #[must_use] 
+    #[must_use]
     pub fn get_aliases(&self, canonical: &str) -> Option<&HashSet<String>> {
         self.canonical_to_aliases.get(&canonical.to_lowercase())
     }
@@ -114,7 +116,11 @@ impl AliasTable {
     pub fn load_json(&mut self, json: &str) -> Result<(), serde_json::Error> {
         let entries: Vec<AliasEntry> = serde_json::from_str(json)?;
         for entry in entries {
-            let aliases: Vec<&str> = entry.aliases.iter().map(std::string::String::as_str).collect();
+            let aliases: Vec<&str> = entry
+                .aliases
+                .iter()
+                .map(std::string::String::as_str)
+                .collect();
             self.add_aliases(&entry.canonical, &aliases);
         }
         Ok(())

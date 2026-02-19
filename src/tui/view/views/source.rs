@@ -44,9 +44,7 @@ struct MapSection {
 }
 
 /// Build map sections from the JSON tree root's children.
-fn build_map_sections(
-    state: &crate::tui::app_states::source::SourcePanelState,
-) -> Vec<MapSection> {
+fn build_map_sections(state: &crate::tui::app_states::source::SourcePanelState) -> Vec<MapSection> {
     let Some(tree) = &state.json_tree else {
         return Vec::new();
     };
@@ -93,11 +91,13 @@ fn compute_raw_line_starts(raw_lines: &[String]) -> Vec<(String, usize)> {
     let mut result = Vec::new();
     for (i, line) in raw_lines.iter().enumerate() {
         let trimmed = line.trim_start();
-        if line.starts_with("  \"") && !line.starts_with("    ")
-            && let Some(end) = trimmed.find("\":") {
-                let key = trimmed[1..end].to_string();
-                result.push((key, i));
-            }
+        if line.starts_with("  \"")
+            && !line.starts_with("    ")
+            && let Some(end) = trimmed.find("\":")
+        {
+            let key = trimmed[1..end].to_string();
+            result.push((key, i));
+        }
     }
     result
 }
@@ -157,7 +157,9 @@ fn semantic_breadcrumb(node_id: &str, sbom: &NormalizedSbom) -> String {
             if let Ok(idx) = part[1..part.len() - 1].parse::<usize>() {
                 let label = match prev_section {
                     "components" => sbom.components.values().nth(idx).map(|c| {
-                        c.version.as_ref().map_or_else(|| c.name.clone(), |v| format!("{}@{}", c.name, v))
+                        c.version
+                            .as_ref()
+                            .map_or_else(|| c.name.clone(), |v| format!("{}@{}", c.name, v))
                     }),
                     _ => None,
                 };
@@ -192,9 +194,10 @@ fn compute_section_match_counts(
         SourceViewMode::Tree => {
             for &idx in &state.search_matches {
                 if let Some(item) = state.cached_flat_items.get(idx)
-                    && let Some(section) = current_section_from_node_id(&item.node_id) {
-                        *counts.entry(section).or_insert(0) += 1;
-                    }
+                    && let Some(section) = current_section_from_node_id(&item.node_id)
+                {
+                    *counts.entry(section).or_insert(0) += 1;
+                }
             }
         }
         SourceViewMode::Raw => {
@@ -213,15 +216,12 @@ fn compute_section_match_counts(
 /// Requires flat cache to be warm (call `ensure_flat_cache()` before this).
 fn get_current_section(app: &ViewApp, sections: &[MapSection]) -> Option<String> {
     match app.source_state.view_mode {
-        SourceViewMode::Tree => {
-            app.source_state
-                .cached_flat_items
-                .get(app.source_state.selected)
-                .and_then(|item| current_section_from_node_id(&item.node_id))
-        }
-        SourceViewMode::Raw => {
-            current_section_for_raw_line(app.source_state.selected, sections)
-        }
+        SourceViewMode::Tree => app
+            .source_state
+            .cached_flat_items
+            .get(app.source_state.selected)
+            .and_then(|item| current_section_from_node_id(&item.node_id)),
+        SourceViewMode::Raw => current_section_for_raw_line(app.source_state.selected, sections),
     }
 }
 
@@ -303,7 +303,15 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
     y = render_compact_header(buf, x, y, width, app, &scheme);
 
     if y >= context_max_y {
-        render_progress_bar(buf, x, progress_y, width, app.source_state.selected, effective_total, &scheme);
+        render_progress_bar(
+            buf,
+            x,
+            progress_y,
+            width,
+            app.source_state.selected,
+            effective_total,
+            &scheme,
+        );
         if is_focused {
             render_hints(buf, x, max_y - 1, width, &scheme);
         }
@@ -315,7 +323,15 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
     y += 1;
 
     if y >= context_max_y {
-        render_progress_bar(buf, x, progress_y, width, app.source_state.selected, effective_total, &scheme);
+        render_progress_bar(
+            buf,
+            x,
+            progress_y,
+            width,
+            app.source_state.selected,
+            effective_total,
+            &scheme,
+        );
         if is_focused {
             render_hints(buf, x, max_y - 1, width, &scheme);
         }
@@ -336,8 +352,7 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
         // Adjust scroll offset to keep selected visible
         if capacity > 0 {
             if app.source_state.map_selected >= app.source_state.map_scroll_offset + capacity {
-                app.source_state.map_scroll_offset =
-                    app.source_state.map_selected + 1 - capacity;
+                app.source_state.map_scroll_offset = app.source_state.map_selected + 1 - capacity;
             }
             if app.source_state.map_selected < app.source_state.map_scroll_offset {
                 app.source_state.map_scroll_offset = app.source_state.map_selected;
@@ -351,7 +366,11 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
         // Scroll-up indicator
         if app.source_state.map_scroll_offset > 0 && y < section_end_y {
             render_str(
-                buf, x, y, " \u{25b2} more", width,
+                buf,
+                x,
+                y,
+                " \u{25b2} more",
+                width,
                 Style::default().fg(scheme.text_muted),
             );
             y += 1;
@@ -386,10 +405,7 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
 
         let is_current = current_section.as_deref() == Some(&section.key);
         let is_map_selected = is_focused && nav_idx == app.source_state.map_selected;
-        let match_count = section_match_counts
-            .get(&section.key)
-            .copied()
-            .unwrap_or(0);
+        let match_count = section_match_counts.get(&section.key).copied().unwrap_or(0);
 
         // Build section line components
         let count_str = if section.is_object {
@@ -448,7 +464,11 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
             // Render match count in accent
             if match_count > 0 {
                 render_str(
-                    buf, cx, y, &match_str, right_edge - cx,
+                    buf,
+                    cx,
+                    y,
+                    &match_str,
+                    right_edge - cx,
                     Style::default().fg(scheme.accent),
                 );
                 cx += match_str.len() as u16;
@@ -458,7 +478,11 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
             if !badge.is_empty() {
                 let bt = format!("  {badge}");
                 render_str(
-                    buf, cx, y, &bt, right_edge - cx,
+                    buf,
+                    cx,
+                    y,
+                    &bt,
+                    right_edge - cx,
                     Style::default().fg(scheme.muted),
                 );
                 cx += bt.len() as u16;
@@ -467,7 +491,11 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
             // Render marker in accent bold
             if is_current {
                 render_str(
-                    buf, cx, y, marker, right_edge - cx,
+                    buf,
+                    cx,
+                    y,
+                    marker,
+                    right_edge - cx,
                     Style::default().fg(scheme.accent).bold(),
                 );
             }
@@ -488,18 +516,29 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
     }
 
     // Scroll-down indicator
-    let remaining_expandable =
-        total_expandable - app.source_state.map_scroll_offset - rendered;
+    let remaining_expandable = total_expandable - app.source_state.map_scroll_offset - rendered;
     if remaining_expandable > 0 && y < section_end_y {
         render_str(
-            buf, x, y, " \u{25bc} more", width,
+            buf,
+            x,
+            y,
+            " \u{25bc} more",
+            width,
             Style::default().fg(scheme.text_muted),
         );
         y += 1;
     }
 
     if y >= context_max_y {
-        render_progress_bar(buf, x, progress_y, width, app.source_state.selected, effective_total, &scheme);
+        render_progress_bar(
+            buf,
+            x,
+            progress_y,
+            width,
+            app.source_state.selected,
+            effective_total,
+            &scheme,
+        );
         if is_focused {
             render_hints(buf, x, max_y - 1, width, &scheme);
         }
@@ -515,8 +554,13 @@ fn render_source_map(frame: &mut Frame, area: Rect, app: &mut ViewApp, is_focuse
 
     // === Progress bar (bottom-anchored) ===
     render_progress_bar(
-        buf, x, progress_y, width,
-        app.source_state.selected, effective_total, &scheme,
+        buf,
+        x,
+        progress_y,
+        width,
+        app.source_state.selected,
+        effective_total,
+        &scheme,
     );
 
     // === Keyboard hints (when focused) ===
@@ -548,7 +592,11 @@ fn render_compact_header(
         doc.created.format("%Y-%m-%d"),
     );
     render_str(
-        buf, x, y, &format_line, width,
+        buf,
+        x,
+        y,
+        &format_line,
+        width,
         Style::default().fg(scheme.primary).bold(),
     );
     y += 1;
@@ -564,7 +612,11 @@ fn render_compact_header(
             truncate_map_str(&tool.name, (width as usize).saturating_sub(8))
         );
         render_str(
-            buf, x, y, &tool_line, width,
+            buf,
+            x,
+            y,
+            &tool_line,
+            width,
             Style::default().fg(scheme.text_muted),
         );
         y += 1;
@@ -583,12 +635,7 @@ fn render_compact_header(
 /// - components: top ecosystem names (e.g., "npm maven")
 /// - vulnerabilities: severity counts (e.g., "2C 1H 3M")
 /// - metadata: tool short name
-fn section_badge(
-    key: &str,
-    stats: &SbomStats,
-    sbom: &NormalizedSbom,
-    max_len: usize,
-) -> String {
+fn section_badge(key: &str, stats: &SbomStats, sbom: &NormalizedSbom, max_len: usize) -> String {
     if max_len == 0 {
         return String::new();
     }
@@ -669,16 +716,15 @@ fn render_context(
 
     // Get selected node info (uses cached flat items, already warm from render_source_panel)
     let (section_name, array_idx, node_id_full) = match app.source_state.view_mode {
-        SourceViewMode::Tree => {
-            app.source_state.cached_flat_items.get(app.source_state.selected).map_or(
-                (None, None, None),
-                |item| {
-                    let section = current_section_from_node_id(&item.node_id);
-                    let idx = extract_array_index(&item.node_id);
-                    (section, idx, Some(item.node_id.clone()))
-                },
-            )
-        }
+        SourceViewMode::Tree => app
+            .source_state
+            .cached_flat_items
+            .get(app.source_state.selected)
+            .map_or((None, None, None), |item| {
+                let section = current_section_from_node_id(&item.node_id);
+                let idx = extract_array_index(&item.node_id);
+                (section, idx, Some(item.node_id.clone()))
+            }),
         SourceViewMode::Raw => {
             let section = current_section_for_raw_line(app.source_state.selected, sections);
             (section, None, None)
@@ -687,7 +733,11 @@ fn render_context(
 
     // Semantic breadcrumb
     let breadcrumb = node_id_full.as_ref().map_or_else(
-        || section_name.as_ref().map_or_else(|| "root".to_string(), String::clone),
+        || {
+            section_name
+                .as_ref()
+                .map_or_else(|| "root".to_string(), String::clone)
+        },
         |nid| {
             let bc = semantic_breadcrumb(nid, &app.sbom);
             if bc.is_empty() {
@@ -698,7 +748,9 @@ fn render_context(
         },
     );
     render_str(
-        buf, x, y,
+        buf,
+        x,
+        y,
         &format!(
             " {}",
             truncate_map_str(&breadcrumb, (width as usize).saturating_sub(2))
@@ -714,140 +766,156 @@ fn render_context(
     // Component context
     if let (Some(section), Some(idx)) = (&section_name, array_idx) {
         if section == "components"
-            && let Some(comp) = app.sbom.components.values().nth(idx) {
-                let is_primary = app
-                    .sbom
-                    .primary_component_id
-                    .as_ref()
-                    .is_some_and(|pid| pid == &comp.canonical_id);
+            && let Some(comp) = app.sbom.components.values().nth(idx)
+        {
+            let is_primary = app
+                .sbom
+                .primary_component_id
+                .as_ref()
+                .is_some_and(|pid| pid == &comp.canonical_id);
 
-                // Name + version + ecosystem
-                let name_ver = comp.version.as_ref().map_or_else(
-                    || if is_primary {
+            // Name + version + ecosystem
+            let name_ver = comp.version.as_ref().map_or_else(
+                || {
+                    if is_primary {
                         format!(" \u{2605} {}", comp.name)
                     } else {
                         format!(" {}", comp.name)
-                    },
-                    |v| if is_primary {
+                    }
+                },
+                |v| {
+                    if is_primary {
                         format!(" \u{2605} {}@{}", comp.name, v)
                     } else {
                         format!(" {}@{}", comp.name, v)
-                    },
-                );
-                let eco_suffix = comp
-                    .ecosystem
-                    .as_ref()
-                    .map(|e| format!(" ({e})"))
-                    .unwrap_or_default();
-                render_str(
-                    buf, x, y,
-                    &format!("{name_ver}{eco_suffix}"),
-                    width,
-                    Style::default().fg(scheme.primary),
-                );
-                y += 1;
-                if y >= max_y {
-                    return;
-                }
+                    }
+                },
+            );
+            let eco_suffix = comp
+                .ecosystem
+                .as_ref()
+                .map(|e| format!(" ({e})"))
+                .unwrap_or_default();
+            render_str(
+                buf,
+                x,
+                y,
+                &format!("{name_ver}{eco_suffix}"),
+                width,
+                Style::default().fg(scheme.primary),
+            );
+            y += 1;
+            if y >= max_y {
+                return;
+            }
 
-                // License
-                let license = if comp.licenses.declared.is_empty() {
-                    "Unknown".to_string()
-                } else {
-                    comp.licenses
-                        .declared
-                        .iter()
-                        .map(|l| l.expression.as_str())
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                };
+            // License
+            let license = if comp.licenses.declared.is_empty() {
+                "Unknown".to_string()
+            } else {
+                comp.licenses
+                    .declared
+                    .iter()
+                    .map(|l| l.expression.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            };
+            render_str(
+                buf,
+                x,
+                y,
+                &format!(
+                    " License: {}",
+                    truncate_map_str(&license, (width as usize).saturating_sub(11))
+                ),
+                width,
+                Style::default().fg(scheme.success),
+            );
+            y += 1;
+            if y >= max_y {
+                return;
+            }
+
+            // Vulnerability count
+            let vuln_count = comp.vulnerabilities.len();
+            if vuln_count > 0 {
                 render_str(
-                    buf, x, y,
+                    buf,
+                    x,
+                    y,
                     &format!(
-                        " License: {}",
-                        truncate_map_str(&license, (width as usize).saturating_sub(11))
+                        " {} vulnerabilit{}",
+                        vuln_count,
+                        if vuln_count == 1 { "y" } else { "ies" }
                     ),
                     width,
-                    Style::default().fg(scheme.success),
+                    Style::default().fg(scheme.error),
                 );
-                y += 1;
-                if y >= max_y {
-                    return;
-                }
-
-                // Vulnerability count
-                let vuln_count = comp.vulnerabilities.len();
-                if vuln_count > 0 {
-                    render_str(
-                        buf, x, y,
-                        &format!(
-                            " {} vulnerabilit{}",
-                            vuln_count,
-                            if vuln_count == 1 { "y" } else { "ies" }
-                        ),
-                        width,
-                        Style::default().fg(scheme.error),
-                    );
-                } else {
-                    render_str(
-                        buf, x, y,
-                        " No vulnerabilities",
-                        width,
-                        Style::default().fg(scheme.muted),
-                    );
-                }
-                y += 1;
-                if y >= max_y {
-                    return;
-                }
-
-                // PURL
-                if let Some(ref purl) = comp.identifiers.purl {
-                    render_str(
-                        buf, x, y,
-                        &format!(
-                            " purl: {}",
-                            truncate_map_str(purl, (width as usize).saturating_sub(8))
-                        ),
-                        width,
-                        Style::default().fg(scheme.text_muted),
-                    );
-                    y += 1;
-                    if y >= max_y {
-                        return;
-                    }
-                }
-
-                // Extras: type, supplier, hashes, refs
-                let mut extras = Vec::new();
-                extras.push(format!("type:{}", comp.component_type));
-                if let Some(ref supplier) = comp.supplier {
-                    extras.push(format!(
-                        "supplier:{}",
-                        truncate_map_str(&supplier.name, 12)
-                    ));
-                }
-                if !comp.hashes.is_empty() {
-                    extras.push(format!("{}h", comp.hashes.len()));
-                }
-                if !comp.external_refs.is_empty() {
-                    extras.push(format!("{}refs", comp.external_refs.len()));
-                }
+            } else {
                 render_str(
-                    buf, x, y,
+                    buf,
+                    x,
+                    y,
+                    " No vulnerabilities",
+                    width,
+                    Style::default().fg(scheme.muted),
+                );
+            }
+            y += 1;
+            if y >= max_y {
+                return;
+            }
+
+            // PURL
+            if let Some(ref purl) = comp.identifiers.purl {
+                render_str(
+                    buf,
+                    x,
+                    y,
                     &format!(
-                        " {}",
-                        truncate_map_str(&extras.join("  "), (width as usize).saturating_sub(2))
+                        " purl: {}",
+                        truncate_map_str(purl, (width as usize).saturating_sub(8))
                     ),
                     width,
                     Style::default().fg(scheme.text_muted),
                 );
-                return;
+                y += 1;
+                if y >= max_y {
+                    return;
+                }
             }
+
+            // Extras: type, supplier, hashes, refs
+            let mut extras = Vec::new();
+            extras.push(format!("type:{}", comp.component_type));
+            if let Some(ref supplier) = comp.supplier {
+                extras.push(format!("supplier:{}", truncate_map_str(&supplier.name, 12)));
+            }
+            if !comp.hashes.is_empty() {
+                extras.push(format!("{}h", comp.hashes.len()));
+            }
+            if !comp.external_refs.is_empty() {
+                extras.push(format!("{}refs", comp.external_refs.len()));
+            }
+            render_str(
+                buf,
+                x,
+                y,
+                &format!(
+                    " {}",
+                    truncate_map_str(&extras.join("  "), (width as usize).saturating_sub(2))
+                ),
+                width,
+                Style::default().fg(scheme.text_muted),
+            );
+            return;
+        }
 
         if section == "vulnerabilities" {
             render_str(
-                buf, x, y,
+                buf,
+                x,
+                y,
                 &format!(" Vulnerability [{idx}]"),
                 width,
                 Style::default().fg(scheme.warning),
@@ -861,7 +929,9 @@ fn render_context(
         let line_num = app.source_state.selected + 1;
         let total = app.source_state.raw_lines.len();
         render_str(
-            buf, x, y,
+            buf,
+            x,
+            y,
             &format!(" Line {line_num}/{total}"),
             width,
             Style::default().fg(scheme.muted),
@@ -876,7 +946,9 @@ fn render_context(
             let preview = truncate_map_str(trimmed, (width as usize).saturating_sub(2));
             if !preview.is_empty() {
                 render_str(
-                    buf, x, y,
+                    buf,
+                    x,
+                    y,
                     &format!(" {preview}"),
                     width,
                     Style::default().fg(scheme.text_muted),
@@ -888,7 +960,9 @@ fn render_context(
 
     // Document summary (root level or non-component section)
     render_str(
-        buf, x, y,
+        buf,
+        x,
+        y,
         &format!(" {} components", app.stats.component_count),
         width,
         Style::default().fg(scheme.text),
@@ -900,7 +974,9 @@ fn render_context(
 
     if app.stats.vuln_count > 0 {
         render_str(
-            buf, x, y,
+            buf,
+            x,
+            y,
             &format!(" {} vulnerabilities", app.stats.vuln_count),
             width,
             Style::default().fg(scheme.error),
@@ -912,7 +988,9 @@ fn render_context(
     }
 
     render_str(
-        buf, x, y,
+        buf,
+        x,
+        y,
         &format!(" {} licenses", app.stats.license_count),
         width,
         Style::default().fg(scheme.text_muted),
@@ -925,7 +1003,9 @@ fn render_context(
     let edge_count = app.sbom.edges.len();
     if edge_count > 0 {
         render_str(
-            buf, x, y,
+            buf,
+            x,
+            y,
             &format!(" {edge_count} dependency edges"),
             width,
             Style::default().fg(scheme.text_muted),
@@ -966,7 +1046,11 @@ fn render_progress_bar(
         // No room for bar, just show numbers
         let text = format!(" {pos}/{total}  {pct}%");
         render_str(
-            buf, x, y, &text, width,
+            buf,
+            x,
+            y,
+            &text,
+            width,
             Style::default().fg(scheme.text_muted),
         );
         return;
@@ -985,15 +1069,16 @@ fn render_progress_bar(
     }
 
     // Render bar
-    render_str(
-        buf, x, y, &bar, width,
-        Style::default().fg(scheme.muted),
-    );
+    render_str(buf, x, y, &bar, width, Style::default().fg(scheme.muted));
 
     // Render right text (right-aligned)
     let right_x = x + width - right_len;
     render_str(
-        buf, right_x, y, &right_text, right_len,
+        buf,
+        right_x,
+        y,
+        &right_text,
+        right_len,
         Style::default().fg(scheme.text_muted),
     );
 }
@@ -1023,7 +1108,9 @@ fn render_hints(
     scheme: &crate::tui::theme::ColorScheme,
 ) {
     render_str(
-        buf, x, y,
+        buf,
+        x,
+        y,
         " Enter:jump  t:tree  u:vulns",
         width,
         Style::default().fg(scheme.text_muted),
@@ -1049,29 +1136,53 @@ fn render_non_json_map(
 
     // Format info
     render_str(
-        buf, x, y,
+        buf,
+        x,
+        y,
         &format!(" Format: {}", app.sbom.document.format),
         width,
         Style::default().fg(scheme.primary).bold(),
     );
     y += 1;
     if y >= progress_y {
-        render_progress_bar(buf, x, progress_y, width, app.source_state.selected, app.source_state.raw_lines.len(), scheme);
-        if is_focused { render_hints(buf, x, max_y - 1, width, scheme); }
+        render_progress_bar(
+            buf,
+            x,
+            progress_y,
+            width,
+            app.source_state.selected,
+            app.source_state.raw_lines.len(),
+            scheme,
+        );
+        if is_focused {
+            render_hints(buf, x, max_y - 1, width, scheme);
+        }
         return;
     }
 
     let line_count = app.source_state.raw_lines.len();
     render_str(
-        buf, x, y,
+        buf,
+        x,
+        y,
         &format!(" {line_count} lines (raw mode only)"),
         width,
         Style::default().fg(scheme.text_muted),
     );
     y += 1;
     if y >= progress_y {
-        render_progress_bar(buf, x, progress_y, width, app.source_state.selected, line_count, scheme);
-        if is_focused { render_hints(buf, x, max_y - 1, width, scheme); }
+        render_progress_bar(
+            buf,
+            x,
+            progress_y,
+            width,
+            app.source_state.selected,
+            line_count,
+            scheme,
+        );
+        if is_focused {
+            render_hints(buf, x, max_y - 1, width, scheme);
+        }
         return;
     }
 
@@ -1079,14 +1190,26 @@ fn render_non_json_map(
     render_separator(buf, x, y, width, scheme);
     y += 1;
     if y >= progress_y {
-        render_progress_bar(buf, x, progress_y, width, app.source_state.selected, line_count, scheme);
-        if is_focused { render_hints(buf, x, max_y - 1, width, scheme); }
+        render_progress_bar(
+            buf,
+            x,
+            progress_y,
+            width,
+            app.source_state.selected,
+            line_count,
+            scheme,
+        );
+        if is_focused {
+            render_hints(buf, x, max_y - 1, width, scheme);
+        }
         return;
     }
 
     // Stats
     render_str(
-        buf, x, y,
+        buf,
+        x,
+        y,
         &format!(" {} components", app.stats.component_count),
         width,
         Style::default().fg(scheme.text),
@@ -1095,7 +1218,9 @@ fn render_non_json_map(
 
     if y < progress_y && app.stats.vuln_count > 0 {
         render_str(
-            buf, x, y,
+            buf,
+            x,
+            y,
             &format!(" {} vulnerabilities", app.stats.vuln_count),
             width,
             Style::default().fg(scheme.error),
@@ -1105,7 +1230,9 @@ fn render_non_json_map(
 
     if y < progress_y {
         render_str(
-            buf, x, y,
+            buf,
+            x,
+            y,
             &format!(" {} unique licenses", app.stats.license_count),
             width,
             Style::default().fg(scheme.text_muted),
@@ -1114,8 +1241,13 @@ fn render_non_json_map(
 
     // Progress bar
     render_progress_bar(
-        buf, x, progress_y, width,
-        app.source_state.selected, line_count, scheme,
+        buf,
+        x,
+        progress_y,
+        width,
+        app.source_state.selected,
+        line_count,
+        scheme,
     );
 
     // Hints

@@ -32,7 +32,7 @@
 ///
 /// assert_eq!(escape_html("safe text"), "safe text");
 /// ```
-#[must_use] 
+#[must_use]
 pub fn escape_html(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     for c in s.chars() {
@@ -61,7 +61,7 @@ pub fn escape_html(s: &str) -> String {
 /// assert_eq!(escape_html_attr("value with \"quotes\""),
 ///     "value with &quot;quotes&quot;");
 /// ```
-#[must_use] 
+#[must_use]
 pub fn escape_html_attr(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     for c in s.chars() {
@@ -95,7 +95,7 @@ pub fn escape_html_attr(s: &str) -> String {
 /// assert_eq!(escape_markdown_table("line1\nline2"), "line1 line2");
 /// assert_eq!(escape_markdown_table("`code`"), "\\`code\\`");
 /// ```
-#[must_use] 
+#[must_use]
 pub fn escape_markdown_table(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     for c in s.chars() {
@@ -124,7 +124,7 @@ pub fn escape_markdown_table(s: &str) -> String {
 /// assert_eq!(escape_markdown_inline("**bold**"), "\\*\\*bold\\*\\*");
 /// assert_eq!(escape_markdown_inline("[link](url)"), "\\[link\\](url)");
 /// ```
-#[must_use] 
+#[must_use]
 pub fn escape_markdown_inline(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     for c in s.chars() {
@@ -151,7 +151,7 @@ pub fn escape_markdown_inline(s: &str) -> String {
 /// Escape a string for use in Markdown list items.
 ///
 /// Similar to inline escaping but preserves some formatting.
-#[must_use] 
+#[must_use]
 pub fn escape_markdown_list(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     for c in s.chars() {
@@ -220,14 +220,8 @@ mod tests {
     #[test]
     fn test_escape_html_attr() {
         assert_eq!(escape_html_attr("normal"), "normal");
-        assert_eq!(
-            escape_html_attr("line1\nline2"),
-            "line1&#10;line2"
-        );
-        assert_eq!(
-            escape_html_attr("with\ttab"),
-            "with&#9;tab"
-        );
+        assert_eq!(escape_html_attr("line1\nline2"), "line1&#10;line2");
+        assert_eq!(escape_html_attr("with\ttab"), "with&#9;tab");
     }
 
     #[test]
