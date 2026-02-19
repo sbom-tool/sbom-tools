@@ -23,9 +23,9 @@ jobs:
       - name: Checkout
         # v4.2.2
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-      - name: Install Rust stable
-        # stable
-        uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7
+      - name: Install Rust
+        # 1.88 (matches rust-toolchain.toml)
+        uses: dtolnay/rust-toolchain@e814c742d4444ce2f3f6abddea7faf00161ed941
         with:
           components: clippy, rustfmt
       - name: Cache
