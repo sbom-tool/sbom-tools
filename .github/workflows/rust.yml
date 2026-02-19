@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [main]
 
+permissions: read-all
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
@@ -75,7 +77,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
       - name: Install Rust ${{ matrix.toolchain }}
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # master
         with:
           toolchain: ${{ matrix.toolchain }}
       - name: Cache
@@ -109,11 +111,24 @@ jobs:
           command: check ${{ matrix.checks }}
           arguments: --all-features
 
+  # ── Security audit ────────────────────────────────────────────
+  audit:
+    name: Security audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: cargo-audit
+        # v2.0.0
+        uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
   # ── Status gate (single required check) ────────────────────────
   ci:
     name: CI
     if: always()
-    needs: [lint, msrv, test, deny]
+    needs: [lint, msrv, test, deny, audit]
     runs-on: ubuntu-latest
     steps:
       - name: Evaluate results
