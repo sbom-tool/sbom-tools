@@ -1,0 +1,54 @@
+# deny.toml — cargo-deny dependency policy for sbom-tools
+# https://embarkstudios.github.io/cargo-deny/
+
+[graph]
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+    "x86_64-pc-windows-msvc",
+]
+all-features = true
+
+# ── Security advisories ──────────────────────────────────────────
+# Vulnerabilities are denied by default in cargo-deny v0.19+
+[advisories]
+unmaintained = "workspace"
+ignore = []
+
+# ── License compliance ───────────────────────────────────────────
+[licenses]
+confidence-threshold = 0.93
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "ISC",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "CC0-1.0",
+    "Zlib",
+    "OpenSSL",
+]
+exceptions = []
+
+# ── Dependency bans ──────────────────────────────────────────────
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+highlight = "all"
+deny = [
+    { name = "openssl", wrappers = [] },
+    { name = "openssl-sys", wrappers = [] },
+]
+
+# ── Source origin control ────────────────────────────────────────
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

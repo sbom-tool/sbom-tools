@@ -35,5 +35,5 @@ Thumbs.db
 # Demo recording artifacts
 docs/demo/
 
-# Scripts (local tooling)
-scripts/
+# Local tooling (tracked scripts are in scripts/)
+scripts/*.local.*

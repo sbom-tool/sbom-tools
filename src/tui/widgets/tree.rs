@@ -316,7 +316,7 @@ impl<'a> Tree<'a> {
         items
     }
 
-    #[allow(clippy::self_only_used_in_recursion)]
+    #[allow(clippy::only_used_in_recursion)]
     fn flatten_nodes(
         &self,
         nodes: &[TreeNode],

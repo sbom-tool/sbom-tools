@@ -1,22 +1,122 @@
-name: Rust
+name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
-
+  # ── Fast lint pass ─────────────────────────────────────────────
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+      - name: Checkout
+        # v4.2.2
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Install Rust stable
+        # stable
+        uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7
+        with:
+          components: clippy, rustfmt
+      - name: Cache
+        uses: Swatinem/rust-cache@ad397744b0d591a723ab90405b7247fac0e6b8db # v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Clippy (default features)
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Clippy (all features)
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  # ── MSRV check ─────────────────────────────────────────────────
+  msrv:
+    name: MSRV (1.88)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Install Rust 1.88
+        # 1.88
+        uses: dtolnay/rust-toolchain@e814c742d4444ce2f3f6abddea7faf00161ed941
+      - name: Cache
+        uses: Swatinem/rust-cache@ad397744b0d591a723ab90405b7247fac0e6b8db # v2
+        with:
+          shared-key: msrv
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Check (no default features)
+        run: cargo check --locked
+      - name: Check (all features)
+        run: cargo check --locked --all-features
+
+  # ── Test matrix ────────────────────────────────────────────────
+  test:
+    name: Test (${{ matrix.os }} / ${{ matrix.toolchain }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        toolchain: [stable]
+        include:
+          - os: ubuntu-latest
+            toolchain: beta
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Install Rust ${{ matrix.toolchain }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+      - name: Cache
+        uses: Swatinem/rust-cache@ad397744b0d591a723ab90405b7247fac0e6b8db # v2
+        with:
+          shared-key: ${{ matrix.toolchain }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Test (default features)
+        run: cargo test --locked --verbose
+      - name: Test (all features)
+        run: cargo test --locked --all-features --verbose
+
+  # ── Dependency audit ───────────────────────────────────────────
+  deny:
+    name: cargo-deny (${{ matrix.checks }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        checks:
+          - advisories
+          - bans licenses sources
+    # Advisory failures are informational — don't block PRs on surprise CVEs
+    continue-on-error: ${{ matrix.checks == 'advisories' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: cargo-deny
+        # v2
+        uses: EmbarkStudios/cargo-deny-action@82eb9f621fbc699dd0918f3ea06864c14cc84246
+        with:
+          command: check ${{ matrix.checks }}
+          arguments: --all-features
+
+  # ── Status gate (single required check) ────────────────────────
+  ci:
+    name: CI
+    if: always()
+    needs: [lint, msrv, test, deny]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate results
+        run: |
+          result="${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}"
+          [[ "$result" == "false" ]] || exit 1

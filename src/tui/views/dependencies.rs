@@ -1933,7 +1933,7 @@ fn truncate_component(id: &str, max_width: usize) -> String {
                 // Just the last segment
                 seg.to_string()
             } else {
-                format!("{ellipsis_prefix}{}/{result}", seg)
+                format!("{ellipsis_prefix}{seg}/{result}")
             };
             let candidate_w = UnicodeWidthStr::width(candidate.as_str());
             if candidate_w > max_width {
