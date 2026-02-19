@@ -126,13 +126,13 @@ pub fn enrich_sbom(
     use crate::enrichment::{OsvEnricher, VulnerabilityEnricher};
 
     if !quiet {
-        tracing::info!("Enriching SBOM with OSV vulnerability data...");
+        eprintln!("Enriching SBOM with OSV vulnerability data ({} components)...", sbom.component_count());
     }
 
     match OsvEnricher::new(config.clone()) {
         Ok(enricher) => {
             if !enricher.is_available() {
-                tracing::warn!("OSV API unavailable, skipping vulnerability enrichment");
+                eprintln!("Warning: OSV API unavailable, skipping vulnerability enrichment");
                 return None;
             }
 
@@ -143,7 +143,7 @@ pub fn enrich_sbom(
             match enricher.enrich(&mut comp_vec) {
                 Ok(stats) => {
                     if !quiet {
-                        tracing::info!(
+                        eprintln!(
                             "Enriched: {} components with vulns, {} total vulns found",
                             stats.components_with_vulns,
                             stats.total_vulns_found
@@ -156,13 +156,13 @@ pub fn enrich_sbom(
                     Some(stats)
                 }
                 Err(e) => {
-                    tracing::warn!("Failed to enrich SBOM: {}", e);
+                    eprintln!("Warning: vulnerability enrichment failed: {e}");
                     None
                 }
             }
         }
         Err(e) => {
-            tracing::warn!("Failed to initialize OSV enricher: {}", e);
+            eprintln!("Warning: failed to initialize OSV enricher: {e}");
             None
         }
     }
@@ -178,7 +178,7 @@ pub fn enrich_eol(
     use crate::enrichment::EolEnricher;
 
     if !quiet {
-        tracing::info!("Enriching SBOM with end-of-life data from endoflife.date...");
+        eprintln!("Enriching SBOM with end-of-life data from endoflife.date...");
     }
 
     match EolEnricher::new(config.clone()) {
@@ -189,7 +189,7 @@ pub fn enrich_eol(
             match enricher.enrich_components(&mut comp_vec) {
                 Ok(stats) => {
                     if !quiet {
-                        tracing::info!(
+                        eprintln!(
                             "EOL enrichment: {} enriched, {} EOL, {} approaching, {} supported, {} skipped",
                             stats.components_enriched,
                             stats.eol_count,
@@ -205,13 +205,13 @@ pub fn enrich_eol(
                     Some(stats)
                 }
                 Err(e) => {
-                    tracing::warn!("Failed to enrich SBOM with EOL data: {}", e);
+                    eprintln!("Warning: EOL enrichment failed: {e}");
                     None
                 }
             }
         }
         Err(e) => {
-            tracing::warn!("Failed to initialize EOL enricher: {}", e);
+            eprintln!("Warning: failed to initialize EOL enricher: {e}");
             None
         }
     }
@@ -231,7 +231,7 @@ pub fn enrich_vex(
     }
 
     if !quiet {
-        tracing::info!(
+        eprintln!(
             "Enriching SBOM with VEX data from {} document(s)...",
             vex_paths.len()
         );
@@ -241,7 +241,7 @@ pub fn enrich_vex(
         Ok(mut enricher) => {
             let stats = enricher.enrich_sbom(sbom);
             if !quiet {
-                tracing::info!(
+                eprintln!(
                     "VEX enrichment: {} documents, {} statements, {} vulns matched, {} components",
                     stats.documents_loaded,
                     stats.statements_parsed,
@@ -252,7 +252,7 @@ pub fn enrich_vex(
             Some(stats)
         }
         Err(e) => {
-            tracing::warn!("Failed to load VEX documents: {}", e);
+            eprintln!("Warning: failed to load VEX documents: {e}");
             None
         }
     }

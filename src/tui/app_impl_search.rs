@@ -40,7 +40,7 @@ impl App {
         let query_lower = self.overlays.search.query.to_lowercase();
         let mut results = Vec::new();
 
-        // Search through diff results if available
+        // Search through diff results if available (Diff mode)
         if let Some(ref diff) = self.data.diff_result {
             // Search added components
             for comp in &diff.components.added {
@@ -128,6 +128,49 @@ impl App {
                         component_name,
                         change_type: ChangeType::Removed,
                     });
+                }
+            }
+        }
+
+        // Search through single SBOM if available (View mode)
+        if self.data.diff_result.is_none() {
+            if let Some(ref sbom) = self.data.sbom {
+                // Search components by name
+                for comp in sbom.components.values() {
+                    if comp.name.to_lowercase().contains(&query_lower) {
+                        results.push(DiffSearchResult::Component {
+                            name: comp.name.clone(),
+                            version: comp.version.clone(),
+                            change_type: ChangeType::Added, // reuse Added as "present"
+                        });
+                    }
+                }
+
+                // Search vulnerabilities
+                for comp in sbom.components.values() {
+                    for vuln in &comp.vulnerabilities {
+                        if vuln.id.to_lowercase().contains(&query_lower) {
+                            results.push(DiffSearchResult::Vulnerability {
+                                id: vuln.id.clone(),
+                                component_name: comp.name.clone(),
+                                severity: vuln.severity.as_ref().map(|s| format!("{s:?}")),
+                                change_type: VulnChangeType::Introduced, // reuse as "present"
+                            });
+                        }
+                    }
+                }
+
+                // Search licenses
+                for comp in sbom.components.values() {
+                    for lic in &comp.licenses.declared {
+                        if lic.expression.to_lowercase().contains(&query_lower) {
+                            results.push(DiffSearchResult::License {
+                                license: lic.expression.clone(),
+                                component_name: comp.name.clone(),
+                                change_type: ChangeType::Added, // reuse as "present"
+                            });
+                        }
+                    }
                 }
             }
         }

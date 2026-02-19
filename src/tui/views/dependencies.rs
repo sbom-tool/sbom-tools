@@ -147,13 +147,12 @@ fn update_diff_mode_cache(app: &mut App) {
             for sbom in app.data.new_sbom.iter().chain(app.data.old_sbom.iter()) {
                 for (id, comp) in &sbom.components {
                     let id_str = id.value().to_string();
-                    if !display_names.contains_key(&id_str) {
-                        let display = comp.version.as_ref().map_or_else(
+                    display_names.entry(id_str).or_insert_with(|| {
+                        comp.version.as_ref().map_or_else(
                             || comp.name.clone(),
                             |v| format!("{}@{}", comp.name, v),
-                        );
-                        display_names.insert(id_str, display);
-                    }
+                        )
+                    });
                 }
             }
             app.tabs.dependencies.cached_display_names = display_names;

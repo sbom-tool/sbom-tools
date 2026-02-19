@@ -156,9 +156,9 @@ struct DiffArgs {
     #[arg(long)]
     refresh_vulns: bool,
 
-    /// OSV API timeout in seconds (default: 30)
+    /// API timeout in seconds (default: 30)
     #[arg(long, default_value = "30")]
-    osv_timeout: u64,
+    api_timeout: u64,
 
     /// Enable graph-aware diffing (detect reparenting, depth changes)
     #[arg(long)]
@@ -274,8 +274,8 @@ struct ValidateArgs {
     #[arg(long, default_value = "ntia")]
     standard: String,
 
-    /// Output format
-    #[arg(short, long, default_value = "json")]
+    /// Output format (auto detects TTY: tui if interactive, summary otherwise)
+    #[arg(short, long, default_value = "auto")]
     output: ReportFormat,
 
     /// Output file path (stdout if not specified)
@@ -301,8 +301,8 @@ struct DiffMultiArgs {
     #[arg(required = true)]
     targets: Vec<PathBuf>,
 
-    /// Output format
-    #[arg(short, long, default_value = "tui")]
+    /// Output format (auto detects TTY: tui if interactive, summary otherwise)
+    #[arg(short, long, default_value = "auto")]
     output: ReportFormat,
 
     /// Output file path (stdout if not specified)
@@ -325,8 +325,8 @@ struct TimelineArgs {
     #[arg(required = true)]
     sboms: Vec<PathBuf>,
 
-    /// Output format
-    #[arg(short, long, default_value = "tui")]
+    /// Output format (auto detects TTY: tui if interactive, summary otherwise)
+    #[arg(short, long, default_value = "auto")]
     output: ReportFormat,
 
     /// Output file path (stdout if not specified)
@@ -345,8 +345,8 @@ struct MatrixArgs {
     #[arg(required = true)]
     sboms: Vec<PathBuf>,
 
-    /// Output format
-    #[arg(short, long, default_value = "tui")]
+    /// Output format (auto detects TTY: tui if interactive, summary otherwise)
+    #[arg(short, long, default_value = "auto")]
     output: ReportFormat,
 
     /// Output file path (stdout if not specified)
@@ -372,8 +372,8 @@ struct QualityArgs {
     #[arg(long, default_value = "standard")]
     profile: String,
 
-    /// Output format
-    #[arg(short, long, default_value = "summary")]
+    /// Output format (auto detects TTY: tui if interactive, summary otherwise)
+    #[arg(short, long, default_value = "auto")]
     output: ReportFormat,
 
     /// Output file path (stdout if not specified)
@@ -610,7 +610,7 @@ fn main() -> Result<()> {
                 max_concurrent: 10,
                 cache_dir: args.vuln_cache_dir.or_else(|| Some(dirs::osv_cache_dir())),
                 bypass_cache: args.refresh_vulns,
-                timeout_secs: args.osv_timeout,
+                timeout_secs: args.api_timeout,
                 enable_eol: args.enrich_eol,
                 vex_paths: args.vex,
             };
@@ -858,9 +858,9 @@ fn main() -> Result<()> {
 
 /// Split positional args into (optional pattern, file paths).
 ///
-/// The first argument is treated as a search pattern if it doesn't look like
-/// a file path (no path separator, no file extension). Otherwise, all arguments
-/// are treated as file paths.
+/// The first argument is treated as a search pattern unless it clearly looks
+/// like a file path: contains a path separator, has a known SBOM file extension,
+/// or is an existing file on disk.
 fn split_query_args(args: &[String]) -> (Option<String>, Vec<PathBuf>) {
     if args.is_empty() {
         return (None, Vec::new());
@@ -869,8 +869,8 @@ fn split_query_args(args: &[String]) -> (Option<String>, Vec<PathBuf>) {
     let first = &args[0];
     let looks_like_file = first.contains(std::path::MAIN_SEPARATOR)
         || first.contains('/')
-        || first.contains('.')
-        || Path::new(first).exists();
+        || has_sbom_extension(first)
+        || Path::new(first).is_file();
 
     if looks_like_file {
         // All args are file paths
@@ -881,4 +881,16 @@ fn split_query_args(args: &[String]) -> (Option<String>, Vec<PathBuf>) {
         let paths = args[1..].iter().map(PathBuf::from).collect();
         (pattern, paths)
     }
+}
+
+/// Check if a string has a known SBOM file extension.
+fn has_sbom_extension(s: &str) -> bool {
+    let lower = s.to_lowercase();
+    lower.ends_with(".json")
+        || lower.ends_with(".xml")
+        || lower.ends_with(".spdx")
+        || lower.ends_with(".cdx")
+        || lower.ends_with(".yaml")
+        || lower.ends_with(".yml")
+        || lower.ends_with(".rdf")
 }

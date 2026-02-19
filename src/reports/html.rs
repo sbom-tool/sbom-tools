@@ -133,7 +133,7 @@ fn write_eol_section(html: &mut String, sbom: &NormalizedSbom) -> std::fmt::Resu
     writeln!(html, "        <tbody>")?;
 
     for comp in &eol_components {
-        let eol = comp.eol.as_ref().unwrap();
+        let eol = comp.eol.as_ref().expect("filtered to eol.is_some()");
         let badge_class = match eol.status {
             EolStatus::EndOfLife => "badge-critical",
             EolStatus::ApproachingEol => "badge-warning",

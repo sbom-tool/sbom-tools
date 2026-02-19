@@ -394,7 +394,7 @@ impl ReportGenerator for MarkdownReporter {
                     "|-----------|---------|--------|---------|----------|"
                 )?;
                 for comp in &eol_components {
-                    let eol = comp.eol.as_ref().unwrap();
+                    let eol = comp.eol.as_ref().expect("filtered to eol.is_some()");
                     writeln!(
                         md,
                         "| {} | {} | {} | {} | {} |",

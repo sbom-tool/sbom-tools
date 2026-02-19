@@ -37,6 +37,9 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
 
     // Enrich with OSV vulnerability data if enabled (runtime feature check)
     #[cfg(feature = "enrichment")]
+    let mut enrichment_warnings: Vec<&str> = Vec::new();
+
+    #[cfg(feature = "enrichment")]
     let enrichment_stats = {
         if config.enrichment.enabled {
             let osv_config = crate::pipeline::build_enrichment_config(&config.enrichment);
@@ -44,6 +47,9 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
                 crate::pipeline::enrich_sbom(old_parsed.sbom_mut(), &osv_config, quiet);
             let stats_new =
                 crate::pipeline::enrich_sbom(new_parsed.sbom_mut(), &osv_config, quiet);
+            if stats_old.is_none() || stats_new.is_none() {
+                enrichment_warnings.push("OSV vulnerability enrichment failed");
+            }
             Some((stats_old, stats_new))
         } else {
             None
@@ -65,24 +71,30 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
                 timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
                 ..Default::default()
             };
-            crate::pipeline::enrich_eol(old_parsed.sbom_mut(), &eol_config, quiet);
-            crate::pipeline::enrich_eol(new_parsed.sbom_mut(), &eol_config, quiet);
+            let eol_old = crate::pipeline::enrich_eol(old_parsed.sbom_mut(), &eol_config, quiet);
+            let eol_new = crate::pipeline::enrich_eol(new_parsed.sbom_mut(), &eol_config, quiet);
+            if eol_old.is_none() || eol_new.is_none() {
+                enrichment_warnings.push("EOL enrichment failed");
+            }
         }
     }
 
     // Enrich with VEX data if VEX documents provided
     #[cfg(feature = "enrichment")]
     if !config.enrichment.vex_paths.is_empty() {
-        crate::pipeline::enrich_vex(old_parsed.sbom_mut(), &config.enrichment.vex_paths, quiet);
-        crate::pipeline::enrich_vex(new_parsed.sbom_mut(), &config.enrichment.vex_paths, quiet);
+        let vex_old = crate::pipeline::enrich_vex(old_parsed.sbom_mut(), &config.enrichment.vex_paths, quiet);
+        let vex_new = crate::pipeline::enrich_vex(new_parsed.sbom_mut(), &config.enrichment.vex_paths, quiet);
+        if vex_old.is_none() || vex_new.is_none() {
+            enrichment_warnings.push("VEX enrichment failed");
+        }
     }
 
     #[cfg(not(feature = "enrichment"))]
     {
-        if config.enrichment.enabled && !quiet {
-            tracing::warn!(
-                "Enrichment requested but the 'enrichment' feature is not enabled. \
-                 Rebuild with --features enrichment to enable vulnerability enrichment."
+        if config.enrichment.enabled {
+            eprintln!(
+                "Warning: enrichment requested but the 'enrichment' feature is not enabled. \
+                 Rebuild with: cargo build --features enrichment"
             );
         }
     }
@@ -113,6 +125,13 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
 
         #[cfg(not(feature = "enrichment"))]
         let mut app = App::new_diff(result, old_sbom, new_sbom, &old_raw, &new_raw);
+
+        // Show enrichment warnings in TUI footer
+        #[cfg(feature = "enrichment")]
+        if !enrichment_warnings.is_empty() {
+            app.set_status_message(format!("Warning: {}", enrichment_warnings.join(", ")));
+            app.status_sticky = true;
+        }
 
         run_tui(&mut app)?;
     } else {
