@@ -2,6 +2,8 @@
 use libfuzzer_sys::fuzz_target;
 use sbom_tools::parsers::{SpdxParser, SbomParser};
 
+const MAX_WRAPPED_INPUT_LEN: usize = 10_000;
+
 /// Fuzz the SPDX tag-value parser.
 ///
 /// Prefixes input with the SPDX tag-value header to exercise the
@@ -14,7 +16,7 @@ fuzz_target!(|data: &[u8]| {
         let _ = parser.parse_str(s);
 
         // Try wrapping with SPDX tag-value header
-        if s.len() < 10_000 {
+        if s.len() < MAX_WRAPPED_INPUT_LEN {
             let wrapped = format!(
                 "SPDXVersion: SPDX-2.3\nDataLicense: CC0-1.0\nSPDXID: SPDXRef-DOCUMENT\nDocumentName: fuzz\nDocumentNamespace: https://example.com/fuzz\n{s}",
             );
