@@ -65,7 +65,7 @@ jobs:
 
       - name: cargo-deny
         # v2
-        uses: EmbarkStudios/cargo-deny-action@82eb9f621fbc699dd0918f3ea06864c14cc84246
+        uses: EmbarkStudios/cargo-deny-action@3fd3802e88374d3fe9159b834c7714ec57d6c979
         with:
           arguments: --all-features
 
