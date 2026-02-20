@@ -2,6 +2,8 @@
 use libfuzzer_sys::fuzz_target;
 use sbom_tools::parsers::{SpdxParser, SbomParser};
 
+const MAX_WRAPPED_INPUT_LEN: usize = 10_000;
+
 /// Fuzz the SPDX JSON parser directly.
 ///
 /// Wraps input in an SPDX JSON envelope to reach the JSON parsing
@@ -14,7 +16,7 @@ fuzz_target!(|data: &[u8]| {
         let _ = parser.parse_str(s);
 
         // Try wrapping in SPDX JSON envelope
-        if s.len() < 10_000 {
+        if s.len() < MAX_WRAPPED_INPUT_LEN {
             let wrapped = format!(
                 r#"{{"spdxVersion":"SPDX-2.3","SPDXID":"SPDXRef-DOCUMENT","name":"fuzz","documentNamespace":"https://example.com/fuzz","packages":[{s}]}}"#,
             );
