@@ -1,0 +1,7 @@
+# Default reviewers for all files
+* @matrosov @yeggor
+
+# CI/CD and security-sensitive files require explicit review
+.github/ @matrosov
+deny.toml @matrosov
+Cargo.toml @matrosov
