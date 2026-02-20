@@ -5,6 +5,7 @@ on:
     branches: [main]
   schedule:
     - cron: "30 1 * * 6" # Saturday 01:30 UTC
+  workflow_dispatch:
 
 # publish_results requires read-all at workflow level
 permissions: read-all
