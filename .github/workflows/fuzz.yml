@@ -1,0 +1,64 @@
+name: Fuzz testing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/parsers/**"
+      - "fuzz/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/parsers/**"
+      - "fuzz/**"
+  schedule:
+    - cron: "0 3 * * 1" # Monday 03:00 UTC
+  workflow_dispatch:
+
+permissions: read-all
+
+env:
+  CARGO_TERM_COLOR: always
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fuzz:
+    name: Fuzz ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - fuzz_parse_sbom
+          - fuzz_cyclonedx_json
+          - fuzz_cyclonedx_xml
+          - fuzz_spdx_json
+          - fuzz_spdx_tagvalue
+          - fuzz_detect_format
+    steps:
+      - name: Checkout
+        # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - name: Install nightly toolchain
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Cache cargo registry and build
+        # v2.8.2
+        uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6
+        with:
+          workspaces: fuzz -> target
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+
+      - name: Run fuzzer
+        run: |
+          cargo +nightly fuzz run ${{ matrix.target }} -- \
+            -max_total_time=120 \
+            -seed_inputs=fuzz/corpus/seed/*
