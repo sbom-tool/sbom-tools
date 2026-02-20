@@ -1,5 +1,5 @@
 # Default reviewers for all files
-* @matrosov @yeggor
+* @matrosov
 
 # CI/CD and security-sensitive files require explicit review
 .github/ @matrosov
