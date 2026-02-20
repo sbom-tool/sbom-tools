@@ -12,7 +12,7 @@ categories = ["command-line-utilities", "development-tools", "security"]
 
 [dependencies]
 # Signal Handling
-ctrlc = "3.4"
+ctrlc = "3.5"
 
 # SBOM Parsing
 spdx = "0.13"
