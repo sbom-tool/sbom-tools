@@ -46,13 +46,17 @@ jobs:
           persist-credentials: false
 
       - name: Install nightly toolchain
-        uses: dtolnay/rust-toolchain@nightly
+        # nightly
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
+        with:
+          toolchain: nightly
 
       - name: Cache cargo registry and build
         # v2.8.2
         uses: Swatinem/rust-cache@9d47c6ad4b02e050fd481d890b2ea34778fd09d6
         with:
           workspaces: fuzz -> target
+          key: fuzz-${{ matrix.target }}
 
       - name: Install cargo-fuzz
         run: cargo install cargo-fuzz --locked
