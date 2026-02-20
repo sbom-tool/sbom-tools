@@ -1,0 +1,51 @@
+[package]
+name = "sbom-tools-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.sbom-tools]
+path = ".."
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "fuzz_parse_sbom"
+path = "fuzz_targets/fuzz_parse_sbom.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_cyclonedx_json"
+path = "fuzz_targets/fuzz_cyclonedx_json.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_cyclonedx_xml"
+path = "fuzz_targets/fuzz_cyclonedx_xml.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_spdx_json"
+path = "fuzz_targets/fuzz_spdx_json.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_spdx_tagvalue"
+path = "fuzz_targets/fuzz_spdx_tagvalue.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_detect_format"
+path = "fuzz_targets/fuzz_detect_format.rs"
+doc = false

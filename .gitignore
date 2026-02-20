@@ -37,3 +37,7 @@ docs/demo/
 
 # Local tooling (tracked scripts are in scripts/)
 scripts/*.local.*
+
+# Fuzz corpus and artifacts (seed corpus is tracked)
+fuzz/corpus/fuzz_*
+fuzz/artifacts/

@@ -1,0 +1,10 @@
+SPDXVersion: SPDX-2.3
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: fuzz-seed
+DocumentNamespace: https://example.com/fuzz
+Creator: Tool: fuzz-seed
+PackageName: example
+PackageVersion: 1.0.0
+SPDXID: SPDXRef-Package
+PackageDownloadLocation: https://example.com
