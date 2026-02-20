@@ -2,6 +2,8 @@
 use libfuzzer_sys::fuzz_target;
 use sbom_tools::parsers::{CycloneDxParser, SbomParser};
 
+const MAX_WRAPPED_INPUT_LEN: usize = 10_000;
+
 /// Fuzz the CycloneDX JSON parser directly.
 ///
 /// Prefixes input with a minimal CycloneDX JSON wrapper to increase
@@ -15,7 +17,7 @@ fuzz_target!(|data: &[u8]| {
         let _ = parser.parse_str(s);
 
         // Also try wrapping in CycloneDX JSON envelope
-        if s.len() < 10_000 {
+        if s.len() < MAX_WRAPPED_INPUT_LEN {
             let wrapped = format!(
                 r#"{{"bomFormat":"CycloneDX","specVersion":"1.5","components":[{s}]}}"#,
             );
