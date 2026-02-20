@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout
-        # v4.2.2
+        # v6.0.2
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
@@ -35,7 +35,7 @@ jobs:
           publish_results: true
 
       - name: Upload artifact
-        # v4
+        # v6.0.0
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: scorecard-sarif
