@@ -73,7 +73,7 @@ pub fn explain_license_score(report: &QualityReport) -> String {
 pub fn explain_vulnerability_score(report: &QualityReport) -> String {
     let m = &report.vulnerability_metrics;
     if m.total_vulnerabilities == 0 {
-        "No vulns tracked".to_string()
+        "N/A (no vuln data)".to_string()
     } else if m.with_cvss == m.total_vulnerabilities {
         "All have CVSS".to_string()
     } else {
@@ -432,6 +432,8 @@ pub fn render_quality_summary(
 
     // Bar chart with 8 category scores
     // Use max(1) so even 0% bars have a stub for the text_value to render on
+    let vuln_val = report.vulnerability_score.unwrap_or(0.0);
+    let vuln_is_na = report.vulnerability_score.is_none();
     let lifecycle_val = report.lifecycle_score.unwrap_or(0.0);
     let lifecycle_is_na = report.lifecycle_score.is_none();
     let bar_chart = BarChart::default()
@@ -462,10 +464,26 @@ pub fn render_quality_summary(
                     .style(bar_grade_style(report.license_score))
                     .text_value(format!("{}", report.license_score as u64)),
                 Bar::default()
-                    .value((report.vulnerability_score as u64).max(1))
-                    .label(Line::from("VDoc"))
-                    .style(bar_grade_style(report.vulnerability_score))
-                    .text_value(format!("{}", report.vulnerability_score as u64)),
+                    .value(if vuln_is_na {
+                        1
+                    } else {
+                        (vuln_val as u64).max(1)
+                    })
+                    .label(if vuln_is_na {
+                        Line::styled("VDoc", Style::default().fg(scheme.muted))
+                    } else {
+                        Line::from("VDoc")
+                    })
+                    .style(if vuln_is_na {
+                        Style::default().fg(scheme.muted)
+                    } else {
+                        bar_grade_style(vuln_val)
+                    })
+                    .text_value(if vuln_is_na {
+                        "N/A".to_string()
+                    } else {
+                        format!("{}", vuln_val as u64)
+                    }),
                 Bar::default()
                     .value((report.dependency_score as u64).max(1))
                     .label(Line::from("Deps"))
@@ -530,11 +548,13 @@ fn render_compact_header(frame: &mut Frame, area: Rect, report: &QualityReport) 
         ("Completeness", report.completeness_score),
         ("Identifiers", report.identifier_score),
         ("Licenses", report.license_score),
-        ("Vuln Docs", report.vulnerability_score),
         ("Dependencies", report.dependency_score),
         ("Integrity", report.integrity_score),
         ("Provenance", report.provenance_score),
     ];
+    if let Some(vs) = report.vulnerability_score {
+        scores.push(("Vuln Docs", vs));
+    }
     if let Some(lc) = report.lifecycle_score {
         scores.push(("Lifecycle", lc));
     }
@@ -791,6 +811,7 @@ pub fn render_score_breakdown(frame: &mut Frame, area: Rect, report: &QualityRep
 
     // Weighted breakdown table (8 categories)
     let weights = get_profile_weights(report.profile);
+    let vuln_val = report.vulnerability_score.unwrap_or(0.0);
     let lifecycle_val = report.lifecycle_score.unwrap_or(0.0);
     let rows = vec![
         create_breakdown_row(
@@ -813,8 +834,12 @@ pub fn render_score_breakdown(frame: &mut Frame, area: Rect, report: &QualityRep
         ),
         create_breakdown_row(
             "Vuln Docs",
-            report.vulnerability_score,
-            weights.3,
+            vuln_val,
+            if report.vulnerability_score.is_some() {
+                weights.3
+            } else {
+                0.0
+            },
             &explain_vulnerability_score(report),
         ),
         create_breakdown_row(
