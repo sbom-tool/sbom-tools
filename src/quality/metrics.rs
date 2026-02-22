@@ -590,20 +590,26 @@ impl VulnerabilityMetrics {
     }
 
     /// Calculate vulnerability documentation quality score (0-100)
-    /// Note: This measures how well vulnerabilities are documented, not how many there are
+    ///
+    /// Returns `None` when no vulnerability data exists, signaling that this
+    /// category should be excluded from the weighted score (N/A-aware).
+    /// This prevents inflating the overall score when vulnerability assessment
+    /// was not performed.
     #[must_use]
-    pub fn documentation_score(&self) -> f32 {
+    pub fn documentation_score(&self) -> Option<f32> {
         if self.total_vulnerabilities == 0 {
-            return 100.0; // No vulns to document
+            return None; // No vulnerability data — treat as N/A
         }
 
         let cvss_ratio = self.with_cvss as f32 / self.total_vulnerabilities as f32;
         let cwe_ratio = self.with_cwe as f32 / self.total_vulnerabilities as f32;
         let remediation_ratio = self.with_remediation as f32 / self.total_vulnerabilities as f32;
 
-        remediation_ratio
-            .mul_add(30.0, cvss_ratio.mul_add(40.0, cwe_ratio * 30.0))
-            .min(100.0)
+        Some(
+            remediation_ratio
+                .mul_add(30.0, cvss_ratio.mul_add(40.0, cwe_ratio * 30.0))
+                .min(100.0),
+        )
     }
 }
 

@@ -242,10 +242,10 @@ fn format_quality_report(report: &QualityReport, config: &QualityConfig) -> Stri
         "  Licenses:        {:.1}/100",
         report.license_score
     ));
-    lines.push(format!(
-        "  Vulnerabilities: {:.1}/100",
-        report.vulnerability_score
-    ));
+    lines.push(match report.vulnerability_score {
+        Some(score) => format!("  Vulnerabilities: {score:.1}/100"),
+        None => "  Vulnerabilities: N/A".to_string(),
+    });
     lines.push(format!(
         "  Dependencies:    {:.1}/100",
         report.dependency_score

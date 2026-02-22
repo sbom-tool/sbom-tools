@@ -173,8 +173,18 @@ fn render_metrics_panel_with_explanation(
         ]),
         ratatui::widgets::Row::new(vec![
             "Vulnerabilities".to_string(),
-            format!("{:.0}%", report.vulnerability_score),
-            format!("×{:.0}%", weights.3 * 100.0),
+            match report.vulnerability_score {
+                Some(score) => format!("{score:.0}%"),
+                None => "N/A".to_string(),
+            },
+            format!(
+                "×{:.0}%",
+                if report.vulnerability_score.is_some() {
+                    weights.3 * 100.0
+                } else {
+                    0.0
+                }
+            ),
             shared::explain_vulnerability_score(report),
         ]),
         ratatui::widgets::Row::new(vec![

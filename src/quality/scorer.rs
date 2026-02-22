@@ -292,8 +292,8 @@ pub struct QualityReport {
     pub identifier_score: f32,
     /// License quality score
     pub license_score: f32,
-    /// Vulnerability documentation score
-    pub vulnerability_score: f32,
+    /// Vulnerability documentation score (`None` if no vulnerability data)
+    pub vulnerability_score: Option<f32>,
     /// Dependency graph quality score
     pub dependency_score: f32,
     /// Hash/integrity quality score
@@ -385,12 +385,13 @@ impl QualityScorer {
         let lifecycle_score = lifecycle_metrics.quality_score();
 
         // Determine which categories are available
+        let vuln_available = vulnerability_score.is_some();
         let lifecycle_available = lifecycle_score.is_some();
         let available = [
             true,                // completeness
             true,                // identifiers
             true,                // licenses
-            true,                // vulnerabilities
+            vuln_available,      // vulnerabilities
             true,                // dependencies
             true,                // integrity
             true,                // provenance
@@ -404,7 +405,7 @@ impl QualityScorer {
             completeness_score,
             identifier_score,
             license_score,
-            vulnerability_score,
+            vulnerability_score.unwrap_or(0.0),
             dependency_score,
             integrity_score,
             provenance_score,
