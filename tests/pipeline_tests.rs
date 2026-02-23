@@ -537,6 +537,7 @@ mod multi_diff_pipeline {
             Some(out_path.clone()),
             "balanced".to_string(),
             false,
+            false,
         );
 
         result.expect("multi-diff should succeed");
@@ -562,6 +563,7 @@ mod multi_diff_pipeline {
             ReportFormat::Json,
             Some(out_path.clone()),
             "balanced".to_string(),
+            false,
         );
 
         result.expect("timeline should succeed");
@@ -581,6 +583,7 @@ mod multi_diff_pipeline {
             ReportFormat::Json,
             None,
             "balanced".to_string(),
+            false,
         );
 
         assert!(result.is_err(), "Timeline with 1 SBOM should fail");
@@ -606,6 +609,7 @@ mod multi_diff_pipeline {
             Some(out_path.clone()),
             "balanced".to_string(),
             0.7,
+            false,
         );
 
         result.expect("matrix should succeed");
@@ -630,6 +634,7 @@ mod multi_diff_pipeline {
             None,
             "balanced".to_string(),
             0.7,
+            false,
         );
 
         assert!(result.is_err(), "Matrix with 1 SBOM should fail");

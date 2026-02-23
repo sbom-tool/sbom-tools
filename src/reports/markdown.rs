@@ -88,6 +88,13 @@ impl ReportGenerator for MarkdownReporter {
             {
                 writeln!(md, "- [Vulnerability Changes](#vulnerability-changes)")?;
             }
+            if result
+                .graph_summary
+                .as_ref()
+                .is_some_and(|s| s.total_changes > 0)
+            {
+                writeln!(md, "- [Graph Changes](#graph-changes)")?;
+            }
             writeln!(md, "- [CRA Compliance](#cra-compliance)")?;
             writeln!(md)?;
         }
@@ -370,6 +377,115 @@ impl ReportGenerator for MarkdownReporter {
                         escape_markdown_table(&vuln.component_name),
                         vex_display,
                     )?;
+                }
+                writeln!(md)?;
+            }
+        }
+
+        // Graph changes section
+        if let Some(ref summary) = result.graph_summary
+            && summary.total_changes > 0
+        {
+            writeln!(md, "## Graph Changes\n")?;
+            writeln!(md, "| Type | Count |")?;
+            writeln!(md, "|------|-------|")?;
+            writeln!(
+                md,
+                "| Dependencies Added | {} |",
+                summary.dependencies_added
+            )?;
+            writeln!(
+                md,
+                "| Dependencies Removed | {} |",
+                summary.dependencies_removed
+            )?;
+            writeln!(
+                md,
+                "| Relationship Changed | {} |",
+                summary.relationship_changed
+            )?;
+            writeln!(md, "| Reparented | {} |", summary.reparented)?;
+            writeln!(md, "| Depth Changed | {} |", summary.depth_changed)?;
+            writeln!(md, "| **Total** | **{}** |", summary.total_changes)?;
+            writeln!(md)?;
+
+            // Detailed graph changes table
+            if !result.graph_changes.is_empty() {
+                writeln!(md, "### Graph Change Details\n")?;
+                writeln!(md, "| Impact | Type | Component | Details |")?;
+                writeln!(md, "|--------|------|-----------|---------|")?;
+                for change in &result.graph_changes {
+                    let impact = change.impact.as_str().to_uppercase();
+                    let (change_type, details) = match &change.change {
+                        crate::diff::DependencyChangeType::DependencyAdded {
+                            dependency_name,
+                            ..
+                        } => ("Added", format!("+ {dependency_name}")),
+                        crate::diff::DependencyChangeType::DependencyRemoved {
+                            dependency_name,
+                            ..
+                        } => ("Removed", format!("- {dependency_name}")),
+                        crate::diff::DependencyChangeType::RelationshipChanged {
+                            dependency_name,
+                            old_relationship,
+                            new_relationship,
+                            ..
+                        } => (
+                            "Rel Changed",
+                            format!("{dependency_name}: {old_relationship} → {new_relationship}"),
+                        ),
+                        crate::diff::DependencyChangeType::Reparented {
+                            old_parent_name,
+                            new_parent_name,
+                            ..
+                        } => (
+                            "Reparented",
+                            format!("{old_parent_name} → {new_parent_name}"),
+                        ),
+                        crate::diff::DependencyChangeType::DepthChanged {
+                            old_depth,
+                            new_depth,
+                        } => {
+                            let od = if *old_depth == u32::MAX {
+                                "unreachable".to_string()
+                            } else {
+                                old_depth.to_string()
+                            };
+                            let nd = if *new_depth == u32::MAX {
+                                "unreachable".to_string()
+                            } else {
+                                new_depth.to_string()
+                            };
+                            ("Depth", format!("{od} → {nd}"))
+                        }
+                    };
+                    writeln!(
+                        md,
+                        "| {} | {} | {} | {} |",
+                        escape_markdown_table(&impact),
+                        change_type,
+                        escape_markdown_table(&change.component_name),
+                        escape_markdown_table(&details),
+                    )?;
+                }
+                writeln!(md)?;
+            }
+
+            if summary.by_impact.critical > 0 || summary.by_impact.high > 0 {
+                writeln!(md, "### Impact Summary\n")?;
+                writeln!(md, "| Impact | Count |")?;
+                writeln!(md, "|--------|-------|")?;
+                if summary.by_impact.critical > 0 {
+                    writeln!(md, "| Critical | {} |", summary.by_impact.critical)?;
+                }
+                if summary.by_impact.high > 0 {
+                    writeln!(md, "| High | {} |", summary.by_impact.high)?;
+                }
+                if summary.by_impact.medium > 0 {
+                    writeln!(md, "| Medium | {} |", summary.by_impact.medium)?;
+                }
+                if summary.by_impact.low > 0 {
+                    writeln!(md, "| Low | {} |", summary.by_impact.low)?;
                 }
                 writeln!(md)?;
             }

@@ -4,10 +4,10 @@
 
 use crate::model::{
     CanonicalId, CompletenessDeclaration, Component, ComponentType, Creator, CreatorType,
-    CvssScore, CvssVersion, DependencyEdge, DependencyType, DocumentMetadata, ExternalRefType,
-    ExternalReference, Hash, HashAlgorithm, LicenseExpression, NormalizedSbom, Organization,
-    Property, Remediation, RemediationType, SbomFormat, Severity, SignatureInfo, VexJustification,
-    VexResponse, VexState, VexStatus, VulnerabilityRef, VulnerabilitySource,
+    CvssScore, CvssVersion, DependencyEdge, DependencyScope, DependencyType, DocumentMetadata,
+    ExternalRefType, ExternalReference, Hash, HashAlgorithm, LicenseExpression, NormalizedSbom,
+    Organization, Property, Remediation, RemediationType, SbomFormat, Severity, SignatureInfo,
+    VexJustification, VexResponse, VexState, VexStatus, VulnerabilityRef, VulnerabilitySource,
 };
 use crate::parsers::traits::{ParseError, SbomParser};
 use chrono::{DateTime, Utc};
@@ -147,26 +147,48 @@ impl CycloneDxParser {
             sbom.add_component(comp);
         }
 
+        // Build scope map from bom-ref to DependencyScope
+        let mut scope_map: HashMap<String, DependencyScope> = HashMap::new();
+
         if let Some(components) = cdx.components {
             for cdx_comp in components {
                 let comp = self.convert_component(&cdx_comp);
                 let bom_ref = cdx_comp.bom_ref.unwrap_or_else(|| comp.name.clone());
+                if let Some(scope_str) = &cdx_comp.scope {
+                    let scope = match scope_str.to_lowercase().as_str() {
+                        "optional" => DependencyScope::Optional,
+                        "excluded" => DependencyScope::Excluded,
+                        _ => DependencyScope::Required,
+                    };
+                    scope_map.insert(bom_ref.clone(), scope);
+                }
                 id_map.insert(bom_ref, comp.canonical_id.clone());
                 sbom.add_component(comp);
             }
         }
 
-        // Convert dependencies
+        // Convert dependencies, attaching scope from component metadata
         if let Some(deps) = cdx.dependencies {
             for dep in deps {
                 if let Some(from_id) = id_map.get(&dep.ref_field) {
                     for depends_on in dep.depends_on.unwrap_or_default() {
                         if let Some(to_id) = id_map.get(&depends_on) {
-                            sbom.add_edge(DependencyEdge::new(
-                                from_id.clone(),
-                                to_id.clone(),
+                            // Infer relationship type from scope when available.
+                            // CycloneDX scope "optional" → OptionalDependsOn,
+                            // "excluded" → DependsOn (kept as marker via scope field).
+                            let dep_type = scope_map.get(&depends_on).map_or(
                                 DependencyType::DependsOn,
-                            ));
+                                |scope| match scope {
+                                    DependencyScope::Optional => DependencyType::OptionalDependsOn,
+                                    _ => DependencyType::DependsOn,
+                                },
+                            );
+                            let mut edge =
+                                DependencyEdge::new(from_id.clone(), to_id.clone(), dep_type);
+                            if let Some(scope) = scope_map.get(&depends_on) {
+                                edge = edge.with_scope(scope.clone());
+                            }
+                            sbom.add_edge(edge);
                         }
                     }
                 }
@@ -884,6 +906,7 @@ struct CdxComponent {
     name: String,
     version: Option<String>,
     group: Option<String>,
+    scope: Option<String>,
     purl: Option<String>,
     cpe: Option<String>,
     description: Option<String>,

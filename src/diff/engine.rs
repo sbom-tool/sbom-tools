@@ -61,7 +61,7 @@ impl DiffEngine {
     }
 
     /// Enable graph-aware diffing with the given configuration
-    pub const fn with_graph_diff(mut self, config: GraphDiffConfig) -> Self {
+    pub fn with_graph_diff(mut self, config: GraphDiffConfig) -> Self {
         self.graph_diff_config = Some(config);
         self
     }

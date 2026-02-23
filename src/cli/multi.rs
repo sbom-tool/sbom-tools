@@ -21,6 +21,7 @@ pub fn run_diff_multi(
     output_file: Option<PathBuf>,
     fuzzy_preset: String,
     include_unchanged: bool,
+    graph_diff: bool,
 ) -> Result<()> {
     let baseline_parsed = parse_sbom_with_context(&baseline_path, false)?;
     let target_sboms = parse_multiple_sboms(&target_paths)?;
@@ -44,6 +45,9 @@ pub fn run_diff_multi(
     let mut engine = MultiDiffEngine::new()
         .with_fuzzy_config(fuzzy_config)
         .include_unchanged(include_unchanged);
+    if graph_diff {
+        engine = engine.with_graph_diff(crate::diff::GraphDiffConfig::default());
+    }
 
     let baseline_name = get_sbom_name(&baseline_path);
 
@@ -79,6 +83,7 @@ pub fn run_timeline(
     output: ReportFormat,
     output_file: Option<PathBuf>,
     fuzzy_preset: String,
+    graph_diff: bool,
 ) -> Result<()> {
     if sbom_paths.len() < 2 {
         bail!("Timeline analysis requires at least 2 SBOMs");
@@ -99,6 +104,9 @@ pub fn run_timeline(
 
     // Run timeline analysis
     let mut engine = MultiDiffEngine::new().with_fuzzy_config(fuzzy_config);
+    if graph_diff {
+        engine = engine.with_graph_diff(crate::diff::GraphDiffConfig::default());
+    }
     let result = engine.timeline(&sbom_refs);
 
     tracing::info!(
@@ -126,6 +134,7 @@ pub fn run_matrix(
     output_file: Option<PathBuf>,
     fuzzy_preset: String,
     cluster_threshold: f64,
+    graph_diff: bool,
 ) -> Result<()> {
     if sbom_paths.len() < 2 {
         bail!("Matrix comparison requires at least 2 SBOMs");
@@ -150,6 +159,9 @@ pub fn run_matrix(
 
     // Run matrix comparison
     let mut engine = MultiDiffEngine::new().with_fuzzy_config(fuzzy_config);
+    if graph_diff {
+        engine = engine.with_graph_diff(crate::diff::GraphDiffConfig::default());
+    }
     let result = engine.matrix(&sbom_refs, Some(cluster_threshold));
 
     tracing::info!(

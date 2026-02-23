@@ -551,6 +551,12 @@ pub struct GraphAwareDiffConfig {
     pub detect_reparenting: bool,
     /// Detect depth changes
     pub detect_depth_changes: bool,
+    /// Maximum depth to analyze (0 = unlimited)
+    pub max_depth: u32,
+    /// Minimum impact level to include in output ("low", "medium", "high", "critical")
+    pub impact_threshold: Option<String>,
+    /// Relationship type filter — only include edges matching these types (empty = all)
+    pub relation_filter: Vec<String>,
 }
 
 impl GraphAwareDiffConfig {
@@ -561,6 +567,9 @@ impl GraphAwareDiffConfig {
             enabled: true,
             detect_reparenting: true,
             detect_depth_changes: true,
+            max_depth: 0,
+            impact_threshold: None,
+            relation_filter: Vec::new(),
         }
     }
 }

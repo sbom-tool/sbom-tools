@@ -174,6 +174,19 @@ struct DiffArgs {
     #[arg(long)]
     graph_diff: bool,
 
+    /// Maximum depth for graph analysis (0 = unlimited, requires --graph-diff)
+    #[arg(long, default_value = "0")]
+    graph_max_depth: u32,
+
+    /// Minimum impact level to include in graph diff output (low, medium, high, critical)
+    #[arg(long, default_value = "low")]
+    graph_impact_threshold: String,
+
+    /// Comma-separated list of relationship types to include in graph diff
+    /// (e.g., "DependsOn,DevDependsOn"). Empty = all types.
+    #[arg(long)]
+    graph_relations: Option<String>,
+
     /// Custom matching rules YAML file
     #[arg(long)]
     matching_rules: Option<PathBuf>,
@@ -330,6 +343,10 @@ struct DiffMultiArgs {
     /// Include unchanged components in output
     #[arg(long)]
     include_unchanged: bool,
+
+    /// Enable graph-aware diffing for multi-comparisons
+    #[arg(long)]
+    graph_diff: bool,
 }
 
 /// Arguments for the `timeline` subcommand
@@ -350,6 +367,10 @@ struct TimelineArgs {
     /// Fuzzy matching preset (strict, balanced, permissive)
     #[arg(long, default_value = "balanced")]
     fuzzy_preset: String,
+
+    /// Enable graph-aware diffing for timeline analysis
+    #[arg(long)]
+    graph_diff: bool,
 }
 
 /// Arguments for the `matrix` subcommand
@@ -374,6 +395,10 @@ struct MatrixArgs {
     /// Similarity threshold for clustering (0.0-1.0)
     #[arg(long, default_value = "0.8")]
     cluster_threshold: f64,
+
+    /// Enable graph-aware diffing for matrix comparison
+    #[arg(long)]
+    graph_diff: bool,
 }
 
 /// Arguments for the `quality` subcommand
@@ -689,7 +714,16 @@ fn main() -> Result<()> {
                     recommend_threshold: args.recommend_threshold,
                 },
                 graph_diff: if args.graph_diff {
-                    GraphAwareDiffConfig::enabled()
+                    let mut gdc = GraphAwareDiffConfig::enabled();
+                    gdc.max_depth = args.graph_max_depth;
+                    if args.graph_impact_threshold != "low" {
+                        gdc.impact_threshold = Some(args.graph_impact_threshold.clone());
+                    }
+                    if let Some(ref rels) = args.graph_relations {
+                        gdc.relation_filter =
+                            rels.split(',').map(|s| s.trim().to_string()).collect();
+                    }
+                    gdc
                 } else {
                     GraphAwareDiffConfig::default()
                 },
@@ -765,11 +799,16 @@ fn main() -> Result<()> {
             args.output_file,
             args.fuzzy_preset,
             args.include_unchanged,
+            args.graph_diff,
         ),
 
-        Commands::Timeline(args) => {
-            cli::run_timeline(args.sboms, args.output, args.output_file, args.fuzzy_preset)
-        }
+        Commands::Timeline(args) => cli::run_timeline(
+            args.sboms,
+            args.output,
+            args.output_file,
+            args.fuzzy_preset,
+            args.graph_diff,
+        ),
 
         Commands::Matrix(args) => cli::run_matrix(
             args.sboms,
@@ -777,6 +816,7 @@ fn main() -> Result<()> {
             args.output_file,
             args.fuzzy_preset,
             args.cluster_threshold,
+            args.graph_diff,
         ),
 
         Commands::Quality(args) => {

@@ -26,9 +26,12 @@ pub fn render_graph_changes(frame: &mut Frame, area: Rect, app: &mut App) {
         return;
     }
 
-    // Clone necessary data to avoid borrow issues
-    let changes: Vec<DependencyGraphChange> = result.graph_changes.clone();
-    let summary = result.graph_summary.clone();
+    // Update mutable state first, then borrow immutably for rendering
+    let total = result.graph_changes.len();
+    app.tabs.graph_changes.set_total(total);
+
+    // Re-borrow immutably after mutable update
+    let result = app.data.diff_result.as_ref().expect("checked above");
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -40,18 +43,15 @@ pub fn render_graph_changes(frame: &mut Frame, area: Rect, app: &mut App) {
         .split(area);
 
     // Summary stats
-    if let Some(ref sum) = summary {
+    if let Some(ref sum) = result.graph_summary {
         render_summary(frame, chunks[0], sum);
     }
-
-    // Update total
-    app.tabs.graph_changes.set_total(changes.len());
 
     // Context bar with selection info
     render_context_bar(frame, chunks[1], app);
 
     // Changes table
-    render_changes_table(frame, chunks[2], &changes, app);
+    render_changes_table(frame, chunks[2], &result.graph_changes, app);
 }
 
 fn render_no_data(frame: &mut Frame, area: Rect) {
@@ -102,6 +102,11 @@ fn render_summary(frame: &mut Frame, area: Rect, summary: &GraphChangeSummary) {
             Span::styled("- ", Style::default().fg(colors().removed).bold()),
             Span::styled(
                 format!("{} removed  ", summary.dependencies_removed),
+                Style::default().fg(colors().text),
+            ),
+            Span::styled("~ ", Style::default().fg(colors().modified).bold()),
+            Span::styled(
+                format!("{} rel changed  ", summary.relationship_changed),
                 Style::default().fg(colors().text),
             ),
             Span::styled("↔ ", Style::default().fg(colors().modified).bold()),
@@ -278,6 +283,9 @@ fn change_type_cell(change: &DependencyChangeType) -> Cell<'static> {
         DependencyChangeType::DependencyRemoved { .. } => {
             ("- Removed", Style::default().fg(colors().removed))
         }
+        DependencyChangeType::RelationshipChanged { .. } => {
+            ("~ Relation", Style::default().fg(colors().modified))
+        }
         DependencyChangeType::Reparented { .. } => {
             ("↔ Reparent", Style::default().fg(colors().modified))
         }
@@ -300,6 +308,19 @@ fn details_cell(change: &DependencyChangeType) -> Cell<'static> {
         } => {
             format!("Removed dependency: {}", truncate(dependency_name, 40))
         }
+        DependencyChangeType::RelationshipChanged {
+            dependency_name,
+            old_relationship,
+            new_relationship,
+            ..
+        } => {
+            format!(
+                "{}: {} → {}",
+                truncate(dependency_name, 20),
+                truncate(old_relationship, 15),
+                truncate(new_relationship, 15)
+            )
+        }
         DependencyChangeType::Reparented {
             old_parent_name,
             new_parent_name,
@@ -315,12 +336,27 @@ fn details_cell(change: &DependencyChangeType) -> Cell<'static> {
             old_depth,
             new_depth,
         } => {
-            let direction = if *new_depth < *old_depth {
+            let fmt_depth = |d: u32| -> String {
+                if d == u32::MAX {
+                    "unreachable".to_string()
+                } else {
+                    d.to_string()
+                }
+            };
+            let direction = if *new_depth == u32::MAX {
+                "→ unreachable"
+            } else if *old_depth == u32::MAX {
+                "← became reachable"
+            } else if *new_depth < *old_depth {
                 "↑ promoted"
             } else {
                 "↓ demoted"
             };
-            format!("Depth {old_depth} → {new_depth} ({direction})")
+            format!(
+                "Depth {} → {} ({direction})",
+                fmt_depth(*old_depth),
+                fmt_depth(*new_depth)
+            )
         }
     };
     Cell::from(text).style(Style::default().fg(colors().text))

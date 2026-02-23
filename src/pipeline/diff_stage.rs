@@ -41,7 +41,8 @@ pub fn compute_diff(
         engine = engine.with_graph_diff(GraphDiffConfig {
             detect_reparenting: config.graph_diff.detect_reparenting,
             detect_depth_changes: config.graph_diff.detect_depth_changes,
-            max_depth: 0, // 0 = unlimited depth traversal
+            max_depth: config.graph_diff.max_depth,
+            relation_filter: config.graph_diff.relation_filter.clone(),
         });
     }
 
@@ -58,19 +59,41 @@ pub fn compute_diff(
         .diff(old_sbom, new_sbom)
         .map_err(|e| super::PipelineError::DiffFailed { source: e.into() })?;
 
-    // Report on graph changes if enabled
-    if config.graph_diff.enabled
-        && !quiet
-        && let Some(ref summary) = result.graph_summary
-    {
-        tracing::info!(
-            "Graph changes: {} total ({} added, {} removed, {} reparented, {} depth changes)",
-            summary.total_changes,
-            summary.dependencies_added,
-            summary.dependencies_removed,
-            summary.reparented,
-            summary.depth_changed
-        );
+    // Apply graph impact threshold filter if specified
+    if config.graph_diff.enabled {
+        if let Some(ref threshold) = config.graph_diff.impact_threshold {
+            let min_impact = crate::diff::GraphChangeImpact::from_label(threshold);
+            let impact_rank = |i: &crate::diff::GraphChangeImpact| match i {
+                crate::diff::GraphChangeImpact::Critical => 4,
+                crate::diff::GraphChangeImpact::High => 3,
+                crate::diff::GraphChangeImpact::Medium => 2,
+                crate::diff::GraphChangeImpact::Low => 1,
+            };
+            let min_rank = impact_rank(&min_impact);
+            result
+                .graph_changes
+                .retain(|c| impact_rank(&c.impact) >= min_rank);
+            result.graph_summary = Some(crate::diff::GraphChangeSummary::from_changes(
+                &result.graph_changes,
+            ));
+            result.calculate_summary();
+            if !quiet {
+                tracing::info!("Filtered graph changes to impact >= {threshold}");
+            }
+        }
+
+        if !quiet {
+            if let Some(ref summary) = result.graph_summary {
+                tracing::info!(
+                    "Graph changes: {} total ({} added, {} removed, {} reparented, {} depth changes)",
+                    summary.total_changes,
+                    summary.dependencies_added,
+                    summary.dependencies_removed,
+                    summary.reparented,
+                    summary.depth_changed
+                );
+            }
+        }
     }
 
     // Apply severity filtering if specified

@@ -33,8 +33,11 @@ impl ChangeComputer for DependencyChangeComputer {
     ) -> DependencyChangeSet {
         let mut result = DependencyChangeSet::new();
 
+        // Edge key includes (from, to, relationship, scope) for full identity comparison
+        type EdgeKey = (String, String, String, Option<String>);
+
         // Map old edges to their canonical form for comparison
-        let mut normalized_old_edges: HashSet<(String, String)> = HashSet::new();
+        let mut normalized_old_edges: HashSet<EdgeKey> = HashSet::new();
         for edge in &old.edges {
             let from = matches
                 .get(&edge.from)
@@ -44,22 +47,36 @@ impl ChangeComputer for DependencyChangeComputer {
                 .get(&edge.to)
                 .and_then(|v| v.as_ref())
                 .map_or_else(|| edge.to.to_string(), std::string::ToString::to_string);
-            normalized_old_edges.insert((from, to));
+            normalized_old_edges.insert((
+                from,
+                to,
+                edge.relationship.to_string(),
+                edge.scope.as_ref().map(std::string::ToString::to_string),
+            ));
         }
 
         // Find added dependencies
         for edge in &new.edges {
-            let from = edge.from.to_string();
-            let to = edge.to.to_string();
-            if !normalized_old_edges.contains(&(from, to)) {
+            let key: EdgeKey = (
+                edge.from.to_string(),
+                edge.to.to_string(),
+                edge.relationship.to_string(),
+                edge.scope.as_ref().map(std::string::ToString::to_string),
+            );
+            if !normalized_old_edges.contains(&key) {
                 result.added.push(DependencyChange::added(edge));
             }
         }
 
         // Map new edges for comparison with old
-        let mut normalized_new_edges: HashSet<(String, String)> = HashSet::new();
+        let mut normalized_new_edges: HashSet<EdgeKey> = HashSet::new();
         for edge in &new.edges {
-            normalized_new_edges.insert((edge.from.to_string(), edge.to.to_string()));
+            normalized_new_edges.insert((
+                edge.from.to_string(),
+                edge.to.to_string(),
+                edge.relationship.to_string(),
+                edge.scope.as_ref().map(std::string::ToString::to_string),
+            ));
         }
 
         // Find removed dependencies
@@ -73,7 +90,13 @@ impl ChangeComputer for DependencyChangeComputer {
                 .and_then(|v| v.as_ref())
                 .map_or_else(|| edge.to.to_string(), std::string::ToString::to_string);
 
-            if !normalized_new_edges.contains(&(from, to)) {
+            let key: EdgeKey = (
+                from,
+                to,
+                edge.relationship.to_string(),
+                edge.scope.as_ref().map(std::string::ToString::to_string),
+            );
+            if !normalized_new_edges.contains(&key) {
                 result.removed.push(DependencyChange::removed(edge));
             }
         }
