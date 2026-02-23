@@ -140,7 +140,7 @@ impl ViewApp {
             .and_then(ViewTab::from_str_opt)
             .unwrap_or(ViewTab::Overview);
 
-        Self {
+        let mut app = Self {
             sbom,
             active_tab: initial_tab,
             tree_state,
@@ -172,7 +172,13 @@ impl ViewApp {
             source_state,
             bookmarked: HashSet::new(),
             export_template: None,
-        }
+        };
+
+        // Pre-compute vuln cache at startup to avoid freeze on first tab visit
+        let cache = super::views::build_vuln_cache(&app);
+        app.vuln_state.set_cache(cache);
+
+        app
     }
 
     /// Lazily compute compliance results for all standards when first needed.

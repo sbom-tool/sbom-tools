@@ -462,7 +462,7 @@ impl StatefulWidget for Tree<'_> {
                 }
             }
 
-            // Label
+            // Label — truncate to fit with room for vuln badge
             let label_style = if is_selected {
                 self.highlight_style
             } else if item.is_group {
@@ -471,7 +471,22 @@ impl StatefulWidget for Tree<'_> {
                 self.component_style
             };
 
-            for ch in item.label.chars() {
+            let vuln_badge_width: u16 = if item.vuln_count > 0 {
+                2 + item.vuln_count.to_string().len() as u16 // space + sev_char + count digits
+            } else {
+                0
+            };
+            let remaining = (area.x + area.width).saturating_sub(x + vuln_badge_width) as usize;
+
+            let display_label = if item.label.len() > remaining && remaining > 3 {
+                let max_chars = remaining.saturating_sub(3);
+                let truncated: String = item.label.chars().take(max_chars).collect();
+                format!("{truncated}...")
+            } else {
+                item.label.clone()
+            };
+
+            for ch in display_label.chars() {
                 if x < area.x + area.width {
                     if let Some(cell) = buf.cell_mut((x, y)) {
                         cell.set_char(ch).set_style(label_style);

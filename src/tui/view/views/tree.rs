@@ -1,9 +1,9 @@
 //! Tree view for `ViewApp` - hierarchical component navigation.
 
-use crate::model::{Component, EolStatus};
+use crate::model::{Component, DependencyType, EolStatus};
 use crate::tui::theme::colors;
-use crate::tui::view::app::{ComponentDetailTab, FocusPanel, ViewApp};
-use crate::tui::widgets::{SeverityBadge, Tree, truncate_str};
+use crate::tui::view::app::{ComponentDetailTab, FocusPanel, TreeFilter, ViewApp};
+use crate::tui::widgets::{SeverityBadge, Tree, TreeNode, truncate_str};
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Paragraph, Wrap},
@@ -26,12 +26,20 @@ fn render_tree_panel(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
         .constraints([Constraint::Length(2), Constraint::Min(5)])
         .split(area);
 
-    // Filter/group bar
-    render_filter_bar(frame, chunks[0], app);
-
     // Tree
     let nodes = app.build_tree_nodes();
     let scheme = colors();
+
+    let is_filtered =
+        !app.tree_search_query.is_empty() || !matches!(app.tree_filter, TreeFilter::All);
+    let filtered_count = if is_filtered {
+        Some(count_tree_leaves(&nodes))
+    } else {
+        None
+    };
+
+    // Filter/group bar (with optional filtered count)
+    render_filter_bar(frame, chunks[0], app, filtered_count);
 
     let border_color = if app.focus_panel == FocusPanel::Left {
         scheme.border_focused
@@ -39,10 +47,16 @@ fn render_tree_panel(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
         scheme.border
     };
 
+    let title = if let Some(count) = filtered_count {
+        format!(" Components ({count}/{}) ", app.stats.component_count)
+    } else {
+        format!(" Components ({}) ", app.stats.component_count)
+    };
+
     let tree = Tree::new(&nodes)
         .block(
             Block::default()
-                .title(format!(" Components ({}) ", app.stats.component_count))
+                .title(title)
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(border_color)),
         )
@@ -55,24 +69,42 @@ fn render_tree_panel(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     frame.render_stateful_widget(tree, chunks[1], &mut app.tree_state);
 }
 
-fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
+fn count_tree_leaves(nodes: &[TreeNode]) -> usize {
+    nodes
+        .iter()
+        .map(|n| match n {
+            TreeNode::Component { .. } => 1,
+            TreeNode::Group { children, .. } => count_tree_leaves(children),
+        })
+        .sum()
+}
+
+fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp, filtered_count: Option<usize>) {
     let scheme = colors();
 
     // If search is active, show search input
     if app.tree_search_active {
         let cursor = if app.tick % 10 < 5 { "▌" } else { " " };
-        let spans = vec![
+        let mut spans = vec![
             Span::styled("Search: ", Style::default().fg(scheme.accent).bold()),
             Span::styled(
                 format!("{}{}", app.tree_search_query, cursor),
                 Style::default().fg(scheme.text).bg(scheme.selection),
             ),
+        ];
+        if let Some(count) = filtered_count {
+            spans.push(Span::styled(
+                format!(" ({count})"),
+                Style::default().fg(scheme.text_muted),
+            ));
+        }
+        spans.extend([
             Span::raw("  "),
             Span::styled("[Esc]", Style::default().fg(scheme.text_muted)),
             Span::styled(" cancel  ", Style::default().fg(scheme.text_muted)),
             Span::styled("[Enter]", Style::default().fg(scheme.text_muted)),
             Span::styled(" done", Style::default().fg(scheme.text_muted)),
-        ];
+        ]);
         let para = Paragraph::new(Line::from(spans));
         frame.render_widget(para, area);
         return;
@@ -108,6 +140,14 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
         spans.push(Span::styled(
             format!("\"{}\"", app.tree_search_query),
             Style::default().fg(scheme.info),
+        ));
+    }
+
+    // Show filtered count when search or filter is active
+    if let Some(count) = filtered_count {
+        spans.push(Span::styled(
+            format!(" ({count})"),
+            Style::default().fg(scheme.text_muted),
         ));
     }
 
@@ -519,8 +559,10 @@ fn render_identifiers_tab(frame: &mut Frame, area: Rect, comp: &Component, borde
             Style::default().fg(scheme.highlight).bold(),
         ));
         for hash in &comp.hashes {
-            let hash_display = if hash.value.len() > 48 {
-                format!("{}...", &hash.value[..48])
+            let algo_prefix_len = format!("  {}: ", hash.algorithm).len();
+            let max_hash_width = width.saturating_sub(algo_prefix_len + 1);
+            let hash_display = if hash.value.len() > max_hash_width {
+                format!("{}...", &hash.value[..max_hash_width.saturating_sub(3)])
             } else {
                 hash.value.clone()
             };
@@ -684,20 +726,20 @@ fn render_dependencies_tab(
 
     // Find direct dependencies from edges
     let comp_id = &comp.canonical_id;
-    let mut direct_deps: Vec<&Component> = Vec::new();
-    let mut dependents: Vec<&Component> = Vec::new();
+    let mut direct_deps: Vec<(&Component, &DependencyType)> = Vec::new();
+    let mut dependents: Vec<(&Component, &DependencyType)> = Vec::new();
 
     for edge in &app.sbom.edges {
         if edge.from == *comp_id {
             // This component depends on edge.to
             if let Some(dep) = app.sbom.components.get(&edge.to) {
-                direct_deps.push(dep);
+                direct_deps.push((dep, &edge.relationship));
             }
         }
         if edge.to == *comp_id {
             // edge.from depends on this component
             if let Some(dependent) = app.sbom.components.get(&edge.from) {
-                dependents.push(dependent);
+                dependents.push((dependent, &edge.relationship));
             }
         }
     }
@@ -714,7 +756,7 @@ fn render_dependencies_tab(
             Style::default().fg(scheme.text_muted),
         ));
     } else {
-        for dep in direct_deps.iter().take(10) {
+        for (dep, rel) in direct_deps.iter().take(10) {
             let version = dep.version.as_deref().unwrap_or("");
             let vuln_indicator = if dep.vulnerabilities.is_empty() {
                 String::new()
@@ -726,16 +768,25 @@ fn render_dependencies_tab(
             } else {
                 scheme.critical
             };
+            let tag = dependency_tag(rel);
 
-            lines.push(Line::from(vec![
+            let mut spans = vec![
                 Span::styled("  → ", Style::default().fg(scheme.accent)),
                 Span::styled(&dep.name, Style::default().fg(scheme.text)),
                 Span::styled(
                     format!(" {version}"),
                     Style::default().fg(scheme.text_muted),
                 ),
-                Span::styled(vuln_indicator, Style::default().fg(vuln_color)),
-            ]));
+            ];
+            if !tag.is_empty() {
+                spans.push(Span::styled(tag, Style::default().fg(scheme.info)));
+            }
+            spans.push(Span::styled(
+                vuln_indicator,
+                Style::default().fg(vuln_color),
+            ));
+
+            lines.push(Line::from(spans));
         }
         if direct_deps.len() > 10 {
             lines.push(Line::styled(
@@ -759,17 +810,23 @@ fn render_dependencies_tab(
             Style::default().fg(scheme.text_muted),
         ));
     } else {
-        for dep in dependents.iter().take(10) {
+        for (dep, rel) in dependents.iter().take(10) {
             let version = dep.version.as_deref().unwrap_or("");
+            let tag = dependency_tag(rel);
 
-            lines.push(Line::from(vec![
+            let mut spans = vec![
                 Span::styled("  ← ", Style::default().fg(scheme.highlight)),
                 Span::styled(&dep.name, Style::default().fg(scheme.text)),
                 Span::styled(
                     format!(" {version}"),
                     Style::default().fg(scheme.text_muted),
                 ),
-            ]));
+            ];
+            if !tag.is_empty() {
+                spans.push(Span::styled(tag, Style::default().fg(scheme.info)));
+            }
+
+            lines.push(Line::from(spans));
         }
         if dependents.len() > 10 {
             lines.push(Line::styled(
@@ -1080,8 +1137,8 @@ fn render_group_stats_panel(
             0
         };
         lines.push(Line::from(vec![
-            Span::styled(format!("  {label:10}"), Style::default().fg(*color)),
-            Span::styled(format!("{count:>4} "), Style::default().fg(scheme.text)),
+            Span::styled(format!("  {label:12}"), Style::default().fg(*color)),
+            Span::styled(format!("{count:>5} "), Style::default().fg(scheme.text)),
             Span::styled("\u{2588}".repeat(bar_len), Style::default().fg(*color)),
         ]));
     }
@@ -1128,8 +1185,8 @@ fn render_group_stats_panel(
                 0
             };
             lines.push(Line::from(vec![
-                Span::styled(format!("  {label:10}"), Style::default().fg(*color)),
-                Span::styled(format!("{count:>4} "), Style::default().fg(scheme.text)),
+                Span::styled(format!("  {label:12}"), Style::default().fg(*color)),
+                Span::styled(format!("{count:>5} "), Style::default().fg(scheme.text)),
                 Span::styled("█".repeat(bar_len), Style::default().fg(*color)),
             ]));
         }
@@ -1199,6 +1256,22 @@ fn render_group_stats_panel(
         .wrap(Wrap { trim: true });
 
     frame.render_widget(panel, area);
+}
+
+/// Short tag for non-default dependency relationship types.
+fn dependency_tag(rel: &DependencyType) -> &'static str {
+    match rel {
+        DependencyType::DevDependsOn => " dev",
+        DependencyType::BuildDependsOn => " build",
+        DependencyType::TestDependsOn => " test",
+        DependencyType::OptionalDependsOn => " opt",
+        DependencyType::ProvidedDependsOn => " provided",
+        DependencyType::RuntimeDependsOn => " runtime",
+        DependencyType::Contains => " contains",
+        DependencyType::StaticLink => " static",
+        DependencyType::DynamicLink => " dynamic",
+        _ => "",
+    }
 }
 
 /// Map an optional `EolStatus` to a bar-chart key.
