@@ -66,12 +66,17 @@ impl DiffResult {
         self.summary.components_added = self.components.added.len();
         self.summary.components_removed = self.components.removed.len();
         self.summary.components_modified = self.components.modified.len();
-        self.summary.total_changes = self.summary.components_added
-            + self.summary.components_removed
-            + self.summary.components_modified;
 
         self.summary.dependencies_added = self.dependencies.added.len();
         self.summary.dependencies_removed = self.dependencies.removed.len();
+        self.summary.graph_changes_count = self.graph_changes.len();
+
+        self.summary.total_changes = self.summary.components_added
+            + self.summary.components_removed
+            + self.summary.components_modified
+            + self.summary.dependencies_added
+            + self.summary.dependencies_removed
+            + self.summary.graph_changes_count;
 
         self.summary.vulnerabilities_introduced = self.vulnerabilities.introduced.len();
         self.summary.vulnerabilities_resolved = self.vulnerabilities.resolved.len();
@@ -81,20 +86,18 @@ impl DiffResult {
         self.summary.licenses_removed = self.licenses.removed_licenses.len();
     }
 
-    /// Check if there are any changes
+    /// Check if there are any changes.
+    ///
+    /// Checks both the pre-computed summary and the source-of-truth fields to be
+    /// safe regardless of whether `calculate_summary()` was called.
     #[must_use]
     pub fn has_changes(&self) -> bool {
         self.summary.total_changes > 0
+            || !self.components.is_empty()
             || !self.dependencies.is_empty()
+            || !self.graph_changes.is_empty()
             || !self.vulnerabilities.introduced.is_empty()
             || !self.vulnerabilities.resolved.is_empty()
-            || !self.graph_changes.is_empty()
-    }
-
-    /// Set graph changes and compute summary
-    pub fn set_graph_changes(&mut self, changes: Vec<DependencyGraphChange>) {
-        self.graph_summary = Some(GraphChangeSummary::from_changes(&changes));
-        self.graph_changes = changes;
     }
 
     /// Find a component change by canonical ID
@@ -210,6 +213,7 @@ pub struct DiffSummary {
     pub components_modified: usize,
     pub dependencies_added: usize,
     pub dependencies_removed: usize,
+    pub graph_changes_count: usize,
     pub vulnerabilities_introduced: usize,
     pub vulnerabilities_resolved: usize,
     pub vulnerabilities_persistent: usize,
@@ -576,6 +580,9 @@ pub struct DependencyChange {
     pub to: String,
     /// Relationship type
     pub relationship: String,
+    /// Dependency scope
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
     /// Change type
     pub change_type: ChangeType,
 }
@@ -587,6 +594,7 @@ impl DependencyChange {
             from: edge.from.to_string(),
             to: edge.to.to_string(),
             relationship: edge.relationship.to_string(),
+            scope: edge.scope.as_ref().map(std::string::ToString::to_string),
             change_type: ChangeType::Added,
         }
     }
@@ -597,6 +605,7 @@ impl DependencyChange {
             from: edge.from.to_string(),
             to: edge.to.to_string(),
             relationship: edge.relationship.to_string(),
+            scope: edge.scope.as_ref().map(std::string::ToString::to_string),
             change_type: ChangeType::Removed,
         }
     }
@@ -939,6 +948,7 @@ pub struct DependencyGraphChange {
 
 /// Types of dependency graph structural changes
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum DependencyChangeType {
     /// A new dependency link was added
     DependencyAdded {
@@ -950,6 +960,16 @@ pub enum DependencyChangeType {
     DependencyRemoved {
         dependency_id: CanonicalId,
         dependency_name: String,
+    },
+
+    /// Dependency relationship or scope changed (same endpoints, different attributes)
+    RelationshipChanged {
+        dependency_id: CanonicalId,
+        dependency_name: String,
+        old_relationship: String,
+        new_relationship: String,
+        old_scope: Option<String>,
+        new_scope: Option<String>,
     },
 
     /// A dependency was reparented (had exactly one parent in both, but different)
@@ -964,7 +984,7 @@ pub enum DependencyChangeType {
 
     /// Dependency depth changed (e.g., transitive became direct)
     DepthChanged {
-        old_depth: u32, // 1 = direct, 2+ = transitive
+        old_depth: u32, // 1 = root, 2 = direct, 3+ = transitive
         new_depth: u32,
     },
 }
@@ -976,6 +996,7 @@ impl DependencyChangeType {
         match self {
             Self::DependencyAdded { .. } => "added",
             Self::DependencyRemoved { .. } => "removed",
+            Self::RelationshipChanged { .. } => "relationship_changed",
             Self::Reparented { .. } => "reparented",
             Self::DepthChanged { .. } => "depth_changed",
         }
@@ -1030,6 +1051,7 @@ pub struct GraphChangeSummary {
     pub total_changes: usize,
     pub dependencies_added: usize,
     pub dependencies_removed: usize,
+    pub relationship_changed: usize,
     pub reparented: usize,
     pub depth_changed: usize,
     pub by_impact: GraphChangesByImpact,
@@ -1048,6 +1070,9 @@ impl GraphChangeSummary {
             match &change.change {
                 DependencyChangeType::DependencyAdded { .. } => summary.dependencies_added += 1,
                 DependencyChangeType::DependencyRemoved { .. } => summary.dependencies_removed += 1,
+                DependencyChangeType::RelationshipChanged { .. } => {
+                    summary.relationship_changed += 1;
+                }
                 DependencyChangeType::Reparented { .. } => summary.reparented += 1,
                 DependencyChangeType::DepthChanged { .. } => summary.depth_changed += 1,
             }

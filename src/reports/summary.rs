@@ -192,6 +192,42 @@ impl ReportGenerator for SummaryReporter {
             }
         }
 
+        // Graph changes
+        if let Some(ref summary) = result.graph_summary
+            && summary.total_changes > 0
+        {
+            lines.push(String::new());
+            lines.push(self.color("Graph Changes:", "bold"));
+            lines.push(format!(
+                "  {} added, {} removed, {} rel changed, {} reparented, {} depth changes",
+                summary.dependencies_added,
+                summary.dependencies_removed,
+                summary.relationship_changed,
+                summary.reparented,
+                summary.depth_changed,
+            ));
+
+            // Impact breakdown
+            let mut impact_parts = Vec::new();
+            if summary.by_impact.critical > 0 {
+                impact_parts
+                    .push(self.color(&format!("{} critical", summary.by_impact.critical), "red"));
+            }
+            if summary.by_impact.high > 0 {
+                impact_parts
+                    .push(self.color(&format!("{} high", summary.by_impact.high), "yellow"));
+            }
+            if summary.by_impact.medium > 0 {
+                impact_parts.push(format!("{} medium", summary.by_impact.medium));
+            }
+            if summary.by_impact.low > 0 {
+                impact_parts.push(format!("{} low", summary.by_impact.low));
+            }
+            if !impact_parts.is_empty() {
+                lines.push(format!("  By impact: {}", impact_parts.join(", ")));
+            }
+        }
+
         // Score
         lines.push(String::new());
         let score = result.semantic_score;

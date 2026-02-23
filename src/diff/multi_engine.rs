@@ -27,6 +27,8 @@ pub struct MultiDiffEngine {
     fuzzy_config: Option<FuzzyMatchConfig>,
     /// Whether to include unchanged components in diff results.
     include_unchanged: bool,
+    /// Graph diff configuration (optional).
+    graph_diff_config: Option<super::GraphDiffConfig>,
     /// Caching wrapper built lazily on first diff operation.
     incremental: Option<IncrementalDiffEngine>,
 }
@@ -37,6 +39,7 @@ impl MultiDiffEngine {
         Self {
             fuzzy_config: None,
             include_unchanged: false,
+            graph_diff_config: None,
             incremental: None,
         }
     }
@@ -57,6 +60,14 @@ impl MultiDiffEngine {
         self
     }
 
+    /// Enable graph-aware diffing with the given configuration
+    #[must_use]
+    pub fn with_graph_diff(mut self, config: super::GraphDiffConfig) -> Self {
+        self.graph_diff_config = Some(config);
+        self.incremental = None;
+        self
+    }
+
     /// Build the configured `DiffEngine` and wrap it in an `IncrementalDiffEngine`.
     fn ensure_engine(&mut self) {
         if self.incremental.is_none() {
@@ -65,6 +76,9 @@ impl MultiDiffEngine {
                 engine = engine.with_fuzzy_config(config);
             }
             engine = engine.include_unchanged(self.include_unchanged);
+            if let Some(config) = self.graph_diff_config.clone() {
+                engine = engine.with_graph_diff(config);
+            }
             self.incremental = Some(IncrementalDiffEngine::new(engine));
         }
     }
@@ -528,16 +542,30 @@ impl MultiDiffEngine {
             })
             .collect();
 
-        // Build dependency trend
-        let dependency_trend: Vec<DependencySnapshot> = sbom_infos
+        // Build dependency trend, computing transitive deps from edge depth data
+        let dependency_trend: Vec<DependencySnapshot> = sboms
             .iter()
             .enumerate()
-            .map(|(i, info)| DependencySnapshot {
-                sbom_index: i,
-                sbom_name: info.name.clone(),
-                direct_dependencies: info.dependency_count,
-                transitive_dependencies: 0,
-                total_edges: info.dependency_count,
+            .map(|(i, (sbom, _, _))| {
+                let total_edges = sbom.edges.len();
+                // Count root nodes (no incoming edges) to determine direct vs transitive
+                let targets: HashSet<_> = sbom.edges.iter().map(|e| &e.to).collect();
+                let sources: HashSet<_> = sbom.edges.iter().map(|e| &e.from).collect();
+                let roots: HashSet<_> = sources.difference(&targets).collect();
+                let direct = sbom
+                    .edges
+                    .iter()
+                    .filter(|e| roots.contains(&&e.from))
+                    .count();
+                let transitive = total_edges.saturating_sub(direct);
+
+                DependencySnapshot {
+                    sbom_index: i,
+                    sbom_name: sbom_infos[i].name.clone(),
+                    direct_dependencies: direct,
+                    transitive_dependencies: transitive,
+                    total_edges,
+                }
             })
             .collect();
 

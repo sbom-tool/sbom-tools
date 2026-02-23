@@ -449,6 +449,16 @@ pub enum DependencyScope {
     Excluded,
 }
 
+impl std::fmt::Display for DependencyScope {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Required => write!(f, "required"),
+            Self::Optional => write!(f, "optional"),
+            Self::Excluded => write!(f, "excluded"),
+        }
+    }
+}
+
 /// Format-specific extensions that don't map to the canonical model
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct FormatExtensions {

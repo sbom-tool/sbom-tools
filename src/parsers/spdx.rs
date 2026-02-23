@@ -742,40 +742,57 @@ impl SpdxParser {
                     }
                 }
 
-                let dep_type = match rel.relationship_type.as_str() {
-                    "DEPENDS_ON" => Some(DependencyType::DependsOn),
-                    "DEV_DEPENDENCY_OF" => Some(DependencyType::DevDependsOn),
-                    "BUILD_DEPENDENCY_OF" => Some(DependencyType::BuildDependsOn),
-                    "TEST_DEPENDENCY_OF" => Some(DependencyType::TestDependsOn),
-                    "RUNTIME_DEPENDENCY_OF" => Some(DependencyType::RuntimeDependsOn),
-                    "OPTIONAL_DEPENDENCY_OF" => Some(DependencyType::OptionalDependsOn),
-                    "CONTAINS" => Some(DependencyType::Contains),
-                    "DESCRIBES" => Some(DependencyType::Describes),
-                    "GENERATES" => Some(DependencyType::Generates),
-                    "ANCESTOR_OF" => Some(DependencyType::AncestorOf),
-                    "VARIANT_OF" => Some(DependencyType::VariantOf),
-                    "DISTRIBUTION_ARTIFACT" => Some(DependencyType::DistributionArtifact),
-                    "PATCH_FOR" => Some(DependencyType::PatchFor),
-                    "COPY_OF" => Some(DependencyType::CopyOf),
-                    "FILE_ADDED" => Some(DependencyType::FileAdded),
-                    "FILE_DELETED" => Some(DependencyType::FileDeleted),
-                    "FILE_MODIFIED" => Some(DependencyType::FileModified),
-                    "DYNAMIC_LINK" => Some(DependencyType::DynamicLink),
-                    "STATIC_LINK" => Some(DependencyType::StaticLink),
+                // Map SPDX relationship types.
+                // `*_DEPENDENCY_OF` types have inverse direction:
+                //   "A DEV_DEPENDENCY_OF B" means B depends on A,
+                //   so edge should be from=B, to=A (swapped).
+                let dep_mapping = match rel.relationship_type.as_str() {
+                    "DEPENDS_ON" => Some((DependencyType::DependsOn, false)),
+                    "DEV_DEPENDENCY_OF" => Some((DependencyType::DevDependsOn, true)),
+                    "BUILD_DEPENDENCY_OF" => Some((DependencyType::BuildDependsOn, true)),
+                    "TEST_DEPENDENCY_OF" => Some((DependencyType::TestDependsOn, true)),
+                    "RUNTIME_DEPENDENCY_OF" => Some((DependencyType::RuntimeDependsOn, true)),
+                    "OPTIONAL_DEPENDENCY_OF" => Some((DependencyType::OptionalDependsOn, true)),
+                    "CONTAINS" => Some((DependencyType::Contains, false)),
+                    "DESCRIBES" => Some((DependencyType::Describes, false)),
+                    "GENERATES" => Some((DependencyType::Generates, false)),
+                    "ANCESTOR_OF" => Some((DependencyType::AncestorOf, false)),
+                    "VARIANT_OF" => Some((DependencyType::VariantOf, false)),
+                    "DISTRIBUTION_ARTIFACT" => Some((DependencyType::DistributionArtifact, false)),
+                    "PATCH_FOR" => Some((DependencyType::PatchFor, false)),
+                    "COPY_OF" => Some((DependencyType::CopyOf, false)),
+                    "FILE_ADDED" => Some((DependencyType::FileAdded, false)),
+                    "FILE_DELETED" => Some((DependencyType::FileDeleted, false)),
+                    "FILE_MODIFIED" => Some((DependencyType::FileModified, false)),
+                    "DYNAMIC_LINK" => Some((DependencyType::DynamicLink, false)),
+                    "STATIC_LINK" => Some((DependencyType::StaticLink, false)),
+                    // SPDX 2.3 additional relationship types
+                    "DEPENDENCY_OF" => Some((DependencyType::DependsOn, true)),
+                    "PROVIDED_DEPENDENCY_OF" => Some((DependencyType::ProvidedDependsOn, true)),
+                    "HAS_PREREQUISITE" => Some((DependencyType::DependsOn, false)),
+                    "PREREQUISITE_FOR" => Some((DependencyType::DependsOn, true)),
+                    "DESCRIBED_BY" => Some((DependencyType::Describes, true)),
+                    "BUILD_TOOL_OF" => Some((DependencyType::BuildDependsOn, true)),
+                    "DEV_TOOL_OF" => Some((DependencyType::DevDependsOn, true)),
+                    "TEST_TOOL_OF" => Some((DependencyType::TestDependsOn, true)),
+                    "DOCUMENTATION_OF" => Some((DependencyType::Describes, true)),
+                    "PACKAGE_OF" => Some((DependencyType::Contains, true)),
+                    "EXAMPLE_OF" => Some((DependencyType::DependsOn, true)),
                     _ => None,
                 };
 
-                if let Some(dep_type) = dep_type
-                    && let (Some(from_id), Some(to_id)) = (
+                if let Some((dep_type, swap_direction)) = dep_mapping
+                    && let (Some(element_id), Some(related_id)) = (
                         id_map.get(&rel.spdx_element_id),
                         id_map.get(&rel.related_spdx_element),
                     )
                 {
-                    sbom.add_edge(DependencyEdge::new(
-                        from_id.clone(),
-                        to_id.clone(),
-                        dep_type,
-                    ));
+                    let (from_id, to_id) = if swap_direction {
+                        (related_id.clone(), element_id.clone())
+                    } else {
+                        (element_id.clone(), related_id.clone())
+                    };
+                    sbom.add_edge(DependencyEdge::new(from_id, to_id, dep_type));
                 }
             }
         }

@@ -123,10 +123,27 @@ impl NormalizedSbom {
             }
         }
 
-        // Hash edges
-        for edge in &self.edges {
-            hasher_input.extend(edge.from.value().as_bytes());
-            hasher_input.extend(edge.to.value().as_bytes());
+        // Hash edges (sorted for determinism, including relationship and scope)
+        let mut edge_keys: Vec<_> = self
+            .edges
+            .iter()
+            .map(|edge| {
+                (
+                    edge.from.value(),
+                    edge.to.value(),
+                    edge.relationship.to_string(),
+                    edge.scope
+                        .as_ref()
+                        .map_or(String::new(), std::string::ToString::to_string),
+                )
+            })
+            .collect();
+        edge_keys.sort();
+        for (from, to, relationship, scope) in &edge_keys {
+            hasher_input.extend(from.as_bytes());
+            hasher_input.extend(to.as_bytes());
+            hasher_input.extend(relationship.as_bytes());
+            hasher_input.extend(scope.as_bytes());
         }
 
         self.content_hash = xxh3_64(&hasher_input);
@@ -726,6 +743,13 @@ impl DependencyEdge {
             relationship,
             scope: None,
         }
+    }
+
+    /// Set the dependency scope
+    #[must_use]
+    pub const fn with_scope(mut self, scope: DependencyScope) -> Self {
+        self.scope = Some(scope);
+        self
     }
 
     /// Check if this is a direct dependency
