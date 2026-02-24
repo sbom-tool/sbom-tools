@@ -2150,6 +2150,8 @@ pub(crate) struct DependencyViewState {
     pub search_active: bool,
     /// Scroll offset for the detail/stats panel
     pub detail_scroll: u16,
+    /// Whether roots have been auto-expanded on first visit
+    pub roots_initialized: bool,
 }
 
 impl DependencyViewState {
@@ -2162,6 +2164,7 @@ impl DependencyViewState {
             search_query: String::new(),
             search_active: false,
             detail_scroll: 0,
+            roots_initialized: false,
         }
     }
 

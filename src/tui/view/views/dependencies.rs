@@ -21,6 +21,15 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
 
     // Build the dependency graph once and reuse it
     let deps = build_dependency_graph(app);
+
+    // Auto-expand root nodes on first visit
+    if !deps.roots.is_empty() && !app.dependency_state.roots_initialized {
+        app.dependency_state.roots_initialized = true;
+        for root in &deps.roots {
+            app.dependency_state.expanded.insert(root.clone());
+        }
+    }
+
     render_dependency_tree(frame, chunks[0], app, &deps);
     render_dependency_stats(frame, chunks[1], app, &deps);
 }
@@ -586,7 +595,7 @@ fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, dep
             ("critical", "Critical", scheme.critical),
             ("high", "High", scheme.high),
             ("medium", "Medium", scheme.warning),
-            ("low", "Low", scheme.info),
+            ("low", "Low", scheme.low),
             ("clean", "Clean", scheme.success),
         ];
 

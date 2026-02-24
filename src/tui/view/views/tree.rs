@@ -941,7 +941,7 @@ fn render_component_stats_panel(frame: &mut Frame, area: Rect, app: &ViewApp, bo
         ("critical", "Critical", scheme.critical),
         ("high", "High", scheme.high),
         ("medium", "Medium", scheme.warning),
-        ("low", "Low", scheme.info),
+        ("low", "Low", scheme.low),
         ("clean", "Clean", scheme.success),
     ];
 
