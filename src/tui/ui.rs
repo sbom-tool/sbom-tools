@@ -604,10 +604,7 @@ fn render_help_overlay(frame: &mut Frame, area: Rect) {
         ]),
         Line::from(vec![
             Span::styled("  Shift+drag     ", Style::default().fg(colors().accent)),
-            Span::styled(
-                "Select text with mouse",
-                Style::default().fg(colors().text),
-            ),
+            Span::styled("Select text with mouse", Style::default().fg(colors().text)),
         ]),
         Line::from(vec![
             Span::styled("  ?              ", Style::default().fg(colors().accent)),

@@ -91,7 +91,12 @@ fn render_dependency_tree(
         None
     } else {
         let q = search_query.to_lowercase();
-        Some(flat_nodes.iter().filter(|n| n.name.to_lowercase().contains(&q)).count())
+        Some(
+            flat_nodes
+                .iter()
+                .filter(|n| n.name.to_lowercase().contains(&q))
+                .count(),
+        )
     };
 
     // Render filter bar
@@ -221,8 +226,8 @@ fn render_dependency_tree(
         let display_name = truncate_str(&node.name, name_max);
 
         // Check if name matches search
-        let is_search_match = !search_lower.is_empty()
-            && node.name.to_lowercase().contains(&search_lower);
+        let is_search_match =
+            !search_lower.is_empty() && node.name.to_lowercase().contains(&search_lower);
 
         let mut x = inner_area.x;
 
@@ -286,10 +291,10 @@ fn render_dependency_tree(
 
         // P1: Depth-based color gradient for node names
         let depth_color = match node.depth {
-            0 => scheme.text,                        // Root: bold white
-            1 => scheme.text,                        // Direct deps: white
-            2 => Color::Rgb(180, 180, 180),          // Depth 2: light gray
-            _ => scheme.text_muted,                  // Depth 3+: muted gray
+            0 => scheme.text,               // Root: bold white
+            1 => scheme.text,               // Direct deps: white
+            2 => Color::Rgb(180, 180, 180), // Depth 2: light gray
+            _ => scheme.text_muted,         // Depth 3+: muted gray
         };
         let name_style = if is_selected {
             Style::default().bg(scheme.selection).fg(scheme.text).bold()
@@ -432,7 +437,10 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp, match_count: 
 
     // Show search query if present
     if !app.dependency_state.search_query.is_empty() {
-        spans.push(Span::styled("Search: ", Style::default().fg(scheme.text_muted)));
+        spans.push(Span::styled(
+            "Search: ",
+            Style::default().fg(scheme.text_muted),
+        ));
         spans.push(Span::styled(
             format!("\"{}\"", app.dependency_state.search_query),
             Style::default().fg(scheme.info),
@@ -508,7 +516,9 @@ fn flatten_node(
     let vuln_count = deps.vuln_counts.get(node_id).copied().unwrap_or(0);
     let max_severity = deps.max_severities.get(node_id).cloned();
     let relationship = parent_id.and_then(|pid| {
-        deps.relationships.get(&(pid.to_string(), node_id.to_string())).cloned()
+        deps.relationships
+            .get(&(pid.to_string(), node_id.to_string()))
+            .cloned()
     });
 
     let mut current_ancestors = ancestors_last.to_vec();
@@ -547,7 +557,12 @@ fn flatten_node(
     visited.remove(node_id);
 }
 
-fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, deps: &DependencyGraph) {
+fn render_dependency_stats(
+    frame: &mut Frame,
+    area: Rect,
+    app: &mut ViewApp,
+    deps: &DependencyGraph,
+) {
     let scheme = colors();
     let sep_width = area.width.saturating_sub(4) as usize;
 
@@ -611,14 +626,19 @@ fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, dep
 
     for (node_id, &count) in &deps.vuln_counts {
         if count > 0 {
-            let category = deps.max_severities.get(node_id).map_or("low", |s| s.as_str());
+            let category = deps
+                .max_severities
+                .get(node_id)
+                .map_or("low", |s| s.as_str());
             *vuln_severity_counts.entry(category).or_insert(0) += 1;
         } else {
             *vuln_severity_counts.entry("clean").or_insert(0) += 1;
         }
     }
 
-    let has_vulns = vuln_severity_counts.iter().any(|(&k, &v)| k != "clean" && v > 0);
+    let has_vulns = vuln_severity_counts
+        .iter()
+        .any(|(&k, &v)| k != "clean" && v > 0);
     if has_vulns {
         lines.push(Line::styled(
             "Vulnerability Status:",
@@ -798,7 +818,13 @@ fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, dep
                 lines.push(Line::from(vec![
                     Span::styled("License: ", Style::default().fg(scheme.muted)),
                     Span::styled(
-                        comp.licenses.declared.iter().take(2).map(|l| l.expression.as_str()).collect::<Vec<_>>().join(", "),
+                        comp.licenses
+                            .declared
+                            .iter()
+                            .take(2)
+                            .map(|l| l.expression.as_str())
+                            .collect::<Vec<_>>()
+                            .join(", "),
                         Style::default().fg(scheme.text),
                     ),
                     if comp.licenses.declared.len() > 2 {
@@ -820,14 +846,12 @@ fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, dep
                     Style::default().fg(scheme.error).bold(),
                 ));
                 for vuln in comp.vulnerabilities.iter().take(5) {
-                    let sev_str = vuln.severity.as_ref().map_or("unknown", |s| {
-                        match s {
-                            crate::model::Severity::Critical => "critical",
-                            crate::model::Severity::High => "high",
-                            crate::model::Severity::Medium => "medium",
-                            crate::model::Severity::Low => "low",
-                            _ => "info",
-                        }
+                    let sev_str = vuln.severity.as_ref().map_or("unknown", |s| match s {
+                        crate::model::Severity::Critical => "critical",
+                        crate::model::Severity::High => "high",
+                        crate::model::Severity::Medium => "medium",
+                        crate::model::Severity::Low => "low",
+                        _ => "info",
                     });
                     let sev_color = SeverityBadge::fg_color(sev_str);
                     let indicator = SeverityBadge::indicator(sev_str);
@@ -837,7 +861,10 @@ fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, dep
                         Span::raw(" "),
                         Span::styled(
                             format!("[{indicator}]"),
-                            Style::default().fg(scheme.badge_fg_dark).bg(sev_color).bold(),
+                            Style::default()
+                                .fg(scheme.badge_fg_dark)
+                                .bg(sev_color)
+                                .bold(),
                         ),
                     ];
                     if let Some(cvss) = vuln.cvss.first() {
@@ -887,8 +914,13 @@ fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, dep
                 Style::default().fg(scheme.primary).bold(),
             ));
             for child_id in children.iter().take(5) {
-                let child_name = deps.names.get(child_id).map_or(child_id.as_str(), String::as_str);
-                let tag = deps.relationships.get(&(node_id.clone(), child_id.clone()))
+                let child_name = deps
+                    .names
+                    .get(child_id)
+                    .map_or(child_id.as_str(), String::as_str);
+                let tag = deps
+                    .relationships
+                    .get(&(node_id.clone(), child_id.clone()))
                     .map(|r| dependency_tag(r))
                     .unwrap_or("");
                 let mut spans = vec![
@@ -967,9 +999,7 @@ fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, dep
 
     // Render scrollbar on detail panel if content overflows
     if content_height > inner_height {
-        let inner_area = Block::default()
-            .borders(Borders::ALL)
-            .inner(area);
+        let inner_area = Block::default().borders(Borders::ALL).inner(area);
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .thumb_style(Style::default().fg(scheme.secondary))
             .track_style(Style::default().fg(scheme.muted));
@@ -1025,7 +1055,10 @@ fn build_dependency_graph(app: &ViewApp) -> DependencyGraph {
 
         // Only add edge if both nodes exist in our names map
         if names.contains_key(&from_str) && names.contains_key(&to_str) {
-            edges.entry(from_str.clone()).or_default().push(to_str.clone());
+            edges
+                .entry(from_str.clone())
+                .or_default()
+                .push(to_str.clone());
             has_parent.insert(to_str.clone());
             relationships.insert((from_str, to_str), edge.relationship.clone());
         }

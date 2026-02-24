@@ -300,7 +300,12 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
         KeyCode::Char('e') => {
             if app.active_tab == ViewTab::Dependencies {
                 // Expand all dependency nodes
-                let all_ids: Vec<String> = app.sbom.components.keys().map(|id| id.value().to_string()).collect();
+                let all_ids: Vec<String> = app
+                    .sbom
+                    .components
+                    .keys()
+                    .map(|id| id.value().to_string())
+                    .collect();
                 app.dependency_state.expand_all(&all_ids);
             } else {
                 app.toggle_export();

@@ -412,7 +412,8 @@ pub fn get_yank_text(app: &super::App) -> Option<String> {
                 .iter()
                 .chain(result.dependencies.removed.iter())
                 .collect();
-            deps.get(idx).map(|dep| format!("{} → {}", dep.from, dep.to))
+            deps.get(idx)
+                .map(|dep| format!("{} → {}", dep.from, dep.to))
         }
         super::TabKind::Licenses => {
             let idx = app.tabs.licenses.selected;
@@ -426,7 +427,11 @@ pub fn get_yank_text(app: &super::App) -> Option<String> {
             licenses.get(idx).map(|lic| lic.license.clone())
         }
         super::TabKind::Quality => {
-            let report = app.data.new_quality.as_ref().or(app.data.old_quality.as_ref())?;
+            let report = app
+                .data
+                .new_quality
+                .as_ref()
+                .or(app.data.old_quality.as_ref())?;
             report
                 .recommendations
                 .get(app.tabs.quality.selected_recommendation)
