@@ -117,6 +117,26 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
         return;
     }
 
+    // Handle dependency search input
+    if app.active_tab == ViewTab::Dependencies && app.dependency_state.search_active {
+        match key.code {
+            KeyCode::Esc => {
+                app.dependency_state.clear_search();
+            }
+            KeyCode::Enter => {
+                app.dependency_state.stop_search();
+            }
+            KeyCode::Backspace => {
+                app.dependency_state.search_pop();
+            }
+            KeyCode::Char(c) => {
+                app.dependency_state.search_push(c);
+            }
+            _ => {}
+        }
+        return;
+    }
+
     // Handle tree search input
     if app.active_tab == ViewTab::Tree && app.tree_search_active {
         match key.code {
@@ -265,12 +285,20 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
                 app.start_tree_search();
             } else if app.active_tab == ViewTab::Vulnerabilities {
                 app.vuln_state.start_vuln_search();
+            } else if app.active_tab == ViewTab::Dependencies {
+                app.dependency_state.start_search();
             } else {
                 app.start_search();
             }
         }
         KeyCode::Char('e') => {
-            app.toggle_export();
+            if app.active_tab == ViewTab::Dependencies {
+                // Expand all dependency nodes
+                let all_ids: Vec<String> = app.sbom.components.keys().map(|id| id.value().to_string()).collect();
+                app.dependency_state.expand_all(&all_ids);
+            } else {
+                app.toggle_export();
+            }
         }
         KeyCode::Char('l') => {
             app.toggle_legend();
@@ -416,19 +444,25 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
             ViewTab::Licenses => app.license_state.toggle_group(),
             _ => {}
         },
-        // Scroll component list in License details (Ctrl+Up/Down or K/J)
-        KeyCode::Char('K') => {
-            if app.active_tab == ViewTab::Licenses {
-                app.license_state.scroll_components_up();
+        // Scroll component list in License details / Dependency stats (K/J)
+        KeyCode::Char('K') => match app.active_tab {
+            ViewTab::Licenses => app.license_state.scroll_components_up(),
+            ViewTab::Dependencies => {
+                app.dependency_state.detail_scroll =
+                    app.dependency_state.detail_scroll.saturating_sub(1);
             }
-        }
-        KeyCode::Char('J') => {
-            if app.active_tab == ViewTab::Licenses {
-                // Calculate visible count based on typical panel height
+            _ => {}
+        },
+        KeyCode::Char('J') => match app.active_tab {
+            ViewTab::Licenses => {
                 app.license_state
                     .scroll_components_down(crate::tui::constants::PAGE_SIZE);
             }
-        }
+            ViewTab::Dependencies => {
+                app.dependency_state.detail_scroll += 1;
+            }
+            _ => {}
+        },
         KeyCode::Char('m') => {
             if app.active_tab == ViewTab::Tree {
                 app.toggle_bookmark();
@@ -452,6 +486,16 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
         KeyCode::Char('d') => {
             if app.active_tab == ViewTab::Vulnerabilities {
                 app.vuln_state.toggle_deduplicate();
+            }
+        }
+        KeyCode::Char('c') if app.active_tab == ViewTab::Dependencies => {
+            // Jump to selected dependency's component in the Tree tab
+            if let Some(node_id) = app.get_selected_dependency_node_id() {
+                app.selected_component = Some(node_id.clone());
+                app.active_tab = ViewTab::Tree;
+                app.component_tab = ComponentDetailTab::Overview;
+                app.focus_panel = FocusPanel::Right;
+                app.jump_to_component_in_tree(&node_id);
             }
         }
         KeyCode::Char('w') if app.active_tab == ViewTab::Source => {
@@ -511,6 +555,10 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                 }
                 _ => {}
             }
+        }
+        KeyCode::Char('E') if app.active_tab == ViewTab::Dependencies => {
+            // Collapse all dependency nodes
+            app.dependency_state.collapse_all();
         }
         KeyCode::Char('E') if app.active_tab == ViewTab::Compliance => {
             // Export compliance results as JSON

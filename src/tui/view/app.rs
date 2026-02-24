@@ -2144,6 +2144,12 @@ pub(crate) struct DependencyViewState {
     pub expanded: HashSet<String>,
     /// Scroll offset for the tree view
     pub scroll_offset: usize,
+    /// Search query for dependency tree filtering
+    pub search_query: String,
+    /// Whether search input is active
+    pub search_active: bool,
+    /// Scroll offset for the detail/stats panel
+    pub detail_scroll: u16,
 }
 
 impl DependencyViewState {
@@ -2153,6 +2159,9 @@ impl DependencyViewState {
             total: 0,
             expanded: HashSet::new(),
             scroll_offset: 0,
+            search_query: String::new(),
+            search_active: false,
+            detail_scroll: 0,
         }
     }
 
@@ -2166,6 +2175,35 @@ impl DependencyViewState {
 
     pub fn is_expanded(&self, node_id: &str) -> bool {
         self.expanded.contains(node_id)
+    }
+
+    pub fn expand_all(&mut self, all_node_ids: &[String]) {
+        self.expanded.extend(all_node_ids.iter().cloned());
+    }
+
+    pub fn collapse_all(&mut self) {
+        self.expanded.clear();
+    }
+
+    pub fn start_search(&mut self) {
+        self.search_active = true;
+    }
+
+    pub fn stop_search(&mut self) {
+        self.search_active = false;
+    }
+
+    pub fn clear_search(&mut self) {
+        self.search_query.clear();
+        self.search_active = false;
+    }
+
+    pub fn search_push(&mut self, c: char) {
+        self.search_query.push(c);
+    }
+
+    pub fn search_pop(&mut self) {
+        self.search_query.pop();
     }
 }
 
