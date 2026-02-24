@@ -378,7 +378,7 @@ fn group_affected_components(
 }
 
 /// Build the vulnerability cache from SBOM data
-fn build_vuln_cache(app: &ViewApp) -> VulnCache {
+pub(crate) fn build_vuln_cache(app: &ViewApp) -> VulnCache {
     use crate::tui::shared::vulnerabilities::severity_rank;
     use crate::tui::view::app::VulnSortBy;
     use std::collections::HashMap;
@@ -1734,9 +1734,10 @@ pub fn build_display_items(
         groups.sort_by(|a, _, b, _| severity_rank(a).cmp(&severity_rank(b)));
     }
 
+    let auto_expand_all = groups.len() == 1;
     let mut items = Vec::new();
     for (label, indices) in &groups {
-        let is_expanded = expanded.contains(label);
+        let is_expanded = auto_expand_all || expanded.contains(label);
         items.push(VulnDisplayItem::GroupHeader {
             label: label.clone(),
             count: indices.len(),

@@ -16,6 +16,7 @@ pub use overview::render_overview;
 pub use quality::render_quality;
 pub use source::render_source;
 pub use tree::render_tree;
+pub(crate) use vulnerabilities::build_vuln_cache;
 pub use vulnerabilities::{
     VulnCache, VulnCacheRef, VulnDisplayItem, build_display_items, render_vulnerabilities,
 };

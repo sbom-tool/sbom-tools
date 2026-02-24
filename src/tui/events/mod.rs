@@ -82,6 +82,12 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
     // Clear any status message on key press
     app.clear_status_message();
 
+    // Ctrl+C copies the selected item (universal shortcut)
+    if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+        handle_yank(app);
+        return;
+    }
+
     // Handle search mode separately
     if app.overlays.search.active {
         match key.code {
@@ -255,12 +261,6 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
                 app.overlays.view_switcher.toggle();
             }
         }
-        // Match threshold tuning overlay (only in Diff mode)
-        KeyCode::Char('M') => {
-            if matches!(app.mode, super::AppMode::Diff) {
-                app.toggle_threshold_tuning();
-            }
-        }
         // Keyboard shortcuts overlay
         KeyCode::Char('K') | KeyCode::F(1) => {
             let context = match app.mode {
@@ -289,6 +289,10 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
             if matches!(app.mode, super::AppMode::Diff | super::AppMode::View) {
                 app.next_policy();
             }
+        }
+        // Yank (copy) selected item to clipboard
+        KeyCode::Char('y') => {
+            handle_yank(app);
         }
         KeyCode::Esc => app.close_overlays(),
         KeyCode::Char('b') | KeyCode::Backspace => {
@@ -379,6 +383,92 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
         super::AppMode::Timeline => timeline::handle_timeline_keys(app, key),
         super::AppMode::Matrix => matrix::handle_matrix_keys(app, key),
         _ => {}
+    }
+}
+
+/// Get the text that would be copied for the current selection in diff mode.
+///
+/// Returns `None` if nothing is selected or the tab has no copyable item.
+pub fn get_yank_text(app: &super::App) -> Option<String> {
+    match app.active_tab {
+        super::TabKind::Components => helpers::get_selected_component_name(app),
+        super::TabKind::Vulnerabilities => {
+            let idx = app.tabs.vulnerabilities.selected;
+            let result = app.data.diff_result.as_ref()?;
+            let vulns: Vec<_> = result
+                .vulnerabilities
+                .introduced
+                .iter()
+                .chain(result.vulnerabilities.resolved.iter())
+                .collect();
+            vulns.get(idx).map(|v| v.id.clone())
+        }
+        super::TabKind::Dependencies => {
+            let idx = app.tabs.dependencies.selected;
+            let result = app.data.diff_result.as_ref()?;
+            let deps: Vec<_> = result
+                .dependencies
+                .added
+                .iter()
+                .chain(result.dependencies.removed.iter())
+                .collect();
+            deps.get(idx)
+                .map(|dep| format!("{} → {}", dep.from, dep.to))
+        }
+        super::TabKind::Licenses => {
+            let idx = app.tabs.licenses.selected;
+            let result = app.data.diff_result.as_ref()?;
+            let licenses: Vec<_> = result
+                .licenses
+                .new_licenses
+                .iter()
+                .chain(result.licenses.removed_licenses.iter())
+                .collect();
+            licenses.get(idx).map(|lic| lic.license.clone())
+        }
+        super::TabKind::Quality => {
+            let report = app
+                .data
+                .new_quality
+                .as_ref()
+                .or(app.data.old_quality.as_ref())?;
+            report
+                .recommendations
+                .get(app.tabs.quality.selected_recommendation)
+                .map(|rec| rec.message.clone())
+        }
+        super::TabKind::Compliance => {
+            let results = app
+                .data
+                .new_compliance_results
+                .as_ref()
+                .or(app.data.old_compliance_results.as_ref())?;
+            let result = results.get(app.tabs.diff_compliance.selected_standard)?;
+            result
+                .violations
+                .get(app.tabs.diff_compliance.selected_violation)
+                .map(|v| v.message.clone())
+        }
+        _ => None,
+    }
+}
+
+/// Handle `y` / `Ctrl+C` to copy the focused item to clipboard.
+fn handle_yank(app: &mut super::App) {
+    let Some(text) = get_yank_text(app) else {
+        app.set_status_message("Nothing selected to copy");
+        return;
+    };
+
+    if crate::tui::clipboard::copy_to_clipboard(&text) {
+        let display = if text.len() > 50 {
+            format!("{}...", &text[..47])
+        } else {
+            text
+        };
+        app.set_status_message(format!("Copied: {display}"));
+    } else {
+        app.set_status_message("Failed to copy to clipboard");
     }
 }
 

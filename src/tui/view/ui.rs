@@ -349,7 +349,22 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &ViewApp) {
     };
 
     let hints = FooterHints::for_view_tab(tab_name);
-    let footer_spans = render_footer_hints(&hints);
+    let mut footer_spans = render_footer_hints(&hints);
+
+    // Append copy preview: [y] copy <value>
+    if let Some(yank_text) = super::events::get_yank_text(app) {
+        let truncated = if yank_text.len() > 30 {
+            format!("{}...", &yank_text[..27])
+        } else {
+            yank_text
+        };
+        footer_spans.push(Span::styled(" ", Style::default()));
+        footer_spans.push(Span::styled("[y]", Style::default().fg(colors().accent)));
+        footer_spans.push(Span::styled(
+            format!(" copy {truncated}"),
+            Style::default().fg(colors().text_muted),
+        ));
+    }
 
     let footer = Paragraph::new(Line::from(footer_spans))
         .alignment(Alignment::Center)

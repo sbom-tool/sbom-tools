@@ -1273,12 +1273,13 @@ fn render_view_node_line(
     }
     prefix.push_str(if is_last { "└─" } else { "├─" });
 
+    // P8: Leaf indicator — dot instead of ambiguous dash
     let expand_icon = if cycle_ref {
         "⟳"
     } else if child_count > 0 {
         if is_expanded { "▼" } else { "▶" }
     } else {
-        "─"
+        "·"
     };
 
     let name_budget = max_width.saturating_sub(prefix.len() + 6);
@@ -1286,16 +1287,22 @@ fn render_view_node_line(
     let has_vuln = vuln_components.contains(node_id);
     let in_cycle = cycles_in_deps.contains(node_id) || cycle_ref;
 
+    // P1: Depth-based color gradient for tree nodes
     let name_style = if cycle_ref {
         Style::default().fg(scheme.warning)
-    } else if depth == 1 {
+    } else if depth == 0 {
         Style::default().fg(scheme.text).bold()
+    } else if depth == 1 {
+        Style::default().fg(scheme.text)
+    } else if depth == 2 {
+        Style::default().fg(Color::Rgb(180, 180, 180))
     } else {
         Style::default().fg(scheme.text_muted)
     };
 
+    // P2: Brighter tree structure lines (text_muted instead of border/DarkGray)
     let mut spans = vec![
-        Span::styled(prefix, Style::default().fg(scheme.border)),
+        Span::styled(prefix, Style::default().fg(scheme.text_muted)),
         Span::styled(
             expand_icon,
             Style::default().fg(if child_count > 0 {

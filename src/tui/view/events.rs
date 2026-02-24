@@ -75,6 +75,12 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
     // Clear any status message on key press
     app.clear_status_message();
 
+    // Ctrl+C copies the selected item (universal shortcut)
+    if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+        handle_yank(app);
+        return;
+    }
+
     // Handle source-local search input
     if app.active_tab == ViewTab::Source && app.source_state.search_active {
         match key.code {
@@ -111,6 +117,26 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
             }
             KeyCode::Char(c) => {
                 app.vuln_state.search_push(c);
+            }
+            _ => {}
+        }
+        return;
+    }
+
+    // Handle dependency search input
+    if app.active_tab == ViewTab::Dependencies && app.dependency_state.search_active {
+        match key.code {
+            KeyCode::Esc => {
+                app.dependency_state.clear_search();
+            }
+            KeyCode::Enter => {
+                app.dependency_state.stop_search();
+            }
+            KeyCode::Backspace => {
+                app.dependency_state.search_pop();
+            }
+            KeyCode::Char(c) => {
+                app.dependency_state.search_push(c);
             }
             _ => {}
         }
@@ -265,12 +291,25 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
                 app.start_tree_search();
             } else if app.active_tab == ViewTab::Vulnerabilities {
                 app.vuln_state.start_vuln_search();
+            } else if app.active_tab == ViewTab::Dependencies {
+                app.dependency_state.start_search();
             } else {
                 app.start_search();
             }
         }
         KeyCode::Char('e') => {
-            app.toggle_export();
+            if app.active_tab == ViewTab::Dependencies {
+                // Expand all dependency nodes
+                let all_ids: Vec<String> = app
+                    .sbom
+                    .components
+                    .keys()
+                    .map(|id| id.value().to_string())
+                    .collect();
+                app.dependency_state.expand_all(&all_ids);
+            } else {
+                app.toggle_export();
+            }
         }
         KeyCode::Char('l') => {
             app.toggle_legend();
@@ -287,6 +326,9 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
             if app.navigation_ctx.has_history() {
                 app.go_back();
             }
+        }
+        KeyCode::Char('y') => {
+            handle_yank(app);
         }
 
         // Tab navigation
@@ -416,19 +458,25 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
             ViewTab::Licenses => app.license_state.toggle_group(),
             _ => {}
         },
-        // Scroll component list in License details (Ctrl+Up/Down or K/J)
-        KeyCode::Char('K') => {
-            if app.active_tab == ViewTab::Licenses {
-                app.license_state.scroll_components_up();
+        // Scroll component list in License details / Dependency stats (K/J)
+        KeyCode::Char('K') => match app.active_tab {
+            ViewTab::Licenses => app.license_state.scroll_components_up(),
+            ViewTab::Dependencies => {
+                app.dependency_state.detail_scroll =
+                    app.dependency_state.detail_scroll.saturating_sub(1);
             }
-        }
-        KeyCode::Char('J') => {
-            if app.active_tab == ViewTab::Licenses {
-                // Calculate visible count based on typical panel height
+            _ => {}
+        },
+        KeyCode::Char('J') => match app.active_tab {
+            ViewTab::Licenses => {
                 app.license_state
                     .scroll_components_down(crate::tui::constants::PAGE_SIZE);
             }
-        }
+            ViewTab::Dependencies => {
+                app.dependency_state.detail_scroll += 1;
+            }
+            _ => {}
+        },
         KeyCode::Char('m') => {
             if app.active_tab == ViewTab::Tree {
                 app.toggle_bookmark();
@@ -452,6 +500,16 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
         KeyCode::Char('d') => {
             if app.active_tab == ViewTab::Vulnerabilities {
                 app.vuln_state.toggle_deduplicate();
+            }
+        }
+        KeyCode::Char('c') if app.active_tab == ViewTab::Dependencies => {
+            // Jump to selected dependency's component in the Tree tab
+            if let Some(node_id) = app.get_selected_dependency_node_id() {
+                app.selected_component = Some(node_id.clone());
+                app.active_tab = ViewTab::Tree;
+                app.component_tab = ComponentDetailTab::Overview;
+                app.focus_panel = FocusPanel::Right;
+                app.jump_to_component_in_tree(&node_id);
             }
         }
         KeyCode::Char('w') if app.active_tab == ViewTab::Source => {
@@ -511,6 +569,10 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                 }
                 _ => {}
             }
+        }
+        KeyCode::Char('E') if app.active_tab == ViewTab::Dependencies => {
+            // Collapse all dependency nodes
+            app.dependency_state.collapse_all();
         }
         KeyCode::Char('E') if app.active_tab == ViewTab::Compliance => {
             // Export compliance results as JSON
@@ -772,6 +834,90 @@ fn handle_list_click(app: &mut ViewApp, clicked_index: usize, _x: u16) {
         ViewTab::Source | ViewTab::Overview => {
             // Source uses its own scrolling; Overview has no list navigation
         }
+    }
+}
+
+/// Get the text that would be copied for the current selection.
+///
+/// Returns `None` if nothing is selected or the tab has no copyable item.
+pub fn get_yank_text(app: &ViewApp) -> Option<String> {
+    match app.active_tab {
+        ViewTab::Tree | ViewTab::Overview => {
+            let comp = app.get_selected_component()?;
+            Some(if let Some(ref purl) = comp.identifiers.purl {
+                purl.clone()
+            } else {
+                let ver = comp.version.as_deref().unwrap_or("unknown");
+                format!("{}@{ver}", comp.name)
+            })
+        }
+        ViewTab::Vulnerabilities => {
+            let (_comp_id, vuln) = app.vuln_state.get_selected(&app.sbom)?;
+            Some(vuln.id.clone())
+        }
+        ViewTab::Dependencies => {
+            let node_id = app.get_selected_dependency_node_id()?;
+            Some(
+                app.sbom
+                    .components
+                    .iter()
+                    .find(|(id, _)| id.value() == node_id)
+                    .map_or(node_id, |(_, comp)| comp.name.clone()),
+            )
+        }
+        ViewTab::Licenses => {
+            let mut licenses: Vec<String> = Vec::new();
+            for comp in app.sbom.components.values() {
+                for lic in &comp.licenses.declared {
+                    if !licenses.contains(&lic.expression) {
+                        licenses.push(lic.expression.clone());
+                    }
+                }
+            }
+            licenses.sort();
+            licenses.get(app.license_state.selected).cloned()
+        }
+        ViewTab::Quality => app
+            .quality_report
+            .recommendations
+            .get(app.quality_state.selected_recommendation)
+            .map(|rec| rec.message.clone()),
+        ViewTab::Compliance => {
+            let results = app.compliance_results.as_ref()?;
+            let result = results.get(app.compliance_state.selected_standard)?;
+            let violations: Vec<_> = result
+                .violations
+                .iter()
+                .filter(|v| app.compliance_state.severity_filter.matches(v.severity))
+                .collect();
+            violations
+                .get(app.compliance_state.selected_violation)
+                .map(|v| v.message.clone())
+        }
+        ViewTab::Source => None,
+    }
+}
+
+/// Handle `y` / `Ctrl+C` to copy the focused item to clipboard.
+fn handle_yank(app: &mut ViewApp) {
+    let Some(text) = get_yank_text(app) else {
+        if app.active_tab == ViewTab::Source {
+            app.set_status_message("Shift+drag to select text, then Cmd/Ctrl+C");
+        } else {
+            app.set_status_message("Nothing selected to copy");
+        }
+        return;
+    };
+
+    if crate::tui::clipboard::copy_to_clipboard(&text) {
+        let display = if text.len() > 50 {
+            format!("{}...", &text[..47])
+        } else {
+            text
+        };
+        app.set_status_message(format!("Copied: {display}"));
+    } else {
+        app.set_status_message("Failed to copy to clipboard");
     }
 }
 
