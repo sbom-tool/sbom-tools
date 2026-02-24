@@ -3,7 +3,7 @@
 use crate::model::DependencyType;
 use crate::tui::state::ListNavigation;
 use crate::tui::theme::colors;
-use crate::tui::view::app::ViewApp;
+use crate::tui::view::app::{FocusPanel, ViewApp};
 use crate::tui::view::severity::severity_category;
 use crate::tui::widgets::{self, SeverityBadge, truncate_str};
 use ratatui::{
@@ -12,6 +12,25 @@ use ratatui::{
 };
 use std::collections::{HashMap, HashSet};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+
+/// Format a number with thousands separators (e.g., 3354 -> "3,354").
+fn format_thousands(n: usize) -> String {
+    let s = n.to_string();
+    let mut result = String::with_capacity(s.len() + s.len() / 3);
+    for (i, ch) in s.chars().rev().enumerate() {
+        if i > 0 && i % 3 == 0 {
+            result.push(',');
+        }
+        result.push(ch);
+    }
+    result.chars().rev().collect()
+}
+
+/// Render a horizontal section separator line.
+fn push_separator(lines: &mut Vec<Line>, width: usize, color: Color) {
+    let sep = "─".repeat(width.saturating_sub(4));
+    lines.push(Line::styled(sep, Style::default().fg(color)));
+}
 
 pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
     let chunks = Layout::default()
@@ -89,10 +108,16 @@ fn render_dependency_tree(
         format!(" Dependency Tree ({} nodes) ", flat_nodes.len())
     };
 
+    // P6: Focused panel border highlighting
+    let tree_border_color = if app.focus_panel == FocusPanel::Left {
+        scheme.border_focused
+    } else {
+        scheme.border
+    };
     let block = Block::default()
         .title(title)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(scheme.primary));
+        .border_style(Style::default().fg(tree_border_color));
     let inner_area = block.inner(chunks[1]);
     frame.render_widget(block, chunks[1]);
 
@@ -164,11 +189,11 @@ fn render_dependency_tree(
             ""
         };
 
-        // Expand/collapse indicator
+        // P8: Expand/collapse indicator — leaves get empty space instead of ambiguous dash
         let expand_char = if node.has_children {
             if node.is_expanded { "▼ " } else { "▶ " }
         } else {
-            "  "
+            "· "
         };
 
         // Relationship tag
@@ -218,13 +243,14 @@ fn render_dependency_tree(
             x += 2;
         }
 
-        // Tree prefix
+        // P2: Brighter tree structure lines (text_muted instead of muted/DarkGray)
+        let tree_line_color = scheme.text_muted;
         for ch in prefix.chars() {
             let w = UnicodeWidthChar::width(ch).unwrap_or(1);
             if x + w as u16 <= inner_area.x + inner_area.width {
                 if let Some(cell) = frame.buffer_mut().cell_mut((x, y)) {
                     cell.set_char(ch)
-                        .set_style(Style::default().fg(scheme.muted));
+                        .set_style(Style::default().fg(tree_line_color));
                 }
                 x += w as u16;
             }
@@ -236,7 +262,7 @@ fn render_dependency_tree(
             if x + w as u16 <= inner_area.x + inner_area.width {
                 if let Some(cell) = frame.buffer_mut().cell_mut((x, y)) {
                     cell.set_char(ch)
-                        .set_style(Style::default().fg(scheme.muted));
+                        .set_style(Style::default().fg(tree_line_color));
                 }
                 x += w as u16;
             }
@@ -258,13 +284,21 @@ fn render_dependency_tree(
             }
         }
 
-        // Name (with search highlight)
+        // P1: Depth-based color gradient for node names
+        let depth_color = match node.depth {
+            0 => scheme.text,                        // Root: bold white
+            1 => scheme.text,                        // Direct deps: white
+            2 => Color::Rgb(180, 180, 180),          // Depth 2: light gray
+            _ => scheme.text_muted,                  // Depth 3+: muted gray
+        };
         let name_style = if is_selected {
             Style::default().bg(scheme.selection).fg(scheme.text).bold()
         } else if is_search_match {
             Style::default().fg(scheme.accent).bold()
+        } else if node.depth == 0 {
+            Style::default().fg(depth_color).bold()
         } else {
-            Style::default().fg(scheme.text)
+            Style::default().fg(depth_color)
         };
         for ch in display_name.chars() {
             let w = UnicodeWidthChar::width(ch).unwrap_or(1);
@@ -515,54 +549,54 @@ fn flatten_node(
 
 fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, deps: &DependencyGraph) {
     let scheme = colors();
+    let sep_width = area.width.saturating_sub(4) as usize;
 
     let mut lines = vec![];
 
-    // Summary stats
+    // P7: Compact stat summary (2 lines instead of 4)
+    let total_components = deps.names.len();
+    let total_edges: usize = deps.edges.values().map(Vec::len).sum();
+    let root_count = deps.roots.len();
+    let max_depth = calculate_max_depth(deps);
+
     lines.push(Line::styled(
         "Dependency Statistics",
         Style::default().fg(scheme.primary).bold(),
     ));
     lines.push(Line::from(""));
 
-    let total_components = deps.names.len();
-    let total_edges: usize = deps.edges.values().map(Vec::len).sum();
-    let root_count = deps.roots.len();
-
+    // P9: Number formatting with thousands separators
     lines.push(Line::from(vec![
-        Span::styled("Total Components: ", Style::default().fg(scheme.muted)),
+        Span::styled("Components: ", Style::default().fg(scheme.muted)),
         Span::styled(
-            total_components.to_string(),
+            format_thousands(total_components),
+            Style::default().fg(scheme.text).bold(),
+        ),
+        Span::styled("  │  ", Style::default().fg(scheme.border)),
+        Span::styled("Edges: ", Style::default().fg(scheme.muted)),
+        Span::styled(
+            format_thousands(total_edges),
             Style::default().fg(scheme.text).bold(),
         ),
     ]));
 
     lines.push(Line::from(vec![
-        Span::styled("Dependency Edges: ", Style::default().fg(scheme.muted)),
+        Span::styled("Roots: ", Style::default().fg(scheme.muted)),
         Span::styled(
-            total_edges.to_string(),
+            format_thousands(root_count),
             Style::default().fg(scheme.text).bold(),
         ),
-    ]));
-
-    lines.push(Line::from(vec![
-        Span::styled("Root Components:  ", Style::default().fg(scheme.muted)),
-        Span::styled(
-            root_count.to_string(),
-            Style::default().fg(scheme.text).bold(),
-        ),
-    ]));
-
-    let max_depth = calculate_max_depth(deps);
-    lines.push(Line::from(vec![
-        Span::styled("Maximum Depth:    ", Style::default().fg(scheme.muted)),
+        Span::styled("  │  ", Style::default().fg(scheme.border)),
+        Span::styled("Max Depth: ", Style::default().fg(scheme.muted)),
         Span::styled(
             max_depth.to_string(),
             Style::default().fg(scheme.text).bold(),
         ),
     ]));
 
+    // P5: Section separator
     lines.push(Line::from(""));
+    push_separator(&mut lines, sep_width, scheme.border);
 
     // Vulnerability severity bar chart
     let width = area.width.saturating_sub(4) as usize;
@@ -602,6 +636,10 @@ fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, dep
         let max_vuln_count = vuln_severity_counts.values().copied().max().unwrap_or(1);
         for (key, label, color) in &vuln_order {
             let count = vuln_severity_counts.get(key).copied().unwrap_or(0);
+            // P3: Hide zero-count vulnerability rows (except Clean which always shows)
+            if count == 0 && *key != "clean" {
+                continue;
+            }
             let bar_len = if max_vuln_count > 0 {
                 (count * bar_width) / max_vuln_count
             } else {
@@ -610,15 +648,20 @@ fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, dep
             let bar = "█".repeat(bar_len);
             lines.push(Line::from(vec![
                 Span::styled(format!("  {label:12}"), Style::default().fg(*color)),
-                Span::styled(format!("{count:>5} "), Style::default().fg(scheme.text)),
+                Span::styled(
+                    format!("{:>5} ", format_thousands(count)),
+                    Style::default().fg(scheme.text),
+                ),
                 Span::styled(bar, Style::default().fg(*color)),
             ]));
         }
 
+        // P5: Section separator
         lines.push(Line::from(""));
+        push_separator(&mut lines, sep_width, scheme.border);
     }
 
-    // Relationship type bar chart
+    // P10: Conditional relationship chart — only show bar chart when 2+ types
     let mut rel_counts: HashMap<&str, usize> = HashMap::new();
     for edge in &app.sbom.edges {
         let tag = dependency_tag(&edge.relationship).trim();
@@ -627,67 +670,53 @@ fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, dep
     }
 
     if !rel_counts.is_empty() {
-        lines.push(Line::styled(
-            "Relationship Types:",
-            Style::default().fg(scheme.info).bold(),
-        ));
-
-        let max_rel_count = rel_counts.values().copied().max().unwrap_or(1);
-        let mut rel_entries: Vec<_> = rel_counts.iter().collect();
-        rel_entries.sort_by(|a, b| b.1.cmp(a.1));
-
-        for (label, count) in &rel_entries {
-            let count = **count;
-            let bar_len = if max_rel_count > 0 {
-                (count * bar_width) / max_rel_count
-            } else {
-                0
-            };
-            let bar = "█".repeat(bar_len);
+        if rel_counts.len() == 1 {
+            // Single relationship type — compact single line
+            let (label, count) = rel_counts.iter().next().expect("checked non-empty");
             lines.push(Line::from(vec![
-                Span::styled(format!("  {label:12}"), Style::default().fg(scheme.info)),
-                Span::styled(format!("{count:>5} "), Style::default().fg(scheme.text)),
-                Span::styled(bar, Style::default().fg(scheme.info)),
+                Span::styled("Relationships: ", Style::default().fg(scheme.info).bold()),
+                Span::styled(
+                    format!("{} {label}", format_thousands(*count)),
+                    Style::default().fg(scheme.text),
+                ),
             ]));
+        } else {
+            // Multiple types — show bar chart
+            lines.push(Line::styled(
+                "Relationship Types:",
+                Style::default().fg(scheme.info).bold(),
+            ));
+
+            let max_rel_count = rel_counts.values().copied().max().unwrap_or(1);
+            let mut rel_entries: Vec<_> = rel_counts.iter().collect();
+            rel_entries.sort_by(|a, b| b.1.cmp(a.1));
+
+            for (label, count) in &rel_entries {
+                let count = **count;
+                let bar_len = if max_rel_count > 0 {
+                    (count * bar_width) / max_rel_count
+                } else {
+                    0
+                };
+                let bar = "█".repeat(bar_len);
+                lines.push(Line::from(vec![
+                    Span::styled(format!("  {label:12}"), Style::default().fg(scheme.info)),
+                    Span::styled(
+                        format!("{:>5} ", format_thousands(count)),
+                        Style::default().fg(scheme.text),
+                    ),
+                    Span::styled(bar, Style::default().fg(scheme.info)),
+                ]));
+            }
         }
 
+        // P5: Section separator
         lines.push(Line::from(""));
+        push_separator(&mut lines, sep_width, scheme.border);
     }
 
-    // Navigation help
-    lines.push(Line::styled(
-        "Navigation",
-        Style::default().fg(scheme.primary).bold(),
-    ));
-    lines.push(Line::from(""));
-    lines.push(Line::styled(
-        "↑/↓ or j/k  Navigate",
-        Style::default().fg(scheme.muted),
-    ));
-    lines.push(Line::styled(
-        "Enter/→/l   Expand node",
-        Style::default().fg(scheme.muted),
-    ));
-    lines.push(Line::styled(
-        "←/h         Collapse node",
-        Style::default().fg(scheme.muted),
-    ));
-    lines.push(Line::styled(
-        "e/E         Expand/collapse all",
-        Style::default().fg(scheme.muted),
-    ));
-    lines.push(Line::styled(
-        "/           Search",
-        Style::default().fg(scheme.muted),
-    ));
-    lines.push(Line::styled(
-        "J/K         Scroll detail panel",
-        Style::default().fg(scheme.muted),
-    ));
-
-    // Show selected node info
+    // P4: Rich Selected Node details (replaces static Navigation section)
     if let Some(node_id) = app.get_selected_dependency_node_id() {
-        lines.push(Line::from(""));
         lines.push(Line::styled(
             "Selected Node",
             Style::default().fg(scheme.accent).bold(),
@@ -742,6 +771,47 @@ fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, dep
                 ]));
             }
 
+            // Dependency counts (inline)
+            let dep_count = deps.edges.get(&node_id).map_or(0, Vec::len);
+            let depended_on_count = deps
+                .edges
+                .values()
+                .filter(|children| children.contains(&node_id))
+                .count();
+
+            lines.push(Line::from(vec![
+                Span::styled("Deps: ", Style::default().fg(scheme.muted)),
+                Span::styled(
+                    format_thousands(dep_count),
+                    Style::default().fg(scheme.primary),
+                ),
+                Span::styled("  │  ", Style::default().fg(scheme.border)),
+                Span::styled("Used by: ", Style::default().fg(scheme.muted)),
+                Span::styled(
+                    format_thousands(depended_on_count),
+                    Style::default().fg(scheme.primary),
+                ),
+            ]));
+
+            // License info
+            if !comp.licenses.declared.is_empty() {
+                lines.push(Line::from(vec![
+                    Span::styled("License: ", Style::default().fg(scheme.muted)),
+                    Span::styled(
+                        comp.licenses.declared.iter().take(2).map(|l| l.expression.as_str()).collect::<Vec<_>>().join(", "),
+                        Style::default().fg(scheme.text),
+                    ),
+                    if comp.licenses.declared.len() > 2 {
+                        Span::styled(
+                            format!(" +{}", comp.licenses.declared.len() - 2),
+                            Style::default().fg(scheme.muted),
+                        )
+                    } else {
+                        Span::raw("")
+                    },
+                ]));
+            }
+
             // Vulnerability details
             if !comp.vulnerabilities.is_empty() {
                 lines.push(Line::from(""));
@@ -785,34 +855,35 @@ fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, dep
                     ));
                 }
             }
+        } else {
+            // No component found — still show dependency counts
+            let dep_count = deps.edges.get(&node_id).map_or(0, Vec::len);
+            let depended_on_count = deps
+                .edges
+                .values()
+                .filter(|children| children.contains(&node_id))
+                .count();
 
-            // License info
-            if !comp.licenses.declared.is_empty() {
-                lines.push(Line::from(""));
-                lines.push(Line::styled(
-                    "Licenses:",
-                    Style::default().fg(scheme.highlight).bold(),
-                ));
-                for lic in comp.licenses.declared.iter().take(3) {
-                    lines.push(Line::from(vec![
-                        Span::styled("  • ", Style::default().fg(scheme.muted)),
-                        Span::raw(&lic.expression),
-                    ]));
-                }
-                if comp.licenses.declared.len() > 3 {
-                    lines.push(Line::styled(
-                        format!("  ... and {} more", comp.licenses.declared.len() - 3),
-                        Style::default().fg(scheme.muted),
-                    ));
-                }
-            }
+            lines.push(Line::from(vec![
+                Span::styled("Deps: ", Style::default().fg(scheme.muted)),
+                Span::styled(
+                    format_thousands(dep_count),
+                    Style::default().fg(scheme.primary),
+                ),
+                Span::styled("  │  ", Style::default().fg(scheme.border)),
+                Span::styled("Used by: ", Style::default().fg(scheme.muted)),
+                Span::styled(
+                    format_thousands(depended_on_count),
+                    Style::default().fg(scheme.primary),
+                ),
+            ]));
         }
 
         // Direct dependencies with relationship tags
         if let Some(children) = deps.edges.get(&node_id) {
             lines.push(Line::from(""));
             lines.push(Line::styled(
-                format!("Dependencies ({}):", children.len()),
+                format!("Dependencies ({}):", format_thousands(children.len())),
                 Style::default().fg(scheme.primary).bold(),
             ));
             for child_id in children.iter().take(5) {
@@ -822,7 +893,10 @@ fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, dep
                     .unwrap_or("");
                 let mut spans = vec![
                     Span::styled("  → ", Style::default().fg(scheme.muted)),
-                    Span::styled(child_name, Style::default().fg(scheme.text)),
+                    Span::styled(
+                        truncate_str(child_name, area.width.saturating_sub(12) as usize),
+                        Style::default().fg(scheme.text),
+                    ),
                 ];
                 let tag = tag.trim();
                 if !tag.is_empty() {
@@ -841,22 +915,6 @@ fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, dep
             }
         }
 
-        // Depended-on-by count (reverse graph)
-        let depended_on_count = deps
-            .edges
-            .values()
-            .filter(|children| children.contains(&node_id))
-            .count();
-        if depended_on_count > 0 {
-            lines.push(Line::from(vec![
-                Span::styled("Depended-on-by: ", Style::default().fg(scheme.muted)),
-                Span::styled(
-                    depended_on_count.to_string(),
-                    Style::default().fg(scheme.primary),
-                ),
-            ]));
-        }
-
         // Canonical ID (dimmed, for reference when it differs from name)
         if deps
             .names
@@ -873,14 +931,25 @@ fn render_dependency_stats(frame: &mut Frame, area: Rect, app: &mut ViewApp, dep
                 Style::default().fg(scheme.muted).dim(),
             ));
         }
+    } else {
+        lines.push(Line::styled(
+            "Select a node to view details",
+            Style::default().fg(scheme.muted),
+        ));
     }
 
     // Scrolling support
     let content_height = lines.len() as u16;
+    // P6: Focused panel border highlighting
+    let detail_border_color = if app.focus_panel == FocusPanel::Right {
+        scheme.border_focused
+    } else {
+        scheme.border
+    };
     let block = Block::default()
         .title(" Stats & Info ")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(scheme.secondary));
+        .border_style(Style::default().fg(detail_border_color));
     let inner_height = block.inner(area).height;
 
     // Clamp scroll

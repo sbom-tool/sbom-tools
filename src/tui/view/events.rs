@@ -75,6 +75,12 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
     // Clear any status message on key press
     app.clear_status_message();
 
+    // Ctrl+C copies the selected item (universal shortcut)
+    if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+        handle_yank(app);
+        return;
+    }
+
     // Handle source-local search input
     if app.active_tab == ViewTab::Source && app.source_state.search_active {
         match key.code {
@@ -315,6 +321,9 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
             if app.navigation_ctx.has_history() {
                 app.go_back();
             }
+        }
+        KeyCode::Char('y') => {
+            handle_yank(app);
         }
 
         // Tab navigation
@@ -820,6 +829,90 @@ fn handle_list_click(app: &mut ViewApp, clicked_index: usize, _x: u16) {
         ViewTab::Source | ViewTab::Overview => {
             // Source uses its own scrolling; Overview has no list navigation
         }
+    }
+}
+
+/// Get the text that would be copied for the current selection.
+///
+/// Returns `None` if nothing is selected or the tab has no copyable item.
+pub fn get_yank_text(app: &ViewApp) -> Option<String> {
+    match app.active_tab {
+        ViewTab::Tree | ViewTab::Overview => {
+            let comp = app.get_selected_component()?;
+            Some(if let Some(ref purl) = comp.identifiers.purl {
+                purl.clone()
+            } else {
+                let ver = comp.version.as_deref().unwrap_or("unknown");
+                format!("{}@{ver}", comp.name)
+            })
+        }
+        ViewTab::Vulnerabilities => {
+            let (_comp_id, vuln) = app.vuln_state.get_selected(&app.sbom)?;
+            Some(vuln.id.clone())
+        }
+        ViewTab::Dependencies => {
+            let node_id = app.get_selected_dependency_node_id()?;
+            Some(
+                app.sbom
+                    .components
+                    .iter()
+                    .find(|(id, _)| id.value() == node_id)
+                    .map_or(node_id, |(_, comp)| comp.name.clone()),
+            )
+        }
+        ViewTab::Licenses => {
+            let mut licenses: Vec<String> = Vec::new();
+            for comp in app.sbom.components.values() {
+                for lic in &comp.licenses.declared {
+                    if !licenses.contains(&lic.expression) {
+                        licenses.push(lic.expression.clone());
+                    }
+                }
+            }
+            licenses.sort();
+            licenses.get(app.license_state.selected).cloned()
+        }
+        ViewTab::Quality => app
+            .quality_report
+            .recommendations
+            .get(app.quality_state.selected_recommendation)
+            .map(|rec| rec.message.clone()),
+        ViewTab::Compliance => {
+            let results = app.compliance_results.as_ref()?;
+            let result = results.get(app.compliance_state.selected_standard)?;
+            let violations: Vec<_> = result
+                .violations
+                .iter()
+                .filter(|v| app.compliance_state.severity_filter.matches(v.severity))
+                .collect();
+            violations
+                .get(app.compliance_state.selected_violation)
+                .map(|v| v.message.clone())
+        }
+        ViewTab::Source => None,
+    }
+}
+
+/// Handle `y` / `Ctrl+C` to copy the focused item to clipboard.
+fn handle_yank(app: &mut ViewApp) {
+    let Some(text) = get_yank_text(app) else {
+        if app.active_tab == ViewTab::Source {
+            app.set_status_message("Shift+drag to select text, then Cmd/Ctrl+C");
+        } else {
+            app.set_status_message("Nothing selected to copy");
+        }
+        return;
+    };
+
+    if crate::tui::clipboard::copy_to_clipboard(&text) {
+        let display = if text.len() > 50 {
+            format!("{}...", &text[..47])
+        } else {
+            text
+        };
+        app.set_status_message(format!("Copied: {display}"));
+    } else {
+        app.set_status_message("Failed to copy to clipboard");
     }
 }
 
