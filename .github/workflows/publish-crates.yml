@@ -75,7 +75,7 @@ jobs:
         run: cargo publish --dry-run --locked
 
       - name: Authenticate to crates.io
-        uses: rust-lang/crates-io-auth-action@6005031c403c7b07e1a66b2f868da63ad96a626e # v1
+        uses: rust-lang/crates-io-auth-action@c2f7455177fbf986ee0f82f0932f8290b8769cce # v1
         id: auth
 
       - name: Publish crate
