@@ -33,7 +33,8 @@ If you discover a security vulnerability in sbom-tools, please report it respons
   - **Critical/High:** Patch release within 7 days
   - **Medium:** Patch in the next scheduled release
   - **Low:** Fix queued for a future release
-- You will be credited in the release notes (unless you prefer anonymity)
+- You will be credited in the release notes and GitHub Security Advisory (unless you prefer anonymity)
+- We follow [coordinated vulnerability disclosure](https://en.wikipedia.org/wiki/Coordinated_vulnerability_disclosure)
 
 ### Scope
 
