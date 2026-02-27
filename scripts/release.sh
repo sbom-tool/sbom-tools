@@ -18,6 +18,15 @@ if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 1
 fi
 
+# ── Verify signing key ─────────────────────────────────────────
+if ! git config user.signingkey &>/dev/null; then
+    echo "Error: No signing key configured. Set up GPG or SSH signing:"
+    echo "  GPG: git config --global user.signingkey <KEY_ID>"
+    echo "  SSH: git config --global gpg.format ssh"
+    echo "       git config --global user.signingkey ~/.ssh/id_ed25519.pub"
+    exit 1
+fi
+
 # ── Verify clean state ──────────────────────────────────────────
 if [[ -n "$(git status --porcelain)" ]]; then
     echo "Error: Working tree is not clean. Commit or stash changes first."
@@ -77,11 +86,17 @@ cargo check --quiet 2>/dev/null
 echo "==> Committing and tagging..."
 git add Cargo.toml Cargo.lock
 git commit -m "Bump version to $VERSION"
-git tag -a "v$VERSION" -m "Release v$VERSION"
+git tag -s "v$VERSION" -m "Release v$VERSION"
 
 echo "==> Pushing to origin..."
 git push origin main "v$VERSION"
 
+echo "==> Creating GitHub Release..."
+gh release create "v$VERSION" \
+    --title "v$VERSION" \
+    --generate-notes \
+    --verify-tag
+
 echo ""
-echo "Done! v$VERSION pushed. CI will publish to crates.io."
+echo "Done! v$VERSION released. CI will publish to crates.io and attach SLSA provenance."
 echo "Monitor: gh run list --limit 3"
