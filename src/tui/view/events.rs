@@ -95,6 +95,9 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
             KeyCode::Backspace => {
                 app.source_state.search_pop_char();
             }
+            KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                app.source_state.toggle_search_regex();
+            }
             KeyCode::Char(c) => {
                 app.source_state.search_push_char(c);
             }
@@ -478,7 +481,9 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
             _ => {}
         },
         KeyCode::Char('m') => {
-            if app.active_tab == ViewTab::Tree {
+            if app.active_tab == ViewTab::Source {
+                app.source_state.toggle_bookmark();
+            } else if app.active_tab == ViewTab::Tree {
                 app.toggle_bookmark();
             }
         }
@@ -489,6 +494,11 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                 app.compliance_state.severity_filter = app.compliance_state.severity_filter.next();
                 app.compliance_state.selected_violation = 0;
                 app.compliance_state.scroll_offset = 0;
+            }
+            ViewTab::Source => {
+                if app.source_state.view_mode == SourceViewMode::Tree {
+                    app.source_state.cycle_filter_type();
+                }
             }
             _ => {}
         },
@@ -520,6 +530,46 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
         }
         KeyCode::Char('N') if app.active_tab == ViewTab::Source => {
             app.source_state.prev_search_match();
+        }
+        // Source: Line numbers toggle
+        KeyCode::Char('I') if app.active_tab == ViewTab::Source => {
+            app.source_state.toggle_line_numbers();
+        }
+        // Source: Word wrap toggle (raw mode only)
+        KeyCode::Char('W') if app.active_tab == ViewTab::Source => {
+            if app.source_state.view_mode == SourceViewMode::Raw {
+                app.source_state.toggle_word_wrap();
+            }
+        }
+        // Source: Next bookmark
+        KeyCode::Char('\'') if app.active_tab == ViewTab::Source => {
+            app.source_state.next_bookmark();
+        }
+        // Source: Copy JSON path
+        KeyCode::Char('c') if app.active_tab == ViewTab::Source => {
+            app.source_state.ensure_flat_cache();
+            if let Some(item) = app
+                .source_state
+                .cached_flat_items
+                .get(app.source_state.selected)
+            {
+                let path = item.node_id.clone();
+                if crate::tui::clipboard::copy_to_clipboard(&path) {
+                    app.set_status_message(format!("Copied path: {path}"));
+                }
+            }
+        }
+        // Source: Export content
+        KeyCode::Char('E') if app.active_tab == ViewTab::Source => {
+            let content = app.source_state.get_full_content();
+            let result = crate::tui::export::export_source_content(&content, "source");
+            app.set_status_message(result.message);
+        }
+        // Source: Sort cycle (tree mode only)
+        KeyCode::Char('S') if app.active_tab == ViewTab::Source => {
+            if app.source_state.view_mode == SourceViewMode::Tree {
+                app.source_state.cycle_sort();
+            }
         }
         KeyCode::Char('v') => {
             if app.active_tab == ViewTab::Quality {
@@ -775,10 +825,18 @@ pub fn handle_mouse_event(app: &mut ViewApp, mouse: event::MouseEvent) {
             }
         }
         MouseEventKind::ScrollDown => {
-            app.navigate_down();
+            if app.active_tab == ViewTab::Source {
+                app.source_state.select_next();
+            } else {
+                app.navigate_down();
+            }
         }
         MouseEventKind::ScrollUp => {
-            app.navigate_up();
+            if app.active_tab == ViewTab::Source {
+                app.source_state.select_prev();
+            } else {
+                app.navigate_up();
+            }
         }
         _ => {}
     }
@@ -845,8 +903,21 @@ fn handle_list_click(app: &mut ViewApp, clicked_index: usize, _x: u16) {
                 app.compliance_state.selected_violation = clicked_index;
             }
         }
-        ViewTab::Source | ViewTab::Overview => {
-            // Source uses its own scrolling; Overview has no list navigation
+        ViewTab::Source => {
+            let max = match app.source_state.view_mode {
+                SourceViewMode::Tree => {
+                    app.source_state.ensure_flat_cache();
+                    app.source_state.cached_flat_items.len()
+                }
+                SourceViewMode::Raw => app.source_state.raw_lines.len(),
+            };
+            let idx = app.source_state.scroll_offset + clicked_index;
+            if idx < max {
+                app.source_state.selected = idx;
+            }
+        }
+        ViewTab::Overview => {
+            // Overview has no list navigation
         }
     }
 }

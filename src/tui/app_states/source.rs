@@ -3,7 +3,7 @@
 //! Provides a JSON tree model and panel state for both single-SBOM
 //! viewing (`ViewApp`) and side-by-side diff viewing (App).
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 /// A node in the XML tree, built from XML content via `quick_xml`.
 #[derive(Debug, Clone)]
@@ -271,6 +271,35 @@ pub enum JsonValueType {
     Number,
     Boolean,
     Null,
+}
+
+/// Sort mode for tree view.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SourceSortMode {
+    #[default]
+    None,
+    KeyAsc,
+    KeyDesc,
+}
+
+impl SourceSortMode {
+    /// Cycle to the next sort mode.
+    pub const fn next(self) -> Self {
+        match self {
+            Self::None => Self::KeyAsc,
+            Self::KeyAsc => Self::KeyDesc,
+            Self::KeyDesc => Self::None,
+        }
+    }
+
+    /// Label for display.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::None => "",
+            Self::KeyAsc => "[A-Z]",
+            Self::KeyDesc => "[Z-A]",
+        }
+    }
 }
 
 /// A node in the JSON tree, built from `serde_json::Value`.
@@ -580,6 +609,24 @@ pub struct SourcePanelState {
     pub cached_flat_items: Vec<crate::tui::shared::source::FlatJsonItem>,
     /// Whether the cached flat items are valid (invalidated on expand/collapse).
     pub flat_cache_valid: bool,
+    /// Show line numbers in tree mode.
+    pub show_line_numbers: bool,
+    /// Word wrap in raw mode (disables horizontal scroll).
+    pub word_wrap: bool,
+    /// Bookmarked line indices.
+    pub bookmarks: BTreeSet<usize>,
+    /// Indices of lines with change annotations (for jump-to-change navigation).
+    pub change_indices: Vec<usize>,
+    /// Current position within change_indices.
+    pub current_change_idx: Option<usize>,
+    /// Whether regex search mode is active.
+    pub search_regex_mode: bool,
+    /// Compiled regex (when regex mode is on and query is valid).
+    pub compiled_regex: Option<regex::Regex>,
+    /// Filter by JSON value type (tree mode only).
+    pub filter_type: Option<JsonValueType>,
+    /// Sort mode for tree children (tree mode only).
+    pub sort_mode: SourceSortMode,
 }
 
 impl SourcePanelState {
@@ -666,12 +713,23 @@ impl SourcePanelState {
             h_scroll_offset: 0,
             cached_flat_items: Vec::new(),
             flat_cache_valid: false,
+            show_line_numbers: false,
+            word_wrap: false,
+            bookmarks: BTreeSet::new(),
+            change_indices: Vec::new(),
+            current_change_idx: None,
+            search_regex_mode: false,
+            compiled_regex: None,
+            filter_type: None,
+            sort_mode: SourceSortMode::None,
         }
     }
 
     /// Invalidate the cached flat tree items (call after expand/collapse changes).
-    pub const fn invalidate_flat_cache(&mut self) {
+    pub fn invalidate_flat_cache(&mut self) {
         self.flat_cache_valid = false;
+        self.change_indices.clear();
+        self.current_change_idx = None;
     }
 
     /// Ensure the cached flat tree items are up-to-date. No-op if already valid.
@@ -689,6 +747,7 @@ impl SourcePanelState {
                 &mut self.cached_flat_items,
                 true,
                 &[],
+                self.sort_mode,
             );
         } else if let Some(ref xml) = self.xml_tree {
             flatten_xml_tree(
@@ -701,6 +760,13 @@ impl SourcePanelState {
                 &[],
             );
         }
+
+        // Apply type filter (retain expandable nodes + matching leaf types)
+        if let Some(filter_type) = self.filter_type {
+            self.cached_flat_items
+                .retain(|item| item.is_expandable || item.value_type == Some(filter_type));
+        }
+
         self.flat_cache_valid = true;
     }
 
@@ -927,11 +993,13 @@ impl SourcePanelState {
 
     pub fn search_push_char(&mut self, c: char) {
         self.search_query.push(c);
+        self.update_compiled_regex();
         self.execute_search();
     }
 
     pub fn search_pop_char(&mut self) {
         self.search_query.pop();
+        self.update_compiled_regex();
         self.execute_search();
     }
 
@@ -961,23 +1029,47 @@ impl SourcePanelState {
             return;
         }
 
-        let query = self.search_query.to_lowercase();
-
-        match self.view_mode {
-            SourceViewMode::Tree => {
-                self.ensure_flat_cache();
-                for (i, item) in self.cached_flat_items.iter().enumerate() {
-                    if item.display_key.to_lowercase().contains(&query)
-                        || item.value_preview.to_lowercase().contains(&query)
-                    {
-                        self.search_matches.push(i);
+        // Use regex matching if regex mode is on and regex compiles
+        if self.search_regex_mode {
+            // Clone the regex to avoid borrow conflict with ensure_flat_cache
+            if let Some(re) = self.compiled_regex.clone() {
+                match self.view_mode {
+                    SourceViewMode::Tree => {
+                        self.ensure_flat_cache();
+                        for (i, item) in self.cached_flat_items.iter().enumerate() {
+                            if re.is_match(&item.display_key) || re.is_match(&item.value_preview) {
+                                self.search_matches.push(i);
+                            }
+                        }
+                    }
+                    SourceViewMode::Raw => {
+                        for (i, line) in self.raw_lines.iter().enumerate() {
+                            if re.is_match(line) {
+                                self.search_matches.push(i);
+                            }
+                        }
                     }
                 }
             }
-            SourceViewMode::Raw => {
-                for (i, line) in self.raw_lines.iter().enumerate() {
-                    if line.to_lowercase().contains(&query) {
-                        self.search_matches.push(i);
+            // If regex doesn't compile, no matches (intentional)
+        } else {
+            let query = self.search_query.to_lowercase();
+            match self.view_mode {
+                SourceViewMode::Tree => {
+                    self.ensure_flat_cache();
+                    for (i, item) in self.cached_flat_items.iter().enumerate() {
+                        if item.display_key.to_lowercase().contains(&query)
+                            || item.value_preview.to_lowercase().contains(&query)
+                        {
+                            self.search_matches.push(i);
+                        }
+                    }
+                }
+                SourceViewMode::Raw => {
+                    for (i, line) in self.raw_lines.iter().enumerate() {
+                        if line.to_lowercase().contains(&query) {
+                            self.search_matches.push(i);
+                        }
                     }
                 }
             }
@@ -987,6 +1079,196 @@ impl SourcePanelState {
         if !self.search_matches.is_empty() {
             self.selected = self.search_matches[0];
         }
+    }
+
+    // --- Line numbers ---
+
+    pub fn toggle_line_numbers(&mut self) {
+        self.show_line_numbers = !self.show_line_numbers;
+    }
+
+    // --- Word wrap ---
+
+    pub fn toggle_word_wrap(&mut self) {
+        self.word_wrap = !self.word_wrap;
+        if self.word_wrap {
+            self.h_scroll_offset = 0;
+        }
+    }
+
+    // --- Bookmarks ---
+
+    pub fn toggle_bookmark(&mut self) {
+        if !self.bookmarks.remove(&self.selected) {
+            self.bookmarks.insert(self.selected);
+        }
+    }
+
+    pub fn next_bookmark(&mut self) {
+        if self.bookmarks.is_empty() {
+            return;
+        }
+        // Find next bookmark after current selection
+        if let Some(&next) = self.bookmarks.range((self.selected + 1)..).next() {
+            self.selected = next;
+        } else {
+            // Wrap around
+            if let Some(&first) = self.bookmarks.iter().next() {
+                self.selected = first;
+            }
+        }
+    }
+
+    pub fn prev_bookmark(&mut self) {
+        if self.bookmarks.is_empty() {
+            return;
+        }
+        if let Some(&prev) = self.bookmarks.range(..self.selected).next_back() {
+            self.selected = prev;
+        } else {
+            // Wrap around
+            if let Some(&last) = self.bookmarks.iter().next_back() {
+                self.selected = last;
+            }
+        }
+    }
+
+    // --- Change navigation ---
+
+    /// Build the change_indices list by scanning for annotated items.
+    pub fn build_change_indices(&mut self) {
+        self.change_indices.clear();
+        self.current_change_idx = None;
+
+        if self.change_annotations.is_empty() {
+            return;
+        }
+
+        match self.view_mode {
+            SourceViewMode::Tree => {
+                self.ensure_flat_cache();
+                for (i, item) in self.cached_flat_items.iter().enumerate() {
+                    if self.find_annotation(&item.node_id).is_some() {
+                        self.change_indices.push(i);
+                    }
+                }
+            }
+            SourceViewMode::Raw => {
+                for (i, node_id) in self.raw_line_node_ids.iter().enumerate() {
+                    if !node_id.is_empty() && self.find_annotation(node_id).is_some() {
+                        self.change_indices.push(i);
+                    }
+                }
+            }
+        }
+
+        // Deduplicate (annotations can repeat via ancestors)
+        self.change_indices.dedup();
+    }
+
+    pub fn next_change(&mut self) {
+        if self.change_indices.is_empty() {
+            self.build_change_indices();
+        }
+        if self.change_indices.is_empty() {
+            return;
+        }
+        let idx = match self.current_change_idx {
+            Some(i) => {
+                if i + 1 < self.change_indices.len() {
+                    i + 1
+                } else {
+                    0
+                }
+            }
+            None => {
+                // Find first change at or after current selection
+                self.change_indices
+                    .iter()
+                    .position(|&ci| ci >= self.selected)
+                    .unwrap_or(0)
+            }
+        };
+        self.current_change_idx = Some(idx);
+        self.selected = self.change_indices[idx];
+    }
+
+    pub fn prev_change(&mut self) {
+        if self.change_indices.is_empty() {
+            self.build_change_indices();
+        }
+        if self.change_indices.is_empty() {
+            return;
+        }
+        let idx = match self.current_change_idx {
+            Some(i) => {
+                if i > 0 {
+                    i - 1
+                } else {
+                    self.change_indices.len() - 1
+                }
+            }
+            None => self
+                .change_indices
+                .iter()
+                .rposition(|&ci| ci <= self.selected)
+                .unwrap_or(self.change_indices.len() - 1),
+        };
+        self.current_change_idx = Some(idx);
+        self.selected = self.change_indices[idx];
+    }
+
+    // --- Regex search ---
+
+    pub fn toggle_search_regex(&mut self) {
+        self.search_regex_mode = !self.search_regex_mode;
+        self.update_compiled_regex();
+        self.execute_search();
+    }
+
+    fn update_compiled_regex(&mut self) {
+        if self.search_regex_mode && !self.search_query.is_empty() {
+            self.compiled_regex = regex::RegexBuilder::new(&self.search_query)
+                .case_insensitive(true)
+                .build()
+                .ok();
+        } else {
+            self.compiled_regex = None;
+        }
+    }
+
+    // --- Filter/Sort ---
+
+    pub fn cycle_filter_type(&mut self) {
+        self.filter_type = match self.filter_type {
+            None => Some(JsonValueType::String),
+            Some(JsonValueType::String) => Some(JsonValueType::Number),
+            Some(JsonValueType::Number) => Some(JsonValueType::Boolean),
+            Some(JsonValueType::Boolean) => None,
+            Some(JsonValueType::Null) => None,
+        };
+        self.invalidate_flat_cache();
+    }
+
+    pub fn cycle_sort(&mut self) {
+        self.sort_mode = self.sort_mode.next();
+        self.invalidate_flat_cache();
+    }
+
+    /// Get a display label for the current filter type.
+    pub fn filter_label(&self) -> &'static str {
+        match self.filter_type {
+            None => "",
+            Some(JsonValueType::String) => "[Str]",
+            Some(JsonValueType::Number) => "[Num]",
+            Some(JsonValueType::Boolean) => "[Bool]",
+            Some(JsonValueType::Null) => "[Null]",
+        }
+    }
+
+    /// Get the full raw content as a single string.
+    pub fn get_full_content(&self) -> String {
+        self.raw_lines.join("\n")
     }
 }
 
@@ -1072,6 +1354,10 @@ pub struct SourceDiffState {
     pub new_panel: SourcePanelState,
     pub active_side: SourceSide,
     pub sync_mode: super::ScrollSyncMode,
+    /// Whether the detail panel is visible.
+    pub show_detail: bool,
+    /// Scroll offset within the detail panel.
+    pub detail_scroll: usize,
 }
 
 impl SourceDiffState {
@@ -1081,6 +1367,8 @@ impl SourceDiffState {
             new_panel: SourcePanelState::new(new_raw),
             active_side: SourceSide::New,
             sync_mode: super::ScrollSyncMode::Locked,
+            show_detail: false,
+            detail_scroll: 0,
         }
     }
 
@@ -1280,6 +1568,37 @@ impl SourceDiffState {
         if self.is_synced() {
             self.inactive_panel_mut().page_down();
         }
+    }
+
+    // --- Detail panel ---
+
+    pub fn toggle_detail(&mut self) {
+        self.show_detail = !self.show_detail;
+        self.detail_scroll = 0;
+    }
+
+    /// Get details for the currently selected item in the active panel.
+    pub fn get_selected_detail(&mut self) -> Option<String> {
+        let panel = self.active_panel_mut();
+        panel.ensure_flat_cache();
+        let item = panel.cached_flat_items.get(panel.selected)?;
+        let mut lines = Vec::new();
+        lines.push(format!("Path: {}", item.node_id));
+        lines.push(format!("Key: {}", item.display_key));
+        if !item.value_preview.is_empty() {
+            lines.push(format!("Value: {}", item.value_preview));
+        }
+        if let Some(vt) = item.value_type {
+            lines.push(format!("Type: {vt:?}"));
+        }
+        if item.is_expandable {
+            lines.push(format!("Children: {}", item.child_count_label));
+        }
+        lines.push(format!("Depth: {}", item.depth));
+        if let Some(status) = panel.find_annotation(&item.node_id) {
+            lines.push(format!("Change: {status:?}"));
+        }
+        Some(lines.join("\n"))
     }
 }
 

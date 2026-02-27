@@ -9,10 +9,18 @@ pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent) {
 
     match mouse.kind {
         MouseEventKind::ScrollUp => {
-            app.select_up();
+            if app.active_tab == crate::tui::TabKind::Source {
+                app.tabs.source.select_prev();
+            } else {
+                app.select_up();
+            }
         }
         MouseEventKind::ScrollDown => {
-            app.select_down();
+            if app.active_tab == crate::tui::TabKind::Source {
+                app.tabs.source.select_next();
+            } else {
+                app.select_down();
+            }
         }
         MouseEventKind::Down(MouseButton::Left) => {
             let x = mouse.column;
@@ -65,7 +73,7 @@ pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent) {
 }
 
 /// Handle a click on a list item
-pub(super) const fn handle_list_click(app: &mut App, clicked_index: usize, _x: u16) {
+pub(super) fn handle_list_click(app: &mut App, clicked_index: usize, _x: u16) {
     match app.active_tab {
         crate::tui::TabKind::Components => {
             if clicked_index < app.tabs.components.total {
@@ -95,6 +103,21 @@ pub(super) const fn handle_list_click(app: &mut App, clicked_index: usize, _x: u
                 if let Some(ref mut qv) = app.quality_view {
                     qv.set_selected_recommendation(clicked_index);
                 }
+            }
+        }
+        crate::tui::TabKind::Source => {
+            // Determine which panel from x position (50/50 split)
+            let panel = app.tabs.source.active_panel_mut();
+            let max = match panel.view_mode {
+                crate::tui::app_states::SourceViewMode::Tree => {
+                    panel.ensure_flat_cache();
+                    panel.cached_flat_items.len()
+                }
+                crate::tui::app_states::SourceViewMode::Raw => panel.raw_lines.len(),
+            };
+            let idx = panel.scroll_offset + clicked_index;
+            if idx < max {
+                panel.selected = idx;
             }
         }
         _ => {}

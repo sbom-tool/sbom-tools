@@ -3,7 +3,7 @@
 use crate::tui::app::App;
 use crate::tui::app_states::SourceViewMode;
 use crate::tui::app_states::source::SourceDiffState;
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 /// Handle source-tab-specific key events.
 pub fn handle_source_keys(app: &mut App, key: KeyEvent) {
@@ -23,6 +23,9 @@ pub fn handle_source_keys(app: &mut App, key: KeyEvent) {
             KeyCode::Backspace => {
                 panel.search_pop_char();
             }
+            KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                panel.toggle_search_regex();
+            }
             KeyCode::Char(c) => {
                 panel.search_push_char(c);
             }
@@ -36,10 +39,107 @@ pub fn handle_source_keys(app: &mut App, key: KeyEvent) {
             app.tabs.source.active_panel_mut().start_search();
         }
         KeyCode::Char('n') => {
-            app.tabs.source.active_panel_mut().next_search_match();
+            let panel = app.tabs.source.active_panel_mut();
+            if panel.search_query.is_empty() && !panel.change_annotations.is_empty() {
+                // No active search → change navigation
+                app.tabs.source.active_panel_mut().next_change();
+                let idx = app.tabs.source.active_panel_mut().current_change_idx;
+                let total = app.tabs.source.active_panel_mut().change_indices.len();
+                if let Some(i) = idx {
+                    app.set_status_message(format!("Change {}/{total}", i + 1));
+                }
+            } else {
+                app.tabs.source.active_panel_mut().next_search_match();
+            }
         }
         KeyCode::Char('N') => {
-            app.tabs.source.active_panel_mut().prev_search_match();
+            let panel = app.tabs.source.active_panel_mut();
+            if panel.search_query.is_empty() && !panel.change_annotations.is_empty() {
+                app.tabs.source.active_panel_mut().prev_change();
+                let idx = app.tabs.source.active_panel_mut().current_change_idx;
+                let total = app.tabs.source.active_panel_mut().change_indices.len();
+                if let Some(i) = idx {
+                    app.set_status_message(format!("Change {}/{total}", i + 1));
+                }
+            } else {
+                app.tabs.source.active_panel_mut().prev_search_match();
+            }
+        }
+        // Copy JSON path
+        KeyCode::Char('c') => {
+            let panel = app.tabs.source.active_panel_mut();
+            panel.ensure_flat_cache();
+            if let Some(item) = panel.cached_flat_items.get(panel.selected) {
+                let path = item.node_id.clone();
+                if crate::tui::clipboard::copy_to_clipboard(&path) {
+                    app.set_status_message(format!("Copied path: {path}"));
+                }
+            }
+        }
+        // Line numbers toggle
+        KeyCode::Char('I') => {
+            app.tabs.source.active_panel_mut().toggle_line_numbers();
+            if app.tabs.source.is_synced() {
+                app.tabs.source.inactive_panel_mut().toggle_line_numbers();
+            }
+        }
+        // Word wrap toggle (raw mode only)
+        KeyCode::Char('W') => {
+            if app.tabs.source.active_panel_mut().view_mode == SourceViewMode::Raw {
+                app.tabs.source.active_panel_mut().toggle_word_wrap();
+                if app.tabs.source.is_synced() {
+                    app.tabs.source.inactive_panel_mut().toggle_word_wrap();
+                }
+            }
+        }
+        // Bookmarks
+        KeyCode::Char('m') => {
+            app.tabs.source.active_panel_mut().toggle_bookmark();
+        }
+        KeyCode::Char('\'') => {
+            app.tabs.source.active_panel_mut().next_bookmark();
+        }
+        KeyCode::Char('"') => {
+            app.tabs.source.active_panel_mut().prev_bookmark();
+        }
+        // Export source content
+        KeyCode::Char('E') => {
+            let panel = app.tabs.source.active_panel_mut();
+            let content = panel.get_full_content();
+            let label = match app.tabs.source.active_side {
+                crate::tui::app_states::SourceSide::Old => "old",
+                crate::tui::app_states::SourceSide::New => "new",
+            };
+            let result = crate::tui::export::export_source_content(&content, label);
+            app.set_status_message(result.message);
+        }
+        // Detail panel toggle
+        KeyCode::Char('d') => {
+            app.tabs.source.toggle_detail();
+        }
+        // Filter type cycle (tree mode only)
+        KeyCode::Char('f') => {
+            if app.tabs.source.active_panel_mut().view_mode == SourceViewMode::Tree {
+                app.tabs.source.active_panel_mut().cycle_filter_type();
+                let label = app.tabs.source.active_panel_mut().filter_label();
+                if label.is_empty() {
+                    app.set_status_message("Filter: off".to_string());
+                } else {
+                    app.set_status_message(format!("Filter: {label}"));
+                }
+            }
+        }
+        // Sort cycle (tree mode only)
+        KeyCode::Char('S') => {
+            if app.tabs.source.active_panel_mut().view_mode == SourceViewMode::Tree {
+                app.tabs.source.active_panel_mut().cycle_sort();
+                let label = app.tabs.source.active_panel_mut().sort_mode.label();
+                if label.is_empty() {
+                    app.set_status_message("Sort: off".to_string());
+                } else {
+                    app.set_status_message(format!("Sort: {label}"));
+                }
+            }
         }
         KeyCode::Char('v') => {
             app.tabs.source.old_panel.toggle_view_mode();
