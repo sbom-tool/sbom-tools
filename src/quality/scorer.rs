@@ -632,6 +632,35 @@ impl QualityScorer {
             });
         }
 
+        // Priority 2-3: Software complexity
+        if let Some(level) = &dependencies.complexity_level {
+            match level {
+                super::metrics::ComplexityLevel::VeryHigh => {
+                    recommendations.push(Recommendation {
+                        priority: 2,
+                        category: RecommendationCategory::Dependencies,
+                        message:
+                            "Dependency structure is very complex — review for unnecessary transitive dependencies"
+                                .to_string(),
+                        impact: 8.0,
+                        affected_count: dependencies.total_dependencies,
+                    });
+                }
+                super::metrics::ComplexityLevel::High => {
+                    recommendations.push(Recommendation {
+                        priority: 3,
+                        category: RecommendationCategory::Dependencies,
+                        message:
+                            "Dependency structure is complex — consider reducing hub dependencies or flattening deep chains"
+                                .to_string(),
+                        impact: 5.0,
+                        affected_count: dependencies.total_dependencies,
+                    });
+                }
+                _ => {}
+            }
+        }
+
         // Priority 3: Missing licenses
         let missing_licenses = total_components - licenses.with_declared;
         if missing_licenses > 0 && (missing_licenses as f32 / total_components.max(1) as f32) > 0.2

@@ -4,7 +4,8 @@
 //! and have no dependency on App or `ViewApp` state.
 
 use crate::quality::{
-    QualityGrade, QualityReport, RecommendationCategory, SCORING_ENGINE_VERSION, ScoringProfile,
+    ComplexityLevel, DependencyMetrics, QualityGrade, QualityReport, RecommendationCategory,
+    SCORING_ENGINE_VERSION, ScoringProfile,
 };
 use crate::tui::theme::colors;
 use ratatui::{
@@ -87,6 +88,14 @@ pub fn explain_dependency_score(report: &QualityReport) -> String {
         "No deps defined".to_string()
     } else if m.cycle_count > 0 {
         format!("{} cycle(s)", m.cycle_count)
+    } else if matches!(
+        m.complexity_level,
+        Some(ComplexityLevel::High | ComplexityLevel::VeryHigh)
+    ) {
+        format!(
+            "Complexity: {}",
+            m.complexity_level.as_ref().map_or("?", |l| l.label())
+        )
     } else if m.orphan_components > 5 {
         format!("{} orphans", m.orphan_components)
     } else {
@@ -134,6 +143,54 @@ pub fn explain_lifecycle_score(report: &QualityReport) -> String {
                 "Some concerns".to_string()
             }
         }
+    }
+}
+
+/// Build a styled TUI line for the complexity index + factor breakdown.
+fn complexity_line(
+    d: &DependencyMetrics,
+    scheme: &crate::tui::theme::ColorScheme,
+) -> Line<'static> {
+    match (d.software_complexity_index, &d.complexity_level) {
+        (Some(simplicity), Some(level)) => {
+            let level_color = match level {
+                ComplexityLevel::Low => scheme.success,
+                ComplexityLevel::Moderate => scheme.primary,
+                ComplexityLevel::High => scheme.warning,
+                ComplexityLevel::VeryHigh => scheme.error,
+            };
+            let mut spans = vec![
+                Span::styled("  Complexity: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(
+                    format!("{simplicity:.0}"),
+                    Style::default().fg(level_color).bold(),
+                ),
+                Span::styled("/100 ", Style::default().fg(scheme.text_muted)),
+                Span::styled(
+                    format!("({})", level.label()),
+                    Style::default().fg(level_color),
+                ),
+            ];
+            if let Some(ref f) = d.complexity_factors {
+                spans.push(Span::styled("  ", Style::default()));
+                spans.push(Span::styled(
+                    format!(
+                        "V:{:.2} D:{:.2} F:{:.2} C:{:.2} Fr:{:.2}",
+                        f.dependency_volume,
+                        f.normalized_depth,
+                        f.fanout_concentration,
+                        f.cycle_ratio,
+                        f.fragmentation
+                    ),
+                    Style::default().fg(scheme.text_muted),
+                ));
+            }
+            Line::from(spans)
+        }
+        _ => Line::from(vec![
+            Span::styled("  Complexity: ", Style::default().fg(scheme.text_muted)),
+            Span::styled("N/A", Style::default().fg(scheme.text_muted)),
+        ]),
     }
 }
 
@@ -292,6 +349,40 @@ pub fn generate_key_factors(report: &QualityReport) -> Vec<Line<'static>> {
                 Style::default().fg(scheme.text),
             ),
         ]));
+    }
+    // Complexity insight
+    match report.dependency_metrics.complexity_level {
+        Some(ComplexityLevel::High) => {
+            lines.push(Line::from(vec![
+                Span::styled("   ! ", Style::default().fg(scheme.warning)),
+                Span::styled(
+                    format!(
+                        "High dependency complexity (simplicity {:.0}/100)",
+                        report
+                            .dependency_metrics
+                            .software_complexity_index
+                            .unwrap_or(0.0)
+                    ),
+                    Style::default().fg(scheme.text),
+                ),
+            ]));
+        }
+        Some(ComplexityLevel::VeryHigh) => {
+            lines.push(Line::from(vec![
+                Span::styled("   - ", Style::default().fg(scheme.error)),
+                Span::styled(
+                    format!(
+                        "Very high dependency complexity (simplicity {:.0}/100)",
+                        report
+                            .dependency_metrics
+                            .software_complexity_index
+                            .unwrap_or(0.0)
+                    ),
+                    Style::default().fg(scheme.text),
+                ),
+            ]));
+        }
+        _ => {}
     }
 
     lines
@@ -1275,6 +1366,8 @@ pub fn render_dependency_details(frame: &mut Frame, area: Rect, report: &Quality
             Span::styled("  Cycles: ", Style::default().fg(scheme.text_muted)),
             Span::styled(format!("{}", d.cycle_count), cycle_style),
         ]),
+        // Software complexity index
+        complexity_line(d, &scheme),
         Line::from(""),
         Line::from(vec![Span::styled(
             "Vulnerability Data:",
