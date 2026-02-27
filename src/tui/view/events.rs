@@ -553,7 +553,9 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                     app.compliance_state.prev_standard();
                 }
                 ViewTab::Source => {
-                    if app.source_state.view_mode == SourceViewMode::Tree {
+                    if app.source_state.view_mode == SourceViewMode::Raw {
+                        app.source_state.scroll_left();
+                    } else {
                         app.source_state.ensure_flat_cache();
                         if let Some(item) = app
                             .source_state
@@ -597,7 +599,9 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                     }
                 }
                 ViewTab::Source => {
-                    if app.source_state.view_mode == SourceViewMode::Tree {
+                    if app.source_state.view_mode == SourceViewMode::Raw {
+                        app.source_state.scroll_right();
+                    } else {
                         app.source_state.ensure_flat_cache();
                         if let Some(item) = app
                             .source_state
@@ -619,6 +623,16 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
         }
         KeyCode::Char('L') if app.active_tab == ViewTab::Source => {
             app.source_state.expand_all();
+        }
+        // Fold depth presets for Source tab: Shift+1/2/3
+        KeyCode::Char('!') if app.active_tab == ViewTab::Source => {
+            app.source_state.expand_to_depth(1);
+        }
+        KeyCode::Char('@') if app.active_tab == ViewTab::Source => {
+            app.source_state.expand_to_depth(2);
+        }
+        KeyCode::Char('#') if app.active_tab == ViewTab::Source => {
+            app.source_state.expand_to_depth(3);
         }
 
         _ => {}
@@ -894,7 +908,33 @@ pub fn get_yank_text(app: &ViewApp) -> Option<String> {
                 .get(app.compliance_state.selected_violation)
                 .map(|v| v.message.clone())
         }
-        ViewTab::Source => None,
+        ViewTab::Source => match app.source_state.view_mode {
+            SourceViewMode::Tree => {
+                // Need to ensure flat cache is warm — it normally is from rendering
+                // but we can't call ensure_flat_cache on an immutable ref.
+                // The cache is already warm from the last render, so read directly.
+                app.source_state
+                    .cached_flat_items
+                    .get(app.source_state.selected)
+                    .map(|item| {
+                        if !item.value_preview.is_empty() {
+                            let v = &item.value_preview;
+                            if v.starts_with('"') && v.ends_with('"') && v.len() >= 2 {
+                                v[1..v.len() - 1].to_string()
+                            } else {
+                                v.clone()
+                            }
+                        } else {
+                            item.node_id.clone()
+                        }
+                    })
+            }
+            SourceViewMode::Raw => app
+                .source_state
+                .raw_lines
+                .get(app.source_state.selected)
+                .map(|line| line.trim().to_string()),
+        },
     }
 }
 

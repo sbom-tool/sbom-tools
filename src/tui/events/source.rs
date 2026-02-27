@@ -61,22 +61,36 @@ pub fn handle_source_keys(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Left | KeyCode::Char('h') => {
-            // Collapse: only if expanded
-            let node_id = get_active_expandable_node(&mut app.tabs.source, Some(true));
-            if let Some(id) = node_id {
-                app.tabs.source.active_panel_mut().toggle_expand(&id);
+            if app.tabs.source.active_panel_mut().view_mode == SourceViewMode::Raw {
+                app.tabs.source.active_panel_mut().scroll_left();
                 if app.tabs.source.is_synced() {
-                    sync_expand_to_inactive(&mut app.tabs.source, &id);
+                    app.tabs.source.inactive_panel_mut().scroll_left();
+                }
+            } else {
+                // Collapse: only if expanded
+                let node_id = get_active_expandable_node(&mut app.tabs.source, Some(true));
+                if let Some(id) = node_id {
+                    app.tabs.source.active_panel_mut().toggle_expand(&id);
+                    if app.tabs.source.is_synced() {
+                        sync_expand_to_inactive(&mut app.tabs.source, &id);
+                    }
                 }
             }
         }
         KeyCode::Right | KeyCode::Char('l') => {
-            // Expand: only if collapsed
-            let node_id = get_active_expandable_node(&mut app.tabs.source, Some(false));
-            if let Some(id) = node_id {
-                app.tabs.source.active_panel_mut().toggle_expand(&id);
+            if app.tabs.source.active_panel_mut().view_mode == SourceViewMode::Raw {
+                app.tabs.source.active_panel_mut().scroll_right();
                 if app.tabs.source.is_synced() {
-                    sync_expand_to_inactive(&mut app.tabs.source, &id);
+                    app.tabs.source.inactive_panel_mut().scroll_right();
+                }
+            } else {
+                // Expand: only if collapsed
+                let node_id = get_active_expandable_node(&mut app.tabs.source, Some(false));
+                if let Some(id) = node_id {
+                    app.tabs.source.active_panel_mut().toggle_expand(&id);
+                    if app.tabs.source.is_synced() {
+                        sync_expand_to_inactive(&mut app.tabs.source, &id);
+                    }
                 }
             }
         }
@@ -90,6 +104,25 @@ pub fn handle_source_keys(app: &mut App, key: KeyEvent) {
             app.tabs.source.active_panel_mut().expand_all();
             if app.tabs.source.is_synced() {
                 app.tabs.source.inactive_panel_mut().expand_all();
+            }
+        }
+        // Fold depth presets: Shift+1/2/3
+        KeyCode::Char('!') => {
+            app.tabs.source.active_panel_mut().expand_to_depth(1);
+            if app.tabs.source.is_synced() {
+                app.tabs.source.inactive_panel_mut().expand_to_depth(1);
+            }
+        }
+        KeyCode::Char('@') => {
+            app.tabs.source.active_panel_mut().expand_to_depth(2);
+            if app.tabs.source.is_synced() {
+                app.tabs.source.inactive_panel_mut().expand_to_depth(2);
+            }
+        }
+        KeyCode::Char('#') => {
+            app.tabs.source.active_panel_mut().expand_to_depth(3);
+            if app.tabs.source.is_synced() {
+                app.tabs.source.inactive_panel_mut().expand_to_depth(3);
             }
         }
         _ => {}

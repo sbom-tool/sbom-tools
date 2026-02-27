@@ -104,6 +104,7 @@ impl App {
 
         let mut app = Self::base(AppMode::Diff, components_len, vulns_len);
         app.tabs.source = SourceDiffState::new(old_raw, new_raw);
+        app.tabs.source.populate_annotations(&diff_result);
         app.data.diff_result = Some(diff_result);
         app.data.old_sbom = Some(old_sbom);
         app.data.new_sbom = Some(new_sbom);
