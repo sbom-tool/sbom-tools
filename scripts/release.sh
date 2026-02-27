@@ -2,6 +2,9 @@
 # Release script for sbom-tools
 # Usage: scripts/release.sh <version>
 # Example: scripts/release.sh 0.1.11
+#
+# Supports repos with branch protection: creates a PR for the version bump,
+# waits for CI, then merges (with --admin if needed), tags, and releases.
 set -euo pipefail
 
 VERSION="${1:-}"
@@ -40,6 +43,16 @@ if [[ "$BRANCH" != "main" ]]; then
     exit 1
 fi
 
+# Ensure we're up to date
+git fetch origin main --quiet
+LOCAL_SHA="$(git rev-parse HEAD)"
+REMOTE_SHA="$(git rev-parse origin/main)"
+if [[ "$LOCAL_SHA" != "$REMOTE_SHA" ]]; then
+    echo "Error: Local main ($LOCAL_SHA) differs from origin/main ($REMOTE_SHA)"
+    echo "Run 'git pull origin main' first."
+    exit 1
+fi
+
 echo "==> Releasing sbom-tools v$VERSION"
 
 # ── Check current version ────────────────────────────────────────
@@ -74,7 +87,11 @@ cargo clippy --all-features -- -D warnings 2>&1 | tail -1
 echo "==> Dry-run publish..."
 cargo publish --dry-run --locked 2>&1 | tail -3
 
-# ── Bump version ─────────────────────────────────────────────────
+# ── Bump version on a release branch ────────────────────────────
+RELEASE_BRANCH="release/v$VERSION"
+echo "==> Creating release branch '$RELEASE_BRANCH'..."
+git checkout -b "$RELEASE_BRANCH"
+
 echo "==> Bumping Cargo.toml to $VERSION"
 sed -i.bak "s/^version = \"$CURRENT\"/version = \"$VERSION\"/" Cargo.toml
 rm -f Cargo.toml.bak
@@ -82,21 +99,56 @@ rm -f Cargo.toml.bak
 # Update Cargo.lock
 cargo check --quiet 2>/dev/null
 
-# ── Commit + tag + push ─────────────────────────────────────────
-echo "==> Committing and tagging..."
 git add Cargo.toml Cargo.lock
 git commit -m "Bump version to $VERSION"
+git push -u origin "$RELEASE_BRANCH"
+
+# ── Create PR and wait for CI ────────────────────────────────────
+echo "==> Creating pull request..."
+PR_URL="$(gh pr create \
+    --title "Release v$VERSION" \
+    --body "Bump version to $VERSION for release." \
+    --base main \
+    --head "$RELEASE_BRANCH")"
+PR_NUMBER="$(echo "$PR_URL" | grep -oE '[0-9]+$')"
+echo "    PR #$PR_NUMBER: $PR_URL"
+
+echo "==> Waiting for CI checks..."
+if ! gh pr checks "$PR_NUMBER" --watch --fail-level all; then
+    echo "Error: CI checks failed on PR #$PR_NUMBER"
+    echo "Fix the issues, then re-run this script or merge manually."
+    git checkout main
+    exit 1
+fi
+
+# ── Merge PR ─────────────────────────────────────────────────────
+echo "==> Merging PR #$PR_NUMBER..."
+if ! gh pr merge "$PR_NUMBER" --squash --delete-branch; then
+    echo "    Standard merge failed, trying with --admin..."
+    gh pr merge "$PR_NUMBER" --squash --delete-branch --admin
+fi
+
+# ── Update local main ───────────────────────────────────────────
+git checkout main
+git pull origin main
+
+# ── Tag and push ─────────────────────────────────────────────────
+echo "==> Creating signed tag v$VERSION..."
 git tag -s "v$VERSION" -m "Release v$VERSION"
+git push origin "v$VERSION"
 
-echo "==> Pushing to origin..."
-git push origin main "v$VERSION"
-
+# ── Create GitHub Release ────────────────────────────────────────
 echo "==> Creating GitHub Release..."
 gh release create "v$VERSION" \
     --title "v$VERSION" \
     --generate-notes \
     --verify-tag
 
+# ── Cleanup ──────────────────────────────────────────────────────
+git branch -d "$RELEASE_BRANCH" 2>/dev/null || true
+
 echo ""
-echo "Done! v$VERSION released. CI will publish to crates.io and attach SLSA provenance."
-echo "Monitor: gh run list --limit 3"
+echo "Done! v$VERSION released."
+echo "  - GitHub Release: https://github.com/sbom-tool/sbom-tools/releases/tag/v$VERSION"
+echo "  - CI will publish to crates.io and attach SLSA provenance."
+echo "  - Monitor: gh run list --limit 3"
