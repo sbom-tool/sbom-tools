@@ -3,7 +3,7 @@
 //! Provides interactive JSON tree rendering and raw text rendering for the Source tab.
 
 use crate::tui::app_states::source::{
-    JsonTreeNode, JsonValueType, SourcePanelState, SourceViewMode,
+    JsonTreeNode, JsonValueType, SourcePanelState, SourceSortMode, SourceViewMode,
 };
 use crate::tui::theme::colors;
 use ratatui::{
@@ -29,6 +29,7 @@ pub struct FlatJsonItem {
 }
 
 /// Flatten the JSON tree into a list respecting expand/collapse state.
+#[allow(clippy::too_many_arguments)]
 pub fn flatten_json_tree(
     node: &JsonTreeNode,
     parent_path: &str,
@@ -37,6 +38,7 @@ pub fn flatten_json_tree(
     items: &mut Vec<FlatJsonItem>,
     is_last_sibling: bool,
     ancestors_last: &[bool],
+    sort_mode: SourceSortMode,
 ) {
     let node_id = node.node_id(parent_path);
     let is_expanded = expanded.contains(&node_id);
@@ -67,8 +69,34 @@ pub fn flatten_json_tree(
     if is_expanded && let Some(children) = node.children() {
         let mut current_ancestors = ancestors_last.to_vec();
         current_ancestors.push(is_last_sibling);
-        for (i, child) in children.iter().enumerate() {
-            let child_is_last = i == children.len() - 1;
+
+        // Optionally sort children by key
+        let sorted_children: Vec<&JsonTreeNode>;
+        let children_ref: &[&JsonTreeNode] = match sort_mode {
+            SourceSortMode::None => {
+                sorted_children = children.iter().collect();
+                &sorted_children
+            }
+            SourceSortMode::KeyAsc => {
+                sorted_children = {
+                    let mut v: Vec<&JsonTreeNode> = children.iter().collect();
+                    v.sort_by_key(|a| a.display_key());
+                    v
+                };
+                &sorted_children
+            }
+            SourceSortMode::KeyDesc => {
+                sorted_children = {
+                    let mut v: Vec<&JsonTreeNode> = children.iter().collect();
+                    v.sort_by_key(|b| std::cmp::Reverse(b.display_key()));
+                    v
+                };
+                &sorted_children
+            }
+        };
+
+        for (i, child) in children_ref.iter().enumerate() {
+            let child_is_last = i == children_ref.len() - 1;
             flatten_json_tree(
                 child,
                 &node_id,
@@ -77,6 +105,7 @@ pub fn flatten_json_tree(
                 items,
                 child_is_last,
                 &current_ancestors,
+                sort_mode,
             );
         }
     }
@@ -118,14 +147,56 @@ fn render_source_tree(
     } else {
         String::new()
     };
+    let filter_label = state.filter_label();
+    let sort_label = state.sort_mode.label();
+    let indicators = format!(
+        "{}{}",
+        if filter_label.is_empty() {
+            String::new()
+        } else {
+            format!(" {filter_label}")
+        },
+        if sort_label.is_empty() {
+            String::new()
+        } else {
+            format!(" {sort_label}")
+        },
+    );
+    // We'll render the block after computing status bar (needs item_count)
+    // Compute a preliminary inner to find dimensions
+    let preliminary_block = Block::default().borders(Borders::ALL);
+    let preliminary_inner = preliminary_block.inner(area);
+    drop(preliminary_block);
+
+    // Pre-compute item count for status bar
+    state.ensure_flat_cache();
+    let pre_item_count = state.cached_flat_items.len();
+    let percent = if pre_item_count > 0 {
+        (state.selected + 1) * 100 / pre_item_count
+    } else {
+        0
+    };
+    let status_bar = format!(
+        " Ln {}/{} ({}%) ",
+        state.selected + 1,
+        pre_item_count,
+        percent
+    );
+
     let block = Block::default()
-        .title(format!(" {title} [Tree]{node_info}{mode_hint}"))
+        .title(format!(" {title} [Tree]{node_info}{indicators}{mode_hint}"))
         .title_style(Style::default().fg(border_color).bold())
+        .title_bottom(
+            Line::from(status_bar)
+                .right_aligned()
+                .style(Style::default().fg(scheme.text_muted)),
+        )
         .borders(Borders::ALL)
         .border_style(Style::default().fg(border_color));
 
     let inner = block.inner(area);
     frame.render_widget(block, area);
+    let _ = preliminary_inner;
 
     if inner.width < 4 || inner.height < 1 {
         return;
@@ -228,6 +299,34 @@ fn render_source_tree(
 
         let mut x = inner.x;
 
+        // Line number (when enabled)
+        if state.show_line_numbers {
+            let total = state.cached_flat_items.len();
+            let gutter_w = format!("{total}").len();
+            let num_str = format!("{:>gutter_w$} ", abs_idx + 1);
+            render_str(
+                frame.buffer_mut(),
+                x,
+                y,
+                &num_str,
+                inner.width,
+                Style::default().fg(scheme.text_muted),
+            );
+            x += num_str.len() as u16;
+        }
+
+        // Bookmark indicator
+        if state.bookmarks.contains(&abs_idx) {
+            render_str(
+                frame.buffer_mut(),
+                x,
+                y,
+                "\u{2605} ",
+                inner.width.saturating_sub(x - inner.x),
+                Style::default().fg(scheme.warning),
+            );
+        }
+
         // Selection indicator
         let sel_str = if is_selected { "> " } else { "  " };
         render_str(
@@ -235,7 +334,7 @@ fn render_source_tree(
             x,
             y,
             sel_str,
-            inner.width,
+            inner.width.saturating_sub(x - inner.x),
             Style::default().fg(scheme.accent).bold(),
         );
         x += 2;
@@ -428,22 +527,47 @@ fn render_source_raw(
         scheme.border
     };
 
-    let has_tree = state.json_tree.is_some() || state.xml_tree.is_some();
+    let has_json_tree = state.json_tree.is_some();
+    let has_xml_tree = state.xml_tree.is_some();
+    let has_tree = has_json_tree || has_xml_tree;
     let mode_hint = if has_tree { " 'v':Tree " } else { "" };
-    let col_hint = if state.h_scroll_offset > 0 {
+    let wrap_hint = if state.word_wrap { " [Wrap]" } else { "" };
+    let col_hint = if !state.word_wrap && state.h_scroll_offset > 0 {
         format!(" col:{}", state.h_scroll_offset)
     } else {
         String::new()
     };
+
+    // Status bar
+    let total_lines = state.raw_lines.len();
+    let percent = if total_lines > 0 {
+        (state.selected + 1) * 100 / total_lines
+    } else {
+        0
+    };
+    let col_info = if !state.word_wrap && state.h_scroll_offset > 0 {
+        format!(" Col {}", state.h_scroll_offset)
+    } else {
+        String::new()
+    };
+    let status_bar = format!(
+        " Ln {}/{}{} ({}%) ",
+        state.selected + 1,
+        total_lines,
+        col_info,
+        percent
+    );
+
     let block = Block::default()
         .title(format!(
-            " {} [Raw] ({} lines){}{} ",
-            title,
-            state.raw_lines.len(),
-            col_hint,
-            mode_hint,
+            " {title} [Raw] ({total_lines} lines){col_hint}{wrap_hint}{mode_hint} ",
         ))
         .title_style(Style::default().fg(border_color).bold())
+        .title_bottom(
+            Line::from(status_bar)
+                .right_aligned()
+                .style(Style::default().fg(scheme.text_muted)),
+        )
         .borders(Borders::ALL)
         .border_style(Style::default().fg(border_color));
 
@@ -490,10 +614,23 @@ fn render_source_raw(
     {
         let y = inner.y + i as u16;
         let line_num = state.scroll_offset + i + 1;
-        let is_selected = state.scroll_offset + i == state.selected;
+        let abs_idx = state.scroll_offset + i;
+        let is_selected = abs_idx == state.selected;
+
+        // Bookmark indicator
+        if state.bookmarks.contains(&abs_idx) {
+            render_str(
+                frame.buffer_mut(),
+                inner.x,
+                y,
+                "\u{2605}",
+                1,
+                Style::default().fg(scheme.warning),
+            );
+        }
 
         // Line number gutter
-        let num_str = format!("{line_num:>gutter_width$} │ ");
+        let num_str = format!("{line_num:>gutter_width$} \u{2502} ");
         render_str(
             frame.buffer_mut(),
             inner.x,
@@ -506,14 +643,26 @@ fn render_source_raw(
         let content_x = inner.x + num_str.len() as u16;
         if content_x < remaining {
             let max_w = remaining - content_x;
-            // Apply horizontal scroll offset
-            let display_line = if state.h_scroll_offset > 0 {
+            // Apply horizontal scroll offset (skip if word wrap is on)
+            let display_line = if state.word_wrap {
+                // Word wrap: truncate at max_w (no horizontal scroll)
+                line.to_string()
+            } else if state.h_scroll_offset > 0 {
                 skip_display_chars(line, state.h_scroll_offset)
             } else {
                 line.to_string()
             };
-            if has_tree {
+            if has_json_tree {
                 render_json_line_highlighted(
+                    frame.buffer_mut(),
+                    content_x,
+                    y,
+                    &display_line,
+                    max_w,
+                    &scheme,
+                );
+            } else if has_xml_tree {
+                render_xml_line_highlighted(
                     frame.buffer_mut(),
                     content_x,
                     y,
@@ -535,8 +684,7 @@ fn render_source_raw(
 
         // Diff change annotation highlighting (raw mode)
         if !state.change_annotations.is_empty() {
-            let abs_idx_raw = state.scroll_offset + i;
-            if let Some(node_id) = state.raw_line_node_ids.get(abs_idx_raw) {
+            if let Some(node_id) = state.raw_line_node_ids.get(abs_idx) {
                 if let Some(status) = state.find_annotation(node_id) {
                     let bg = match status {
                         crate::tui::app_states::source::SourceChangeStatus::Added => {
@@ -568,7 +716,6 @@ fn render_source_raw(
         }
 
         // Search match highlighting (substring-level)
-        let abs_idx = state.scroll_offset + i;
         if !state.search_matches.is_empty()
             && state.search_query.len() >= 2
             && state.search_matches.binary_search(&abs_idx).is_ok()
@@ -736,6 +883,191 @@ fn json_looks_like_null(chars: &[char], i: usize) -> bool {
     remaining.len() >= 4 && remaining[..4] == ['n', 'u', 'l', 'l']
 }
 
+/// Render a raw XML line with syntax highlighting.
+fn render_xml_line_highlighted(
+    buf: &mut Buffer,
+    x: u16,
+    y: u16,
+    line: &str,
+    max_width: u16,
+    scheme: &crate::tui::theme::ColorScheme,
+) {
+    let mut cx = x;
+    let limit = x + max_width;
+    let chars: Vec<char> = line.chars().collect();
+    let mut i = 0;
+
+    while i < chars.len() && cx < limit {
+        let ch = chars[i];
+        match ch {
+            '<' => {
+                // Check for comment: <!--
+                if i + 3 < chars.len()
+                    && chars[i + 1] == '!'
+                    && chars[i + 2] == '-'
+                    && chars[i + 3] == '-'
+                {
+                    let comment_style = Style::default().fg(scheme.text_muted);
+                    // Render until -->
+                    while i < chars.len() && cx < limit {
+                        let w = UnicodeWidthChar::width(chars[i]).unwrap_or(1) as u16;
+                        if cx + w > limit {
+                            break;
+                        }
+                        if let Some(cell) = buf.cell_mut((cx, y)) {
+                            cell.set_char(chars[i]).set_style(comment_style);
+                        }
+                        cx += w;
+                        if i >= 2 && chars[i] == '>' && chars[i - 1] == '-' && chars[i - 2] == '-' {
+                            i += 1;
+                            break;
+                        }
+                        i += 1;
+                    }
+                    continue;
+                }
+
+                // Tag start: render < in muted
+                let struct_style = Style::default().fg(scheme.text_muted);
+                if let Some(cell) = buf.cell_mut((cx, y)) {
+                    cell.set_char('<').set_style(struct_style);
+                }
+                cx += 1;
+                i += 1;
+
+                // Optional / for closing tags
+                if i < chars.len() && chars[i] == '/' {
+                    if let Some(cell) = buf.cell_mut((cx, y)) {
+                        cell.set_char('/').set_style(struct_style);
+                    }
+                    cx += 1;
+                    i += 1;
+                }
+
+                // Tag name
+                let tag_style = Style::default().fg(scheme.primary);
+                while i < chars.len()
+                    && cx < limit
+                    && !chars[i].is_whitespace()
+                    && chars[i] != '>'
+                    && chars[i] != '/'
+                {
+                    let w = UnicodeWidthChar::width(chars[i]).unwrap_or(1) as u16;
+                    if cx + w > limit {
+                        break;
+                    }
+                    if let Some(cell) = buf.cell_mut((cx, y)) {
+                        cell.set_char(chars[i]).set_style(tag_style);
+                    }
+                    cx += w;
+                    i += 1;
+                }
+
+                // Attributes inside tag
+                while i < chars.len() && cx < limit && chars[i] != '>' {
+                    if chars[i] == '/' {
+                        if let Some(cell) = buf.cell_mut((cx, y)) {
+                            cell.set_char('/').set_style(struct_style);
+                        }
+                        cx += 1;
+                        i += 1;
+                    } else if chars[i] == '"' {
+                        // Quoted attribute value
+                        let val_style = Style::default().fg(scheme.success);
+                        if let Some(cell) = buf.cell_mut((cx, y)) {
+                            cell.set_char('"').set_style(val_style);
+                        }
+                        cx += 1;
+                        i += 1;
+                        while i < chars.len() && cx < limit && chars[i] != '"' {
+                            let w = UnicodeWidthChar::width(chars[i]).unwrap_or(1) as u16;
+                            if cx + w > limit {
+                                break;
+                            }
+                            if let Some(cell) = buf.cell_mut((cx, y)) {
+                                cell.set_char(chars[i]).set_style(val_style);
+                            }
+                            cx += w;
+                            i += 1;
+                        }
+                        if i < chars.len() && cx < limit {
+                            if let Some(cell) = buf.cell_mut((cx, y)) {
+                                cell.set_char('"').set_style(val_style);
+                            }
+                            cx += 1;
+                            i += 1;
+                        }
+                    } else if chars[i] == '=' {
+                        if let Some(cell) = buf.cell_mut((cx, y)) {
+                            cell.set_char('=').set_style(struct_style);
+                        }
+                        cx += 1;
+                        i += 1;
+                    } else if chars[i].is_whitespace() {
+                        if let Some(cell) = buf.cell_mut((cx, y)) {
+                            cell.set_char(chars[i])
+                                .set_style(Style::default().fg(scheme.text));
+                        }
+                        cx += 1;
+                        i += 1;
+                    } else {
+                        // Attribute name
+                        let attr_style = Style::default().fg(scheme.accent);
+                        let w = UnicodeWidthChar::width(chars[i]).unwrap_or(1) as u16;
+                        if cx + w <= limit {
+                            if let Some(cell) = buf.cell_mut((cx, y)) {
+                                cell.set_char(chars[i]).set_style(attr_style);
+                            }
+                            cx += w;
+                        }
+                        i += 1;
+                    }
+                }
+
+                // Closing >
+                if i < chars.len() && cx < limit && chars[i] == '>' {
+                    if let Some(cell) = buf.cell_mut((cx, y)) {
+                        cell.set_char('>').set_style(struct_style);
+                    }
+                    cx += 1;
+                    i += 1;
+                }
+            }
+            '&' => {
+                // XML entity (e.g., &amp;)
+                let entity_style = Style::default().fg(scheme.accent);
+                while i < chars.len() && cx < limit {
+                    let w = UnicodeWidthChar::width(chars[i]).unwrap_or(1) as u16;
+                    if cx + w > limit {
+                        break;
+                    }
+                    if let Some(cell) = buf.cell_mut((cx, y)) {
+                        cell.set_char(chars[i]).set_style(entity_style);
+                    }
+                    cx += w;
+                    let done = chars[i] == ';';
+                    i += 1;
+                    if done {
+                        break;
+                    }
+                }
+            }
+            _ => {
+                // Text content
+                let w = UnicodeWidthChar::width(ch).unwrap_or(1) as u16;
+                if cx + w <= limit {
+                    if let Some(cell) = buf.cell_mut((cx, y)) {
+                        cell.set_char(ch)
+                            .set_style(Style::default().fg(scheme.text));
+                    }
+                    cx += w;
+                }
+                i += 1;
+            }
+        }
+    }
+}
+
 /// Render search bar at the bottom of the panel.
 fn render_search_bar(
     frame: &mut Frame,
@@ -772,7 +1104,11 @@ fn render_search_bar(
         String::new()
     };
 
-    let search_text = format!("/{}{}{}", state.search_query, cursor, match_info);
+    let regex_indicator = if state.search_regex_mode { "[R] " } else { "" };
+    let search_text = format!(
+        "/{regex_indicator}{}{}{}",
+        state.search_query, cursor, match_info
+    );
     render_str(
         frame.buffer_mut(),
         inner.x,

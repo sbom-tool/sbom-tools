@@ -513,6 +513,32 @@ th { background: #313244; color: #89b4fa; font-weight: 600; }
     html
 }
 
+/// Export raw source content to a file.
+///
+/// Detects XML vs JSON from content prefix and writes to `sbom-source-{label}.{ext}`.
+pub fn export_source_content(content: &str, label: &str) -> ExportResult {
+    let ext = if content.trim_start().starts_with('<') {
+        "xml"
+    } else {
+        "json"
+    };
+    let filename = format!("sbom-source-{label}.{ext}");
+    let path = PathBuf::from(&filename);
+
+    match write_to_file(&path, content) {
+        Ok(actual_path) => ExportResult {
+            message: format!("Source exported to {}", display_path(&actual_path)),
+            path: actual_path,
+            success: true,
+        },
+        Err(e) => ExportResult {
+            path,
+            success: false,
+            message: format!("Failed to write: {e}"),
+        },
+    }
+}
+
 /// Escape a value for CSV: double any embedded quotes.
 fn csv_escape(s: &str) -> String {
     s.replace('"', "\"\"")

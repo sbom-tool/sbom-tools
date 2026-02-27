@@ -883,6 +883,7 @@ impl ViewApp {
                         &mut items,
                         true,
                         &[],
+                        self.source_state.sort_mode,
                     );
                     if let Some(item) = items.get(self.source_state.selected)
                         && item.is_expandable
@@ -938,6 +939,7 @@ impl ViewApp {
                     &mut items,
                     true,
                     &[],
+                    self.source_state.sort_mode,
                 );
                 if let Some(idx) = items.iter().position(|item| item.node_id == target_id) {
                     self.source_state.selected = idx;
@@ -982,6 +984,7 @@ impl ViewApp {
             &mut items,
             true,
             &[],
+            self.source_state.sort_mode,
         );
         let item = items.get(self.source_state.selected)?;
         let parts: Vec<&str> = item.node_id.split('.').collect();
