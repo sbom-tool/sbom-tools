@@ -332,6 +332,23 @@ fn format_quality_report(report: &QualityReport, config: &QualityConfig) -> Stri
             "    Orphan Nodes:   {}",
             report.dependency_metrics.orphan_components
         ));
+        // Software complexity index
+        if let Some(simplicity) = report.dependency_metrics.software_complexity_index {
+            let level = report
+                .dependency_metrics
+                .complexity_level
+                .as_ref()
+                .map_or("N/A", |l| l.label());
+            lines.push(format!("    Complexity:     {simplicity:.0}/100 ({level})"));
+            if let Some(ref f) = report.dependency_metrics.complexity_factors {
+                lines.push(format!(
+                    "      Volume: {:.2}  Depth: {:.2}  Fanout: {:.2}  Cycles: {:.2}  Fragmentation: {:.2}",
+                    f.dependency_volume, f.normalized_depth, f.fanout_concentration, f.cycle_ratio, f.fragmentation
+                ));
+            }
+        } else {
+            lines.push("    Complexity:     N/A (graph analysis skipped)".to_string());
+        }
         lines.push(String::new());
     }
 

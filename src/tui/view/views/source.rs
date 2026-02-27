@@ -929,18 +929,15 @@ fn render_context(
                 .nth(idx);
             if let Some(v) = vuln {
                 // CVE ID + severity
-                let severity = v
-                    .severity
-                    .as_ref()
-                    .map_or("unknown", |s| match s {
-                        crate::model::Severity::Critical => "critical",
-                        crate::model::Severity::High => "high",
-                        crate::model::Severity::Medium => "medium",
-                        crate::model::Severity::Low => "low",
-                        crate::model::Severity::Info => "info",
-                        crate::model::Severity::None => "none",
-                        crate::model::Severity::Unknown => "unknown",
-                    });
+                let severity = v.severity.as_ref().map_or("unknown", |s| match s {
+                    crate::model::Severity::Critical => "critical",
+                    crate::model::Severity::High => "high",
+                    crate::model::Severity::Medium => "medium",
+                    crate::model::Severity::Low => "low",
+                    crate::model::Severity::Info => "info",
+                    crate::model::Severity::None => "none",
+                    crate::model::Severity::Unknown => "unknown",
+                });
                 let sev_color = match severity {
                     "critical" => scheme.error,
                     "high" => scheme.warning,
@@ -963,8 +960,7 @@ fn render_context(
 
                 // Description (truncated)
                 if let Some(ref desc) = v.description {
-                    let trunc =
-                        truncate_map_str(desc, (width as usize).saturating_sub(2));
+                    let trunc = truncate_map_str(desc, (width as usize).saturating_sub(2));
                     render_str(
                         buf,
                         x,
@@ -988,10 +984,7 @@ fn render_context(
                         y,
                         &format!(
                             " CWE: {}",
-                            truncate_map_str(
-                                &cwes,
-                                (width as usize).saturating_sub(7)
-                            )
+                            truncate_map_str(&cwes, (width as usize).saturating_sub(7))
                         ),
                         width,
                         Style::default().fg(scheme.text_muted),
@@ -1015,10 +1008,7 @@ fn render_context(
                         y,
                         &format!(
                             " Affects: {}",
-                            truncate_map_str(
-                                &comp.name,
-                                (width as usize).saturating_sub(11)
-                            )
+                            truncate_map_str(&comp.name, (width as usize).saturating_sub(11))
                         ),
                         width,
                         Style::default().fg(scheme.primary),
@@ -1390,4 +1380,3 @@ fn render_non_json_map(
 fn truncate_map_str(s: &str, max_len: usize) -> String {
     crate::tui::widgets::truncate_str(s, max_len)
 }
-

@@ -457,22 +457,19 @@ pub fn get_yank_text(app: &super::App) -> Option<String> {
             match panel.view_mode {
                 super::app_states::SourceViewMode::Tree => {
                     // Cache is already warm from rendering
-                    panel
-                        .cached_flat_items
-                        .get(panel.selected)
-                        .map(|item| {
-                            if !item.value_preview.is_empty() {
-                                // Strip surrounding quotes for string values
-                                let v = &item.value_preview;
-                                if v.starts_with('"') && v.ends_with('"') && v.len() >= 2 {
-                                    v[1..v.len() - 1].to_string()
-                                } else {
-                                    v.clone()
-                                }
+                    panel.cached_flat_items.get(panel.selected).map(|item| {
+                        if !item.value_preview.is_empty() {
+                            // Strip surrounding quotes for string values
+                            let v = &item.value_preview;
+                            if v.starts_with('"') && v.ends_with('"') && v.len() >= 2 {
+                                v[1..v.len() - 1].to_string()
                             } else {
-                                item.node_id.clone()
+                                v.clone()
                             }
-                        })
+                        } else {
+                            item.node_id.clone()
+                        }
+                    })
                 }
                 super::app_states::SourceViewMode::Raw => panel
                     .raw_lines

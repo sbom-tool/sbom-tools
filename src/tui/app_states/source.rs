@@ -18,8 +18,8 @@ pub enum XmlTreeNode {
 
 /// Parse XML content into an `XmlTreeNode` tree.
 pub fn xml_tree_from_str(xml: &str) -> Option<XmlTreeNode> {
-    use quick_xml::events::Event;
     use quick_xml::Reader;
+    use quick_xml::events::Event;
 
     let mut reader = Reader::from_str(xml);
     let mut stack: Vec<XmlTreeNode> = Vec::new();
@@ -1224,9 +1224,7 @@ impl SourceDiffState {
     }
 
     /// Count change annotations by status.
-    pub fn annotation_counts(
-        panel: &SourcePanelState,
-    ) -> (usize, usize, usize) {
+    pub fn annotation_counts(panel: &SourcePanelState) -> (usize, usize, usize) {
         let mut added = 0;
         let mut removed = 0;
         let mut modified = 0;

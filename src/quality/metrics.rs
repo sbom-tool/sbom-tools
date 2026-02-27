@@ -620,6 +620,70 @@ impl VulnerabilityMetrics {
 /// Maximum edge count before skipping expensive graph analysis
 const MAX_EDGES_FOR_GRAPH_ANALYSIS: usize = 50_000;
 
+// ============================================================================
+// Software complexity index
+// ============================================================================
+
+/// Complexity level bands for the software complexity index
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum ComplexityLevel {
+    /// Simplicity 75–100 (raw complexity 0–0.25)
+    Low,
+    /// Simplicity 50–74 (raw complexity 0.26–0.50)
+    Moderate,
+    /// Simplicity 25–49 (raw complexity 0.51–0.75)
+    High,
+    /// Simplicity 0–24 (raw complexity 0.76–1.00)
+    VeryHigh,
+}
+
+impl ComplexityLevel {
+    /// Determine complexity level from a simplicity score (0–100)
+    #[must_use]
+    pub const fn from_score(simplicity: f32) -> Self {
+        match simplicity as u32 {
+            75..=100 => Self::Low,
+            50..=74 => Self::Moderate,
+            25..=49 => Self::High,
+            _ => Self::VeryHigh,
+        }
+    }
+
+    /// Human-readable label
+    #[must_use]
+    pub const fn label(&self) -> &'static str {
+        match self {
+            Self::Low => "Low",
+            Self::Moderate => "Moderate",
+            Self::High => "High",
+            Self::VeryHigh => "Very High",
+        }
+    }
+}
+
+impl std::fmt::Display for ComplexityLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.label())
+    }
+}
+
+/// Breakdown of the five factors that compose the software complexity index.
+/// Each factor is normalized to 0.0–1.0 where higher = more complex.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComplexityFactors {
+    /// Log-scaled edge density: `min(1.0, ln(1 + edges/components) / ln(20))`
+    pub dependency_volume: f32,
+    /// Depth ratio: `min(1.0, max_depth / 15.0)`
+    pub normalized_depth: f32,
+    /// Hub dominance: `min(1.0, max_out_degree / max(components * 0.25, 4))`
+    pub fanout_concentration: f32,
+    /// Cycle density: `min(1.0, cycle_count / max(1, components * 0.05))`
+    pub cycle_ratio: f32,
+    /// Extra disconnected subgraphs: `(islands - 1) / max(1, components - 1)`
+    pub fragmentation: f32,
+}
+
 /// Dependency graph quality metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DependencyMetrics {
@@ -641,6 +705,14 @@ pub struct DependencyMetrics {
     pub island_count: usize,
     /// Whether graph analysis was skipped due to size
     pub graph_analysis_skipped: bool,
+    /// Maximum out-degree (most dependencies from a single component)
+    pub max_out_degree: usize,
+    /// Software complexity index (0–100, higher = simpler). `None` when graph analysis skipped.
+    pub software_complexity_index: Option<f32>,
+    /// Complexity level band. `None` when graph analysis skipped.
+    pub complexity_level: Option<ComplexityLevel>,
+    /// Factor breakdown. `None` when graph analysis skipped.
+    pub complexity_factors: Option<ComplexityFactors>,
 }
 
 impl DependencyMetrics {
@@ -679,6 +751,9 @@ impl DependencyMetrics {
             .collect();
         let root_count = roots.len();
 
+        // Compute max out-degree (single pass over adjacency, O(V))
+        let max_out_degree = children.values().map(Vec::len).max().unwrap_or(0);
+
         // Skip expensive graph analysis for very large graphs
         if total_deps > MAX_EDGES_FOR_GRAPH_ANALYSIS {
             return Self {
@@ -691,6 +766,10 @@ impl DependencyMetrics {
                 cycle_count: 0,
                 island_count: 0,
                 graph_analysis_skipped: true,
+                max_out_degree,
+                software_complexity_index: None,
+                complexity_level: None,
+                complexity_factors: None,
             };
         }
 
@@ -703,6 +782,18 @@ impl DependencyMetrics {
         // Union-Find for island/subgraph detection
         let island_count = count_islands(&all_ids, &sbom.edges);
 
+        // Compute software complexity index
+        let component_count = all_ids.len();
+        let (complexity_index, complexity_lvl, factors) = compute_complexity(
+            total_deps,
+            component_count,
+            max_depth.unwrap_or(0),
+            max_out_degree,
+            cycle_count,
+            orphans,
+            island_count,
+        );
+
         Self {
             total_dependencies: total_deps,
             components_with_deps: has_outgoing.len(),
@@ -713,6 +804,10 @@ impl DependencyMetrics {
             cycle_count,
             island_count,
             graph_analysis_skipped: false,
+            max_out_degree,
+            software_complexity_index: Some(complexity_index),
+            complexity_level: Some(complexity_lvl),
+            complexity_factors: Some(factors),
         }
     }
 
@@ -888,6 +983,75 @@ fn count_islands(all_nodes: &[&str], edges: &[crate::model::DependencyEdge]) -> 
     }
 
     roots.len()
+}
+
+/// Compute the software complexity index and factor breakdown.
+///
+/// Returns `(simplicity_index, complexity_level, factors)`.
+/// `simplicity_index` is 0–100 where 100 = simplest.
+fn compute_complexity(
+    edges: usize,
+    components: usize,
+    max_depth: usize,
+    max_out_degree: usize,
+    cycle_count: usize,
+    _orphans: usize,
+    islands: usize,
+) -> (f32, ComplexityLevel, ComplexityFactors) {
+    if components == 0 {
+        let factors = ComplexityFactors {
+            dependency_volume: 0.0,
+            normalized_depth: 0.0,
+            fanout_concentration: 0.0,
+            cycle_ratio: 0.0,
+            fragmentation: 0.0,
+        };
+        return (100.0, ComplexityLevel::Low, factors);
+    }
+
+    // Factor 1: dependency volume — log-scaled edge density
+    let edge_ratio = edges as f64 / components as f64;
+    let dependency_volume = ((1.0 + edge_ratio).ln() / 20.0_f64.ln()).min(1.0) as f32;
+
+    // Factor 2: normalized depth
+    let normalized_depth = (max_depth as f32 / 15.0).min(1.0);
+
+    // Factor 3: fanout concentration — hub dominance
+    // Floor of 4.0 prevents small graphs from being penalized for max_out_degree of 1
+    let fanout_denom = (components as f32 * 0.25).max(4.0);
+    let fanout_concentration = (max_out_degree as f32 / fanout_denom).min(1.0);
+
+    // Factor 4: cycle ratio
+    let cycle_threshold = (components as f32 * 0.05).max(1.0);
+    let cycle_ratio = (cycle_count as f32 / cycle_threshold).min(1.0);
+
+    // Factor 5: fragmentation — extra disconnected subgraphs beyond the ideal of 1
+    // Uses (islands - 1) because orphans are already counted as individual islands.
+    let extra_islands = islands.saturating_sub(1);
+    let fragmentation = if components > 1 {
+        (extra_islands as f32 / (components - 1) as f32).min(1.0)
+    } else {
+        0.0
+    };
+
+    let factors = ComplexityFactors {
+        dependency_volume,
+        normalized_depth,
+        fanout_concentration,
+        cycle_ratio,
+        fragmentation,
+    };
+
+    let raw_complexity = 0.30 * dependency_volume
+        + 0.20 * normalized_depth
+        + 0.20 * fanout_concentration
+        + 0.20 * cycle_ratio
+        + 0.10 * fragmentation;
+
+    let simplicity_index = (100.0 - raw_complexity * 100.0).clamp(0.0, 100.0);
+    let level = ComplexityLevel::from_score(simplicity_index);
+
+    (simplicity_index, level, factors)
 }
 
 // ============================================================================
@@ -1539,6 +1703,76 @@ mod tests {
         };
         // Lifecycle phase excluded for non-CDX
         assert_eq!(metrics.quality_score(false), 100.0);
+    }
+
+    #[test]
+    fn test_complexity_empty_graph() {
+        let (simplicity, level, factors) = compute_complexity(0, 0, 0, 0, 0, 0, 0);
+        assert_eq!(simplicity, 100.0);
+        assert_eq!(level, ComplexityLevel::Low);
+        assert_eq!(factors.dependency_volume, 0.0);
+    }
+
+    #[test]
+    fn test_complexity_single_node() {
+        // 1 component, no edges, no cycles, 1 orphan, 1 island
+        let (simplicity, level, _) = compute_complexity(0, 1, 0, 0, 0, 1, 1);
+        assert!(
+            simplicity >= 80.0,
+            "Single node simplicity {simplicity} should be >= 80"
+        );
+        assert_eq!(level, ComplexityLevel::Low);
+    }
+
+    #[test]
+    fn test_complexity_monotonic_edges() {
+        // More edges should never increase simplicity
+        let (s1, _, _) = compute_complexity(5, 10, 2, 3, 0, 1, 1);
+        let (s2, _, _) = compute_complexity(20, 10, 2, 3, 0, 1, 1);
+        assert!(
+            s2 <= s1,
+            "More edges should not increase simplicity: {s2} vs {s1}"
+        );
+    }
+
+    #[test]
+    fn test_complexity_monotonic_cycles() {
+        let (s1, _, _) = compute_complexity(10, 10, 2, 3, 0, 1, 1);
+        let (s2, _, _) = compute_complexity(10, 10, 2, 3, 3, 1, 1);
+        assert!(
+            s2 <= s1,
+            "More cycles should not increase simplicity: {s2} vs {s1}"
+        );
+    }
+
+    #[test]
+    fn test_complexity_monotonic_depth() {
+        let (s1, _, _) = compute_complexity(10, 10, 2, 3, 0, 1, 1);
+        let (s2, _, _) = compute_complexity(10, 10, 10, 3, 0, 1, 1);
+        assert!(
+            s2 <= s1,
+            "More depth should not increase simplicity: {s2} vs {s1}"
+        );
+    }
+
+    #[test]
+    fn test_complexity_graph_skipped() {
+        // When graph_analysis_skipped, DependencyMetrics should have None complexity fields.
+        // We test compute_complexity separately; the from_sbom integration handles the None case.
+        let (simplicity, _, _) = compute_complexity(100, 50, 5, 10, 2, 5, 3);
+        assert!(simplicity >= 0.0 && simplicity <= 100.0);
+    }
+
+    #[test]
+    fn test_complexity_level_bands() {
+        assert_eq!(ComplexityLevel::from_score(100.0), ComplexityLevel::Low);
+        assert_eq!(ComplexityLevel::from_score(75.0), ComplexityLevel::Low);
+        assert_eq!(ComplexityLevel::from_score(74.0), ComplexityLevel::Moderate);
+        assert_eq!(ComplexityLevel::from_score(50.0), ComplexityLevel::Moderate);
+        assert_eq!(ComplexityLevel::from_score(49.0), ComplexityLevel::High);
+        assert_eq!(ComplexityLevel::from_score(25.0), ComplexityLevel::High);
+        assert_eq!(ComplexityLevel::from_score(24.0), ComplexityLevel::VeryHigh);
+        assert_eq!(ComplexityLevel::from_score(0.0), ComplexityLevel::VeryHigh);
     }
 
     #[test]

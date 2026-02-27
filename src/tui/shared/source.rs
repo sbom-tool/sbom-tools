@@ -338,8 +338,7 @@ fn render_source_tree(
                     Some(JsonValueType::Null) => Style::default().fg(scheme.text_muted),
                     None => Style::default().fg(scheme.text),
                 };
-                let display_val =
-                    crate::tui::widgets::truncate_str(&item.value_preview, max_w);
+                let display_val = crate::tui::widgets::truncate_str(&item.value_preview, max_w);
                 render_str(
                     frame.buffer_mut(),
                     x,
@@ -384,8 +383,10 @@ fn render_source_tree(
             && state.search_matches.binary_search(&abs_idx).is_ok()
         {
             let is_current = state.search_matches.get(state.search_current) == Some(&abs_idx);
-            let display_text =
-                format!("{}: {}{}", item.display_key, item.value_preview, item.child_count_label);
+            let display_text = format!(
+                "{}: {}{}",
+                item.display_key, item.value_preview, item.child_count_label
+            );
             highlight_search_in_row(
                 frame.buffer_mut(),
                 y,
@@ -842,10 +843,8 @@ fn highlight_search_in_row(
                 char_cols
                     .last()
                     .map(|(_, c)| {
-                        *c + UnicodeWidthChar::width(
-                            displayed_text.chars().last().unwrap_or(' '),
-                        )
-                        .unwrap_or(1) as u16
+                        *c + UnicodeWidthChar::width(displayed_text.chars().last().unwrap_or(' '))
+                            .unwrap_or(1) as u16
                     })
                     .unwrap_or(0)
             });
