@@ -3,7 +3,256 @@
 //! Provides a JSON tree model and panel state for both single-SBOM
 //! viewing (`ViewApp`) and side-by-side diff viewing (App).
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+
+/// A node in the XML tree, built from XML content via `quick_xml`.
+#[derive(Debug, Clone)]
+pub enum XmlTreeNode {
+    Element {
+        name: String,
+        attributes: Vec<(String, String)>,
+        children: Vec<Self>,
+    },
+    Text(String),
+}
+
+/// Parse XML content into an `XmlTreeNode` tree.
+pub fn xml_tree_from_str(xml: &str) -> Option<XmlTreeNode> {
+    use quick_xml::events::Event;
+    use quick_xml::Reader;
+
+    let mut reader = Reader::from_str(xml);
+    let mut stack: Vec<XmlTreeNode> = Vec::new();
+
+    // Virtual root to collect top-level elements
+    stack.push(XmlTreeNode::Element {
+        name: "root".to_string(),
+        attributes: Vec::new(),
+        children: Vec::new(),
+    });
+
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(ref e)) => {
+                let name = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                let attributes = e
+                    .attributes()
+                    .filter_map(|a| {
+                        a.ok().map(|attr| {
+                            (
+                                String::from_utf8_lossy(attr.key.as_ref()).to_string(),
+                                String::from_utf8_lossy(&attr.value).to_string(),
+                            )
+                        })
+                    })
+                    .collect();
+                stack.push(XmlTreeNode::Element {
+                    name,
+                    attributes,
+                    children: Vec::new(),
+                });
+            }
+            Ok(Event::End(_)) => {
+                if stack.len() > 1 {
+                    let child = stack.pop()?;
+                    if let Some(XmlTreeNode::Element { children, .. }) = stack.last_mut() {
+                        children.push(child);
+                    }
+                }
+            }
+            Ok(Event::Empty(ref e)) => {
+                let name = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                let attributes = e
+                    .attributes()
+                    .filter_map(|a| {
+                        a.ok().map(|attr| {
+                            (
+                                String::from_utf8_lossy(attr.key.as_ref()).to_string(),
+                                String::from_utf8_lossy(&attr.value).to_string(),
+                            )
+                        })
+                    })
+                    .collect();
+                if let Some(XmlTreeNode::Element { children, .. }) = stack.last_mut() {
+                    children.push(XmlTreeNode::Element {
+                        name,
+                        attributes,
+                        children: Vec::new(),
+                    });
+                }
+            }
+            Ok(Event::Text(ref e)) => {
+                let text = e.decode().unwrap_or_default().trim().to_string();
+                if !text.is_empty() {
+                    if let Some(XmlTreeNode::Element { children, .. }) = stack.last_mut() {
+                        children.push(XmlTreeNode::Text(text));
+                    }
+                }
+            }
+            Ok(Event::Eof) => break,
+            Err(_) => return None,
+            _ => {}
+        }
+    }
+
+    stack.pop()
+}
+
+/// Flatten an XML tree into `FlatJsonItem` values for rendering compatibility.
+pub fn flatten_xml_tree(
+    node: &XmlTreeNode,
+    parent_path: &str,
+    depth: usize,
+    expanded: &HashSet<String>,
+    items: &mut Vec<crate::tui::shared::source::FlatJsonItem>,
+    is_last_sibling: bool,
+    ancestors_last: &[bool],
+) {
+    match node {
+        XmlTreeNode::Element {
+            name,
+            attributes,
+            children,
+            ..
+        } => {
+            let node_id = if parent_path.is_empty() {
+                name.clone()
+            } else {
+                format!("{parent_path}.{name}")
+            };
+            let is_expanded = expanded.contains(&node_id);
+            let has_children = !children.is_empty();
+
+            // Show attributes inline in the value_preview
+            let attr_preview = if attributes.is_empty() {
+                String::new()
+            } else {
+                attributes
+                    .iter()
+                    .map(|(k, v)| format!("{k}=\"{v}\""))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            };
+
+            let child_count_label = if has_children {
+                format!("<> ({} children)", children.len())
+            } else if !attr_preview.is_empty() {
+                String::new()
+            } else {
+                "</>".to_string()
+            };
+
+            items.push(crate::tui::shared::source::FlatJsonItem {
+                node_id: node_id.clone(),
+                depth,
+                display_key: format!("<{name}>"),
+                value_preview: attr_preview,
+                value_type: None,
+                is_expandable: has_children,
+                is_expanded,
+                child_count_label,
+                is_last_sibling,
+                ancestors_last: ancestors_last.to_vec(),
+            });
+
+            if is_expanded {
+                let mut current_ancestors = ancestors_last.to_vec();
+                current_ancestors.push(is_last_sibling);
+                for (i, child) in children.iter().enumerate() {
+                    let child_is_last = i == children.len() - 1;
+                    flatten_xml_tree(
+                        child,
+                        &node_id,
+                        depth + 1,
+                        expanded,
+                        items,
+                        child_is_last,
+                        &current_ancestors,
+                    );
+                }
+            }
+        }
+        XmlTreeNode::Text(text) => {
+            let node_id = if parent_path.is_empty() {
+                "#text".to_string()
+            } else {
+                format!("{parent_path}.#text")
+            };
+            items.push(crate::tui::shared::source::FlatJsonItem {
+                node_id,
+                depth,
+                display_key: String::new(),
+                value_preview: format!("\"{text}\""),
+                value_type: Some(JsonValueType::String),
+                is_expandable: false,
+                is_expanded: false,
+                child_count_label: String::new(),
+                is_last_sibling,
+                ancestors_last: ancestors_last.to_vec(),
+            });
+        }
+    }
+}
+
+/// Count nodes in an XML tree.
+fn count_xml_nodes(node: &XmlTreeNode) -> usize {
+    match node {
+        XmlTreeNode::Element { children, .. } => {
+            1 + children.iter().map(count_xml_nodes).sum::<usize>()
+        }
+        XmlTreeNode::Text(_) => 1,
+    }
+}
+
+/// Pretty-print an XML tree for raw mode display.
+fn pretty_print_xml(node: &XmlTreeNode, depth: usize) -> Vec<String> {
+    let indent = "  ".repeat(depth);
+    match node {
+        XmlTreeNode::Element {
+            name,
+            attributes,
+            children,
+            ..
+        } => {
+            let attrs = if attributes.is_empty() {
+                String::new()
+            } else {
+                attributes
+                    .iter()
+                    .map(|(k, v)| format!(" {k}=\"{v}\""))
+                    .collect::<String>()
+            };
+            let mut lines = Vec::new();
+            if children.is_empty() {
+                lines.push(format!("{indent}<{name}{attrs}/>"));
+            } else if children.len() == 1 && matches!(&children[0], XmlTreeNode::Text(_)) {
+                let text = match &children[0] {
+                    XmlTreeNode::Text(t) => t.as_str(),
+                    _ => "",
+                };
+                lines.push(format!("{indent}<{name}{attrs}>{text}</{name}>"));
+            } else {
+                lines.push(format!("{indent}<{name}{attrs}>"));
+                for child in children {
+                    lines.extend(pretty_print_xml(child, depth + 1));
+                }
+                lines.push(format!("{indent}</{name}>"));
+            }
+            lines
+        }
+        XmlTreeNode::Text(text) => {
+            vec![format!("{indent}{text}")]
+        }
+    }
+}
+
+/// Change status for diff highlighting in the source tree.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SourceChangeStatus {
+    Added,
+    Removed,
+    Modified,
+}
 
 /// View mode for the Source tab.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -152,11 +401,7 @@ impl JsonTreeNode {
 }
 
 fn truncate_value(s: &str, max_len: usize) -> String {
-    if s.len() > max_len {
-        format!("{}...", &s[..max_len])
-    } else {
-        s.to_string()
-    }
+    crate::tui::widgets::truncate_str(s, max_len)
 }
 
 fn count_tree_nodes(node: &JsonTreeNode) -> usize {
@@ -302,6 +547,8 @@ pub struct SourcePanelState {
     pub visible_count: usize,
     /// JSON tree (built from raw content; None if not valid JSON)
     pub json_tree: Option<JsonTreeNode>,
+    /// XML tree (built from raw content; None if not valid XML)
+    pub xml_tree: Option<XmlTreeNode>,
     /// Raw content lines (pretty-printed JSON or original lines for non-JSON)
     pub raw_lines: Vec<String>,
     /// Mapping from raw line index to the corresponding tree node_id
@@ -323,6 +570,12 @@ pub struct SourcePanelState {
     pub map_selected: usize,
     /// SBOM map panel: scroll offset for section list
     pub map_scroll_offset: usize,
+    /// Change annotations for diff highlighting (node_id → status)
+    pub change_annotations: HashMap<String, SourceChangeStatus>,
+    /// Viewport height in rows (set during render, used for page_up/page_down)
+    pub viewport_height: usize,
+    /// Horizontal scroll offset for raw mode
+    pub h_scroll_offset: usize,
     /// Cached flattened tree items; rebuilt only when expanded set changes.
     pub cached_flat_items: Vec<crate::tui::shared::source::FlatJsonItem>,
     /// Whether the cached flat items are valid (invalidated on expand/collapse).
@@ -332,35 +585,51 @@ pub struct SourcePanelState {
 impl SourcePanelState {
     /// Create a new panel state by parsing raw SBOM content.
     pub fn new(raw_content: &str) -> Self {
-        let (json_tree, raw_lines) = serde_json::from_str::<serde_json::Value>(raw_content)
-            .map_or_else(
-                |_| {
-                    // Not valid JSON (e.g. XML, tag-value) — raw mode only
+        let (json_tree, xml_tree, raw_lines) =
+            if let Ok(value) = serde_json::from_str::<serde_json::Value>(raw_content) {
+                let tree = JsonTreeNode::from_value("root".to_string(), None, &value);
+                let pretty = serde_json::to_string_pretty(&value)
+                    .unwrap_or_else(|_| raw_content.to_string());
+                let lines: Vec<String> = pretty
+                    .lines()
+                    .map(std::string::ToString::to_string)
+                    .collect();
+                (Some(tree), None, lines)
+            } else if raw_content.trim_start().starts_with('<') {
+                // Try XML parsing
+                if let Some(xml) = xml_tree_from_str(raw_content) {
+                    let lines = pretty_print_xml(&xml, 0);
+                    (None, Some(xml), lines)
+                } else {
                     let lines: Vec<String> = raw_content
                         .lines()
                         .map(std::string::ToString::to_string)
                         .collect();
-                    (None, lines)
-                },
-                |value| {
-                    let tree = JsonTreeNode::from_value("root".to_string(), None, &value);
-                    let pretty = serde_json::to_string_pretty(&value)
-                        .unwrap_or_else(|_| raw_content.to_string());
-                    let lines: Vec<String> = pretty
-                        .lines()
-                        .map(std::string::ToString::to_string)
-                        .collect();
-                    (Some(tree), lines)
-                },
-            );
+                    (None, None, lines)
+                }
+            } else {
+                let lines: Vec<String> = raw_content
+                    .lines()
+                    .map(std::string::ToString::to_string)
+                    .collect();
+                (None, None, lines)
+            };
+
+        let has_tree = json_tree.is_some() || xml_tree.is_some();
 
         // Auto-expand root in tree mode
         let mut expanded = HashSet::new();
-        if json_tree.is_some() {
+        if has_tree {
             expanded.insert("root".to_string());
         }
 
-        let total_node_count = json_tree.as_ref().map_or(0, count_tree_nodes);
+        let total_node_count = if let Some(ref jt) = json_tree {
+            count_tree_nodes(jt)
+        } else if let Some(ref xt) = xml_tree {
+            count_xml_nodes(xt)
+        } else {
+            0
+        };
         let raw_line_node_ids = if json_tree.is_some() {
             build_raw_line_mapping(&raw_lines)
         } else {
@@ -368,7 +637,7 @@ impl SourcePanelState {
         };
 
         Self {
-            view_mode: if json_tree.is_some() {
+            view_mode: if has_tree {
                 SourceViewMode::Tree
             } else {
                 SourceViewMode::Raw
@@ -378,6 +647,7 @@ impl SourcePanelState {
             scroll_offset: 0,
             visible_count: 0,
             json_tree,
+            xml_tree,
             raw_lines,
             raw_line_node_ids,
             total_node_count,
@@ -391,6 +661,9 @@ impl SourcePanelState {
             search_current: 0,
             map_selected: 0,
             map_scroll_offset: 0,
+            change_annotations: HashMap::new(),
+            viewport_height: 20,
+            h_scroll_offset: 0,
             cached_flat_items: Vec::new(),
             flat_cache_valid: false,
         }
@@ -417,11 +690,24 @@ impl SourcePanelState {
                 true,
                 &[],
             );
+        } else if let Some(ref xml) = self.xml_tree {
+            flatten_xml_tree(
+                xml,
+                "",
+                0,
+                &self.expanded,
+                &mut self.cached_flat_items,
+                true,
+                &[],
+            );
         }
         self.flat_cache_valid = true;
     }
 
     pub fn toggle_view_mode(&mut self) {
+        // Reset horizontal scroll when switching modes
+        self.h_scroll_offset = 0;
+
         // Save current position for fallback
         match self.view_mode {
             SourceViewMode::Tree => {
@@ -438,10 +724,11 @@ impl SourcePanelState {
         let synced = self.compute_synced_position();
 
         // Switch mode
+        let has_tree = self.json_tree.is_some() || self.xml_tree.is_some();
         let new_mode = match self.view_mode {
             SourceViewMode::Tree => SourceViewMode::Raw,
             SourceViewMode::Raw => {
-                if self.json_tree.is_some() {
+                if has_tree {
                     SourceViewMode::Tree
                 } else {
                     return;
@@ -536,6 +823,8 @@ impl SourcePanelState {
     pub fn expand_all(&mut self) {
         if let Some(ref tree) = self.json_tree {
             expand_all_recursive(tree, "", &mut self.expanded);
+        } else if let Some(ref xml) = self.xml_tree {
+            expand_all_xml_recursive(xml, "", &mut self.expanded);
         }
         self.invalidate_flat_cache();
     }
@@ -574,11 +863,11 @@ impl SourcePanelState {
 
     pub fn page_down(&mut self) {
         let max = self.effective_count();
-        self.selected = (self.selected + 20).min(max.saturating_sub(1));
+        self.selected = (self.selected + self.viewport_height).min(max.saturating_sub(1));
     }
 
-    pub const fn page_up(&mut self) {
-        self.selected = self.selected.saturating_sub(20);
+    pub fn page_up(&mut self) {
+        self.selected = self.selected.saturating_sub(self.viewport_height);
     }
 
     fn effective_count(&self) -> usize {
@@ -587,6 +876,42 @@ impl SourcePanelState {
         } else {
             self.raw_lines.len()
         }
+    }
+
+    pub fn scroll_left(&mut self) {
+        self.h_scroll_offset = self.h_scroll_offset.saturating_sub(4);
+    }
+
+    pub fn scroll_right(&mut self) {
+        self.h_scroll_offset += 4;
+    }
+
+    /// Expand all nodes up to (but not including) the given depth.
+    /// Depth 0 = root only, 1 = root + direct children, etc.
+    pub fn expand_to_depth(&mut self, max_depth: usize) {
+        self.expanded.clear();
+        if let Some(ref tree) = self.json_tree {
+            expand_to_depth_recursive(tree, "", 0, max_depth, &mut self.expanded);
+        } else if let Some(ref xml) = self.xml_tree {
+            expand_to_depth_xml_recursive(xml, "", 0, max_depth, &mut self.expanded);
+        }
+        self.invalidate_flat_cache();
+    }
+
+    /// Find a change annotation for a node_id, checking ancestors if no direct match.
+    pub fn find_annotation(&self, node_id: &str) -> Option<SourceChangeStatus> {
+        if let Some(status) = self.change_annotations.get(node_id) {
+            return Some(*status);
+        }
+        // Walk ancestor paths
+        let parts: Vec<&str> = node_id.split('.').collect();
+        for len in (1..parts.len()).rev() {
+            let ancestor = parts[..len].join(".");
+            if let Some(status) = self.change_annotations.get(&ancestor) {
+                return Some(*status);
+            }
+        }
+        None
     }
 
     pub fn start_search(&mut self) {
@@ -672,6 +997,62 @@ fn expand_all_recursive(node: &JsonTreeNode, path: &str, expanded: &mut HashSet<
         if let Some(children) = node.children() {
             for child in children {
                 expand_all_recursive(child, &id, expanded);
+            }
+        }
+    }
+}
+
+fn expand_all_xml_recursive(node: &XmlTreeNode, path: &str, expanded: &mut HashSet<String>) {
+    if let XmlTreeNode::Element { name, children, .. } = node {
+        let id = if path.is_empty() {
+            name.clone()
+        } else {
+            format!("{path}.{name}")
+        };
+        if !children.is_empty() {
+            expanded.insert(id.clone());
+            for child in children {
+                expand_all_xml_recursive(child, &id, expanded);
+            }
+        }
+    }
+}
+
+fn expand_to_depth_xml_recursive(
+    node: &XmlTreeNode,
+    path: &str,
+    depth: usize,
+    max_depth: usize,
+    expanded: &mut HashSet<String>,
+) {
+    if let XmlTreeNode::Element { name, children, .. } = node {
+        let id = if path.is_empty() {
+            name.clone()
+        } else {
+            format!("{path}.{name}")
+        };
+        if !children.is_empty() && depth < max_depth {
+            expanded.insert(id.clone());
+            for child in children {
+                expand_to_depth_xml_recursive(child, &id, depth + 1, max_depth, expanded);
+            }
+        }
+    }
+}
+
+fn expand_to_depth_recursive(
+    node: &JsonTreeNode,
+    path: &str,
+    depth: usize,
+    max_depth: usize,
+    expanded: &mut HashSet<String>,
+) {
+    let id = node.node_id(path);
+    if node.is_expandable() && depth < max_depth {
+        expanded.insert(id.clone());
+        if let Some(children) = node.children() {
+            for child in children {
+                expand_to_depth_recursive(child, &id, depth + 1, max_depth, expanded);
             }
         }
     }
@@ -795,6 +1176,70 @@ impl SourceDiffState {
         }
     }
 
+    /// Populate change annotations from a diff result.
+    ///
+    /// Maps component indices to JSON paths and marks them as added/removed/modified
+    /// on the appropriate panel.
+    pub fn populate_annotations(&mut self, diff: &crate::diff::DiffResult) {
+        // Build component name → array index mapping for old panel
+        let old_comp_indices = build_component_index(&self.old_panel);
+        // Build component name → array index mapping for new panel
+        let new_comp_indices = build_component_index(&self.new_panel);
+
+        // Mark removed components on old panel
+        for comp in &diff.components.removed {
+            if let Some(&idx) = old_comp_indices.get(&comp.name) {
+                let path = format!("root.components.[{idx}]");
+                self.old_panel
+                    .change_annotations
+                    .insert(path, SourceChangeStatus::Removed);
+            }
+        }
+
+        // Mark added components on new panel
+        for comp in &diff.components.added {
+            if let Some(&idx) = new_comp_indices.get(&comp.name) {
+                let path = format!("root.components.[{idx}]");
+                self.new_panel
+                    .change_annotations
+                    .insert(path, SourceChangeStatus::Added);
+            }
+        }
+
+        // Mark modified components on both panels
+        for comp in &diff.components.modified {
+            if let Some(&idx) = old_comp_indices.get(&comp.name) {
+                let path = format!("root.components.[{idx}]");
+                self.old_panel
+                    .change_annotations
+                    .insert(path, SourceChangeStatus::Modified);
+            }
+            if let Some(&idx) = new_comp_indices.get(&comp.name) {
+                let path = format!("root.components.[{idx}]");
+                self.new_panel
+                    .change_annotations
+                    .insert(path, SourceChangeStatus::Modified);
+            }
+        }
+    }
+
+    /// Count change annotations by status.
+    pub fn annotation_counts(
+        panel: &SourcePanelState,
+    ) -> (usize, usize, usize) {
+        let mut added = 0;
+        let mut removed = 0;
+        let mut modified = 0;
+        for status in panel.change_annotations.values() {
+            match status {
+                SourceChangeStatus::Added => added += 1,
+                SourceChangeStatus::Removed => removed += 1,
+                SourceChangeStatus::Modified => modified += 1,
+            }
+        }
+        (added, removed, modified)
+    }
+
     // --- Synchronized navigation methods ---
 
     pub fn select_next(&mut self) {
@@ -838,4 +1283,44 @@ impl SourceDiffState {
             self.inactive_panel_mut().page_down();
         }
     }
+}
+
+/// Build a name→index mapping for top-level "components" array entries in a panel's JSON tree.
+fn build_component_index(panel: &SourcePanelState) -> HashMap<String, usize> {
+    let mut map = HashMap::new();
+    let Some(ref tree) = panel.json_tree else {
+        return map;
+    };
+    let Some(children) = tree.children() else {
+        return map;
+    };
+    // Find the "components" child
+    for child in children {
+        if let JsonTreeNode::Array { key, children, .. } = child {
+            if key == "components" {
+                for (idx, comp_node) in children.iter().enumerate() {
+                    if let Some(name) = extract_component_name(comp_node) {
+                        map.insert(name, idx);
+                    }
+                }
+            }
+        }
+    }
+    map
+}
+
+/// Extract the "name" field from a component JSON object node.
+fn extract_component_name(node: &JsonTreeNode) -> Option<String> {
+    if let JsonTreeNode::Object { children, .. } = node {
+        for child in children {
+            if let JsonTreeNode::Leaf { key, value, .. } = child {
+                if key == "name" {
+                    // Strip surrounding quotes from the value
+                    let v = value.trim_matches('"');
+                    return Some(v.to_string());
+                }
+            }
+        }
+    }
+    None
 }

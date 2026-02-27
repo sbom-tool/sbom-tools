@@ -449,6 +449,37 @@ pub fn get_yank_text(app: &super::App) -> Option<String> {
                 .get(app.tabs.diff_compliance.selected_violation)
                 .map(|v| v.message.clone())
         }
+        super::TabKind::Source => {
+            let panel = match app.tabs.source.active_side {
+                crate::tui::app_states::SourceSide::Old => &app.tabs.source.old_panel,
+                crate::tui::app_states::SourceSide::New => &app.tabs.source.new_panel,
+            };
+            match panel.view_mode {
+                super::app_states::SourceViewMode::Tree => {
+                    // Cache is already warm from rendering
+                    panel
+                        .cached_flat_items
+                        .get(panel.selected)
+                        .map(|item| {
+                            if !item.value_preview.is_empty() {
+                                // Strip surrounding quotes for string values
+                                let v = &item.value_preview;
+                                if v.starts_with('"') && v.ends_with('"') && v.len() >= 2 {
+                                    v[1..v.len() - 1].to_string()
+                                } else {
+                                    v.clone()
+                                }
+                            } else {
+                                item.node_id.clone()
+                            }
+                        })
+                }
+                super::app_states::SourceViewMode::Raw => panel
+                    .raw_lines
+                    .get(panel.selected)
+                    .map(|line| line.trim().to_string()),
+            }
+        }
         _ => None,
     }
 }

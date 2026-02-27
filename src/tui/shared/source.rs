@@ -111,11 +111,8 @@ fn render_source_tree(
         scheme.border
     };
 
-    let mode_hint = if state.json_tree.is_some() {
-        " 'v':Raw "
-    } else {
-        ""
-    };
+    let has_tree = state.json_tree.is_some() || state.xml_tree.is_some();
+    let mode_hint = if has_tree { " 'v':Raw " } else { "" };
     let node_info = if state.total_node_count > 0 {
         format!(" ({} nodes)", state.total_node_count)
     } else {
@@ -134,9 +131,9 @@ fn render_source_tree(
         return;
     }
 
-    if state.json_tree.is_none() {
+    if state.json_tree.is_none() && state.xml_tree.is_none() {
         let msg = ratatui::widgets::Paragraph::new(
-            "Content is not valid JSON. Press 'v' for raw text view.",
+            "Content is not valid JSON or XML. Press 'v' for raw text view.",
         )
         .style(Style::default().fg(scheme.text_muted));
         frame.render_widget(msg, inner);
@@ -165,8 +162,24 @@ fn render_source_tree(
             let bc_style = Style::default().fg(scheme.text_muted).italic();
             let bc_width = inner.width as usize;
             let bc_display = if UnicodeWidthStr::width(breadcrumb.as_str()) > bc_width {
-                let trimmed =
-                    &breadcrumb[breadcrumb.len().saturating_sub(bc_width.saturating_sub(3))..];
+                // Take chars from the end, measured by display width
+                let target = bc_width.saturating_sub(3);
+                let mut width = 0;
+                let trimmed: String = breadcrumb
+                    .chars()
+                    .rev()
+                    .take_while(|ch| {
+                        let w = UnicodeWidthChar::width(*ch).unwrap_or(1);
+                        if width + w > target {
+                            return false;
+                        }
+                        width += w;
+                        true
+                    })
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                    .rev()
+                    .collect();
                 format!("...{trimmed}")
             } else {
                 breadcrumb
@@ -192,6 +205,7 @@ fn render_source_tree(
 
     // Scroll adjustment
     let visible_height = inner.height as usize;
+    state.viewport_height = visible_height;
     if visible_height > 0 {
         if state.selected >= state.scroll_offset + visible_height {
             state.scroll_offset = state.selected.saturating_sub(visible_height - 1);
@@ -279,22 +293,17 @@ fn render_source_tree(
         // Key name
         if !item.display_key.is_empty() && x < remaining {
             let key_style = Style::default().fg(scheme.primary);
-            let max_w = (remaining - x) as usize;
-            let key_width = UnicodeWidthStr::width(item.display_key.as_str());
-            let display_key = if key_width > max_w {
-                &item.display_key[..max_w.min(item.display_key.len())]
-            } else {
-                &item.display_key
-            };
             render_str(
                 frame.buffer_mut(),
                 x,
                 y,
-                display_key,
+                &item.display_key,
                 remaining - x,
                 key_style,
             );
-            x += UnicodeWidthStr::width(display_key) as u16;
+            let key_width = UnicodeWidthStr::width(item.display_key.as_str());
+            let max_w = (remaining - x) as usize;
+            x += key_width.min(max_w) as u16;
 
             if (!item.value_preview.is_empty() || item.is_expandable) && x + 2 < remaining {
                 render_str(
@@ -313,17 +322,11 @@ fn render_source_tree(
         if x < remaining {
             let max_w = (remaining - x) as usize;
             if item.is_expandable {
-                let label = &item.child_count_label;
-                let display = if label.len() > max_w {
-                    &label[..max_w]
-                } else {
-                    label.as_str()
-                };
                 render_str(
                     frame.buffer_mut(),
                     x,
                     y,
-                    display,
+                    &item.child_count_label,
                     remaining - x,
                     Style::default().fg(scheme.text_muted),
                 );
@@ -335,11 +338,8 @@ fn render_source_tree(
                     Some(JsonValueType::Null) => Style::default().fg(scheme.text_muted),
                     None => Style::default().fg(scheme.text),
                 };
-                let display_val = if item.value_preview.len() > max_w {
-                    format!("{}...", &item.value_preview[..max_w.saturating_sub(3)])
-                } else {
-                    item.value_preview.clone()
-                };
+                let display_val =
+                    crate::tui::widgets::truncate_str(&item.value_preview, max_w);
                 render_str(
                     frame.buffer_mut(),
                     x,
@@ -348,6 +348,24 @@ fn render_source_tree(
                     remaining - x,
                     val_style,
                 );
+            }
+        }
+
+        // Diff change annotation highlighting
+        if !state.change_annotations.is_empty() {
+            if let Some(status) = state.find_annotation(&item.node_id) {
+                let bg = match status {
+                    crate::tui::app_states::source::SourceChangeStatus::Added => scheme.success_bg,
+                    crate::tui::app_states::source::SourceChangeStatus::Removed => scheme.error_bg,
+                    crate::tui::app_states::source::SourceChangeStatus::Modified => {
+                        scheme.search_highlight_bg
+                    }
+                };
+                for col in inner.x..remaining {
+                    if let Some(cell) = frame.buffer_mut().cell_mut((col, y)) {
+                        cell.set_bg(bg);
+                    }
+                }
             }
         }
 
@@ -360,20 +378,24 @@ fn render_source_tree(
             }
         }
 
-        // Search match highlighting
-        if !state.search_matches.is_empty() && state.search_matches.binary_search(&abs_idx).is_ok()
+        // Search match highlighting (substring-level)
+        if !state.search_matches.is_empty()
+            && state.search_query.len() >= 2
+            && state.search_matches.binary_search(&abs_idx).is_ok()
         {
             let is_current = state.search_matches.get(state.search_current) == Some(&abs_idx);
-            let bg = if is_current {
-                scheme.search_highlight_bg
-            } else {
-                scheme.highlight
-            };
-            for col in inner.x..remaining {
-                if let Some(cell) = frame.buffer_mut().cell_mut((col, y)) {
-                    cell.set_bg(bg);
-                }
-            }
+            let display_text =
+                format!("{}: {}{}", item.display_key, item.value_preview, item.child_count_label);
+            highlight_search_in_row(
+                frame.buffer_mut(),
+                y,
+                inner.x,
+                remaining,
+                &display_text,
+                &state.search_query,
+                is_current,
+                &scheme,
+            );
         }
     }
 
@@ -405,14 +427,20 @@ fn render_source_raw(
         scheme.border
     };
 
-    let has_tree = state.json_tree.is_some();
+    let has_tree = state.json_tree.is_some() || state.xml_tree.is_some();
     let mode_hint = if has_tree { " 'v':Tree " } else { "" };
+    let col_hint = if state.h_scroll_offset > 0 {
+        format!(" col:{}", state.h_scroll_offset)
+    } else {
+        String::new()
+    };
     let block = Block::default()
         .title(format!(
-            " {} [Raw] ({} lines){} ",
+            " {} [Raw] ({} lines){}{} ",
             title,
             state.raw_lines.len(),
-            mode_hint
+            col_hint,
+            mode_hint,
         ))
         .title_style(Style::default().fg(border_color).bold())
         .borders(Borders::ALL)
@@ -433,6 +461,7 @@ fn render_source_raw(
     }
 
     let visible_height = inner.height as usize;
+    state.viewport_height = visible_height;
 
     // Scroll adjustment
     if visible_height > 0 {
@@ -476,29 +505,55 @@ fn render_source_raw(
         let content_x = inner.x + num_str.len() as u16;
         if content_x < remaining {
             let max_w = remaining - content_x;
+            // Apply horizontal scroll offset
+            let display_line = if state.h_scroll_offset > 0 {
+                skip_display_chars(line, state.h_scroll_offset)
+            } else {
+                line.to_string()
+            };
             if has_tree {
                 render_json_line_highlighted(
                     frame.buffer_mut(),
                     content_x,
                     y,
-                    line,
+                    &display_line,
                     max_w,
                     &scheme,
                 );
             } else {
-                let display_line = if line.len() > max_w as usize {
-                    &line[..max_w as usize]
-                } else {
-                    line.as_str()
-                };
                 render_str(
                     frame.buffer_mut(),
                     content_x,
                     y,
-                    display_line,
+                    &display_line,
                     max_w,
                     Style::default().fg(scheme.text),
                 );
+            }
+        }
+
+        // Diff change annotation highlighting (raw mode)
+        if !state.change_annotations.is_empty() {
+            let abs_idx_raw = state.scroll_offset + i;
+            if let Some(node_id) = state.raw_line_node_ids.get(abs_idx_raw) {
+                if let Some(status) = state.find_annotation(node_id) {
+                    let bg = match status {
+                        crate::tui::app_states::source::SourceChangeStatus::Added => {
+                            scheme.success_bg
+                        }
+                        crate::tui::app_states::source::SourceChangeStatus::Removed => {
+                            scheme.error_bg
+                        }
+                        crate::tui::app_states::source::SourceChangeStatus::Modified => {
+                            scheme.search_highlight_bg
+                        }
+                    };
+                    for col in inner.x..remaining {
+                        if let Some(cell) = frame.buffer_mut().cell_mut((col, y)) {
+                            cell.set_bg(bg);
+                        }
+                    }
+                }
             }
         }
 
@@ -511,21 +566,23 @@ fn render_source_raw(
             }
         }
 
-        // Search match highlighting
+        // Search match highlighting (substring-level)
         let abs_idx = state.scroll_offset + i;
-        if !state.search_matches.is_empty() && state.search_matches.binary_search(&abs_idx).is_ok()
+        if !state.search_matches.is_empty()
+            && state.search_query.len() >= 2
+            && state.search_matches.binary_search(&abs_idx).is_ok()
         {
             let is_current = state.search_matches.get(state.search_current) == Some(&abs_idx);
-            let bg = if is_current {
-                scheme.search_highlight_bg
-            } else {
-                scheme.highlight
-            };
-            for col in inner.x..remaining {
-                if let Some(cell) = frame.buffer_mut().cell_mut((col, y)) {
-                    cell.set_bg(bg);
-                }
-            }
+            highlight_search_in_row(
+                frame.buffer_mut(),
+                y,
+                content_x,
+                remaining,
+                line,
+                &state.search_query,
+                is_current,
+                &scheme,
+            );
         }
     }
 
@@ -725,6 +782,88 @@ fn render_search_bar(
     );
 }
 
+/// Highlight search query substrings within a rendered row.
+///
+/// After a row has been rendered, this overlays the search highlight on cells
+/// that match the query. Only applies to visible buffer cells.
+#[allow(clippy::too_many_arguments)]
+fn highlight_search_in_row(
+    buf: &mut Buffer,
+    y: u16,
+    x_start: u16,
+    x_end: u16,
+    displayed_text: &str,
+    query: &str,
+    is_current_match: bool,
+    scheme: &crate::tui::theme::ColorScheme,
+) {
+    if query.is_empty() || displayed_text.is_empty() {
+        return;
+    }
+
+    let bg = if is_current_match {
+        scheme.search_highlight_bg
+    } else {
+        scheme.highlight
+    };
+
+    let lower_text = displayed_text.to_lowercase();
+    let lower_query = query.to_lowercase();
+
+    // Collect char positions → column offsets
+    let char_cols: Vec<(usize, u16)> = {
+        let mut cols = Vec::new();
+        let mut col: u16 = 0;
+        for (byte_idx, ch) in displayed_text.char_indices() {
+            cols.push((byte_idx, col));
+            col += UnicodeWidthChar::width(ch).unwrap_or(1) as u16;
+        }
+        cols
+    };
+
+    // Find all occurrences of the query in the text (case-insensitive)
+    let mut search_start = 0;
+    while let Some(pos) = lower_text[search_start..].find(&lower_query) {
+        let byte_start = search_start + pos;
+        let byte_end = byte_start + lower_query.len();
+        search_start = byte_start + 1;
+
+        // Map byte range to column range
+        let col_start = char_cols
+            .iter()
+            .find(|(b, _)| *b >= byte_start)
+            .map(|(_, c)| *c);
+        let col_end = char_cols
+            .iter()
+            .find(|(b, _)| *b >= byte_end)
+            .map(|(_, c)| *c)
+            .unwrap_or_else(|| {
+                // End of string
+                char_cols
+                    .last()
+                    .map(|(_, c)| {
+                        *c + UnicodeWidthChar::width(
+                            displayed_text.chars().last().unwrap_or(' '),
+                        )
+                        .unwrap_or(1) as u16
+                    })
+                    .unwrap_or(0)
+            });
+
+        if let Some(start_col) = col_start {
+            for col in start_col..col_end {
+                let abs_col = x_start + col;
+                if abs_col >= x_end {
+                    break;
+                }
+                if let Some(cell) = buf.cell_mut((abs_col, y)) {
+                    cell.set_bg(bg);
+                }
+            }
+        }
+    }
+}
+
 /// Build a breadcrumb string from a node ID path.
 fn breadcrumb_from_node_id(node_id: &str) -> String {
     if node_id.is_empty() {
@@ -734,8 +873,22 @@ fn breadcrumb_from_node_id(node_id: &str) -> String {
     parts.join(" > ")
 }
 
+/// Skip a given number of display-width characters from the start of a string.
+fn skip_display_chars(s: &str, skip_width: usize) -> String {
+    let mut skipped = 0;
+    let mut chars = s.chars();
+    for ch in chars.by_ref() {
+        let w = UnicodeWidthChar::width(ch).unwrap_or(1);
+        skipped += w;
+        if skipped >= skip_width {
+            break;
+        }
+    }
+    chars.collect()
+}
+
 /// Write a string into the buffer starting at (x, y), limited to `max_width`.
-fn render_str(buf: &mut Buffer, x: u16, y: u16, s: &str, max_width: u16, style: Style) {
+pub fn render_str(buf: &mut Buffer, x: u16, y: u16, s: &str, max_width: u16, style: Style) {
     let mut cx = x;
     let limit = x + max_width;
     for ch in s.chars() {

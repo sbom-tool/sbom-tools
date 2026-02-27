@@ -3,7 +3,7 @@
 use crate::model::CreatorType;
 use crate::model::NormalizedSbom;
 use crate::tui::app_states::source::{JsonTreeNode, SourceViewMode};
-use crate::tui::shared::source::render_source_panel;
+use crate::tui::shared::source::{render_source_panel, render_str};
 use crate::tui::theme::colors;
 use crate::tui::view::app::{FocusPanel, SbomStats, ViewApp};
 use ratatui::{
@@ -13,7 +13,6 @@ use ratatui::{
 };
 use std::collections::HashMap;
 use std::fmt::Write;
-use unicode_width::UnicodeWidthChar;
 
 /// Render the source tab for a single SBOM with map panel.
 pub fn render_source(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
@@ -685,6 +684,15 @@ fn section_badge(key: &str, stats: &SbomStats, sbom: &NormalizedSbom, max_len: u
             .find(|c| c.creator_type == CreatorType::Tool)
             .map(|c| truncate_map_str(&c.name, max_len.min(12)))
             .unwrap_or_default(),
+        "dependencies" | "relationships" => {
+            let edge_count = sbom.edges.len();
+            if edge_count > 0 {
+                let label = format!("{edge_count} edges");
+                truncate_map_str(&label, max_len)
+            } else {
+                String::new()
+            }
+        }
         _ => String::new(),
     }
 }
@@ -912,14 +920,136 @@ fn render_context(
         }
 
         if section == "vulnerabilities" {
-            render_str(
-                buf,
-                x,
-                y,
-                &format!(" Vulnerability [{idx}]"),
-                width,
-                Style::default().fg(scheme.warning),
-            );
+            // Try to find the vulnerability at this index
+            let vuln = app
+                .sbom
+                .components
+                .values()
+                .flat_map(|c| &c.vulnerabilities)
+                .nth(idx);
+            if let Some(v) = vuln {
+                // CVE ID + severity
+                let severity = v
+                    .severity
+                    .as_ref()
+                    .map_or("unknown", |s| match s {
+                        crate::model::Severity::Critical => "critical",
+                        crate::model::Severity::High => "high",
+                        crate::model::Severity::Medium => "medium",
+                        crate::model::Severity::Low => "low",
+                        crate::model::Severity::Info => "info",
+                        crate::model::Severity::None => "none",
+                        crate::model::Severity::Unknown => "unknown",
+                    });
+                let sev_color = match severity {
+                    "critical" => scheme.error,
+                    "high" => scheme.warning,
+                    "medium" => scheme.accent,
+                    "low" => scheme.muted,
+                    _ => scheme.text_muted,
+                };
+                render_str(
+                    buf,
+                    x,
+                    y,
+                    &format!(" {} ({severity})", v.id),
+                    width,
+                    Style::default().fg(sev_color).bold(),
+                );
+                y += 1;
+                if y >= max_y {
+                    return;
+                }
+
+                // Description (truncated)
+                if let Some(ref desc) = v.description {
+                    let trunc =
+                        truncate_map_str(desc, (width as usize).saturating_sub(2));
+                    render_str(
+                        buf,
+                        x,
+                        y,
+                        &format!(" {trunc}"),
+                        width,
+                        Style::default().fg(scheme.text_muted),
+                    );
+                    y += 1;
+                    if y >= max_y {
+                        return;
+                    }
+                }
+
+                // CWEs if present
+                if !v.cwes.is_empty() {
+                    let cwes = v.cwes.join(", ");
+                    render_str(
+                        buf,
+                        x,
+                        y,
+                        &format!(
+                            " CWE: {}",
+                            truncate_map_str(
+                                &cwes,
+                                (width as usize).saturating_sub(7)
+                            )
+                        ),
+                        width,
+                        Style::default().fg(scheme.text_muted),
+                    );
+                    y += 1;
+                    if y >= max_y {
+                        return;
+                    }
+                }
+
+                // Affected component name
+                if let Some(comp) = app
+                    .sbom
+                    .components
+                    .values()
+                    .find(|c| c.vulnerabilities.iter().any(|vv| vv.id == v.id))
+                {
+                    render_str(
+                        buf,
+                        x,
+                        y,
+                        &format!(
+                            " Affects: {}",
+                            truncate_map_str(
+                                &comp.name,
+                                (width as usize).saturating_sub(11)
+                            )
+                        ),
+                        width,
+                        Style::default().fg(scheme.primary),
+                    );
+                    y += 1;
+                    if y >= max_y {
+                        return;
+                    }
+                }
+
+                // KEV badge if actively exploited
+                if v.is_kev {
+                    render_str(
+                        buf,
+                        x,
+                        y,
+                        " \u{26a0} KEV: Actively Exploited",
+                        width,
+                        Style::default().fg(scheme.error).bold(),
+                    );
+                }
+            } else {
+                render_str(
+                    buf,
+                    x,
+                    y,
+                    &format!(" Vulnerability [{idx}]"),
+                    width,
+                    Style::default().fg(scheme.warning),
+                );
+            }
             return;
         }
     }
@@ -1256,29 +1386,8 @@ fn render_non_json_map(
     }
 }
 
-/// Truncate a string for map display.
+/// Truncate a string for map display (Unicode-safe).
 fn truncate_map_str(s: &str, max_len: usize) -> String {
-    if s.len() > max_len && max_len > 3 {
-        format!("{}...", &s[..max_len.saturating_sub(3)])
-    } else if s.len() > max_len {
-        s[..max_len].to_string()
-    } else {
-        s.to_string()
-    }
+    crate::tui::widgets::truncate_str(s, max_len)
 }
 
-/// Write a string into the buffer starting at (x, y), limited to `max_width`.
-fn render_str(buf: &mut Buffer, x: u16, y: u16, s: &str, max_width: u16, style: Style) {
-    let mut cx = x;
-    let limit = x + max_width;
-    for ch in s.chars() {
-        let w = UnicodeWidthChar::width(ch).unwrap_or(1) as u16;
-        if cx + w > limit {
-            break;
-        }
-        if let Some(cell) = buf.cell_mut((cx, y)) {
-            cell.set_char(ch).set_style(style);
-        }
-        cx += w;
-    }
-}
