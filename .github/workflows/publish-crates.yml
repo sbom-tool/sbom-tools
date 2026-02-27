@@ -15,6 +15,8 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     environment: crates-io
     runs-on: ubuntu-latest
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
     permissions:
       contents: read
       id-token: write
@@ -76,6 +78,14 @@ jobs:
       - name: Dry-run publish
         run: cargo publish --dry-run --locked
 
+      - name: Build crate archive for provenance
+        run: cargo package --locked
+
+      - name: Generate subject hashes
+        id: hash
+        run: |
+          echo "hashes=$(sha256sum target/package/sbom-tools-*.crate | base64 -w0)" >> "$GITHUB_OUTPUT"
+
       - name: Authenticate to crates.io
         uses: rust-lang/crates-io-auth-action@c2f7455177fbf986ee0f82f0932f8290b8769cce # v1
         id: auth
@@ -84,3 +94,36 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
         run: cargo publish --locked
+
+  release:
+    name: Create GitHub Release
+    needs: [publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes \
+            --verify-tag
+
+  provenance:
+    needs: [publish]
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    # Must reference by tag, not SHA — generator requirement
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: "${{ needs.publish.outputs.hashes }}"
+      upload-assets: true
+      provenance-name: sbom-tools.intoto.jsonl
