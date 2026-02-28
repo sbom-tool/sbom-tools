@@ -113,7 +113,15 @@ PR_URL="$(gh pr create \
 PR_NUMBER="$(echo "$PR_URL" | grep -oE '[0-9]+$')"
 echo "    PR #$PR_NUMBER: $PR_URL"
 
-echo "==> Waiting for CI checks..."
+echo "==> Waiting for CI checks to start..."
+for i in $(seq 1 30); do
+    if gh pr checks "$PR_NUMBER" --json name --jq '.[0].name' &>/dev/null 2>&1; then
+        break
+    fi
+    sleep 2
+done
+
+echo "==> Waiting for CI checks to complete..."
 if ! gh pr checks "$PR_NUMBER" --watch; then
     echo "Error: CI checks failed on PR #$PR_NUMBER"
     echo "Fix the issues, then re-run this script or merge manually."
