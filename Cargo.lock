@@ -2403,7 +2403,7 @@ dependencies = [
 
 [[package]]
 name = "sbom-tools"
-version = "0.1.12"
+version = "0.1.13"
 dependencies = [
  "anyhow",
  "chrono",
