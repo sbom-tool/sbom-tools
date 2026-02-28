@@ -114,7 +114,7 @@ PR_NUMBER="$(echo "$PR_URL" | grep -oE '[0-9]+$')"
 echo "    PR #$PR_NUMBER: $PR_URL"
 
 echo "==> Waiting for CI checks..."
-if ! gh pr checks "$PR_NUMBER" --watch --fail-level all; then
+if ! gh pr checks "$PR_NUMBER" --watch; then
     echo "Error: CI checks failed on PR #$PR_NUMBER"
     echo "Fix the issues, then re-run this script or merge manually."
     git checkout main
@@ -137,18 +137,10 @@ echo "==> Creating signed tag v$VERSION..."
 git tag -s "v$VERSION" -m "Release v$VERSION"
 git push origin "v$VERSION"
 
-# ── Create GitHub Release ────────────────────────────────────────
-echo "==> Creating GitHub Release..."
-gh release create "v$VERSION" \
-    --title "v$VERSION" \
-    --generate-notes \
-    --verify-tag
-
 # ── Cleanup ──────────────────────────────────────────────────────
 git branch -d "$RELEASE_BRANCH" 2>/dev/null || true
 
 echo ""
-echo "Done! v$VERSION released."
-echo "  - GitHub Release: https://github.com/sbom-tool/sbom-tools/releases/tag/v$VERSION"
-echo "  - CI will publish to crates.io and attach SLSA provenance."
-echo "  - Monitor: gh run list --limit 3"
+echo "Done! Tag v$VERSION pushed."
+echo "  - CI will: publish to crates.io, create GitHub Release, attach SLSA provenance."
+echo "  - Monitor: gh run watch \$(gh run list --limit 1 --workflow publish-crates.yml --json databaseId -q '.[0].databaseId')"
