@@ -95,26 +95,6 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
         run: cargo publish --locked
 
-  release:
-    name: Create GitHub Release
-    needs: [publish]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        # v6.0.2
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "${{ github.ref_name }}" \
-            --title "${{ github.ref_name }}" \
-            --generate-notes \
-            --verify-tag
-
   provenance:
     needs: [publish]
     permissions:
@@ -125,5 +105,34 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
     with:
       base64-subjects: "${{ needs.publish.outputs.hashes }}"
-      upload-assets: true
+      upload-assets: false
       provenance-name: sbom-tools.intoto.jsonl
+
+  release:
+    name: Create GitHub Release
+    needs: [publish, provenance]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout
+        # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Download SLSA provenance
+        # v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
+        with:
+          name: sbom-tools.intoto.jsonl
+          path: provenance/
+
+      - name: Create GitHub Release with provenance
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            provenance/sbom-tools.intoto.jsonl \
+            --title "${{ github.ref_name }}" \
+            --generate-notes \
+            --verify-tag
