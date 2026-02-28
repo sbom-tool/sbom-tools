@@ -1,0 +1,37 @@
+# These are SBOM test fixtures, not actual dependencies.
+# Ignore all non-Rust ecosystem packages found by osv-scanner.
+
+[[PackageOverrides]]
+ecosystem = "npm"
+ignore = true
+reason = "SBOM test fixture data, not actual dependencies"
+
+[[PackageOverrides]]
+ecosystem = "PyPI"
+ignore = true
+reason = "SBOM test fixture data, not actual dependencies"
+
+[[PackageOverrides]]
+ecosystem = "Maven"
+ignore = true
+reason = "SBOM test fixture data, not actual dependencies"
+
+[[PackageOverrides]]
+ecosystem = "RubyGems"
+ignore = true
+reason = "SBOM test fixture data, not actual dependencies"
+
+[[PackageOverrides]]
+ecosystem = "Packagist"
+ignore = true
+reason = "SBOM test fixture data, not actual dependencies"
+
+[[PackageOverrides]]
+ecosystem = "Go"
+ignore = true
+reason = "SBOM test fixture data, not actual dependencies"
+
+[[PackageOverrides]]
+ecosystem = "NuGet"
+ignore = true
+reason = "SBOM test fixture data, not actual dependencies"
