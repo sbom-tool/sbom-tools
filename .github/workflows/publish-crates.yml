@@ -58,7 +58,7 @@ jobs:
             exit 1
           fi
 
-          git fetch --no-tags --depth=1 origin main
+          git fetch --no-tags origin main
           if ! git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"; then
             echo "::error::Tagged commit ${GITHUB_SHA} is not on origin/main."
             exit 1
