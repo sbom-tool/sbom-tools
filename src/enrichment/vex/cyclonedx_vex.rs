@@ -69,17 +69,32 @@ struct CdxAnalysis {
 /// but lacks a `components` array (or has an empty one). This distinguishes
 /// standalone VEX documents from regular CycloneDX SBOMs that also contain
 /// vulnerability data.
+///
+/// Uses minimal JSON parsing of top-level keys to avoid false positives/negatives
+/// from substring matching (e.g., `"components"` appearing inside a `detail` string).
 pub(crate) fn is_cyclonedx_vex(content: &str) -> bool {
-    // Must be CycloneDX with vulnerabilities
-    if !content.contains("\"bomFormat\"")
-        || !content.contains("CycloneDX")
-        || !content.contains("\"vulnerabilities\"")
-    {
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(content) else {
         return false;
-    }
-    // A VEX document should NOT have a "components" section, or if it does,
-    // it should be empty. Regular SBOMs have both components and vulnerabilities.
-    !content.contains("\"components\"")
+    };
+    let Some(obj) = value.as_object() else {
+        return false;
+    };
+    // Must be CycloneDX with vulnerabilities
+    let is_cdx = obj
+        .get("bomFormat")
+        .and_then(|v| v.as_str())
+        .is_some_and(|s| s == "CycloneDX");
+    let has_vulns = obj
+        .get("vulnerabilities")
+        .and_then(|v| v.as_array())
+        .is_some_and(|a| !a.is_empty());
+    // A VEX document should NOT have components, or have an empty array
+    let has_components = obj
+        .get("components")
+        .and_then(|v| v.as_array())
+        .is_some_and(|a| !a.is_empty());
+
+    is_cdx && has_vulns && !has_components
 }
 
 /// Parse a CycloneDX VEX document from a JSON string.
@@ -258,6 +273,47 @@ mod tests {
     fn test_is_cyclonedx_vex() {
         assert!(is_cyclonedx_vex(CDX_VEX_SAMPLE));
         assert!(!is_cyclonedx_vex(r#"{"statements": []}"#));
+    }
+
+    #[test]
+    fn test_is_cyclonedx_vex_rejects_sbom_with_components() {
+        // Regular CycloneDX SBOM with both components and vulnerabilities
+        let sbom = r#"{
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.6",
+            "components": [{"name": "foo"}],
+            "vulnerabilities": [{"id": "CVE-2024-0001"}]
+        }"#;
+        assert!(!is_cyclonedx_vex(sbom));
+    }
+
+    #[test]
+    fn test_is_cyclonedx_vex_accepts_empty_components() {
+        // VEX doc with empty components array is valid VEX
+        let vex = r#"{
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.6",
+            "components": [],
+            "vulnerabilities": [{"id": "CVE-2024-0001", "analysis": {"state": "fixed"}}]
+        }"#;
+        assert!(is_cyclonedx_vex(vex));
+    }
+
+    #[test]
+    fn test_is_cyclonedx_vex_ignores_components_in_strings() {
+        // "components" appearing in a detail string should NOT reject the doc
+        let vex = r#"{
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.6",
+            "vulnerabilities": [{
+                "id": "CVE-2024-0001",
+                "analysis": {
+                    "state": "not_affected",
+                    "detail": "Does not affect components in our deployment"
+                }
+            }]
+        }"#;
+        assert!(is_cyclonedx_vex(vex));
     }
 
     #[test]

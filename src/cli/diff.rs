@@ -147,11 +147,13 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
 }
 
 /// Determine the appropriate exit code based on diff results and config flags.
+///
+/// Priority (highest exit code wins): VEX gaps (4) > vulns introduced (2) > changes (1).
+/// VEX gaps are checked first because they are more specific — a user who sets
+/// `--fail-on-vex-gap` wants to know about missing VEX statements, not just
+/// that vulns were introduced.
 fn determine_exit_code(config: &DiffConfig, result: &crate::diff::DiffResult) -> i32 {
-    if config.behavior.fail_on_vuln && result.summary.vulnerabilities_introduced > 0 {
-        return exit_codes::VULNS_INTRODUCED;
-    }
-    // Check for VEX gaps: introduced vulns without VEX statements
+    // Check for VEX gaps first (most specific gate)
     if config.filtering.fail_on_vex_gap {
         let vex_summary = result.vulnerabilities.vex_summary();
         if vex_summary.introduced_without_vex > 0 {
@@ -161,6 +163,9 @@ fn determine_exit_code(config: &DiffConfig, result: &crate::diff::DiffResult) ->
             );
             return exit_codes::VEX_GAPS_FOUND;
         }
+    }
+    if config.behavior.fail_on_vuln && result.summary.vulnerabilities_introduced > 0 {
+        return exit_codes::VULNS_INTRODUCED;
     }
     if config.behavior.fail_on_change && result.summary.total_changes > 0 {
         return exit_codes::CHANGES_DETECTED;

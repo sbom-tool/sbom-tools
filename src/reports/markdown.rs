@@ -385,8 +385,7 @@ impl ReportGenerator for MarkdownReporter {
         // VEX coverage summary (if any vulns have VEX data)
         {
             let vex_summary = result.vulnerabilities.vex_summary();
-            if (vex_summary.with_vex > 0 || vex_summary.without_vex > 0)
-                && vex_summary.total_vulns > 0
+            if vex_summary.total_vulns > 0
             {
                 writeln!(md, "### VEX Coverage\n")?;
                 writeln!(md, "| Metric | Value |")?;

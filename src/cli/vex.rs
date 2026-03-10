@@ -91,20 +91,19 @@ fn run_vex_status(sbom: &NormalizedSbom, config: &VexConfig) -> Result<i32> {
     let with_vex = vulns.iter().filter(|v| v.vex_state.is_some()).count();
     let without_vex = total - with_vex;
 
-    let mut by_state: std::collections::HashMap<String, usize> =
-        std::collections::HashMap::with_capacity(4);
+    let mut by_state: std::collections::BTreeMap<String, usize> =
+        std::collections::BTreeMap::new();
     let mut actionable = 0;
 
     for v in &vulns {
         if let Some(ref state) = v.vex_state {
             *by_state.entry(state.to_string()).or_insert(0) += 1;
         }
-        if v.vex_state.is_none()
-            || matches!(
-                v.vex_state,
-                Some(VexState::Affected) | Some(VexState::UnderInvestigation)
-            )
-        {
+        // Consistent with VulnerabilityDetail::is_vex_actionable — excludes NotAffected/Fixed
+        if !matches!(
+            v.vex_state,
+            Some(VexState::NotAffected) | Some(VexState::Fixed)
+        ) {
             actionable += 1;
         }
     }
@@ -117,11 +116,11 @@ fn run_vex_status(sbom: &NormalizedSbom, config: &VexConfig) -> Result<i32> {
 
     let output_target = OutputTarget::from_option(config.output_file.clone());
 
-    if matches!(
-        config.output_format,
-        crate::reports::ReportFormat::Json | crate::reports::ReportFormat::Auto
-    ) && matches!(output_target, OutputTarget::File(_))
-    {
+    let use_json = matches!(config.output_format, crate::reports::ReportFormat::Json)
+        || (matches!(config.output_format, crate::reports::ReportFormat::Auto)
+            && matches!(output_target, OutputTarget::File(_)));
+
+    if use_json {
         // JSON output for piping
         let summary = serde_json::json!({
             "total_vulnerabilities": total,
@@ -199,7 +198,7 @@ fn run_vex_filter(sbom: &NormalizedSbom, config: &VexConfig) -> Result<i32> {
             })
             .collect()
     } else if let Some(ref state_filter) = config.filter_state {
-        let target_state = parse_vex_state_filter(state_filter);
+        let target_state = parse_vex_state_filter(state_filter)?;
         vulns
             .iter()
             .filter(|v| v.vex_state.as_ref() == target_state.as_ref())
@@ -269,16 +268,22 @@ fn collect_all_vulns(sbom: &NormalizedSbom) -> Vec<VulnEntry> {
 }
 
 /// Parse a VEX state filter string into `Option<VexState>`.
-fn parse_vex_state_filter(s: &str) -> Option<VexState> {
+///
+/// Returns `None` for "none"/"missing" (meaning: match vulns without VEX).
+/// Returns `Err` for unrecognized values to prevent silent wrong results.
+fn parse_vex_state_filter(s: &str) -> Result<Option<VexState>> {
     match s.to_lowercase().as_str() {
-        "not_affected" | "notaffected" => Some(VexState::NotAffected),
-        "affected" => Some(VexState::Affected),
-        "fixed" => Some(VexState::Fixed),
+        "not_affected" | "notaffected" => Ok(Some(VexState::NotAffected)),
+        "affected" => Ok(Some(VexState::Affected)),
+        "fixed" => Ok(Some(VexState::Fixed)),
         "under_investigation" | "underinvestigation" | "in_triage" => {
-            Some(VexState::UnderInvestigation)
+            Ok(Some(VexState::UnderInvestigation))
         }
-        "none" | "missing" => None,
-        _ => Some(VexState::UnderInvestigation),
+        "none" | "missing" => Ok(None),
+        other => anyhow::bail!(
+            "unknown VEX state filter: '{other}'. Valid values: \
+             not_affected, affected, fixed, under_investigation, none"
+        ),
     }
 }
 
@@ -289,15 +294,27 @@ mod tests {
     #[test]
     fn test_parse_vex_state_filter() {
         assert_eq!(
-            parse_vex_state_filter("not_affected"),
+            parse_vex_state_filter("not_affected").unwrap(),
             Some(VexState::NotAffected)
         );
-        assert_eq!(parse_vex_state_filter("affected"), Some(VexState::Affected));
-        assert_eq!(parse_vex_state_filter("fixed"), Some(VexState::Fixed));
         assert_eq!(
-            parse_vex_state_filter("under_investigation"),
+            parse_vex_state_filter("affected").unwrap(),
+            Some(VexState::Affected)
+        );
+        assert_eq!(
+            parse_vex_state_filter("fixed").unwrap(),
+            Some(VexState::Fixed)
+        );
+        assert_eq!(
+            parse_vex_state_filter("under_investigation").unwrap(),
             Some(VexState::UnderInvestigation)
         );
-        assert_eq!(parse_vex_state_filter("none"), None);
+        assert_eq!(parse_vex_state_filter("none").unwrap(), None);
+    }
+
+    #[test]
+    fn test_parse_vex_state_filter_rejects_unknown() {
+        assert!(parse_vex_state_filter("fixd").is_err());
+        assert!(parse_vex_state_filter("notaffected_typo").is_err());
     }
 }
