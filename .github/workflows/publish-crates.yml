@@ -108,9 +108,107 @@ jobs:
       upload-assets: false
       provenance-name: sbom-tools.intoto.jsonl
 
+  build-binaries:
+    name: Build ${{ matrix.target }}
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            cross: true
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+    steps:
+      - name: Checkout
+        # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Install Rust stable
+        # stable
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      - name: Cache
+        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools (aarch64-linux)
+        if: matrix.cross
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          cat >> ~/.cargo/config.toml <<EOF
+          [target.aarch64-unknown-linux-gnu]
+          linker = "aarch64-linux-gnu-gcc"
+          EOF
+
+      - name: Build release binary
+        run: cargo build --release --locked --all-features --target ${{ matrix.target }}
+
+      - name: Package binary (unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          ARCHIVE="sbom-tools-${{ matrix.target }}.tar.gz"
+          mkdir -p staging
+          cp "target/${{ matrix.target }}/release/sbom-tools" staging/
+          cp LICENSE README.md staging/
+          tar -czf "${ARCHIVE}" -C staging .
+          echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
+
+      - name: Package binary (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $archive = "sbom-tools-${{ matrix.target }}.zip"
+          New-Item -ItemType Directory -Force staging
+          Copy-Item "target/${{ matrix.target }}/release/sbom-tools.exe" staging/
+          Copy-Item LICENSE, README.md staging/
+          Compress-Archive -Path staging/* -DestinationPath $archive
+          "ARCHIVE=$archive" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Generate SHA256 checksum
+        shell: bash
+        run: |
+          # Use shasum on macOS (sha256sum is not guaranteed), sha256sum elsewhere
+          if command -v sha256sum &>/dev/null; then
+            SHA_CMD="sha256sum"
+          else
+            SHA_CMD="shasum -a 256"
+          fi
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            $SHA_CMD "sbom-tools-${{ matrix.target }}.zip" > "sbom-tools-${{ matrix.target }}.zip.sha256"
+          else
+            $SHA_CMD "sbom-tools-${{ matrix.target }}.tar.gz" > "sbom-tools-${{ matrix.target }}.tar.gz.sha256"
+          fi
+
+      - name: Upload binary artifact
+        # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: binary-${{ matrix.target }}
+          path: |
+            sbom-tools-${{ matrix.target }}.*
+          if-no-files-found: error
+          retention-days: 1
+
   release:
     name: Create GitHub Release
-    needs: [publish, provenance]
+    needs: [publish, provenance, build-binaries]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -127,12 +225,36 @@ jobs:
           name: sbom-tools.intoto.jsonl
           path: provenance/
 
-      - name: Create GitHub Release with provenance
+      - name: Download all binary artifacts
+        # v4
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3
+        with:
+          pattern: binary-*
+          path: binaries/
+          merge-multiple: true
+
+      - name: List release assets
+        run: |
+          echo "=== Provenance ==="
+          ls -la provenance/
+          echo "=== Binaries ==="
+          ls -la binaries/
+
+      - name: Create GitHub Release with provenance and binaries
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
+          set -euo pipefail
+          ASSETS=()
+          ASSETS+=(provenance/sbom-tools.intoto.jsonl)
+          for f in binaries/sbom-tools-*; do
+            ASSETS+=("${f}")
+          done
+          echo "Uploading ${#ASSETS[@]} assets:"
+          printf '  %s\n' "${ASSETS[@]}"
           gh release create "${{ github.ref_name }}" \
-            provenance/sbom-tools.intoto.jsonl \
+            "${ASSETS[@]}" \
             --title "${{ github.ref_name }}" \
             --generate-notes \
             --verify-tag
