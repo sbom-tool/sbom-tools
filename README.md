@@ -423,7 +423,74 @@ sbom-tools query "log4j" --version "<2.17.0" fleet/*.json -o json
 ```
 
 <details>
-<summary>GitHub Actions example</summary>
+<summary>GitHub Actions — using the action (recommended)</summary>
+
+```yaml
+name: SBOM Check
+
+on:
+  pull_request:
+    paths: ['sbom.json']
+
+jobs:
+  sbom-diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get previous SBOM
+        run: git show HEAD~1:sbom.json > /tmp/old-sbom.json
+
+      - name: Diff SBOM
+        uses: sbom-tool/sbom-tools@v1
+        with:
+          command: diff
+          args: /tmp/old-sbom.json sbom.json
+          fail-on-vuln: true
+          enrich-vulns: true
+          output-format: sarif
+          output-file: results.sarif
+
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+
+  sbom-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check quality
+        uses: sbom-tool/sbom-tools@v1
+        with:
+          command: quality
+          args: sbom.json
+          profile: security
+          min-score: '80'
+
+  sbom-compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate CRA compliance
+        uses: sbom-tool/sbom-tools@v1
+        with:
+          command: validate
+          args: sbom.json
+          standard: cra
+          output-format: sarif
+          output-file: compliance.sarif
+```
+
+</details>
+
+<details>
+<summary>GitHub Actions — manual binary download</summary>
 
 ```yaml
 name: SBOM Check
@@ -442,7 +509,9 @@ jobs:
 
       - name: Install sbom-tools
         run: |
-          curl -sSL https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-tools-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          curl -fsSL -o sbom-tools.tar.gz \
+            https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-tools-x86_64-unknown-linux-gnu.tar.gz
+          tar xzf sbom-tools.tar.gz
           sudo mv sbom-tools /usr/local/bin/
 
       - name: Diff SBOM against main
@@ -469,7 +538,7 @@ jobs:
 | `1` | Changes detected (`--fail-on-change`) |
 | `2` | New vulnerabilities introduced (`--fail-on-vuln`) |
 | `3` | Error |
-| `4` | Introduced vulnerabilities lack VEX statements (`--fail-on-vex-gap`) |
+| `4` | VEX coverage gaps found (`--fail-on-vex-gap`) |
 
 ## Configuration
 
