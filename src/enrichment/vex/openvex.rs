@@ -150,7 +150,7 @@ pub(crate) fn vex_status_from_statement(stmt: &VexStatement) -> VexStatus {
         justification,
         action_statement: stmt.action_statement.clone(),
         impact_statement: stmt.impact_statement.clone(),
-        response: None,
+        responses: Vec::new(),
         detail: None,
     }
 }

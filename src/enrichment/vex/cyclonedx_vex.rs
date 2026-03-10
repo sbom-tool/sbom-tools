@@ -210,17 +210,18 @@ fn build_vex_status(analysis: &CdxAnalysis) -> VexStatus {
         .as_deref()
         .and_then(parse_cdx_justification);
 
-    let response = analysis
+    let responses: Vec<VexResponse> = analysis
         .response
-        .first()
-        .and_then(|r| parse_cdx_response(r));
+        .iter()
+        .filter_map(|r| parse_cdx_response(r))
+        .collect();
 
     VexStatus {
         status: state,
         justification,
         action_statement: None,
         impact_statement: None,
-        response,
+        responses,
         detail: analysis.detail.clone(),
     }
 }
@@ -344,7 +345,7 @@ mod tests {
         );
         let lodash_status = result.scoped.get(&lodash_key).expect("should have lodash");
         assert_eq!(lodash_status.status, VexState::Affected);
-        assert_eq!(lodash_status.response, Some(VexResponse::Update));
+        assert_eq!(lodash_status.responses, vec![VexResponse::Update]);
 
         let triage_status = result
             .unscoped
@@ -407,5 +408,28 @@ mod tests {
             Some(VexResponse::Workaround)
         );
         assert_eq!(parse_cdx_response("unknown"), None);
+    }
+
+    #[test]
+    fn test_multiple_responses_preserved() {
+        let vex = r#"{
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.6",
+            "vulnerabilities": [{
+                "id": "CVE-2024-9999",
+                "affects": [{ "ref": "pkg:npm/foo@1.0.0" }],
+                "analysis": {
+                    "state": "affected",
+                    "response": ["update", "workaround_available"]
+                }
+            }]
+        }"#;
+        let result = parse_cyclonedx_vex(vex).expect("should parse");
+        let key = ("CVE-2024-9999".to_string(), "pkg:npm/foo@1.0.0".to_string());
+        let status = result.scoped.get(&key).expect("should have entry");
+        assert_eq!(
+            status.responses,
+            vec![VexResponse::Update, VexResponse::Workaround]
+        );
     }
 }

@@ -156,10 +156,11 @@ fn determine_exit_code(config: &DiffConfig, result: &crate::diff::DiffResult) ->
     // Check for VEX gaps first (most specific gate)
     if config.filtering.fail_on_vex_gap {
         let vex_summary = result.vulnerabilities.vex_summary();
-        if vex_summary.introduced_without_vex > 0 {
+        let total_gaps = vex_summary.introduced_without_vex + vex_summary.persistent_without_vex;
+        if total_gaps > 0 {
             eprintln!(
-                "VEX gap: {} introduced vulnerability(ies) lack VEX statements",
-                vex_summary.introduced_without_vex
+                "VEX gap: {} vulnerability(ies) lack VEX statements ({} introduced, {} persistent)",
+                total_gaps, vex_summary.introduced_without_vex, vex_summary.persistent_without_vex,
             );
             return exit_codes::VEX_GAPS_FOUND;
         }

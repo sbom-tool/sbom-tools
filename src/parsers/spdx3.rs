@@ -641,22 +641,27 @@ impl Spdx3Parser {
         });
 
         // Map response string to enum
-        let response = assessment.action_statement.as_deref().and_then(|a| {
-            let lower = a.to_lowercase();
-            if lower.contains("update") || lower.contains("upgrade") {
-                Some(VexResponse::Update)
-            } else if lower.contains("rollback") {
-                Some(VexResponse::Rollback)
-            } else if lower.contains("workaround") {
-                Some(VexResponse::Workaround)
-            } else if lower.contains("will not fix") || lower.contains("wontfix") {
-                Some(VexResponse::WillNotFix)
-            } else if lower.contains("cannot fix") || lower.contains("can not fix") {
-                Some(VexResponse::CanNotFix)
-            } else {
-                None
-            }
-        });
+        let responses: Vec<VexResponse> = assessment
+            .action_statement
+            .as_deref()
+            .and_then(|a| {
+                let lower = a.to_lowercase();
+                if lower.contains("update") || lower.contains("upgrade") {
+                    Some(VexResponse::Update)
+                } else if lower.contains("rollback") {
+                    Some(VexResponse::Rollback)
+                } else if lower.contains("workaround") {
+                    Some(VexResponse::Workaround)
+                } else if lower.contains("will not fix") || lower.contains("wontfix") {
+                    Some(VexResponse::WillNotFix)
+                } else if lower.contains("cannot fix") || lower.contains("can not fix") {
+                    Some(VexResponse::CanNotFix)
+                } else {
+                    None
+                }
+            })
+            .into_iter()
+            .collect();
 
         // Build VEX status
         let vex_status = vex_state.map(|status| VexStatus {
@@ -664,7 +669,7 @@ impl Spdx3Parser {
             justification: justification.clone(),
             action_statement: assessment.action_statement.clone(),
             impact_statement: assessment.impact_statement.clone(),
-            response,
+            responses,
             detail: assessment.status_notes.clone(),
         });
 
@@ -850,7 +855,7 @@ impl Spdx3Parser {
                                         justification: None,
                                         action_statement: None,
                                         impact_statement: None,
-                                        response: None,
+                                        responses: Vec::new(),
                                         detail: None,
                                     });
                                     if let Some(comp) = sbom.components.get_mut(canonical_id) {
@@ -860,7 +865,7 @@ impl Spdx3Parser {
                                             justification: None,
                                             action_statement: None,
                                             impact_statement: None,
-                                            response: None,
+                                            responses: Vec::new(),
                                             detail: None,
                                         });
                                     }

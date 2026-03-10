@@ -709,9 +709,15 @@ impl VulnerabilityChanges {
             }
         }
 
-        // Introduced vulns without VEX (gaps)
+        // Vulns without VEX (gaps) — both introduced and persistent are flagged
         let introduced_without_vex = self
             .introduced
+            .iter()
+            .filter(|v| v.vex_state.is_none())
+            .count();
+
+        let persistent_without_vex = self
+            .persistent
             .iter()
             .filter(|v| v.vex_state.is_none())
             .count();
@@ -728,6 +734,7 @@ impl VulnerabilityChanges {
             },
             by_state,
             introduced_without_vex,
+            persistent_without_vex,
         }
     }
 }
@@ -750,6 +757,8 @@ pub struct VexCoverageSummary {
     pub by_state: HashMap<crate::model::VexState, usize>,
     /// Introduced vulnerabilities without VEX (gaps requiring attention)
     pub introduced_without_vex: usize,
+    /// Persistent vulnerabilities without VEX (ongoing gaps)
+    pub persistent_without_vex: usize,
 }
 
 /// SLA status for vulnerability remediation tracking

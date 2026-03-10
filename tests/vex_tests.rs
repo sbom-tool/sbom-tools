@@ -250,6 +250,20 @@ mod vex_exit_codes {
     }
 
     #[test]
+    fn test_vex_summary_persistent_without_vex() {
+        let mut vulns = VulnerabilityChanges::default();
+        vulns.persistent.push(make_vuln("CVE-1", None));
+        vulns
+            .persistent
+            .push(make_vuln("CVE-2", Some(VexState::Affected)));
+        vulns.introduced.push(make_vuln("CVE-3", None));
+
+        let summary = vulns.vex_summary();
+        assert_eq!(summary.persistent_without_vex, 1); // CVE-1
+        assert_eq!(summary.introduced_without_vex, 1); // CVE-3
+    }
+
+    #[test]
     fn test_vex_gaps_found_exit_code_value() {
         assert_eq!(exit_codes::VEX_GAPS_FOUND, 4);
         assert_ne!(exit_codes::VEX_GAPS_FOUND, exit_codes::VULNS_INTRODUCED);
@@ -298,7 +312,7 @@ mod vex_model {
             justification: None,
             action_statement: None,
             impact_statement: Some("Not used in our code".to_string()),
-            response: None,
+            responses: Vec::new(),
             detail: None,
         };
         assert_eq!(status.status, VexState::NotAffected);

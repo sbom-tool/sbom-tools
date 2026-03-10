@@ -559,22 +559,28 @@ impl CycloneDxParser {
                 _ => VexJustification::ComponentNotPresent,
             });
 
-            let response = analysis.response.as_ref().and_then(|responses| {
-                responses.first().map(|r| match r.as_str() {
-                    "can_not_fix" => VexResponse::CanNotFix,
-                    "will_not_fix" => VexResponse::WillNotFix,
-                    "rollback" => VexResponse::Rollback,
-                    "workaround_available" => VexResponse::Workaround,
-                    _ => VexResponse::Update,
+            let responses: Vec<VexResponse> = analysis
+                .response
+                .as_ref()
+                .map(|rs| {
+                    rs.iter()
+                        .map(|r| match r.as_str() {
+                            "can_not_fix" => VexResponse::CanNotFix,
+                            "will_not_fix" => VexResponse::WillNotFix,
+                            "rollback" => VexResponse::Rollback,
+                            "workaround_available" => VexResponse::Workaround,
+                            _ => VexResponse::Update,
+                        })
+                        .collect()
                 })
-            });
+                .unwrap_or_default();
 
             VexStatus {
                 status,
                 justification,
                 action_statement: None,
                 impact_statement: analysis.detail.clone(),
-                response,
+                responses,
                 detail: analysis.detail.clone(),
             }
         });
