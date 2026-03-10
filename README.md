@@ -444,7 +444,7 @@ jobs:
         run: git show HEAD~1:sbom.json > /tmp/old-sbom.json
 
       - name: Diff SBOM
-        uses: sbom-tool/sbom-tools@v1
+        uses: sbom-tool/sbom-tools-action@v1
         with:
           command: diff
           args: /tmp/old-sbom.json sbom.json
@@ -465,7 +465,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Check quality
-        uses: sbom-tool/sbom-tools@v1
+        uses: sbom-tool/sbom-tools-action@v1
         with:
           command: quality
           args: sbom.json
@@ -478,7 +478,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Validate CRA compliance
-        uses: sbom-tool/sbom-tools@v1
+        uses: sbom-tool/sbom-tools-action@v1
         with:
           command: validate
           args: sbom.json
