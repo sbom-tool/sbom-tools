@@ -25,6 +25,9 @@ pub enum VexParseError {
 /// Top-level OpenVEX document.
 #[derive(Debug, Deserialize)]
 pub(crate) struct OpenVexDocument {
+    /// OpenVEX context URI (e.g., `https://openvex.dev/ns/v0.2.0`)
+    #[serde(rename = "@context", default)]
+    pub context: Option<String>,
     #[serde(default)]
     pub statements: Vec<VexStatement>,
 }
@@ -68,8 +71,27 @@ pub(crate) struct VexIdentifiers {
 // ============================================================================
 
 /// Parse an OpenVEX document from a JSON string.
+///
+/// Validates that the document has an OpenVEX `@context` field and non-empty
+/// statements with valid vulnerability names.
 pub(crate) fn parse_openvex(content: &str) -> Result<OpenVexDocument, VexParseError> {
     let doc: OpenVexDocument = serde_json::from_str(content)?;
+
+    // Validate @context to avoid misinterpreting non-VEX JSON
+    match doc.context.as_deref() {
+        Some(ctx) if ctx.contains("openvex.dev") => {}
+        Some(ctx) => {
+            return Err(VexParseError::InvalidDocument(format!(
+                "unrecognized @context: '{ctx}' (expected openvex.dev)"
+            )));
+        }
+        None => {
+            return Err(VexParseError::InvalidDocument(
+                "missing @context field (not an OpenVEX document)".to_string(),
+            ));
+        }
+    }
+
     if doc.statements.is_empty() {
         return Err(VexParseError::InvalidDocument(
             "OpenVEX document has no statements".to_string(),
@@ -143,6 +165,7 @@ mod tests {
     use super::*;
 
     const SAMPLE_VEX: &str = r#"{
+        "@context": "https://openvex.dev/ns/v0.2.0",
         "statements": [
             {
                 "vulnerability": { "name": "CVE-2021-44228", "aliases": ["GHSA-jfh8-c2jp-5v3q"] },
@@ -179,15 +202,33 @@ mod tests {
 
     #[test]
     fn test_parse_empty_statements() {
-        let result = parse_openvex(r#"{"statements": []}"#);
+        let result = parse_openvex(
+            r#"{"@context": "https://openvex.dev/ns/v0.2.0", "statements": []}"#,
+        );
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("no statements"),);
+        assert!(result.unwrap_err().to_string().contains("no statements"));
     }
 
     #[test]
     fn test_parse_invalid_json() {
         let result = parse_openvex("not json");
         assert!(matches!(result, Err(VexParseError::JsonError(_))));
+    }
+
+    #[test]
+    fn test_parse_rejects_missing_context() {
+        let result = parse_openvex(r#"{"statements": [{"vulnerability": {"name": "CVE-1"}, "status": "fixed"}]}"#);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("@context"));
+    }
+
+    #[test]
+    fn test_parse_rejects_wrong_context() {
+        let result = parse_openvex(
+            r#"{"@context": "https://example.com/not-vex", "statements": [{"vulnerability": {"name": "CVE-1"}, "status": "fixed"}]}"#,
+        );
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("unrecognized"));
     }
 
     #[test]

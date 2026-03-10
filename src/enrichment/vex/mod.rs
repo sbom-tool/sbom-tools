@@ -75,7 +75,14 @@ impl VexEnricher {
 
                 for stmt in &doc.statements {
                     statements_parsed += 1;
-                    let vuln_id = stmt.vulnerability.name.clone();
+                    let vuln_id = &stmt.vulnerability.name;
+
+                    // Skip statements with empty vulnerability names
+                    if vuln_id.is_empty() {
+                        tracing::warn!("skipping OpenVEX statement with empty vulnerability name");
+                        continue;
+                    }
+
                     let status = vex_status_from_statement(stmt);
 
                     if stmt.products.is_empty() {
@@ -86,14 +93,16 @@ impl VexEnricher {
                     } else {
                         for product in &stmt.products {
                             if let Some(purl) = extract_product_purl(product) {
-                                lookup.insert((vuln_id.clone(), purl.to_string()), status.clone());
+                                lookup
+                                    .insert((vuln_id.clone(), purl.to_string()), status.clone());
                                 for alias in &stmt.vulnerability.aliases {
                                     lookup
                                         .insert((alias.clone(), purl.to_string()), status.clone());
                                 }
-                            } else {
-                                vuln_only.insert(vuln_id.clone(), status.clone());
                             }
+                            // Products without PURLs are skipped — don't promote
+                            // scoped statements to global scope, as that could
+                            // apply VEX status to unintended components.
                         }
                     }
                 }

@@ -698,7 +698,7 @@ struct VexArgs {
     actionable_only: bool,
 
     /// Filter by VEX state (not_affected, affected, fixed, under_investigation, none)
-    #[arg(long)]
+    #[arg(long, value_parser = validate_vex_state)]
     state: Option<String>,
 
     /// Enable OSV vulnerability enrichment before VEX overlay
@@ -724,6 +724,18 @@ struct VexArgs {
     /// API timeout in seconds (default: 30)
     #[arg(long, default_value = "30")]
     api_timeout: u64,
+}
+
+/// Validate VEX state filter values at the CLI boundary.
+fn validate_vex_state(s: &str) -> std::result::Result<String, String> {
+    match s.to_lowercase().as_str() {
+        "not_affected" | "notaffected" | "affected" | "fixed" | "under_investigation"
+        | "underinvestigation" | "in_triage" | "none" | "missing" => Ok(s.to_string()),
+        _ => Err(format!(
+            "unknown VEX state: '{s}'. Valid values: \
+             not_affected, affected, fixed, under_investigation, none"
+        )),
+    }
 }
 
 fn main() -> Result<()> {
