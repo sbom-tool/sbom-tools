@@ -383,4 +383,42 @@ mod tests {
         // my-lib CVE-2024-0001 has no VEX and no lookup entry
         assert_eq!(stats.vulns_matched, 0);
     }
+
+    #[test]
+    fn test_scoped_match_takes_priority_over_vuln_only() {
+        let purl = "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1";
+
+        // Scoped says NotAffected
+        let mut lookup = HashMap::new();
+        lookup.insert(
+            ("CVE-2021-44228".to_string(), purl.to_string()),
+            VexStatus::new(VexState::NotAffected),
+        );
+
+        // vuln_only says Affected (less specific, should lose)
+        let mut vuln_only = HashMap::new();
+        vuln_only.insert(
+            "CVE-2021-44228".to_string(),
+            VexStatus::new(VexState::Affected),
+        );
+
+        let mut enricher = VexEnricher {
+            lookup,
+            vuln_only,
+            stats: VexEnrichmentStats::default(),
+        };
+
+        let mut sbom = make_sbom_with_vulns();
+        enricher.enrich_sbom(&mut sbom);
+
+        for comp in sbom.components.values() {
+            if comp.name == "log4j-core" {
+                assert_eq!(
+                    comp.vulnerabilities[0].vex_status.as_ref().unwrap().status,
+                    VexState::NotAffected,
+                    "scoped (vuln_id, purl) match should take priority over vuln_only"
+                );
+            }
+        }
+    }
 }

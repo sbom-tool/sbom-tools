@@ -175,6 +175,108 @@ mod vex_coverage_summary {
     }
 }
 
+#[cfg(feature = "enrichment")]
+mod vex_exit_codes {
+    use sbom_tools::diff::{VulnerabilityChanges, VulnerabilityDetail};
+    use sbom_tools::model::VexState;
+    use sbom_tools::pipeline::exit_codes;
+
+    /// Helper to create a minimal VulnerabilityDetail for testing.
+    fn make_vuln(id: &str, vex_state: Option<VexState>) -> VulnerabilityDetail {
+        VulnerabilityDetail {
+            id: id.to_string(),
+            source: String::new(),
+            severity: String::new(),
+            cvss_score: None,
+            component_id: String::new(),
+            component_canonical_id: None,
+            component_ref: None,
+            component_name: String::new(),
+            version: None,
+            cwes: Vec::new(),
+            description: None,
+            remediation: None,
+            is_kev: false,
+            component_depth: None,
+            published_date: None,
+            kev_due_date: None,
+            days_since_published: None,
+            days_until_due: None,
+            vex_state,
+            vex_justification: None,
+            vex_impact_statement: None,
+        }
+    }
+
+    #[test]
+    fn test_vex_summary_introduced_without_vex() {
+        let mut vulns = VulnerabilityChanges::default();
+        vulns.introduced.push(make_vuln("CVE-2024-0001", None));
+        vulns
+            .introduced
+            .push(make_vuln("CVE-2024-0002", Some(VexState::NotAffected)));
+
+        let summary = vulns.vex_summary();
+        assert_eq!(summary.total_vulns, 2);
+        assert_eq!(summary.with_vex, 1);
+        assert_eq!(summary.without_vex, 1);
+        assert_eq!(summary.introduced_without_vex, 1);
+        assert_eq!(summary.coverage_pct, 50.0);
+    }
+
+    #[test]
+    fn test_vex_summary_actionable_counts() {
+        let mut vulns = VulnerabilityChanges::default();
+        // NotAffected — not actionable
+        vulns
+            .persistent
+            .push(make_vuln("CVE-1", Some(VexState::NotAffected)));
+        // Fixed — not actionable
+        vulns
+            .resolved
+            .push(make_vuln("CVE-2", Some(VexState::Fixed)));
+        // Affected — actionable
+        vulns
+            .introduced
+            .push(make_vuln("CVE-3", Some(VexState::Affected)));
+        // No VEX — actionable
+        vulns.introduced.push(make_vuln("CVE-4", None));
+
+        let summary = vulns.vex_summary();
+        assert_eq!(summary.total_vulns, 4);
+        assert_eq!(summary.actionable, 2); // CVE-3 (Affected) + CVE-4 (None)
+        assert_eq!(summary.with_vex, 3);
+        assert_eq!(summary.introduced_without_vex, 1); // only CVE-4
+    }
+
+    #[test]
+    fn test_vex_gaps_found_exit_code_value() {
+        assert_eq!(exit_codes::VEX_GAPS_FOUND, 4);
+        assert_ne!(exit_codes::VEX_GAPS_FOUND, exit_codes::VULNS_INTRODUCED);
+        assert_ne!(exit_codes::VEX_GAPS_FOUND, exit_codes::CHANGES_DETECTED);
+        assert_ne!(exit_codes::VEX_GAPS_FOUND, exit_codes::ERROR);
+    }
+
+    #[test]
+    fn test_vex_summary_by_state_keys() {
+        let mut vulns = VulnerabilityChanges::default();
+        vulns
+            .introduced
+            .push(make_vuln("CVE-1", Some(VexState::Affected)));
+        vulns
+            .introduced
+            .push(make_vuln("CVE-2", Some(VexState::Affected)));
+        vulns
+            .resolved
+            .push(make_vuln("CVE-3", Some(VexState::Fixed)));
+
+        let summary = vulns.vex_summary();
+        assert_eq!(summary.by_state.get(&VexState::Affected), Some(&2));
+        assert_eq!(summary.by_state.get(&VexState::Fixed), Some(&1));
+        assert_eq!(summary.by_state.get(&VexState::NotAffected), None);
+    }
+}
+
 mod vex_model {
     use sbom_tools::model::{VexState, VexStatus};
 
