@@ -40,15 +40,37 @@ Semantic SBOM diff and analysis tool. Compare, validate, and assess the quality 
 
 ## Installation
 
+### Pre-built binaries
+
+Download from [GitHub Releases](https://github.com/sbom-tool/sbom-tools/releases/latest):
+
+```sh
+# Linux (x86_64)
+curl -sSL https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-tools-x86_64-unknown-linux-gnu.tar.gz | tar xz
+sudo mv sbom-tools /usr/local/bin/
+
+# macOS (Apple Silicon)
+curl -sSL https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-tools-aarch64-apple-darwin.tar.gz | tar xz
+sudo mv sbom-tools /usr/local/bin/
+
+# macOS (Intel)
+curl -sSL https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-tools-x86_64-apple-darwin.tar.gz | tar xz
+sudo mv sbom-tools /usr/local/bin/
+```
+
 ### From crates.io
 
 ```sh
+# Fast install (downloads pre-built binary)
+cargo binstall sbom-tools
+
+# Or compile from source
 cargo install sbom-tools
 ```
 
 ### Build from source
 
-Requires Rust 1.86+.
+Requires Rust 1.88+.
 
 ```sh
 # Release build (includes vulnerability enrichment by default)
@@ -419,7 +441,9 @@ jobs:
           fetch-depth: 2
 
       - name: Install sbom-tools
-        run: cargo install sbom-tools
+        run: |
+          curl -sSL https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-tools-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          sudo mv sbom-tools /usr/local/bin/
 
       - name: Diff SBOM against main
         run: |
@@ -445,6 +469,7 @@ jobs:
 | `1` | Changes detected (`--fail-on-change`) |
 | `2` | New vulnerabilities introduced (`--fail-on-vuln`) |
 | `3` | Error |
+| `4` | Introduced vulnerabilities lack VEX statements (`--fail-on-vex-gap`) |
 
 ## Configuration
 
