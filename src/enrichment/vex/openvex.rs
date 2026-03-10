@@ -5,7 +5,7 @@
 
 use crate::model::{VexJustification, VexState, VexStatus};
 use serde::Deserialize;
-use std::path::Path;
+
 
 /// Error type for VEX parsing operations.
 #[derive(Debug, thiserror::Error)]
@@ -76,12 +76,6 @@ pub(crate) fn parse_openvex(content: &str) -> Result<OpenVexDocument, VexParseEr
         ));
     }
     Ok(doc)
-}
-
-/// Parse an OpenVEX document from a file path.
-pub(crate) fn parse_openvex_file(path: &Path) -> Result<OpenVexDocument, VexParseError> {
-    let content = std::fs::read_to_string(path)?;
-    parse_openvex(&content)
 }
 
 /// Map an OpenVEX status string to internal `VexState`.

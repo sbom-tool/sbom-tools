@@ -8,6 +8,7 @@ mod multi;
 mod quality;
 mod query;
 mod validate;
+mod vex;
 mod view;
 mod watch;
 
@@ -16,6 +17,7 @@ pub use multi::{run_diff_multi, run_matrix, run_timeline};
 pub use quality::run_quality;
 pub use query::{QueryFilter, run_query};
 pub use validate::run_validate;
+pub use vex::{VexAction, run_vex};
 pub use view::run_view;
 pub use watch::run_watch;
 

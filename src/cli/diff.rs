@@ -147,9 +147,20 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
 }
 
 /// Determine the appropriate exit code based on diff results and config flags.
-const fn determine_exit_code(config: &DiffConfig, result: &crate::diff::DiffResult) -> i32 {
+fn determine_exit_code(config: &DiffConfig, result: &crate::diff::DiffResult) -> i32 {
     if config.behavior.fail_on_vuln && result.summary.vulnerabilities_introduced > 0 {
         return exit_codes::VULNS_INTRODUCED;
+    }
+    // Check for VEX gaps: introduced vulns without VEX statements
+    if config.filtering.fail_on_vex_gap {
+        let vex_summary = result.vulnerabilities.vex_summary();
+        if vex_summary.introduced_without_vex > 0 {
+            eprintln!(
+                "VEX gap: {} introduced vulnerability(ies) lack VEX statements",
+                vex_summary.introduced_without_vex
+            );
+            return exit_codes::VEX_GAPS_FOUND;
+        }
     }
     if config.behavior.fail_on_change && result.summary.total_changes > 0 {
         return exit_codes::CHANGES_DETECTED;

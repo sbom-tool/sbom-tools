@@ -684,6 +684,72 @@ impl VulnerabilityChanges {
             .filter(|v| v.severity == "Critical" || v.severity == "High")
             .collect()
     }
+
+    /// Compute VEX coverage summary across all vulnerability categories.
+    pub fn vex_summary(&self) -> VexCoverageSummary {
+        let all_vulns: Vec<&VulnerabilityDetail> = self
+            .introduced
+            .iter()
+            .chain(&self.resolved)
+            .chain(&self.persistent)
+            .collect();
+
+        let total = all_vulns.len();
+        let mut with_vex = 0;
+        let mut by_state: HashMap<crate::model::VexState, usize> = HashMap::with_capacity(4);
+        let mut actionable = 0;
+
+        for vuln in &all_vulns {
+            if let Some(ref state) = vuln.vex_state {
+                with_vex += 1;
+                *by_state.entry(state.clone()).or_insert(0) += 1;
+            }
+            if vuln.is_vex_actionable() {
+                actionable += 1;
+            }
+        }
+
+        // Introduced vulns without VEX (gaps)
+        let introduced_without_vex = self
+            .introduced
+            .iter()
+            .filter(|v| v.vex_state.is_none())
+            .count();
+
+        VexCoverageSummary {
+            total_vulns: total,
+            with_vex,
+            without_vex: total - with_vex,
+            actionable,
+            coverage_pct: if total > 0 {
+                (with_vex as f64 / total as f64) * 100.0
+            } else {
+                100.0
+            },
+            by_state,
+            introduced_without_vex,
+        }
+    }
+}
+
+/// VEX coverage summary for vulnerability changes.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[must_use]
+pub struct VexCoverageSummary {
+    /// Total vulnerabilities across all categories
+    pub total_vulns: usize,
+    /// Vulnerabilities with a VEX statement
+    pub with_vex: usize,
+    /// Vulnerabilities without a VEX statement
+    pub without_vex: usize,
+    /// Vulnerabilities that are VEX-actionable (no NotAffected/Fixed)
+    pub actionable: usize,
+    /// VEX coverage percentage (0.0-100.0)
+    pub coverage_pct: f64,
+    /// Breakdown by VEX state
+    pub by_state: HashMap<crate::model::VexState, usize>,
+    /// Introduced vulnerabilities without VEX (gaps requiring attention)
+    pub introduced_without_vex: usize,
 }
 
 /// SLA status for vulnerability remediation tracking

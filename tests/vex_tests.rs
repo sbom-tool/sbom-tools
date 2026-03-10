@@ -96,6 +96,85 @@ mod vex_diff_filter {
     }
 }
 
+#[cfg(feature = "enrichment")]
+mod vex_cyclonedx_format {
+    use super::*;
+    use sbom_tools::enrichment::VexEnricher;
+
+    #[test]
+    fn test_parse_cyclonedx_vex_document() {
+        let vex_path = fixture_path("vex/cyclonedx-vex-sample.json");
+        let enricher = VexEnricher::from_files(&[vex_path]).expect("Failed to parse CycloneDX VEX");
+        let stats = enricher.stats();
+        assert_eq!(stats.documents_loaded, 1);
+        assert_eq!(stats.statements_parsed, 4);
+    }
+
+    #[test]
+    fn test_cyclonedx_vex_enrichment() {
+        let sbom_path = fixture_path("demo-old.cdx.json");
+        let mut sbom = parse_sbom(&sbom_path).expect("Failed to parse SBOM");
+
+        let vex_path = fixture_path("vex/cyclonedx-vex-sample.json");
+        let mut enricher =
+            VexEnricher::from_files(&[vex_path]).expect("Failed to parse CycloneDX VEX");
+        let stats = enricher.enrich_sbom(&mut sbom);
+
+        assert_eq!(stats.documents_loaded, 1);
+        assert!(stats.statements_parsed > 0);
+    }
+
+    #[test]
+    fn test_mixed_vex_formats() {
+        // Load both OpenVEX and CycloneDX VEX in the same enricher
+        let openvex_path = fixture_path("vex/openvex-sample.json");
+        let cdx_vex_path = fixture_path("vex/cyclonedx-vex-sample.json");
+
+        let enricher = VexEnricher::from_files(&[openvex_path, cdx_vex_path])
+            .expect("Failed to parse mixed VEX");
+        let stats = enricher.stats();
+        assert_eq!(stats.documents_loaded, 2);
+        // OpenVEX: 4 statements + CycloneDX VEX: 4 statements
+        assert_eq!(stats.statements_parsed, 8);
+    }
+}
+
+#[cfg(feature = "enrichment")]
+mod vex_coverage_summary {
+    use super::*;
+    use sbom_tools::diff::DiffEngine;
+
+    #[test]
+    fn test_vex_summary_no_vex_data() {
+        let old_path = fixture_path("demo-old.cdx.json");
+        let new_path = fixture_path("demo-new.cdx.json");
+
+        let old_sbom = parse_sbom(&old_path).expect("Failed to parse old SBOM");
+        let new_sbom = parse_sbom(&new_path).expect("Failed to parse new SBOM");
+
+        let engine = DiffEngine::new();
+        let result = engine.diff(&old_sbom, &new_sbom).expect("Diff failed");
+        let vex_summary = result.vulnerabilities.vex_summary();
+
+        // Without VEX enrichment, no vulns should have VEX
+        assert_eq!(vex_summary.with_vex, 0);
+        // All vulns should be actionable (no VEX = actionable)
+        assert_eq!(vex_summary.actionable, vex_summary.total_vulns);
+        // If no vulns exist, coverage is 100% (nothing to cover)
+        if vex_summary.total_vulns > 0 {
+            assert_eq!(vex_summary.coverage_pct, 0.0);
+        }
+    }
+
+    #[test]
+    fn test_vex_summary_empty_vulns() {
+        let changes = sbom_tools::diff::VulnerabilityChanges::default();
+        let summary = changes.vex_summary();
+        assert_eq!(summary.total_vulns, 0);
+        assert_eq!(summary.coverage_pct, 100.0);
+    }
+}
+
 mod vex_model {
     use sbom_tools::model::{VexState, VexStatus};
 

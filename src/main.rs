@@ -50,6 +50,7 @@ const fn build_long_version() -> &'static str {
     1  Changes detected / no query matches
     2  Vulnerabilities introduced
     3  Error occurred
+    4  VEX gaps found (--fail-on-vex-gap)
 
 EXAMPLES:
     # Quick diff with auto-detected output
@@ -206,6 +207,10 @@ struct DiffArgs {
     /// Exclude vulnerabilities with VEX status `not_affected` or fixed
     #[arg(long, alias = "exclude-vex-not-affected")]
     exclude_vex_resolved: bool,
+
+    /// Exit with error if introduced vulnerabilities lack VEX statements (CI gate)
+    #[arg(long)]
+    fail_on_vex_gap: bool,
 
     /// Enable typosquat detection warnings
     #[arg(long)]
@@ -613,6 +618,12 @@ enum Commands {
     /// Search for components across multiple SBOMs
     Query(QueryArgs),
 
+    /// Standalone VEX (Vulnerability Exploitability eXchange) operations
+    Vex {
+        #[command(subcommand)]
+        action: VexAction,
+    },
+
     /// Continuously monitor SBOMs for file changes and new vulnerabilities
     Watch(WatchArgs),
 
@@ -649,6 +660,70 @@ enum ConfigAction {
     Path,
     /// Generate an example .sbom-tools.yaml in the current directory
     Init,
+}
+
+/// Sub-subcommands for the `vex` command
+#[derive(Subcommand)]
+enum VexAction {
+    /// Apply external VEX documents to an SBOM and output enriched vulnerability data
+    Apply(VexArgs),
+    /// Show VEX coverage summary (how many vulns have VEX statements)
+    Status(VexArgs),
+    /// Filter vulnerabilities by VEX state (for CI pipelines)
+    Filter(VexArgs),
+}
+
+/// Shared arguments for all VEX subcommands
+#[derive(Parser)]
+struct VexArgs {
+    /// Path to the SBOM file
+    sbom: PathBuf,
+
+    /// Apply external VEX document(s) (OpenVEX or CycloneDX VEX). Can be specified multiple times.
+    #[arg(long = "vex", value_name = "PATH")]
+    vex: Vec<PathBuf>,
+
+    /// Output format (json, summary, table)
+    #[arg(short, long, default_value = "auto")]
+    output: ReportFormat,
+
+    /// Output file path (stdout if not specified)
+    #[arg(short = 'O', long)]
+    output_file: Option<PathBuf>,
+
+    /// Only show actionable vulnerabilities (exclude NotAffected/Fixed).
+    /// For `filter`: exit code 1 if actionable vulns remain.
+    /// For `status`: exit code 1 if actionable vulns exist.
+    #[arg(long)]
+    actionable_only: bool,
+
+    /// Filter by VEX state (not_affected, affected, fixed, under_investigation, none)
+    #[arg(long)]
+    state: Option<String>,
+
+    /// Enable OSV vulnerability enrichment before VEX overlay
+    #[arg(long)]
+    enrich_vulns: bool,
+
+    /// Enable end-of-life detection
+    #[arg(long)]
+    enrich_eol: bool,
+
+    /// Cache directory for enrichment data
+    #[arg(long)]
+    vuln_cache_dir: Option<PathBuf>,
+
+    /// Cache TTL in hours (default: 24)
+    #[arg(long, default_value = "24")]
+    vuln_cache_ttl: u64,
+
+    /// Bypass cache and fetch fresh data
+    #[arg(long)]
+    refresh_vulns: bool,
+
+    /// API timeout in seconds (default: 30)
+    #[arg(long, default_value = "30")]
+    api_timeout: u64,
 }
 
 fn main() -> Result<()> {
@@ -705,6 +780,7 @@ fn main() -> Result<()> {
                     only_changes: args.only_changes,
                     min_severity: args.severity,
                     exclude_vex_resolved: args.exclude_vex_resolved,
+                    fail_on_vex_gap: args.fail_on_vex_gap,
                 },
                 behavior: BehaviorConfig {
                     fail_on_vuln: args.fail_on_vuln,
@@ -884,6 +960,43 @@ fn main() -> Result<()> {
             };
 
             cli::run_query(config, filter)
+        }
+
+        Commands::Vex { action } => {
+            let (args, cli_action) = match action {
+                VexAction::Apply(args) => (args, cli::VexAction::Apply),
+                VexAction::Status(args) => (args, cli::VexAction::Status),
+                VexAction::Filter(args) => (args, cli::VexAction::Filter),
+            };
+
+            let enrichment = EnrichmentConfig {
+                enabled: args.enrich_vulns,
+                provider: "osv".to_string(),
+                cache_ttl_hours: args.vuln_cache_ttl,
+                max_concurrent: 10,
+                cache_dir: args.vuln_cache_dir.or_else(|| Some(dirs::osv_cache_dir())),
+                bypass_cache: args.refresh_vulns,
+                timeout_secs: args.api_timeout,
+                enable_eol: args.enrich_eol,
+                vex_paths: Vec::new(), // VEX paths handled separately
+            };
+
+            let config = sbom_tools::config::VexConfig {
+                sbom_path: args.sbom,
+                vex_paths: args.vex,
+                output_format: args.output,
+                output_file: args.output_file,
+                quiet: cli.quiet,
+                actionable_only: args.actionable_only,
+                filter_state: args.state,
+                enrichment,
+            };
+
+            let exit_code = cli::run_vex(config, cli_action)?;
+            if exit_code != 0 {
+                std::process::exit(exit_code);
+            }
+            Ok(())
         }
 
         Commands::Watch(args) => {

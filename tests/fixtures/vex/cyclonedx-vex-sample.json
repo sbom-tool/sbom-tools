@@ -1,0 +1,47 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+  "version": 1,
+  "vulnerabilities": [
+    {
+      "id": "CVE-2021-44228",
+      "affects": [
+        { "ref": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1" }
+      ],
+      "analysis": {
+        "state": "not_affected",
+        "justification": "code_not_reachable",
+        "detail": "JNDI lookup is disabled in our deployment configuration"
+      }
+    },
+    {
+      "id": "CVE-2023-1234",
+      "affects": [
+        { "ref": "pkg:npm/lodash@4.17.20" }
+      ],
+      "analysis": {
+        "state": "affected",
+        "response": ["update"],
+        "detail": "Upgrade to lodash@4.17.21 to fix prototype pollution"
+      }
+    },
+    {
+      "id": "CVE-2024-5678",
+      "affects": [
+        { "ref": "pkg:pypi/requests@2.28.0" }
+      ],
+      "analysis": {
+        "state": "fixed",
+        "response": ["update"],
+        "detail": "Patched in v2.31.0"
+      }
+    },
+    {
+      "id": "CVE-2024-9999",
+      "analysis": {
+        "state": "in_triage"
+      }
+    }
+  ]
+}

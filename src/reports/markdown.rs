@@ -382,6 +382,28 @@ impl ReportGenerator for MarkdownReporter {
             }
         }
 
+        // VEX coverage summary (if any vulns have VEX data)
+        {
+            let vex_summary = result.vulnerabilities.vex_summary();
+            if (vex_summary.with_vex > 0 || vex_summary.without_vex > 0)
+                && vex_summary.total_vulns > 0
+            {
+                writeln!(md, "### VEX Coverage\n")?;
+                writeln!(md, "| Metric | Value |")?;
+                writeln!(md, "|--------|-------|")?;
+                writeln!(
+                    md,
+                    "| Coverage | {:.1}% ({}/{}) |",
+                    vex_summary.coverage_pct, vex_summary.with_vex, vex_summary.total_vulns
+                )?;
+                writeln!(md, "| Actionable | {} |", vex_summary.actionable)?;
+                for (state, count) in &vex_summary.by_state {
+                    writeln!(md, "| {state} | {count} |")?;
+                }
+                writeln!(md)?;
+            }
+        }
+
         // Graph changes section
         if let Some(ref summary) = result.graph_summary
             && summary.total_changes > 0

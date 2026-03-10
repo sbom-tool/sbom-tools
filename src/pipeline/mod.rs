@@ -52,6 +52,8 @@ pub mod exit_codes {
     pub const VULNS_INTRODUCED: i32 = 2;
     /// An error occurred
     pub const ERROR: i32 = 3;
+    /// Introduced vulnerabilities lack VEX statements (--fail-on-vex-gap)
+    pub const VEX_GAPS_FOUND: i32 = 4;
 }
 
 /// Platform-specific cache directory utilities
@@ -119,6 +121,7 @@ mod tests {
         assert_eq!(exit_codes::CHANGES_DETECTED, 1);
         assert_eq!(exit_codes::VULNS_INTRODUCED, 2);
         assert_eq!(exit_codes::ERROR, 3);
+        assert_eq!(exit_codes::VEX_GAPS_FOUND, 4);
     }
 
     #[test]

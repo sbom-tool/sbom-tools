@@ -351,6 +351,27 @@ pub struct MatrixConfig {
     pub cluster_threshold: f64,
 }
 
+/// Configuration for the `vex` subcommand.
+#[derive(Debug, Clone)]
+pub struct VexConfig {
+    /// Path to SBOM file
+    pub sbom_path: PathBuf,
+    /// Paths to external VEX documents
+    pub vex_paths: Vec<PathBuf>,
+    /// Output format
+    pub output_format: ReportFormat,
+    /// Output file path (None for stdout)
+    pub output_file: Option<PathBuf>,
+    /// Suppress non-essential output
+    pub quiet: bool,
+    /// Only show actionable vulnerabilities (exclude NotAffected/Fixed)
+    pub actionable_only: bool,
+    /// Filter by VEX state
+    pub filter_state: Option<String>,
+    /// Enrichment configuration (for OSV/EOL before VEX overlay)
+    pub enrichment: EnrichmentConfig,
+}
+
 // ============================================================================
 // Sub-configuration Types
 // ============================================================================
@@ -523,6 +544,8 @@ pub struct FilterConfig {
     /// Exclude vulnerabilities with VEX status `not_affected` or fixed
     #[serde(alias = "exclude_vex_not_affected")]
     pub exclude_vex_resolved: bool,
+    /// Exit with error if introduced vulnerabilities lack VEX statements
+    pub fail_on_vex_gap: bool,
 }
 
 /// Behavior flags for diff operations

@@ -161,6 +161,7 @@ impl AppConfig {
                 only_changes: true,
                 min_severity: None,
                 exclude_vex_resolved: false,
+                fail_on_vex_gap: false,
             },
             behavior: BehaviorConfig {
                 fail_on_vuln: true,

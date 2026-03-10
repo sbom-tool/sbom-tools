@@ -66,7 +66,7 @@ pub use result::{
     ChangeSet, ChangeType, ComponentChange, ComponentLicenseChange, ConfidenceInterval,
     DependencyChange, DependencyChangeType, DependencyGraphChange, DiffResult, DiffSummary,
     FieldChange, GraphChangeImpact, GraphChangeSummary, GraphChangesByImpact, LicenseChange,
-    LicenseChanges, LicenseConflict, MatchInfo, MatchScoreComponent, SlaStatus,
+    LicenseChanges, LicenseConflict, MatchInfo, MatchScoreComponent, SlaStatus, VexCoverageSummary,
     VulnerabilityChanges, VulnerabilityDetail,
 };
 pub use traits::{

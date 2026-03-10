@@ -57,7 +57,7 @@ pub use types::{
     AppConfig, AppConfigBuilder, BehaviorConfig, DiffConfig, DiffConfigBuilder, DiffPaths,
     EcosystemRulesConfig, EnrichmentConfig, FilterConfig, GraphAwareDiffConfig, MatchingConfig,
     MatchingRulesPathConfig, MatrixConfig, MultiDiffConfig, OutputConfig, QueryConfig,
-    StreamingConfig, TimelineConfig, TuiConfig, TuiPreferences, ViewConfig,
+    StreamingConfig, TimelineConfig, TuiConfig, TuiPreferences, VexConfig, ViewConfig,
 };
 pub use validation::{ConfigError, Validatable};
 
