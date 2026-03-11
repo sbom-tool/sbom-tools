@@ -8,7 +8,6 @@ use crate::model::{VexJustification, VexResponse, VexState, VexStatus};
 use serde::Deserialize;
 use std::collections::HashMap;
 
-
 use super::openvex::VexParseError;
 
 // ============================================================================

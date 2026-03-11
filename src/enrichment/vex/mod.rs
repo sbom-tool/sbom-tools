@@ -93,8 +93,7 @@ impl VexEnricher {
                     } else {
                         for product in &stmt.products {
                             if let Some(purl) = extract_product_purl(product) {
-                                lookup
-                                    .insert((vuln_id.clone(), purl.to_string()), status.clone());
+                                lookup.insert((vuln_id.clone(), purl.to_string()), status.clone());
                                 for alias in &stmt.vulnerability.aliases {
                                     lookup
                                         .insert((alias.clone(), purl.to_string()), status.clone());

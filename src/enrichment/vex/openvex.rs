@@ -6,7 +6,6 @@
 use crate::model::{VexJustification, VexState, VexStatus};
 use serde::Deserialize;
 
-
 /// Error type for VEX parsing operations.
 #[derive(Debug, thiserror::Error)]
 pub enum VexParseError {
@@ -202,9 +201,8 @@ mod tests {
 
     #[test]
     fn test_parse_empty_statements() {
-        let result = parse_openvex(
-            r#"{"@context": "https://openvex.dev/ns/v0.2.0", "statements": []}"#,
-        );
+        let result =
+            parse_openvex(r#"{"@context": "https://openvex.dev/ns/v0.2.0", "statements": []}"#);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("no statements"));
     }
@@ -217,7 +215,9 @@ mod tests {
 
     #[test]
     fn test_parse_rejects_missing_context() {
-        let result = parse_openvex(r#"{"statements": [{"vulnerability": {"name": "CVE-1"}, "status": "fixed"}]}"#);
+        let result = parse_openvex(
+            r#"{"statements": [{"vulnerability": {"name": "CVE-1"}, "status": "fixed"}]}"#,
+        );
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("@context"));
     }

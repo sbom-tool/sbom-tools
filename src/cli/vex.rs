@@ -91,8 +91,7 @@ fn run_vex_status(sbom: &NormalizedSbom, config: &VexConfig) -> Result<i32> {
     let with_vex = vulns.iter().filter(|v| v.vex_state.is_some()).count();
     let without_vex = total - with_vex;
 
-    let mut by_state: std::collections::BTreeMap<String, usize> =
-        std::collections::BTreeMap::new();
+    let mut by_state: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
     let mut actionable = 0;
 
     for v in &vulns {

@@ -729,8 +729,15 @@ struct VexArgs {
 /// Validate VEX state filter values at the CLI boundary.
 fn validate_vex_state(s: &str) -> std::result::Result<String, String> {
     match s.to_lowercase().as_str() {
-        "not_affected" | "notaffected" | "affected" | "fixed" | "under_investigation"
-        | "underinvestigation" | "in_triage" | "none" | "missing" => Ok(s.to_string()),
+        "not_affected"
+        | "notaffected"
+        | "affected"
+        | "fixed"
+        | "under_investigation"
+        | "underinvestigation"
+        | "in_triage"
+        | "none"
+        | "missing" => Ok(s.to_string()),
         _ => Err(format!(
             "unknown VEX state: '{s}'. Valid values: \
              not_affected, affected, fixed, under_investigation, none"
