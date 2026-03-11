@@ -37,11 +37,13 @@ pub fn render_source(frame: &mut Frame, area: Rect, app: &mut App) {
     let active = source.active_side;
     let sync_label = if source.is_synced() { " [sync]" } else { "" };
 
-    let (old_a, old_r, old_m) = SourceDiffState::annotation_counts(&source.old_panel);
-    let (new_a, new_r, new_m) = SourceDiffState::annotation_counts(&source.new_panel);
+    let (old_added, old_removed, old_modified) =
+        SourceDiffState::annotation_counts(&source.old_panel);
+    let (new_added, new_removed, new_modified) =
+        SourceDiffState::annotation_counts(&source.new_panel);
 
-    let old_badge = format_change_badge(old_a, old_r, old_m);
-    let new_badge = format_change_badge(new_a, new_r, new_m);
+    let old_badge = format_change_badge(old_added, old_removed, old_modified);
+    let new_badge = format_change_badge(new_added, new_removed, new_modified);
 
     let old_title = format!("Old SBOM{sync_label}{old_badge}");
     let new_title = format!("New SBOM{sync_label}{new_badge}");
