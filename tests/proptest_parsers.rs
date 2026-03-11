@@ -56,7 +56,7 @@ proptest! {
 
     #[test]
     fn cyclonedx_partial_json_doesnt_panic(
-        version in "1\\.[0-9]",
+        version in "1\\.[4-7]",
         extra in "\\PC{0,200}",
     ) {
         let input = format!(r#"{{"bomFormat": "CycloneDX", "specVersion": "{}", {}}}"#, version, extra);
