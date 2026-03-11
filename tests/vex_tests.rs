@@ -47,6 +47,9 @@ mod vex_enrichment {
         assert!(result.is_some());
         let stats = result.unwrap();
         assert_eq!(stats.documents_loaded, 1);
+        // Ensure that VEX enrichment actually applied statements.
+        assert!(stats.statements_parsed > 0);
+        assert!(stats.components_with_vex > 0);
     }
 
     #[test]
