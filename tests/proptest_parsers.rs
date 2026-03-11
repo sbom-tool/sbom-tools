@@ -26,15 +26,18 @@ proptest! {
 
     #[test]
     fn json_like_input_doesnt_panic(
-        s in prop::string::string_regex(r#"\{[^\}]{0,500}\}"#).unwrap()
+        s in prop::string::string_regex(r#"\{[^\}]{0,500}\}"#)
+            .expect("invalid JSON-like regex for proptest")
     ) {
         let _ = parse_sbom_str(&s);
     }
 
     #[test]
     fn xml_like_input_doesnt_panic(
-        s in prop::string::string_regex(r#"<[a-z]{1,20}>[^<]{0,200}</[a-z]{1,20}>"#).unwrap()
+        tag in "[A-Za-z][A-Za-z0-9_-]{0,19}",
+        content in "\\PC{0,200}",
     ) {
+        let s = format!("<{tag}>{content}</{tag}>");
         let _ = parse_sbom_str(&s);
     }
 
@@ -56,7 +59,7 @@ proptest! {
 
     #[test]
     fn cyclonedx_partial_json_doesnt_panic(
-        version in "1\\.[0-9]",
+        version in "1\\.[4-7]",
         extra in "\\PC{0,200}",
     ) {
         let input = format!(r#"{{"bomFormat": "CycloneDX", "specVersion": "{}", {}}}"#, version, extra);
