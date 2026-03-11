@@ -33,8 +33,10 @@ proptest! {
 
     #[test]
     fn xml_like_input_doesnt_panic(
-        s in prop::string::string_regex(r#"<[a-z]{1,20}>[^<]{0,200}</[a-z]{1,20}>"#).unwrap()
+        tag in "[A-Za-z][A-Za-z0-9_-]{0,19}",
+        content in "\\PC{0,200}",
     ) {
+        let s = format!("<{tag}>{content}</{tag}>");
         let _ = parse_sbom_str(&s);
     }
 
