@@ -26,7 +26,8 @@ proptest! {
 
     #[test]
     fn json_like_input_doesnt_panic(
-        s in prop::string::string_regex(r#"\{[^\}]{0,500}\}"#).unwrap()
+        s in prop::string::string_regex(r#"\{[^\}]{0,500}\}"#)
+            .expect("invalid JSON-like regex for proptest")
     ) {
         let _ = parse_sbom_str(&s);
     }
