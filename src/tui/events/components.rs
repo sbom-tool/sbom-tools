@@ -1,73 +1,47 @@
 //! Components tab event handlers.
 
+use crate::tui::traits::{EventResult, ViewContext, ViewMode, ViewState};
 use crate::tui::{App, AppMode};
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent};
 
 pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
+    let Some(view) = app.components_view.as_mut() else {
+        return;
+    };
+
+    // Pre-sync: tabs → view
+    view.sync_from(&app.tabs.components);
+
+    let mut ctx = ViewContext {
+        mode: ViewMode::from_app_mode(app.mode),
+        focused: true,
+        width: 0,
+        height: 0,
+        tick: app.tick,
+        status_message: &mut app.status_message,
+    };
+
+    let result = view.handle_key(key, &mut ctx);
+
+    // Post-sync: view → tabs
+    view.sync_to(&mut app.tabs.components);
+
+    match result {
+        EventResult::StatusMessage(msg) => {
+            app.status_message = Some(msg);
+        }
+        EventResult::Ignored => {
+            // Handle data-dependent keys that the ViewState can't process
+            handle_data_dependent_keys(app, key);
+        }
+        _ => {}
+    }
+}
+
+/// Handle keys that need access to App data (clipboard, browser, security cache).
+fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
     match key.code {
-        KeyCode::Char('f') => {
-            if matches!(app.mode, AppMode::View) {
-                app.tabs.components.toggle_view_filter();
-            } else {
-                app.tabs.components.toggle_filter();
-            }
-        }
-        KeyCode::Char('s') => app.tabs.components.toggle_sort(),
-        KeyCode::Char('v') => app.tabs.components.toggle_multi_select_mode(),
-        KeyCode::Char('p') | KeyCode::Tab => app.tabs.components.toggle_focus(),
-        KeyCode::Char(' ') if app.tabs.components.multi_select_mode => {
-            app.tabs.components.toggle_current_selection();
-        }
-        KeyCode::Char('a') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            app.tabs.components.select_all();
-        }
-        KeyCode::Char('A') => {
-            app.tabs.components.select_all();
-        }
-        KeyCode::Esc if app.tabs.components.multi_select_mode => {
-            app.tabs.components.toggle_multi_select_mode();
-        }
-        // Quick filter toggles (1-8)
-        KeyCode::Char('1') => {
-            app.tabs.components.security_filter.toggle_by_index(0);
-            app.set_status_message(app.tabs.components.security_filter.summary());
-        }
-        KeyCode::Char('2') => {
-            app.tabs.components.security_filter.toggle_by_index(1);
-            app.set_status_message(app.tabs.components.security_filter.summary());
-        }
-        KeyCode::Char('3') => {
-            app.tabs.components.security_filter.toggle_by_index(2);
-            app.set_status_message(app.tabs.components.security_filter.summary());
-        }
-        KeyCode::Char('4') => {
-            app.tabs.components.security_filter.toggle_by_index(3);
-            app.set_status_message(app.tabs.components.security_filter.summary());
-        }
-        KeyCode::Char('5') => {
-            app.tabs.components.security_filter.toggle_by_index(4);
-            app.set_status_message(app.tabs.components.security_filter.summary());
-        }
-        KeyCode::Char('6') => {
-            app.tabs.components.security_filter.toggle_by_index(5);
-            app.set_status_message(app.tabs.components.security_filter.summary());
-        }
-        KeyCode::Char('7') => {
-            app.tabs.components.security_filter.toggle_by_index(6);
-            app.set_status_message(app.tabs.components.security_filter.summary());
-        }
-        KeyCode::Char('8') => {
-            app.tabs.components.security_filter.toggle_by_index(7);
-            app.set_status_message(app.tabs.components.security_filter.summary());
-        }
-        KeyCode::Char('0') => {
-            // Clear all quick filters
-            app.tabs.components.security_filter.clear_all();
-            app.set_status_message("All filters cleared");
-        }
-        // Quick actions for security analysis
         KeyCode::Char('y') => {
-            // Copy component info to clipboard
             if let Some(comp_name) = get_components_tab_selected_name(app) {
                 let info = get_components_tab_clipboard_info(app, &comp_name);
                 if crate::tui::security::copy_to_clipboard(&info).is_ok() {
@@ -78,7 +52,6 @@ pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Char('F') => {
-            // Flag component for follow-up
             if let Some(comp_name) = get_components_tab_selected_name(app) {
                 let was_flagged = app.security_cache.is_flagged(&comp_name);
                 app.security_cache
@@ -91,7 +64,6 @@ pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Char('o') => {
-            // Open first vulnerability CVE in browser
             if let Some(vuln_id) = get_components_tab_selected_vuln(app) {
                 let url = crate::tui::security::cve_url(&vuln_id);
                 if crate::tui::security::open_in_browser(&url).is_ok() {
@@ -104,10 +76,8 @@ pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Char('n') => {
-            // Add/cycle analyst note for flagged components
             if let Some(comp_name) = get_components_tab_selected_name(app) {
                 if app.security_cache.is_flagged(&comp_name) {
-                    // Cycle through preset notes
                     let preset_notes = [
                         "Needs investigation",
                         "Potential supply chain risk",
@@ -119,12 +89,10 @@ pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
                     let next_note = match current_note {
                         None => preset_notes[0],
                         Some(note) => {
-                            // Find current note and get next
                             let idx = preset_notes.iter().position(|&n| n == note);
                             match idx {
                                 Some(i) if i + 1 < preset_notes.len() => preset_notes[i + 1],
                                 _ => {
-                                    // Clear note after cycling through all
                                     app.security_cache.add_note(&comp_name, "");
                                     app.status_message = Some("Note cleared".to_string());
                                     return;

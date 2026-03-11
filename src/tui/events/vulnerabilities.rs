@@ -2,24 +2,47 @@
 
 use crate::tui::App;
 use crate::tui::app::AppMode;
+use crate::tui::traits::{EventResult, ViewContext, ViewMode, ViewState};
 use crossterm::event::{KeyCode, KeyEvent};
 
 pub(super) fn handle_vulnerabilities_keys(app: &mut App, key: KeyEvent) {
-    match key.code {
-        KeyCode::Char('f') => app.tabs.vulnerabilities.toggle_filter(),
-        KeyCode::Char('s') => app.tabs.vulnerabilities.toggle_sort(),
-        KeyCode::Char('g') => {
-            // Toggle grouped mode
-            app.tabs.vulnerabilities.toggle_grouped_mode();
-            let mode = if app.tabs.vulnerabilities.group_by_component {
-                "grouped"
-            } else {
-                "list"
-            };
-            app.set_status_message(format!("Vulnerabilities: {mode} view"));
+    let Some(view) = app.vulnerabilities_view.as_mut() else {
+        return;
+    };
+
+    // Pre-sync: tabs → view
+    view.sync_from(&app.tabs.vulnerabilities);
+
+    let mut ctx = ViewContext {
+        mode: ViewMode::from_app_mode(app.mode),
+        focused: true,
+        width: 0,
+        height: 0,
+        tick: app.tick,
+        status_message: &mut app.status_message,
+    };
+
+    let result = view.handle_key(key, &mut ctx);
+
+    // Post-sync: view → tabs
+    view.sync_to(&mut app.tabs.vulnerabilities);
+
+    match result {
+        EventResult::StatusMessage(msg) => {
+            app.status_message = Some(msg);
         }
+        EventResult::Ignored => {
+            // Handle data-dependent keys
+            handle_data_dependent_keys(app, key);
+        }
+        _ => {}
+    }
+}
+
+/// Handle keys that need access to App data.
+fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
+    match key.code {
         KeyCode::Char('E') => {
-            // Expand all groups (in grouped mode)
             if app.tabs.vulnerabilities.group_by_component {
                 let group_names = collect_all_group_names(app);
                 app.tabs.vulnerabilities.expand_all_groups(&group_names);
@@ -27,7 +50,6 @@ pub(super) fn handle_vulnerabilities_keys(app: &mut App, key: KeyEvent) {
             }
         }
         KeyCode::Char('C') => {
-            // Collapse all groups (in grouped mode)
             if app.tabs.vulnerabilities.group_by_component {
                 app.tabs.vulnerabilities.collapse_all_groups();
                 app.set_status_message("All groups collapsed");
@@ -64,7 +86,6 @@ fn handle_flat_enter(app: &mut App) {
 fn handle_grouped_enter(app: &mut App) {
     let selected = app.tabs.vulnerabilities.selected;
 
-    // Build the same grouped render items to determine what's at the selected index
     let item_info = resolve_grouped_selection(app, selected);
 
     match item_info {
@@ -91,7 +112,6 @@ fn resolve_grouped_selection(app: &mut App, selected: usize) -> GroupedSelection
             app.ensure_vulnerability_cache();
             let items = app.diff_vulnerability_items_from_cache();
 
-            // Group by component name, same order as render
             let mut groups: Vec<(String, Vec<usize>)> = Vec::new();
             let mut group_map: std::collections::HashMap<String, usize> =
                 std::collections::HashMap::new();
@@ -107,24 +127,24 @@ fn resolve_grouped_selection(app: &mut App, selected: usize) -> GroupedSelection
                 }
             }
 
-            // Sort groups by max severity
             groups.sort_by(|a, b| {
-                let max_a =
-                    a.1.iter()
-                        .filter_map(|&i| items.get(i))
-                        .map(|it| severity_rank(&it.vuln.severity))
-                        .min()
-                        .unwrap_or(99);
-                let max_b =
-                    b.1.iter()
-                        .filter_map(|&i| items.get(i))
-                        .map(|it| severity_rank(&it.vuln.severity))
-                        .min()
-                        .unwrap_or(99);
+                let max_a = a
+                    .1
+                    .iter()
+                    .filter_map(|&i| items.get(i))
+                    .map(|it| severity_rank(&it.vuln.severity))
+                    .min()
+                    .unwrap_or(99);
+                let max_b = b
+                    .1
+                    .iter()
+                    .filter_map(|&i| items.get(i))
+                    .map(|it| severity_rank(&it.vuln.severity))
+                    .min()
+                    .unwrap_or(99);
                 max_a.cmp(&max_b)
             });
 
-            // Walk the grouped items to find what's at `selected`
             let mut pos = 0;
             for (comp_name, vuln_indices) in &groups {
                 if pos == selected {
@@ -150,7 +170,6 @@ fn resolve_grouped_selection(app: &mut App, selected: usize) -> GroupedSelection
             GroupedSelection::None
         }
         AppMode::View => {
-            // For view mode, we need sbom data
             let Some(sbom) = app.data.sbom.as_ref() else {
                 return GroupedSelection::None;
             };
@@ -172,34 +191,36 @@ fn resolve_grouped_selection(app: &mut App, selected: usize) -> GroupedSelection
             }
 
             groups.sort_by(|a, b| {
-                let max_a =
-                    a.1.iter()
-                        .filter_map(|&i| vulns.get(i))
-                        .map(|it| {
-                            severity_rank(
-                                &it.1
-                                    .severity
-                                    .as_ref()
-                                    .map(std::string::ToString::to_string)
-                                    .unwrap_or_default(),
-                            )
-                        })
-                        .min()
-                        .unwrap_or(99);
-                let max_b =
-                    b.1.iter()
-                        .filter_map(|&i| vulns.get(i))
-                        .map(|it| {
-                            severity_rank(
-                                &it.1
-                                    .severity
-                                    .as_ref()
-                                    .map(std::string::ToString::to_string)
-                                    .unwrap_or_default(),
-                            )
-                        })
-                        .min()
-                        .unwrap_or(99);
+                let max_a = a
+                    .1
+                    .iter()
+                    .filter_map(|&i| vulns.get(i))
+                    .map(|it| {
+                        severity_rank(
+                            &it.1
+                                .severity
+                                .as_ref()
+                                .map(std::string::ToString::to_string)
+                                .unwrap_or_default(),
+                        )
+                    })
+                    .min()
+                    .unwrap_or(99);
+                let max_b = b
+                    .1
+                    .iter()
+                    .filter_map(|&i| vulns.get(i))
+                    .map(|it| {
+                        severity_rank(
+                            &it.1
+                                .severity
+                                .as_ref()
+                                .map(std::string::ToString::to_string)
+                                .unwrap_or_default(),
+                        )
+                    })
+                    .min()
+                    .unwrap_or(99);
                 max_a.cmp(&max_b)
             });
 

@@ -222,12 +222,23 @@ pub struct App {
     pub(crate) compliance_state: crate::tui::app_states::PolicyComplianceState,
     /// Optional export filename template (from `--export-template` CLI arg).
     pub(crate) export_template: Option<String>,
-    /// Quality tab `ViewState` implementation (proof of concept).
-    ///
-    /// When present, quality tab key events are dispatched through this
-    /// `ViewState` instead of the direct handler. State is synced back to
-    /// `tabs.quality` after each event for rendering compatibility.
+    // ========================================================================
+    // ViewState implementations
+    // ========================================================================
+    // Each view handles its own key events via the ViewState trait.
+    // State is synced back to `tabs.*` after each event for rendering.
+
+    #[allow(dead_code)] // Will be used in Phase 4 (render trait)
+    pub(crate) summary_view: Option<crate::tui::view_states::SummaryView>,
+    pub(crate) components_view: Option<crate::tui::view_states::ComponentsView>,
+    pub(crate) dependencies_view: Option<crate::tui::view_states::DependenciesView>,
+    pub(crate) licenses_view: Option<crate::tui::view_states::LicensesView>,
+    pub(crate) vulnerabilities_view: Option<crate::tui::view_states::VulnerabilitiesView>,
     pub(crate) quality_view: Option<crate::tui::view_states::QualityView>,
+    pub(crate) compliance_view: Option<crate::tui::view_states::ComplianceView>,
+    pub(crate) sidebyside_view: Option<crate::tui::view_states::SideBySideView>,
+    pub(crate) graph_changes_view: Option<crate::tui::view_states::GraphChangesView>,
+    pub(crate) source_view: Option<crate::tui::view_states::SourceView>,
 }
 
 impl App {

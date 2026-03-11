@@ -69,7 +69,16 @@ impl App {
             security_cache: crate::tui::security::SecurityAnalysisCache::new(),
             compliance_state: crate::tui::app_states::PolicyComplianceState::new(),
             export_template: None,
+            summary_view: Some(crate::tui::view_states::SummaryView::new()),
+            components_view: Some(crate::tui::view_states::ComponentsView::new()),
+            dependencies_view: Some(crate::tui::view_states::DependenciesView::new()),
+            licenses_view: Some(crate::tui::view_states::LicensesView::new()),
+            vulnerabilities_view: Some(crate::tui::view_states::VulnerabilitiesView::new()),
             quality_view: Some(crate::tui::view_states::QualityView::new()),
+            compliance_view: Some(crate::tui::view_states::ComplianceView::new()),
+            sidebyside_view: Some(crate::tui::view_states::SideBySideView::new()),
+            graph_changes_view: Some(crate::tui::view_states::GraphChangesView::new()),
+            source_view: Some(crate::tui::view_states::SourceView::new()),
         }
     }
 
