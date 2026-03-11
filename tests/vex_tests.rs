@@ -67,7 +67,12 @@ mod vex_enrichment {
         let enricher =
             VexEnricher::from_files(&[vex_path.clone(), vex_path]).expect("Failed to parse VEX");
         let stats = enricher.stats();
+        // Loading the same VEX file twice should result in two documents loaded
+        // and a statements_parsed count that reflects both documents.
         assert_eq!(stats.documents_loaded, 2);
+        // The sample fixture has 4 statements (see test_vex_enrichment_stats_tracking),
+        // so loading it twice should yield 8 parsed statements.
+        assert_eq!(stats.statements_parsed, 8);
     }
 }
 
