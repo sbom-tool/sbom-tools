@@ -54,6 +54,8 @@ pub mod exit_codes {
     pub const ERROR: i32 = 3;
     /// Introduced vulnerabilities lack VEX statements (--fail-on-vex-gap)
     pub const VEX_GAPS_FOUND: i32 = 4;
+    /// License policy violations found
+    pub const LICENSE_VIOLATIONS: i32 = 5;
 }
 
 /// Platform-specific cache directory utilities

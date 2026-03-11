@@ -51,6 +51,7 @@ const fn build_long_version() -> &'static str {
     2  Vulnerabilities introduced
     3  Error occurred
     4  VEX gaps found (--fail-on-vex-gap)
+    5  License policy violations found
 
 EXAMPLES:
     # Quick diff with auto-detected output
@@ -647,6 +648,25 @@ enum Commands {
         action: ConfigAction,
     },
 
+    /// Verify SBOM integrity
+    Verify {
+        #[command(subcommand)]
+        action: VerifyAction,
+    },
+
+    /// Check license policy compliance
+    LicenseCheck(LicenseCheckArgs),
+
+    /// Enrich an SBOM with vulnerability and EOL data
+    #[cfg(feature = "enrichment")]
+    Enrich(EnrichArgs),
+
+    /// Tailor (filter) an SBOM by removing unwanted components
+    Tailor(TailorArgs),
+
+    /// Merge two SBOMs into one
+    Merge(MergeArgs),
+
     /// Generate a man page and print it to stdout
     Man,
 }
@@ -724,6 +744,142 @@ struct VexArgs {
     /// API timeout in seconds (default: 30)
     #[arg(long, default_value = "30")]
     api_timeout: u64,
+}
+
+/// Sub-subcommands for the `verify` command
+#[derive(Subcommand)]
+enum VerifyAction {
+    /// Verify file integrity against a hash value
+    Hash {
+        /// SBOM file to verify
+        file: PathBuf,
+        /// Expected hash (sha256:<hex>, sha512:<hex>, or bare hex)
+        #[arg(long)]
+        expected: Option<String>,
+        /// Read expected hash from a file (e.g., sbom.json.sha256)
+        #[arg(long, conflicts_with = "expected")]
+        hash_file: Option<PathBuf>,
+    },
+    /// Audit component hashes within an SBOM
+    AuditHashes {
+        /// SBOM file to audit
+        file: PathBuf,
+        /// Output format (table or json)
+        #[arg(short, long, default_value = "table")]
+        format: String,
+    },
+}
+
+/// Arguments for the `license-check` subcommand
+#[derive(Parser)]
+struct LicenseCheckArgs {
+    /// SBOM file to check
+    file: PathBuf,
+
+    /// Path to license policy config file (JSON)
+    #[arg(long)]
+    policy: Option<PathBuf>,
+
+    /// Check license propagation through dependency tree
+    #[arg(long)]
+    check_propagation: bool,
+
+    /// Use strict permissive-only policy (default is permissive)
+    #[arg(long)]
+    strict: bool,
+
+    /// Output format (table or json)
+    #[arg(short, long, default_value = "table")]
+    format: String,
+}
+
+/// Arguments for the `enrich` subcommand
+#[cfg(feature = "enrichment")]
+#[derive(Parser)]
+struct EnrichArgs {
+    /// SBOM file to enrich
+    file: PathBuf,
+
+    /// Output file (stdout if not specified)
+    #[arg(short = 'O', long)]
+    output_file: Option<PathBuf>,
+
+    /// Enable OSV vulnerability enrichment
+    #[arg(long)]
+    enrich_vulns: bool,
+
+    /// Enable end-of-life detection
+    #[arg(long)]
+    enrich_eol: bool,
+
+    /// Apply VEX document(s)
+    #[arg(long = "vex", value_name = "PATH")]
+    vex: Vec<PathBuf>,
+
+    /// Cache directory for enrichment data
+    #[arg(long)]
+    cache_dir: Option<PathBuf>,
+
+    /// Cache TTL in hours (default: 24)
+    #[arg(long, default_value = "24")]
+    cache_ttl: u64,
+
+    /// Bypass cache and fetch fresh data
+    #[arg(long)]
+    refresh: bool,
+
+    /// API timeout in seconds (default: 30)
+    #[arg(long, default_value = "30")]
+    api_timeout: u64,
+}
+
+/// Arguments for the `tailor` subcommand
+#[derive(Parser)]
+struct TailorArgs {
+    /// SBOM file to tailor
+    file: PathBuf,
+
+    /// Output file (stdout if not specified)
+    #[arg(short = 'O', long)]
+    output_file: Option<PathBuf>,
+
+    /// Include only components matching this name pattern
+    #[arg(long)]
+    include_name: Option<String>,
+
+    /// Include only these component types (comma-separated)
+    #[arg(long)]
+    include_types: Option<String>,
+
+    /// Exclude these ecosystems (comma-separated)
+    #[arg(long)]
+    exclude_ecosystems: Option<String>,
+
+    /// Strip vulnerability data from output
+    #[arg(long)]
+    strip_vulns: bool,
+
+    /// Strip extension/property data
+    #[arg(long)]
+    strip_extensions: bool,
+}
+
+/// Arguments for the `merge` subcommand
+#[derive(Parser)]
+struct MergeArgs {
+    /// Primary SBOM (provides document metadata)
+    primary: PathBuf,
+
+    /// Secondary SBOM to merge into primary
+    secondary: PathBuf,
+
+    /// Output file (stdout if not specified)
+    #[arg(short = 'O', long)]
+    output_file: Option<PathBuf>,
+
+    /// Deduplication strategy (name, purl, none)
+    #[arg(long, default_value = "name")]
+    dedup: String,
 }
 
 /// Validate VEX state filter values at the CLI boundary.
@@ -1135,6 +1291,112 @@ fn main() -> Result<()> {
                 Ok(())
             }
         },
+
+        Commands::Verify { action } => {
+            let cli_action = match action {
+                VerifyAction::Hash {
+                    file,
+                    expected,
+                    hash_file,
+                } => cli::VerifyAction::Hash {
+                    file,
+                    expected,
+                    hash_file,
+                },
+                VerifyAction::AuditHashes { file, format } => {
+                    cli::VerifyAction::AuditHashes { file, format }
+                }
+            };
+
+            let exit_code = cli::run_verify(cli_action, cli.quiet)?;
+            if exit_code != 0 {
+                std::process::exit(exit_code);
+            }
+            Ok(())
+        }
+
+        Commands::LicenseCheck(args) => {
+            let exit_code = cli::run_license_check(
+                &args.file,
+                args.policy.as_ref(),
+                args.check_propagation,
+                args.strict,
+                &args.format,
+                cli.quiet,
+            )?;
+            if exit_code != 0 {
+                std::process::exit(exit_code);
+            }
+            Ok(())
+        }
+
+        #[cfg(feature = "enrichment")]
+        Commands::Enrich(args) => {
+            let enrichment = EnrichmentConfig {
+                enabled: args.enrich_vulns,
+                provider: "osv".to_string(),
+                cache_ttl_hours: args.cache_ttl,
+                max_concurrent: 10,
+                cache_dir: args.cache_dir.or_else(|| Some(dirs::osv_cache_dir())),
+                bypass_cache: args.refresh,
+                timeout_secs: args.api_timeout,
+                enable_eol: args.enrich_eol,
+                vex_paths: args.vex,
+            };
+
+            let exit_code =
+                cli::run_enrich(&args.file, args.output_file.as_ref(), enrichment, cli.quiet)?;
+            if exit_code != 0 {
+                std::process::exit(exit_code);
+            }
+            Ok(())
+        }
+
+        Commands::Tailor(args) => {
+            let config = sbom_tools::serialization::TailorConfig {
+                include_name_pattern: args.include_name,
+                include_types: args
+                    .include_types
+                    .map(|s| s.split(',').map(|t| t.trim().to_string()).collect())
+                    .unwrap_or_default(),
+                exclude_ecosystems: args
+                    .exclude_ecosystems
+                    .map(|s| s.split(',').map(|e| e.trim().to_string()).collect())
+                    .unwrap_or_default(),
+                strip_vulns: args.strip_vulns,
+                strip_extensions: args.strip_extensions,
+                ..Default::default()
+            };
+
+            let exit_code =
+                cli::run_tailor(&args.file, args.output_file.as_ref(), config, cli.quiet)?;
+            if exit_code != 0 {
+                std::process::exit(exit_code);
+            }
+            Ok(())
+        }
+
+        Commands::Merge(args) => {
+            let dedup_strategy = match args.dedup.to_lowercase().as_str() {
+                "purl" => sbom_tools::serialization::DeduplicationStrategy::Purl,
+                "none" => sbom_tools::serialization::DeduplicationStrategy::None,
+                _ => sbom_tools::serialization::DeduplicationStrategy::Name,
+            };
+
+            let config = sbom_tools::serialization::MergeConfig { dedup_strategy };
+
+            let exit_code = cli::run_merge(
+                &args.primary,
+                &args.secondary,
+                args.output_file.as_ref(),
+                config,
+                cli.quiet,
+            )?;
+            if exit_code != 0 {
+                std::process::exit(exit_code);
+            }
+            Ok(())
+        }
 
         Commands::Man => {
             let cmd = Cli::command();

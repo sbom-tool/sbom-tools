@@ -220,14 +220,17 @@ pub mod diff;
 #[cfg(feature = "enrichment")]
 pub mod enrichment;
 pub mod error;
+pub mod license;
 pub mod matching;
 pub mod model;
 pub mod parsers;
 pub mod pipeline;
 pub mod quality;
 pub mod reports;
+pub mod serialization;
 pub mod tui;
 pub mod utils;
+pub mod verification;
 pub mod watch;
 
 // Re-export main types for convenience
