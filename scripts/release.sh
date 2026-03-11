@@ -115,7 +115,7 @@ echo "    PR #$PR_NUMBER: $PR_URL"
 
 echo "==> Waiting for CI checks to start..."
 for i in $(seq 1 30); do
-    if gh pr checks "$PR_NUMBER" --json name --jq '.[0].name' &>/dev/null 2>&1; then
+    if gh pr checks "$PR_NUMBER" --json name --jq '.[0].name' &>/dev/null; then
         break
     fi
     sleep 2
