@@ -85,14 +85,21 @@ fn merge_cyclonedx(
     let secondary_components = secondary.get("components").and_then(Value::as_array);
 
     if let (Some(p_comps), Some(s_comps)) = (primary_components, secondary_components) {
-        // Build dedup set from primary
-        let mut seen = build_seen_set(p_comps, config);
-
-        // Add non-duplicate components from secondary
-        for comp in s_comps {
-            let key = component_key(comp, config);
-            if seen.insert(key) {
+        if config.dedup_strategy == DeduplicationStrategy::None {
+            // No deduplication — keep all components
+            for comp in s_comps {
                 p_comps.push(comp.clone());
+            }
+        } else {
+            // Build dedup set from primary
+            let mut seen = build_seen_set(p_comps, config);
+
+            // Add non-duplicate components from secondary
+            for comp in s_comps {
+                let key = component_key(comp, config);
+                if seen.insert(key) {
+                    p_comps.push(comp.clone());
+                }
             }
         }
     }
@@ -172,11 +179,17 @@ fn merge_spdx2(primary: &mut Value, secondary: &Value, config: &MergeConfig) -> 
         primary.get_mut("packages").and_then(Value::as_array_mut),
         secondary.get("packages").and_then(Value::as_array),
     ) {
-        let mut seen = build_seen_set(p_pkgs, config);
-        for pkg in s_pkgs {
-            let key = component_key(pkg, config);
-            if seen.insert(key) {
+        if config.dedup_strategy == DeduplicationStrategy::None {
+            for pkg in s_pkgs {
                 p_pkgs.push(pkg.clone());
+            }
+        } else {
+            let mut seen = build_seen_set(p_pkgs, config);
+            for pkg in s_pkgs {
+                let key = component_key(pkg, config);
+                if seen.insert(key) {
+                    p_pkgs.push(pkg.clone());
+                }
             }
         }
     }
@@ -291,10 +304,8 @@ mod tests {
         };
         let result = merge_sbom_json(a, b, &config).unwrap();
         let doc: Value = serde_json::from_str(&result).unwrap();
-        // None strategy still uses name@version key, so foo@1.0 is deduped
-        // Actually with None strategy, the key is still name@version, so it'll dedup
-        // Let me fix this by checking the None strategy
         let components = doc["components"].as_array().unwrap();
-        assert!(components.len() >= 1);
+        // None strategy keeps all components, including duplicates
+        assert_eq!(components.len(), 2);
     }
 }

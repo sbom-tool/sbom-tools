@@ -56,10 +56,11 @@ pub fn verify_file_hash(path: &Path, expected: &str) -> anyhow::Result<HashVerif
         expected
     };
 
-    // Detect algorithm from prefix or length
-    let (algorithm, expected_hex) = if let Some(hex) = expected.strip_prefix("sha256:") {
+    // Detect algorithm from prefix or length (case-insensitive prefix)
+    let expected_lower = expected.to_lowercase();
+    let (algorithm, expected_hex) = if let Some(hex) = expected_lower.strip_prefix("sha256:") {
         ("SHA-256", hex.to_string())
-    } else if let Some(hex) = expected.strip_prefix("sha512:") {
+    } else if let Some(hex) = expected_lower.strip_prefix("sha512:") {
         ("SHA-512", hex.to_string())
     } else {
         match expected.len() {
@@ -107,11 +108,8 @@ pub fn verify_file_hash(path: &Path, expected: &str) -> anyhow::Result<HashVerif
 /// Returns error if the file cannot be read.
 pub fn read_hash_file(path: &Path) -> anyhow::Result<String> {
     let content = fs::read_to_string(path)?;
-    let hash = content
-        .trim()
-        .split_whitespace()
-        .next()
-        .unwrap_or(content.trim());
+    let trimmed = content.trim();
+    let hash = trimmed.split_whitespace().next().unwrap_or(trimmed);
     Ok(hash.to_string())
 }
 
