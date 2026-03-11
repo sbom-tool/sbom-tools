@@ -160,10 +160,8 @@ mod vex_coverage_summary {
         assert_eq!(vex_summary.with_vex, 0);
         // All vulns should be actionable (no VEX = actionable)
         assert_eq!(vex_summary.actionable, vex_summary.total_vulns);
-        // If no vulns exist, coverage is 100% (nothing to cover)
-        if vex_summary.total_vulns > 0 {
-            assert_eq!(vex_summary.coverage_pct, 0.0);
-        }
+        // In this scenario with no VEX data, coverage should be 0%
+        assert_eq!(vex_summary.coverage_pct, 0.0);
     }
 
     #[test]
