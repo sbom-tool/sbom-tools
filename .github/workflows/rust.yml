@@ -32,7 +32,7 @@ jobs:
           toolchain: "1.88"
           components: clippy, rustfmt
       - name: Cache
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2
+        uses: Swatinem/rust-cache@c676846f29d98ff6b0106d3608c7ffd4048af17b # v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Check formatting
@@ -55,7 +55,7 @@ jobs:
         with:
           toolchain: "1.88"
       - name: Cache
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2
+        uses: Swatinem/rust-cache@c676846f29d98ff6b0106d3608c7ffd4048af17b # v2
         with:
           shared-key: msrv
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -84,7 +84,7 @@ jobs:
         with:
           toolchain: ${{ matrix.toolchain }}
       - name: Cache
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2
+        uses: Swatinem/rust-cache@c676846f29d98ff6b0106d3608c7ffd4048af17b # v2
         with:
           shared-key: ${{ matrix.toolchain }}
           save-if: ${{ github.ref == 'refs/heads/main' }}
