@@ -128,20 +128,18 @@ fn resolve_grouped_selection(app: &mut App, selected: usize) -> GroupedSelection
             }
 
             groups.sort_by(|a, b| {
-                let max_a = a
-                    .1
-                    .iter()
-                    .filter_map(|&i| items.get(i))
-                    .map(|it| severity_rank(&it.vuln.severity))
-                    .min()
-                    .unwrap_or(99);
-                let max_b = b
-                    .1
-                    .iter()
-                    .filter_map(|&i| items.get(i))
-                    .map(|it| severity_rank(&it.vuln.severity))
-                    .min()
-                    .unwrap_or(99);
+                let max_a =
+                    a.1.iter()
+                        .filter_map(|&i| items.get(i))
+                        .map(|it| severity_rank(&it.vuln.severity))
+                        .min()
+                        .unwrap_or(99);
+                let max_b =
+                    b.1.iter()
+                        .filter_map(|&i| items.get(i))
+                        .map(|it| severity_rank(&it.vuln.severity))
+                        .min()
+                        .unwrap_or(99);
                 max_a.cmp(&max_b)
             });
 
@@ -191,36 +189,34 @@ fn resolve_grouped_selection(app: &mut App, selected: usize) -> GroupedSelection
             }
 
             groups.sort_by(|a, b| {
-                let max_a = a
-                    .1
-                    .iter()
-                    .filter_map(|&i| vulns.get(i))
-                    .map(|it| {
-                        severity_rank(
-                            &it.1
-                                .severity
-                                .as_ref()
-                                .map(std::string::ToString::to_string)
-                                .unwrap_or_default(),
-                        )
-                    })
-                    .min()
-                    .unwrap_or(99);
-                let max_b = b
-                    .1
-                    .iter()
-                    .filter_map(|&i| vulns.get(i))
-                    .map(|it| {
-                        severity_rank(
-                            &it.1
-                                .severity
-                                .as_ref()
-                                .map(std::string::ToString::to_string)
-                                .unwrap_or_default(),
-                        )
-                    })
-                    .min()
-                    .unwrap_or(99);
+                let max_a =
+                    a.1.iter()
+                        .filter_map(|&i| vulns.get(i))
+                        .map(|it| {
+                            severity_rank(
+                                &it.1
+                                    .severity
+                                    .as_ref()
+                                    .map(std::string::ToString::to_string)
+                                    .unwrap_or_default(),
+                            )
+                        })
+                        .min()
+                        .unwrap_or(99);
+                let max_b =
+                    b.1.iter()
+                        .filter_map(|&i| vulns.get(i))
+                        .map(|it| {
+                            severity_rank(
+                                &it.1
+                                    .severity
+                                    .as_ref()
+                                    .map(std::string::ToString::to_string)
+                                    .unwrap_or_default(),
+                            )
+                        })
+                        .min()
+                        .unwrap_or(99);
                 max_a.cmp(&max_b)
             });
 

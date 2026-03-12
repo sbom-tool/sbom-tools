@@ -43,7 +43,9 @@ impl VulnerabilitiesView {
         self.inner.filter = state.filter;
         self.inner.sort_by = state.sort_by;
         self.inner.group_by_component = state.group_by_component;
-        self.inner.expanded_groups.clone_from(&state.expanded_groups);
+        self.inner
+            .expanded_groups
+            .clone_from(&state.expanded_groups);
     }
 
     pub(crate) fn sync_to(&self, state: &mut VulnerabilitiesState) {
@@ -51,7 +53,9 @@ impl VulnerabilitiesView {
         state.filter = self.inner.filter;
         state.sort_by = self.inner.sort_by;
         state.group_by_component = self.inner.group_by_component;
-        state.expanded_groups.clone_from(&self.inner.expanded_groups);
+        state
+            .expanded_groups
+            .clone_from(&self.inner.expanded_groups);
     }
 
     /// Toggle a specific group's expansion state (used by bridge for Enter key in grouped mode).

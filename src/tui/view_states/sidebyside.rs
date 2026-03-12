@@ -41,14 +41,10 @@ impl SideBySideView {
         self.inner.filter = state.filter.clone();
         self.inner.selected_row = state.selected_row;
         self.inner.total_rows = state.total_rows;
-        self.inner
-            .change_indices
-            .clone_from(&state.change_indices);
+        self.inner.change_indices.clone_from(&state.change_indices);
         self.inner.current_change_idx = state.current_change_idx;
         self.inner.search_query.clone_from(&state.search_query);
-        self.inner
-            .search_matches
-            .clone_from(&state.search_matches);
+        self.inner.search_matches.clone_from(&state.search_matches);
         self.inner.current_match_idx = state.current_match_idx;
         self.inner.search_active = state.search_active;
         self.inner.show_detail_modal = state.show_detail_modal;
@@ -65,9 +61,7 @@ impl SideBySideView {
         state.change_indices.clone_from(&self.inner.change_indices);
         state.current_change_idx = self.inner.current_change_idx;
         state.search_query.clone_from(&self.inner.search_query);
-        state
-            .search_matches
-            .clone_from(&self.inner.search_matches);
+        state.search_matches.clone_from(&self.inner.search_matches);
         state.current_match_idx = self.inner.current_match_idx;
         state.search_active = self.inner.search_active;
         state.show_detail_modal = self.inner.show_detail_modal;
@@ -241,10 +235,7 @@ impl SideBySideView {
             KeyCode::Enter => {
                 self.inner.confirm_search();
                 if !self.inner.search_matches.is_empty() {
-                    return EventResult::status(format!(
-                        "Match {}",
-                        self.inner.match_position()
-                    ));
+                    return EventResult::status(format!("Match {}", self.inner.match_position()));
                 }
                 EventResult::Consumed
             }

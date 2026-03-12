@@ -41,15 +41,9 @@ impl DependenciesView {
         self.inner.show_cycles = state.show_cycles;
         self.inner.search_active = state.search_active;
         self.inner.search_query.clone_from(&state.search_query);
-        self.inner
-            .search_matches
-            .clone_from(&state.search_matches);
-        self.inner
-            .visible_nodes
-            .clone_from(&state.visible_nodes);
-        self.inner
-            .expanded_nodes
-            .clone_from(&state.expanded_nodes);
+        self.inner.search_matches.clone_from(&state.search_matches);
+        self.inner.visible_nodes.clone_from(&state.visible_nodes);
+        self.inner.expanded_nodes.clone_from(&state.expanded_nodes);
         self.inner.viewport_height = state.viewport_height;
     }
 
@@ -62,12 +56,8 @@ impl DependenciesView {
         state.show_cycles = self.inner.show_cycles;
         state.search_active = self.inner.search_active;
         state.search_query.clone_from(&self.inner.search_query);
-        state
-            .search_matches
-            .clone_from(&self.inner.search_matches);
-        state
-            .expanded_nodes
-            .clone_from(&self.inner.expanded_nodes);
+        state.search_matches.clone_from(&self.inner.search_matches);
+        state.expanded_nodes.clone_from(&self.inner.expanded_nodes);
     }
 }
 
@@ -182,11 +172,7 @@ impl ViewState for DependenciesView {
                 EventResult::Consumed
             }
             KeyCode::Enter => {
-                if let Some(node_id) = self
-                    .inner
-                    .get_selected_node_id()
-                    .map(str::to_string)
-                {
+                if let Some(node_id) = self.inner.get_selected_node_id().map(str::to_string) {
                     self.inner.toggle_node(&node_id);
                 }
                 EventResult::Consumed
@@ -194,21 +180,13 @@ impl ViewState for DependenciesView {
             // Cross-tab navigation: return Ignored so bridge handles it
             KeyCode::Char('c') => EventResult::Ignored,
             KeyCode::Left => {
-                if let Some(node_id) = self
-                    .inner
-                    .get_selected_node_id()
-                    .map(str::to_string)
-                {
+                if let Some(node_id) = self.inner.get_selected_node_id().map(str::to_string) {
                     self.inner.collapse(&node_id);
                 }
                 EventResult::Consumed
             }
             KeyCode::Right => {
-                if let Some(node_id) = self
-                    .inner
-                    .get_selected_node_id()
-                    .map(str::to_string)
-                {
+                if let Some(node_id) = self.inner.get_selected_node_id().map(str::to_string) {
                     self.inner.expand(&node_id);
                 }
                 EventResult::Consumed

@@ -227,7 +227,6 @@ pub struct App {
     // ========================================================================
     // Each view handles its own key events via the ViewState trait.
     // State is synced back to `tabs.*` after each event for rendering.
-
     #[allow(dead_code)] // Will be used in Phase 4 (render trait)
     pub(crate) summary_view: Option<crate::tui::view_states::SummaryView>,
     pub(crate) components_view: Option<crate::tui::view_states::ComponentsView>,

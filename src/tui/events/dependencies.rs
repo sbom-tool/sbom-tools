@@ -1,8 +1,8 @@
 //! Dependencies tab event handlers.
 
+use crate::tui::App;
 use crate::tui::state::ListNavigation;
 use crate::tui::traits::{EventResult, ViewContext, ViewMode, ViewState};
-use crate::tui::App;
 use crossterm::event::{KeyCode, KeyEvent};
 
 pub(super) fn handle_dependencies_keys(app: &mut App, key: KeyEvent) {
