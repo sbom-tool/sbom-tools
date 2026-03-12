@@ -87,7 +87,7 @@ jobs:
           echo "hashes=$(sha256sum target/package/sbom-tools-*.crate | base64 -w0)" >> "$GITHUB_OUTPUT"
 
       - name: Authenticate to crates.io
-        uses: rust-lang/crates-io-auth-action@3835ef703f60ad2743169f730a9ce4d1c0fad74e # v1
+        uses: rust-lang/crates-io-auth-action@4571143d47062e56e5135627be37f24f0d5c1388 # v1
         id: auth
 
       - name: Publish crate
