@@ -73,27 +73,6 @@ pub fn render_depth_badge_spans(
     ]
 }
 
-/// Render RANSOMWARE badge spans for KEV vulns with known ransomware use.
-pub fn render_ransomware_badge_spans(
-    is_ransomware: bool,
-    scheme: &crate::tui::theme::ColorScheme,
-) -> Vec<Span<'static>> {
-    if is_ransomware {
-        vec![
-            Span::styled(
-                "RW",
-                Style::default()
-                    .fg(scheme.badge_fg_light)
-                    .bg(scheme.critical)
-                    .bold(),
-            ),
-            Span::raw(" "),
-        ]
-    } else {
-        vec![]
-    }
-}
-
 /// Render VEX status badge spans for use in vulnerability row ID cells.
 ///
 /// - `NotAffected` → green "NA" badge

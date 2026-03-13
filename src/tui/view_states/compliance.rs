@@ -26,33 +26,13 @@ impl ComplianceView {
         }
     }
 
-    // Accessors for sync bridge
-    pub(crate) const fn selected_standard(&self) -> usize {
-        self.inner.selected_standard
-    }
-    pub(crate) const fn selected_violation(&self) -> usize {
-        self.inner.selected_violation
-    }
-    pub(crate) const fn scroll_offset(&self) -> usize {
-        self.inner.scroll_offset
-    }
-    pub(crate) const fn view_mode(&self) -> crate::tui::app_states::DiffComplianceViewMode {
-        self.inner.view_mode
-    }
-    pub(crate) const fn show_detail(&self) -> bool {
-        self.inner.show_detail
+    /// Access the inner state.
+    pub(crate) const fn inner(&self) -> &DiffComplianceState {
+        &self.inner
     }
 
     pub(crate) fn set_max_violations(&mut self, max: usize) {
         self.max_violations = max;
-    }
-
-    pub(crate) fn sync_from(&mut self, state: &DiffComplianceState) {
-        self.inner.selected_standard = state.selected_standard;
-        self.inner.selected_violation = state.selected_violation;
-        self.inner.scroll_offset = state.scroll_offset;
-        self.inner.view_mode = state.view_mode;
-        self.inner.show_detail = state.show_detail;
     }
 
     /// Whether a compliance export was requested (set during handle_key, consumed by bridge).
@@ -185,10 +165,10 @@ mod tests {
     fn test_standard_navigation() {
         let mut view = ComplianceView::new();
         let mut ctx = make_ctx();
-        let initial = view.selected_standard();
+        let initial = view.inner().selected_standard;
 
         view.handle_key(make_key(KeyCode::Right), &mut ctx);
-        assert_ne!(view.selected_standard(), initial);
+        assert_ne!(view.inner().selected_standard, initial);
     }
 
     #[test]
@@ -198,10 +178,10 @@ mod tests {
         let mut ctx = make_ctx();
 
         view.handle_key(make_key(KeyCode::Down), &mut ctx);
-        assert_eq!(view.selected_violation(), 1);
+        assert_eq!(view.inner().selected_violation, 1);
 
         view.handle_key(make_key(KeyCode::Up), &mut ctx);
-        assert_eq!(view.selected_violation(), 0);
+        assert_eq!(view.inner().selected_violation, 0);
     }
 
     #[test]
@@ -210,12 +190,12 @@ mod tests {
         view.set_max_violations(3);
         let mut ctx = make_ctx();
 
-        assert!(!view.show_detail());
+        assert!(!view.inner().show_detail);
         view.handle_key(make_key(KeyCode::Enter), &mut ctx);
-        assert!(view.show_detail());
+        assert!(view.inner().show_detail);
 
         view.handle_key(make_key(KeyCode::Esc), &mut ctx);
-        assert!(!view.show_detail());
+        assert!(!view.inner().show_detail);
     }
 
     #[test]

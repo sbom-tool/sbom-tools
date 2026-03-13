@@ -201,8 +201,8 @@ impl App {
                     if let Some(index) =
                         self.find_component_index_all(&name, Some(change_type), version.as_deref())
                     {
-                        self.tabs.components.filter = ComponentFilter::All;
-                        self.tabs.components.selected = index;
+                        self.components_state_mut().filter = ComponentFilter::All;
+                        self.components_state_mut().selected = index;
                         self.select_tab(TabKind::Components);
                         self.stop_search();
                         return;
@@ -210,28 +210,28 @@ impl App {
 
                     // Fall back to name-only match across all components
                     if let Some(index) = self.find_component_index_all(&name, None, None) {
-                        self.tabs.components.filter = ComponentFilter::All;
-                        self.tabs.components.selected = index;
+                        self.components_state_mut().filter = ComponentFilter::All;
+                        self.components_state_mut().selected = index;
                         self.select_tab(TabKind::Components);
                         self.stop_search();
                         return;
                     }
 
-                    self.tabs.components.filter = ComponentFilter::All;
+                    self.components_state_mut().filter = ComponentFilter::All;
                     self.select_tab(TabKind::Components);
                 }
                 DiffSearchResult::Vulnerability {
                     id, change_type, ..
                 } => {
                     // Align filter/sort so the selection is stable
-                    self.tabs.vulnerabilities.sort_by = VulnSort::Id;
-                    self.tabs.vulnerabilities.filter = match change_type {
+                    self.vulnerabilities_state_mut().sort_by = VulnSort::Id;
+                    self.vulnerabilities_state_mut().filter = match change_type {
                         VulnChangeType::Introduced => VulnFilter::Introduced,
                         VulnChangeType::Resolved => VulnFilter::Resolved,
                     };
 
                     if let Some(index) = self.find_vulnerability_index(&id) {
-                        self.tabs.vulnerabilities.selected = index;
+                        self.vulnerabilities_state_mut().selected = index;
                     }
 
                     self.select_tab(TabKind::Vulnerabilities);
@@ -244,7 +244,7 @@ impl App {
                         // Search new licenses first
                         for lic in &diff.licenses.new_licenses {
                             if lic.license == license {
-                                self.tabs.licenses.selected = index;
+                                self.licenses_state_mut().selected = index;
                                 self.select_tab(TabKind::Licenses);
                                 self.stop_search();
                                 return;
@@ -255,7 +255,7 @@ impl App {
                         // Then removed licenses
                         for lic in &diff.licenses.removed_licenses {
                             if lic.license == license {
-                                self.tabs.licenses.selected = index;
+                                self.licenses_state_mut().selected = index;
                                 self.select_tab(TabKind::Licenses);
                                 self.stop_search();
                                 return;

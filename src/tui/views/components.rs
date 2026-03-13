@@ -1,9 +1,8 @@
 //! Components view with master-detail layout.
 
 use crate::diff::ComponentChange;
-use crate::model::Component;
-use crate::tui::app::{App, AppMode, ComponentFilter};
-use crate::tui::state::ListNavigation;
+use crate::tui::app::{AppMode, ComponentFilter};
+use crate::tui::render_context::RenderContext;
 use crate::tui::theme::colors;
 use crate::tui::widgets;
 use ratatui::{
@@ -18,46 +17,28 @@ use ratatui::{
 /// Built once per frame in `render_components` and passed to sub-functions.
 pub enum ComponentListData<'a> {
     Diff(Vec<&'a ComponentChange>),
-    View(Vec<&'a Component>),
     Empty,
 }
 
-pub fn render_components(frame: &mut Frame, area: Rect, app: &mut App) {
+pub fn render_components(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(3), Constraint::Min(10)])
         .split(area);
 
     // Render filter bar with badges
-    render_filter_bar(frame, chunks[0], app);
+    render_filter_bar(frame, chunks[0], ctx);
 
-    // Build component list once per frame (performance optimization)
-    // Use efficient count methods to update state, then build list only once for rendering
-    let total_unfiltered = match app.mode {
-        AppMode::Diff => {
-            app.tabs.components.total = app.diff_component_count(app.tabs.components.filter);
-            app.data
-                .diff_result
-                .as_ref()
-                .map_or(0, |r| r.components.total())
-        }
-        AppMode::View => {
-            app.tabs.components.total = app.view_component_count();
-            app.tabs.components.total // For view mode, total equals visible count
-        }
-        AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => {
-            app.tabs.components.total = 0;
-            0
-        }
+    // Totals and clamp_selection are done in prepare_render().
+    // Compute total_unfiltered for empty-state display only.
+    let total_unfiltered = match ctx.mode {
+        AppMode::Diff => ctx.diff_result.map_or(0, |r| r.components.total()),
+        AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => 0,
     };
-    app.tabs.components.clamp_selection();
 
-    // Build the list data once for rendering (borrows app immutably)
-    let component_data = match app.mode {
-        AppMode::Diff => {
-            ComponentListData::Diff(app.diff_component_items(app.tabs.components.filter))
-        }
-        AppMode::View => ComponentListData::View(app.view_component_items()),
+    // Build the list data once for rendering
+    let component_data = match ctx.mode {
+        AppMode::Diff => ComponentListData::Diff(ctx.diff_component_items()),
         AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => ComponentListData::Empty,
     };
 
@@ -67,30 +48,25 @@ pub fn render_components(frame: &mut Frame, area: Rect, app: &mut App) {
         .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
         .split(chunks[1]);
 
-    // Render component table (master) — pass scroll_offset separately to avoid borrow conflict
-    let mut scroll_offset = app.tabs.components.scroll_offset;
+    // Render component table (master)
     render_component_table(
         frame,
         content_chunks[0],
-        app,
+        ctx,
         &component_data,
         total_unfiltered,
-        &mut scroll_offset,
     );
-    // Render detail panel (component_data borrow ends after this call)
-    render_detail_panel(frame, content_chunks[1], app, &component_data);
-
-    // Save scroll offset back after component_data borrow is released
-    app.tabs.components.scroll_offset = scroll_offset;
+    // Render detail panel
+    render_detail_panel(frame, content_chunks[1], ctx, &component_data);
 }
 
-fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
+fn render_filter_bar(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     use crate::tui::viewmodel::security_filter::QuickFilter;
 
-    let filter = app.tabs.components.filter;
-    let sort = &app.tabs.components.sort_by;
-    let multi_select = app.tabs.components.multi_select_mode;
-    let selection_count = app.tabs.components.selection_count();
+    let filter = ctx.components.filter;
+    let sort = &ctx.components.sort_by;
+    let multi_select = ctx.components.multi_select_mode;
+    let selection_count = ctx.components.selection_count();
 
     let mut filter_spans = vec![
         Span::styled("Filter: ", Style::default().fg(colors().text_muted)),
@@ -116,7 +92,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
     }
 
     // Show quick filter chips
-    let security_filter = &app.tabs.components.security_filter;
+    let security_filter = &ctx.components.security_filter;
     if security_filter.has_active_filters() {
         filter_spans.push(Span::raw("  "));
         filter_spans.push(Span::styled("│", Style::default().fg(colors().border)));
@@ -200,10 +176,9 @@ fn status_badge(text: &str, color: Color) -> Span<'static> {
 fn render_component_table(
     frame: &mut Frame,
     area: Rect,
-    app: &App,
+    ctx: &RenderContext,
     component_data: &ComponentListData,
     total_unfiltered: usize,
-    scroll_offset: &mut usize,
 ) {
     let is_diff = matches!(component_data, ComponentListData::Diff(_));
     let header_cells: Vec<Cell> = if is_diff {
@@ -226,10 +201,9 @@ fn render_component_table(
     };
     let header = Row::new(header_cells).height(1);
 
-    // Use pre-built component list (state already updated in render_components)
+    // Use pre-built component list (state already updated in prepare_render)
     let rows: Vec<Row> = match component_data {
-        ComponentListData::Diff(components) => get_diff_rows(app, components),
-        ComponentListData::View(components) => get_view_rows(app, components),
+        ComponentListData::Diff(components) => get_diff_rows(ctx, components),
         ComponentListData::Empty => vec![],
     };
 
@@ -251,7 +225,7 @@ fn render_component_table(
                 frame,
                 area,
                 "Filter",
-                app.tabs.components.filter.label(),
+                ctx.components.filter.label(),
             );
         }
         return;
@@ -278,9 +252,9 @@ fn render_component_table(
         ]
     };
 
-    let selected_idx = app.tabs.components.selected;
+    let selected_idx = ctx.components.selected;
     let scheme = colors();
-    let table_focused = !app.tabs.components.focus_detail;
+    let table_focused = !ctx.components.focus_detail;
     let table_border_color = if table_focused {
         scheme.accent
     } else {
@@ -309,15 +283,13 @@ fn render_component_table(
         .highlight_symbol("▶ ");
 
     let mut state = TableState::default()
-        .with_offset(*scroll_offset)
+        .with_offset(ctx.components.scroll_offset)
         .with_selected(Some(selected_idx));
 
     frame.render_stateful_widget(table, area, &mut state);
 
-    // Save scroll offset for next frame (stable viewport)
-    *scroll_offset = state.offset();
-
     // Render scrollbar
+    let scroll_offset = state.offset();
     if rows.len() > area.height.saturating_sub(3) as usize {
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .thumb_style(Style::default().fg(colors().accent))
@@ -325,7 +297,7 @@ fn render_component_table(
             .begin_symbol(Some("▲"))
             .end_symbol(Some("▼"));
 
-        let mut scrollbar_state = ScrollbarState::new(rows.len()).position(*scroll_offset);
+        let mut scrollbar_state = ScrollbarState::new(rows.len()).position(scroll_offset);
 
         frame.render_stateful_widget(
             scrollbar,
@@ -341,18 +313,17 @@ fn render_component_table(
 fn render_detail_panel(
     frame: &mut Frame,
     area: Rect,
-    app: &App,
+    ctx: &RenderContext,
     component_data: &ComponentListData,
 ) {
     match component_data {
-        ComponentListData::Diff(components) => render_diff_detail(frame, area, app, components),
-        ComponentListData::View(components) => render_view_detail(frame, area, app, components),
+        ComponentListData::Diff(components) => render_diff_detail(frame, area, ctx, components),
         ComponentListData::Empty => {}
     }
 }
 
-fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&ComponentChange]) {
-    let selected = app.tabs.components.selected;
+fn render_diff_detail(frame: &mut Frame, area: Rect, ctx: &RenderContext, components: &[&ComponentChange]) {
+    let selected = ctx.components.selected;
 
     if let Some(comp) = components.get(selected) {
         let change_type = &comp.change_type;
@@ -505,10 +476,8 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
         }
 
         // Related vulnerabilities - look up by ID, not by name
-        let related_vulns: Vec<_> = app
-            .data
+        let related_vulns: Vec<_> = ctx
             .diff_result
-            .as_ref()
             .map(|r| {
                 r.vulnerabilities
                     .introduced
@@ -544,13 +513,11 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
         }
 
         // Security Analysis section (Diff mode)
-        let reverse_graph = &app.tabs.dependencies.cached_reverse_graph;
+        let reverse_graph = &ctx.dependencies.cached_reverse_graph;
         let (direct_deps, transitive_count) =
             crate::tui::shared::components::compute_blast_radius(&comp.name, reverse_graph);
-        let license_text = app
-            .data
+        let license_text = ctx
             .new_sbom
-            .as_ref()
             .and_then(|sbom| {
                 let canonical_id = crate::model::CanonicalId::from_format_id(&comp.id);
                 sbom.components.get(&canonical_id)
@@ -567,10 +534,10 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
         );
 
         // Flagged indicator and analyst notes
-        let is_flagged = app.security_cache.is_flagged(&comp.name);
+        let is_flagged = ctx.security_cache.is_flagged(&comp.name);
         lines.extend(crate::tui::shared::components::render_flagged_lines(
             is_flagged,
-            app.security_cache.get_note(&comp.name),
+            ctx.security_cache.get_note(&comp.name),
             area.width,
             "",
         ));
@@ -584,288 +551,13 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&C
             area,
             lines,
             " Component Details ",
-            app.tabs.components.focus_detail,
+            ctx.components.focus_detail,
         );
     } else {
-        render_empty_detail(frame, area, app.tabs.components.focus_detail);
+        render_empty_detail(frame, area, ctx.components.focus_detail);
     }
 }
 
-fn render_view_detail(frame: &mut Frame, area: Rect, app: &App, components: &[&Component]) {
-    let selected = app.tabs.components.selected;
-
-    if let Some(comp) = components.get(selected) {
-        let mut lines = vec![
-            // Component name
-            Line::from(vec![
-                Span::styled("Name: ", Style::default().fg(colors().text_muted)),
-                Span::styled(&comp.name, Style::default().fg(colors().text).bold()),
-            ]),
-        ];
-
-        // Version
-        if let Some(ver) = &comp.version {
-            lines.push(Line::from(vec![
-                Span::styled("Version: ", Style::default().fg(colors().text_muted)),
-                Span::styled(ver, Style::default().fg(colors().secondary)),
-            ]));
-        }
-
-        // Ecosystem
-        if let Some(eco) = &comp.ecosystem {
-            lines.push(Line::from(vec![
-                Span::styled("Ecosystem: ", Style::default().fg(colors().text_muted)),
-                Span::styled(eco.to_string(), Style::default().fg(colors().accent)),
-            ]));
-        }
-
-        // Component type
-        lines.push(Line::from(vec![
-            Span::styled("Type: ", Style::default().fg(colors().text_muted)),
-            Span::styled(
-                format!("{:?}", comp.component_type),
-                Style::default().fg(colors().text),
-            ),
-        ]));
-
-        // PURL if available
-        if let Some(purl) = &comp.identifiers.purl {
-            lines.push(Line::from(vec![
-                Span::styled("PURL: ", Style::default().fg(colors().text_muted)),
-                Span::styled(
-                    widgets::truncate_str(purl, area.width as usize - 8),
-                    Style::default().fg(colors().text),
-                ),
-            ]));
-        }
-
-        // Licenses
-        if !comp.licenses.declared.is_empty() {
-            lines.push(Line::from(""));
-            lines.push(Line::from(vec![
-                Span::styled("━━━ ", Style::default().fg(colors().border)),
-                Span::styled(
-                    format!("Licenses ({})", comp.licenses.declared.len()),
-                    Style::default().fg(colors().permissive).bold(),
-                ),
-                Span::styled(" ━━━", Style::default().fg(colors().border)),
-            ]));
-            for lic in comp.licenses.declared.iter().take(3) {
-                let lic_color = colors().license_color(&lic.expression);
-                lines.push(Line::from(vec![
-                    Span::styled("  • ", Style::default().fg(colors().text_muted)),
-                    Span::styled(&lic.expression, Style::default().fg(lic_color)),
-                ]));
-            }
-            if comp.licenses.declared.len() > 3 {
-                lines.push(Line::styled(
-                    format!("    ... and {} more", comp.licenses.declared.len() - 3),
-                    Style::default().fg(colors().text_muted),
-                ));
-            }
-        }
-
-        // Vulnerabilities
-        if !comp.vulnerabilities.is_empty() {
-            lines.push(Line::from(""));
-            lines.push(Line::from(vec![
-                Span::styled("━━━ ", Style::default().fg(colors().border)),
-                Span::styled(
-                    format!("⚠ Vulnerabilities ({})", comp.vulnerabilities.len()),
-                    Style::default().fg(colors().high).bold(),
-                ),
-                Span::styled(" ━━━", Style::default().fg(colors().border)),
-            ]));
-            let sev_strings: Vec<String> = comp
-                .vulnerabilities
-                .iter()
-                .map(|v| {
-                    v.severity
-                        .as_ref()
-                        .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string)
-                })
-                .collect();
-            let vuln_entries: Vec<(&str, &str, Option<&str>)> = comp
-                .vulnerabilities
-                .iter()
-                .zip(sev_strings.iter())
-                .map(|(v, sev)| (sev.as_str(), v.id.as_str(), None))
-                .collect();
-            lines.extend(
-                crate::tui::shared::components::render_vulnerability_list_lines(
-                    &vuln_entries,
-                    5,
-                    comp.vulnerabilities.len(),
-                    area.width,
-                ),
-            );
-        }
-
-        // Hashes
-        if !comp.hashes.is_empty() {
-            lines.push(Line::from(""));
-            lines.push(Line::from(vec![
-                Span::styled("━━━ ", Style::default().fg(colors().border)),
-                Span::styled("Hashes", Style::default().fg(colors().text_muted).bold()),
-                Span::styled(" ━━━", Style::default().fg(colors().border)),
-            ]));
-            for hash in comp.hashes.iter().take(2) {
-                lines.push(Line::from(vec![
-                    Span::styled(
-                        format!("  {:?}: ", hash.algorithm),
-                        Style::default().fg(colors().text_muted),
-                    ),
-                    Span::styled(
-                        widgets::truncate_str(&hash.value, 32),
-                        Style::default().fg(colors().text),
-                    ),
-                ]));
-            }
-        }
-
-        // End-of-Life section
-        if let Some(eol) = &comp.eol {
-            use crate::model::EolStatus;
-            lines.push(Line::from(""));
-            let status_color = match eol.status {
-                EolStatus::Supported => colors().success,
-                EolStatus::SecurityOnly => colors().warning,
-                EolStatus::ApproachingEol => colors().high,
-                EolStatus::EndOfLife => colors().critical,
-                EolStatus::Unknown => colors().muted,
-            };
-            lines.push(Line::from(vec![
-                Span::styled("━━━ ", Style::default().fg(colors().border)),
-                Span::styled(
-                    format!("{} End-of-Life", eol.status.icon()),
-                    Style::default().fg(status_color).bold(),
-                ),
-                Span::styled(" ━━━", Style::default().fg(colors().border)),
-            ]));
-            // Status badge with days countdown
-            let days_text = eol.days_until_eol.map_or_else(String::new, |d| {
-                if d < 0 {
-                    format!(" ({} days past EOL)", d.abs())
-                } else if d == 0 {
-                    " (EOL today)".to_string()
-                } else {
-                    format!(" ({d} days remaining)")
-                }
-            });
-            lines.push(Line::from(vec![
-                Span::styled("  Status: ", Style::default().fg(colors().text_muted)),
-                Span::styled(
-                    format!(" {} ", eol.status.label()),
-                    Style::default()
-                        .fg(colors().badge_fg_dark)
-                        .bg(status_color)
-                        .bold(),
-                ),
-                Span::styled(days_text, Style::default().fg(status_color)),
-            ]));
-            // Product and cycle
-            lines.push(Line::from(vec![
-                Span::styled("  Product: ", Style::default().fg(colors().text_muted)),
-                Span::styled(&eol.product, Style::default().fg(colors().text)),
-                Span::styled(
-                    format!(" (cycle {})", eol.cycle),
-                    Style::default().fg(colors().text_muted),
-                ),
-            ]));
-            // EOL date
-            if let Some(date) = eol.eol_date {
-                lines.push(Line::from(vec![
-                    Span::styled("  EOL Date: ", Style::default().fg(colors().text_muted)),
-                    Span::styled(date.to_string(), Style::default().fg(status_color)),
-                ]));
-            }
-            // Support end date
-            if let Some(date) = eol.support_end_date {
-                lines.push(Line::from(vec![
-                    Span::styled("  Support End: ", Style::default().fg(colors().text_muted)),
-                    Span::styled(date.to_string(), Style::default().fg(colors().text)),
-                ]));
-            }
-            // LTS indicator
-            if eol.is_lts {
-                lines.push(Line::from(vec![
-                    Span::styled("  LTS: ", Style::default().fg(colors().text_muted)),
-                    Span::styled(
-                        " LTS ",
-                        Style::default()
-                            .fg(colors().badge_fg_dark)
-                            .bg(colors().success)
-                            .bold(),
-                    ),
-                ]));
-            }
-            // Latest available version in cycle
-            if let Some(latest) = &eol.latest_in_cycle {
-                let is_outdated = comp
-                    .version
-                    .as_deref()
-                    .is_some_and(|v| v != latest.as_str());
-                lines.push(Line::from(vec![
-                    Span::styled("  Latest: ", Style::default().fg(colors().text_muted)),
-                    Span::styled(
-                        latest,
-                        Style::default().fg(if is_outdated {
-                            colors().warning
-                        } else {
-                            colors().success
-                        }),
-                    ),
-                    if is_outdated {
-                        Span::styled(" (update available)", Style::default().fg(colors().warning))
-                    } else {
-                        Span::styled(" (up to date)", Style::default().fg(colors().success))
-                    },
-                ]));
-            }
-        }
-
-        // Security Analysis section
-        let reverse_graph = &app.tabs.dependencies.cached_reverse_graph;
-        let (direct_deps, transitive_count) =
-            crate::tui::shared::components::compute_blast_radius(&comp.name, reverse_graph);
-        let license_text = comp
-            .licenses
-            .declared
-            .first()
-            .map_or("Unknown", |l| l.expression.as_str());
-        lines.extend(
-            crate::tui::shared::components::render_security_analysis_lines(
-                comp.vulnerabilities.len(),
-                direct_deps,
-                transitive_count,
-                license_text,
-            ),
-        );
-
-        // Flagged indicator and analyst notes
-        let is_flagged = app.security_cache.is_flagged(&comp.name);
-        lines.extend(crate::tui::shared::components::render_flagged_lines(
-            is_flagged,
-            app.security_cache.get_note(&comp.name),
-            area.width,
-            " for follow-up",
-        ));
-
-        lines.extend(crate::tui::shared::components::render_quick_actions_hint(
-            !comp.vulnerabilities.is_empty(),
-        ));
-
-        crate::tui::shared::components::render_detail_block(
-            frame,
-            area,
-            lines,
-            " Component Details ",
-            app.tabs.components.focus_detail,
-        );
-    } else {
-        render_empty_detail(frame, area, app.tabs.components.focus_detail);
-    }
-}
 
 fn render_empty_detail(frame: &mut Frame, area: Rect, focused: bool) {
     crate::tui::shared::components::render_empty_detail_panel(
@@ -879,14 +571,14 @@ fn render_empty_detail(frame: &mut Frame, area: Rect, focused: bool) {
     );
 }
 
-fn get_diff_rows(app: &App, components: &[&ComponentChange]) -> Vec<Row<'static>> {
-    let multi_select = app.tabs.components.multi_select_mode;
+fn get_diff_rows(ctx: &RenderContext, components: &[&ComponentChange]) -> Vec<Row<'static>> {
+    let multi_select = ctx.components.multi_select_mode;
 
     components
         .iter()
         .enumerate()
         .map(|(idx, comp)| {
-            let is_selected = app.tabs.components.is_selected(idx);
+            let is_selected = ctx.components.is_selected(idx);
             let checkbox = if multi_select {
                 if is_selected { "☑ " } else { "☐ " }
             } else {
@@ -953,128 +645,4 @@ fn get_diff_rows(app: &App, components: &[&ComponentChange]) -> Vec<Row<'static>
             .style(row_style)
         })
         .collect()
-}
-
-fn get_view_rows(app: &App, components: &[&crate::model::Component]) -> Vec<Row<'static>> {
-    let multi_select = app.tabs.components.multi_select_mode;
-
-    components
-        .iter()
-        .enumerate()
-        .map(|(idx, comp)| {
-            let is_selected = app.tabs.components.is_selected(idx);
-            let checkbox = if multi_select {
-                if is_selected { "☑ " } else { "☐ " }
-            } else {
-                ""
-            };
-
-            let scheme = colors();
-            let vuln_indicator = if comp.vulnerabilities.is_empty() {
-                Span::styled(
-                    format!("{checkbox} ✓ "),
-                    Style::default().fg(scheme.success),
-                )
-            } else {
-                Span::styled(
-                    format!("{} ⚠ {} ", checkbox, comp.vulnerabilities.len()),
-                    Style::default()
-                        .fg(scheme.badge_fg_light)
-                        .bg(scheme.high)
-                        .bold(),
-                )
-            };
-
-            let row_style = if is_selected {
-                Style::default().bg(scheme.selection)
-            } else {
-                Style::default()
-            };
-
-            // Build staleness cell
-            let staleness_cell = comp.staleness.as_ref().map_or_else(
-                || Cell::from("-"),
-                |info| {
-                    use crate::model::StalenessLevel;
-                    let (label, color) = match info.level {
-                        StalenessLevel::Fresh => ("Fresh", scheme.success),
-                        StalenessLevel::Aging => ("Aging", scheme.warning),
-                        StalenessLevel::Stale => ("Stale", scheme.high),
-                        StalenessLevel::Abandoned => ("Abandoned", scheme.critical),
-                        StalenessLevel::Deprecated => ("Deprecated", scheme.critical),
-                        StalenessLevel::Archived => ("Archived", scheme.error),
-                    };
-                    Cell::from(Span::styled(
-                        format!(" {label} "),
-                        Style::default()
-                            .fg(
-                                if matches!(
-                                    info.level,
-                                    StalenessLevel::Fresh | StalenessLevel::Aging
-                                ) {
-                                    scheme.badge_fg_dark
-                                } else {
-                                    scheme.badge_fg_light
-                                },
-                            )
-                            .bg(color)
-                            .bold(),
-                    ))
-                },
-            );
-
-            // Build EOL cell
-            let eol_cell = comp.eol.as_ref().map_or_else(
-                || Cell::from("-"),
-                |info| {
-                    use crate::model::EolStatus;
-                    let (label, color) = match info.status {
-                        EolStatus::Supported => ("Supported", scheme.success),
-                        EolStatus::SecurityOnly => ("Sec Only", scheme.warning),
-                        EolStatus::ApproachingEol => ("Near EOL", scheme.high),
-                        EolStatus::EndOfLife => ("EOL", scheme.critical),
-                        EolStatus::Unknown => ("?", scheme.muted),
-                    };
-                    Cell::from(Span::styled(
-                        format!(" {label} "),
-                        Style::default()
-                            .fg(
-                                if matches!(info.status, EolStatus::Supported | EolStatus::Unknown)
-                                {
-                                    scheme.badge_fg_dark
-                                } else {
-                                    scheme.badge_fg_light
-                                },
-                            )
-                            .bg(color)
-                            .bold(),
-                    ))
-                },
-            );
-
-            Row::new(vec![
-                Cell::from(vuln_indicator),
-                Cell::from(comp.name.clone()),
-                Cell::from(
-                    comp.version
-                        .clone()
-                        .unwrap_or_else(|| "\u{2014}".to_string()),
-                ),
-                Cell::from(""),
-                Cell::from(
-                    comp.ecosystem
-                        .as_ref()
-                        .map_or_else(|| "-".to_string(), std::string::ToString::to_string),
-                ),
-                staleness_cell,
-                eol_cell,
-            ])
-            .style(row_style)
-        })
-        .collect()
-}
-
-#[allow(dead_code)]
-fn severity_style(severity: &str) -> Style {
-    Style::default().fg(colors().severity_color(severity))
 }

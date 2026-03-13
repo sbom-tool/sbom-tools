@@ -3,7 +3,7 @@
 //! Proof of concept for the `ViewState` trait: the Quality tab delegates
 //! its key handling to this self-contained view state machine.
 
-use crate::tui::app_states::quality::{QualityState, QualityViewMode};
+use crate::tui::app_states::quality::QualityState;
 use crate::tui::state::ListNavigation;
 use crate::tui::traits::{EventResult, Shortcut, ViewContext, ViewState};
 use crossterm::event::{KeyCode, KeyEvent, MouseEvent};
@@ -23,24 +23,14 @@ impl QualityView {
         }
     }
 
-    pub(crate) const fn view_mode(&self) -> QualityViewMode {
-        self.inner.view_mode
+    /// Access the inner state.
+    pub(crate) const fn inner(&self) -> &QualityState {
+        &self.inner
     }
 
-    pub(crate) const fn selected_recommendation(&self) -> usize {
-        self.inner.selected_recommendation
-    }
-
-    pub(crate) const fn set_selected_recommendation(&mut self, idx: usize) {
-        self.inner.selected_recommendation = idx;
-    }
-
-    pub(crate) const fn set_total_recommendations(&mut self, total: usize) {
-        self.inner.total_recommendations = total;
-    }
-
-    pub(crate) const fn scroll_offset(&self) -> usize {
-        self.inner.scroll_offset
+    /// Mutable access to the inner state.
+    pub(crate) fn inner_mut(&mut self) -> &mut QualityState {
+        &mut self.inner
     }
 }
 
@@ -114,6 +104,7 @@ impl ViewState for QualityView {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tui::app_states::quality::QualityViewMode;
     use crate::tui::traits::ViewMode;
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
@@ -124,7 +115,7 @@ mod tests {
     fn make_ctx() -> ViewContext<'static> {
         let status: &'static mut Option<String> = Box::leak(Box::new(None));
         ViewContext {
-            mode: ViewMode::View,
+            mode: ViewMode::Diff,
             focused: true,
             width: 80,
             height: 24,
@@ -138,63 +129,63 @@ mod tests {
         let mut view = QualityView::new();
         let mut ctx = make_ctx();
 
-        assert_eq!(view.view_mode(), QualityViewMode::Summary);
+        assert_eq!(view.inner().view_mode, QualityViewMode::Summary);
 
         let result = view.handle_key(make_key(KeyCode::Char('v')), &mut ctx);
         assert_eq!(result, EventResult::Consumed);
-        assert_eq!(view.view_mode(), QualityViewMode::Breakdown);
+        assert_eq!(view.inner().view_mode, QualityViewMode::Breakdown);
 
         view.handle_key(make_key(KeyCode::Char('v')), &mut ctx);
-        assert_eq!(view.view_mode(), QualityViewMode::Metrics);
+        assert_eq!(view.inner().view_mode, QualityViewMode::Metrics);
 
         view.handle_key(make_key(KeyCode::Char('v')), &mut ctx);
-        assert_eq!(view.view_mode(), QualityViewMode::Recommendations);
+        assert_eq!(view.inner().view_mode, QualityViewMode::Recommendations);
 
         view.handle_key(make_key(KeyCode::Char('v')), &mut ctx);
-        assert_eq!(view.view_mode(), QualityViewMode::Summary);
+        assert_eq!(view.inner().view_mode, QualityViewMode::Summary);
     }
 
     #[test]
     fn test_navigation() {
         let mut view = QualityView::new();
-        view.set_total_recommendations(5);
+        view.inner_mut().total_recommendations = 5;
         let mut ctx = make_ctx();
 
-        assert_eq!(view.selected_recommendation(), 0);
+        assert_eq!(view.inner().selected_recommendation, 0);
 
         view.handle_key(make_key(KeyCode::Char('j')), &mut ctx);
-        assert_eq!(view.selected_recommendation(), 1);
+        assert_eq!(view.inner().selected_recommendation, 1);
 
         view.handle_key(make_key(KeyCode::Down), &mut ctx);
-        assert_eq!(view.selected_recommendation(), 2);
+        assert_eq!(view.inner().selected_recommendation, 2);
 
         view.handle_key(make_key(KeyCode::Char('k')), &mut ctx);
-        assert_eq!(view.selected_recommendation(), 1);
+        assert_eq!(view.inner().selected_recommendation, 1);
 
         view.handle_key(make_key(KeyCode::Up), &mut ctx);
-        assert_eq!(view.selected_recommendation(), 0);
+        assert_eq!(view.inner().selected_recommendation, 0);
 
         // Can't go below 0
         view.handle_key(make_key(KeyCode::Up), &mut ctx);
-        assert_eq!(view.selected_recommendation(), 0);
+        assert_eq!(view.inner().selected_recommendation, 0);
     }
 
     #[test]
     fn test_home_end() {
         let mut view = QualityView::new();
-        view.set_total_recommendations(10);
+        view.inner_mut().total_recommendations = 10;
         let mut ctx = make_ctx();
 
         // Go to end
         let result = view.handle_key(make_key(KeyCode::Char('G')), &mut ctx);
         assert_eq!(result, EventResult::Consumed);
-        assert_eq!(view.selected_recommendation(), 9);
+        assert_eq!(view.inner().selected_recommendation, 9);
 
         // Go to start
         let result = view.handle_key(make_key(KeyCode::Char('g')), &mut ctx);
         assert_eq!(result, EventResult::Consumed);
-        assert_eq!(view.selected_recommendation(), 0);
-        assert_eq!(view.scroll_offset(), 0);
+        assert_eq!(view.inner().selected_recommendation, 0);
+        assert_eq!(view.inner().scroll_offset, 0);
     }
 
     #[test]
@@ -204,7 +195,7 @@ mod tests {
 
         let result = view.handle_key(make_key(KeyCode::Char('G')), &mut ctx);
         assert_eq!(result, EventResult::Consumed);
-        assert_eq!(view.selected_recommendation(), 0); // stays at 0
+        assert_eq!(view.inner().selected_recommendation, 0); // stays at 0
     }
 
     #[test]

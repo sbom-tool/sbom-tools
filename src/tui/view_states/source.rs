@@ -21,6 +21,11 @@ impl SourceView {
         }
     }
 
+    /// Create with pre-populated state (used when raw SBOM text is available).
+    pub(crate) fn with_state(state: SourceDiffState) -> Self {
+        Self { inner: state }
+    }
+
     /// Access the inner state for sync operations.
     pub(crate) fn inner(&self) -> &SourceDiffState {
         &self.inner
@@ -30,41 +35,6 @@ impl SourceView {
     pub(crate) fn inner_mut(&mut self) -> &mut SourceDiffState {
         &mut self.inner
     }
-
-    pub(crate) fn sync_from(&mut self, state: &SourceDiffState) {
-        self.inner.active_side = state.active_side;
-        self.inner.sync_mode = state.sync_mode;
-        self.inner.show_detail = state.show_detail;
-        // Panel state is complex — sync individual fields
-        sync_panel(&mut self.inner.old_panel, &state.old_panel);
-        sync_panel(&mut self.inner.new_panel, &state.new_panel);
-    }
-
-    pub(crate) fn sync_to(&self, state: &mut SourceDiffState) {
-        state.active_side = self.inner.active_side;
-        state.sync_mode = self.inner.sync_mode;
-        state.show_detail = self.inner.show_detail;
-        sync_panel(&mut state.old_panel, &self.inner.old_panel);
-        sync_panel(&mut state.new_panel, &self.inner.new_panel);
-    }
-}
-
-fn sync_panel(
-    dst: &mut crate::tui::app_states::source::SourcePanelState,
-    src: &crate::tui::app_states::source::SourcePanelState,
-) {
-    dst.selected = src.selected;
-    dst.scroll_offset = src.scroll_offset;
-    dst.h_scroll_offset = src.h_scroll_offset;
-    dst.view_mode = src.view_mode;
-    dst.show_line_numbers = src.show_line_numbers;
-    dst.word_wrap = src.word_wrap;
-    dst.search_active = src.search_active;
-    dst.search_query.clone_from(&src.search_query);
-    dst.search_matches.clone_from(&src.search_matches);
-    dst.search_current = src.search_current;
-    dst.bookmarks.clone_from(&src.bookmarks);
-    dst.expanded.clone_from(&src.expanded);
 }
 
 impl Default for SourceView {
@@ -407,7 +377,7 @@ mod tests {
         let initial = view.inner().old_panel.view_mode;
         view.handle_key(make_key(KeyCode::Char('v')), &mut ctx);
         // toggle_view_mode cycles the mode
-        let after = view.inner().old_panel.view_mode;
+        let _after = view.inner().old_panel.view_mode;
         // Verify it changed (or at least the key was consumed)
         let result = view.handle_key(make_key(KeyCode::Char('v')), &mut ctx);
         assert_eq!(result, EventResult::Consumed);

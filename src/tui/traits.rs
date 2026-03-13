@@ -214,8 +214,6 @@ impl ViewContext<'_> {
 pub enum ViewMode {
     /// Comparing two SBOMs
     Diff,
-    /// Viewing a single SBOM
-    View,
     /// Multi-diff comparison
     MultiDiff,
     /// Timeline analysis
@@ -230,7 +228,6 @@ impl ViewMode {
     pub const fn from_app_mode(mode: super::app::AppMode) -> Self {
         match mode {
             super::app::AppMode::Diff => Self::Diff,
-            super::app::AppMode::View => Self::View,
             super::app::AppMode::MultiDiff => Self::MultiDiff,
             super::app::AppMode::Timeline => Self::Timeline,
             super::app::AppMode::Matrix => Self::Matrix,

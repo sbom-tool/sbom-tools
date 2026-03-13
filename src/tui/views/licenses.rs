@@ -1,12 +1,12 @@
 //! Licenses view with enhanced categorization, compatibility checking, and risk assessment.
 
-use crate::tui::app::{App, AppMode, LicenseGroupBy, LicenseRiskFilter, LicenseSort};
+use crate::tui::app::{AppMode, LicenseGroupBy, LicenseRiskFilter, LicenseSort};
 use crate::tui::license_conflicts::{ConflictDetector, ConflictSeverity};
 use crate::tui::license_utils::{
-    LicenseCategory, LicenseInfo, LicenseStats, RiskLevel, SpdxExpression,
+    LicenseCategory, LicenseInfo, RiskLevel, SpdxExpression,
     analyze_license_compatibility,
 };
-use crate::tui::state::ListNavigation;
+use crate::tui::render_context::RenderContext;
 use crate::tui::theme::colors;
 use crate::tui::widgets;
 use ratatui::{
@@ -15,29 +15,28 @@ use ratatui::{
 };
 use std::collections::HashMap;
 
-pub fn render_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
+pub fn render_licenses(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(3), Constraint::Min(5)])
         .split(area);
 
     // Filter bar with group by and sort
-    render_filter_bar(frame, chunks[0], app);
+    render_filter_bar(frame, chunks[0], ctx);
 
-    // License content - both modes now use &mut App for state updates
-    match app.mode {
-        AppMode::Diff => render_diff_licenses(frame, chunks[1], app),
-        AppMode::View => render_view_licenses(frame, chunks[1], app),
+    // License content
+    match ctx.mode {
+        AppMode::Diff => render_diff_licenses(frame, chunks[1], ctx),
         // Multi-comparison modes have their own views
         AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => {}
     }
 }
 
-fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
+fn render_filter_bar(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let scheme = colors();
-    let group = &app.tabs.licenses.group_by;
-    let sort = &app.tabs.licenses.sort_by;
-    let is_diff_mode = app.mode == AppMode::Diff;
+    let group = &ctx.licenses.group_by;
+    let sort = &ctx.licenses.sort_by;
+    let is_diff_mode = ctx.mode == AppMode::Diff;
 
     let group_label = match group {
         LicenseGroupBy::License => "License",
@@ -54,7 +53,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
         LicenseSort::Risk => "Risk",
     };
 
-    let risk_filter_label = match app.tabs.licenses.risk_filter {
+    let risk_filter_label = match ctx.licenses.risk_filter {
         None => "All",
         Some(LicenseRiskFilter::Low) => "Low+",
         Some(LicenseRiskFilter::Medium) => "Medium+",
@@ -62,7 +61,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
         Some(LicenseRiskFilter::Critical) => "Critical",
     };
 
-    let compat_label = if app.tabs.licenses.show_compatibility {
+    let compat_label = if ctx.licenses.show_compatibility {
         "On"
     } else {
         "Off"
@@ -86,7 +85,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
             format!(" {risk_filter_label} "),
             Style::default()
                 .fg(scheme.badge_fg_dark)
-                .bg(if app.tabs.licenses.risk_filter.is_some() {
+                .bg(if ctx.licenses.risk_filter.is_some() {
                     scheme.warning
                 } else {
                     scheme.success
@@ -99,7 +98,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
             format!(" {compat_label} "),
             Style::default()
                 .fg(scheme.badge_fg_dark)
-                .bg(if app.tabs.licenses.show_compatibility {
+                .bg(if ctx.licenses.show_compatibility {
                     scheme.accent
                 } else {
                     scheme.border
@@ -110,7 +109,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
 
     // Show panel focus indicator only in Diff mode
     if is_diff_mode {
-        let focus_label = if app.tabs.licenses.focus_left {
+        let focus_label = if ctx.licenses.focus_left {
             "New"
         } else {
             "Removed"
@@ -124,7 +123,7 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
             format!(" {focus_label} "),
             Style::default()
                 .fg(scheme.badge_fg_dark)
-                .bg(if app.tabs.licenses.focus_left {
+                .bg(if ctx.licenses.focus_left {
                     scheme.added
                 } else {
                     scheme.removed
@@ -174,13 +173,13 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(paragraph, area);
 }
 
-fn render_diff_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
-    let Some(result) = app.data.diff_result.as_ref() else {
+fn render_diff_licenses(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
+    let Some(result) = ctx.diff_result else {
         return;
     };
 
     // Layout depends on whether compatibility panel is shown
-    let main_chunks = if app.tabs.licenses.show_compatibility {
+    let main_chunks = if ctx.licenses.show_compatibility {
         Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
@@ -193,7 +192,7 @@ fn render_diff_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
     };
 
     // Left panel: split between new and removed (or compatibility stats)
-    let list_area = if app.tabs.licenses.show_compatibility {
+    let list_area = if ctx.licenses.show_compatibility {
         // When showing compatibility, give more space to lists
         let left_chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -201,7 +200,7 @@ fn render_diff_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
             .split(main_chunks[0]);
 
         // Render compatibility panel on the right
-        render_compatibility_panel(frame, main_chunks[1], app);
+        render_compatibility_panel(frame, main_chunks[1], ctx);
 
         left_chunks
     } else {
@@ -211,22 +210,14 @@ fn render_diff_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
             .split(main_chunks[0])
     };
 
-    let sort = app.tabs.licenses.sort_by;
-    let group = app.tabs.licenses.group_by;
-    let risk_filter = app.tabs.licenses.risk_filter;
+    let sort = ctx.licenses.sort_by;
+    let group = ctx.licenses.group_by;
+    let risk_filter = ctx.licenses.risk_filter;
 
     // Build sorted and filtered license data
     let new_licenses = build_license_list(&result.licenses.new_licenses, sort, group, risk_filter);
     let removed_licenses =
         build_license_list(&result.licenses.removed_licenses, sort, group, risk_filter);
-
-    // Update total based on focus
-    app.tabs.licenses.total = if app.tabs.licenses.focus_left {
-        new_licenses.len()
-    } else {
-        removed_licenses.len()
-    };
-    app.tabs.licenses.clamp_selection();
 
     // Render new licenses table
     render_license_table(
@@ -235,13 +226,13 @@ fn render_diff_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
         &new_licenses,
         " + New Licenses ",
         true,
-        app.tabs.licenses.focus_left,
-        if app.tabs.licenses.focus_left {
-            Some(app.tabs.licenses.selected)
+        ctx.licenses.focus_left,
+        if ctx.licenses.focus_left {
+            Some(ctx.licenses.selected)
         } else {
             None
         },
-        &mut app.tabs.licenses.scroll_offset_new,
+        ctx.licenses.scroll_offset_new,
         group,
     );
 
@@ -252,39 +243,39 @@ fn render_diff_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
         &removed_licenses,
         " - Removed Licenses ",
         false,
-        !app.tabs.licenses.focus_left,
-        if app.tabs.licenses.focus_left {
+        !ctx.licenses.focus_left,
+        if ctx.licenses.focus_left {
             None
         } else {
-            Some(app.tabs.licenses.selected)
+            Some(ctx.licenses.selected)
         },
-        &mut app.tabs.licenses.scroll_offset_removed,
+        ctx.licenses.scroll_offset_removed,
         group,
     );
 
     // Detail panel (only when compatibility is off)
-    if !app.tabs.licenses.show_compatibility {
-        let selected_license = if app.tabs.licenses.focus_left {
-            new_licenses.get(app.tabs.licenses.selected)
+    if !ctx.licenses.show_compatibility {
+        let selected_license = if ctx.licenses.focus_left {
+            new_licenses.get(ctx.licenses.selected)
         } else {
-            removed_licenses.get(app.tabs.licenses.selected)
+            removed_licenses.get(ctx.licenses.selected)
         };
 
         render_license_details(
             frame,
             main_chunks[1],
             selected_license,
-            app.tabs.licenses.focus_left,
-            app.data.diff_result.as_ref(),
+            ctx.licenses.focus_left,
+            ctx.diff_result,
         );
     }
 }
 
 /// Render compatibility analysis panel
-fn render_compatibility_panel(frame: &mut Frame, area: Rect, app: &App) {
+fn render_compatibility_panel(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let scheme = colors();
 
-    let Some(result) = app.data.diff_result.as_ref() else {
+    let Some(result) = ctx.diff_result else {
         return;
     };
 
@@ -585,7 +576,7 @@ fn render_license_table(
     is_new: bool,
     is_focused: bool,
     selected: Option<usize>,
-    scroll_offset: &mut usize,
+    scroll_offset: usize,
     group: LicenseGroupBy,
 ) {
     let scheme = colors();
@@ -706,15 +697,10 @@ fn render_license_table(
         .highlight_symbol(if is_focused { "▶ " } else { "  " });
 
     let mut state = TableState::default()
-        .with_offset(*scroll_offset)
+        .with_offset(scroll_offset)
         .with_selected(selected);
 
     frame.render_stateful_widget(table, area, &mut state);
-
-    // Update scroll offset only when focused
-    if is_focused {
-        *scroll_offset = state.offset();
-    }
 }
 
 fn render_license_details(
@@ -812,372 +798,6 @@ fn render_license_details(
                 .title(" License Details ")
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(border_color)),
-        )
-        .wrap(ratatui::widgets::Wrap { trim: true });
-
-    frame.render_widget(detail, area);
-}
-
-fn render_view_licenses(frame: &mut Frame, area: Rect, app: &mut App) {
-    let Some(sbom) = app.data.sbom.as_ref() else {
-        return;
-    };
-    let sort = app.tabs.licenses.sort_by;
-    let risk_filter = app.tabs.licenses.risk_filter;
-
-    // Collect license usage
-    let mut license_counts: HashMap<String, Vec<String>> = HashMap::new();
-
-    for comp in sbom.components.values() {
-        for lic in &comp.licenses.declared {
-            license_counts
-                .entry(lic.expression.clone())
-                .or_default()
-                .push(comp.name.clone());
-        }
-    }
-
-    // Handle empty state
-    if license_counts.is_empty() {
-        widgets::render_empty_state_enhanced(
-            frame,
-            area,
-            "📜",
-            "No license information found",
-            Some("Components in this SBOM do not have declared licenses"),
-            Some("License data may be incomplete or missing from the source"),
-        );
-        return;
-    }
-
-    // Layout with optional stats/details panel
-    let chunks = if app.tabs.licenses.show_compatibility {
-        Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
-            .split(area)
-    } else {
-        Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
-            .split(area)
-    };
-
-    // Build license entries with metadata
-    let mut licenses: Vec<_> = license_counts
-        .into_iter()
-        .map(|(license, components)| {
-            let info = LicenseInfo::from_spdx(&license);
-            let parsed = SpdxExpression::parse(&license);
-            LicenseEntry {
-                license,
-                components,
-                category: info.category,
-                risk_level: info.risk_level,
-                family: info.family.to_string(),
-                is_dual_licensed: parsed.is_choice(),
-            }
-        })
-        .collect();
-
-    // Apply risk filter
-    if let Some(min_risk) = risk_filter {
-        let min_level = match min_risk {
-            LicenseRiskFilter::Low => RiskLevel::Low,
-            LicenseRiskFilter::Medium => RiskLevel::Medium,
-            LicenseRiskFilter::High => RiskLevel::High,
-            LicenseRiskFilter::Critical => RiskLevel::Critical,
-        };
-        licenses.retain(|e| e.risk_level >= min_level);
-    }
-
-    // Apply sorting (with license name tiebreaker for stable ordering)
-    match sort {
-        LicenseSort::License => {
-            licenses.sort_by(|a, b| a.license.cmp(&b.license));
-        }
-        LicenseSort::Count => {
-            licenses.sort_by(|a, b| {
-                b.components
-                    .len()
-                    .cmp(&a.components.len())
-                    .then_with(|| a.license.cmp(&b.license))
-            });
-        }
-        LicenseSort::Permissiveness => {
-            licenses.sort_by(|a, b| {
-                a.category
-                    .copyleft_strength()
-                    .cmp(&b.category.copyleft_strength())
-                    .then_with(|| a.license.cmp(&b.license))
-            });
-        }
-        LicenseSort::Risk => {
-            licenses.sort_by(|a, b| {
-                b.risk_level
-                    .cmp(&a.risk_level)
-                    .then_with(|| a.license.cmp(&b.license))
-            });
-        }
-    }
-
-    // Update total and clamp selection
-    app.tabs.licenses.total = licenses.len();
-    app.tabs.licenses.clamp_selection();
-
-    let scheme = colors();
-
-    // Build all rows (no limit)
-    let rows: Vec<Row> = licenses
-        .iter()
-        .map(|entry| {
-            let cat_color = crate::tui::shared::licenses::category_color(entry.category);
-
-            let risk_color = crate::tui::shared::licenses::risk_level_color(entry.risk_level);
-
-            let license_display = if entry.is_dual_licensed {
-                format!("{} ⊕", widgets::truncate_str(&entry.license, 28))
-            } else {
-                widgets::truncate_str(&entry.license, 30)
-            };
-
-            Row::new(vec![
-                Cell::from(license_display),
-                Cell::from(entry.components.len().to_string()),
-                Cell::from(Span::styled(
-                    entry.category.as_str(),
-                    Style::default().fg(cat_color),
-                )),
-                Cell::from(Span::styled(
-                    entry.risk_level.as_str(),
-                    Style::default().fg(risk_color),
-                )),
-            ])
-        })
-        .collect();
-
-    let table = Table::new(
-        rows,
-        [
-            Constraint::Min(20),
-            Constraint::Length(6),
-            Constraint::Length(14),
-            Constraint::Length(8),
-        ],
-    )
-    .header(
-        Row::new(vec!["License", "Count", "Category", "Risk"])
-            .style(Style::default().bold().fg(scheme.accent)),
-    )
-    .block(
-        Block::default()
-            .title(format!(" License Usage ({}) ", licenses.len()))
-            .title_style(Style::default().fg(scheme.primary).bold())
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(scheme.accent)),
-    )
-    .row_highlight_style(
-        Style::default()
-            .bg(scheme.selection)
-            .add_modifier(Modifier::BOLD),
-    )
-    .highlight_symbol("▶ ");
-
-    // Create table state for selection and scrolling
-    let mut state = TableState::default()
-        .with_offset(app.tabs.licenses.scroll_offset_view)
-        .with_selected(Some(app.tabs.licenses.selected));
-
-    frame.render_stateful_widget(table, chunks[0], &mut state);
-
-    // Update scroll offset from state
-    app.tabs.licenses.scroll_offset_view = state.offset();
-
-    // Render right panel based on mode
-    if app.tabs.licenses.show_compatibility {
-        // Show statistics panel
-        render_view_stats_panel(frame, chunks[1], &licenses);
-    } else {
-        // Show details for selected license
-        let selected_license = licenses.get(app.tabs.licenses.selected);
-        render_view_license_details(frame, chunks[1], selected_license);
-    }
-}
-
-/// Render license statistics panel for view mode
-fn render_view_stats_panel(frame: &mut Frame, area: Rect, licenses: &[LicenseEntry]) {
-    let scheme = colors();
-
-    let mut lines = vec![];
-
-    // Stats summary
-    let stats = LicenseStats::from_licenses(
-        &licenses
-            .iter()
-            .map(|e| e.license.as_str())
-            .collect::<Vec<_>>(),
-    );
-
-    lines.push(Line::styled(
-        "License Statistics",
-        Style::default().fg(scheme.primary).bold(),
-    ));
-    lines.push(Line::from(""));
-
-    lines.push(Line::from(vec![
-        Span::styled("Total: ", Style::default().fg(scheme.text_muted)),
-        Span::styled(
-            stats.total_licenses.to_string(),
-            Style::default().fg(scheme.text),
-        ),
-        Span::styled(" licenses (", Style::default().fg(scheme.text_muted)),
-        Span::styled(
-            stats.unique_licenses.to_string(),
-            Style::default().fg(scheme.accent),
-        ),
-        Span::styled(" unique)", Style::default().fg(scheme.text_muted)),
-    ]));
-
-    lines.push(Line::from(""));
-
-    // Category breakdown
-    lines.push(Line::styled(
-        "By Category:",
-        Style::default().fg(scheme.primary).bold(),
-    ));
-
-    let total = stats.unique_licenses.max(1) as f64;
-
-    for (cat, count) in &stats.by_category {
-        let pct = (*count as f64 / total * 100.0) as u16;
-        let bar_width = (area.width as usize).saturating_sub(25);
-        let filled = (bar_width as f64 * (*count as f64 / total)) as usize;
-
-        let cat_color = crate::tui::shared::licenses::category_color(*cat);
-
-        lines.push(Line::from(vec![
-            Span::styled(
-                format!("  {:14}", cat.as_str()),
-                Style::default().fg(cat_color),
-            ),
-            Span::styled("█".repeat(filled), Style::default().fg(cat_color)),
-            Span::styled(
-                "░".repeat(bar_width.saturating_sub(filled)),
-                Style::default().fg(scheme.border),
-            ),
-            Span::styled(format!(" {pct}%"), Style::default().fg(scheme.text_muted)),
-        ]));
-    }
-
-    lines.push(Line::from(""));
-
-    // Risk breakdown
-    lines.push(Line::styled(
-        "By Risk Level:",
-        Style::default().fg(scheme.primary).bold(),
-    ));
-
-    for (risk, count) in &stats.by_risk {
-        let risk_color = match risk {
-            RiskLevel::Low => scheme.success,
-            RiskLevel::Medium => scheme.info,
-            RiskLevel::High => scheme.warning,
-            RiskLevel::Critical => scheme.error,
-        };
-
-        lines.push(Line::from(vec![
-            Span::styled("  • ", Style::default().fg(scheme.text_muted)),
-            Span::styled(risk.as_str(), Style::default().fg(risk_color)),
-            Span::styled(format!(": {count}"), Style::default().fg(scheme.text)),
-        ]));
-    }
-
-    // Copyleft summary
-    lines.push(Line::from(""));
-    lines.push(Line::from(vec![
-        Span::styled("Permissive: ", Style::default().fg(scheme.text_muted)),
-        Span::styled(
-            format!("{}%", (stats.permissive_count as f64 / total * 100.0) as u8),
-            Style::default().fg(scheme.success),
-        ),
-        Span::styled("  Copyleft: ", Style::default().fg(scheme.text_muted)),
-        Span::styled(
-            format!("{}%", (stats.copyleft_count as f64 / total * 100.0) as u8),
-            Style::default().fg(scheme.warning),
-        ),
-    ]));
-
-    let block = Block::default()
-        .title(" License Statistics ")
-        .title_style(Style::default().fg(scheme.primary).bold())
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(scheme.border));
-
-    let paragraph = Paragraph::new(lines).block(block);
-
-    frame.render_widget(paragraph, area);
-}
-
-/// Render license details panel for view mode
-fn render_view_license_details(frame: &mut Frame, area: Rect, entry: Option<&LicenseEntry>) {
-    let scheme = colors();
-
-    let Some(entry) = entry else {
-        crate::tui::shared::components::render_empty_detail_panel(
-            frame,
-            area,
-            " License Details ",
-            "",
-            "Select a license to view details",
-            &[],
-            false,
-        );
-        return;
-    };
-
-    let mut lines = crate::tui::shared::licenses::render_license_metadata_lines(
-        &entry.license,
-        entry.category,
-        entry.risk_level,
-        &entry.family,
-        entry.components.len(),
-        entry.is_dual_licensed,
-    );
-
-    lines.push(Line::from(""));
-
-    lines
-        .extend(crate::tui::shared::licenses::render_license_characteristics_lines(&entry.license));
-
-    lines.push(Line::from(""));
-
-    // Affected components
-    lines.push(Line::styled(
-        "Using Components:",
-        Style::default().fg(scheme.primary).bold(),
-    ));
-
-    let max_components = (area.height as usize).saturating_sub(18).max(3);
-    for comp in entry.components.iter().take(max_components) {
-        lines.push(Line::from(vec![
-            Span::styled("  • ", Style::default().fg(scheme.text_muted)),
-            Span::raw(widgets::truncate_str(comp, area.width as usize - 8)),
-        ]));
-    }
-
-    if entry.components.len() > max_components {
-        lines.push(Line::from(vec![Span::styled(
-            format!("  ... and {} more", entry.components.len() - max_components),
-            Style::default().fg(scheme.text_muted),
-        )]));
-    }
-
-    let detail = Paragraph::new(lines)
-        .block(
-            Block::default()
-                .title(" License Details ")
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(scheme.primary)),
         )
         .wrap(ratatui::widgets::Wrap { trim: true });
 

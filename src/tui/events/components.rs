@@ -9,9 +9,6 @@ pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
         return;
     };
 
-    // Pre-sync: tabs → view
-    view.sync_from(&app.tabs.components);
-
     let mut ctx = ViewContext {
         mode: ViewMode::from_app_mode(app.mode),
         focused: true,
@@ -22,9 +19,6 @@ pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
     };
 
     let result = view.handle_key(key, &mut ctx);
-
-    // Post-sync: view → tabs
-    view.sync_to(&mut app.tabs.components);
 
     match result {
         EventResult::StatusMessage(msg) => {
@@ -113,14 +107,10 @@ fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
 
 /// Get the name of the currently selected component (for Components tab quick actions)
 pub(super) fn get_components_tab_selected_name(app: &App) -> Option<String> {
-    let selected = app.tabs.components.selected;
+    let selected = app.components_state().selected;
     match app.mode {
         AppMode::Diff => app.data.diff_result.as_ref().and_then(|_| {
-            let items = app.diff_component_items(app.tabs.components.filter);
-            items.get(selected).map(|c| c.name.clone())
-        }),
-        AppMode::View => app.data.sbom.as_ref().and_then(|_| {
-            let items = app.view_component_items();
+            let items = app.diff_component_items(app.components_state().filter);
             items.get(selected).map(|c| c.name.clone())
         }),
         _ => None,
@@ -129,10 +119,10 @@ pub(super) fn get_components_tab_selected_name(app: &App) -> Option<String> {
 
 /// Get clipboard-friendly info for the selected component
 pub(super) fn get_components_tab_clipboard_info(app: &App, comp_name: &str) -> String {
-    let selected = app.tabs.components.selected;
+    let selected = app.components_state().selected;
     match app.mode {
         AppMode::Diff => {
-            let items = app.diff_component_items(app.tabs.components.filter);
+            let items = app.diff_component_items(app.components_state().filter);
             items.get(selected).map_or_else(
                 || comp_name.to_string(),
                 |comp| {
@@ -149,40 +139,16 @@ pub(super) fn get_components_tab_clipboard_info(app: &App, comp_name: &str) -> S
                 },
             )
         }
-        AppMode::View => {
-            let items = app.view_component_items();
-            items.get(selected).map_or_else(
-                || comp_name.to_string(),
-                |comp| {
-                    let vulns: Vec<_> =
-                        comp.vulnerabilities.iter().map(|v| v.id.as_str()).collect();
-                    format!(
-                        "Component: {}\nVersion: {}\nEcosystem: {}\nVulnerabilities: {}",
-                        comp.name,
-                        comp.version.as_deref().unwrap_or("unknown"),
-                        comp.ecosystem.as_ref().map_or_else(
-                            || "unknown".to_string(),
-                            std::string::ToString::to_string
-                        ),
-                        if vulns.is_empty() {
-                            "None".to_string()
-                        } else {
-                            vulns.join(", ")
-                        }
-                    )
-                },
-            )
-        }
         _ => comp_name.to_string(),
     }
 }
 
 /// Get the first vulnerability ID for the selected component
 pub(super) fn get_components_tab_selected_vuln(app: &App) -> Option<String> {
-    let selected = app.tabs.components.selected;
+    let selected = app.components_state().selected;
     match app.mode {
         AppMode::Diff => app.data.diff_result.as_ref().and_then(|r| {
-            let items = app.diff_component_items(app.tabs.components.filter);
+            let items = app.diff_component_items(app.components_state().filter);
             items.get(selected).and_then(|comp| {
                 r.vulnerabilities
                     .introduced
@@ -190,12 +156,6 @@ pub(super) fn get_components_tab_selected_vuln(app: &App) -> Option<String> {
                     .find(|v| v.component_id == comp.id)
                     .map(|v| v.id.clone())
             })
-        }),
-        AppMode::View => app.data.sbom.as_ref().and_then(|_| {
-            let items = app.view_component_items();
-            items
-                .get(selected)
-                .and_then(|comp| comp.vulnerabilities.first().map(|v| v.id.clone()))
         }),
         _ => None,
     }

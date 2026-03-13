@@ -10,9 +10,6 @@ pub(super) fn handle_dependencies_keys(app: &mut App, key: KeyEvent) {
         return;
     };
 
-    // Pre-sync: tabs → view
-    view.sync_from(&app.tabs.dependencies);
-
     let mut ctx = ViewContext {
         mode: ViewMode::from_app_mode(app.mode),
         focused: true,
@@ -24,9 +21,6 @@ pub(super) fn handle_dependencies_keys(app: &mut App, key: KeyEvent) {
 
     let result = view.handle_key(key, &mut ctx);
 
-    // Post-sync: view → tabs
-    view.sync_to(&mut app.tabs.dependencies);
-
     // Skip dependency placeholders after navigation
     if matches!(
         key.code,
@@ -36,7 +30,7 @@ pub(super) fn handle_dependencies_keys(app: &mut App, key: KeyEvent) {
     }
 
     // Update search matches if search state changed
-    if app.tabs.dependencies.is_searching() {
+    if app.dependencies_state().is_searching() {
         update_dependencies_search_matches(app);
     }
 
@@ -57,8 +51,7 @@ fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
     if key.code == KeyCode::Char('c') {
         // Navigate to component (cross-tab)
         if let Some(node_id) = app
-            .tabs
-            .dependencies
+            .dependencies_state()
             .get_selected_node_id()
             .map(str::to_string)
         {
@@ -70,8 +63,7 @@ fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
 /// Update search matches for dependencies view
 pub(super) fn update_dependencies_search_matches(app: &mut App) {
     let all_nodes: Vec<(String, String)> = app
-        .tabs
-        .dependencies
+        .dependencies_state()
         .visible_nodes
         .iter()
         .filter(|id| !id.starts_with("__"))
@@ -85,24 +77,24 @@ pub(super) fn update_dependencies_search_matches(app: &mut App) {
         })
         .collect();
 
-    app.tabs.dependencies.update_search_matches(&all_nodes);
+    app.dependencies_state_mut().update_search_matches(&all_nodes);
 }
 
 pub(super) fn skip_dependency_placeholders(app: &mut App, forward: bool) {
     loop {
-        let Some(node_id) = app.tabs.dependencies.get_selected_node_id() else {
+        let Some(node_id) = app.dependencies_state().get_selected_node_id() else {
             break;
         };
         if !node_id.starts_with("__") {
             break;
         }
-        let before = app.tabs.dependencies.selected;
+        let before = app.dependencies_state().selected;
         if forward {
-            app.tabs.dependencies.select_next();
+            app.dependencies_state_mut().select_next();
         } else {
-            app.tabs.dependencies.select_prev();
+            app.dependencies_state_mut().select_prev();
         }
-        if app.tabs.dependencies.selected == before {
+        if app.dependencies_state().selected == before {
             break;
         }
     }

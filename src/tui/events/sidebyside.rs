@@ -9,9 +9,6 @@ pub(super) fn handle_sidebyside_keys(app: &mut App, key: KeyEvent) {
         return;
     };
 
-    // Pre-sync: tabs → view
-    view.sync_from(&app.tabs.side_by_side);
-
     let mut ctx = ViewContext {
         mode: ViewMode::from_app_mode(app.mode),
         focused: true,
@@ -23,11 +20,8 @@ pub(super) fn handle_sidebyside_keys(app: &mut App, key: KeyEvent) {
 
     let result = view.handle_key(key, &mut ctx);
 
-    // Post-sync: view → tabs
-    view.sync_to(&mut app.tabs.side_by_side);
-
     // Update search matches if search is active and text changed
-    if app.tabs.side_by_side.search_active
+    if app.side_by_side_state().search_active
         && matches!(key.code, KeyCode::Char(_) | KeyCode::Backspace)
     {
         update_sidebyside_search_matches(app);
@@ -60,14 +54,13 @@ fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
 
 pub(super) fn update_sidebyside_search_matches(app: &mut App) {
     let query = app
-        .tabs
-        .side_by_side
+        .side_by_side_state()
         .search_query
         .clone()
         .unwrap_or_default();
 
     if query.is_empty() {
-        app.tabs.side_by_side.update_search_matches(vec![]);
+        app.side_by_side_state_mut().update_search_matches(vec![]);
         return;
     }
 
@@ -75,7 +68,7 @@ pub(super) fn update_sidebyside_search_matches(app: &mut App) {
     let mut matches = Vec::new();
 
     if let Some(result) = &app.data.diff_result {
-        let filter = &app.tabs.side_by_side.filter;
+        let filter = &app.side_by_side_state().filter.clone();
         let mut idx = 0;
 
         if filter.show_removed {
@@ -106,13 +99,13 @@ pub(super) fn update_sidebyside_search_matches(app: &mut App) {
         }
     }
 
-    app.tabs.side_by_side.update_search_matches(matches);
+    app.side_by_side_state_mut().update_search_matches(matches);
 }
 
 pub(super) fn get_current_row_info(app: &App) -> Option<String> {
     let result = app.data.diff_result.as_ref()?;
-    let filter = &app.tabs.side_by_side.filter;
-    let selected = app.tabs.side_by_side.selected_row;
+    let filter = &app.side_by_side_state().filter;
+    let selected = app.side_by_side_state().selected_row;
 
     let mut idx = 0;
 

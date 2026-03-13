@@ -20,12 +20,14 @@ impl GraphChangesView {
         }
     }
 
-    pub(crate) const fn selected(&self) -> usize {
-        self.inner.selected
+    /// Access the inner state.
+    pub(crate) const fn inner(&self) -> &GraphChangesState {
+        &self.inner
     }
 
-    pub(crate) fn set_total(&mut self, total: usize) {
-        self.inner.set_total(total);
+    /// Mutable access to the inner state.
+    pub(crate) fn inner_mut(&mut self) -> &mut GraphChangesState {
+        &mut self.inner
     }
 }
 
@@ -96,7 +98,7 @@ mod tests {
     fn make_ctx() -> ViewContext<'static> {
         let status: &'static mut Option<String> = Box::leak(Box::new(None));
         ViewContext {
-            mode: ViewMode::View,
+            mode: ViewMode::Diff,
             focused: true,
             width: 80,
             height: 24,
@@ -108,35 +110,35 @@ mod tests {
     #[test]
     fn test_navigation() {
         let mut view = GraphChangesView::new();
-        view.set_total(5);
+        view.inner_mut().set_total(5);
         let mut ctx = make_ctx();
 
-        assert_eq!(view.selected(), 0);
+        assert_eq!(view.inner().selected, 0);
 
         view.handle_key(make_key(KeyCode::Down), &mut ctx);
-        assert_eq!(view.selected(), 1);
+        assert_eq!(view.inner().selected, 1);
 
         view.handle_key(make_key(KeyCode::Char('j')), &mut ctx);
-        assert_eq!(view.selected(), 2);
+        assert_eq!(view.inner().selected, 2);
 
         view.handle_key(make_key(KeyCode::Up), &mut ctx);
-        assert_eq!(view.selected(), 1);
+        assert_eq!(view.inner().selected, 1);
 
         view.handle_key(make_key(KeyCode::Char('k')), &mut ctx);
-        assert_eq!(view.selected(), 0);
+        assert_eq!(view.inner().selected, 0);
     }
 
     #[test]
     fn test_home_end() {
         let mut view = GraphChangesView::new();
-        view.set_total(10);
+        view.inner_mut().set_total(10);
         let mut ctx = make_ctx();
 
         view.handle_key(make_key(KeyCode::Char('G')), &mut ctx);
-        assert_eq!(view.selected(), 9);
+        assert_eq!(view.inner().selected, 9);
 
         view.handle_key(make_key(KeyCode::Home), &mut ctx);
-        assert_eq!(view.selected(), 0);
+        assert_eq!(view.inner().selected, 0);
     }
 
     #[test]

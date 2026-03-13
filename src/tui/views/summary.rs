@@ -1,35 +1,31 @@
 //! Summary view with visual gauges and charts.
 
 use crate::quality::ComplianceResult;
-use crate::tui::app::{App, AppMode};
+use crate::tui::app::AppMode;
+use crate::tui::render_context::RenderContext;
 use crate::tui::theme::colors;
 use ratatui::{
     prelude::*,
     widgets::{Bar, BarChart, BarGroup, Block, Borders, Gauge, Paragraph},
 };
 
-pub fn render_summary(frame: &mut Frame, area: Rect, app: &App) {
-    match app.mode {
-        AppMode::Diff => render_diff_summary(frame, area, app),
-        AppMode::View => render_view_summary(frame, area, app),
+pub fn render_summary(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
+    match ctx.mode {
+        AppMode::Diff => render_diff_summary(frame, area, ctx),
         // Multi-comparison modes have their own views
         AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => {}
     }
 }
 
-fn render_diff_summary(frame: &mut Frame, area: Rect, app: &App) {
-    let Some(result) = app.data.diff_result.as_ref() else {
+fn render_diff_summary(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
+    let Some(result) = ctx.diff_result else {
         return;
     };
-    let old_count = app
-        .data
+    let old_count = ctx
         .old_sbom
-        .as_ref()
         .map_or(0, crate::model::NormalizedSbom::component_count);
-    let new_count = app
-        .data
+    let new_count = ctx
         .new_sbom
-        .as_ref()
         .map_or(0, crate::model::NormalizedSbom::component_count);
 
     // Check if vulnerability chart has data (used for dynamic height)
@@ -38,7 +34,7 @@ fn render_diff_summary(frame: &mut Frame, area: Rect, app: &App) {
     let chart_height = if has_vulns { 10 } else { 3 };
 
     // Dynamic height for policy compliance row (compact when unchecked)
-    let compliance_height = if app.compliance_state.checked { 5 } else { 3 };
+    let compliance_height = if ctx.compliance_state.checked { 5 } else { 3 };
 
     // Main layout: score, risk verdict, stats, compliance, charts, top changes
     let main_chunks = Layout::default()
@@ -73,10 +69,10 @@ fn render_diff_summary(frame: &mut Frame, area: Rect, app: &App) {
     render_components_card(frame, stats_chunks[0], result, old_count, new_count);
     render_dependencies_card(frame, stats_chunks[1], result);
     render_vulnerabilities_card(frame, stats_chunks[2], result);
-    render_cra_card(frame, stats_chunks[3], app);
+    render_cra_card(frame, stats_chunks[3], ctx);
 
     // Policy compliance section
-    render_policy_compliance(frame, main_chunks[3], app);
+    render_policy_compliance(frame, main_chunks[3], ctx);
 
     // Bar charts row (or collapsed when no vulns)
     if has_vulns {
@@ -113,7 +109,7 @@ fn render_diff_summary(frame: &mut Frame, area: Rect, app: &App) {
     }
 
     // Top changes section
-    render_top_changes(frame, main_chunks[5], app);
+    render_top_changes(frame, main_chunks[5], ctx);
 }
 
 fn render_semantic_score_gauge(frame: &mut Frame, area: Rect, score: f64) {
@@ -357,12 +353,12 @@ fn render_dependencies_card(frame: &mut Frame, area: Rect, result: &crate::diff:
     frame.render_widget(paragraph, area);
 }
 
-fn render_cra_card(frame: &mut Frame, area: Rect, app: &App) {
+fn render_cra_card(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let scheme = colors();
     let (old_status, old_style, old_counts) =
-        format_compliance_line(app.data.old_cra_compliance.as_ref(), &scheme);
+        format_compliance_line(ctx.old_cra_compliance, &scheme);
     let (new_status, new_style, new_counts) =
-        format_compliance_line(app.data.new_cra_compliance.as_ref(), &scheme);
+        format_compliance_line(ctx.new_cra_compliance, &scheme);
 
     let text = vec![
         Line::from(vec![
@@ -392,9 +388,9 @@ fn render_cra_card(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(paragraph, area);
 }
 
-fn render_policy_compliance(frame: &mut Frame, area: Rect, app: &App) {
+fn render_policy_compliance(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let scheme = colors();
-    let compliance = &app.compliance_state;
+    let compliance = ctx.compliance_state;
 
     let mut spans = vec![
         Span::styled("Policy: ", Style::default().fg(scheme.text_muted)),
@@ -715,9 +711,9 @@ fn render_severity_chart(frame: &mut Frame, area: Rect, result: &crate::diff::Di
     frame.render_widget(bar_chart, area);
 }
 
-fn render_top_changes(frame: &mut Frame, area: Rect, app: &App) {
+fn render_top_changes(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let scheme = colors();
-    let Some(result) = app.data.diff_result.as_ref() else {
+    let Some(result) = ctx.diff_result else {
         return;
     };
     let mut lines = vec![];
@@ -879,240 +875,6 @@ fn render_top_changes(frame: &mut Frame, area: Rect, app: &App) {
     );
 
     frame.render_widget(paragraph, area);
-}
-
-fn render_view_summary(frame: &mut Frame, area: Rect, app: &App) {
-    let scheme = colors();
-
-    if let Some(sbom) = &app.data.sbom {
-        let vuln_counts = sbom.vulnerability_counts();
-        let total_vulns =
-            vuln_counts.critical + vuln_counts.high + vuln_counts.medium + vuln_counts.low;
-
-        // Main layout
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(7),  // Overview stats
-                Constraint::Length(5),  // Policy compliance
-                Constraint::Length(10), // Charts
-                Constraint::Min(5),     // Component preview
-            ])
-            .split(area);
-
-        // Overview stats
-        let stats_chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(33),
-                Constraint::Percentage(34),
-                Constraint::Percentage(33),
-            ])
-            .split(chunks[0]);
-
-        // Components overview
-        let comp_text = vec![
-            Line::from(vec![
-                Span::styled("Total: ", Style::default().fg(scheme.muted)),
-                Span::styled(
-                    sbom.component_count().to_string(),
-                    Style::default().fg(scheme.primary).bold(),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled("Dependencies: ", Style::default().fg(scheme.muted)),
-                Span::raw(sbom.edges.len().to_string()),
-            ]),
-        ];
-
-        let comp_block = Paragraph::new(comp_text).block(
-            Block::default()
-                .title(" Components ")
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(scheme.secondary)),
-        );
-        frame.render_widget(comp_block, stats_chunks[0]);
-
-        // Vulnerability overview with severity gauge
-        let vuln_text = vec![
-            Line::from(vec![
-                Span::styled("Total: ", Style::default().fg(scheme.muted)),
-                Span::styled(
-                    total_vulns.to_string(),
-                    if vuln_counts.critical > 0 {
-                        Style::default().fg(scheme.critical).bold()
-                    } else {
-                        Style::default().fg(scheme.warning)
-                    },
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled("● ", Style::default().fg(scheme.critical)),
-                Span::raw(format!("Critical: {} ", vuln_counts.critical)),
-                Span::styled("● ", Style::default().fg(scheme.high)),
-                Span::raw(format!("High: {}", vuln_counts.high)),
-            ]),
-            Line::from(vec![
-                Span::styled("● ", Style::default().fg(scheme.medium)),
-                Span::raw(format!("Medium: {} ", vuln_counts.medium)),
-                Span::styled("● ", Style::default().fg(scheme.low)),
-                Span::raw(format!("Low: {}", vuln_counts.low)),
-            ]),
-        ];
-
-        let vuln_block = Paragraph::new(vuln_text).block(
-            Block::default()
-                .title(" Vulnerabilities ")
-                .borders(Borders::ALL)
-                .border_style(if vuln_counts.critical > 0 {
-                    Style::default().fg(scheme.critical)
-                } else {
-                    Style::default().fg(scheme.warning)
-                }),
-        );
-        frame.render_widget(vuln_block, stats_chunks[1]);
-
-        // Ecosystem breakdown
-        let mut ecosystem_counts: std::collections::HashMap<String, usize> =
-            std::collections::HashMap::new();
-
-        for comp in sbom.components.values() {
-            let ecosystem = comp
-                .ecosystem
-                .as_ref()
-                .map_or_else(|| "unknown".to_string(), std::string::ToString::to_string);
-            *ecosystem_counts.entry(ecosystem).or_insert(0) += 1;
-        }
-
-        let mut ecosystems: Vec<_> = ecosystem_counts.into_iter().collect();
-        ecosystems.sort_by(|a, b| b.1.cmp(&a.1));
-
-        let eco_lines: Vec<Line> = ecosystems
-            .iter()
-            .take(4)
-            .map(|(name, count)| {
-                Line::from(vec![
-                    Span::styled(format!("{name}: "), Style::default().fg(scheme.primary)),
-                    Span::raw(count.to_string()),
-                ])
-            })
-            .collect();
-
-        let eco_block = Paragraph::new(eco_lines).block(
-            Block::default()
-                .title(" Ecosystems ")
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(scheme.success)),
-        );
-        frame.render_widget(eco_block, stats_chunks[2]);
-
-        // Policy compliance section
-        render_policy_compliance(frame, chunks[1], app);
-
-        // Severity bar chart
-        let chart_chunks = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(chunks[2]);
-
-        let severity_chart = BarChart::default()
-            .block(
-                Block::default()
-                    .title(" Vulnerability Severity Distribution ")
-                    .borders(Borders::ALL)
-                    .border_style(Style::default().fg(scheme.border)),
-            )
-            .bar_width(8)
-            .bar_gap(2)
-            .data(
-                BarGroup::default().bars(&[
-                    Bar::default()
-                        .value(vuln_counts.critical as u64)
-                        .label(Line::from("Critical"))
-                        .style(Style::default().fg(scheme.critical)),
-                    Bar::default()
-                        .value(vuln_counts.high as u64)
-                        .label(Line::from("High"))
-                        .style(Style::default().fg(scheme.high)),
-                    Bar::default()
-                        .value(vuln_counts.medium as u64)
-                        .label(Line::from("Medium"))
-                        .style(Style::default().fg(scheme.medium)),
-                    Bar::default()
-                        .value(vuln_counts.low as u64)
-                        .label(Line::from("Low"))
-                        .style(Style::default().fg(scheme.low)),
-                ]),
-            );
-
-        frame.render_widget(severity_chart, chart_chunks[0]);
-
-        // Ecosystem distribution chart
-        let palette = scheme.chart_palette();
-        let eco_data: Vec<Bar> = ecosystems
-            .iter()
-            .take(5)
-            .enumerate()
-            .map(|(i, (name, count))| {
-                Bar::default()
-                    .value(*count as u64)
-                    .label(Line::from(truncate(name, 8).to_string()))
-                    .style(Style::default().fg(palette[i % palette.len()]))
-            })
-            .collect();
-
-        let eco_chart = BarChart::default()
-            .block(
-                Block::default()
-                    .title(" Ecosystem Distribution ")
-                    .borders(Borders::ALL)
-                    .border_style(Style::default().fg(scheme.border)),
-            )
-            .bar_width(7)
-            .bar_gap(1)
-            .data(BarGroup::default().bars(&eco_data));
-
-        frame.render_widget(eco_chart, chart_chunks[1]);
-
-        // Top vulnerable components
-        let vulns = sbom.all_vulnerabilities();
-        let mut vuln_lines: Vec<Line> = vec![];
-
-        for (comp, vuln) in vulns.iter().take(5) {
-            let severity = vuln
-                .severity
-                .as_ref()
-                .map_or_else(|| "Unknown".to_string(), std::string::ToString::to_string);
-            let severity_color = scheme.severity_color(&severity);
-            let severity_style = match severity.to_lowercase().as_str() {
-                "critical" | "high" => Style::default().fg(severity_color).bold(),
-                _ => Style::default().fg(severity_color),
-            };
-
-            vuln_lines.push(Line::from(vec![
-                Span::styled(format!("[{severity}] "), severity_style),
-                Span::styled(&vuln.id, Style::default().bold()),
-                Span::styled(" in ", Style::default().fg(scheme.muted)),
-                Span::raw(&comp.name),
-            ]));
-        }
-
-        if vuln_lines.is_empty() {
-            vuln_lines.push(Line::styled(
-                "No vulnerabilities detected",
-                Style::default().fg(scheme.success),
-            ));
-        }
-
-        let vuln_preview = Paragraph::new(vuln_lines).block(
-            Block::default()
-                .title(" Top Vulnerabilities ")
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(scheme.border)),
-        );
-
-        frame.render_widget(vuln_preview, chunks[3]);
-    }
 }
 
 fn truncate(s: &str, max_len: usize) -> &str {

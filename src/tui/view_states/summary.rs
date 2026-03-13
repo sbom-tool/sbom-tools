@@ -54,7 +54,7 @@ mod tests {
         let mut view = SummaryView::new();
         let status: &'static mut Option<String> = Box::leak(Box::new(None));
         let mut ctx = ViewContext {
-            mode: ViewMode::View,
+            mode: ViewMode::Diff,
             focused: true,
             width: 80,
             height: 24,

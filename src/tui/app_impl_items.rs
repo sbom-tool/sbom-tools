@@ -3,27 +3,8 @@
 use super::app::App;
 use super::app_states::{
     ChangeType, ComponentFilter, DiffVulnItem, DiffVulnStatus, VulnFilter, sort_component_changes,
-    sort_components,
 };
 use crate::diff::SlaStatus;
-
-/// Check whether a component matches the active EOL filter.
-fn eol_filter_matches(comp: &crate::model::Component, filter: ComponentFilter) -> bool {
-    use crate::model::EolStatus;
-    match filter {
-        ComponentFilter::EolOnly => comp
-            .eol
-            .as_ref()
-            .is_some_and(|e| e.status == EolStatus::EndOfLife),
-        ComponentFilter::EolRisk => comp.eol.as_ref().is_some_and(|e| {
-            matches!(
-                e.status,
-                EolStatus::EndOfLife | EolStatus::ApproachingEol | EolStatus::SecurityOnly
-            )
-        }),
-        _ => true,
-    }
-}
 
 /// Check whether a vulnerability matches the active filter.
 fn matches_vuln_filter(vuln: &crate::diff::VulnerabilityDetail, filter: VulnFilter) -> bool {
@@ -132,7 +113,7 @@ impl App {
             items.extend(diff.components.modified.iter());
         }
 
-        sort_component_changes(&mut items, self.tabs.components.sort_by);
+        sort_component_changes(&mut items, self.components_state().sort_by);
         items
     }
 
@@ -156,49 +137,14 @@ impl App {
         }
     }
 
-    /// Count view-mode components (without building full list).
-    pub fn view_component_count(&self) -> usize {
-        let Some(sbom) = self.data.sbom.as_ref() else {
-            return 0;
-        };
-        let filter = self.tabs.components.filter;
-        if filter == ComponentFilter::All || !filter.is_view_filter() {
-            sbom.component_count()
-        } else {
-            sbom.components
-                .values()
-                .filter(|c| eol_filter_matches(c, filter))
-                .count()
-        }
-    }
-
-    /// Build view-mode components list in the same order as the table.
-    #[must_use]
-    pub fn view_component_items(&self) -> Vec<&crate::model::Component> {
-        let Some(sbom) = self.data.sbom.as_ref() else {
-            return Vec::new();
-        };
-        let filter = self.tabs.components.filter;
-        let mut items: Vec<_> = if filter == ComponentFilter::All || !filter.is_view_filter() {
-            sbom.components.values().collect()
-        } else {
-            sbom.components
-                .values()
-                .filter(|c| eol_filter_matches(c, filter))
-                .collect()
-        };
-        sort_components(&mut items, self.tabs.components.sort_by);
-        items
-    }
-
     /// Build diff-mode vulnerabilities list in the same order as the table.
     #[must_use]
     pub fn diff_vulnerability_items(&self) -> Vec<DiffVulnItem<'_>> {
         let Some(diff) = self.data.diff_result.as_ref() else {
             return Vec::new();
         };
-        let filter = self.tabs.vulnerabilities.filter;
-        let sort = &self.tabs.vulnerabilities.sort_by;
+        let filter = self.vulnerabilities_state().filter;
+        let sort = &self.vulnerabilities_state().sort_by;
         let mut all_vulns: Vec<DiffVulnItem<'_>> = Vec::new();
 
         let (include_introduced, include_resolved, include_persistent) =
@@ -241,7 +187,7 @@ impl App {
         }
 
         // Get blast radius data for FixUrgency sorting
-        let reverse_graph = &self.tabs.dependencies.cached_reverse_graph;
+        let reverse_graph = &self.dependencies_state().cached_reverse_graph;
 
         match sort {
             super::app_states::VulnSort::Severity => {
@@ -299,12 +245,12 @@ impl App {
     /// the cache is warm.
     pub fn ensure_vulnerability_cache(&mut self) {
         let current_key = (
-            self.tabs.vulnerabilities.filter,
-            self.tabs.vulnerabilities.sort_by,
+            self.vulnerabilities_state().filter,
+            self.vulnerabilities_state().sort_by,
         );
 
-        if self.tabs.vulnerabilities.cached_key == Some(current_key)
-            && !self.tabs.vulnerabilities.cached_indices.is_empty()
+        if self.vulnerabilities_state().cached_key == Some(current_key)
+            && !self.vulnerabilities_state().cached_indices.is_empty()
         {
             return; // Cache is warm
         }
@@ -334,8 +280,8 @@ impl App {
                 });
         drop(items);
 
-        self.tabs.vulnerabilities.cached_key = Some(current_key);
-        self.tabs.vulnerabilities.cached_indices = indices;
+        self.vulnerabilities_state_mut().cached_key = Some(current_key);
+        self.vulnerabilities_state_mut().cached_indices = indices;
     }
 
     /// Reconstruct vulnerability items from the cache (cheap pointer lookups).
@@ -347,8 +293,7 @@ impl App {
         let Some(diff) = self.data.diff_result.as_ref() else {
             return Vec::new();
         };
-        self.tabs
-            .vulnerabilities
+        self.vulnerabilities_state()
             .cached_indices
             .iter()
             .filter_map(|(status, idx)| {
@@ -372,7 +317,7 @@ impl App {
         let Some(diff) = self.data.diff_result.as_ref() else {
             return 0;
         };
-        let filter = self.tabs.vulnerabilities.filter;
+        let filter = self.vulnerabilities_state().filter;
 
         let (include_introduced, include_resolved, include_persistent) =
             vuln_category_includes(filter);

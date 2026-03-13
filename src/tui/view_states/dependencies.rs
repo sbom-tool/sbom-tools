@@ -31,34 +31,6 @@ impl DependenciesView {
         &mut self.inner
     }
 
-    pub(crate) fn sync_from(&mut self, state: &DependenciesState) {
-        self.inner.selected = state.selected;
-        self.inner.total = state.total;
-        self.inner.show_transitive = state.show_transitive;
-        self.inner.highlight_changes = state.highlight_changes;
-        self.inner.max_depth = state.max_depth;
-        self.inner.max_roots = state.max_roots;
-        self.inner.show_cycles = state.show_cycles;
-        self.inner.search_active = state.search_active;
-        self.inner.search_query.clone_from(&state.search_query);
-        self.inner.search_matches.clone_from(&state.search_matches);
-        self.inner.visible_nodes.clone_from(&state.visible_nodes);
-        self.inner.expanded_nodes.clone_from(&state.expanded_nodes);
-        self.inner.viewport_height = state.viewport_height;
-    }
-
-    pub(crate) fn sync_to(&self, state: &mut DependenciesState) {
-        state.selected = self.inner.selected;
-        state.show_transitive = self.inner.show_transitive;
-        state.highlight_changes = self.inner.highlight_changes;
-        state.max_depth = self.inner.max_depth;
-        state.max_roots = self.inner.max_roots;
-        state.show_cycles = self.inner.show_cycles;
-        state.search_active = self.inner.search_active;
-        state.search_query.clone_from(&self.inner.search_query);
-        state.search_matches.clone_from(&self.inner.search_matches);
-        state.expanded_nodes.clone_from(&self.inner.expanded_nodes);
-    }
 }
 
 impl Default for DependenciesView {

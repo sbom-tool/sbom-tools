@@ -318,20 +318,6 @@ impl SideBySideState {
         self.right_total = right;
     }
 
-    /// Set total rows for aligned mode
-    pub const fn set_total_rows(&mut self, total: usize) {
-        self.total_rows = total;
-        if self.selected_row >= total && total > 0 {
-            self.selected_row = total - 1;
-        }
-    }
-
-    /// Set change indices for navigation
-    pub fn set_change_indices(&mut self, indices: Vec<usize>) {
-        self.change_indices = indices;
-        self.current_change_idx = None;
-    }
-
     /// Go to top of focused panel
     pub fn go_to_top(&mut self) {
         if self.focus_right {

@@ -30,42 +30,6 @@ impl SideBySideView {
         &mut self.inner
     }
 
-    pub(crate) fn sync_from(&mut self, state: &SideBySideState) {
-        self.inner.left_scroll = state.left_scroll;
-        self.inner.right_scroll = state.right_scroll;
-        self.inner.left_total = state.left_total;
-        self.inner.right_total = state.right_total;
-        self.inner.focus_right = state.focus_right;
-        self.inner.alignment_mode = state.alignment_mode;
-        self.inner.sync_mode = state.sync_mode;
-        self.inner.filter = state.filter.clone();
-        self.inner.selected_row = state.selected_row;
-        self.inner.total_rows = state.total_rows;
-        self.inner.change_indices.clone_from(&state.change_indices);
-        self.inner.current_change_idx = state.current_change_idx;
-        self.inner.search_query.clone_from(&state.search_query);
-        self.inner.search_matches.clone_from(&state.search_matches);
-        self.inner.current_match_idx = state.current_match_idx;
-        self.inner.search_active = state.search_active;
-        self.inner.show_detail_modal = state.show_detail_modal;
-    }
-
-    pub(crate) fn sync_to(&self, state: &mut SideBySideState) {
-        state.left_scroll = self.inner.left_scroll;
-        state.right_scroll = self.inner.right_scroll;
-        state.focus_right = self.inner.focus_right;
-        state.alignment_mode = self.inner.alignment_mode;
-        state.sync_mode = self.inner.sync_mode;
-        state.filter = self.inner.filter.clone();
-        state.selected_row = self.inner.selected_row;
-        state.change_indices.clone_from(&self.inner.change_indices);
-        state.current_change_idx = self.inner.current_change_idx;
-        state.search_query.clone_from(&self.inner.search_query);
-        state.search_matches.clone_from(&self.inner.search_matches);
-        state.current_match_idx = self.inner.current_match_idx;
-        state.search_active = self.inner.search_active;
-        state.show_detail_modal = self.inner.show_detail_modal;
-    }
 }
 
 impl Default for SideBySideView {

@@ -4,7 +4,8 @@
 //! delegated to `crate::tui::shared::quality`.
 
 use crate::quality::QualityReport;
-use crate::tui::app::{App, AppMode, QualityViewMode};
+use crate::tui::app::AppMode;
+use crate::tui::render_context::RenderContext;
 use crate::tui::shared::quality as shared;
 use crate::tui::theme::colors;
 use crate::tui::widgets;
@@ -13,17 +14,16 @@ use ratatui::{
     widgets::{Block, Borders, Gauge, Paragraph},
 };
 
-pub fn render_quality(frame: &mut Frame, area: Rect, app: &App) {
-    match app.mode {
-        AppMode::Diff => render_diff_quality(frame, area, app),
-        AppMode::View => render_view_quality(frame, area, app),
+pub fn render_quality(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
+    match ctx.mode {
+        AppMode::Diff => render_diff_quality(frame, area, ctx),
         AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => {}
     }
 }
 
-fn render_diff_quality(frame: &mut Frame, area: Rect, app: &App) {
-    let old_report = app.data.old_quality.as_ref();
-    let new_report = app.data.new_quality.as_ref();
+fn render_diff_quality(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
+    let old_report = ctx.old_quality;
+    let new_report = ctx.new_quality;
 
     if old_report.is_none() && new_report.is_none() {
         render_no_quality_data(frame, area);
@@ -41,27 +41,7 @@ fn render_diff_quality(frame: &mut Frame, area: Rect, app: &App) {
 
     render_score_comparison(frame, chunks[0], old_report, new_report);
     render_metrics_comparison(frame, chunks[1], old_report, new_report);
-    render_combined_recommendations(frame, chunks[2], old_report, new_report, app);
-}
-
-fn render_view_quality(frame: &mut Frame, area: Rect, app: &App) {
-    let Some(report) = &app.data.quality_report else {
-        render_no_quality_data(frame, area);
-        return;
-    };
-
-    match app.tabs.quality.view_mode {
-        QualityViewMode::Summary => shared::render_quality_summary(frame, area, report, 0),
-        QualityViewMode::Breakdown => shared::render_score_breakdown(frame, area, report),
-        QualityViewMode::Metrics => shared::render_quality_metrics(frame, area, report),
-        QualityViewMode::Recommendations => shared::render_quality_recommendations(
-            frame,
-            area,
-            report,
-            app.tabs.quality.selected_recommendation,
-            app.tabs.quality.scroll_offset,
-        ),
-    }
+    render_combined_recommendations(frame, chunks[2], old_report, new_report, ctx);
 }
 
 fn render_no_quality_data(frame: &mut Frame, area: Rect) {
@@ -233,7 +213,7 @@ fn render_combined_recommendations(
     area: Rect,
     old_report: Option<&QualityReport>,
     new_report: Option<&QualityReport>,
-    app: &App,
+    ctx: &RenderContext,
 ) {
     let scheme = colors();
     let mut lines: Vec<Line> = vec![];
@@ -274,7 +254,7 @@ fn render_combined_recommendations(
         ));
 
         for (i, rec) in report.recommendations.iter().take(4).enumerate() {
-            let is_selected = i == app.tabs.quality.selected_recommendation;
+            let is_selected = i == ctx.quality.selected_recommendation;
             let prefix = if is_selected { "▶ " } else { "  " };
             let style = if is_selected {
                 Style::default().fg(scheme.text).bold()
@@ -304,7 +284,7 @@ fn render_combined_recommendations(
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(scheme.error)),
         )
-        .scroll((app.tabs.quality.scroll_offset as u16, 0));
+        .scroll((ctx.quality.scroll_offset as u16, 0));
     frame.render_widget(paragraph, area);
 }
 

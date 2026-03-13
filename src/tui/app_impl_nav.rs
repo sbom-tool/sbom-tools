@@ -81,10 +81,10 @@ impl App {
     /// Move selection up
     pub fn select_up(&mut self) {
         match self.active_tab {
-            TabKind::Components => self.tabs.components.select_prev(),
-            TabKind::Vulnerabilities => self.tabs.vulnerabilities.select_prev(),
-            TabKind::Licenses => self.tabs.licenses.select_prev(),
-            TabKind::Source => self.tabs.source.select_prev(),
+            TabKind::Components => self.components_state_mut().select_prev(),
+            TabKind::Vulnerabilities => self.vulnerabilities_state_mut().select_prev(),
+            TabKind::Licenses => self.licenses_state_mut().select_prev(),
+            TabKind::Source => self.source_state_mut().select_prev(),
             _ => {}
         }
     }
@@ -92,10 +92,10 @@ impl App {
     /// Move selection down
     pub fn select_down(&mut self) {
         match self.active_tab {
-            TabKind::Components => self.tabs.components.select_next(),
-            TabKind::Vulnerabilities => self.tabs.vulnerabilities.select_next(),
-            TabKind::Licenses => self.tabs.licenses.select_next(),
-            TabKind::Source => self.tabs.source.select_next(),
+            TabKind::Components => self.components_state_mut().select_next(),
+            TabKind::Vulnerabilities => self.vulnerabilities_state_mut().select_next(),
+            TabKind::Licenses => self.licenses_state_mut().select_next(),
+            TabKind::Source => self.source_state_mut().select_next(),
             _ => {}
         }
     }
@@ -103,10 +103,10 @@ impl App {
     /// Move selection to first item
     pub fn select_first(&mut self) {
         match self.active_tab {
-            TabKind::Components => self.tabs.components.go_first(),
-            TabKind::Vulnerabilities => self.tabs.vulnerabilities.go_first(),
-            TabKind::Licenses => self.tabs.licenses.go_first(),
-            TabKind::Source => self.tabs.source.select_first(),
+            TabKind::Components => self.components_state_mut().go_first(),
+            TabKind::Vulnerabilities => self.vulnerabilities_state_mut().go_first(),
+            TabKind::Licenses => self.licenses_state_mut().go_first(),
+            TabKind::Source => self.source_state_mut().select_first(),
             _ => {}
         }
     }
@@ -114,9 +114,9 @@ impl App {
     /// Move selection to last item
     pub fn select_last(&mut self) {
         match self.active_tab {
-            TabKind::Components => self.tabs.components.go_last(),
-            TabKind::Vulnerabilities => self.tabs.vulnerabilities.go_last(),
-            TabKind::Source => self.tabs.source.select_last(),
+            TabKind::Components => self.components_state_mut().go_last(),
+            TabKind::Vulnerabilities => self.vulnerabilities_state_mut().go_last(),
+            TabKind::Source => self.source_state_mut().select_last(),
             _ => {}
         }
     }
@@ -124,9 +124,9 @@ impl App {
     /// Page up
     pub fn page_up(&mut self) {
         match self.active_tab {
-            TabKind::Components => self.tabs.components.page_up(),
-            TabKind::Vulnerabilities => self.tabs.vulnerabilities.page_up(),
-            TabKind::Source => self.tabs.source.page_up(),
+            TabKind::Components => self.components_state_mut().page_up(),
+            TabKind::Vulnerabilities => self.vulnerabilities_state_mut().page_up(),
+            TabKind::Source => self.source_state_mut().page_up(),
             _ => {}
         }
     }
@@ -134,9 +134,9 @@ impl App {
     /// Page down
     pub fn page_down(&mut self) {
         match self.active_tab {
-            TabKind::Components => self.tabs.components.page_down(),
-            TabKind::Vulnerabilities => self.tabs.vulnerabilities.page_down(),
-            TabKind::Source => self.tabs.source.page_down(),
+            TabKind::Components => self.components_state_mut().page_down(),
+            TabKind::Vulnerabilities => self.vulnerabilities_state_mut().page_down(),
+            TabKind::Source => self.source_state_mut().page_down(),
             _ => {}
         }
     }
@@ -148,10 +148,11 @@ impl App {
     /// Navigate from vulnerability to the affected component
     pub fn navigate_vuln_to_component(&mut self, vuln_id: &str, component_name: &str) {
         // Save current position as breadcrumb
+        let selected = self.vulnerabilities_state().selected;
         self.navigation_ctx.push_breadcrumb(
             TabKind::Vulnerabilities,
             vuln_id.to_string(),
-            self.tabs.vulnerabilities.selected,
+            selected,
         );
 
         // Set target and switch to components tab
@@ -178,7 +179,7 @@ impl App {
         self.navigation_ctx.push_breadcrumb(
             TabKind::Dependencies,
             dep_name.to_string(),
-            self.tabs.dependencies.selected,
+            self.dependencies_state().selected,
         );
 
         // Set target and switch to components tab
@@ -197,19 +198,19 @@ impl App {
             // Restore selection based on the tab we're returning to
             match breadcrumb.tab {
                 TabKind::Vulnerabilities => {
-                    self.tabs.vulnerabilities.selected = breadcrumb.selection_index;
+                    self.vulnerabilities_state_mut().selected = breadcrumb.selection_index;
                 }
                 TabKind::Components => {
-                    self.tabs.components.selected = breadcrumb.selection_index;
+                    self.components_state_mut().selected = breadcrumb.selection_index;
                 }
                 TabKind::Dependencies => {
-                    self.tabs.dependencies.selected = breadcrumb.selection_index;
+                    self.dependencies_state_mut().selected = breadcrumb.selection_index;
                 }
                 TabKind::Licenses => {
-                    self.tabs.licenses.selected = breadcrumb.selection_index;
+                    self.licenses_state_mut().selected = breadcrumb.selection_index;
                 }
                 TabKind::Source => {
-                    self.tabs.source.active_panel_mut().selected = breadcrumb.selection_index;
+                    self.source_state_mut().active_panel_mut().selected = breadcrumb.selection_index;
                 }
                 _ => {}
             }
@@ -225,7 +226,7 @@ impl App {
     pub(super) fn find_and_select_component(&mut self, name: &str) {
         if self.data.diff_result.is_some() {
             // Reset filter to All to ensure we can find it
-            self.tabs.components.filter = ComponentFilter::All;
+            self.components_state_mut().filter = ComponentFilter::All;
 
             let name_lower = name.to_lowercase();
             let index = {
@@ -236,7 +237,7 @@ impl App {
             };
 
             if let Some(index) = index {
-                self.tabs.components.selected = index;
+                self.components_state_mut().selected = index;
             }
         }
     }
@@ -275,7 +276,7 @@ impl App {
             TabTarget::VulnerabilityById(id) => {
                 self.active_tab = TabKind::Vulnerabilities;
                 if let Some(idx) = self.find_vulnerability_index(&id) {
-                    self.tabs.vulnerabilities.selected = idx;
+                    self.vulnerabilities_state_mut().selected = idx;
                 }
             }
         }

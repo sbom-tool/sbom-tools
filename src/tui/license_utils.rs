@@ -503,57 +503,6 @@ pub enum IssueSeverity {
     Error,
 }
 
-/// License statistics for display
-#[derive(Debug, Default)]
-pub struct LicenseStats {
-    pub total_licenses: usize,
-    pub unique_licenses: usize,
-    pub by_category: HashMap<LicenseCategory, usize>,
-    pub by_risk: HashMap<RiskLevel, usize>,
-    pub by_family: HashMap<String, usize>,
-    pub copyleft_count: usize,
-    pub permissive_count: usize,
-}
-
-impl LicenseStats {
-    pub(crate) fn from_licenses(licenses: &[&str]) -> Self {
-        let mut stats = Self {
-            total_licenses: licenses.len(),
-            unique_licenses: 0,
-            by_category: HashMap::new(),
-            by_risk: HashMap::new(),
-            by_family: HashMap::new(),
-            copyleft_count: 0,
-            permissive_count: 0,
-        };
-
-        let unique: HashSet<_> = licenses.iter().collect();
-        stats.unique_licenses = unique.len();
-
-        for license in unique {
-            let info = LicenseInfo::from_spdx(license);
-
-            *stats.by_category.entry(info.category).or_default() += 1;
-            *stats.by_risk.entry(info.risk_level).or_default() += 1;
-            *stats.by_family.entry(info.family.to_string()).or_default() += 1;
-
-            match info.category {
-                LicenseCategory::Permissive | LicenseCategory::PublicDomain => {
-                    stats.permissive_count += 1;
-                }
-                LicenseCategory::WeakCopyleft
-                | LicenseCategory::StrongCopyleft
-                | LicenseCategory::NetworkCopyleft => {
-                    stats.copyleft_count += 1;
-                }
-                _ => {}
-            }
-        }
-
-        stats
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

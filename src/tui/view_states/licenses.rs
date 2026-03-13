@@ -19,38 +19,14 @@ impl LicensesView {
         }
     }
 
-    // Accessors for sync bridge
-    pub(crate) const fn group_by(&self) -> crate::tui::app_states::LicenseGroupBy {
-        self.inner.group_by
-    }
-    pub(crate) const fn sort_by(&self) -> crate::tui::app_states::LicenseSort {
-        self.inner.sort_by
-    }
-    pub(crate) const fn selected(&self) -> usize {
-        self.inner.selected
-    }
-    pub(crate) const fn focus_left(&self) -> bool {
-        self.inner.focus_left
-    }
-    pub(crate) const fn show_compatibility(&self) -> bool {
-        self.inner.show_compatibility
-    }
-    pub(crate) const fn risk_filter(&self) -> Option<crate::tui::app_states::LicenseRiskFilter> {
-        self.inner.risk_filter
-    }
-    pub(crate) const fn selected_new(&self) -> usize {
-        self.inner.selected_new
-    }
-    pub(crate) const fn selected_removed(&self) -> usize {
-        self.inner.selected_removed
+    /// Access the inner state.
+    pub(crate) const fn inner(&self) -> &LicensesState {
+        &self.inner
     }
 
-    pub(crate) fn set_total(&mut self, total: usize) {
-        self.inner.set_total(total);
-    }
-
-    pub(crate) fn sync_from(&mut self, state: &LicensesState) {
-        self.inner.total = state.total;
+    /// Mutable access to the inner state.
+    pub(crate) fn inner_mut(&mut self) -> &mut LicensesState {
+        &mut self.inner
     }
 }
 
@@ -143,9 +119,9 @@ mod tests {
         let mut view = LicensesView::new();
         let mut ctx = make_ctx(ViewMode::Diff);
 
-        let initial = view.group_by();
+        let initial = view.inner().group_by;
         view.handle_key(make_key(KeyCode::Char('g')), &mut ctx);
-        assert_ne!(view.group_by(), initial);
+        assert_ne!(view.inner().group_by, initial);
     }
 
     #[test]
@@ -154,25 +130,25 @@ mod tests {
 
         // In diff mode, panel toggle works
         let mut ctx = make_ctx(ViewMode::Diff);
-        assert!(view.focus_left());
+        assert!(view.inner().focus_left);
         view.handle_key(make_key(KeyCode::Char('p')), &mut ctx);
-        assert!(!view.focus_left());
+        assert!(!view.inner().focus_left);
 
         // Reset
         view.handle_key(make_key(KeyCode::Char('p')), &mut ctx);
-        assert!(view.focus_left());
+        assert!(view.inner().focus_left);
     }
 
     #[test]
     fn test_navigation() {
         let mut view = LicensesView::new();
-        view.set_total(5);
-        let mut ctx = make_ctx(ViewMode::View);
+        view.inner_mut().set_total(5);
+        let mut ctx = make_ctx(ViewMode::Diff);
 
         view.handle_key(make_key(KeyCode::Char('j')), &mut ctx);
-        assert_eq!(view.selected(), 1);
+        assert_eq!(view.inner().selected, 1);
 
         view.handle_key(make_key(KeyCode::Char('k')), &mut ctx);
-        assert_eq!(view.selected(), 0);
+        assert_eq!(view.inner().selected, 0);
     }
 }

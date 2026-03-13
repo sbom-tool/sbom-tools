@@ -20,57 +20,14 @@ impl VulnerabilitiesView {
         }
     }
 
-    // Accessors for sync bridge
-    pub(crate) const fn selected(&self) -> usize {
-        self.inner.selected
-    }
-    pub(crate) const fn filter(&self) -> crate::tui::app_states::VulnFilter {
-        self.inner.filter
-    }
-    pub(crate) const fn sort_by(&self) -> crate::tui::app_states::VulnSort {
-        self.inner.sort_by
-    }
-    pub(crate) const fn group_by_component(&self) -> bool {
-        self.inner.group_by_component
-    }
-    pub(crate) fn expanded_groups(&self) -> &std::collections::HashSet<String> {
-        &self.inner.expanded_groups
+    /// Access the inner state.
+    pub(crate) fn inner(&self) -> &VulnerabilitiesState {
+        &self.inner
     }
 
-    pub(crate) fn sync_from(&mut self, state: &VulnerabilitiesState) {
-        self.inner.selected = state.selected;
-        self.inner.total = state.total;
-        self.inner.filter = state.filter;
-        self.inner.sort_by = state.sort_by;
-        self.inner.group_by_component = state.group_by_component;
-        self.inner
-            .expanded_groups
-            .clone_from(&state.expanded_groups);
-    }
-
-    pub(crate) fn sync_to(&self, state: &mut VulnerabilitiesState) {
-        state.selected = self.inner.selected;
-        state.filter = self.inner.filter;
-        state.sort_by = self.inner.sort_by;
-        state.group_by_component = self.inner.group_by_component;
-        state
-            .expanded_groups
-            .clone_from(&self.inner.expanded_groups);
-    }
-
-    /// Toggle a specific group's expansion state (used by bridge for Enter key in grouped mode).
-    pub(crate) fn toggle_group(&mut self, name: &str) {
-        self.inner.toggle_group(name);
-    }
-
-    /// Expand all groups (used by bridge).
-    pub(crate) fn expand_all_groups(&mut self, names: &[String]) {
-        self.inner.expand_all_groups(names);
-    }
-
-    /// Collapse all groups (used by bridge).
-    pub(crate) fn collapse_all_groups(&mut self) {
-        self.inner.collapse_all_groups();
+    /// Mutable access to the inner state.
+    pub(crate) fn inner_mut(&mut self) -> &mut VulnerabilitiesState {
+        &mut self.inner
     }
 }
 
@@ -155,9 +112,9 @@ mod tests {
         let mut view = VulnerabilitiesView::new();
         let mut ctx = make_ctx();
 
-        let initial = view.filter();
+        let initial = view.inner().filter;
         view.handle_key(make_key(KeyCode::Char('f')), &mut ctx);
-        assert_ne!(view.filter(), initial);
+        assert_ne!(view.inner().filter, initial);
     }
 
     #[test]
@@ -165,9 +122,9 @@ mod tests {
         let mut view = VulnerabilitiesView::new();
         let mut ctx = make_ctx();
 
-        assert!(!view.group_by_component());
+        assert!(!view.inner().group_by_component);
         let result = view.handle_key(make_key(KeyCode::Char('g')), &mut ctx);
-        assert!(view.group_by_component());
+        assert!(view.inner().group_by_component);
         assert!(matches!(result, EventResult::StatusMessage(_)));
     }
 }

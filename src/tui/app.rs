@@ -5,6 +5,7 @@ use crate::diff::{DiffResult, MatrixResult, MultiDiffResult, TimelineResult};
 use crate::enrichment::EnrichmentStats;
 use crate::model::{NormalizedSbom, NormalizedSbomIndex};
 use crate::quality::{ComplianceResult, QualityReport};
+use crate::tui::state::ListNavigation;
 use crate::tui::views::ThresholdTuningState;
 
 // Re-export state types from app_states module for backwards compatibility
@@ -73,26 +74,16 @@ pub use super::app_states::{
     VulnSort,
     VulnerabilitiesState,
     sort_component_changes,
-    sort_components,
 };
 
-/// Per-tab UI state container.
+/// Mode-specific UI state for multi-comparison views.
 ///
-/// Groups all tab-specific state structs that were previously
-/// flat fields on `App`. Access via `app.tabs.components`, etc.
-pub struct TabStates {
-    pub(crate) components: ComponentsState,
-    pub(crate) dependencies: DependenciesState,
-    pub(crate) licenses: LicensesState,
-    pub(crate) vulnerabilities: VulnerabilitiesState,
-    pub(crate) quality: QualityState,
-    pub(crate) graph_changes: GraphChangesState,
-    pub(crate) side_by_side: SideBySideState,
-    pub(crate) diff_compliance: crate::tui::app_states::DiffComplianceState,
+/// Contains state for multi_diff, timeline, and matrix modes only.
+/// Per-tab state for standard tabs lives in their respective ViewState impls.
+pub struct ModeStates {
     pub(crate) multi_diff: MultiDiffState,
     pub(crate) timeline: TimelineState,
     pub(crate) matrix: MatrixState,
-    pub(crate) source: crate::tui::app_states::SourceDiffState,
 }
 
 /// Overlay UI state container.
@@ -201,7 +192,7 @@ pub struct App {
     /// SBOM data, diff results, indexes, quality, and compliance
     pub(crate) data: DataContext,
     /// Per-tab UI state
-    pub(crate) tabs: TabStates,
+    pub(crate) tabs: ModeStates,
     /// Overlay UI state
     pub(crate) overlays: AppOverlays,
     /// Should quit
@@ -227,8 +218,6 @@ pub struct App {
     // ========================================================================
     // Each view handles its own key events via the ViewState trait.
     // State is synced back to `tabs.*` after each event for rendering.
-    #[allow(dead_code)] // Will be used in Phase 4 (render trait)
-    pub(crate) summary_view: Option<crate::tui::view_states::SummaryView>,
     pub(crate) components_view: Option<crate::tui::view_states::ComponentsView>,
     pub(crate) dependencies_view: Option<crate::tui::view_states::DependenciesView>,
     pub(crate) licenses_view: Option<crate::tui::view_states::LicensesView>,
@@ -318,11 +307,6 @@ impl App {
                         .as_ref()
                         .map_or(0, crate::model::NormalizedSbom::component_count)
             }
-            AppMode::View => self
-                .data
-                .sbom
-                .as_ref()
-                .map_or(0, crate::model::NormalizedSbom::component_count),
             _ => 0,
         };
 
@@ -394,7 +378,7 @@ impl App {
     /// The export is scoped to the active tab: e.g. if the user is on the
     /// Vulnerabilities tab only vulnerability data is included.
     pub fn export(&mut self, format: super::export::ExportFormat) {
-        use super::export::{export_diff, export_view, tab_to_report_type};
+        use super::export::{export_diff, tab_to_report_type};
         use crate::reports::ReportConfig;
 
         let report_type = tab_to_report_type(self.active_tab);
@@ -421,14 +405,6 @@ impl App {
                     return;
                 }
             }
-            AppMode::View => {
-                if let Some(ref sbom) = self.data.sbom {
-                    export_view(format, sbom, None, &config, self.export_template.as_deref())
-                } else {
-                    self.set_status_message("No SBOM data to export");
-                    return;
-                }
-            }
             _ => {
                 self.set_status_message("Export not supported for this mode");
                 return;
@@ -451,15 +427,16 @@ impl App {
         self.ensure_compliance_results();
 
         // Determine which compliance results and selected standard to use
+        let selected_standard = self.diff_compliance_state().selected_standard;
         let (results, selected) = if let Some(ref results) = self.data.new_compliance_results {
             if !results.is_empty() {
-                (results, self.tabs.diff_compliance.selected_standard)
+                (results, selected_standard)
             } else if let Some(ref old_results) = self.data.old_compliance_results {
                 if old_results.is_empty() {
                     self.set_status_message("No compliance results to export");
                     return;
                 }
-                (old_results, self.tabs.diff_compliance.selected_standard)
+                (old_results, selected_standard)
             } else {
                 self.set_status_message("No compliance results to export");
                 return;
@@ -469,7 +446,7 @@ impl App {
                 self.set_status_message("No compliance results to export");
                 return;
             }
-            (old_results, self.tabs.diff_compliance.selected_standard)
+            (old_results, selected_standard)
         } else {
             self.set_status_message("No compliance results to export");
             return;
@@ -646,56 +623,29 @@ impl App {
     fn collect_compliance_data(&self) -> Vec<crate::tui::security::ComplianceComponentData> {
         let mut components = Vec::new();
 
-        match self.mode {
-            AppMode::Diff => {
-                if let Some(sbom) = &self.data.new_sbom {
-                    for comp in sbom.components.values() {
-                        let licenses: Vec<String> = comp
-                            .licenses
-                            .declared
-                            .iter()
-                            .map(std::string::ToString::to_string)
-                            .collect();
-                        let vulns: Vec<(String, String)> = comp
-                            .vulnerabilities
-                            .iter()
-                            .map(|v| {
-                                let severity = v.severity.as_ref().map_or_else(
-                                    || "Unknown".to_string(),
-                                    std::string::ToString::to_string,
-                                );
-                                (v.id.clone(), severity)
-                            })
-                            .collect();
-                        components.push((comp.name.clone(), comp.version.clone(), licenses, vulns));
-                    }
+        if self.mode == AppMode::Diff {
+            if let Some(sbom) = &self.data.new_sbom {
+                for comp in sbom.components.values() {
+                    let licenses: Vec<String> = comp
+                        .licenses
+                        .declared
+                        .iter()
+                        .map(std::string::ToString::to_string)
+                        .collect();
+                    let vulns: Vec<(String, String)> = comp
+                        .vulnerabilities
+                        .iter()
+                        .map(|v| {
+                            let severity = v.severity.as_ref().map_or_else(
+                                || "Unknown".to_string(),
+                                std::string::ToString::to_string,
+                            );
+                            (v.id.clone(), severity)
+                        })
+                        .collect();
+                    components.push((comp.name.clone(), comp.version.clone(), licenses, vulns));
                 }
             }
-            AppMode::View => {
-                if let Some(sbom) = &self.data.sbom {
-                    for comp in sbom.components.values() {
-                        let licenses: Vec<String> = comp
-                            .licenses
-                            .declared
-                            .iter()
-                            .map(std::string::ToString::to_string)
-                            .collect();
-                        let vulns: Vec<(String, String)> = comp
-                            .vulnerabilities
-                            .iter()
-                            .map(|v| {
-                                let severity = v.severity.as_ref().map_or_else(
-                                    || "Unknown".to_string(),
-                                    std::string::ToString::to_string,
-                                );
-                                (v.id.clone(), severity)
-                            })
-                            .collect();
-                        components.push((comp.name.clone(), comp.version.clone(), licenses, vulns));
-                    }
-                }
-            }
-            _ => {}
         }
 
         components
@@ -811,6 +761,198 @@ impl App {
 
         shortcuts
     }
+
+    // ========================================================================
+    // ViewState inner state accessors
+    // ========================================================================
+
+    pub(crate) fn quality_state(&self) -> &super::app_states::QualityState {
+        self.quality_view.as_ref().expect("quality_view").inner()
+    }
+    pub(crate) fn quality_state_mut(&mut self) -> &mut super::app_states::QualityState {
+        self.quality_view.as_mut().expect("quality_view").inner_mut()
+    }
+
+    pub(crate) fn graph_changes_state(&self) -> &super::app_states::GraphChangesState {
+        self.graph_changes_view.as_ref().expect("graph_changes_view").inner()
+    }
+    pub(crate) fn graph_changes_state_mut(&mut self) -> &mut super::app_states::GraphChangesState {
+        self.graph_changes_view.as_mut().expect("graph_changes_view").inner_mut()
+    }
+
+    pub(crate) fn licenses_state(&self) -> &super::app_states::LicensesState {
+        self.licenses_view.as_ref().expect("licenses_view").inner()
+    }
+    pub(crate) fn licenses_state_mut(&mut self) -> &mut super::app_states::LicensesState {
+        self.licenses_view.as_mut().expect("licenses_view").inner_mut()
+    }
+
+    pub(crate) fn diff_compliance_state(&self) -> &super::app_states::DiffComplianceState {
+        self.compliance_view.as_ref().expect("compliance_view").inner()
+    }
+    pub(crate) fn components_state(&self) -> &ComponentsState {
+        self.components_view.as_ref().expect("components_view").inner()
+    }
+    pub(crate) fn components_state_mut(&mut self) -> &mut ComponentsState {
+        self.components_view.as_mut().expect("components_view").inner_mut()
+    }
+
+    pub(crate) fn vulnerabilities_state(&self) -> &super::app_states::VulnerabilitiesState {
+        self.vulnerabilities_view.as_ref().expect("vulnerabilities_view").inner()
+    }
+    pub(crate) fn vulnerabilities_state_mut(&mut self) -> &mut super::app_states::VulnerabilitiesState {
+        self.vulnerabilities_view.as_mut().expect("vulnerabilities_view").inner_mut()
+    }
+
+    pub(crate) fn side_by_side_state(&self) -> &super::app_states::SideBySideState {
+        self.sidebyside_view.as_ref().expect("sidebyside_view").inner()
+    }
+    pub(crate) fn side_by_side_state_mut(&mut self) -> &mut super::app_states::SideBySideState {
+        self.sidebyside_view.as_mut().expect("sidebyside_view").inner_mut()
+    }
+
+    pub(crate) fn dependencies_state(&self) -> &DependenciesState {
+        self.dependencies_view.as_ref().expect("dependencies_view").inner()
+    }
+    pub(crate) fn dependencies_state_mut(&mut self) -> &mut DependenciesState {
+        self.dependencies_view.as_mut().expect("dependencies_view").inner_mut()
+    }
+
+    pub(crate) fn source_state(&self) -> &crate::tui::app_states::SourceDiffState {
+        self.source_view.as_ref().expect("source_view").inner()
+    }
+    pub(crate) fn source_state_mut(&mut self) -> &mut crate::tui::app_states::SourceDiffState {
+        self.source_view.as_mut().expect("source_view").inner_mut()
+    }
+
+    // ========================================================================
+    // Pre-render preparation
+    // ========================================================================
+
+    /// Prepare mutable state that render functions previously computed inline.
+    ///
+    /// Call this once per frame, **before** creating a [`RenderContext`].
+    /// After this method returns, all render functions can operate on `&App`
+    /// (read-only) instead of `&mut App`.
+    ///
+    /// [`RenderContext`]: super::render_context::RenderContext
+    pub fn prepare_render(&mut self) {
+        // 1. Graph cache for dependencies (was inline in render_dependencies)
+        super::views::update_graph_cache(
+            self.dependencies_view.as_mut().expect("dependencies_view").inner_mut(),
+            &self.data,
+            self.mode,
+        );
+
+        // 2. Compliance results (was inline in render_diff_compliance)
+        self.ensure_compliance_results();
+
+        // 3. Vulnerability cache (was inline in render_vulnerabilities)
+        if self.mode == AppMode::Diff {
+            self.ensure_vulnerability_cache();
+        }
+
+        // 4. Component totals (was inline in render_components)
+        let comp_filter = self.components_state().filter;
+        let comp_total = match self.mode {
+            AppMode::Diff => self.diff_component_count(comp_filter),
+            AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => 0,
+        };
+        self.components_state_mut().total = comp_total;
+        self.components_state_mut().clamp_selection();
+
+        // 5. Vulnerability totals (was inline in render_vulnerabilities)
+        self.prepare_vulnerability_totals();
+
+        // 6. Graph changes total (was inline in render_graph_changes)
+        let graph_total = self.data.diff_result.as_ref().map_or(0, |r| r.graph_changes.len());
+        self.graph_changes_state_mut().set_total(graph_total);
+
+        // 7. Dependencies breadcrumbs (was inline in render_dependencies)
+        self.dependencies_state_mut().update_breadcrumbs();
+
+        // 8. License totals (was inline in render_licenses)
+        self.prepare_license_totals();
+
+        // 9. Side-by-side totals (was inline in render_sidebyside)
+        // Totals are set by set_totals in the render function, which is now
+        // hoisted here using cached aligned rows or diff data.
+        if self.mode == AppMode::Diff {
+            if let Some(ref result) = self.data.diff_result {
+                let left = result.components.removed.len() + result.components.modified.len();
+                let right = result.components.added.len() + result.components.modified.len();
+                self.side_by_side_state_mut().set_totals(left, right);
+            }
+        }
+    }
+
+    /// Pre-compute license totals for rendering.
+    fn prepare_license_totals(&mut self) {
+        match self.mode {
+            AppMode::Diff => {
+                if let Some(ref result) = self.data.diff_result {
+                    let focus_left = self.licenses_state().focus_left;
+                    let risk_filter = self.licenses_state().risk_filter;
+                    let count = if focus_left {
+                        Self::filtered_license_count(
+                            &result.licenses.new_licenses,
+                            risk_filter,
+                        )
+                    } else {
+                        Self::filtered_license_count(
+                            &result.licenses.removed_licenses,
+                            risk_filter,
+                        )
+                    };
+                    self.licenses_state_mut().total = count;
+                }
+            }
+            AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => {
+                self.licenses_state_mut().total = 0;
+            }
+        }
+        self.licenses_state_mut().clamp_selection();
+    }
+
+    /// Count licenses after applying risk filter.
+    fn filtered_license_count(
+        licenses: &[crate::diff::LicenseChange],
+        risk_filter: Option<crate::tui::app_states::LicenseRiskFilter>,
+    ) -> usize {
+        use crate::tui::license_utils::{LicenseInfo, RiskLevel};
+        if let Some(min_risk) = risk_filter {
+            let min_level = match min_risk {
+                crate::tui::app_states::LicenseRiskFilter::Low => RiskLevel::Low,
+                crate::tui::app_states::LicenseRiskFilter::Medium => RiskLevel::Medium,
+                crate::tui::app_states::LicenseRiskFilter::High => RiskLevel::High,
+                crate::tui::app_states::LicenseRiskFilter::Critical => RiskLevel::Critical,
+            };
+            licenses
+                .iter()
+                .filter(|l| LicenseInfo::from_spdx(&l.license).risk_level >= min_level)
+                .count()
+        } else {
+            licenses.len()
+        }
+    }
+
+    /// Pre-compute vulnerability totals for rendering.
+    fn prepare_vulnerability_totals(&mut self) {
+        let vuln_total = match self.mode {
+            AppMode::Diff => self.diff_vulnerability_count(),
+            AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => 0,
+        };
+        self.vulnerabilities_state_mut().total = vuln_total;
+        self.vulnerabilities_state_mut().clamp_selection();
+
+        // Grouped mode adjusts total to match visible render items
+        if self.vulnerabilities_state().group_by_component {
+            let grouped_count =
+                super::views::count_grouped_items(self);
+            self.vulnerabilities_state_mut().total = grouped_count;
+            self.vulnerabilities_state_mut().clamp_selection();
+        }
+    }
 }
 
 /// Application mode
@@ -818,8 +960,6 @@ impl App {
 pub enum AppMode {
     /// Comparing two SBOMs
     Diff,
-    /// Viewing a single SBOM
-    View,
     /// 1:N multi-diff comparison
     MultiDiff,
     /// Timeline analysis

@@ -5,9 +5,9 @@
 //! - Aligned: Components aligned on same row for direct comparison
 
 use crate::diff::ChangeType;
-use crate::tui::app::{AlignmentMode, App, AppMode};
+use crate::tui::app::{AlignmentMode, AppMode};
+use crate::tui::render_context::RenderContext;
 use crate::tui::theme::colors;
-use crate::tui::widgets;
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Clear, Paragraph, Wrap},
@@ -43,36 +43,35 @@ pub enum DiffSpanStyle {
 }
 
 /// Render side-by-side diff view
-pub fn render_sidebyside(frame: &mut Frame, area: Rect, app: &mut App) {
-    match app.mode {
-        AppMode::Diff => render_diff_sidebyside(frame, area, app),
-        AppMode::View => render_view_placeholder(frame, area),
+pub fn render_sidebyside(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
+    match ctx.mode {
+        AppMode::Diff => render_diff_sidebyside(frame, area, ctx),
         // Multi-comparison modes have their own views
         AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => {}
     }
 }
 
-fn render_diff_sidebyside(frame: &mut Frame, area: Rect, app: &mut App) {
+fn render_diff_sidebyside(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     // Handle search input mode
-    if app.tabs.side_by_side.search_active {
-        render_with_search_input(frame, area, app);
+    if ctx.side_by_side.search_active {
+        render_with_search_input(frame, area, ctx);
         return;
     }
 
     // Handle component detail modal
-    if app.tabs.side_by_side.show_detail_modal {
-        render_with_detail_modal(frame, area, app);
+    if ctx.side_by_side.show_detail_modal {
+        render_with_detail_modal(frame, area, ctx);
         return;
     }
 
     // Normal rendering based on alignment mode
-    match app.tabs.side_by_side.alignment_mode {
-        AlignmentMode::Grouped => render_grouped_mode(frame, area, app),
-        AlignmentMode::Aligned => render_aligned_mode(frame, area, app),
+    match ctx.side_by_side.alignment_mode {
+        AlignmentMode::Grouped => render_grouped_mode(frame, area, ctx),
+        AlignmentMode::Aligned => render_aligned_mode(frame, area, ctx),
     }
 }
 
-fn render_grouped_mode(frame: &mut Frame, area: Rect, app: &mut App) {
+fn render_grouped_mode(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     // Split into context bar and panels
     let main_chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -83,7 +82,7 @@ fn render_grouped_mode(frame: &mut Frame, area: Rect, app: &mut App) {
         .split(area);
 
     // Render context bar
-    render_sidebyside_context_bar(frame, main_chunks[0], app);
+    render_sidebyside_context_bar(frame, main_chunks[0], ctx);
 
     // Split panels area into left, divider, right
     let chunks = Layout::default()
@@ -100,36 +99,29 @@ fn render_grouped_mode(frame: &mut Frame, area: Rect, app: &mut App) {
     let right_area = chunks[2];
 
     // Get SBOM names
-    let old_name = app
-        .data
+    let old_name = ctx
         .old_sbom
-        .as_ref()
         .and_then(|s| s.document.name.clone())
         .unwrap_or_else(|| "Old SBOM".to_string());
-    let new_name = app
-        .data
+    let new_name = ctx
         .new_sbom
-        .as_ref()
         .and_then(|s| s.document.name.clone())
         .unwrap_or_else(|| "New SBOM".to_string());
 
     // Track which panel is focused
-    let focus_right = app.tabs.side_by_side.focus_right;
+    let focus_right = ctx.side_by_side.focus_right;
 
     // Render left panel (old)
-    let left_lines = render_old_panel(frame, left_area, app, &old_name, !focus_right);
+    render_old_panel(frame, left_area, ctx, &old_name, !focus_right);
 
     // Render divider with focus indicator
     render_divider(frame, divider_area, focus_right);
 
     // Render right panel (new)
-    let right_lines = render_new_panel(frame, right_area, app, &new_name, focus_right);
-
-    // Update totals in state
-    app.tabs.side_by_side.set_totals(left_lines, right_lines);
+    render_new_panel(frame, right_area, ctx, &new_name, focus_right);
 }
 
-fn render_aligned_mode(frame: &mut Frame, area: Rect, app: &mut App) {
+fn render_aligned_mode(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let scheme = colors();
 
     // Split into context bar and main area
@@ -142,7 +134,7 @@ fn render_aligned_mode(frame: &mut Frame, area: Rect, app: &mut App) {
         .split(area);
 
     // Render context bar
-    render_sidebyside_context_bar(frame, main_chunks[0], app);
+    render_sidebyside_context_bar(frame, main_chunks[0], ctx);
 
     // Split main area into left, divider, right
     let chunks = Layout::default()
@@ -158,43 +150,28 @@ fn render_aligned_mode(frame: &mut Frame, area: Rect, app: &mut App) {
     let divider_area = chunks[1];
     let right_area = chunks[2];
 
-    // Build aligned rows from diff result
-    let rows = build_aligned_rows(app);
-    let total_rows = rows.len();
-
-    // Update state with row info
-    let change_indices: Vec<usize> = rows
-        .iter()
-        .enumerate()
-        .filter(|(_, r)| r.change_type != ChangeType::Unchanged)
-        .map(|(i, _)| i)
-        .collect();
-    app.tabs.side_by_side.set_total_rows(total_rows);
-    app.tabs.side_by_side.set_change_indices(change_indices);
+    // Build aligned rows from diff result (local computation, not cached in state)
+    let rows = build_aligned_rows(ctx);
 
     // Calculate visible range based on scroll
-    let scroll = app.tabs.side_by_side.left_scroll;
+    let scroll = ctx.side_by_side.left_scroll;
     let visible_height = (left_area.height.saturating_sub(2)) as usize; // Account for borders
-    let selected = app.tabs.side_by_side.selected_row;
+    let selected = ctx.side_by_side.selected_row;
 
     // Get search query for highlighting
-    let search_query = app.tabs.side_by_side.search_query.clone();
+    let search_query = ctx.side_by_side.search_query.clone();
 
     // Build left and right lines
     let mut left_lines: Vec<Line> = vec![];
     let mut right_lines: Vec<Line> = vec![];
 
     // Get SBOM names for headers
-    let old_name = app
-        .data
+    let old_name = ctx
         .old_sbom
-        .as_ref()
         .and_then(|s| s.document.name.clone())
         .unwrap_or_else(|| "Old SBOM".to_string());
-    let new_name = app
-        .data
+    let new_name = ctx
         .new_sbom
-        .as_ref()
         .and_then(|s| s.document.name.clone())
         .unwrap_or_else(|| "New SBOM".to_string());
 
@@ -216,11 +193,8 @@ fn render_aligned_mode(frame: &mut Frame, area: Rect, app: &mut App) {
         right_lines.push(right_line);
     }
 
-    // Update totals
-    app.tabs.side_by_side.set_totals(total_rows, total_rows);
-
     // Render left panel
-    let focus_right = app.tabs.side_by_side.focus_right;
+    let focus_right = ctx.side_by_side.focus_right;
     let left_border_style = if focus_right {
         Style::default().fg(scheme.muted)
     } else {
@@ -256,11 +230,11 @@ fn render_aligned_mode(frame: &mut Frame, area: Rect, app: &mut App) {
     frame.render_widget(right_panel, right_area);
 }
 
-fn build_aligned_rows(app: &App) -> Vec<AlignedRow> {
+fn build_aligned_rows(ctx: &RenderContext) -> Vec<AlignedRow> {
     let mut rows = Vec::new();
-    let filter = &app.tabs.side_by_side.filter;
+    let filter = &ctx.side_by_side.filter;
 
-    if let Some(result) = &app.data.diff_result {
+    if let Some(result) = ctx.diff_result {
         // Add removed components
         if filter.show_removed {
             for comp in &result.components.removed {
@@ -600,9 +574,9 @@ fn render_aligned_divider(
     frame.render_widget(divider, area);
 }
 
-fn render_sidebyside_context_bar(frame: &mut Frame, area: Rect, app: &App) {
+fn render_sidebyside_context_bar(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let scheme = colors();
-    let state = &app.tabs.side_by_side;
+    let state = &ctx.side_by_side;
 
     let mut spans = vec![
         // Mode indicator
@@ -716,12 +690,12 @@ fn render_sidebyside_context_bar(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(paragraph, area);
 }
 
-fn render_old_panel(frame: &mut Frame, area: Rect, app: &App, name: &str, focused: bool) -> usize {
+fn render_old_panel(frame: &mut Frame, area: Rect, ctx: &RenderContext, name: &str, focused: bool) {
     let scheme = colors();
     let mut lines: Vec<Line> = vec![];
-    let filter = &app.tabs.side_by_side.filter;
+    let filter = &ctx.side_by_side.filter;
 
-    if let Some(result) = &app.data.diff_result {
+    if let Some(result) = ctx.diff_result {
         // Header showing counts
         lines.push(Line::from(vec![
             Span::styled("Removed: ", Style::default().fg(scheme.removed)),
@@ -811,8 +785,7 @@ fn render_old_panel(frame: &mut Frame, area: Rect, app: &App, name: &str, focuse
         }
     }
 
-    let total_lines = lines.len();
-    let scroll = app.tabs.side_by_side.left_scroll;
+    let scroll = ctx.side_by_side.left_scroll;
 
     // Border style changes based on focus
     let border_style = if focused {
@@ -834,16 +807,14 @@ fn render_old_panel(frame: &mut Frame, area: Rect, app: &App, name: &str, focuse
         .scroll((scroll as u16, 0));
 
     frame.render_widget(panel, area);
-
-    total_lines
 }
 
-fn render_new_panel(frame: &mut Frame, area: Rect, app: &App, name: &str, focused: bool) -> usize {
+fn render_new_panel(frame: &mut Frame, area: Rect, ctx: &RenderContext, name: &str, focused: bool) {
     let scheme = colors();
     let mut lines: Vec<Line> = vec![];
-    let filter = &app.tabs.side_by_side.filter;
+    let filter = &ctx.side_by_side.filter;
 
-    if let Some(result) = &app.data.diff_result {
+    if let Some(result) = ctx.diff_result {
         // Header showing counts
         lines.push(Line::from(vec![
             Span::styled("Added: ", Style::default().fg(scheme.added)),
@@ -933,8 +904,7 @@ fn render_new_panel(frame: &mut Frame, area: Rect, app: &App, name: &str, focuse
         }
     }
 
-    let total_lines = lines.len();
-    let scroll = app.tabs.side_by_side.right_scroll;
+    let scroll = ctx.side_by_side.right_scroll;
 
     // Border style changes based on focus
     let border_style = if focused {
@@ -956,8 +926,6 @@ fn render_new_panel(frame: &mut Frame, area: Rect, app: &App, name: &str, focuse
         .scroll((scroll as u16, 0));
 
     frame.render_widget(panel, area);
-
-    total_lines
 }
 
 fn render_divider(frame: &mut Frame, area: Rect, focus_right: bool) {
@@ -985,13 +953,13 @@ fn render_divider(frame: &mut Frame, area: Rect, focus_right: bool) {
     frame.render_widget(divider, area);
 }
 
-fn render_with_search_input(frame: &mut Frame, area: Rect, app: &mut App) {
+fn render_with_search_input(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let scheme = colors();
 
     // First render the normal view
-    match app.tabs.side_by_side.alignment_mode {
-        AlignmentMode::Grouped => render_grouped_mode(frame, area, app),
-        AlignmentMode::Aligned => render_aligned_mode(frame, area, app),
+    match ctx.side_by_side.alignment_mode {
+        AlignmentMode::Grouped => render_grouped_mode(frame, area, ctx),
+        AlignmentMode::Aligned => render_aligned_mode(frame, area, ctx),
     }
 
     // Then render search input overlay at bottom
@@ -1004,9 +972,9 @@ fn render_with_search_input(frame: &mut Frame, area: Rect, app: &mut App) {
 
     frame.render_widget(Clear, search_area);
 
-    let query = app.tabs.side_by_side.search_query.as_deref().unwrap_or("");
-    let match_info = if !app.tabs.side_by_side.search_matches.is_empty() {
-        format!(" ({} matches)", app.tabs.side_by_side.search_matches.len())
+    let query = ctx.side_by_side.search_query.as_deref().unwrap_or("");
+    let match_info = if !ctx.side_by_side.search_matches.is_empty() {
+        format!(" ({} matches)", ctx.side_by_side.search_matches.len())
     } else if !query.is_empty() {
         " (no matches)".to_string()
     } else {
@@ -1027,13 +995,13 @@ fn render_with_search_input(frame: &mut Frame, area: Rect, app: &mut App) {
     frame.render_widget(search_input, search_area);
 }
 
-fn render_with_detail_modal(frame: &mut Frame, area: Rect, app: &mut App) {
+fn render_with_detail_modal(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let scheme = colors();
 
     // First render the normal view (dimmed)
-    match app.tabs.side_by_side.alignment_mode {
-        AlignmentMode::Grouped => render_grouped_mode(frame, area, app),
-        AlignmentMode::Aligned => render_aligned_mode(frame, area, app),
+    match ctx.side_by_side.alignment_mode {
+        AlignmentMode::Grouped => render_grouped_mode(frame, area, ctx),
+        AlignmentMode::Aligned => render_aligned_mode(frame, area, ctx),
     }
 
     // Calculate modal area (centered, 80% width, 70% height)
@@ -1056,8 +1024,8 @@ fn render_with_detail_modal(frame: &mut Frame, area: Rect, app: &mut App) {
     let mut content_lines: Vec<Line> = vec![];
 
     // Build aligned rows to find the selected component
-    let rows = build_aligned_rows(app);
-    if let Some(row) = rows.get(app.tabs.side_by_side.selected_row) {
+    let rows = build_aligned_rows(ctx);
+    if let Some(row) = rows.get(ctx.side_by_side.selected_row) {
         // Extract owned data from row
         let component_name = row
             .left_name
@@ -1154,7 +1122,7 @@ fn render_with_detail_modal(frame: &mut Frame, area: Rect, app: &mut App) {
         }
 
         // Find related vulnerabilities - lookup by ID
-        if let Some(result) = &app.data.diff_result {
+        if let Some(result) = ctx.diff_result {
             let comp_id = component_id.as_deref().unwrap_or("");
             let related_vulns: Vec<_> = result
                 .vulnerabilities
@@ -1203,17 +1171,6 @@ fn render_with_detail_modal(frame: &mut Frame, area: Rect, app: &mut App) {
         );
 
     frame.render_widget(modal, modal_area);
-}
-
-fn render_view_placeholder(frame: &mut Frame, area: Rect) {
-    widgets::render_empty_state_enhanced(
-        frame,
-        area,
-        "||",
-        "Side-by-side view requires diff mode",
-        Some("This view compares two SBOMs side by side"),
-        Some("Run: sbom-tools diff <old.json> <new.json> --tui"),
-    );
 }
 
 #[cfg(test)]

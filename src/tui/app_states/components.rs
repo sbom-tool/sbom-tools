@@ -54,17 +54,6 @@ impl ComponentsState {
         self.multi_selected.clear(); // Clear multi-selection on filter change
     }
 
-    /// Toggle filter in view mode (only view-relevant filters)
-    pub fn toggle_view_filter(&mut self) {
-        self.filter = match self.filter {
-            ComponentFilter::All => ComponentFilter::EolOnly,
-            ComponentFilter::EolOnly => ComponentFilter::EolRisk,
-            _ => ComponentFilter::All,
-        };
-        self.selected = 0;
-        self.multi_selected.clear();
-    }
-
     pub const fn toggle_sort(&mut self) {
         self.sort_by = match self.sort_by {
             ComponentSort::Name => ComponentSort::Version,
@@ -204,41 +193,6 @@ pub fn sort_component_changes(
     }
 }
 
-pub fn sort_components(items: &mut Vec<&crate::model::Component>, sort_by: ComponentSort) {
-    match sort_by {
-        ComponentSort::Name => {
-            items.sort_by_key(|comp| {
-                (
-                    comp.name.to_lowercase(),
-                    comp.version.as_deref().unwrap_or("").to_lowercase(),
-                    comp.canonical_id.value().to_lowercase(),
-                )
-            });
-        }
-        ComponentSort::Version => {
-            items.sort_by_key(|comp| {
-                (
-                    comp.version.as_deref().unwrap_or("").to_lowercase(),
-                    comp.name.to_lowercase(),
-                    comp.canonical_id.value().to_lowercase(),
-                )
-            });
-        }
-        ComponentSort::Ecosystem => {
-            items.sort_by_key(|comp| {
-                (
-                    comp.ecosystem
-                        .as_ref()
-                        .map(|eco| eco.to_string().to_lowercase())
-                        .unwrap_or_default(),
-                    comp.name.to_lowercase(),
-                    comp.canonical_id.value().to_lowercase(),
-                )
-            });
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -262,21 +216,6 @@ mod tests {
         assert!(!ComponentFilter::Added.is_view_filter());
         assert!(!ComponentFilter::Removed.is_view_filter());
         assert!(!ComponentFilter::Modified.is_view_filter());
-    }
-
-    #[test]
-    fn view_filter_cycling() {
-        let mut state = ComponentsState::new(10);
-        assert_eq!(state.filter, ComponentFilter::All);
-
-        state.toggle_view_filter();
-        assert_eq!(state.filter, ComponentFilter::EolOnly);
-
-        state.toggle_view_filter();
-        assert_eq!(state.filter, ComponentFilter::EolRisk);
-
-        state.toggle_view_filter();
-        assert_eq!(state.filter, ComponentFilter::All);
     }
 
     #[test]
@@ -309,7 +248,7 @@ mod tests {
         state.set_selected(5);
         state.multi_selected.insert(3);
 
-        state.toggle_view_filter();
+        state.toggle_filter();
         assert_eq!(
             state.selected(),
             0,
@@ -319,15 +258,5 @@ mod tests {
             state.multi_selected.is_empty(),
             "Multi-selection should clear on filter change"
         );
-    }
-
-    #[test]
-    fn view_filter_change_resets_selection() {
-        let mut state = ComponentsState::new(10);
-        state.set_selected(5);
-
-        state.toggle_view_filter();
-        assert_eq!(state.selected(), 0);
-        assert_eq!(state.filter, ComponentFilter::EolOnly);
     }
 }

@@ -1,6 +1,5 @@
 //! Source tab rendering for App (diff mode) — side-by-side layout.
 
-use crate::tui::app::App;
 use crate::tui::app_states::SourceSide;
 use crate::tui::app_states::source::SourceDiffState;
 use crate::tui::shared::source::{render_source_panel, render_str};
@@ -10,8 +9,7 @@ use ratatui::widgets::{Block, Borders, Scrollbar, ScrollbarOrientation, Scrollba
 use std::fmt::Write;
 
 /// Render the source tab with side-by-side old/new SBOM panels.
-pub fn render_source(frame: &mut Frame, area: Rect, app: &mut App) {
-    let source = &mut app.tabs.source;
+pub fn render_source(frame: &mut Frame, area: Rect, source: &mut SourceDiffState) {
     let show_detail = source.show_detail;
 
     // When detail panel is visible: 38% / 38% / 24%

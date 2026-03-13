@@ -39,6 +39,9 @@ pub fn run_tui(app: &mut App) -> io::Result<()> {
 
     // Main loop
     loop {
+        // Pre-render: compute all mutable state before borrowing App read-only
+        app.prepare_render();
+
         // Render
         terminal.draw(|frame| render(frame, app))?;
 
@@ -106,8 +109,8 @@ fn render(frame: &mut Frame, app: &mut App) {
             render_cross_view_overlays(frame, app);
             return;
         }
-        // Diff and View modes use the tabbed layout below
-        AppMode::Diff | AppMode::View => {}
+        // Diff mode uses the tabbed layout below
+        AppMode::Diff => {}
     }
 
     // Main layout: header, tabs, content, status bar, footer
@@ -128,18 +131,28 @@ fn render(frame: &mut Frame, app: &mut App) {
     // Render tabs with shortcuts
     render_tabs(frame, chunks[1], app);
 
-    // Render content based on active tab
+    // Render content based on active tab.
+    // Migrated tabs use RenderContext (read-only); unmigrated tabs still use &mut App.
     match app.active_tab {
-        TabKind::Summary => views::render_summary(frame, chunks[2], app),
-        TabKind::Components => views::render_components(frame, chunks[2], app),
-        TabKind::Dependencies => views::render_dependencies(frame, chunks[2], app),
-        TabKind::Licenses => views::render_licenses(frame, chunks[2], app),
-        TabKind::Vulnerabilities => views::render_vulnerabilities(frame, chunks[2], app),
-        TabKind::Quality => views::render_quality(frame, chunks[2], app),
-        TabKind::Compliance => views::render_diff_compliance(frame, chunks[2], app),
-        TabKind::SideBySide => views::render_sidebyside(frame, chunks[2], app),
-        TabKind::GraphChanges => views::render_graph_changes(frame, chunks[2], app),
-        TabKind::Source => views::render_source(frame, chunks[2], app),
+        // --- Migrated to RenderContext ---
+        TabKind::Summary | TabKind::Quality | TabKind::GraphChanges | TabKind::Compliance
+        | TabKind::Components | TabKind::Licenses | TabKind::SideBySide
+        | TabKind::Dependencies | TabKind::Vulnerabilities => {
+            let ctx = super::render_context::RenderContext::from_app(app);
+            match app.active_tab {
+                TabKind::Summary => views::render_summary(frame, chunks[2], &ctx),
+                TabKind::Quality => views::render_quality(frame, chunks[2], &ctx),
+                TabKind::GraphChanges => views::render_graph_changes(frame, chunks[2], &ctx),
+                TabKind::Compliance => views::render_diff_compliance(frame, chunks[2], &ctx),
+                TabKind::Components => views::render_components(frame, chunks[2], &ctx),
+                TabKind::Licenses => views::render_licenses(frame, chunks[2], &ctx),
+                TabKind::SideBySide => views::render_sidebyside(frame, chunks[2], &ctx),
+                TabKind::Dependencies => views::render_dependencies(frame, chunks[2], &ctx),
+                TabKind::Vulnerabilities => views::render_vulnerabilities(frame, chunks[2], &ctx),
+                _ => unreachable!(),
+            }
+        }
+        TabKind::Source => views::render_source(frame, chunks[2], app.source_state_mut()),
     }
 
     // Render status bar
@@ -188,15 +201,6 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
                 .and_then(|s| s.document.name.clone())
                 .unwrap_or_else(|| "SBOM B".to_string());
             ("diff", format!("{old_name} ⟷ {new_name}"))
-        }
-        AppMode::View => {
-            let name = app
-                .data
-                .sbom
-                .as_ref()
-                .and_then(|s| s.document.name.clone())
-                .unwrap_or_else(|| "SBOM".to_string());
-            ("view", name)
         }
         AppMode::MultiDiff => ("multi-diff", "Multi-Diff Comparison".to_string()),
         AppMode::Timeline => ("timeline", "Timeline Analysis".to_string()),
@@ -315,12 +319,6 @@ fn render_status_bar(frame: &mut Frame, area: Rect, app: &App) {
             let score = result.map_or(0.0, |r| r.semantic_score);
             (comp, vuln, Some(score))
         }
-        AppMode::View => {
-            let sbom = app.data.sbom.as_ref();
-            let comp = sbom.map_or(0, crate::model::NormalizedSbom::component_count);
-            let vuln = sbom.map_or(0, |s| s.all_vulnerabilities().len());
-            (comp, vuln, None)
-        }
         // Multi-comparison modes use their own status bars
         AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => (0, 0, None),
     };
@@ -333,11 +331,6 @@ fn render_status_bar(frame: &mut Frame, area: Rect, app: &App) {
                 .filter(|v| v.severity == "Critical")
                 .count()
         }),
-        AppMode::View => app
-            .data
-            .sbom
-            .as_ref()
-            .map_or(0, |s| s.vulnerability_counts().critical),
         AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => 0,
     };
 

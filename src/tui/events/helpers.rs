@@ -41,10 +41,10 @@ pub(super) fn get_selected_component_name(app: &App) -> Option<String> {
             }
             None
         }
-        AppMode::Diff | AppMode::View => {
+        AppMode::Diff => {
             // Get selected component from components tab
             if let Some(ref result) = app.data.diff_result {
-                let idx = app.tabs.components.selected;
+                let idx = app.components_state().selected;
                 let total = result.components.total();
                 if idx < total {
                     // Try to get from added, removed, or modified

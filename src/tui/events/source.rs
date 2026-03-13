@@ -1,6 +1,6 @@
 //! Source tab event handling for App (diff mode).
 
-use crate::tui::app::App;
+use crate::tui::App;
 use crate::tui::traits::{EventResult, ViewContext, ViewMode, ViewState};
 use crossterm::event::{KeyCode, KeyEvent};
 
@@ -9,9 +9,6 @@ pub fn handle_source_keys(app: &mut App, key: KeyEvent) {
     let Some(view) = app.source_view.as_mut() else {
         return;
     };
-
-    // Pre-sync: tabs → view
-    view.sync_from(&app.tabs.source);
 
     let mut ctx = ViewContext {
         mode: ViewMode::from_app_mode(app.mode),
@@ -23,9 +20,6 @@ pub fn handle_source_keys(app: &mut App, key: KeyEvent) {
     };
 
     let result = view.handle_key(key, &mut ctx);
-
-    // Post-sync: view → tabs
-    view.sync_to(&mut app.tabs.source);
 
     match result {
         EventResult::StatusMessage(msg) => {
@@ -44,7 +38,7 @@ fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
     match key.code {
         KeyCode::Char('c') => {
             // Copy JSON path
-            let panel = app.tabs.source.active_panel_mut();
+            let panel = app.source_state_mut().active_panel_mut();
             panel.ensure_flat_cache();
             if let Some(item) = panel.cached_flat_items.get(panel.selected) {
                 let path = item.node_id.clone();
@@ -55,9 +49,9 @@ fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
         }
         KeyCode::Char('E') => {
             // Export source content
-            let panel = app.tabs.source.active_panel_mut();
+            let panel = app.source_state_mut().active_panel_mut();
             let content = panel.get_full_content();
-            let label = match app.tabs.source.active_side {
+            let label = match app.source_state().active_side {
                 crate::tui::app_states::SourceSide::Old => "old",
                 crate::tui::app_states::SourceSide::New => "new",
             };

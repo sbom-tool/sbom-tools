@@ -3,8 +3,8 @@
 use crate::diff::{
     DependencyChangeType, DependencyGraphChange, GraphChangeImpact, GraphChangeSummary,
 };
-use crate::tui::app::App;
-use crate::tui::state::ListNavigation;
+use crate::tui::app_states::GraphChangesState;
+use crate::tui::render_context::RenderContext;
 use crate::tui::theme::colors;
 use crate::tui::widgets;
 use ratatui::{
@@ -15,8 +15,8 @@ use ratatui::{
     },
 };
 
-pub fn render_graph_changes(frame: &mut Frame, area: Rect, app: &mut App) {
-    let Some(result) = &app.data.diff_result else {
+pub fn render_graph_changes(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
+    let Some(result) = ctx.diff_result else {
         render_no_data(frame, area);
         return;
     };
@@ -25,13 +25,6 @@ pub fn render_graph_changes(frame: &mut Frame, area: Rect, app: &mut App) {
         render_no_changes(frame, area);
         return;
     }
-
-    // Update mutable state first, then borrow immutably for rendering
-    let total = result.graph_changes.len();
-    app.tabs.graph_changes.set_total(total);
-
-    // Re-borrow immutably after mutable update
-    let result = app.data.diff_result.as_ref().expect("checked above");
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -48,17 +41,17 @@ pub fn render_graph_changes(frame: &mut Frame, area: Rect, app: &mut App) {
     }
 
     // Context bar with selection info
-    render_context_bar(frame, chunks[1], app);
+    render_context_bar(frame, chunks[1], ctx.graph_changes);
 
     // Changes table
-    render_changes_table(frame, chunks[2], &result.graph_changes, app);
+    render_changes_table(frame, chunks[2], &result.graph_changes, ctx.graph_changes);
 }
 
 fn render_no_data(frame: &mut Frame, area: Rect) {
     widgets::render_empty_state_enhanced(
         frame,
         area,
-        "📊",
+        "\u{1f4ca}",
         "No graph changes available",
         Some("Graph diff analysis not included in this comparison"),
         Some("Run with --graph-diff flag to enable structural analysis"),
@@ -69,7 +62,7 @@ fn render_no_changes(frame: &mut Frame, area: Rect) {
     widgets::render_empty_state_enhanced(
         frame,
         area,
-        "✓",
+        "\u{2713}",
         "No structural changes detected",
         Some("The dependency graph structure is identical between both SBOMs"),
         None,
@@ -93,7 +86,7 @@ fn render_summary(frame: &mut Frame, area: Rect, summary: &GraphChangeSummary) {
                 format!("{}", summary.total_changes),
                 Style::default().fg(colors().accent).bold(),
             ),
-            Span::raw("  │  "),
+            Span::raw("  \u{2502}  "),
             Span::styled("+ ", Style::default().fg(colors().added).bold()),
             Span::styled(
                 format!("{} added  ", summary.dependencies_added),
@@ -109,12 +102,12 @@ fn render_summary(frame: &mut Frame, area: Rect, summary: &GraphChangeSummary) {
                 format!("{} rel changed  ", summary.relationship_changed),
                 Style::default().fg(colors().text),
             ),
-            Span::styled("↔ ", Style::default().fg(colors().modified).bold()),
+            Span::styled("\u{2194} ", Style::default().fg(colors().modified).bold()),
             Span::styled(
                 format!("{} reparented  ", summary.reparented),
                 Style::default().fg(colors().text),
             ),
-            Span::styled("↕ ", Style::default().fg(colors().info).bold()),
+            Span::styled("\u{2195} ", Style::default().fg(colors().info).bold()),
             Span::styled(
                 format!("{} depth changed", summary.depth_changed),
                 Style::default().fg(colors().text),
@@ -158,9 +151,9 @@ fn impact_badge(impact: GraphChangeImpact, count: usize) -> Span<'static> {
     )
 }
 
-fn render_context_bar(frame: &mut Frame, area: Rect, app: &App) {
-    let selected = app.tabs.graph_changes.selected;
-    let total = app.tabs.graph_changes.total;
+fn render_context_bar(frame: &mut Frame, area: Rect, state: &GraphChangesState) {
+    let selected = state.selected;
+    let total = state.total;
 
     let context_line = Line::from(vec![
         Span::styled("Row ", Style::default().fg(colors().text_muted)),
@@ -168,8 +161,8 @@ fn render_context_bar(frame: &mut Frame, area: Rect, app: &App) {
             format!("{}/{}", if total > 0 { selected + 1 } else { 0 }, total),
             Style::default().fg(colors().accent).bold(),
         ),
-        Span::styled(" │ ", Style::default().fg(colors().border)),
-        Span::styled("[↑↓/jk]", Style::default().fg(colors().accent)),
+        Span::styled(" \u{2502} ", Style::default().fg(colors().border)),
+        Span::styled("[\u{2191}\u{2193}/jk]", Style::default().fg(colors().accent)),
         Span::styled(" select ", Style::default().fg(colors().text_muted)),
         Span::styled("[PgUp/Dn]", Style::default().fg(colors().accent)),
         Span::styled(" page ", Style::default().fg(colors().text_muted)),
@@ -188,7 +181,7 @@ fn render_changes_table(
     frame: &mut Frame,
     area: Rect,
     changes: &[DependencyGraphChange],
-    app: &App,
+    state: &GraphChangesState,
 ) {
     // Split for scrollbar
     let chunks = Layout::default()
@@ -244,7 +237,7 @@ fn render_changes_table(
     // Create table state with selection
     let mut table_state = TableState::default();
     if !changes.is_empty() {
-        table_state.select(Some(app.tabs.graph_changes.selected));
+        table_state.select(Some(state.selected));
     }
 
     frame.render_stateful_widget(table, inner, &mut table_state);
@@ -252,7 +245,7 @@ fn render_changes_table(
     // Scrollbar
     let mut scrollbar_state = ScrollbarState::default()
         .content_length(changes.len())
-        .position(app.tabs.graph_changes.selected);
+        .position(state.selected);
 
     frame.render_stateful_widget(
         Scrollbar::default()
@@ -287,10 +280,10 @@ fn change_type_cell(change: &DependencyChangeType) -> Cell<'static> {
             ("~ Relation", Style::default().fg(colors().modified))
         }
         DependencyChangeType::Reparented { .. } => {
-            ("↔ Reparent", Style::default().fg(colors().modified))
+            ("\u{2194} Reparent", Style::default().fg(colors().modified))
         }
         DependencyChangeType::DepthChanged { .. } => {
-            ("↕ Depth", Style::default().fg(colors().info))
+            ("\u{2195} Depth", Style::default().fg(colors().info))
         }
     };
     Cell::from(text).style(style)
@@ -315,7 +308,7 @@ fn details_cell(change: &DependencyChangeType) -> Cell<'static> {
             ..
         } => {
             format!(
-                "{}: {} → {}",
+                "{}: {} \u{2192} {}",
                 truncate(dependency_name, 20),
                 truncate(old_relationship, 15),
                 truncate(new_relationship, 15)
@@ -327,7 +320,7 @@ fn details_cell(change: &DependencyChangeType) -> Cell<'static> {
             ..
         } => {
             format!(
-                "{} → {}",
+                "{} \u{2192} {}",
                 truncate(old_parent_name, 20),
                 truncate(new_parent_name, 20)
             )
@@ -344,16 +337,16 @@ fn details_cell(change: &DependencyChangeType) -> Cell<'static> {
                 }
             };
             let direction = if *new_depth == u32::MAX {
-                "→ unreachable"
+                "\u{2192} unreachable"
             } else if *old_depth == u32::MAX {
-                "← became reachable"
+                "\u{2190} became reachable"
             } else if *new_depth < *old_depth {
-                "↑ promoted"
+                "\u{2191} promoted"
             } else {
-                "↓ demoted"
+                "\u{2193} demoted"
             };
             format!(
-                "Depth {} → {} ({direction})",
+                "Depth {} \u{2192} {} ({direction})",
                 fmt_depth(*old_depth),
                 fmt_depth(*new_depth)
             )

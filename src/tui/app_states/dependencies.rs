@@ -68,8 +68,6 @@ pub struct DependenciesState {
     pub cached_roots: Vec<String>,
     /// Cached vulnerability components for O(1) lookup
     pub cached_vuln_components: HashSet<String>,
-    /// Cached cycle nodes (flattened) for O(1) lookup
-    pub cached_cycle_nodes: HashSet<String>,
     /// Whether the cache is valid
     pub cache_valid: bool,
     /// Scroll offset for virtual scrolling
@@ -122,7 +120,6 @@ impl DependenciesState {
             cached_graph: HashMap::new(),
             cached_roots: Vec::new(),
             cached_vuln_components: HashSet::new(),
-            cached_cycle_nodes: HashSet::new(),
             cache_valid: false,
             scroll_offset: 0,
             viewport_height: 0,
@@ -161,17 +158,6 @@ impl DependenciesState {
     /// Update cached vulnerability components
     pub fn update_vuln_cache(&mut self, vuln_components: HashSet<String>) {
         self.cached_vuln_components = vuln_components;
-    }
-
-    /// Update cached cycle nodes
-    pub fn update_cycle_cache(&mut self, cycles: Vec<Vec<String>>) {
-        self.detected_cycles.clone_from(&cycles);
-        self.cached_cycle_nodes = cycles.into_iter().flatten().collect();
-    }
-
-    /// Update viewport for virtual scrolling
-    pub const fn update_viewport(&mut self, height: usize) {
-        self.viewport_height = height;
     }
 
     /// Adjust scroll to keep selection visible
@@ -332,18 +318,6 @@ impl DependenciesState {
         self.visible_nodes
             .get(self.selected)
             .map(std::string::String::as_str)
-    }
-
-    /// Set the visible nodes and update total (called during rendering)
-    pub fn set_visible_nodes(&mut self, nodes: Vec<String>) {
-        self.total = nodes.len();
-        self.visible_nodes = nodes;
-        // Clamp selection to valid bounds without disrupting position
-        if self.total == 0 {
-            self.selected = 0;
-        } else {
-            self.selected = self.selected.min(self.total - 1);
-        }
     }
 
     // Search methods

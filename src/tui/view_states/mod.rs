@@ -1,6 +1,3 @@
-// Some accessor methods are not yet used — they exist for Phase 4-6 (render
-// trait, cleanup, ViewApp unification). Suppress warnings until then.
-#![allow(dead_code)]
 //! Concrete `ViewState` implementations.
 //!
 //! This module contains view state machines that implement the `ViewState`
@@ -8,8 +5,8 @@
 //! state management independently.
 //!
 //! The views are wired into the event system via sync bridges in
-//! `tui::events`, which pre-sync state from `App` into the view,
-//! delegate event handling, and post-sync state back.
+//! `tui::events`, which delegate event handling to the ViewState impl
+//! and handle data-dependent operations that need access to App.
 
 pub mod compliance;
 pub mod components;
@@ -30,5 +27,4 @@ pub use licenses::LicensesView;
 pub use quality::QualityView;
 pub use sidebyside::SideBySideView;
 pub use source::SourceView;
-pub use summary::SummaryView;
 pub use vulnerabilities::VulnerabilitiesView;

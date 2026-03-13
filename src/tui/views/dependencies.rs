@@ -1,6 +1,8 @@
 //! Dependencies view with tree widget.
 
-use crate::tui::app::{App, AppMode};
+use crate::tui::app::{AppMode, DataContext};
+use crate::tui::app_states::DependenciesState;
+use crate::tui::render_context::RenderContext;
 use crate::tui::theme::colors;
 use ratatui::{
     prelude::*,
@@ -20,85 +22,18 @@ fn compute_graph_hash(edges: &[(String, String)]) -> u64 {
     hasher.finish()
 }
 
-/// Update the graph cache if needed (call before rendering)
-pub fn update_graph_cache(app: &mut App) {
-    match app.mode {
-        AppMode::View => update_view_mode_cache(app),
-        AppMode::Diff => update_diff_mode_cache(app),
-        _ => {}
+/// Update the graph cache if needed (call before rendering).
+///
+/// Takes `&mut DependenciesState` and `&DataContext` separately to avoid
+/// borrow conflicts when accessing both data and state on `App`.
+pub fn update_graph_cache(deps: &mut DependenciesState, data: &DataContext, mode: AppMode) {
+    if mode == AppMode::Diff {
+        update_diff_mode_cache(deps, data);
     }
 }
 
-fn update_view_mode_cache(app: &mut App) {
-    if let Some(sbom) = &app.data.sbom {
-        // Compute hash of current edges
-        let edges: Vec<(String, String)> = sbom
-            .edges
-            .iter()
-            .map(|e| (e.from.value().to_string(), e.to.value().to_string()))
-            .collect();
-        let new_hash = compute_graph_hash(&edges);
-
-        // Check if cache needs refresh
-        if app.tabs.dependencies.needs_cache_refresh(new_hash) {
-            // Build graph structure
-            let mut by_source: HashMap<String, Vec<String>> = HashMap::new();
-            for (from, to) in &edges {
-                by_source.entry(from.clone()).or_default().push(to.clone());
-            }
-
-            // Find root nodes
-            let all_deps: HashSet<String> = by_source.values().flatten().cloned().collect();
-            let mut sources: Vec<String> = by_source.keys().cloned().collect();
-            sources.sort();
-            let roots: Vec<String> = sources
-                .into_iter()
-                .filter(|s| !all_deps.contains(s))
-                .collect();
-
-            // Detect cycles
-            if app.tabs.dependencies.show_cycles {
-                let cycles = detect_cycles(&by_source);
-                app.tabs.dependencies.update_cycle_cache(cycles);
-            } else {
-                app.tabs.dependencies.update_cycle_cache(Vec::new());
-            }
-
-            // Update graph cache
-            app.tabs
-                .dependencies
-                .update_graph_cache(by_source, roots, new_hash);
-
-            // Update transitive caches (direct deps, reverse graph, depths)
-            app.tabs.dependencies.update_transitive_cache();
-
-            // Update vulnerability cache
-            let vuln_components: HashSet<String> = sbom
-                .components
-                .values()
-                .filter(|c| !c.vulnerabilities.is_empty())
-                .map(|c| c.name.clone())
-                .collect();
-            app.tabs.dependencies.update_vuln_cache(vuln_components);
-
-            // Build display name cache: canonical ID → "name@version"
-            let mut display_names = HashMap::new();
-            for (id, comp) in &sbom.components {
-                let id_str = id.value().to_string();
-                let display = comp
-                    .version
-                    .as_ref()
-                    .map_or_else(|| comp.name.clone(), |v| format!("{}@{}", comp.name, v));
-                display_names.insert(id_str, display);
-            }
-            app.tabs.dependencies.cached_display_names = display_names;
-        }
-    }
-}
-
-fn update_diff_mode_cache(app: &mut App) {
-    if let Some(result) = &app.data.diff_result {
-        // Compute hash based on dependency changes
+fn update_diff_mode_cache(deps: &mut DependenciesState, data: &DataContext) {
+    if let Some(result) = &data.diff_result {
         let mut edges: Vec<(String, String)> = Vec::new();
         for dep in &result.dependencies.added {
             edges.push((dep.from.clone(), dep.to.clone()));
@@ -109,8 +44,7 @@ fn update_diff_mode_cache(app: &mut App) {
         edges.sort();
         let new_hash = compute_graph_hash(&edges);
 
-        if app.tabs.dependencies.needs_cache_refresh(new_hash) {
-            // Build graph for diff mode
+        if deps.needs_cache_refresh(new_hash) {
             let mut by_source: HashMap<String, Vec<String>> = HashMap::new();
             for dep in &result.dependencies.added {
                 by_source
@@ -128,14 +62,9 @@ fn update_diff_mode_cache(app: &mut App) {
             let mut sources: Vec<String> = by_source.keys().cloned().collect();
             sources.sort();
 
-            app.tabs
-                .dependencies
-                .update_graph_cache(by_source, sources, new_hash);
+            deps.update_graph_cache(by_source, sources, new_hash);
+            deps.update_transitive_cache();
 
-            // Update transitive caches (direct deps, reverse graph, depths)
-            app.tabs.dependencies.update_transitive_cache();
-
-            // Update vulnerability cache from diff result
             let vuln_components: HashSet<String> = result
                 .vulnerabilities
                 .introduced
@@ -143,12 +72,10 @@ fn update_diff_mode_cache(app: &mut App) {
                 .chain(result.vulnerabilities.resolved.iter())
                 .map(|v| v.component_name.clone())
                 .collect();
-            app.tabs.dependencies.update_vuln_cache(vuln_components);
+            deps.update_vuln_cache(vuln_components);
 
-            // Build display name cache from both old and new SBOMs
             let mut display_names = HashMap::new();
-            // Try new SBOM first (preferred for added deps), then old SBOM
-            for sbom in app.data.new_sbom.iter().chain(app.data.old_sbom.iter()) {
+            for sbom in data.new_sbom.iter().chain(data.old_sbom.iter()) {
                 for (id, comp) in &sbom.components {
                     let id_str = id.value().to_string();
                     display_names.entry(id_str).or_insert_with(|| {
@@ -158,43 +85,21 @@ fn update_diff_mode_cache(app: &mut App) {
                     });
                 }
             }
-            app.tabs.dependencies.cached_display_names = display_names;
+            deps.cached_display_names = display_names;
         }
     }
 }
 
-/// Tree node for rendering
-#[allow(dead_code)]
-struct TreeNode {
-    id: String,
-    label: String,
-    children: Vec<Self>,
-    change_type: ChangeType,
-    depth: usize,
-}
-
-#[derive(Clone, Copy, PartialEq)]
-#[allow(dead_code)]
-enum ChangeType {
-    None,
-    Added,
-    Removed,
-}
-
-pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
+pub fn render_dependencies(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let scheme = colors();
 
-    // Update cache before rendering (only recomputes if data changed)
-    update_graph_cache(app);
-
-    // Update breadcrumbs based on current selection
-    app.tabs.dependencies.update_breadcrumbs();
+    // Caches and breadcrumbs are updated in prepare_render via update_graph_cache
 
     // Adjust context bar height based on search mode and breadcrumbs
-    let is_searching = app.tabs.dependencies.is_searching();
-    let has_search_query = app.tabs.dependencies.has_search_query();
-    let show_breadcrumbs = app.tabs.dependencies.show_breadcrumbs
-        && !app.tabs.dependencies.breadcrumb_trail.is_empty();
+    let is_searching = ctx.dependencies.is_searching();
+    let has_search_query = ctx.dependencies.has_search_query();
+    let show_breadcrumbs = ctx.dependencies.show_breadcrumbs
+        && !ctx.dependencies.breadcrumb_trail.is_empty();
 
     let mut context_height = 6u16;
     if is_searching || has_search_query {
@@ -210,30 +115,30 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
         .split(area);
 
     // Context bar with options and selection info
-    let selected = app.tabs.dependencies.selected;
-    let total = app.tabs.dependencies.total;
-    let expanded_count = app.tabs.dependencies.expanded_nodes.len();
-    let max_depth = app.tabs.dependencies.max_depth;
-    let max_roots = app.tabs.dependencies.max_roots;
-    let show_cycles = app.tabs.dependencies.show_cycles;
-    let cycle_count = app.tabs.dependencies.detected_cycles.len();
-    let (root_overflow, depth_limited) = dependency_limit_info_cached(app, max_roots, max_depth);
+    let selected = ctx.dependencies.selected;
+    let total = ctx.dependencies.total;
+    let expanded_count = ctx.dependencies.expanded_nodes.len();
+    let max_depth = ctx.dependencies.max_depth;
+    let max_roots = ctx.dependencies.max_roots;
+    let show_cycles = ctx.dependencies.show_cycles;
+    let cycle_count = ctx.dependencies.detected_cycles.len();
+    let (root_overflow, depth_limited) = dependency_limit_info_ctx(ctx, max_roots, max_depth);
 
     // Use cached vulnerability components (O(1) lookup, no rebuild)
-    let vuln_count = app.tabs.dependencies.cached_vuln_components.len();
+    let vuln_count = ctx.dependencies.cached_vuln_components.len();
 
-    let is_diff_mode = app.mode == AppMode::Diff;
+    let is_diff_mode = ctx.mode == AppMode::Diff;
 
     let mut line1_spans = vec![
         Span::styled("[t]", Style::default().fg(scheme.accent)),
         Span::raw(" Transitive: "),
         Span::styled(
-            if app.tabs.dependencies.show_transitive {
+            if ctx.dependencies.show_transitive {
                 "On"
             } else {
                 "Off"
             },
-            if app.tabs.dependencies.show_transitive {
+            if ctx.dependencies.show_transitive {
                 Style::default().fg(scheme.success).bold()
             } else {
                 Style::default().fg(scheme.text_muted)
@@ -247,12 +152,12 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
         line1_spans.push(Span::styled("[h]", Style::default().fg(scheme.accent)));
         line1_spans.push(Span::raw(" Highlight: "));
         line1_spans.push(Span::styled(
-            if app.tabs.dependencies.highlight_changes {
+            if ctx.dependencies.highlight_changes {
                 "On"
             } else {
                 "Off"
             },
-            if app.tabs.dependencies.highlight_changes {
+            if ctx.dependencies.highlight_changes {
                 Style::default().fg(scheme.success).bold()
             } else {
                 Style::default().fg(scheme.text_muted)
@@ -274,7 +179,7 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
 
     let line1 = Line::from(line1_spans);
 
-    let sort_order = app.tabs.dependencies.sort_order.display_name();
+    let sort_order = ctx.dependencies.sort_order.display_name();
     let line2 = Line::from(vec![
         Span::styled("[+/-]", Style::default().fg(scheme.accent)),
         Span::raw(" Depth: "),
@@ -374,9 +279,9 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
 
     // Add search bar if searching
     if is_searching {
-        let query = &app.tabs.dependencies.search_query;
-        let match_count = app.tabs.dependencies.search_matches.len();
-        let filter_mode = app.tabs.dependencies.filter_mode;
+        let query = &ctx.dependencies.search_query;
+        let match_count = ctx.dependencies.search_matches.len();
+        let filter_mode = ctx.dependencies.filter_mode;
 
         let mut search_spans = vec![
             Span::styled("[/]", Style::default().fg(scheme.accent)),
@@ -419,11 +324,11 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
         search_spans.push(Span::raw(" next/prev"));
 
         context_lines.push(Line::from(search_spans));
-    } else if app.tabs.dependencies.has_search_query() {
+    } else if ctx.dependencies.has_search_query() {
         // Show persistent search indicator when not actively searching
-        let match_count = app.tabs.dependencies.search_matches.len();
-        let filter_mode = app.tabs.dependencies.filter_mode;
-        let query = &app.tabs.dependencies.search_query;
+        let match_count = ctx.dependencies.search_matches.len();
+        let filter_mode = ctx.dependencies.filter_mode;
+        let query = &ctx.dependencies.search_query;
 
         let mut search_spans = vec![
             Span::styled("[/]", Style::default().fg(scheme.accent)),
@@ -454,7 +359,7 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
 
     // Add breadcrumb bar if enabled and there's a trail
     if show_breadcrumbs {
-        let breadcrumb_display = app.tabs.dependencies.get_breadcrumb_display();
+        let breadcrumb_display = ctx.dependencies.get_breadcrumb_display();
         let breadcrumb_line = Line::from(vec![
             Span::styled("📍 ", Style::default().fg(scheme.accent)),
             Span::styled(breadcrumb_display, Style::default().fg(scheme.text_muted)),
@@ -476,15 +381,15 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut App) {
     frame.render_widget(options, chunks[0]);
 
     // Dependency tree
-    render_dependency_tree(frame, chunks[1], app);
+    render_dependency_tree(frame, chunks[1], ctx);
 
     // Render help overlay if active
-    if app.tabs.dependencies.show_deps_help {
+    if ctx.dependencies.show_deps_help {
         render_deps_help_overlay(frame, area);
     }
 }
 
-fn render_dependency_tree(frame: &mut Frame, area: Rect, app: &mut App) {
+fn render_dependency_tree(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let scheme = colors();
 
     // Split into tree (60%) and detail panel (40%)
@@ -504,41 +409,29 @@ fn render_dependency_tree(frame: &mut Frame, area: Rect, app: &mut App) {
 
     let tree_area = chunks[0];
 
-    // Update viewport height for virtual scrolling
+    // Compute viewport height locally (writeback removed — prepare_render handles it)
     let viewport_height = tree_area.height.saturating_sub(2) as usize;
-    app.tabs.dependencies.update_viewport(viewport_height);
 
     let mut lines: Vec<Line> = vec![];
     let mut visible_nodes: Vec<String> = vec![];
 
-    // Get search state (clone to avoid borrow issues)
-    let search_matches = app.tabs.dependencies.search_matches.clone();
-    let filter_mode = app.tabs.dependencies.filter_mode;
+    // Read search state from ctx
+    let search_matches = &ctx.dependencies.search_matches;
+    let filter_mode = ctx.dependencies.filter_mode;
     let has_search = !search_matches.is_empty();
 
-    // Clone cached vulnerability components to avoid borrow issues
-    let vuln_components = app.tabs.dependencies.cached_vuln_components.clone();
+    // Read cached vulnerability components from ctx
+    let vuln_components = &ctx.dependencies.cached_vuln_components;
 
-    match app.mode {
+    match ctx.mode {
         AppMode::Diff => {
             render_diff_tree_cached(
                 &mut lines,
                 &mut visible_nodes,
-                app,
+                ctx,
                 tree_area.width as usize,
-                &vuln_components,
-                &search_matches,
-                filter_mode,
-            );
-        }
-        AppMode::View => {
-            render_view_tree_cached(
-                &mut lines,
-                &mut visible_nodes,
-                app,
-                tree_area.width as usize,
-                &vuln_components,
-                &search_matches,
+                vuln_components,
+                search_matches,
                 filter_mode,
             );
         }
@@ -546,17 +439,12 @@ fn render_dependency_tree(frame: &mut Frame, area: Rect, app: &mut App) {
         AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => {}
     }
 
-    // Update state with visible nodes
-    app.tabs
-        .dependencies
-        .set_visible_nodes(visible_nodes.clone());
-
-    // Adjust scroll to keep selection visible
-    app.tabs.dependencies.adjust_scroll_to_selection();
+    // visible_nodes and scroll adjustment are handled in prepare_render;
+    // here we use the pre-computed state from ctx.
 
     // Apply selection and search highlighting with virtual scrolling
-    let selected = app.tabs.dependencies.selected;
-    let scroll_offset = app.tabs.dependencies.scroll_offset;
+    let selected = ctx.dependencies.selected;
+    let scroll_offset = ctx.dependencies.scroll_offset;
 
     // Only process lines in the visible range (virtual scrolling)
     let visible_start = scroll_offset;
@@ -627,11 +515,11 @@ fn render_dependency_tree(frame: &mut Frame, area: Rect, app: &mut App) {
     );
 
     // Render detail panel for selected node
-    render_detail_panel(frame, detail_area, app);
+    render_detail_panel(frame, detail_area, ctx);
 }
 
 /// Render the detail panel showing info about the selected dependency node
-fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
+fn render_detail_panel(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     use ratatui::widgets::Wrap;
 
     let scheme = colors();
@@ -643,7 +531,7 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
     ));
     lines.push(Line::from(""));
 
-    let selected_node = app.tabs.dependencies.get_selected_node_id();
+    let selected_node = ctx.dependencies.get_selected_node_id();
 
     if let Some(raw_id) = selected_node {
         // Skip placeholder nodes
@@ -664,7 +552,7 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
             };
 
             // Display name
-            let display_name = app.tabs.dependencies.cached_display_names.get(component_id);
+            let display_name = ctx.dependencies.cached_display_names.get(component_id);
 
             if let Some(name) = display_name {
                 lines.push(Line::from(vec![
@@ -687,7 +575,7 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
             }
 
             // Look up component in SBOMs for rich details
-            let component = find_component_in_sboms(component_id, app);
+            let component = find_component_in_sboms(component_id, ctx);
 
             if let Some(comp) = component {
                 if let Some(ref ver) = comp.version {
@@ -733,14 +621,12 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
             }
 
             // Dependency counts from cached graphs
-            let dep_count = app
-                .tabs
+            let dep_count = ctx
                 .dependencies
                 .cached_graph
                 .get(component_id)
                 .map_or(0, Vec::len);
-            let depended_on_count = app
-                .tabs
+            let depended_on_count = ctx
                 .dependencies
                 .cached_reverse_graph
                 .get(component_id)
@@ -791,14 +677,13 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, app: &App) {
 }
 
 /// Look up a component by canonical ID in available SBOMs
-fn find_component_in_sboms<'a>(id: &str, app: &'a App) -> Option<&'a crate::model::Component> {
+fn find_component_in_sboms<'a>(id: &str, ctx: &'a RenderContext) -> Option<&'a crate::model::Component> {
     // Try view-mode SBOM first, then diff-mode SBOMs
-    for sbom in app
-        .data
+    for sbom in ctx
         .sbom
         .iter()
-        .chain(app.data.new_sbom.iter())
-        .chain(app.data.old_sbom.iter())
+        .chain(ctx.new_sbom.iter())
+        .chain(ctx.old_sbom.iter())
     {
         for (canonical_id, comp) in &sbom.components {
             if canonical_id.value() == id {
@@ -809,549 +694,21 @@ fn find_component_in_sboms<'a>(id: &str, app: &'a App) -> Option<&'a crate::mode
     None
 }
 
-#[allow(dead_code)]
-fn render_diff_tree(
-    lines: &mut Vec<Line>,
-    visible_nodes: &mut Vec<String>,
-    app: &App,
-    max_width: usize,
-    vuln_components: &HashSet<String>,
-    search_matches: &HashSet<String>,
-    filter_mode: bool,
-) {
-    let scheme = colors();
-    let max_roots = app.tabs.dependencies.max_roots;
-    let highlight = app.tabs.dependencies.highlight_changes;
-
-    if let Some(result) = &app.data.diff_result {
-        // Build tree from dependency changes
-        let added_count = result.dependencies.added.len();
-        let removed_count = result.dependencies.removed.len();
-
-        // Summary header
-        lines.push(Line::from(vec![
-            Span::styled("Changes: ", Style::default().fg(scheme.text).bold()),
-            Span::styled(
-                format!("+{added_count}"),
-                Style::default().fg(scheme.added).bold(),
-            ),
-            Span::raw(" added, "),
-            Span::styled(
-                format!("-{removed_count}"),
-                Style::default().fg(scheme.removed).bold(),
-            ),
-            Span::raw(" removed"),
-        ]));
-        visible_nodes.push("__header__".to_string());
-        lines.push(Line::raw(""));
-        visible_nodes.push("__spacer__".to_string());
-
-        // Group dependencies by source component
-        let mut added_by_source: HashMap<&str, Vec<&str>> = HashMap::new();
-        let mut removed_by_source: HashMap<&str, Vec<&str>> = HashMap::new();
-
-        for dep in &result.dependencies.added {
-            added_by_source.entry(&dep.from).or_default().push(&dep.to);
-        }
-
-        for dep in &result.dependencies.removed {
-            removed_by_source
-                .entry(&dep.from)
-                .or_default()
-                .push(&dep.to);
-        }
-
-        // Get all unique source components
-        let mut all_sources: HashSet<&str> = HashSet::new();
-        all_sources.extend(added_by_source.keys());
-        all_sources.extend(removed_by_source.keys());
-
-        let mut sources: Vec<_> = all_sources.into_iter().collect();
-        sources.sort_unstable();
-
-        let expanded = &app.tabs.dependencies.expanded_nodes;
-
-        // Apply search filter if active
-        let sources_to_show: Vec<_> = if filter_mode && !search_matches.is_empty() {
-            sources
-                .iter()
-                .filter(|s| search_matches.contains(**s))
-                .take(max_roots)
-                .collect()
-        } else {
-            sources.iter().take(max_roots).collect()
-        };
-
-        for (idx, source) in sources_to_show.iter().enumerate() {
-            let added = added_by_source.get(**source);
-            let removed = removed_by_source.get(**source);
-
-            let child_count =
-                added.map_or(0, std::vec::Vec::len) + removed.map_or(0, std::vec::Vec::len);
-            let is_expanded = expanded.contains(**source);
-            let is_last = idx == sources_to_show.len() - 1;
-
-            // Check for vulnerabilities
-            let source_has_vuln = vuln_components.contains(**source);
-
-            // Tree branch characters
-            let branch = if is_last { "└─" } else { "├─" };
-            let expand_icon = if is_expanded { "▼" } else { "▶" };
-
-            // Determine color based on changes
-            let source_style = if highlight {
-                if added.is_some() && removed.is_some() {
-                    Style::default().fg(scheme.modified) // Both added and removed
-                } else if added.is_some() {
-                    Style::default().fg(scheme.added)
-                } else {
-                    Style::default().fg(scheme.removed)
-                }
-            } else {
-                Style::default().fg(scheme.text)
-            };
-
-            // Source component line
-            let short_source = truncate_component(source, max_width - 20);
-            let mut spans = vec![
-                Span::styled(branch, Style::default().fg(scheme.border)),
-                Span::styled(expand_icon, Style::default().fg(scheme.accent)),
-                Span::raw(" "),
-                Span::styled(short_source, source_style.bold()),
-                Span::styled(
-                    format!(" ({child_count})"),
-                    Style::default().fg(scheme.text_muted),
-                ),
-            ];
-
-            // Add vulnerability indicator
-            if source_has_vuln {
-                spans.push(Span::styled(" ⚠", Style::default().fg(scheme.critical)));
-            }
-
-            lines.push(Line::from(spans));
-            visible_nodes.push((**source).to_string());
-
-            // Children if expanded
-            if is_expanded {
-                let prefix = if is_last { "   " } else { "│  " };
-
-                // Added dependencies
-                if let Some(added_deps) = added {
-                    for (i, dep) in added_deps.iter().enumerate() {
-                        let is_last_child = removed.is_none() && i == added_deps.len() - 1;
-                        let child_branch = if is_last_child { "└─" } else { "├─" };
-                        let short_dep = truncate_component(dep, max_width - 25);
-                        let dep_has_vuln = vuln_components.contains(*dep);
-
-                        let dep_style = if highlight {
-                            Style::default().fg(scheme.added)
-                        } else {
-                            Style::default().fg(scheme.text)
-                        };
-                        let mut dep_spans = vec![
-                            Span::styled(prefix, Style::default().fg(scheme.border)),
-                            Span::styled(child_branch, Style::default().fg(scheme.border)),
-                            Span::styled(" + ", dep_style.bold()),
-                            Span::styled(short_dep, dep_style),
-                        ];
-
-                        if dep_has_vuln {
-                            dep_spans
-                                .push(Span::styled(" ⚠", Style::default().fg(scheme.critical)));
-                        }
-
-                        lines.push(Line::from(dep_spans));
-                        visible_nodes.push(format!("{}:+:{}", **source, dep));
-                    }
-                }
-
-                // Removed dependencies
-                if let Some(removed_deps) = removed {
-                    for (i, dep) in removed_deps.iter().enumerate() {
-                        let is_last_child = i == removed_deps.len() - 1;
-                        let child_branch = if is_last_child { "└─" } else { "├─" };
-                        let short_dep = truncate_component(dep, max_width - 25);
-                        let dep_has_vuln = vuln_components.contains(*dep);
-
-                        let dep_style = if highlight {
-                            Style::default().fg(scheme.removed)
-                        } else {
-                            Style::default().fg(scheme.text)
-                        };
-                        let mut dep_spans = vec![
-                            Span::styled(prefix, Style::default().fg(scheme.border)),
-                            Span::styled(child_branch, Style::default().fg(scheme.border)),
-                            Span::styled(" - ", dep_style.bold()),
-                            Span::styled(short_dep, dep_style),
-                        ];
-
-                        if dep_has_vuln {
-                            dep_spans
-                                .push(Span::styled(" ⚠", Style::default().fg(scheme.critical)));
-                        }
-
-                        lines.push(Line::from(dep_spans));
-                        visible_nodes.push(format!("{}:-:{}", **source, dep));
-                    }
-                }
-            }
-        }
-
-        if sources.is_empty() {
-            lines.push(Line::styled(
-                "No dependency changes detected",
-                Style::default().fg(scheme.text_muted),
-            ));
-            visible_nodes.push("__empty__".to_string());
-        }
-    }
-}
-
-#[allow(dead_code)]
-fn render_view_tree(
-    lines: &mut Vec<Line>,
-    visible_nodes: &mut Vec<String>,
-    app: &mut App,
-    max_width: usize,
-    vuln_components: &HashSet<String>,
-    search_matches: &HashSet<String>,
-    filter_mode: bool,
-) {
-    let scheme = colors();
-    let max_roots = app.tabs.dependencies.max_roots;
-    let max_depth = app.tabs.dependencies.max_depth;
-    let show_cycles = app.tabs.dependencies.show_cycles;
-    let _has_search = !search_matches.is_empty();
-
-    if let Some(sbom) = &app.data.sbom {
-        // Build tree from edges - group by source
-        let mut by_source: HashMap<String, Vec<String>> = HashMap::new();
-
-        for edge in &sbom.edges {
-            by_source
-                .entry(edge.from.value().to_string())
-                .or_default()
-                .push(edge.to.value().to_string());
-        }
-
-        // Detect cycles if enabled
-        let cycles_in_deps: HashSet<String> = if show_cycles {
-            let cycles = detect_cycles(&by_source);
-            app.tabs.dependencies.detected_cycles.clone_from(&cycles);
-            cycles.into_iter().flatten().collect()
-        } else {
-            app.tabs.dependencies.detected_cycles.clear();
-            HashSet::new()
-        };
-
-        // Summary
-        lines.push(Line::from(vec![
-            Span::styled("Total: ", Style::default().fg(scheme.text).bold()),
-            Span::styled(
-                format!("{} dependencies", sbom.edges.len()),
-                Style::default().fg(scheme.primary).bold(),
-            ),
-            if cycles_in_deps.is_empty() {
-                Span::raw("")
-            } else {
-                Span::styled(
-                    format!("  (⟳ {} in cycles)", cycles_in_deps.len()),
-                    Style::default().fg(scheme.warning),
-                )
-            },
-        ]));
-        visible_nodes.push("__header__".to_string());
-        lines.push(Line::raw(""));
-        visible_nodes.push("__spacer__".to_string());
-
-        let mut sources: Vec<_> = by_source.keys().cloned().collect();
-        sources.sort();
-        let has_sources = !sources.is_empty();
-
-        let expanded = &app.tabs.dependencies.expanded_nodes;
-
-        // Root components (components that are not dependencies of others)
-        let all_deps: HashSet<_> = by_source.values().flatten().cloned().collect();
-        let mut roots: Vec<String> = sources
-            .iter()
-            .filter(|s| !all_deps.contains(*s))
-            .cloned()
-            .collect();
-
-        // Apply search filter if active
-        if filter_mode && !search_matches.is_empty() {
-            roots.retain(|r| search_matches.contains(r));
-        }
-
-        let mut flat_view = false;
-        if roots.is_empty() && has_sources {
-            flat_view = true;
-            lines.push(Line::styled(
-                "Dependencies (flat view):",
-                Style::default().fg(scheme.primary),
-            ));
-            visible_nodes.push("__flat_header__".to_string());
-            let source_roots: Vec<String> = if filter_mode && !search_matches.is_empty() {
-                sources
-                    .iter()
-                    .filter(|s| search_matches.contains(*s))
-                    .take(max_roots)
-                    .cloned()
-                    .collect()
-            } else {
-                sources.iter().take(max_roots).cloned().collect()
-            };
-            roots = source_roots;
-        } else {
-            roots.truncate(max_roots);
-        }
-
-        let mut path = Vec::new();
-        for (idx, source) in roots.iter().enumerate() {
-            let is_last = idx == roots.len().saturating_sub(1);
-            render_view_node(
-                lines,
-                visible_nodes,
-                source,
-                &by_source,
-                expanded,
-                &[],
-                is_last,
-                1,
-                max_depth,
-                max_width,
-                &scheme,
-                vuln_components,
-                &cycles_in_deps,
-                show_cycles,
-                &mut path,
-            );
-        }
-
-        if flat_view && roots.is_empty() && has_sources {
-            lines.push(Line::styled(
-                "No dependency roots found",
-                Style::default().fg(scheme.text_muted),
-            ));
-            visible_nodes.push("__flat_empty__".to_string());
-        }
-
-        if sbom.edges.is_empty() {
-            lines.push(Line::styled(
-                "No dependencies found",
-                Style::default().fg(scheme.text_muted),
-            ));
-            visible_nodes.push("__empty__".to_string());
-        }
-    }
-}
-
-#[allow(dead_code)]
-#[allow(clippy::too_many_arguments)]
-fn render_view_node(
-    lines: &mut Vec<Line>,
-    visible_nodes: &mut Vec<String>,
-    node_id: &str,
-    by_source: &HashMap<String, Vec<String>>,
-    expanded: &HashSet<String>,
-    ancestors_last: &[bool],
-    is_last: bool,
-    depth: usize,
-    max_depth: usize,
-    max_width: usize,
-    scheme: &crate::tui::theme::ColorScheme,
-    vuln_components: &HashSet<String>,
-    cycles_in_deps: &HashSet<String>,
-    show_cycles: bool,
-    path: &mut Vec<String>,
-) {
-    let children = by_source.get(node_id);
-    let child_count = children.map_or(0, std::vec::Vec::len);
-    let is_expanded = expanded.contains(node_id);
-
-    let empty_names = HashMap::new();
-    render_view_node_line(
-        lines,
-        visible_nodes,
-        node_id,
-        child_count,
-        is_expanded,
-        ancestors_last,
-        is_last,
-        depth,
-        max_width,
-        scheme,
-        vuln_components,
-        cycles_in_deps,
-        show_cycles,
-        false,
-        &empty_names,
-    );
-
-    if child_count == 0 || !is_expanded || depth >= max_depth {
-        return;
-    }
-
-    path.push(node_id.to_string());
-    if let Some(children) = children {
-        for (i, child) in children.iter().enumerate() {
-            let is_last_child = i == children.len().saturating_sub(1);
-            let mut next_ancestors = ancestors_last.to_vec();
-            next_ancestors.push(is_last);
-            let is_cycle_ref = path.iter().any(|ancestor| ancestor == child);
-
-            if is_cycle_ref {
-                let grand_child_count = by_source.get(child).map_or(0, std::vec::Vec::len);
-                render_view_node_line(
-                    lines,
-                    visible_nodes,
-                    child,
-                    grand_child_count,
-                    false,
-                    &next_ancestors,
-                    is_last_child,
-                    depth + 1,
-                    max_width,
-                    scheme,
-                    vuln_components,
-                    cycles_in_deps,
-                    show_cycles,
-                    true,
-                    &empty_names,
-                );
-                continue;
-            }
-
-            render_view_node(
-                lines,
-                visible_nodes,
-                child,
-                by_source,
-                expanded,
-                &next_ancestors,
-                is_last_child,
-                depth + 1,
-                max_depth,
-                max_width,
-                scheme,
-                vuln_components,
-                cycles_in_deps,
-                show_cycles,
-                path,
-            );
-        }
-    }
-    path.pop();
-}
-
-#[allow(clippy::too_many_arguments)]
-fn render_view_node_line(
-    lines: &mut Vec<Line>,
-    visible_nodes: &mut Vec<String>,
-    node_id: &str,
-    child_count: usize,
-    is_expanded: bool,
-    ancestors_last: &[bool],
-    is_last: bool,
-    depth: usize,
-    max_width: usize,
-    scheme: &crate::tui::theme::ColorScheme,
-    vuln_components: &HashSet<String>,
-    cycles_in_deps: &HashSet<String>,
-    show_cycles: bool,
-    cycle_ref: bool,
-    display_names: &HashMap<String, String>,
-) {
-    let mut prefix = String::new();
-    for last in ancestors_last {
-        if *last {
-            prefix.push_str("   ");
-        } else {
-            prefix.push_str("│  ");
-        }
-    }
-    prefix.push_str(if is_last { "└─" } else { "├─" });
-
-    // P8: Leaf indicator — dot instead of ambiguous dash
-    let expand_icon = if cycle_ref {
-        "⟳"
-    } else if child_count > 0 {
-        if is_expanded { "▼" } else { "▶" }
-    } else {
-        "·"
-    };
-
-    let name_budget = max_width.saturating_sub(prefix.len() + 6);
-    let short_name = resolve_display_name(node_id, display_names, name_budget.max(6));
-    let has_vuln = vuln_components.contains(node_id);
-    let in_cycle = cycles_in_deps.contains(node_id) || cycle_ref;
-
-    // P1: Depth-based color gradient for tree nodes
-    let name_style = if cycle_ref {
-        Style::default().fg(scheme.warning)
-    } else if depth == 0 {
-        Style::default().fg(scheme.text).bold()
-    } else if depth == 1 {
-        Style::default().fg(scheme.text)
-    } else if depth == 2 {
-        Style::default().fg(Color::Rgb(180, 180, 180))
-    } else {
-        Style::default().fg(scheme.text_muted)
-    };
-
-    // P2: Brighter tree structure lines (text_muted instead of border/DarkGray)
-    let mut spans = vec![
-        Span::styled(prefix, Style::default().fg(scheme.text_muted)),
-        Span::styled(
-            expand_icon,
-            Style::default().fg(if child_count > 0 {
-                scheme.accent
-            } else {
-                scheme.text_muted
-            }),
-        ),
-        Span::raw(" "),
-        Span::styled(short_name, name_style),
-    ];
-
-    if child_count > 0 && !cycle_ref {
-        spans.push(Span::styled(
-            format!(" ({child_count})"),
-            Style::default().fg(scheme.text_muted),
-        ));
-    }
-
-    if has_vuln {
-        spans.push(Span::styled(" ⚠", Style::default().fg(scheme.critical)));
-    }
-
-    if show_cycles && in_cycle {
-        spans.push(Span::styled(" ⟳", Style::default().fg(scheme.warning)));
-    }
-
-    lines.push(Line::from(spans));
-    visible_nodes.push(node_id.to_string());
-}
-
-// === CACHED VERSIONS OF RENDER FUNCTIONS ===
-// These use the cached graph structure and avoid rebuilding on every frame
-
-/// Cached version of `render_diff_tree` - uses cached graph structure
+/// Render diff dependency tree using cached graph structure.
 fn render_diff_tree_cached(
     lines: &mut Vec<Line>,
     visible_nodes: &mut Vec<String>,
-    app: &App,
+    ctx: &RenderContext,
     max_width: usize,
     vuln_components: &HashSet<String>,
     search_matches: &HashSet<String>,
     filter_mode: bool,
 ) {
     let scheme = colors();
-    let max_roots = app.tabs.dependencies.max_roots;
-    let highlight = app.tabs.dependencies.highlight_changes;
+    let max_roots = ctx.dependencies.max_roots;
+    let highlight = ctx.dependencies.highlight_changes;
 
-    if let Some(result) = &app.data.diff_result {
+    if let Some(result) = ctx.diff_result {
         // Build tree from dependency changes
         let added_count = result.dependencies.added.len();
         let removed_count = result.dependencies.removed.len();
@@ -1375,9 +732,9 @@ fn render_diff_tree_cached(
         visible_nodes.push("__spacer__".to_string());
 
         // Use cached roots (sources)
-        let sources = &app.tabs.dependencies.cached_roots;
-        let expanded = &app.tabs.dependencies.expanded_nodes;
-        let display_names = &app.tabs.dependencies.cached_display_names;
+        let sources = &ctx.dependencies.cached_roots;
+        let expanded = &ctx.dependencies.expanded_nodes;
+        let display_names = &ctx.dependencies.cached_display_names;
 
         // Build added/removed lookup from result
         let mut added_by_source: HashMap<&str, Vec<&str>> = HashMap::new();
@@ -1524,290 +881,10 @@ fn render_diff_tree_cached(
     }
 }
 
-/// Cached version of `render_view_tree` - uses cached graph and cycle nodes
-fn render_view_tree_cached(
-    lines: &mut Vec<Line>,
-    visible_nodes: &mut Vec<String>,
-    app: &App,
-    max_width: usize,
-    vuln_components: &HashSet<String>,
-    search_matches: &HashSet<String>,
-    filter_mode: bool,
-) {
-    use crate::tui::app_states::DependencySort;
-
-    let scheme = colors();
-    let max_roots = app.tabs.dependencies.max_roots;
-    let max_depth = app.tabs.dependencies.max_depth;
-    let show_cycles = app.tabs.dependencies.show_cycles;
-    let show_transitive = app.tabs.dependencies.show_transitive;
-    let sort_order = app.tabs.dependencies.sort_order;
-
-    // Use cached graph structure
-    let by_source = &app.tabs.dependencies.cached_graph;
-    let cached_roots = &app.tabs.dependencies.cached_roots;
-    let cycles_in_deps = &app.tabs.dependencies.cached_cycle_nodes;
-    let cached_depths = &app.tabs.dependencies.cached_depths;
-    let cached_reverse_graph = &app.tabs.dependencies.cached_reverse_graph;
-    let display_names = &app.tabs.dependencies.cached_display_names;
-
-    if by_source.is_empty() && app.data.sbom.is_none() {
-        return;
-    }
-
-    // Get edge count from SBOM for summary
-    let edge_count = app.data.sbom.as_ref().map_or(0, |s| s.edges.len());
-
-    // Summary
-    lines.push(Line::from(vec![
-        Span::styled("Total: ", Style::default().fg(scheme.text).bold()),
-        Span::styled(
-            format!("{edge_count} dependencies"),
-            Style::default().fg(scheme.primary).bold(),
-        ),
-        if show_cycles && !cycles_in_deps.is_empty() {
-            Span::styled(
-                format!("  (⟳ {} in cycles)", cycles_in_deps.len()),
-                Style::default().fg(scheme.warning),
-            )
-        } else {
-            Span::raw("")
-        },
-    ]));
-    visible_nodes.push("__header__".to_string());
-    lines.push(Line::raw(""));
-    visible_nodes.push("__spacer__".to_string());
-
-    let has_sources = !by_source.is_empty();
-    let expanded = &app.tabs.dependencies.expanded_nodes;
-
-    // Apply search filter to roots
-    let mut roots: Vec<String> = if filter_mode && !search_matches.is_empty() {
-        cached_roots
-            .iter()
-            .filter(|r| search_matches.contains(*r))
-            .cloned()
-            .collect()
-    } else {
-        cached_roots.clone()
-    };
-
-    let mut flat_view = false;
-    if roots.is_empty() && has_sources {
-        flat_view = true;
-        lines.push(Line::styled(
-            "Dependencies (flat view):",
-            Style::default().fg(scheme.primary),
-        ));
-        visible_nodes.push("__flat_header__".to_string());
-
-        // Use sources as roots in flat view
-        let sources: Vec<String> = by_source.keys().cloned().collect();
-        roots = if filter_mode && !search_matches.is_empty() {
-            sources
-                .into_iter()
-                .filter(|s| search_matches.contains(s))
-                .take(max_roots)
-                .collect()
-        } else {
-            sources.into_iter().take(max_roots).collect()
-        };
-    } else {
-        roots.truncate(max_roots);
-    }
-
-    // Sort roots based on sort_order
-    match sort_order {
-        DependencySort::Name => roots.sort(),
-        DependencySort::Depth => {
-            roots.sort_by(|a, b| {
-                let depth_a = cached_depths.get(a).copied().unwrap_or(0);
-                let depth_b = cached_depths.get(b).copied().unwrap_or(0);
-                depth_a.cmp(&depth_b).then_with(|| a.cmp(b))
-            });
-        }
-        DependencySort::VulnCount => {
-            roots.sort_by(|a, b| {
-                let vuln_a = i32::from(vuln_components.contains(a));
-                let vuln_b = i32::from(vuln_components.contains(b));
-                // Sort vulnerable first (descending), then by name
-                vuln_b.cmp(&vuln_a).then_with(|| a.cmp(b))
-            });
-        }
-        DependencySort::DependentCount => {
-            roots.sort_by(|a, b| {
-                let count_a = cached_reverse_graph.get(a).map_or(0, std::vec::Vec::len);
-                let count_b = cached_reverse_graph.get(b).map_or(0, std::vec::Vec::len);
-                // Sort by most dependents first, then by name
-                count_b.cmp(&count_a).then_with(|| a.cmp(b))
-            });
-        }
-    }
-
-    let mut path = Vec::new();
-    for (idx, source) in roots.iter().enumerate() {
-        let is_last = idx == roots.len().saturating_sub(1);
-        render_view_node_cached(
-            lines,
-            visible_nodes,
-            source,
-            by_source,
-            expanded,
-            &[],
-            is_last,
-            1,
-            max_depth,
-            max_width,
-            &scheme,
-            vuln_components,
-            cycles_in_deps,
-            show_cycles,
-            show_transitive,
-            &mut path,
-            display_names,
-        );
-    }
-
-    if flat_view && roots.is_empty() && has_sources {
-        lines.push(Line::styled(
-            "No dependency roots found",
-            Style::default().fg(scheme.text_muted),
-        ));
-        visible_nodes.push("__flat_empty__".to_string());
-    }
-
-    if !has_sources && app.data.sbom.is_some() {
-        lines.push(Line::styled(
-            "No dependencies found",
-            Style::default().fg(scheme.text_muted),
-        ));
-        visible_nodes.push("__empty__".to_string());
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-fn render_view_node_cached(
-    lines: &mut Vec<Line>,
-    visible_nodes: &mut Vec<String>,
-    node_id: &str,
-    by_source: &HashMap<String, Vec<String>>,
-    expanded: &HashSet<String>,
-    ancestors_last: &[bool],
-    is_last: bool,
-    depth: usize,
-    max_depth: usize,
-    max_width: usize,
-    scheme: &crate::tui::theme::ColorScheme,
-    vuln_components: &HashSet<String>,
-    cycles_in_deps: &HashSet<String>,
-    show_cycles: bool,
-    show_transitive: bool,
-    path: &mut Vec<String>,
-    display_names: &HashMap<String, String>,
-) {
-    let children = by_source.get(node_id);
-    let child_count = children.map_or(0, std::vec::Vec::len);
-    let is_expanded = expanded.contains(node_id);
-
-    // When show_transitive is false, adjust child_count display for non-root nodes
-    // Depth 1 = root nodes, depth 2 = direct deps (show these), depth > 2 = transitive (hide if show_transitive=false)
-    let effective_child_count = if !show_transitive && depth > 1 {
-        0 // Don't show expansion indicator for transitive deps when hidden
-    } else {
-        child_count
-    };
-
-    render_view_node_line(
-        lines,
-        visible_nodes,
-        node_id,
-        effective_child_count,
-        is_expanded,
-        ancestors_last,
-        is_last,
-        depth,
-        max_width,
-        scheme,
-        vuln_components,
-        cycles_in_deps,
-        show_cycles,
-        false,
-        display_names,
-    );
-
-    // Skip rendering children if:
-    // - No children
-    // - Not expanded
-    // - Depth limit reached
-    // - show_transitive is false and we're past depth 1 (only show direct deps)
-    if child_count == 0 || !is_expanded || depth >= max_depth {
-        return;
-    }
-
-    // When show_transitive is false, only show depth 1 (direct dependencies)
-    // Depth 1 = roots, depth 2 = direct deps of roots
-    if !show_transitive && depth > 1 {
-        return;
-    }
-
-    path.push(node_id.to_string());
-    if let Some(children) = children {
-        for (i, child) in children.iter().enumerate() {
-            let is_last_child = i == children.len().saturating_sub(1);
-            let mut next_ancestors = ancestors_last.to_vec();
-            next_ancestors.push(is_last);
-            let is_cycle_ref = path.iter().any(|ancestor| ancestor == child);
-
-            if is_cycle_ref {
-                let grand_child_count = by_source.get(child).map_or(0, std::vec::Vec::len);
-                render_view_node_line(
-                    lines,
-                    visible_nodes,
-                    child,
-                    grand_child_count,
-                    false,
-                    &next_ancestors,
-                    is_last_child,
-                    depth + 1,
-                    max_width,
-                    scheme,
-                    vuln_components,
-                    cycles_in_deps,
-                    show_cycles,
-                    true,
-                    display_names,
-                );
-                continue;
-            }
-
-            render_view_node_cached(
-                lines,
-                visible_nodes,
-                child,
-                by_source,
-                expanded,
-                &next_ancestors,
-                is_last_child,
-                depth + 1,
-                max_depth,
-                max_width,
-                scheme,
-                vuln_components,
-                cycles_in_deps,
-                show_cycles,
-                show_transitive,
-                path,
-                display_names,
-            );
-        }
-    }
-    path.pop();
-}
-
-/// Cached version of `dependency_limit_info` - uses cached graph structure
-fn dependency_limit_info_cached(app: &App, max_roots: usize, max_depth: usize) -> (usize, bool) {
-    let roots = &app.tabs.dependencies.cached_roots;
-    let graph = &app.tabs.dependencies.cached_graph;
+/// Cached version of `dependency_limit_info` using RenderContext
+fn dependency_limit_info_ctx(ctx: &RenderContext, max_roots: usize, max_depth: usize) -> (usize, bool) {
+    let roots = &ctx.dependencies.cached_roots;
+    let graph = &ctx.dependencies.cached_graph;
 
     if graph.is_empty() {
         return (0, false);
@@ -1817,54 +894,6 @@ fn dependency_limit_info_cached(app: &App, max_roots: usize, max_depth: usize) -
     let depth_limited = depth_exceeds_limit(graph, roots, max_depth);
 
     (root_overflow, depth_limited)
-}
-
-#[allow(dead_code)]
-fn dependency_limit_info(app: &App, max_roots: usize, max_depth: usize) -> (usize, bool) {
-    match app.mode {
-        AppMode::Diff => {
-            let mut sources: HashSet<&str> = HashSet::new();
-            if let Some(result) = &app.data.diff_result {
-                for dep in &result.dependencies.added {
-                    sources.insert(dep.from.as_str());
-                }
-                for dep in &result.dependencies.removed {
-                    sources.insert(dep.from.as_str());
-                }
-            }
-            (sources.len().saturating_sub(max_roots), false)
-        }
-        AppMode::View => {
-            let mut by_source: HashMap<String, Vec<String>> = HashMap::new();
-            if let Some(sbom) = &app.data.sbom {
-                for edge in &sbom.edges {
-                    by_source
-                        .entry(edge.from.value().to_string())
-                        .or_default()
-                        .push(edge.to.value().to_string());
-                }
-            }
-
-            if by_source.is_empty() {
-                return (0, false);
-            }
-
-            let mut sources: Vec<String> = by_source.keys().cloned().collect();
-            sources.sort();
-
-            let all_deps: HashSet<String> = by_source.values().flatten().cloned().collect();
-            let roots: Vec<String> = sources
-                .into_iter()
-                .filter(|s| !all_deps.contains(s))
-                .collect();
-
-            let root_overflow = roots.len().saturating_sub(max_roots);
-            let depth_limited = depth_exceeds_limit(&by_source, &roots, max_depth);
-
-            (root_overflow, depth_limited)
-        }
-        _ => (0, false),
-    }
 }
 
 fn depth_exceeds_limit(
@@ -2007,64 +1036,6 @@ fn truncate_by_width(s: &str, max_width: usize) -> String {
         })
         .collect();
     format!("{truncated}…")
-}
-
-/// Detect circular dependencies in a dependency graph.
-/// Returns a list of cycles, where each cycle is a vector of node IDs.
-fn detect_cycles(graph: &HashMap<String, Vec<String>>) -> Vec<Vec<String>> {
-    fn dfs(
-        node: &str,
-        graph: &HashMap<String, Vec<String>>,
-        visited: &mut HashSet<String>,
-        rec_stack: &mut HashSet<String>,
-        path: &mut Vec<String>,
-        cycles: &mut Vec<Vec<String>>,
-    ) {
-        visited.insert(node.to_string());
-        rec_stack.insert(node.to_string());
-        path.push(node.to_string());
-
-        if let Some(neighbors) = graph.get(node) {
-            for neighbor in neighbors {
-                if !visited.contains(neighbor) {
-                    dfs(neighbor, graph, visited, rec_stack, path, cycles);
-                } else if rec_stack.contains(neighbor) {
-                    // Found a cycle - extract it from path
-                    if let Some(start_idx) = path.iter().position(|n| n == neighbor) {
-                        let cycle: Vec<String> = path[start_idx..].to_vec();
-                        if !cycle.is_empty() && cycles.len() < 10 {
-                            // Limit to 10 cycles
-                            cycles.push(cycle);
-                        }
-                    }
-                }
-            }
-        }
-
-        path.pop();
-        rec_stack.remove(node);
-    }
-
-    let mut cycles: Vec<Vec<String>> = Vec::new();
-    let mut visited: HashSet<String> = HashSet::new();
-    let mut rec_stack: HashSet<String> = HashSet::new();
-    let mut path: Vec<String> = Vec::new();
-
-    // Start DFS from each unvisited node
-    for node in graph.keys() {
-        if !visited.contains(node) {
-            dfs(
-                node,
-                graph,
-                &mut visited,
-                &mut rec_stack,
-                &mut path,
-                &mut cycles,
-            );
-        }
-    }
-
-    cycles
 }
 
 /// Render the dependencies keyboard shortcut help overlay

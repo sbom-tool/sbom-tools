@@ -5,7 +5,7 @@
 //! sync bridge since they need access to `App` data and security cache.
 
 use crate::tui::app_states::components::ComponentsState;
-use crate::tui::traits::{EventResult, Shortcut, ViewContext, ViewMode, ViewState};
+use crate::tui::traits::{EventResult, Shortcut, ViewContext, ViewState};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 
 /// Components tab view implementing the `ViewState` trait.
@@ -20,55 +20,14 @@ impl ComponentsView {
         }
     }
 
-    // Accessors for sync bridge
-    pub(crate) const fn selected(&self) -> usize {
-        self.inner.selected
-    }
-    pub(crate) const fn filter(&self) -> crate::tui::app_states::ComponentFilter {
-        self.inner.filter
-    }
-    pub(crate) const fn sort_by(&self) -> crate::tui::app_states::ComponentSort {
-        self.inner.sort_by
-    }
-    pub(crate) const fn multi_select_mode(&self) -> bool {
-        self.inner.multi_select_mode
-    }
-    pub(crate) const fn focus_detail(&self) -> bool {
-        self.inner.focus_detail
-    }
-    pub(crate) fn multi_selected(&self) -> &std::collections::HashSet<usize> {
-        &self.inner.multi_selected
-    }
-    pub(crate) const fn scroll_offset(&self) -> usize {
-        self.inner.scroll_offset
-    }
-    pub(crate) fn security_filter(
-        &self,
-    ) -> &crate::tui::viewmodel::security_filter::SecurityFilterState {
-        &self.inner.security_filter
+    /// Access the inner state.
+    pub(crate) fn inner(&self) -> &ComponentsState {
+        &self.inner
     }
 
-    pub(crate) fn sync_from(&mut self, state: &ComponentsState) {
-        self.inner.selected = state.selected;
-        self.inner.total = state.total;
-        self.inner.filter = state.filter;
-        self.inner.sort_by = state.sort_by;
-        self.inner.multi_select_mode = state.multi_select_mode;
-        self.inner.multi_selected.clone_from(&state.multi_selected);
-        self.inner.focus_detail = state.focus_detail;
-        self.inner.scroll_offset = state.scroll_offset;
-        self.inner.security_filter = state.security_filter.clone();
-    }
-
-    pub(crate) fn sync_to(&self, state: &mut ComponentsState) {
-        state.selected = self.inner.selected;
-        state.filter = self.inner.filter;
-        state.sort_by = self.inner.sort_by;
-        state.multi_select_mode = self.inner.multi_select_mode;
-        state.multi_selected.clone_from(&self.inner.multi_selected);
-        state.focus_detail = self.inner.focus_detail;
-        state.scroll_offset = self.inner.scroll_offset;
-        state.security_filter = self.inner.security_filter.clone();
+    /// Mutable access to the inner state.
+    pub(crate) fn inner_mut(&mut self) -> &mut ComponentsState {
+        &mut self.inner
     }
 }
 
@@ -79,14 +38,10 @@ impl Default for ComponentsView {
 }
 
 impl ViewState for ComponentsView {
-    fn handle_key(&mut self, key: KeyEvent, ctx: &mut ViewContext) -> EventResult {
+    fn handle_key(&mut self, key: KeyEvent, _ctx: &mut ViewContext) -> EventResult {
         match key.code {
             KeyCode::Char('f') => {
-                if ctx.mode == ViewMode::View {
-                    self.inner.toggle_view_filter();
-                } else {
-                    self.inner.toggle_filter();
-                }
+                self.inner.toggle_filter();
                 EventResult::Consumed
             }
             KeyCode::Char('s') => {
@@ -157,6 +112,7 @@ impl ViewState for ComponentsView {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tui::traits::ViewMode;
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
     fn make_key(code: KeyCode) -> KeyEvent {
@@ -180,9 +136,9 @@ mod tests {
         let mut view = ComponentsView::new();
         let mut ctx = make_ctx(ViewMode::Diff);
 
-        let initial = view.filter();
+        let initial = view.inner().filter;
         view.handle_key(make_key(KeyCode::Char('f')), &mut ctx);
-        assert_ne!(view.filter(), initial);
+        assert_ne!(view.inner().filter, initial);
     }
 
     #[test]
@@ -190,12 +146,12 @@ mod tests {
         let mut view = ComponentsView::new();
         let mut ctx = make_ctx(ViewMode::Diff);
 
-        assert!(!view.multi_select_mode());
+        assert!(!view.inner().multi_select_mode);
         view.handle_key(make_key(KeyCode::Char('v')), &mut ctx);
-        assert!(view.multi_select_mode());
+        assert!(view.inner().multi_select_mode);
 
         view.handle_key(make_key(KeyCode::Esc), &mut ctx);
-        assert!(!view.multi_select_mode());
+        assert!(!view.inner().multi_select_mode);
     }
 
     #[test]

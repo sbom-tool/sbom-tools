@@ -1,10 +1,10 @@
 //! Constructor methods for App.
 
-use super::app::{App, AppMode, AppOverlays, DataContext, TabKind, TabStates};
+use super::app::{App, AppMode, AppOverlays, DataContext, TabKind, ModeStates};
 use super::app_states::{
-    ComponentsState, DependenciesState, GraphChangesState, LicensesState, MatrixState,
-    MultiDiffState, NavigationContext, QualityState, SideBySideState, SourceDiffState,
-    TimelineState, VulnerabilitiesState,
+    MatrixState,
+    MultiDiffState, NavigationContext, SourceDiffState,
+    TimelineState,
 };
 use crate::diff::{DiffResult, MatrixResult, MultiDiffResult, TimelineResult};
 use crate::model::NormalizedSbom;
@@ -13,7 +13,7 @@ use crate::quality::{ComplianceChecker, ComplianceLevel, QualityScorer, ScoringP
 impl App {
     /// Shared default initialization for all mode-independent fields.
     /// Mode-specific fields (mode, `active_tab`, and data fields) must be set by the caller.
-    fn base(mode: AppMode, components_len: usize, vulns_len: usize) -> Self {
+    fn base(mode: AppMode) -> Self {
         Self {
             mode,
             active_tab: crate::config::TuiPreferences::load()
@@ -45,19 +45,10 @@ impl App {
                 #[cfg(feature = "enrichment")]
                 enrichment_stats_new: None,
             },
-            tabs: TabStates {
-                components: ComponentsState::new(components_len),
-                dependencies: DependenciesState::new(),
-                licenses: LicensesState::new(),
-                vulnerabilities: VulnerabilitiesState::new(vulns_len),
-                quality: QualityState::new(),
-                graph_changes: GraphChangesState::new(),
-                side_by_side: SideBySideState::new(),
-                diff_compliance: crate::tui::app_states::DiffComplianceState::new(),
+            tabs: ModeStates {
                 multi_diff: MultiDiffState::new(),
                 timeline: TimelineState::new(),
                 matrix: MatrixState::new(),
-                source: SourceDiffState::new("", ""),
             },
             overlays: AppOverlays::new(),
             should_quit: false,
@@ -69,7 +60,6 @@ impl App {
             security_cache: crate::tui::security::SecurityAnalysisCache::new(),
             compliance_state: crate::tui::app_states::PolicyComplianceState::new(),
             export_template: None,
-            summary_view: Some(crate::tui::view_states::SummaryView::new()),
             components_view: Some(crate::tui::view_states::ComponentsView::new()),
             dependencies_view: Some(crate::tui::view_states::DependenciesView::new()),
             licenses_view: Some(crate::tui::view_states::LicensesView::new()),
@@ -91,11 +81,6 @@ impl App {
         old_raw: &str,
         new_raw: &str,
     ) -> Self {
-        let components_len = diff_result.components.total();
-        let vulns_len = diff_result.vulnerabilities.introduced.len()
-            + diff_result.vulnerabilities.resolved.len()
-            + diff_result.vulnerabilities.persistent.len();
-
         // Calculate quality reports for both SBOMs
         let scorer = QualityScorer::new(ScoringProfile::Standard);
         let old_quality = Some(scorer.score(&old_sbom));
@@ -111,9 +96,10 @@ impl App {
         let old_sbom_index = Some(old_sbom.build_index());
         let new_sbom_index = Some(new_sbom.build_index());
 
-        let mut app = Self::base(AppMode::Diff, components_len, vulns_len);
-        app.tabs.source = SourceDiffState::new(old_raw, new_raw);
-        app.tabs.source.populate_annotations(&diff_result);
+        let mut app = Self::base(AppMode::Diff);
+        let mut source = SourceDiffState::new(old_raw, new_raw);
+        source.populate_annotations(&diff_result);
+        app.source_view = Some(crate::tui::view_states::SourceView::with_state(source));
         app.data.diff_result = Some(diff_result);
         app.data.old_sbom = Some(old_sbom);
         app.data.new_sbom = Some(new_sbom);
@@ -157,32 +143,12 @@ impl App {
         }
     }
 
-    /// Create a new app for view mode
-    #[must_use]
-    pub fn new_view(sbom: NormalizedSbom) -> Self {
-        let components_len = sbom.component_count();
-        let vulns_len = sbom.all_vulnerabilities().len();
-
-        // Calculate quality report
-        let scorer = QualityScorer::new(ScoringProfile::Standard);
-        let quality_report = Some(scorer.score(&sbom));
-
-        // Build index for fast lookups
-        let sbom_index = Some(sbom.build_index());
-
-        let mut app = Self::base(AppMode::View, components_len, vulns_len);
-        app.data.sbom = Some(sbom);
-        app.data.quality_report = quality_report;
-        app.data.sbom_index = sbom_index;
-        app
-    }
-
     /// Create a new app for multi-diff mode
     #[must_use]
     pub fn new_multi_diff(result: MultiDiffResult) -> Self {
         let target_count = result.comparisons.len();
 
-        let mut app = Self::base(AppMode::MultiDiff, 0, 0);
+        let mut app = Self::base(AppMode::MultiDiff);
         app.data.multi_diff_result = Some(result);
         app.tabs.multi_diff = MultiDiffState::new_with_targets(target_count);
         app
@@ -193,7 +159,7 @@ impl App {
     pub fn new_timeline(result: TimelineResult) -> Self {
         let version_count = result.sboms.len();
 
-        let mut app = Self::base(AppMode::Timeline, 0, 0);
+        let mut app = Self::base(AppMode::Timeline);
         app.data.timeline_result = Some(result);
         app.tabs.timeline = TimelineState::new_with_versions(version_count);
         app
@@ -204,7 +170,7 @@ impl App {
     pub fn new_matrix(result: MatrixResult) -> Self {
         let sbom_count = result.sboms.len();
 
-        let mut app = Self::base(AppMode::Matrix, 0, 0);
+        let mut app = Self::base(AppMode::Matrix);
         app.data.matrix_result = Some(result);
         app.tabs.matrix = MatrixState::new_with_size(sbom_count);
         app

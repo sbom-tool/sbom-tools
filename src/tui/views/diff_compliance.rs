@@ -12,18 +12,18 @@ use ratatui::{
 };
 
 use crate::quality::{ComplianceLevel, ComplianceResult, ViolationSeverity};
-use crate::tui::app::App;
 use crate::tui::app_states::DiffComplianceViewMode;
+use crate::tui::render_context::RenderContext;
 use crate::tui::shared::compliance as shared_compliance;
 use crate::tui::theme::colors;
 
 /// Get the count of violations shown in the current view mode (for navigation bounds).
-pub fn diff_compliance_violation_count(app: &App) -> usize {
-    let idx = app.tabs.diff_compliance.selected_standard;
-    let Some(old_results) = app.data.old_compliance_results.as_ref() else {
+pub fn diff_compliance_violation_count(ctx: &RenderContext) -> usize {
+    let idx = ctx.compliance.selected_standard;
+    let Some(old_results) = ctx.old_compliance_results else {
         return 0;
     };
-    let Some(new_results) = app.data.new_compliance_results.as_ref() else {
+    let Some(new_results) = ctx.new_compliance_results else {
         return 0;
     };
     if idx >= old_results.len() || idx >= new_results.len() {
@@ -32,7 +32,7 @@ pub fn diff_compliance_violation_count(app: &App) -> usize {
     let old = &old_results[idx];
     let new = &new_results[idx];
 
-    match app.tabs.diff_compliance.view_mode {
+    match ctx.compliance.view_mode {
         DiffComplianceViewMode::Overview => 0,
         DiffComplianceViewMode::NewViolations => compute_new_violations(old, new).len(),
         DiffComplianceViewMode::ResolvedViolations => compute_resolved_violations(old, new).len(),
@@ -42,19 +42,9 @@ pub fn diff_compliance_violation_count(app: &App) -> usize {
 }
 
 /// Main render function for the diff compliance tab.
-pub fn render_diff_compliance(frame: &mut Frame, area: Rect, app: &mut App) {
-    app.ensure_compliance_results();
-
-    let old_empty = app
-        .data
-        .old_compliance_results
-        .as_ref()
-        .is_none_or(std::vec::Vec::is_empty);
-    let new_empty = app
-        .data
-        .new_compliance_results
-        .as_ref()
-        .is_none_or(std::vec::Vec::is_empty);
+pub fn render_diff_compliance(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
+    let old_empty = ctx.old_compliance_results.is_none_or(<[ComplianceResult]>::is_empty);
+    let new_empty = ctx.new_compliance_results.is_none_or(<[ComplianceResult]>::is_empty);
     if old_empty || new_empty {
         let msg = Paragraph::new("No compliance data available")
             .block(Block::default().borders(Borders::ALL).title(" Compliance "));
@@ -72,26 +62,26 @@ pub fn render_diff_compliance(frame: &mut Frame, area: Rect, app: &mut App) {
         ])
         .split(area);
 
-    render_standard_selector(frame, chunks[0], app);
-    render_sidebyside_summary(frame, chunks[1], app);
-    render_violations_panel(frame, chunks[2], app);
-    render_help_bar(frame, chunks[3], app);
+    render_standard_selector(frame, chunks[0], ctx);
+    render_sidebyside_summary(frame, chunks[1], ctx);
+    render_violations_panel(frame, chunks[2], ctx);
+    render_help_bar(frame, chunks[3], ctx);
 
     // Render detail overlay if active
-    if app.tabs.diff_compliance.show_detail
-        && let Some(violation) = get_selected_diff_violation(app)
+    if ctx.compliance.show_detail
+        && let Some(violation) = get_selected_diff_violation(ctx)
     {
         shared_compliance::render_violation_detail_overlay(frame, area, violation);
     }
 }
 
-fn render_standard_selector(frame: &mut Frame, area: Rect, app: &App) {
+fn render_standard_selector(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let levels = ComplianceLevel::all();
-    let selected = app.tabs.diff_compliance.selected_standard;
-    let Some(old_results) = app.data.old_compliance_results.as_ref() else {
+    let selected = ctx.compliance.selected_standard;
+    let Some(old_results) = ctx.old_compliance_results else {
         return;
     };
-    let Some(new_results) = app.data.new_compliance_results.as_ref() else {
+    let Some(new_results) = ctx.new_compliance_results else {
         return;
     };
 
@@ -143,18 +133,10 @@ fn render_standard_selector(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(tabs, area);
 }
 
-fn render_sidebyside_summary(frame: &mut Frame, area: Rect, app: &App) {
-    let idx = app.tabs.diff_compliance.selected_standard;
-    let old = app
-        .data
-        .old_compliance_results
-        .as_ref()
-        .and_then(|r| r.get(idx));
-    let new = app
-        .data
-        .new_compliance_results
-        .as_ref()
-        .and_then(|r| r.get(idx));
+fn render_sidebyside_summary(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
+    let idx = ctx.compliance.selected_standard;
+    let old = ctx.old_compliance_results.and_then(|r| r.get(idx));
+    let new = ctx.new_compliance_results.and_then(|r| r.get(idx));
 
     let halves = Layout::default()
         .direction(Direction::Horizontal)
@@ -230,32 +212,29 @@ fn render_compliance_gauge(frame: &mut Frame, area: Rect, result: &ComplianceRes
     frame.render_widget(counts_para, inner[1]);
 }
 
-fn render_violations_panel(frame: &mut Frame, area: Rect, app: &mut App) {
-    let idx = app.tabs.diff_compliance.selected_standard;
-    let Some(old) = app
-        .data
-        .old_compliance_results
-        .as_ref()
-        .and_then(|r| r.get(idx))
-    else {
+fn render_violations_panel(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
+    let idx = ctx.compliance.selected_standard;
+    let Some(old) = ctx.old_compliance_results.and_then(|r| r.get(idx)) else {
         return;
     };
-    let Some(new) = app
-        .data
-        .new_compliance_results
-        .as_ref()
-        .and_then(|r| r.get(idx))
-    else {
+    let Some(new) = ctx.new_compliance_results.and_then(|r| r.get(idx)) else {
         return;
     };
 
-    let mode = app.tabs.diff_compliance.view_mode;
-    let selected = app.tabs.diff_compliance.selected_violation;
+    let mode = ctx.compliance.view_mode;
+    let selected = ctx.compliance.selected_violation;
 
     // Compute viewport height for scroll adjustment (borders=2, header=1, header margin=1)
     let viewport_height = area.height.saturating_sub(4) as usize;
-    app.tabs.diff_compliance.adjust_scroll(viewport_height);
-    let scroll_offset = app.tabs.diff_compliance.scroll_offset;
+    // Compute scroll_offset locally (read-only — cannot mutate ctx)
+    let mut scroll_offset = ctx.compliance.scroll_offset;
+    if viewport_height > 0 {
+        if ctx.compliance.selected_violation < scroll_offset {
+            scroll_offset = ctx.compliance.selected_violation;
+        } else if ctx.compliance.selected_violation >= scroll_offset + viewport_height {
+            scroll_offset = ctx.compliance.selected_violation + 1 - viewport_height;
+        }
+    }
 
     match mode {
         DiffComplianceViewMode::Overview => {
@@ -571,8 +550,8 @@ fn render_violation_table(
     frame.render_widget(table, area);
 }
 
-fn render_help_bar(frame: &mut Frame, area: Rect, app: &App) {
-    let mode_name = match app.tabs.diff_compliance.view_mode {
+fn render_help_bar(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
+    let mode_name = match ctx.compliance.view_mode {
         DiffComplianceViewMode::Overview => "Overview",
         DiffComplianceViewMode::NewViolations => "New",
         DiffComplianceViewMode::ResolvedViolations => "Resolved",
@@ -631,13 +610,13 @@ fn compute_resolved_violations(
 }
 
 /// Get the actual Violation reference for the currently selected entry in diff mode.
-fn get_selected_diff_violation(app: &App) -> Option<&crate::quality::Violation> {
-    let idx = app.tabs.diff_compliance.selected_standard;
-    let old = app.data.old_compliance_results.as_ref()?.get(idx)?;
-    let new = app.data.new_compliance_results.as_ref()?.get(idx)?;
-    let selected = app.tabs.diff_compliance.selected_violation;
+fn get_selected_diff_violation<'a>(ctx: &'a RenderContext) -> Option<&'a crate::quality::Violation> {
+    let idx = ctx.compliance.selected_standard;
+    let old = ctx.old_compliance_results?.get(idx)?;
+    let new = ctx.new_compliance_results?.get(idx)?;
+    let selected = ctx.compliance.selected_violation;
 
-    match app.tabs.diff_compliance.view_mode {
+    match ctx.compliance.view_mode {
         DiffComplianceViewMode::Overview => None,
         DiffComplianceViewMode::NewViolations => {
             let old_messages: std::collections::HashSet<&str> =

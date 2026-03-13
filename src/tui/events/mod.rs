@@ -268,7 +268,6 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
                 super::AppMode::Timeline => super::app::ShortcutsContext::Timeline,
                 super::AppMode::Matrix => super::app::ShortcutsContext::Matrix,
                 super::AppMode::Diff => super::app::ShortcutsContext::Diff,
-                super::AppMode::View => super::app::ShortcutsContext::Global,
             };
             app.overlays.shortcuts.show(context);
         }
@@ -280,13 +279,13 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
         }
         // Policy/Compliance check (P key)
         KeyCode::Char('P') => {
-            if matches!(app.mode, super::AppMode::Diff | super::AppMode::View) {
+            if matches!(app.mode, super::AppMode::Diff) {
                 app.run_compliance_check();
             }
         }
         // Cycle policy preset (Shift+P cycles policies)
         KeyCode::Char('p') => {
-            if matches!(app.mode, super::AppMode::Diff | super::AppMode::View) {
+            if matches!(app.mode, super::AppMode::Diff) {
                 app.next_policy();
             }
         }
@@ -393,7 +392,7 @@ pub fn get_yank_text(app: &super::App) -> Option<String> {
     match app.active_tab {
         super::TabKind::Components => helpers::get_selected_component_name(app),
         super::TabKind::Vulnerabilities => {
-            let idx = app.tabs.vulnerabilities.selected;
+            let idx = app.vulnerabilities_state().selected;
             let result = app.data.diff_result.as_ref()?;
             let vulns: Vec<_> = result
                 .vulnerabilities
@@ -404,7 +403,7 @@ pub fn get_yank_text(app: &super::App) -> Option<String> {
             vulns.get(idx).map(|v| v.id.clone())
         }
         super::TabKind::Dependencies => {
-            let idx = app.tabs.dependencies.selected;
+            let idx = app.dependencies_state().selected;
             let result = app.data.diff_result.as_ref()?;
             let deps: Vec<_> = result
                 .dependencies
@@ -416,7 +415,7 @@ pub fn get_yank_text(app: &super::App) -> Option<String> {
                 .map(|dep| format!("{} → {}", dep.from, dep.to))
         }
         super::TabKind::Licenses => {
-            let idx = app.tabs.licenses.selected;
+            let idx = app.licenses_state().selected;
             let result = app.data.diff_result.as_ref()?;
             let licenses: Vec<_> = result
                 .licenses
@@ -434,7 +433,7 @@ pub fn get_yank_text(app: &super::App) -> Option<String> {
                 .or(app.data.old_quality.as_ref())?;
             report
                 .recommendations
-                .get(app.tabs.quality.selected_recommendation)
+                .get(app.quality_state().selected_recommendation)
                 .map(|rec| rec.message.clone())
         }
         super::TabKind::Compliance => {
@@ -443,16 +442,17 @@ pub fn get_yank_text(app: &super::App) -> Option<String> {
                 .new_compliance_results
                 .as_ref()
                 .or(app.data.old_compliance_results.as_ref())?;
-            let result = results.get(app.tabs.diff_compliance.selected_standard)?;
+            let result = results.get(app.diff_compliance_state().selected_standard)?;
             result
                 .violations
-                .get(app.tabs.diff_compliance.selected_violation)
+                .get(app.diff_compliance_state().selected_violation)
                 .map(|v| v.message.clone())
         }
         super::TabKind::Source => {
-            let panel = match app.tabs.source.active_side {
-                crate::tui::app_states::SourceSide::Old => &app.tabs.source.old_panel,
-                crate::tui::app_states::SourceSide::New => &app.tabs.source.new_panel,
+            let source = app.source_state();
+            let panel = match source.active_side {
+                crate::tui::app_states::SourceSide::Old => &source.old_panel,
+                crate::tui::app_states::SourceSide::New => &source.new_panel,
             };
             match panel.view_mode {
                 super::app_states::SourceViewMode::Tree => {

@@ -10,14 +10,14 @@ pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent) {
     match mouse.kind {
         MouseEventKind::ScrollUp => {
             if app.active_tab == crate::tui::TabKind::Source {
-                app.tabs.source.select_prev();
+                app.source_state_mut().select_prev();
             } else {
                 app.select_up();
             }
         }
         MouseEventKind::ScrollDown => {
             if app.active_tab == crate::tui::TabKind::Source {
-                app.tabs.source.select_next();
+                app.source_state_mut().select_next();
             } else {
                 app.select_down();
             }
@@ -76,38 +76,34 @@ pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent) {
 pub(super) fn handle_list_click(app: &mut App, clicked_index: usize, _x: u16) {
     match app.active_tab {
         crate::tui::TabKind::Components => {
-            if clicked_index < app.tabs.components.total {
-                app.tabs.components.selected = clicked_index;
+            if clicked_index < app.components_state().total {
+                app.components_state_mut().selected = clicked_index;
             }
         }
         crate::tui::TabKind::Vulnerabilities => {
-            if clicked_index < app.tabs.vulnerabilities.total {
-                app.tabs.vulnerabilities.selected = clicked_index;
+            if clicked_index < app.vulnerabilities_state().total {
+                app.vulnerabilities_state_mut().selected = clicked_index;
             }
         }
         crate::tui::TabKind::Licenses => {
-            if clicked_index < app.tabs.licenses.total {
-                app.tabs.licenses.selected = clicked_index;
+            if clicked_index < app.licenses_state().total {
+                app.licenses_state_mut().selected = clicked_index;
             }
         }
         crate::tui::TabKind::Dependencies => {
-            if clicked_index < app.tabs.dependencies.total {
-                app.tabs.dependencies.selected = clicked_index;
+            if clicked_index < app.dependencies_state().total {
+                app.dependencies_state_mut().selected = clicked_index;
             }
         }
         crate::tui::TabKind::Quality => {
             // Quality view may have selectable items
-            if clicked_index < app.tabs.quality.total_recommendations {
-                app.tabs.quality.selected_recommendation = clicked_index;
-                // Keep quality_view in sync to avoid state divergence
-                if let Some(ref mut qv) = app.quality_view {
-                    qv.set_selected_recommendation(clicked_index);
-                }
+            if clicked_index < app.quality_state().total_recommendations {
+                app.quality_state_mut().selected_recommendation = clicked_index;
             }
         }
         crate::tui::TabKind::Source => {
             // Determine which panel from x position (50/50 split)
-            let panel = app.tabs.source.active_panel_mut();
+            let panel = app.source_state_mut().active_panel_mut();
             let max = match panel.view_mode {
                 crate::tui::app_states::SourceViewMode::Tree => {
                     panel.ensure_flat_cache();
