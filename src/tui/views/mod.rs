@@ -16,8 +16,8 @@ mod timeline;
 mod vulnerabilities;
 
 pub use components::render_components;
-pub(crate) use dependencies::update_graph_cache;
 pub use dependencies::render_dependencies;
+pub(crate) use dependencies::update_graph_cache;
 pub use diff_compliance::{diff_compliance_violation_count, render_diff_compliance};
 pub use graph_changes::render_graph_changes;
 pub use licenses::render_licenses;

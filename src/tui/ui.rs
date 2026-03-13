@@ -135,9 +135,15 @@ fn render(frame: &mut Frame, app: &mut App) {
     // Migrated tabs use RenderContext (read-only); unmigrated tabs still use &mut App.
     match app.active_tab {
         // --- Migrated to RenderContext ---
-        TabKind::Summary | TabKind::Quality | TabKind::GraphChanges | TabKind::Compliance
-        | TabKind::Components | TabKind::Licenses | TabKind::SideBySide
-        | TabKind::Dependencies | TabKind::Vulnerabilities => {
+        TabKind::Summary
+        | TabKind::Quality
+        | TabKind::GraphChanges
+        | TabKind::Compliance
+        | TabKind::Components
+        | TabKind::Licenses
+        | TabKind::SideBySide
+        | TabKind::Dependencies
+        | TabKind::Vulnerabilities => {
             let ctx = super::render_context::RenderContext::from_app(app);
             match app.active_tab {
                 TabKind::Summary => views::render_summary(frame, chunks[2], &ctx),

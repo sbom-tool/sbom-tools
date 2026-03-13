@@ -190,5 +190,4 @@ impl DiffComplianceState {
             self.selected_violation -= 1;
         }
     }
-
 }

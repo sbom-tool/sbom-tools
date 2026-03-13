@@ -98,8 +98,8 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     // Adjust context bar height based on search mode and breadcrumbs
     let is_searching = ctx.dependencies.is_searching();
     let has_search_query = ctx.dependencies.has_search_query();
-    let show_breadcrumbs = ctx.dependencies.show_breadcrumbs
-        && !ctx.dependencies.breadcrumb_trail.is_empty();
+    let show_breadcrumbs =
+        ctx.dependencies.show_breadcrumbs && !ctx.dependencies.breadcrumb_trail.is_empty();
 
     let mut context_height = 3u16;
     if is_searching || has_search_query {
@@ -132,23 +132,39 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     // Line 1: Toggles + Depth/Roots (merged from old lines 1 & 2)
     let on_style = Style::default().fg(scheme.success).bold();
     let off_style = Style::default().fg(scheme.text_muted);
-    let trans_style = if ctx.dependencies.show_transitive { on_style } else { off_style };
+    let trans_style = if ctx.dependencies.show_transitive {
+        on_style
+    } else {
+        off_style
+    };
     let cycle_style = if show_cycles { on_style } else { off_style };
     let sort_order = ctx.dependencies.sort_order.display_name();
 
     let mut line1_spans = vec![
         Span::styled("[t]", Style::default().fg(scheme.accent)),
         Span::styled(
-            if ctx.dependencies.show_transitive { " Trans:On" } else { " Trans:Off" },
+            if ctx.dependencies.show_transitive {
+                " Trans:On"
+            } else {
+                " Trans:Off"
+            },
             trans_style,
         ),
     ];
 
     if is_diff_mode {
-        let hl_style = if ctx.dependencies.highlight_changes { on_style } else { off_style };
+        let hl_style = if ctx.dependencies.highlight_changes {
+            on_style
+        } else {
+            off_style
+        };
         line1_spans.push(Span::styled("  [h]", Style::default().fg(scheme.accent)));
         line1_spans.push(Span::styled(
-            if ctx.dependencies.highlight_changes { " HL:On" } else { " HL:Off" },
+            if ctx.dependencies.highlight_changes {
+                " HL:On"
+            } else {
+                " HL:Off"
+            },
             hl_style,
         ));
     }
@@ -156,7 +172,11 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     line1_spans.extend(vec![
         Span::styled("  [y]", Style::default().fg(scheme.accent)),
         Span::styled(
-            if show_cycles { " Cycles:On" } else { " Cycles:Off" },
+            if show_cycles {
+                " Cycles:On"
+            } else {
+                " Cycles:Off"
+            },
             cycle_style,
         ),
         Span::styled("  │  ", Style::default().fg(scheme.border)),
@@ -649,7 +669,10 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
 }
 
 /// Look up a component by canonical ID in available SBOMs
-fn find_component_in_sboms<'a>(id: &str, ctx: &'a RenderContext) -> Option<&'a crate::model::Component> {
+fn find_component_in_sboms<'a>(
+    id: &str,
+    ctx: &'a RenderContext,
+) -> Option<&'a crate::model::Component> {
     // Try view-mode SBOM first, then diff-mode SBOMs
     for sbom in ctx
         .sbom
@@ -854,7 +877,11 @@ fn render_diff_tree_cached(
 }
 
 /// Cached version of `dependency_limit_info` using RenderContext
-fn dependency_limit_info_ctx(ctx: &RenderContext, max_roots: usize, max_depth: usize) -> (usize, bool) {
+fn dependency_limit_info_ctx(
+    ctx: &RenderContext,
+    max_roots: usize,
+    max_depth: usize,
+) -> (usize, bool) {
     let roots = &ctx.dependencies.cached_roots;
     let graph = &ctx.dependencies.cached_graph;
 

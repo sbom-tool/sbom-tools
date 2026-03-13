@@ -43,8 +43,12 @@ pub fn diff_compliance_violation_count(ctx: &RenderContext) -> usize {
 
 /// Main render function for the diff compliance tab.
 pub fn render_diff_compliance(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
-    let old_empty = ctx.old_compliance_results.is_none_or(<[ComplianceResult]>::is_empty);
-    let new_empty = ctx.new_compliance_results.is_none_or(<[ComplianceResult]>::is_empty);
+    let old_empty = ctx
+        .old_compliance_results
+        .is_none_or(<[ComplianceResult]>::is_empty);
+    let new_empty = ctx
+        .new_compliance_results
+        .is_none_or(<[ComplianceResult]>::is_empty);
     if old_empty || new_empty {
         crate::tui::widgets::render_empty_state_enhanced(
             frame,
@@ -628,7 +632,9 @@ fn compute_resolved_violations(
 }
 
 /// Get the actual Violation reference for the currently selected entry in diff mode.
-fn get_selected_diff_violation<'a>(ctx: &'a RenderContext) -> Option<&'a crate::quality::Violation> {
+fn get_selected_diff_violation<'a>(
+    ctx: &'a RenderContext,
+) -> Option<&'a crate::quality::Violation> {
     let idx = ctx.compliance.selected_standard;
     let old = ctx.old_compliance_results?.get(idx)?;
     let new = ctx.new_compliance_results?.get(idx)?;

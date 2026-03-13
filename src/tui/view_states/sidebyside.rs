@@ -29,7 +29,6 @@ impl SideBySideView {
     pub(crate) fn inner_mut(&mut self) -> &mut SideBySideState {
         &mut self.inner
     }
-
 }
 
 impl Default for SideBySideView {

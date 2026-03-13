@@ -221,12 +221,7 @@ fn render_component_table(
             );
         } else {
             // Filter is hiding everything
-            widgets::render_no_results_state(
-                frame,
-                area,
-                "Filter",
-                ctx.components.filter.label(),
-            );
+            widgets::render_no_results_state(frame, area, "Filter", ctx.components.filter.label());
         }
         return;
     }
@@ -315,7 +310,12 @@ fn render_detail_panel(
     }
 }
 
-fn render_diff_detail(frame: &mut Frame, area: Rect, ctx: &RenderContext, components: &[&ComponentChange]) {
+fn render_diff_detail(
+    frame: &mut Frame,
+    area: Rect,
+    ctx: &RenderContext,
+    components: &[&ComponentChange],
+) {
     let selected = ctx.components.selected;
 
     if let Some(comp) = components.get(selected) {
@@ -550,7 +550,6 @@ fn render_diff_detail(frame: &mut Frame, area: Rect, ctx: &RenderContext, compon
         render_empty_detail(frame, area, ctx.components.focus_detail);
     }
 }
-
 
 fn render_empty_detail(frame: &mut Frame, area: Rect, focused: bool) {
     crate::tui::shared::components::render_empty_detail_panel(

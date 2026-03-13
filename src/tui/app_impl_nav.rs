@@ -210,7 +210,8 @@ impl App {
                     self.licenses_state_mut().selected = breadcrumb.selection_index;
                 }
                 TabKind::Source => {
-                    self.source_state_mut().active_panel_mut().selected = breadcrumb.selection_index;
+                    self.source_state_mut().active_panel_mut().selected =
+                        breadcrumb.selection_index;
                 }
                 _ => {}
             }

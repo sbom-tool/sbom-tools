@@ -133,107 +133,107 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     // Add stats based on mode
     if ctx.mode == AppMode::Diff {
         if let Some(result) = ctx.diff_result {
-                let scheme = colors();
+            let scheme = colors();
 
-                // Compute per-severity deltas
-                let count_by_sev = |vulns: &[crate::diff::VulnerabilityDetail]| -> [usize; 4] {
-                    let mut counts = [0usize; 4]; // [C, H, M, L]
-                    for v in vulns {
-                        match v.severity.to_lowercase().as_str() {
-                            "critical" => counts[0] += 1,
-                            "high" => counts[1] += 1,
-                            "medium" | "moderate" => counts[2] += 1,
-                            "low" => counts[3] += 1,
-                            _ => {}
-                        }
+            // Compute per-severity deltas
+            let count_by_sev = |vulns: &[crate::diff::VulnerabilityDetail]| -> [usize; 4] {
+                let mut counts = [0usize; 4]; // [C, H, M, L]
+                for v in vulns {
+                    match v.severity.to_lowercase().as_str() {
+                        "critical" => counts[0] += 1,
+                        "high" => counts[1] += 1,
+                        "medium" | "moderate" => counts[2] += 1,
+                        "low" => counts[3] += 1,
+                        _ => {}
                     }
-                    counts
+                }
+                counts
+            };
+            let intro = count_by_sev(&result.vulnerabilities.introduced);
+            let resolved = count_by_sev(&result.vulnerabilities.resolved);
+
+            spans.push(Span::styled("│ ", Style::default().fg(scheme.border)));
+
+            let sev_labels = [
+                ("C", scheme.critical, "critical"),
+                ("H", scheme.high, "high"),
+                ("M", scheme.medium, "medium"),
+                ("L", scheme.low, "low"),
+            ];
+            for (i, (label, bg, sev_name)) in sev_labels.iter().enumerate() {
+                spans.push(Span::styled(
+                    format!(" {label} "),
+                    Style::default()
+                        .fg(scheme.severity_badge_fg(sev_name))
+                        .bg(*bg)
+                        .bold(),
+                ));
+                let net: i32 = intro[i] as i32 - resolved[i] as i32;
+                let delta_str = if net > 0 {
+                    format!("+{net}")
+                } else if net < 0 {
+                    format!("{net}")
+                } else {
+                    "0".to_string()
                 };
-                let intro = count_by_sev(&result.vulnerabilities.introduced);
-                let resolved = count_by_sev(&result.vulnerabilities.resolved);
+                let delta_color = if net > 0 {
+                    scheme.removed // worse
+                } else if net < 0 {
+                    scheme.added // better
+                } else {
+                    scheme.text_muted
+                };
+                spans.push(Span::styled(
+                    format!(" {delta_str} "),
+                    Style::default().fg(delta_color),
+                ));
+            }
 
-                spans.push(Span::styled("│ ", Style::default().fg(scheme.border)));
+            // Total summary
+            spans.extend(vec![
+                Span::styled("│ ", Style::default().fg(scheme.border)),
+                Span::styled("+ ", Style::default().fg(scheme.removed).bold()),
+                Span::styled(
+                    format!("{}  ", result.summary.vulnerabilities_introduced),
+                    Style::default().fg(scheme.text),
+                ),
+                Span::styled("- ", Style::default().fg(scheme.added).bold()),
+                Span::styled(
+                    format!("{}  ", result.summary.vulnerabilities_resolved),
+                    Style::default().fg(scheme.text),
+                ),
+                Span::styled("= ", Style::default().fg(scheme.modified).bold()),
+                Span::styled(
+                    format!("{}", result.summary.vulnerabilities_persistent),
+                    Style::default().fg(scheme.text),
+                ),
+            ]);
 
-                let sev_labels = [
-                    ("C", scheme.critical, "critical"),
-                    ("H", scheme.high, "high"),
-                    ("M", scheme.medium, "medium"),
-                    ("L", scheme.low, "low"),
-                ];
-                for (i, (label, bg, sev_name)) in sev_labels.iter().enumerate() {
-                    spans.push(Span::styled(
-                        format!(" {label} "),
-                        Style::default()
-                            .fg(scheme.severity_badge_fg(sev_name))
-                            .bg(*bg)
-                            .bold(),
-                    ));
-                    let net: i32 = intro[i] as i32 - resolved[i] as i32;
-                    let delta_str = if net > 0 {
-                        format!("+{net}")
-                    } else if net < 0 {
-                        format!("{net}")
-                    } else {
-                        "0".to_string()
-                    };
-                    let delta_color = if net > 0 {
-                        scheme.removed // worse
-                    } else if net < 0 {
-                        scheme.added // better
-                    } else {
-                        scheme.text_muted
-                    };
-                    spans.push(Span::styled(
-                        format!(" {delta_str} "),
-                        Style::default().fg(delta_color),
-                    ));
-                }
-
-                // Total summary
-                spans.extend(vec![
-                    Span::styled("│ ", Style::default().fg(scheme.border)),
-                    Span::styled("+ ", Style::default().fg(scheme.removed).bold()),
-                    Span::styled(
-                        format!("{}  ", result.summary.vulnerabilities_introduced),
-                        Style::default().fg(scheme.text),
-                    ),
-                    Span::styled("- ", Style::default().fg(scheme.added).bold()),
-                    Span::styled(
-                        format!("{}  ", result.summary.vulnerabilities_resolved),
-                        Style::default().fg(scheme.text),
-                    ),
-                    Span::styled("= ", Style::default().fg(scheme.modified).bold()),
-                    Span::styled(
-                        format!("{}", result.summary.vulnerabilities_persistent),
-                        Style::default().fg(scheme.text),
-                    ),
-                ]);
-
-                // Add enrichment stats if available
-                #[cfg(feature = "enrichment")]
-                {
-                    let combined = match (ctx.enrichment_stats_old, ctx.enrichment_stats_new) {
-                        (Some(old), Some(new)) => {
-                            let mut c = old.clone();
-                            c.merge(new);
-                            Some(c)
-                        }
-                        (Some(s), None) | (None, Some(s)) => Some(s.clone()),
-                        (None, None) => None,
-                    };
-                    if let Some(stats) = combined
-                        && stats.total_vulns_found > 0
-                    {
-                        spans.extend(vec![
-                            Span::styled("  │ ", Style::default().fg(scheme.border)),
-                            Span::styled("OSV ", Style::default().fg(scheme.accent).bold()),
-                            Span::styled(
-                                format!("+{}", stats.total_vulns_found),
-                                Style::default().fg(scheme.accent),
-                            ),
-                        ]);
+            // Add enrichment stats if available
+            #[cfg(feature = "enrichment")]
+            {
+                let combined = match (ctx.enrichment_stats_old, ctx.enrichment_stats_new) {
+                    (Some(old), Some(new)) => {
+                        let mut c = old.clone();
+                        c.merge(new);
+                        Some(c)
                     }
+                    (Some(s), None) | (None, Some(s)) => Some(s.clone()),
+                    (None, None) => None,
+                };
+                if let Some(stats) = combined
+                    && stats.total_vulns_found > 0
+                {
+                    spans.extend(vec![
+                        Span::styled("  │ ", Style::default().fg(scheme.border)),
+                        Span::styled("OSV ", Style::default().fg(scheme.accent).bold()),
+                        Span::styled(
+                            format!("+{}", stats.total_vulns_found),
+                            Style::default().fg(scheme.accent),
+                        ),
+                    ]);
                 }
+            }
         }
     }
 
@@ -412,9 +412,7 @@ fn render_vuln_table(
 
     // Render scrollbar
     let total_rows = match vuln_data {
-        VulnListData::Diff(items) => {
-            grouped_items.map_or(items.len(), <[VulnRenderItem]>::len)
-        }
+        VulnListData::Diff(items) => grouped_items.map_or(items.len(), <[VulnRenderItem]>::len),
         VulnListData::Empty => 0,
     };
     if total_rows > area.height.saturating_sub(3) as usize {
@@ -432,7 +430,10 @@ fn render_vuln_table(
 
 /// Build the grouped render items list from vulnerability data.
 /// Groups vulns by component name, renders headers with expand/collapse.
-fn build_grouped_render_items(ctx: &RenderContext, vuln_data: &VulnListData) -> Vec<VulnRenderItem> {
+fn build_grouped_render_items(
+    ctx: &RenderContext,
+    vuln_data: &VulnListData,
+) -> Vec<VulnRenderItem> {
     let mut items = Vec::new();
 
     match vuln_data {
@@ -1067,7 +1068,10 @@ fn format_sla_cell(
 }
 
 /// Compute attack paths for a component (used by both render and cache).
-fn compute_attack_paths(component: &str, ctx: &RenderContext) -> Vec<crate::tui::security::AttackPath> {
+fn compute_attack_paths(
+    component: &str,
+    ctx: &RenderContext,
+) -> Vec<crate::tui::security::AttackPath> {
     let forward_graph = &ctx.dependencies.cached_forward_graph;
     let reverse_graph = &ctx.dependencies.cached_reverse_graph;
     let all_components: Vec<String> = reverse_graph.keys().cloned().collect();

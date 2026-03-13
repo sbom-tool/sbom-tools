@@ -1,10 +1,8 @@
 //! Constructor methods for App.
 
-use super::app::{App, AppMode, AppOverlays, DataContext, TabKind, ModeStates};
+use super::app::{App, AppMode, AppOverlays, DataContext, ModeStates, TabKind};
 use super::app_states::{
-    MatrixState,
-    MultiDiffState, NavigationContext, SourceDiffState,
-    TimelineState,
+    MatrixState, MultiDiffState, NavigationContext, SourceDiffState, TimelineState,
 };
 use crate::diff::{DiffResult, MatrixResult, MultiDiffResult, TimelineResult};
 use crate::model::NormalizedSbom;

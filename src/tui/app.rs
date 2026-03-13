@@ -770,52 +770,93 @@ impl App {
         self.quality_view.as_ref().expect("quality_view").inner()
     }
     pub(crate) fn quality_state_mut(&mut self) -> &mut super::app_states::QualityState {
-        self.quality_view.as_mut().expect("quality_view").inner_mut()
+        self.quality_view
+            .as_mut()
+            .expect("quality_view")
+            .inner_mut()
     }
 
     pub(crate) fn graph_changes_state(&self) -> &super::app_states::GraphChangesState {
-        self.graph_changes_view.as_ref().expect("graph_changes_view").inner()
+        self.graph_changes_view
+            .as_ref()
+            .expect("graph_changes_view")
+            .inner()
     }
     pub(crate) fn graph_changes_state_mut(&mut self) -> &mut super::app_states::GraphChangesState {
-        self.graph_changes_view.as_mut().expect("graph_changes_view").inner_mut()
+        self.graph_changes_view
+            .as_mut()
+            .expect("graph_changes_view")
+            .inner_mut()
     }
 
     pub(crate) fn licenses_state(&self) -> &super::app_states::LicensesState {
         self.licenses_view.as_ref().expect("licenses_view").inner()
     }
     pub(crate) fn licenses_state_mut(&mut self) -> &mut super::app_states::LicensesState {
-        self.licenses_view.as_mut().expect("licenses_view").inner_mut()
+        self.licenses_view
+            .as_mut()
+            .expect("licenses_view")
+            .inner_mut()
     }
 
     pub(crate) fn diff_compliance_state(&self) -> &super::app_states::DiffComplianceState {
-        self.compliance_view.as_ref().expect("compliance_view").inner()
+        self.compliance_view
+            .as_ref()
+            .expect("compliance_view")
+            .inner()
     }
     pub(crate) fn components_state(&self) -> &ComponentsState {
-        self.components_view.as_ref().expect("components_view").inner()
+        self.components_view
+            .as_ref()
+            .expect("components_view")
+            .inner()
     }
     pub(crate) fn components_state_mut(&mut self) -> &mut ComponentsState {
-        self.components_view.as_mut().expect("components_view").inner_mut()
+        self.components_view
+            .as_mut()
+            .expect("components_view")
+            .inner_mut()
     }
 
     pub(crate) fn vulnerabilities_state(&self) -> &super::app_states::VulnerabilitiesState {
-        self.vulnerabilities_view.as_ref().expect("vulnerabilities_view").inner()
+        self.vulnerabilities_view
+            .as_ref()
+            .expect("vulnerabilities_view")
+            .inner()
     }
-    pub(crate) fn vulnerabilities_state_mut(&mut self) -> &mut super::app_states::VulnerabilitiesState {
-        self.vulnerabilities_view.as_mut().expect("vulnerabilities_view").inner_mut()
+    pub(crate) fn vulnerabilities_state_mut(
+        &mut self,
+    ) -> &mut super::app_states::VulnerabilitiesState {
+        self.vulnerabilities_view
+            .as_mut()
+            .expect("vulnerabilities_view")
+            .inner_mut()
     }
 
     pub(crate) fn side_by_side_state(&self) -> &super::app_states::SideBySideState {
-        self.sidebyside_view.as_ref().expect("sidebyside_view").inner()
+        self.sidebyside_view
+            .as_ref()
+            .expect("sidebyside_view")
+            .inner()
     }
     pub(crate) fn side_by_side_state_mut(&mut self) -> &mut super::app_states::SideBySideState {
-        self.sidebyside_view.as_mut().expect("sidebyside_view").inner_mut()
+        self.sidebyside_view
+            .as_mut()
+            .expect("sidebyside_view")
+            .inner_mut()
     }
 
     pub(crate) fn dependencies_state(&self) -> &DependenciesState {
-        self.dependencies_view.as_ref().expect("dependencies_view").inner()
+        self.dependencies_view
+            .as_ref()
+            .expect("dependencies_view")
+            .inner()
     }
     pub(crate) fn dependencies_state_mut(&mut self) -> &mut DependenciesState {
-        self.dependencies_view.as_mut().expect("dependencies_view").inner_mut()
+        self.dependencies_view
+            .as_mut()
+            .expect("dependencies_view")
+            .inner_mut()
     }
 
     pub(crate) fn source_state(&self) -> &crate::tui::app_states::SourceDiffState {
@@ -839,7 +880,10 @@ impl App {
     pub fn prepare_render(&mut self) {
         // 1. Graph cache for dependencies (was inline in render_dependencies)
         super::views::update_graph_cache(
-            self.dependencies_view.as_mut().expect("dependencies_view").inner_mut(),
+            self.dependencies_view
+                .as_mut()
+                .expect("dependencies_view")
+                .inner_mut(),
             &self.data,
             self.mode,
         );
@@ -865,7 +909,11 @@ impl App {
         self.prepare_vulnerability_totals();
 
         // 6. Graph changes total (was inline in render_graph_changes)
-        let graph_total = self.data.diff_result.as_ref().map_or(0, |r| r.graph_changes.len());
+        let graph_total = self
+            .data
+            .diff_result
+            .as_ref()
+            .map_or(0, |r| r.graph_changes.len());
         self.graph_changes_state_mut().set_total(graph_total);
 
         // 7. Dependencies breadcrumbs (was inline in render_dependencies)
@@ -894,15 +942,9 @@ impl App {
                     let focus_left = self.licenses_state().focus_left;
                     let risk_filter = self.licenses_state().risk_filter;
                     let count = if focus_left {
-                        Self::filtered_license_count(
-                            &result.licenses.new_licenses,
-                            risk_filter,
-                        )
+                        Self::filtered_license_count(&result.licenses.new_licenses, risk_filter)
                     } else {
-                        Self::filtered_license_count(
-                            &result.licenses.removed_licenses,
-                            risk_filter,
-                        )
+                        Self::filtered_license_count(&result.licenses.removed_licenses, risk_filter)
                     };
                     self.licenses_state_mut().total = count;
                 }
@@ -947,8 +989,7 @@ impl App {
 
         // Grouped mode adjusts total to match visible render items
         if self.vulnerabilities_state().group_by_component {
-            let grouped_count =
-                super::views::count_grouped_items(self);
+            let grouped_count = super::views::count_grouped_items(self);
             self.vulnerabilities_state_mut().total = grouped_count;
             self.vulnerabilities_state_mut().clamp_selection();
         }

@@ -47,10 +47,20 @@ pub fn render_graph_changes(frame: &mut Frame, area: Rect, ctx: &RenderContext) 
         .split(chunks[2]);
 
     // Changes table (master)
-    render_changes_table(frame, content_chunks[0], &result.graph_changes, ctx.graph_changes);
+    render_changes_table(
+        frame,
+        content_chunks[0],
+        &result.graph_changes,
+        ctx.graph_changes,
+    );
 
     // Detail panel
-    render_change_detail(frame, content_chunks[1], &result.graph_changes, ctx.graph_changes);
+    render_change_detail(
+        frame,
+        content_chunks[1],
+        &result.graph_changes,
+        ctx.graph_changes,
+    );
 }
 
 fn render_no_data(frame: &mut Frame, area: Rect) {
@@ -168,7 +178,10 @@ fn render_context_bar(frame: &mut Frame, area: Rect, state: &GraphChangesState) 
             Style::default().fg(colors().accent).bold(),
         ),
         Span::styled(" \u{2502} ", Style::default().fg(colors().border)),
-        Span::styled("[\u{2191}\u{2193}/jk]", Style::default().fg(colors().accent)),
+        Span::styled(
+            "[\u{2191}\u{2193}/jk]",
+            Style::default().fg(colors().accent),
+        ),
         Span::styled(" select ", Style::default().fg(colors().text_muted)),
         Span::styled("[PgUp/Dn]", Style::default().fg(colors().accent)),
         Span::styled(" page ", Style::default().fg(colors().text_muted)),

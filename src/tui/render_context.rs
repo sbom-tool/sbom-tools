@@ -17,12 +17,12 @@ use crate::enrichment::EnrichmentStats;
 use crate::model::{NormalizedSbom, NormalizedSbomIndex};
 use crate::quality::{ComplianceResult, QualityReport};
 use crate::tui::app::{App, AppMode, ComponentFilter, TabKind};
+use crate::tui::app_states::source::SourceDiffState;
 use crate::tui::app_states::{
     ComponentsState, DependenciesState, DiffComplianceState, DiffVulnItem, DiffVulnStatus,
     GraphChangesState, LicensesState, QualityState, SideBySideState, VulnerabilitiesState,
     sort_component_changes,
 };
-use crate::tui::app_states::source::SourceDiffState;
 use crate::tui::security::SecurityAnalysisCache;
 
 /// Read-only rendering context.

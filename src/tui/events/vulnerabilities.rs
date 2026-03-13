@@ -39,7 +39,8 @@ fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
         KeyCode::Char('E') => {
             if app.vulnerabilities_state().group_by_component {
                 let group_names = collect_all_group_names(app);
-                app.vulnerabilities_state_mut().expand_all_groups(&group_names);
+                app.vulnerabilities_state_mut()
+                    .expand_all_groups(&group_names);
                 app.set_status_message("All groups expanded");
             }
         }

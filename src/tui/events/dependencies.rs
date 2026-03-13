@@ -77,7 +77,8 @@ pub(super) fn update_dependencies_search_matches(app: &mut App) {
         })
         .collect();
 
-    app.dependencies_state_mut().update_search_matches(&all_nodes);
+    app.dependencies_state_mut()
+        .update_search_matches(&all_nodes);
 }
 
 pub(super) fn skip_dependency_placeholders(app: &mut App, forward: bool) {

@@ -3,8 +3,7 @@
 use crate::tui::app::{AppMode, LicenseGroupBy, LicenseRiskFilter, LicenseSort};
 use crate::tui::license_conflicts::{ConflictDetector, ConflictSeverity};
 use crate::tui::license_utils::{
-    LicenseCategory, LicenseInfo, RiskLevel, SpdxExpression,
-    analyze_license_compatibility,
+    LicenseCategory, LicenseInfo, RiskLevel, SpdxExpression, analyze_license_compatibility,
 };
 use crate::tui::render_context::RenderContext;
 use crate::tui::theme::colors;

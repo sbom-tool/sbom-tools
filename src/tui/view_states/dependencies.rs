@@ -30,7 +30,6 @@ impl DependenciesView {
     pub(crate) fn inner_mut(&mut self) -> &mut DependenciesState {
         &mut self.inner
     }
-
 }
 
 impl Default for DependenciesView {

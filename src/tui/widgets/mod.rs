@@ -26,12 +26,7 @@ pub const FILTER_BAR_HEIGHT: u16 = 3;
 /// Only renders if `total` items exceed the visible viewport height.
 /// The area should be the inner area (after borders) — typically obtained
 /// via `area.inner(Margin { vertical: 1, horizontal: 0 })`.
-pub fn render_scrollbar(
-    frame: &mut ratatui::Frame,
-    area: Rect,
-    total: usize,
-    position: usize,
-) {
+pub fn render_scrollbar(frame: &mut ratatui::Frame, area: Rect, total: usize, position: usize) {
     let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
         .thumb_style(Style::default().fg(colors().accent))
         .track_style(Style::default().fg(colors().muted))
