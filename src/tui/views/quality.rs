@@ -277,6 +277,7 @@ fn render_combined_recommendations(
         }
     }
 
+    let total_lines = lines.len();
     let paragraph = Paragraph::new(lines)
         .block(
             Block::default()
@@ -286,6 +287,19 @@ fn render_combined_recommendations(
         )
         .scroll((ctx.quality.scroll_offset as u16, 0));
     frame.render_widget(paragraph, area);
+
+    // Render scrollbar
+    if total_lines > area.height.saturating_sub(2) as usize {
+        widgets::render_scrollbar(
+            frame,
+            area.inner(ratatui::prelude::Margin {
+                vertical: 1,
+                horizontal: 0,
+            }),
+            total_lines,
+            ctx.quality.scroll_offset,
+        );
+    }
 }
 
 fn add_change_reasons(lines: &mut Vec<Line>, old: &QualityReport, new: &QualityReport) {

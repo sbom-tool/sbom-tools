@@ -9,10 +9,7 @@ use crate::tui::theme::colors;
 use crate::tui::widgets;
 use ratatui::{
     prelude::*,
-    widgets::{
-        Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
-        Table, TableState, Wrap,
-    },
+    widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState, Wrap},
 };
 
 pub fn render_graph_changes(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
@@ -31,7 +28,7 @@ pub fn render_graph_changes(frame: &mut Frame, area: Rect, ctx: &RenderContext) 
         .constraints([
             Constraint::Length(5), // Summary stats
             Constraint::Length(2), // Context bar
-            Constraint::Min(8),    // Changes table
+            Constraint::Min(8),    // Changes table + detail
         ])
         .split(area);
 
@@ -43,8 +40,17 @@ pub fn render_graph_changes(frame: &mut Frame, area: Rect, ctx: &RenderContext) 
     // Context bar with selection info
     render_context_bar(frame, chunks[1], ctx.graph_changes);
 
-    // Changes table
-    render_changes_table(frame, chunks[2], &result.graph_changes, ctx.graph_changes);
+    // Master-detail layout for changes table + detail panel
+    let content_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(widgets::MASTER_DETAIL_SPLIT)
+        .split(chunks[2]);
+
+    // Changes table (master)
+    render_changes_table(frame, content_chunks[0], &result.graph_changes, ctx.graph_changes);
+
+    // Detail panel
+    render_change_detail(frame, content_chunks[1], &result.graph_changes, ctx.graph_changes);
 }
 
 fn render_no_data(frame: &mut Frame, area: Rect) {
@@ -243,18 +249,169 @@ fn render_changes_table(
     frame.render_stateful_widget(table, inner, &mut table_state);
 
     // Scrollbar
-    let mut scrollbar_state = ScrollbarState::default()
-        .content_length(changes.len())
-        .position(state.selected);
+    widgets::render_scrollbar(frame, chunks[1], changes.len(), state.selected);
+}
 
-    frame.render_stateful_widget(
-        Scrollbar::default()
-            .orientation(ScrollbarOrientation::VerticalRight)
-            .thumb_style(Style::default().fg(colors().accent))
-            .track_style(Style::default().fg(colors().border)),
-        chunks[1],
-        &mut scrollbar_state,
-    );
+fn render_change_detail(
+    frame: &mut Frame,
+    area: Rect,
+    changes: &[DependencyGraphChange],
+    state: &GraphChangesState,
+) {
+    let scheme = colors();
+
+    let Some(change) = changes.get(state.selected) else {
+        crate::tui::shared::components::render_empty_detail_panel(
+            frame,
+            area,
+            " Change Details ",
+            "🔀",
+            "Select a change to view details",
+            &[("[↑↓]", " navigate")],
+            false,
+        );
+        return;
+    };
+
+    let mut lines = vec![];
+
+    // Change type badge
+    let (type_label, type_color) = match &change.change {
+        DependencyChangeType::DependencyAdded { .. } => ("+ ADDED", scheme.added),
+        DependencyChangeType::DependencyRemoved { .. } => ("- REMOVED", scheme.removed),
+        DependencyChangeType::RelationshipChanged { .. } => ("~ RELATION", scheme.modified),
+        DependencyChangeType::Reparented { .. } => ("↔ REPARENT", scheme.modified),
+        DependencyChangeType::DepthChanged { .. } => ("↕ DEPTH", scheme.info),
+    };
+    lines.push(Line::from(vec![Span::styled(
+        format!(" {type_label} "),
+        Style::default()
+            .fg(scheme.badge_fg_dark)
+            .bg(type_color)
+            .bold(),
+    )]));
+    lines.push(Line::from(""));
+
+    // Impact level
+    let (impact_label, impact_color) = match change.impact {
+        GraphChangeImpact::Critical => ("Critical", scheme.critical),
+        GraphChangeImpact::High => ("High", scheme.high),
+        GraphChangeImpact::Medium => ("Medium", scheme.medium),
+        GraphChangeImpact::Low => ("Low", scheme.low),
+    };
+    lines.push(Line::from(vec![
+        Span::styled("Impact: ", Style::default().fg(scheme.text_muted)),
+        Span::styled(impact_label, Style::default().fg(impact_color).bold()),
+    ]));
+    lines.push(Line::from(""));
+
+    // Component name
+    lines.push(Line::from(vec![
+        Span::styled("Component: ", Style::default().fg(scheme.text_muted)),
+        Span::styled(
+            &change.component_name,
+            Style::default().fg(scheme.text).bold(),
+        ),
+    ]));
+
+    // Change-specific details
+    lines.push(Line::from(""));
+    match &change.change {
+        DependencyChangeType::DependencyAdded {
+            dependency_name, ..
+        } => {
+            lines.push(Line::from(vec![
+                Span::styled("Dependency: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(dependency_name, Style::default().fg(scheme.added)),
+            ]));
+        }
+        DependencyChangeType::DependencyRemoved {
+            dependency_name, ..
+        } => {
+            lines.push(Line::from(vec![
+                Span::styled("Dependency: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(dependency_name, Style::default().fg(scheme.removed)),
+            ]));
+        }
+        DependencyChangeType::RelationshipChanged {
+            dependency_name,
+            old_relationship,
+            new_relationship,
+            ..
+        } => {
+            lines.push(Line::from(vec![
+                Span::styled("Dependency: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(dependency_name, Style::default().fg(scheme.text)),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("Old: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(old_relationship, Style::default().fg(scheme.removed)),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("New: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(new_relationship, Style::default().fg(scheme.added)),
+            ]));
+        }
+        DependencyChangeType::Reparented {
+            old_parent_name,
+            new_parent_name,
+            ..
+        } => {
+            lines.push(Line::from(vec![
+                Span::styled("Old parent: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(old_parent_name, Style::default().fg(scheme.removed)),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("New parent: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(new_parent_name, Style::default().fg(scheme.added)),
+            ]));
+        }
+        DependencyChangeType::DepthChanged {
+            old_depth,
+            new_depth,
+        } => {
+            let fmt = |d: u32| -> String {
+                if d == u32::MAX {
+                    "unreachable".to_string()
+                } else {
+                    d.to_string()
+                }
+            };
+            lines.push(Line::from(vec![
+                Span::styled("Old depth: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(fmt(*old_depth), Style::default().fg(scheme.removed)),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled("New depth: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(fmt(*new_depth), Style::default().fg(scheme.added)),
+            ]));
+            let direction = if *new_depth == u32::MAX {
+                "Component became unreachable"
+            } else if *old_depth == u32::MAX {
+                "Component became reachable"
+            } else if *new_depth < *old_depth {
+                "Promoted (closer to root)"
+            } else {
+                "Demoted (further from root)"
+            };
+            lines.push(Line::from(vec![Span::styled(
+                direction,
+                Style::default().fg(scheme.text).italic(),
+            )]));
+        }
+    }
+
+    let detail = Paragraph::new(lines)
+        .block(
+            Block::default()
+                .title(" Change Details ")
+                .title_style(Style::default().fg(scheme.border_focused).bold())
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(scheme.border)),
+        )
+        .wrap(Wrap { trim: true });
+
+    frame.render_widget(detail, area);
 }
 
 fn impact_cell(impact: GraphChangeImpact) -> Cell<'static> {

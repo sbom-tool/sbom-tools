@@ -46,9 +46,14 @@ pub fn render_diff_compliance(frame: &mut Frame, area: Rect, ctx: &RenderContext
     let old_empty = ctx.old_compliance_results.is_none_or(<[ComplianceResult]>::is_empty);
     let new_empty = ctx.new_compliance_results.is_none_or(<[ComplianceResult]>::is_empty);
     if old_empty || new_empty {
-        let msg = Paragraph::new("No compliance data available")
-            .block(Block::default().borders(Borders::ALL).title(" Compliance "));
-        frame.render_widget(msg, area);
+        crate::tui::widgets::render_empty_state_enhanced(
+            frame,
+            area,
+            "📋",
+            "No compliance data available",
+            Some("Compliance analysis requires both old and new SBOMs"),
+            Some("Ensure both SBOMs were successfully parsed"),
+        );
         return;
     }
 
@@ -548,6 +553,19 @@ fn render_violation_table(
     );
 
     frame.render_widget(table, area);
+
+    // Render scrollbar
+    if violations.len() > viewport_height {
+        crate::tui::widgets::render_scrollbar(
+            frame,
+            area.inner(ratatui::layout::Margin {
+                vertical: 1,
+                horizontal: 0,
+            }),
+            violations.len(),
+            scroll_offset,
+        );
+    }
 }
 
 fn render_help_bar(frame: &mut Frame, area: Rect, ctx: &RenderContext) {

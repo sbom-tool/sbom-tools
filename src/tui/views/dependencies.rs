@@ -101,7 +101,7 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let show_breadcrumbs = ctx.dependencies.show_breadcrumbs
         && !ctx.dependencies.breadcrumb_trail.is_empty();
 
-    let mut context_height = 6u16;
+    let mut context_height = 3u16;
     if is_searching || has_search_query {
         context_height += 1;
     }
@@ -114,7 +114,7 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
         .constraints([Constraint::Length(context_height), Constraint::Min(5)])
         .split(area);
 
-    // Context bar with options and selection info
+    // Context bar with options and selection info (compact 3-line layout)
     let selected = ctx.dependencies.selected;
     let total = ctx.dependencies.total;
     let expanded_count = ctx.dependencies.expanded_nodes.len();
@@ -129,153 +129,125 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
 
     let is_diff_mode = ctx.mode == AppMode::Diff;
 
+    // Line 1: Toggles + Depth/Roots (merged from old lines 1 & 2)
+    let on_style = Style::default().fg(scheme.success).bold();
+    let off_style = Style::default().fg(scheme.text_muted);
+    let trans_style = if ctx.dependencies.show_transitive { on_style } else { off_style };
+    let cycle_style = if show_cycles { on_style } else { off_style };
+    let sort_order = ctx.dependencies.sort_order.display_name();
+
     let mut line1_spans = vec![
         Span::styled("[t]", Style::default().fg(scheme.accent)),
-        Span::raw(" Transitive: "),
         Span::styled(
-            if ctx.dependencies.show_transitive {
-                "On"
-            } else {
-                "Off"
-            },
-            if ctx.dependencies.show_transitive {
-                Style::default().fg(scheme.success).bold()
+            if ctx.dependencies.show_transitive { " Trans:On" } else { " Trans:Off" },
+            trans_style,
+        ),
+    ];
+
+    if is_diff_mode {
+        let hl_style = if ctx.dependencies.highlight_changes { on_style } else { off_style };
+        line1_spans.push(Span::styled("  [h]", Style::default().fg(scheme.accent)));
+        line1_spans.push(Span::styled(
+            if ctx.dependencies.highlight_changes { " HL:On" } else { " HL:Off" },
+            hl_style,
+        ));
+    }
+
+    line1_spans.extend(vec![
+        Span::styled("  [y]", Style::default().fg(scheme.accent)),
+        Span::styled(
+            if show_cycles { " Cycles:On" } else { " Cycles:Off" },
+            cycle_style,
+        ),
+        Span::styled("  │  ", Style::default().fg(scheme.border)),
+        Span::styled(
+            format!("Depth:{max_depth}"),
+            Style::default().fg(scheme.primary).bold(),
+        ),
+        Span::styled("  ", Style::default()),
+        Span::styled(
+            format!("Roots:{max_roots}"),
+            Style::default().fg(scheme.primary).bold(),
+        ),
+        Span::styled("  ", Style::default()),
+        Span::styled(
+            format!("Sort:{sort_order}"),
+            Style::default().fg(scheme.primary).bold(),
+        ),
+    ]);
+
+    let line1 = Line::from(line1_spans);
+
+    // Line 2: Selection info + stats (merged from old line3 + hints)
+    let mut line2_spans = vec![
+        Span::styled(
+            format!("{}/{}", if total > 0 { selected + 1 } else { 0 }, total),
+            Style::default().fg(scheme.primary).bold(),
+        ),
+        Span::styled(" selected", Style::default().fg(scheme.text_muted)),
+        Span::styled("  │  ", Style::default().fg(scheme.border)),
+        Span::styled(
+            format!("Expanded: {expanded_count}"),
+            if expanded_count > 0 {
+                Style::default().fg(scheme.success)
             } else {
                 Style::default().fg(scheme.text_muted)
             },
         ),
     ];
 
-    // Highlight changes only available in Diff mode
-    if is_diff_mode {
-        line1_spans.push(Span::styled("  ", Style::default().fg(scheme.border)));
-        line1_spans.push(Span::styled("[h]", Style::default().fg(scheme.accent)));
-        line1_spans.push(Span::raw(" Highlight: "));
-        line1_spans.push(Span::styled(
-            if ctx.dependencies.highlight_changes {
-                "On"
-            } else {
-                "Off"
-            },
-            if ctx.dependencies.highlight_changes {
-                Style::default().fg(scheme.success).bold()
-            } else {
-                Style::default().fg(scheme.text_muted)
-            },
-        ));
-    }
-
-    line1_spans.push(Span::styled("  ", Style::default().fg(scheme.border)));
-    line1_spans.push(Span::styled("[y]", Style::default().fg(scheme.accent)));
-    line1_spans.push(Span::raw(" Cycles: "));
-    line1_spans.push(Span::styled(
-        if show_cycles { "On" } else { "Off" },
-        if show_cycles {
-            Style::default().fg(scheme.success).bold()
-        } else {
-            Style::default().fg(scheme.text_muted)
-        },
-    ));
-
-    let line1 = Line::from(line1_spans);
-
-    let sort_order = ctx.dependencies.sort_order.display_name();
-    let line2 = Line::from(vec![
-        Span::styled("[+/-]", Style::default().fg(scheme.accent)),
-        Span::raw(" Depth: "),
-        Span::styled(
-            format!("{max_depth}"),
-            Style::default().fg(scheme.primary).bold(),
-        ),
-        Span::styled("  ", Style::default().fg(scheme.border)),
-        Span::styled("[</>]", Style::default().fg(scheme.accent)),
-        Span::raw(" Roots: "),
-        Span::styled(
-            format!("{max_roots}"),
-            Style::default().fg(scheme.primary).bold(),
-        ),
-        Span::styled("  ", Style::default().fg(scheme.border)),
-        Span::styled("[s]", Style::default().fg(scheme.accent)),
-        Span::raw(" Sort: "),
-        Span::styled(sort_order, Style::default().fg(scheme.primary).bold()),
-        Span::styled("  │  ", Style::default().fg(scheme.border)),
-        Span::styled("[e/E]", Style::default().fg(scheme.accent)),
-        Span::raw(" expand/collapse all  "),
-        Span::styled("[?]", Style::default().fg(scheme.accent)),
-        Span::raw(" help"),
-    ]);
-
-    let mut line3 = Vec::new();
-
-    line3.push(Span::styled(
-        "Dependency ",
-        Style::default().fg(scheme.text_muted),
-    ));
-    line3.push(Span::styled(
-        format!("{}/{}", if total > 0 { selected + 1 } else { 0 }, total),
-        Style::default().fg(scheme.primary).bold(),
-    ));
-    line3.push(Span::styled("  │  ", Style::default().fg(scheme.border)));
-    line3.push(Span::styled(
-        "Expanded: ",
-        Style::default().fg(scheme.text_muted),
-    ));
-    line3.push(Span::styled(
-        format!("{expanded_count}"),
-        if expanded_count > 0 {
-            Style::default().fg(scheme.success)
-        } else {
-            Style::default().fg(scheme.text_muted)
-        },
-    ));
-
     if vuln_count > 0 {
-        line3.push(Span::styled("  │  ", Style::default().fg(scheme.border)));
-        line3.push(Span::styled(
-            format!(
-                "⚠ {vuln_count} {}",
-                if vuln_count == 1 {
-                    "vulnerability"
-                } else {
-                    "vulnerabilities"
-                }
-            ),
+        line2_spans.push(Span::styled("  │  ", Style::default().fg(scheme.border)));
+        line2_spans.push(Span::styled(
+            format!("⚠ {vuln_count} vuln"),
             Style::default().fg(scheme.critical).bold(),
         ));
     }
 
     if show_cycles && cycle_count > 0 {
-        line3.push(Span::styled("  │  ", Style::default().fg(scheme.border)));
-        line3.push(Span::styled(
-            format!("⟳ {cycle_count} cycles"),
+        line2_spans.push(Span::styled("  │  ", Style::default().fg(scheme.border)));
+        line2_spans.push(Span::styled(
+            format!("⟳ {cycle_count}"),
             Style::default().fg(scheme.warning).bold(),
         ));
     }
 
     if root_overflow > 0 || depth_limited {
-        line3.push(Span::styled("  │  ", Style::default().fg(scheme.border)));
-        line3.push(Span::styled(
-            "Limited: ",
-            Style::default().fg(scheme.text_muted),
-        ));
+        line2_spans.push(Span::styled("  │  ", Style::default().fg(scheme.border)));
         if root_overflow > 0 {
-            line3.push(Span::styled(
-                format!("+{root_overflow} roots hidden"),
-                Style::default().fg(scheme.warning).bold(),
+            line2_spans.push(Span::styled(
+                format!("+{root_overflow} roots"),
+                Style::default().fg(scheme.warning),
             ));
         }
         if root_overflow > 0 && depth_limited {
-            line3.push(Span::styled(", ", Style::default().fg(scheme.text_muted)));
+            line2_spans.push(Span::styled(", ", Style::default().fg(scheme.text_muted)));
         }
         if depth_limited {
-            line3.push(Span::styled(
-                format!("depth capped at {max_depth}"),
-                Style::default().fg(scheme.warning).bold(),
+            line2_spans.push(Span::styled(
+                format!("depth≤{max_depth}"),
+                Style::default().fg(scheme.warning),
             ));
         }
     }
 
-    let mut context_lines = vec![line1, line2, Line::from(line3)];
+    let line2 = Line::from(line2_spans);
+
+    // Line 3: Key hints (compact)
+    let line3 = Line::from(vec![
+        Span::styled("[+/-]", Style::default().fg(scheme.accent)),
+        Span::styled(" depth ", Style::default().fg(scheme.text_muted)),
+        Span::styled("[</>]", Style::default().fg(scheme.accent)),
+        Span::styled(" roots ", Style::default().fg(scheme.text_muted)),
+        Span::styled("[s]", Style::default().fg(scheme.accent)),
+        Span::styled(" sort ", Style::default().fg(scheme.text_muted)),
+        Span::styled("[e/E]", Style::default().fg(scheme.accent)),
+        Span::styled(" expand/collapse ", Style::default().fg(scheme.text_muted)),
+        Span::styled("[?]", Style::default().fg(scheme.accent)),
+        Span::styled(" help", Style::default().fg(scheme.text_muted)),
+    ]);
+
+    let mut context_lines = vec![line1, line2, line3];
 
     // Add search bar if searching
     if is_searching {

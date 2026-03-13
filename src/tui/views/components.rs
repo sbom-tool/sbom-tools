@@ -7,10 +7,7 @@ use crate::tui::theme::colors;
 use crate::tui::widgets;
 use ratatui::{
     prelude::*,
-    widgets::{
-        Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
-        Table, TableState,
-    },
+    widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState},
 };
 
 /// Pre-built component list to avoid rebuilding on each render call.
@@ -23,7 +20,10 @@ pub enum ComponentListData<'a> {
 pub fn render_components(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(3), Constraint::Min(10)])
+        .constraints([
+            Constraint::Length(widgets::FILTER_BAR_HEIGHT),
+            Constraint::Min(10),
+        ])
         .split(area);
 
     // Render filter bar with badges
@@ -45,7 +45,7 @@ pub fn render_components(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     // Master-detail layout
     let content_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
+        .constraints(widgets::MASTER_DETAIL_SPLIT)
         .split(chunks[1]);
 
     // Render component table (master)
@@ -256,12 +256,12 @@ fn render_component_table(
     let scheme = colors();
     let table_focused = !ctx.components.focus_detail;
     let table_border_color = if table_focused {
-        scheme.accent
+        scheme.border_focused
     } else {
         scheme.border
     };
     let table_title_style = if table_focused {
-        Style::default().fg(scheme.accent).bold()
+        Style::default().fg(scheme.border_focused).bold()
     } else {
         Style::default().fg(scheme.text_muted)
     };
@@ -291,21 +291,14 @@ fn render_component_table(
     // Render scrollbar
     let scroll_offset = state.offset();
     if rows.len() > area.height.saturating_sub(3) as usize {
-        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
-            .thumb_style(Style::default().fg(colors().accent))
-            .track_style(Style::default().fg(colors().muted))
-            .begin_symbol(Some("▲"))
-            .end_symbol(Some("▼"));
-
-        let mut scrollbar_state = ScrollbarState::new(rows.len()).position(scroll_offset);
-
-        frame.render_stateful_widget(
-            scrollbar,
+        widgets::render_scrollbar(
+            frame,
             area.inner(Margin {
                 vertical: 1,
                 horizontal: 0,
             }),
-            &mut scrollbar_state,
+            rows.len(),
+            scroll_offset,
         );
     }
 }

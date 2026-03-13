@@ -135,7 +135,7 @@ fn render_source_tree(
 ) {
     let scheme = colors();
     let border_color = if is_focused {
-        scheme.accent
+        scheme.border_focused
     } else {
         scheme.border
     };
@@ -522,7 +522,7 @@ fn render_source_raw(
 ) {
     let scheme = colors();
     let border_color = if is_focused {
-        scheme.accent
+        scheme.border_focused
     } else {
         scheme.border
     };

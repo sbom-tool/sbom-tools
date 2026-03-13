@@ -47,7 +47,16 @@ pub fn render_sidebyside(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     match ctx.mode {
         AppMode::Diff => render_diff_sidebyside(frame, area, ctx),
         // Multi-comparison modes have their own views
-        AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => {}
+        AppMode::MultiDiff | AppMode::Timeline | AppMode::Matrix => {
+            crate::tui::widgets::render_empty_state_enhanced(
+                frame,
+                area,
+                "⇔",
+                "Side-by-side view is only available in Diff mode",
+                Some("This mode compares exactly two SBOMs"),
+                None,
+            );
+        }
     }
 }
 

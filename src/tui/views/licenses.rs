@@ -18,7 +18,10 @@ use std::collections::HashMap;
 pub fn render_licenses(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(3), Constraint::Min(5)])
+        .constraints([
+            Constraint::Length(widgets::FILTER_BAR_HEIGHT),
+            Constraint::Min(5),
+        ])
         .split(area);
 
     // Filter bar with group by and sort
@@ -175,8 +178,28 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
 
 fn render_diff_licenses(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let Some(result) = ctx.diff_result else {
+        crate::tui::widgets::render_empty_state_enhanced(
+            frame,
+            area,
+            "📜",
+            "No license data available",
+            Some("License analysis requires a completed diff"),
+            None,
+        );
         return;
     };
+
+    if result.licenses.new_licenses.is_empty() && result.licenses.removed_licenses.is_empty() {
+        crate::tui::widgets::render_empty_state_enhanced(
+            frame,
+            area,
+            "✓",
+            "No license changes detected",
+            Some("All licenses remain the same between both SBOMs"),
+            None,
+        );
+        return;
+    }
 
     // Layout depends on whether compatibility panel is shown
     let main_chunks = if ctx.licenses.show_compatibility {
@@ -187,7 +210,7 @@ fn render_diff_licenses(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     } else {
         Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
+            .constraints(widgets::MASTER_DETAIL_SPLIT)
             .split(area)
     };
 
@@ -582,7 +605,7 @@ fn render_license_table(
     let scheme = colors();
     let border_color = if is_new { scheme.added } else { scheme.removed };
     let focus_border = if is_focused {
-        border_color
+        scheme.border_focused
     } else {
         scheme.border
     };
@@ -701,6 +724,19 @@ fn render_license_table(
         .with_selected(selected);
 
     frame.render_stateful_widget(table, area, &mut state);
+
+    // Render scrollbar
+    if licenses.len() > area.height.saturating_sub(3) as usize {
+        crate::tui::widgets::render_scrollbar(
+            frame,
+            area.inner(Margin {
+                vertical: 1,
+                horizontal: 0,
+            }),
+            licenses.len(),
+            scroll_offset,
+        );
+    }
 }
 
 fn render_license_details(

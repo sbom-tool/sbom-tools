@@ -11,8 +11,37 @@ pub use tree::{Tree, TreeNode, TreeState, detect_component_type, extract_display
 use crate::tui::theme::colors;
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
 };
+
+/// Standard master-detail split ratio (55% master, 45% detail).
+pub const MASTER_DETAIL_SPLIT: [Constraint; 2] =
+    [Constraint::Percentage(55), Constraint::Percentage(45)];
+
+/// Standard filter bar height.
+pub const FILTER_BAR_HEIGHT: u16 = 3;
+
+/// Render a vertical scrollbar on the right side of an area.
+///
+/// Only renders if `total` items exceed the visible viewport height.
+/// The area should be the inner area (after borders) — typically obtained
+/// via `area.inner(Margin { vertical: 1, horizontal: 0 })`.
+pub fn render_scrollbar(
+    frame: &mut ratatui::Frame,
+    area: Rect,
+    total: usize,
+    position: usize,
+) {
+    let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+        .thumb_style(Style::default().fg(colors().accent))
+        .track_style(Style::default().fg(colors().muted))
+        .begin_symbol(Some("▲"))
+        .end_symbol(Some("▼"));
+
+    let mut scrollbar_state = ScrollbarState::new(total).position(position);
+
+    frame.render_stateful_widget(scrollbar, area, &mut scrollbar_state);
+}
 
 /// Helper function to create a centered rectangle.
 pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

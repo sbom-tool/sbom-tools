@@ -56,8 +56,8 @@ pub fn render_vulnerabilities(frame: &mut Frame, area: Rect, ctx: &RenderContext
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3), // Filter bar + stats
-            Constraint::Min(10),   // Main content
+            Constraint::Length(widgets::FILTER_BAR_HEIGHT), // Filter bar + stats
+            Constraint::Min(10),                            // Main content
         ])
         .split(area);
 
@@ -90,7 +90,7 @@ pub fn render_vulnerabilities(frame: &mut Frame, area: Rect, ctx: &RenderContext
     // Master-detail layout
     let content_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+        .constraints(widgets::MASTER_DETAIL_SPLIT)
         .split(chunks[1]);
 
     // Vulnerability table (master)
@@ -398,9 +398,9 @@ fn render_vuln_table(
         .block(
             Block::default()
                 .title(" Vulnerabilities ")
-                .title_style(Style::default().fg(colors().primary).bold())
+                .title_style(Style::default().fg(colors().border_focused).bold())
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(colors().border)),
+                .border_style(Style::default().fg(colors().border_focused)),
         )
         .row_highlight_style(Style::default().bg(colors().selection))
         .highlight_symbol("▶ ");
@@ -409,6 +409,25 @@ fn render_vuln_table(
     state.select(Some(ctx.vulnerabilities.selected));
 
     frame.render_stateful_widget(table, area, &mut state);
+
+    // Render scrollbar
+    let total_rows = match vuln_data {
+        VulnListData::Diff(items) => {
+            grouped_items.map_or(items.len(), <[VulnRenderItem]>::len)
+        }
+        VulnListData::Empty => 0,
+    };
+    if total_rows > area.height.saturating_sub(3) as usize {
+        widgets::render_scrollbar(
+            frame,
+            area.inner(Margin {
+                vertical: 1,
+                horizontal: 0,
+            }),
+            total_rows,
+            ctx.vulnerabilities.selected,
+        );
+    }
 }
 
 /// Build the grouped render items list from vulnerability data.

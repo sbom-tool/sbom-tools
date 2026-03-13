@@ -19,6 +19,14 @@ pub fn render_summary(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
 
 fn render_diff_summary(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let Some(result) = ctx.diff_result else {
+        crate::tui::widgets::render_empty_state_enhanced(
+            frame,
+            area,
+            "📊",
+            "No diff data loaded",
+            Some("Summary requires a completed diff analysis"),
+            None,
+        );
         return;
     };
     let old_count = ctx
