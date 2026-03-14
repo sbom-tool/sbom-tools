@@ -370,7 +370,7 @@ jobs:
                   "components": []
                 }
               JSON
-              output = shell_output("#{bin}/sbom-tools view #{testpath}/test.cdx.json --format summary")
+              output = shell_output("#{bin}/sbom-tools view #{testpath}/test.cdx.json --output summary")
               assert_match "CycloneDX", output
             end
           end
