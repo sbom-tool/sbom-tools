@@ -64,13 +64,13 @@ curl -sSL https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-
 sudo mv sbom-tools /usr/local/bin/
 ```
 
-Release archives are signed with [Sigstore](https://www.sigstore.dev/) and have [GitHub build attestations](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations):
+Each pre-built archive is signed with [Sigstore](https://www.sigstore.dev/) and has a [GitHub build attestation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations). To verify a download:
 
 ```sh
 # Verify Sigstore signature (requires cosign)
 cosign verify-blob \
   --bundle sbom-tools-aarch64-apple-darwin.tar.gz.bundle \
-  --certificate-identity-regexp 'https://github\.com/sbom-tool/sbom-tools/' \
+  --certificate-identity 'https://github.com/sbom-tool/sbom-tools/.github/workflows/publish-crates.yml@refs/tags/v0.1.14' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   sbom-tools-aarch64-apple-darwin.tar.gz
 
@@ -78,6 +78,8 @@ cosign verify-blob \
 gh attestation verify sbom-tools-aarch64-apple-darwin.tar.gz \
   --repo sbom-tool/sbom-tools
 ```
+
+Replace `v0.1.14` with the version you downloaded. Homebrew users do not need to verify manually — Homebrew validates the source tarball SHA256 automatically.
 
 ### From crates.io
 

@@ -379,11 +379,18 @@ jobs:
       - name: Validate formula syntax
         run: ruby -c tap/Formula/sbom-tools.rb
 
-      - name: Audit formula
+      - name: Tap and audit formula
         run: |
-          brew tap-new --no-git sbom-tool/tap
-          cp tap/Formula/sbom-tools.rb "$(brew --repository sbom-tool/tap)/Formula/"
-          brew audit --formula sbom-tool/tap/sbom-tools || true || true
+          mkdir -p "$(brew --prefix)/Homebrew/Library/Taps/sbom-tool"
+          ln -s "$GITHUB_WORKSPACE/tap" "$(brew --prefix)/Homebrew/Library/Taps/sbom-tool/homebrew-tap"
+          brew audit --formula sbom-tool/tap/sbom-tools
+
+      - name: Install and test formula
+        run: |
+          brew install --build-from-source sbom-tool/tap/sbom-tools
+          brew test sbom-tool/tap/sbom-tools
+          sbom-tools --version
+        timeout-minutes: 15
 
       - name: Commit and push
         shell: bash
