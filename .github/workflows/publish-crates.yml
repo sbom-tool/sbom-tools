@@ -377,12 +377,13 @@ jobs:
           FORMULA_EOF
 
       - name: Validate formula syntax
-        run: |
-          ruby -c tap/Formula/sbom-tools.rb
+        run: ruby -c tap/Formula/sbom-tools.rb
 
       - name: Audit formula
         run: |
-          brew audit --formula tap/Formula/sbom-tools.rb || true
+          brew tap-new --no-git sbom-tool/tap
+          cp tap/Formula/sbom-tools.rb "$(brew --repository sbom-tool/tap)/Formula/"
+          brew audit --formula sbom-tool/tap/sbom-tools || true || true
 
       - name: Commit and push
         shell: bash
