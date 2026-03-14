@@ -40,6 +40,12 @@ Semantic SBOM diff and analysis tool. Compare, validate, and assess the quality 
 
 ## Installation
 
+### Homebrew (macOS / Linux)
+
+```sh
+brew install sbom-tool/tap/sbom-tools
+```
+
 ### Pre-built binaries
 
 Download from [GitHub Releases](https://github.com/sbom-tool/sbom-tools/releases/latest):
@@ -56,6 +62,21 @@ sudo mv sbom-tools /usr/local/bin/
 # macOS (Intel)
 curl -sSL https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-tools-x86_64-apple-darwin.tar.gz | tar xz
 sudo mv sbom-tools /usr/local/bin/
+```
+
+Release archives are signed with [Sigstore](https://www.sigstore.dev/) and have [GitHub build attestations](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations):
+
+```sh
+# Verify Sigstore signature (requires cosign)
+cosign verify-blob \
+  --bundle sbom-tools-aarch64-apple-darwin.tar.gz.bundle \
+  --certificate-identity-regexp 'https://github\.com/sbom-tool/sbom-tools/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  sbom-tools-aarch64-apple-darwin.tar.gz
+
+# Verify GitHub attestation (requires gh CLI)
+gh attestation verify sbom-tools-aarch64-apple-darwin.tar.gz \
+  --repo sbom-tool/sbom-tools
 ```
 
 ### From crates.io

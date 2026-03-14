@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       hashes: ${{ steps.hash.outputs.hashes }}
+      version: ${{ steps.version.outputs.version }}
     permissions:
       contents: read
       id-token: write
@@ -38,6 +39,7 @@ jobs:
         uses: Swatinem/rust-cache@c676846f29d98ff6b0106d3608c7ffd4048af17b # v2
 
       - name: Verify tag matches crate version
+        id: version
         shell: bash
         run: |
           set -euo pipefail
@@ -64,6 +66,7 @@ jobs:
             exit 1
           fi
 
+          echo "version=${CRATE_VERSION}" >> "$GITHUB_OUTPUT"
           echo "Publishing version ${CRATE_VERSION}"
 
       - name: Run tests
@@ -114,6 +117,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -156,6 +161,10 @@ jobs:
           linker = "aarch64-linux-gnu-gcc"
           EOF
 
+      - name: Install cosign
+        # v4.1.0
+        uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22
+
       - name: Build release binary
         run: cargo build --release --locked --all-features --target ${{ matrix.target }}
 
@@ -184,17 +193,25 @@ jobs:
       - name: Generate SHA256 checksum
         shell: bash
         run: |
-          # Use shasum on macOS (sha256sum is not guaranteed), sha256sum elsewhere
           if command -v sha256sum &>/dev/null; then
             SHA_CMD="sha256sum"
           else
             SHA_CMD="shasum -a 256"
           fi
-          if [[ "${{ runner.os }}" == "Windows" ]]; then
-            $SHA_CMD "sbom-tools-${{ matrix.target }}.zip" > "sbom-tools-${{ matrix.target }}.zip.sha256"
-          else
-            $SHA_CMD "sbom-tools-${{ matrix.target }}.tar.gz" > "sbom-tools-${{ matrix.target }}.tar.gz.sha256"
-          fi
+          ${SHA_CMD} "${{ env.ARCHIVE }}" > "${{ env.ARCHIVE }}.sha256"
+
+      - name: Sign archive with Sigstore
+        shell: bash
+        run: |
+          cosign sign-blob --yes \
+            --bundle "${{ env.ARCHIVE }}.bundle" \
+            "${{ env.ARCHIVE }}"
+
+      - name: Attest build provenance
+        # v4.1.0
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32
+        with:
+          subject-path: ${{ env.ARCHIVE }}
 
       - name: Upload binary artifact
         # v4
@@ -258,3 +275,125 @@ jobs:
             --title "${{ github.ref_name }}" \
             --generate-notes \
             --verify-tag
+
+  update-homebrew:
+    name: Update Homebrew tap
+    needs: [publish, release]
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Wait for release assets to be available
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ github.ref_name }}"
+          # Verify the source tarball is downloadable
+          for i in $(seq 1 10); do
+            if gh api "repos/${{ github.repository }}/tarball/${TAG}" \
+                 --method HEAD 2>/dev/null; then
+              echo "Source tarball available"
+              exit 0
+            fi
+            echo "Waiting for source tarball... (attempt ${i}/10)"
+            sleep 5
+          done
+          echo "::error::Source tarball not available after 50s"
+          exit 1
+
+      - name: Download source tarball and compute SHA256
+        id: sha
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.publish.outputs.version }}"
+          TAG="${{ github.ref_name }}"
+          URL="https://github.com/${{ github.repository }}/archive/refs/tags/${TAG}.tar.gz"
+
+          curl -sSL -o source.tar.gz "${URL}"
+          SHA256="$(shasum -a 256 source.tar.gz | awk '{print $1}')"
+
+          echo "url=${URL}" >> "$GITHUB_OUTPUT"
+          echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Source tarball SHA256: ${SHA256}"
+
+      - name: Checkout Homebrew tap
+        # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          repository: sbom-tool/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Update formula
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.sha.outputs.version }}"
+          URL="${{ steps.sha.outputs.url }}"
+          SHA256="${{ steps.sha.outputs.sha256 }}"
+
+          cat > tap/Formula/sbom-tools.rb << 'FORMULA_EOF'
+          class SbomTools < Formula
+            desc "Semantic SBOM diff and analysis tool"
+            homepage "https://github.com/sbom-tool/sbom-tools"
+          FORMULA_EOF
+
+          cat >> tap/Formula/sbom-tools.rb << FORMULA_EOF
+            url "${URL}"
+            sha256 "${SHA256}"
+          FORMULA_EOF
+
+          cat >> tap/Formula/sbom-tools.rb << 'FORMULA_EOF'
+            license "MIT"
+
+            depends_on "rust" => :build
+
+            def install
+              system "cargo", "install", *std_cargo_args
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/sbom-tools --version")
+
+              # Verify it can parse a minimal CycloneDX SBOM
+              (testpath/"test.cdx.json").write <<~JSON
+                {
+                  "bomFormat": "CycloneDX",
+                  "specVersion": "1.4",
+                  "version": 1,
+                  "components": []
+                }
+              JSON
+              output = shell_output("#{bin}/sbom-tools view #{testpath}/test.cdx.json --format summary")
+              assert_match "CycloneDX", output
+            end
+          end
+          FORMULA_EOF
+
+      - name: Validate formula syntax
+        run: |
+          ruby -c tap/Formula/sbom-tools.rb
+
+      - name: Audit formula
+        run: |
+          brew audit --formula tap/Formula/sbom-tools.rb || true
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd tap
+          VERSION="${{ steps.sha.outputs.version }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/sbom-tools.rb
+          git diff --cached --quiet && { echo "No changes to commit"; exit 0; }
+          git commit -m "sbom-tools ${VERSION}"
+          git push
