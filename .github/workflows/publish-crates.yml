@@ -241,11 +241,13 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Install cargo-cyclonedx
-        run: cargo install cargo-cyclonedx --locked
+      - name: Install cargo-sbom
+        run: cargo install cargo-sbom --locked
 
-      - name: Generate SBOM (CycloneDX)
-        run: cargo cyclonedx -f json
+      - name: Generate SBOMs
+        run: |
+          cargo sbom --output-format cyclone_dx_json_1_6 > sbom-tools.cdx.json
+          cargo sbom --output-format spdx_json_2_3 > sbom-tools.spdx.json
 
       - name: Download SLSA provenance
         # v4
@@ -264,8 +266,8 @@ jobs:
 
       - name: List release assets
         run: |
-          echo "=== SBOM ==="
-          ls -la sbom-tools.cdx.json
+          echo "=== SBOMs ==="
+          ls -la sbom-tools.cdx.json sbom-tools.spdx.json
           echo "=== Provenance ==="
           ls -la provenance/
           echo "=== Binaries ==="
@@ -279,6 +281,7 @@ jobs:
           set -euo pipefail
           ASSETS=()
           ASSETS+=(sbom-tools.cdx.json)
+          ASSETS+=(sbom-tools.spdx.json)
           ASSETS+=(provenance/sbom-tools.intoto.jsonl)
           for f in binaries/sbom-tools-*; do
             ASSETS+=("${f}")
