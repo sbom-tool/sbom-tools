@@ -235,6 +235,18 @@ jobs:
         # v6.0.2
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
+      - name: Install Rust stable
+        # stable
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
+        with:
+          toolchain: stable
+
+      - name: Install cargo-cyclonedx
+        run: cargo install cargo-cyclonedx --locked
+
+      - name: Generate SBOM (CycloneDX)
+        run: cargo cyclonedx -f json
+
       - name: Download SLSA provenance
         # v4
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
@@ -252,18 +264,21 @@ jobs:
 
       - name: List release assets
         run: |
+          echo "=== SBOM ==="
+          ls -la sbom-tools.cdx.json
           echo "=== Provenance ==="
           ls -la provenance/
           echo "=== Binaries ==="
           ls -la binaries/
 
-      - name: Create GitHub Release with provenance and binaries
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
           ASSETS=()
+          ASSETS+=(sbom-tools.cdx.json)
           ASSETS+=(provenance/sbom-tools.intoto.jsonl)
           for f in binaries/sbom-tools-*; do
             ASSETS+=("${f}")
