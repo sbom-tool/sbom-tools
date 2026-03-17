@@ -41,3 +41,10 @@ scripts/*.local.*
 # Fuzz corpus and artifacts (seed corpus is tracked)
 fuzz/corpus/fuzz_*
 fuzz/artifacts/
+
+# Local clones of related repos
+homebrew-tap/
+
+# Claude Code memory and working files
+memory/
+.claude/
