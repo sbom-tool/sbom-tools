@@ -432,7 +432,9 @@ jobs:
 
       - name: Tap and audit formula
         run: |
-          brew tap sbom-tool/tap "$GITHUB_WORKSPACE/tap"
+          brew tap sbom-tool/tap
+          # Overwrite the remote formula with the locally-updated version
+          cp tap/Formula/sbom-tools.rb "$(brew --prefix)/Homebrew/Library/Taps/sbom-tool/homebrew-tap/Formula/sbom-tools.rb"
           brew audit --formula sbom-tool/tap/sbom-tools
 
       - name: Install and test formula
