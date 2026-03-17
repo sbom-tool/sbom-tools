@@ -96,7 +96,19 @@ jobs:
       - name: Publish crate
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
-        run: cargo publish --locked
+        shell: bash
+        run: |
+          OUTPUT=$(cargo publish --locked 2>&1) && {
+            echo "$OUTPUT"
+            echo "Published successfully"
+          } || {
+            echo "$OUTPUT"
+            if echo "$OUTPUT" | grep -q "already uploaded"; then
+              echo "::warning::Crate version already published — skipping"
+            else
+              exit 1
+            fi
+          }
 
   provenance:
     needs: [publish]
@@ -145,6 +157,11 @@ jobs:
         with:
           toolchain: stable
           targets: ${{ matrix.target }}
+
+      - name: Add cross-compilation target
+        # rust-toolchain.toml overrides the dtolnay action's toolchain,
+        # so we must explicitly add the target for the pinned toolchain
+        run: rustup target add ${{ matrix.target }}
 
       - name: Cache
         uses: Swatinem/rust-cache@c676846f29d98ff6b0106d3608c7ffd4048af17b # v2
