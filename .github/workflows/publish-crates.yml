@@ -416,8 +416,7 @@ jobs:
 
       - name: Tap and audit formula
         run: |
-          mkdir -p "$(brew --prefix)/Homebrew/Library/Taps/sbom-tool"
-          ln -s "$GITHUB_WORKSPACE/tap" "$(brew --prefix)/Homebrew/Library/Taps/sbom-tool/homebrew-tap"
+          brew tap sbom-tool/tap "$GITHUB_WORKSPACE/tap"
           brew audit --formula sbom-tool/tap/sbom-tools
 
       - name: Install and test formula
