@@ -137,15 +137,20 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
+            archive_name: linux-x86_64
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             cross: true
+            archive_name: linux-aarch64
           - target: x86_64-apple-darwin
             os: macos-latest
+            archive_name: macos-x86_64
           - target: aarch64-apple-darwin
             os: macos-latest
+            archive_name: macos-aarch64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
+            archive_name: windows-x86_64
     steps:
       - name: Checkout
         # v6.0.2
@@ -189,7 +194,7 @@ jobs:
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          ARCHIVE="sbom-tools-${{ matrix.target }}.tar.gz"
+          ARCHIVE="sbom-tools-${{ matrix.archive_name }}.tar.gz"
           mkdir -p staging
           cp "target/${{ matrix.target }}/release/sbom-tools" staging/
           cp LICENSE README.md staging/
@@ -200,7 +205,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $archive = "sbom-tools-${{ matrix.target }}.zip"
+          $archive = "sbom-tools-${{ matrix.archive_name }}.zip"
           New-Item -ItemType Directory -Force staging
           Copy-Item "target/${{ matrix.target }}/release/sbom-tools.exe" staging/
           Copy-Item LICENSE, README.md staging/
@@ -234,9 +239,9 @@ jobs:
         # v4
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
-          name: binary-${{ matrix.target }}
+          name: binary-${{ matrix.archive_name }}
           path: |
-            sbom-tools-${{ matrix.target }}.*
+            sbom-tools-${{ matrix.archive_name }}.*
           if-no-files-found: error
           retention-days: 1
 
@@ -281,6 +286,12 @@ jobs:
           path: binaries/
           merge-multiple: true
 
+      - name: Combine checksums
+        run: |
+          cat binaries/*.sha256 | sort > checksums.sha256
+          echo "=== Combined checksums ==="
+          cat checksums.sha256
+
       - name: List release assets
         run: |
           echo "=== SBOMs ==="
@@ -289,6 +300,8 @@ jobs:
           ls -la provenance/
           echo "=== Binaries ==="
           ls -la binaries/
+          echo "=== Checksums ==="
+          ls -la checksums.sha256
 
       - name: Create GitHub Release
         env:
@@ -299,8 +312,11 @@ jobs:
           ASSETS=()
           ASSETS+=(sbom-tools.cdx.json)
           ASSETS+=(sbom-tools.spdx.json)
+          ASSETS+=(checksums.sha256)
           ASSETS+=(provenance/sbom-tools.intoto.jsonl)
+          # Add archives and Sigstore bundles, skip per-file .sha256
           for f in binaries/sbom-tools-*; do
+            case "${f}" in *.sha256) continue ;; esac
             ASSETS+=("${f}")
           done
           echo "Uploading ${#ASSETS[@]} assets:"

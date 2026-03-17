@@ -52,15 +52,15 @@ Download from [GitHub Releases](https://github.com/sbom-tool/sbom-tools/releases
 
 ```sh
 # Linux (x86_64)
-curl -sSL https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-tools-x86_64-unknown-linux-gnu.tar.gz | tar xz
+curl -sSL https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-tools-linux-x86_64.tar.gz | tar xz
 sudo mv sbom-tools /usr/local/bin/
 
 # macOS (Apple Silicon)
-curl -sSL https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-tools-aarch64-apple-darwin.tar.gz | tar xz
+curl -sSL https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-tools-macos-aarch64.tar.gz | tar xz
 sudo mv sbom-tools /usr/local/bin/
 
 # macOS (Intel)
-curl -sSL https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-tools-x86_64-apple-darwin.tar.gz | tar xz
+curl -sSL https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-tools-macos-x86_64.tar.gz | tar xz
 sudo mv sbom-tools /usr/local/bin/
 ```
 
@@ -69,17 +69,17 @@ Each pre-built archive is signed with [Sigstore](https://www.sigstore.dev/) and 
 ```sh
 # Verify Sigstore signature (requires cosign)
 cosign verify-blob \
-  --bundle sbom-tools-aarch64-apple-darwin.tar.gz.bundle \
-  --certificate-identity 'https://github.com/sbom-tool/sbom-tools/.github/workflows/publish-crates.yml@refs/tags/v0.1.14' \
+  --bundle sbom-tools-macos-aarch64.tar.gz.bundle \
+  --certificate-identity 'https://github.com/sbom-tool/sbom-tools/.github/workflows/publish-crates.yml@refs/tags/v0.1.15' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  sbom-tools-aarch64-apple-darwin.tar.gz
+  sbom-tools-macos-aarch64.tar.gz
 
 # Verify GitHub attestation (requires gh CLI)
-gh attestation verify sbom-tools-aarch64-apple-darwin.tar.gz \
+gh attestation verify sbom-tools-macos-aarch64.tar.gz \
   --repo sbom-tool/sbom-tools
 ```
 
-Replace `v0.1.14` with the version you downloaded. Homebrew users do not need to verify manually — Homebrew validates the source tarball SHA256 automatically.
+Replace `v0.1.15` with the version you downloaded. Homebrew users do not need to verify manually — Homebrew validates the source tarball SHA256 automatically.
 
 ### From crates.io
 
@@ -533,7 +533,7 @@ jobs:
       - name: Install sbom-tools
         run: |
           curl -fsSL -o sbom-tools.tar.gz \
-            https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-tools-x86_64-unknown-linux-gnu.tar.gz
+            https://github.com/sbom-tool/sbom-tools/releases/latest/download/sbom-tools-linux-x86_64.tar.gz
           tar xzf sbom-tools.tar.gz
           sudo mv sbom-tools /usr/local/bin/
 
