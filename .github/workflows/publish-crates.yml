@@ -103,7 +103,7 @@ jobs:
             echo "Published successfully"
           } || {
             echo "$OUTPUT"
-            if echo "$OUTPUT" | grep -q "already uploaded"; then
+            if echo "$OUTPUT" | grep -qE "already uploaded|already exists"; then
               echo "::warning::Crate version already published — skipping"
             else
               exit 1
