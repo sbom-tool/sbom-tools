@@ -708,22 +708,21 @@ fn render_detail_panel(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
             }
 
             // Edge relationship and scope (for child nodes)
-            if let Some(parent) = parent_id {
-                if let Some(info) = ctx
+            if let Some(parent) = parent_id
+                && let Some(info) = ctx
                     .dependencies
                     .cached_edge_info
                     .get(&(parent.to_string(), component_id.to_string()))
-                {
+            {
+                lines.push(Line::from(vec![
+                    Span::styled("Relationship: ", Style::default().fg(scheme.text_muted)),
+                    Span::styled(&info.relationship, Style::default().fg(scheme.text)),
+                ]));
+                if let Some(scope) = &info.scope {
                     lines.push(Line::from(vec![
-                        Span::styled("Relationship: ", Style::default().fg(scheme.text_muted)),
-                        Span::styled(&info.relationship, Style::default().fg(scheme.text)),
+                        Span::styled("Scope: ", Style::default().fg(scheme.text_muted)),
+                        Span::styled(scope, Style::default().fg(scheme.text)),
                     ]));
-                    if let Some(scope) = &info.scope {
-                        lines.push(Line::from(vec![
-                            Span::styled("Scope: ", Style::default().fg(scheme.text_muted)),
-                            Span::styled(scope, Style::default().fg(scheme.text)),
-                        ]));
-                    }
                 }
             }
 

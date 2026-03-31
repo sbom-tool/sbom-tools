@@ -394,6 +394,9 @@ pub extern "C" fn sbom_tools_string_result_free(mut result: SbomToolsStringResul
         unsafe {
             drop(CString::from_raw(result.error_message));
         }
-        result.error_message = std::ptr::null_mut(); // Zero to defend against caller copies
+        #[allow(unused_assignments)]
+        {
+            result.error_message = std::ptr::null_mut(); // Zero to defend against caller copies
+        }
     }
 }
