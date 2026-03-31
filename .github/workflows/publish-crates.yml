@@ -466,8 +466,8 @@ jobs:
           cat >> tap/Formula/sbom-tools.rb << FORMULA_EOF
             # URL pinned to immutable commit SHA (not mutable tag) for supply chain safety
             url "${URL}"
-            sha256 "${SHA256}"
             version "${VERSION}"
+            sha256 "${SHA256}"
           FORMULA_EOF
 
           cat >> tap/Formula/sbom-tools.rb << 'FORMULA_EOF'
