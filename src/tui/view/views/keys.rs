@@ -88,7 +88,9 @@ pub fn render_keys(frame: &mut Frame, area: Rect, app: &ViewApp) {
     frame.render_widget(list, panels[0]);
 
     // ── Right: detail panel ──
-    let selected = app.crypto_list_selected.min(keys.len().saturating_sub(1));
+    let selected = app
+        .active_crypto_selected()
+        .min(keys.len().saturating_sub(1));
     let Some(comp) = keys.get(selected) else {
         frame.render_widget(
             Paragraph::new("No selection")

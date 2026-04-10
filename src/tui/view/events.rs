@@ -378,6 +378,21 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
             prefs.theme = theme_name.parse().unwrap_or_default();
             let _ = prefs.save();
         }
+        KeyCode::Char('P') => {
+            // Toggle BOM profile (SBOM <-> CBOM) and re-score
+            app.bom_profile = match app.bom_profile {
+                crate::model::BomProfile::Sbom => crate::model::BomProfile::Cbom,
+                crate::model::BomProfile::Cbom => crate::model::BomProfile::Sbom,
+            };
+            let scoring_profile = match app.bom_profile {
+                crate::model::BomProfile::Cbom => crate::quality::ScoringProfile::Cbom,
+                crate::model::BomProfile::Sbom => crate::quality::ScoringProfile::Standard,
+            };
+            let scorer = crate::quality::QualityScorer::new(scoring_profile);
+            app.quality_report = scorer.score(&app.sbom);
+            app.active_tab = ViewTab::Overview;
+            app.status_message = Some(format!("Switched to {} mode", app.bom_profile.label()));
+        }
         KeyCode::Char('b') | KeyCode::Backspace => {
             // Navigate back using breadcrumb history
             if app.navigation_ctx.has_history() {
@@ -615,11 +630,13 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
             }
             _ => {}
         },
-        KeyCode::Char('s') => {
-            if app.active_tab == ViewTab::Vulnerabilities {
-                app.vuln_state.toggle_sort();
+        KeyCode::Char('s') => match app.active_tab {
+            ViewTab::Vulnerabilities => app.vuln_state.toggle_sort(),
+            ViewTab::Algorithms => {
+                app.algorithm_sort_by = app.algorithm_sort_by.next();
             }
-        }
+            _ => {}
+        },
         KeyCode::Char('d') => {
             if app.active_tab == ViewTab::Vulnerabilities {
                 app.vuln_state.toggle_deduplicate();

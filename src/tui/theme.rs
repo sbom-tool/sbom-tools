@@ -893,8 +893,9 @@ impl FooterHints {
                 hints.insert(3, ("Enter", "select"));
             }
             "algorithms" => {
-                hints.insert(0, ("↑↓", "select"));
-                hints.insert(1, ("Enter", "detail"));
+                hints.insert(0, ("s", "sort"));
+                hints.insert(1, ("↑↓", "select"));
+                hints.insert(2, ("Enter", "detail"));
             }
             "certificates" => {
                 hints.insert(0, ("↑↓", "select"));

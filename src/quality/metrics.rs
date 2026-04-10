@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::model::{
     CompletenessDeclaration, ComponentType, CreatorType, CryptoAssetType, CryptoMaterialState,
-    EolStatus, ExternalRefType, HashAlgorithm, NormalizedSbom, StalenessLevel,
+    CryptoPrimitive, EolStatus, ExternalRefType, HashAlgorithm, NormalizedSbom, StalenessLevel,
 };
 use serde::{Deserialize, Serialize};
 
@@ -1449,6 +1449,36 @@ pub struct CryptographyMetrics {
     pub inadequate_key_sizes: usize,
     /// Names of weak/broken algorithms found
     pub weak_algorithm_names: Vec<String>,
+
+    // --- Algorithm completeness (slot 1: Crpt) ---
+    /// Algorithms with an OID identifier
+    pub algorithms_with_oid: usize,
+    /// Algorithms with `algorithm_family` set
+    pub algorithms_with_family: usize,
+    /// Algorithms with a recognized primitive (not `Other`)
+    pub algorithms_with_primitive: usize,
+    /// Algorithms with classical or quantum security level set
+    pub algorithms_with_security_level: usize,
+
+    // --- Cross-reference resolution (slot 4: Refs) ---
+    /// Certificates with `signature_algorithm_ref` set
+    pub certs_with_signature_algo_ref: usize,
+    /// Keys with `algorithm_ref` set
+    pub keys_with_algorithm_ref: usize,
+    /// Protocols with at least one cipher suite
+    pub protocols_with_cipher_suites: usize,
+
+    // --- Key lifecycle (slot 5: Life) ---
+    /// Keys with `state` tracked
+    pub keys_with_state: usize,
+    /// Keys with `secured_by` protection
+    pub keys_with_protection: usize,
+    /// Keys with `creation_date` or `activation_date`
+    pub keys_with_lifecycle_dates: usize,
+
+    // --- Certificate health (slot 5: Life) ---
+    /// Certificates with both `not_valid_before` and `not_valid_after`
+    pub certs_with_validity_dates: usize,
 }
 
 impl CryptographyMetrics {
@@ -1470,7 +1500,21 @@ impl CryptographyMetrics {
             match cp.asset_type {
                 CryptoAssetType::Algorithm => {
                     m.algorithms_count += 1;
+                    if cp.oid.is_some() {
+                        m.algorithms_with_oid += 1;
+                    }
                     if let Some(algo) = &cp.algorithm_properties {
+                        if algo.algorithm_family.is_some() {
+                            m.algorithms_with_family += 1;
+                        }
+                        if !matches!(algo.primitive, CryptoPrimitive::Other(_)) {
+                            m.algorithms_with_primitive += 1;
+                        }
+                        if algo.classical_security_level.is_some()
+                            || algo.nist_quantum_security_level.is_some()
+                        {
+                            m.algorithms_with_security_level += 1;
+                        }
                         if algo.is_quantum_safe() {
                             m.quantum_safe_count += 1;
                         } else if algo.nist_quantum_security_level == Some(0) {
@@ -1488,6 +1532,12 @@ impl CryptographyMetrics {
                 CryptoAssetType::Certificate => {
                     m.certificates_count += 1;
                     if let Some(cert) = &cp.certificate_properties {
+                        if cert.not_valid_before.is_some() && cert.not_valid_after.is_some() {
+                            m.certs_with_validity_dates += 1;
+                        }
+                        if cert.signature_algorithm_ref.is_some() {
+                            m.certs_with_signature_algo_ref += 1;
+                        }
                         if cert.is_expired() {
                             m.expired_certificates += 1;
                         } else if cert.is_expiring_soon(90) {
@@ -1498,6 +1548,18 @@ impl CryptographyMetrics {
                 CryptoAssetType::RelatedCryptoMaterial => {
                     m.keys_count += 1;
                     if let Some(mat) = &cp.related_crypto_material_properties {
+                        if mat.state.is_some() {
+                            m.keys_with_state += 1;
+                        }
+                        if mat.secured_by.is_some() {
+                            m.keys_with_protection += 1;
+                        }
+                        if mat.creation_date.is_some() || mat.activation_date.is_some() {
+                            m.keys_with_lifecycle_dates += 1;
+                        }
+                        if mat.algorithm_ref.is_some() {
+                            m.keys_with_algorithm_ref += 1;
+                        }
                         if mat.state == Some(CryptoMaterialState::Compromised) {
                             m.compromised_keys += 1;
                         }
@@ -1516,6 +1578,11 @@ impl CryptographyMetrics {
                 }
                 CryptoAssetType::Protocol => {
                     m.protocols_count += 1;
+                    if let Some(proto) = &cp.protocol_properties
+                        && !proto.cipher_suites.is_empty()
+                    {
+                        m.protocols_with_cipher_suites += 1;
+                    }
                 }
                 _ => {}
             }
@@ -1565,6 +1632,122 @@ impl CryptographyMetrics {
         score += (self.hybrid_pqc_count as f32 * 2.0).min(10.0);
 
         Some(score.clamp(0.0, 100.0))
+    }
+
+    // ----- Per-category scores for CBOM ScoringProfile -----
+
+    /// Crypto completeness: how fully documented are the crypto assets?
+    #[must_use]
+    pub fn crypto_completeness_score(&self) -> f32 {
+        if self.algorithms_count == 0 {
+            return 100.0;
+        }
+        let family_pct = self.algorithms_with_family as f32 / self.algorithms_count as f32;
+        let primitive_pct = self.algorithms_with_primitive as f32 / self.algorithms_count as f32;
+        let level_pct = self.algorithms_with_security_level as f32 / self.algorithms_count as f32;
+        (family_pct * 40.0 + primitive_pct * 30.0 + level_pct * 30.0).clamp(0.0, 100.0)
+    }
+
+    /// Crypto identifier quality: OID coverage.
+    #[must_use]
+    pub fn crypto_identifier_score(&self) -> f32 {
+        if self.algorithms_count == 0 {
+            return 100.0;
+        }
+        let oid_pct = self.algorithms_with_oid as f32 / self.algorithms_count as f32;
+        (oid_pct * 100.0).clamp(0.0, 100.0)
+    }
+
+    /// Algorithm strength: penalizes broken/weak/quantum-vulnerable algorithms.
+    #[must_use]
+    pub fn algorithm_strength_score(&self) -> f32 {
+        if self.algorithms_count == 0 {
+            return 100.0;
+        }
+        let mut score = 100.0_f32;
+        score -= (self.weak_algorithm_count as f32 * 15.0).min(60.0);
+        score -= (self.inadequate_key_sizes as f32 * 8.0).min(30.0);
+        if self.algorithms_count > 0 {
+            let vuln_pct = self.quantum_vulnerable_count as f32 / self.algorithms_count as f32;
+            score -= vuln_pct * 30.0;
+        }
+        score.clamp(0.0, 100.0)
+    }
+
+    /// Crypto dependency references: how well are cert/key/protocol -> algorithm refs resolved?
+    #[must_use]
+    pub fn crypto_dependency_score(&self) -> f32 {
+        let linkable = self.certificates_count + self.keys_count + self.protocols_count;
+        if linkable == 0 {
+            return 100.0;
+        }
+        let resolved = self.certs_with_signature_algo_ref
+            + self.keys_with_algorithm_ref
+            + self.protocols_with_cipher_suites;
+        let pct = resolved as f32 / linkable as f32;
+        (pct * 100.0).clamp(0.0, 100.0)
+    }
+
+    /// Crypto lifecycle: merged key management + certificate health.
+    #[must_use]
+    pub fn crypto_lifecycle_score(&self) -> f32 {
+        let mut score = 100.0_f32;
+
+        if self.keys_count > 0 {
+            let state_pct = self.keys_with_state as f32 / self.keys_count as f32;
+            let protection_pct = self.keys_with_protection as f32 / self.keys_count as f32;
+            let lifecycle_pct = self.keys_with_lifecycle_dates as f32 / self.keys_count as f32;
+            let key_completeness =
+                (state_pct * 0.4 + protection_pct * 0.3 + lifecycle_pct * 0.3) * 100.0;
+            score = score * 0.5 + key_completeness * 0.5;
+            score -= (self.compromised_keys as f32 * 20.0).min(40.0);
+            score -= (self.inadequate_key_sizes as f32 * 5.0).min(20.0);
+        }
+
+        if self.certificates_count > 0 {
+            let validity_pct =
+                self.certs_with_validity_dates as f32 / self.certificates_count as f32;
+            score -= (1.0 - validity_pct) * 15.0;
+            score -= (self.expired_certificates as f32 * 15.0).min(45.0);
+            score -= (self.expiring_soon_certificates as f32 * 5.0).min(20.0);
+        }
+
+        score.clamp(0.0, 100.0)
+    }
+
+    /// PQC readiness: quantum migration preparedness.
+    #[must_use]
+    pub fn pqc_readiness_score(&self) -> f32 {
+        if self.algorithms_count == 0 {
+            return 100.0;
+        }
+        let mut score = 0.0_f32;
+        let qs_pct = self.quantum_safe_count as f32 / self.algorithms_count as f32;
+        score += qs_pct * 60.0;
+        if self.hybrid_pqc_count > 0 {
+            score += 15.0;
+        }
+        if self.weak_algorithm_count == 0 {
+            score += 25.0;
+        } else {
+            score += (25.0 - self.weak_algorithm_count as f32 * 5.0).max(0.0);
+        }
+        score.clamp(0.0, 100.0)
+    }
+
+    /// Percentage of algorithms that are quantum-safe (for overview display).
+    #[must_use]
+    pub fn quantum_readiness_pct(&self) -> f32 {
+        if self.algorithms_count == 0 {
+            return 0.0;
+        }
+        (self.quantum_safe_count as f32 / self.algorithms_count as f32) * 100.0
+    }
+
+    /// Category labels for CBOM quality chart.
+    #[must_use]
+    pub const fn cbom_category_labels() -> [&'static str; 8] {
+        ["Crpt", "OIDs", "Algo", "Refs", "Life", "PQC", "Prov", "Lic"]
     }
 }
 
@@ -1962,5 +2145,185 @@ mod tests {
             "incomplete (first-party only)"
         );
         assert_eq!(CompletenessDeclaration::Unknown.to_string(), "unknown");
+    }
+
+    // ── CryptographyMetrics scoring tests ──
+
+    #[test]
+    fn crypto_completeness_all_documented() {
+        let m = CryptographyMetrics {
+            algorithms_count: 4,
+            algorithms_with_family: 4,
+            algorithms_with_primitive: 4,
+            algorithms_with_security_level: 4,
+            ..Default::default()
+        };
+        let score = m.crypto_completeness_score();
+        assert!(
+            (score - 100.0).abs() < 0.1,
+            "fully documented → 100, got {score}"
+        );
+    }
+
+    #[test]
+    fn crypto_completeness_partial() {
+        let m = CryptographyMetrics {
+            algorithms_count: 4,
+            algorithms_with_family: 2,         // 50%
+            algorithms_with_primitive: 4,      // 100%
+            algorithms_with_security_level: 0, // 0%
+            ..Default::default()
+        };
+        // 0.5*40 + 1.0*30 + 0.0*30 = 20+30+0 = 50
+        let score = m.crypto_completeness_score();
+        assert!((score - 50.0).abs() < 0.1, "partial → 50, got {score}");
+    }
+
+    #[test]
+    fn crypto_identifier_full_oid_coverage() {
+        let m = CryptographyMetrics {
+            algorithms_count: 5,
+            algorithms_with_oid: 5,
+            ..Default::default()
+        };
+        assert!((m.crypto_identifier_score() - 100.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn crypto_identifier_no_oids() {
+        let m = CryptographyMetrics {
+            algorithms_count: 5,
+            algorithms_with_oid: 0,
+            ..Default::default()
+        };
+        assert!((m.crypto_identifier_score() - 0.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn algorithm_strength_weak_penalty() {
+        let m = CryptographyMetrics {
+            algorithms_count: 5,
+            weak_algorithm_count: 2,
+            ..Default::default()
+        };
+        // 100 - 2*15 = 70
+        let score = m.algorithm_strength_score();
+        assert!((score - 70.0).abs() < 0.1, "2 weak → 70, got {score}");
+    }
+
+    #[test]
+    fn algorithm_strength_quantum_vulnerable() {
+        let m = CryptographyMetrics {
+            algorithms_count: 10,
+            quantum_vulnerable_count: 10,
+            ..Default::default()
+        };
+        // 100 - (10/10)*30 = 70
+        let score = m.algorithm_strength_score();
+        assert!(
+            (score - 70.0).abs() < 0.1,
+            "all quantum vuln → 70, got {score}"
+        );
+    }
+
+    #[test]
+    fn crypto_lifecycle_compromised_keys() {
+        let m = CryptographyMetrics {
+            keys_count: 3,
+            keys_with_state: 3,
+            keys_with_protection: 3,
+            keys_with_lifecycle_dates: 3,
+            compromised_keys: 1,
+            ..Default::default()
+        };
+        let score = m.crypto_lifecycle_score();
+        // With full key completeness: 100*0.5 + 100*0.5 = 100, then -20 penalty
+        assert!(score < 85.0);
+        assert!(score > 50.0);
+    }
+
+    #[test]
+    fn crypto_lifecycle_expired_certs() {
+        let m = CryptographyMetrics {
+            certificates_count: 4,
+            certs_with_validity_dates: 4,
+            expired_certificates: 2,
+            expiring_soon_certificates: 1,
+            ..Default::default()
+        };
+        let score = m.crypto_lifecycle_score();
+        // 100 - 2*15 - 1*5 = 100 - 30 - 5 = 65
+        assert!(score < 70.0);
+    }
+
+    #[test]
+    fn pqc_readiness_all_quantum_safe() {
+        let m = CryptographyMetrics {
+            algorithms_count: 5,
+            quantum_safe_count: 5,
+            hybrid_pqc_count: 2,
+            weak_algorithm_count: 0,
+            ..Default::default()
+        };
+        // (5/5)*60 + 15 + 25 = 100
+        let score = m.pqc_readiness_score();
+        assert!(
+            (score - 100.0).abs() < 0.1,
+            "all safe + hybrid → 100, got {score}"
+        );
+    }
+
+    #[test]
+    fn pqc_readiness_no_quantum_safe() {
+        let m = CryptographyMetrics {
+            algorithms_count: 5,
+            quantum_safe_count: 0,
+            hybrid_pqc_count: 0,
+            weak_algorithm_count: 0,
+            ..Default::default()
+        };
+        // 0*60 + 0 + 25 = 25
+        let score = m.pqc_readiness_score();
+        assert!(
+            (score - 25.0).abs() < 0.1,
+            "no safe, no weak → 25, got {score}"
+        );
+    }
+
+    #[test]
+    fn crypto_dependency_all_resolved() {
+        let m = CryptographyMetrics {
+            certificates_count: 2,
+            keys_count: 3,
+            protocols_count: 1,
+            certs_with_signature_algo_ref: 2,
+            keys_with_algorithm_ref: 3,
+            protocols_with_cipher_suites: 1,
+            ..Default::default()
+        };
+        assert!((m.crypto_dependency_score() - 100.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn crypto_dependency_none_resolved() {
+        let m = CryptographyMetrics {
+            certificates_count: 2,
+            keys_count: 3,
+            protocols_count: 1,
+            ..Default::default()
+        };
+        assert!((m.crypto_dependency_score() - 0.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn quality_score_none_when_no_crypto() {
+        let m = CryptographyMetrics::default();
+        assert!(m.quality_score().is_none());
+    }
+
+    #[test]
+    fn quantum_readiness_pct_zero_algorithms() {
+        let m = CryptographyMetrics::default();
+        assert!((m.quantum_readiness_pct() - 0.0).abs() < 0.01);
     }
 }

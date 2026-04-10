@@ -79,10 +79,20 @@ impl App {
         old_raw: &str,
         new_raw: &str,
     ) -> Self {
-        // Calculate quality reports for both SBOMs
-        let scorer = QualityScorer::new(ScoringProfile::Standard);
-        let old_quality = Some(scorer.score(&old_sbom));
-        let new_quality = Some(scorer.score(&new_sbom));
+        // Calculate quality reports for both SBOMs using profile-aware scoring
+        let old_profile = match crate::model::BomProfile::detect(&old_sbom) {
+            crate::model::BomProfile::Cbom => ScoringProfile::Cbom,
+            crate::model::BomProfile::Sbom => ScoringProfile::Standard,
+        };
+        let old_scorer = QualityScorer::new(old_profile);
+        let old_quality = Some(old_scorer.score(&old_sbom));
+
+        let new_profile = match crate::model::BomProfile::detect(&new_sbom) {
+            crate::model::BomProfile::Cbom => ScoringProfile::Cbom,
+            crate::model::BomProfile::Sbom => ScoringProfile::Standard,
+        };
+        let new_scorer = QualityScorer::new(new_profile);
+        let new_quality = Some(new_scorer.score(&new_sbom));
 
         // Compute only CRA Phase2 for the summary card; full compliance is lazy
         let old_cra_compliance =

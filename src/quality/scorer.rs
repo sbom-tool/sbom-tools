@@ -32,6 +32,8 @@ pub enum ScoringProfile {
     Cra,
     /// Comprehensive - all aspects equally weighted
     Comprehensive,
+    /// CBOM - cryptographic BOM focus (algorithm strength, PQC readiness, key/cert lifecycle)
+    Cbom,
 }
 
 impl ScoringProfile {
@@ -44,6 +46,7 @@ impl ScoringProfile {
             Self::Security => ComplianceLevel::NtiaMinimum,
             Self::Cra => ComplianceLevel::CraPhase2,
             Self::Comprehensive => ComplianceLevel::Comprehensive,
+            Self::Cbom => ComplianceLevel::Comprehensive,
         }
     }
 
@@ -112,6 +115,20 @@ impl ScoringProfile {
                 integrity: 0.12,
                 provenance: 0.13,
                 lifecycle: 0.12,
+            },
+            // CBOM slots are reinterpreted:
+            // completeness->CryptoCompl, identifiers->OIDs, licenses->AlgoStrength,
+            // vulnerabilities->CryptoRefs, dependencies->CryptoLifecycle,
+            // integrity->PQCReadiness, provenance->Provenance(std), lifecycle->Licenses(std)
+            Self::Cbom => ScoringWeights {
+                completeness: 0.15,
+                identifiers: 0.15,
+                licenses: 0.22,
+                vulnerabilities: 0.10,
+                dependencies: 0.13,
+                integrity: 0.15,
+                provenance: 0.08,
+                lifecycle: 0.02,
             },
         }
     }
@@ -398,33 +415,54 @@ impl QualityScorer {
         let lifecycle_score = lifecycle_metrics.quality_score();
         let cryptography_score = cryptography_metrics.quality_score();
 
-        // Determine which categories are available
-        let vuln_available = vulnerability_score.is_some();
-        let lifecycle_available = lifecycle_score.is_some();
-        let available = [
-            true,                // completeness
-            true,                // identifiers
-            true,                // licenses
-            vuln_available,      // vulnerabilities
-            true,                // dependencies
-            true,                // integrity
-            true,                // provenance
-            lifecycle_available, // lifecycle
-        ];
+        // For CBOM profile, substitute crypto-specific scores into the 8 slots
+        let is_cbom = self.profile == ScoringProfile::Cbom;
+        let (available, scores) = if is_cbom && cryptography_metrics.has_data() {
+            let cm = &cryptography_metrics;
+            (
+                [true; 8], // all categories available for CBOM
+                [
+                    cm.crypto_completeness_score(), // slot 1: Crpt
+                    cm.crypto_identifier_score(),   // slot 2: OIDs
+                    cm.algorithm_strength_score(),  // slot 3: Algo
+                    cm.crypto_dependency_score(),   // slot 4: Refs
+                    cm.crypto_lifecycle_score(),    // slot 5: Life
+                    cm.pqc_readiness_score(),       // slot 6: PQC
+                    provenance_score,               // slot 7: Prov (standard)
+                    license_score,                  // slot 8: Lic  (standard)
+                ],
+            )
+        } else {
+            // Standard SBOM scoring
+            let vuln_available = vulnerability_score.is_some();
+            let lifecycle_available = lifecycle_score.is_some();
+            (
+                [
+                    true,                // completeness
+                    true,                // identifiers
+                    true,                // licenses
+                    vuln_available,      // vulnerabilities
+                    true,                // dependencies
+                    true,                // integrity
+                    true,                // provenance
+                    lifecycle_available, // lifecycle
+                ],
+                [
+                    completeness_score,
+                    identifier_score,
+                    license_score,
+                    vulnerability_score.unwrap_or(0.0),
+                    dependency_score,
+                    integrity_score,
+                    provenance_score,
+                    lifecycle_score.unwrap_or(0.0),
+                ],
+            )
+        };
 
         // Calculate weighted overall score with N/A renormalization
         let weights = self.profile.weights();
         let norm = weights.renormalize(&available);
-        let scores = [
-            completeness_score,
-            identifier_score,
-            license_score,
-            vulnerability_score.unwrap_or(0.0),
-            dependency_score,
-            integrity_score,
-            provenance_score,
-            lifecycle_score.unwrap_or(0.0),
-        ];
 
         let mut overall_score: f32 = scores.iter().zip(norm.iter()).map(|(s, w)| s * w).sum();
         overall_score = overall_score.min(100.0);
@@ -435,6 +473,7 @@ impl QualityScorer {
             &lifecycle_metrics,
             &dependency_metrics,
             &hash_quality_metrics,
+            &cryptography_metrics,
             total_components,
         );
 
@@ -491,6 +530,7 @@ impl QualityScorer {
         lifecycle: &LifecycleMetrics,
         deps: &DependencyMetrics,
         hashes: &HashQualityMetrics,
+        crypto: &CryptographyMetrics,
         total_components: usize,
     ) -> f32 {
         let is_security_profile =
@@ -525,6 +565,19 @@ impl QualityScorer {
             && hashes.components_with_strong_hash == 0
         {
             score = score.min(89.0);
+        }
+
+        // CBOM-specific hard caps
+        if self.profile == ScoringProfile::Cbom && crypto.has_data() {
+            if crypto.weak_algorithm_count > 0 {
+                score = score.min(69.0);
+            }
+            if crypto.compromised_keys > 0 {
+                score = score.min(79.0);
+            }
+            if crypto.quantum_safe_count == 0 && crypto.algorithms_count > 0 {
+                score = score.min(79.0);
+            }
         }
 
         score
@@ -890,6 +943,7 @@ mod tests {
             ScoringProfile::LicenseCompliance,
             ScoringProfile::Cra,
             ScoringProfile::Comprehensive,
+            ScoringProfile::Cbom,
         ];
         for profile in &profiles {
             let w = profile.weights();
@@ -924,5 +978,36 @@ mod tests {
     #[test]
     fn test_scoring_engine_version() {
         assert_eq!(SCORING_ENGINE_VERSION, "2.0");
+    }
+
+    #[test]
+    fn cbom_hard_cap_weak_algorithms() {
+        use crate::model::{
+            AlgorithmProperties, CanonicalId, Component, ComponentType, CryptoAssetType,
+            CryptoPrimitive, CryptoProperties, NormalizedSbom,
+        };
+
+        let mut sbom = NormalizedSbom::default();
+        // Add a weak crypto component (MD5 algorithm)
+        let mut comp = Component::new("MD5".to_string(), "md5-ref".to_string());
+        comp.component_type = ComponentType::Cryptographic;
+        comp.crypto_properties = Some(
+            CryptoProperties::new(CryptoAssetType::Algorithm).with_algorithm_properties(
+                AlgorithmProperties::new(CryptoPrimitive::Hash)
+                    .with_algorithm_family("MD5".to_string())
+                    .with_nist_quantum_security_level(0),
+            ),
+        );
+        sbom.components
+            .insert(CanonicalId::from_name_version("md5", None), comp);
+
+        let scorer = QualityScorer::new(ScoringProfile::Cbom);
+        let report = scorer.score(&sbom);
+        // Weak algorithm → D max (69)
+        assert!(
+            report.overall_score <= 69.0,
+            "weak algo should cap at D, got {}",
+            report.overall_score
+        );
     }
 }

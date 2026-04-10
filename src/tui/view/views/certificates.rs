@@ -24,6 +24,18 @@ pub fn render_certificates(frame: &mut Frame, area: Rect, app: &ViewApp) {
         })
         .collect();
 
+    let mut certs = certs;
+    certs.sort_by(|a, b| {
+        let days_remaining = |c: &&crate::model::Component| -> i64 {
+            c.crypto_properties
+                .as_ref()
+                .and_then(|cp| cp.certificate_properties.as_ref())
+                .and_then(|cert| cert.validity_days())
+                .unwrap_or(i64::MAX)
+        };
+        days_remaining(a).cmp(&days_remaining(b)) // most urgent first
+    });
+
     if certs.is_empty() {
         let msg = Paragraph::new("No certificates found in this CBOM.")
             .block(
@@ -93,7 +105,9 @@ pub fn render_certificates(frame: &mut Frame, area: Rect, app: &ViewApp) {
     frame.render_widget(list, panels[0]);
 
     // ── Right: detail panel ──
-    let selected = app.crypto_list_selected.min(certs.len().saturating_sub(1));
+    let selected = app
+        .active_crypto_selected()
+        .min(certs.len().saturating_sub(1));
     let Some(comp) = certs.get(selected) else {
         frame.render_widget(
             Paragraph::new("No selection")

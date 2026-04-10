@@ -123,6 +123,9 @@ pub struct ViewApp {
     /// CBOM Protocols tab: selected index
     pub(crate) protocols_selected: usize,
 
+    /// CBOM Algorithms tab: sort order
+    pub(crate) algorithm_sort_by: AlgorithmSortBy,
+
     /// Bookmarked component canonical IDs (in-memory, no persistence)
     pub(crate) bookmarked: HashSet<String>,
 
@@ -141,7 +144,11 @@ impl ViewApp {
         let stats = SbomStats::from_sbom(&sbom);
 
         // Calculate quality score
-        let scorer = QualityScorer::new(ScoringProfile::Standard);
+        let scoring_profile = match bom_profile {
+            crate::model::BomProfile::Cbom => ScoringProfile::Cbom,
+            crate::model::BomProfile::Sbom => ScoringProfile::Standard,
+        };
+        let scorer = QualityScorer::new(scoring_profile);
         let quality_report = scorer.score(&sbom);
         let quality_state = QualityViewState::new(quality_report.recommendations.len());
 
@@ -207,6 +214,7 @@ impl ViewApp {
             certificates_selected: 0,
             keys_selected: 0,
             protocols_selected: 0,
+            algorithm_sort_by: AlgorithmSortBy::default(),
             bookmarked: HashSet::new(),
             export_template: None,
         };
@@ -2470,6 +2478,36 @@ impl VulnSortBy {
             Self::Cvss => "CVSS",
             Self::CveId => "CVE ID",
             Self::Component => "Component",
+        }
+    }
+}
+
+/// Sort order for the Algorithms tab.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) enum AlgorithmSortBy {
+    #[default]
+    Name,
+    Family,
+    QuantumLevel,
+    Strength,
+}
+
+impl AlgorithmSortBy {
+    pub const fn next(self) -> Self {
+        match self {
+            Self::Name => Self::Family,
+            Self::Family => Self::QuantumLevel,
+            Self::QuantumLevel => Self::Strength,
+            Self::Strength => Self::Name,
+        }
+    }
+
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Name => "Name",
+            Self::Family => "Family",
+            Self::QuantumLevel => "Quantum",
+            Self::Strength => "Strength",
         }
     }
 }

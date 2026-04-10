@@ -4,8 +4,8 @@
 //! and have no dependency on App or `ViewApp` state.
 
 use crate::quality::{
-    ComplexityLevel, DependencyMetrics, QualityGrade, QualityReport, RecommendationCategory,
-    SCORING_ENGINE_VERSION, ScoringProfile,
+    ComplexityLevel, CryptographyMetrics, DependencyMetrics, QualityGrade, QualityReport,
+    RecommendationCategory, SCORING_ENGINE_VERSION, ScoringProfile,
 };
 use crate::tui::theme::colors;
 use ratatui::{
@@ -31,6 +31,7 @@ pub const fn get_profile_weights(
         ScoringProfile::LicenseCompliance => (0.15, 0.12, 0.35, 0.05, 0.10, 0.05, 0.10, 0.08),
         ScoringProfile::Cra => (0.12, 0.18, 0.08, 0.15, 0.12, 0.12, 0.15, 0.08),
         ScoringProfile::Comprehensive => (0.15, 0.13, 0.13, 0.10, 0.12, 0.12, 0.13, 0.12),
+        ScoringProfile::Cbom => (0.15, 0.15, 0.22, 0.10, 0.13, 0.15, 0.08, 0.02),
     }
 }
 
@@ -527,101 +528,104 @@ pub fn render_quality_summary(
         .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
         .split(chunks[2]);
 
-    // Bar chart with 8 category scores
+    // Bar chart with 8 category scores (CBOM-aware)
     // Use max(1) so even 0% bars have a stub for the text_value to render on
-    let vuln_val = report.vulnerability_score.unwrap_or(0.0);
-    let vuln_is_na = report.vulnerability_score.is_none();
-    let lifecycle_val = report.lifecycle_score.unwrap_or(0.0);
-    let lifecycle_is_na = report.lifecycle_score.is_none();
+    let is_cbom = report.profile == ScoringProfile::Cbom;
+    let bars: Vec<Bar> = if is_cbom {
+        let cm = &report.cryptography_metrics;
+        let labels = CryptographyMetrics::cbom_category_labels();
+        let scores = [
+            cm.crypto_completeness_score(),
+            cm.crypto_identifier_score(),
+            cm.algorithm_strength_score(),
+            cm.crypto_dependency_score(),
+            cm.crypto_lifecycle_score(),
+            cm.pqc_readiness_score(),
+            report.provenance_score,
+            report.license_score,
+        ];
+        labels
+            .iter()
+            .zip(scores.iter())
+            .map(|(label, &score)| {
+                Bar::default()
+                    .value((score as u64).max(1))
+                    .label(Line::from(*label))
+                    .style(bar_grade_style(score))
+                    .text_value(format!("{}", score as u64))
+            })
+            .collect()
+    } else {
+        let vuln_val = report.vulnerability_score.unwrap_or(0.0);
+        let vuln_is_na = report.vulnerability_score.is_none();
+        let lifecycle_val = report.lifecycle_score.unwrap_or(0.0);
+        let lifecycle_is_na = report.lifecycle_score.is_none();
+        let sbom_labels = ["Cmpl", "IDs", "Lic", "VDoc", "Deps", "Hash", "Prov", "Life"];
+        let sbom_scores = [
+            report.completeness_score,
+            report.identifier_score,
+            report.license_score,
+            vuln_val,
+            report.dependency_score,
+            report.integrity_score,
+            report.provenance_score,
+            lifecycle_val,
+        ];
+        let na_flags = [
+            false,
+            false,
+            false,
+            vuln_is_na,
+            false,
+            false,
+            false,
+            lifecycle_is_na,
+        ];
+        sbom_labels
+            .iter()
+            .zip(sbom_scores.iter())
+            .zip(na_flags.iter())
+            .map(|((label, &score), &is_na)| {
+                if is_na {
+                    Bar::default()
+                        .value(1)
+                        .label(Line::styled(*label, Style::default().fg(scheme.muted)))
+                        .style(Style::default().fg(scheme.muted))
+                        .text_value("N/A".to_string())
+                } else {
+                    Bar::default()
+                        .value((score as u64).max(1))
+                        .label(Line::from(*label))
+                        .style(bar_grade_style(score))
+                        .text_value(format!("{}", score as u64))
+                }
+            })
+            .collect()
+    };
+
+    let chart_title = if is_cbom {
+        " CBOM Category Scores (passing: 70) "
+    } else {
+        " Category Scores (passing: 70) "
+    };
     let bar_chart = BarChart::default()
         .block(
             Block::default()
-                .title(" Category Scores (passing: 70) ")
+                .title(chart_title)
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(scheme.muted)),
         )
         .bar_width(6)
         .bar_gap(1)
         .value_style(Style::default().fg(Color::White).bold())
-        .data(
-            BarGroup::default().bars(&[
-                Bar::default()
-                    .value((report.completeness_score as u64).max(1))
-                    .label(Line::from("Cmpl"))
-                    .style(bar_grade_style(report.completeness_score))
-                    .text_value(format!("{}", report.completeness_score as u64)),
-                Bar::default()
-                    .value((report.identifier_score as u64).max(1))
-                    .label(Line::from("IDs"))
-                    .style(bar_grade_style(report.identifier_score))
-                    .text_value(format!("{}", report.identifier_score as u64)),
-                Bar::default()
-                    .value((report.license_score as u64).max(1))
-                    .label(Line::from("Lic"))
-                    .style(bar_grade_style(report.license_score))
-                    .text_value(format!("{}", report.license_score as u64)),
-                Bar::default()
-                    .value(if vuln_is_na {
-                        1
-                    } else {
-                        (vuln_val as u64).max(1)
-                    })
-                    .label(if vuln_is_na {
-                        Line::styled("VDoc", Style::default().fg(scheme.muted))
-                    } else {
-                        Line::from("VDoc")
-                    })
-                    .style(if vuln_is_na {
-                        Style::default().fg(scheme.muted)
-                    } else {
-                        bar_grade_style(vuln_val)
-                    })
-                    .text_value(if vuln_is_na {
-                        "N/A".to_string()
-                    } else {
-                        format!("{}", vuln_val as u64)
-                    }),
-                Bar::default()
-                    .value((report.dependency_score as u64).max(1))
-                    .label(Line::from("Deps"))
-                    .style(bar_grade_style(report.dependency_score))
-                    .text_value(format!("{}", report.dependency_score as u64)),
-                Bar::default()
-                    .value((report.integrity_score as u64).max(1))
-                    .label(Line::from("Hash"))
-                    .style(bar_grade_style(report.integrity_score))
-                    .text_value(format!("{}", report.integrity_score as u64)),
-                Bar::default()
-                    .value((report.provenance_score as u64).max(1))
-                    .label(Line::from("Prov"))
-                    .style(bar_grade_style(report.provenance_score))
-                    .text_value(format!("{}", report.provenance_score as u64)),
-                Bar::default()
-                    .value(if lifecycle_is_na {
-                        1
-                    } else {
-                        (lifecycle_val as u64).max(1)
-                    })
-                    .label(if lifecycle_is_na {
-                        Line::styled("Life", Style::default().fg(scheme.muted))
-                    } else {
-                        Line::from("Life")
-                    })
-                    .style(if lifecycle_is_na {
-                        Style::default().fg(scheme.muted)
-                    } else {
-                        bar_grade_style(lifecycle_val)
-                    })
-                    .text_value(if lifecycle_is_na {
-                        "N/A".to_string()
-                    } else {
-                        format!("{}", lifecycle_val as u64)
-                    }),
-            ]),
-        );
+        .data(BarGroup::default().bars(&bars));
     frame.render_widget(bar_chart, mid_chunks[0]);
 
-    render_completeness_checklist(frame, mid_chunks[1], report);
+    if is_cbom {
+        render_crypto_inventory(frame, mid_chunks[1], report);
+    } else {
+        render_completeness_checklist(frame, mid_chunks[1], report);
+    }
 
     // Bottom row: full-width recommendations
     render_top_recommendations(frame, chunks[3], report, selected_rec);
@@ -641,20 +645,36 @@ fn render_compact_header(frame: &mut Frame, area: Rect, report: &QualityReport) 
     let bar_str: String = "\u{2588}".repeat(filled) + &"\u{2591}".repeat(empty);
 
     // Identify strongest and weakest across all 8 categories
-    let mut scores = vec![
-        ("Completeness", report.completeness_score),
-        ("Identifiers", report.identifier_score),
-        ("Licenses", report.license_score),
-        ("Dependencies", report.dependency_score),
-        ("Integrity", report.integrity_score),
-        ("Provenance", report.provenance_score),
-    ];
-    if let Some(vs) = report.vulnerability_score {
-        scores.push(("Vuln Docs", vs));
-    }
-    if let Some(lc) = report.lifecycle_score {
-        scores.push(("Lifecycle", lc));
-    }
+    let is_cbom = report.profile == ScoringProfile::Cbom;
+    let scores: Vec<(&str, f32)> = if is_cbom {
+        let cm = &report.cryptography_metrics;
+        vec![
+            ("Crypto Compl", cm.crypto_completeness_score()),
+            ("OIDs", cm.crypto_identifier_score()),
+            ("Algo Strength", cm.algorithm_strength_score()),
+            ("Crypto Refs", cm.crypto_dependency_score()),
+            ("Crypto Life", cm.crypto_lifecycle_score()),
+            ("PQC Readiness", cm.pqc_readiness_score()),
+            ("Provenance", report.provenance_score),
+            ("Licenses", report.license_score),
+        ]
+    } else {
+        let mut s = vec![
+            ("Completeness", report.completeness_score),
+            ("Identifiers", report.identifier_score),
+            ("Licenses", report.license_score),
+            ("Dependencies", report.dependency_score),
+            ("Integrity", report.integrity_score),
+            ("Provenance", report.provenance_score),
+        ];
+        if let Some(vs) = report.vulnerability_score {
+            s.push(("Vuln Docs", vs));
+        }
+        if let Some(lc) = report.lifecycle_score {
+            s.push(("Lifecycle", lc));
+        }
+        s
+    };
     let strongest = scores
         .iter()
         .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
@@ -707,9 +727,14 @@ fn render_compact_header(frame: &mut Frame, area: Rect, report: &QualityReport) 
     }
     let line2 = Line::from(line2_spans);
 
+    let header_title = if is_cbom {
+        " CBOM Quality Score "
+    } else {
+        " SBOM Quality Score "
+    };
     let widget = Paragraph::new(vec![line1, line2]).block(
         Block::default()
-            .title(" SBOM Quality Score ")
+            .title(header_title)
             .title_style(Style::default().bold().fg(scheme.text))
             .borders(Borders::ALL)
             .border_style(Style::default().fg(gauge_color)),
@@ -886,6 +911,99 @@ fn render_insights_panel(frame: &mut Frame, area: Rect, report: &QualityReport) 
             .title(" Insights ")
             .borders(Borders::ALL)
             .border_style(Style::default().fg(scheme.info)),
+    );
+    frame.render_widget(widget, area);
+}
+
+/// Render a crypto asset inventory panel for CBOM mode.
+fn render_crypto_inventory(frame: &mut Frame, area: Rect, report: &QualityReport) {
+    let scheme = colors();
+    let cm = &report.cryptography_metrics;
+
+    let mut lines = vec![];
+
+    // Asset counts
+    lines.push(Line::from(vec![
+        Span::styled("  Algorithms:    ", Style::default().fg(scheme.text_muted)),
+        Span::styled(
+            format!("{}", cm.algorithms_count),
+            Style::default().fg(scheme.text).bold(),
+        ),
+    ]));
+    lines.push(Line::from(vec![
+        Span::styled("  Certificates:  ", Style::default().fg(scheme.text_muted)),
+        Span::styled(
+            format!("{}", cm.certificates_count),
+            Style::default().fg(scheme.text).bold(),
+        ),
+    ]));
+    lines.push(Line::from(vec![
+        Span::styled("  Keys:          ", Style::default().fg(scheme.text_muted)),
+        Span::styled(
+            format!("{}", cm.keys_count),
+            Style::default().fg(scheme.text).bold(),
+        ),
+    ]));
+    lines.push(Line::from(vec![
+        Span::styled("  Protocols:     ", Style::default().fg(scheme.text_muted)),
+        Span::styled(
+            format!("{}", cm.protocols_count),
+            Style::default().fg(scheme.text).bold(),
+        ),
+    ]));
+    lines.push(Line::from(""));
+
+    // PQC readiness percentage
+    let pqc_pct = cm.quantum_readiness_pct();
+    let pqc_color = if pqc_pct >= 80.0 {
+        scheme.success
+    } else if pqc_pct >= 40.0 {
+        scheme.warning
+    } else {
+        scheme.error
+    };
+    lines.push(Line::from(vec![
+        Span::styled("  PQC Ready:     ", Style::default().fg(scheme.text_muted)),
+        Span::styled(
+            format!("{pqc_pct:.0}%"),
+            Style::default().fg(pqc_color).bold(),
+        ),
+    ]));
+
+    // Warnings
+    if cm.weak_algorithm_count > 0 {
+        lines.push(Line::from(vec![
+            Span::styled("  \u{26a0} ", Style::default().fg(scheme.warning)),
+            Span::styled(
+                format!("{} weak algorithm(s)", cm.weak_algorithm_count),
+                Style::default().fg(scheme.warning),
+            ),
+        ]));
+    }
+    if cm.expired_certificates > 0 {
+        lines.push(Line::from(vec![
+            Span::styled("  \u{26a0} ", Style::default().fg(scheme.error)),
+            Span::styled(
+                format!("{} expired cert(s)", cm.expired_certificates),
+                Style::default().fg(scheme.error),
+            ),
+        ]));
+    }
+    if cm.compromised_keys > 0 {
+        lines.push(Line::from(vec![
+            Span::styled("  \u{26a0} ", Style::default().fg(scheme.error)),
+            Span::styled(
+                format!("{} compromised key(s)", cm.compromised_keys),
+                Style::default().fg(scheme.error),
+            ),
+        ]));
+    }
+
+    let widget = Paragraph::new(lines).block(
+        Block::default()
+            .title(" Crypto Inventory ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(scheme.accent)),
     );
     frame.render_widget(widget, area);
 }
