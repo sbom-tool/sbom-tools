@@ -5,21 +5,22 @@ sbom-tools follows a linear pipeline that normalizes inputs, performs semantic
 diffing and scoring, and renders the result through reports or the TUI.
 
 ```
-SBOM files
+SBOM/CBOM files
   -> parsers (CycloneDX/SPDX, streaming for large files)
-  -> NormalizedSbom (canonical model)
+  -> NormalizedSbom (canonical model, incl. CryptoProperties)
+  -> BomProfile detection (SBOM vs CBOM auto-detect)
   -> matching (PURL, alias, ecosystem, adaptive fuzzy, LSH index)
   -> diff engine (semantic + graph)
-  -> DiffResult / QualityReport
+  -> DiffResult / QualityReport (profile-aware: Standard or CBOM scoring)
   -> reports (json/sarif/html/markdown/csv/summary/table/side-by-side) or TUI
 ```
 
 ## Core Modules
 
-- **cli** (`src/cli/`): Clap command handlers for diff, view, validate, quality, query, diff-multi, timeline, matrix, completions, and config-schema.
+- **cli** (`src/cli/`): Clap command handlers for diff, view, validate, quality, query, diff-multi, timeline, matrix, watch, enrich, tailor, merge, license-check, verify, vex, completions, and config-schema.
 - **config** (`src/config/`): Typed configuration with YAML/JSON support, presets, validation, and schema generation.
 - **parsers** (`src/parsers/`): CycloneDX/SPDX format detection and parsing into NormalizedSbom. Includes a streaming parser for large files (>512MB) with progress callbacks.
-- **model** (`src/model/`): Canonical data model — NormalizedSbom, Component, CanonicalId, DocumentMetadata, Vulnerability, DependencyEdge, License.
+- **model** (`src/model/`): Canonical data model — NormalizedSbom, Component, CanonicalId, DocumentMetadata, Vulnerability, DependencyEdge, License, CryptoProperties, BomProfile. Includes CycloneDX 1.6/1.7 crypto types (CryptoAssetType, AlgorithmProperties, CertificateProperties, RelatedCryptoMaterialProperties, ProtocolProperties).
 - **matching** (`src/matching/`): Multi-tier fuzzy matching for component alignment.
   - Exact PURL match, alias lookup, ecosystem-specific normalization, string similarity (Jaro-Winkler, Levenshtein).
   - Adaptive thresholds that adjust based on score distribution.
@@ -27,10 +28,14 @@ SBOM files
   - Custom rule engine for user-defined matching rules.
 - **diff** (`src/diff/`): Semantic diff engine with graph-aware dependency diffing, incremental diff tracking, and cost-model scoring.
 - **enrichment** (`src/enrichment/`): OSV and KEV vulnerability database integration plus EOL detection via endoflife.date API (feature-gated behind `enrichment`). Includes file-based caching with TTL and staleness tracking.
-- **quality** (`src/quality/`): SBOM quality scoring and compliance checks against NTIA, FDA, CRA, NIST SSDF, and EO 14028 standards.
+- **quality** (`src/quality/`): 8-category quality scoring engine with profile-aware weights (Standard, Security, CRA, CBOM, etc.). CBOM profile scores algorithm strength, PQC readiness, OID coverage, crypto completeness, key/cert lifecycle, and cross-reference resolution with hard caps for broken cryptography. Compliance checks against 11 standards: NTIA, FDA, CRA Phase 1/2, NIST SSDF, EO 14028, CNSA 2.0, and NIST PQC (IR 8547).
 - **pipeline** (`src/pipeline/`): Orchestrates the parse → enrich → diff → report workflow. Handles stage sequencing and output routing.
 - **reports** (`src/reports/`): Report generators for JSON, SARIF, HTML, Markdown, CSV, summary, table, and side-by-side formats. Includes a streaming reporter for large outputs.
-- **tui** (`src/tui/`): Interactive ratatui-based UI for exploring diffs and single SBOMs. Supports diff mode, view mode, fleet comparison, and timeline views.
+- **tui** (`src/tui/`): Interactive ratatui-based UI for exploring diffs and single SBOMs/CBOMs. Supports diff mode, view mode (with SBOM/CBOM profile-driven tabs), fleet comparison, and timeline views. CBOM mode provides dedicated Algorithms, Certificates, Keys, Protocols, and PQC Compliance tabs with sorting and crypto inventory panels.
+- **verification** (`src/verification/`): File hash verification (SHA-256/512) and component hash auditing.
+- **license** (`src/license/`): License policy engine (allow/deny/review lists) with dependency propagation analysis.
+- **serialization** (`src/serialization/`): Raw JSON enrichment, SBOM tailoring (filter), and merging with deduplication.
+- **watch** (`src/watch/`): Continuous SBOM monitoring with file watcher, vulnerability alerts, and debounced change detection.
 
 ## Data Flow
 
@@ -104,13 +109,13 @@ responsible for calling it at the right time.
 
 ## TUI Architecture
 
-The TUI has two systems:
+The TUI has two independent app types:
 
-- **Legacy system** (`src/tui/views/`): Monolithic `App` struct holds all state. Each tab renders via functions in `views/*.rs` that take `&App` or `&mut App`. Event handling is a large match tree in `input.rs`. All tabs except Quality use this system.
+- **DiffApp** (`src/tui/app.rs`, `src/tui/views/`): Handles diff mode with `App` struct holding all state. Supports diff, multi-diff, timeline, and matrix modes across 12 tabs. Uses `ViewState` trait with per-tab state structs for all tabs.
 
-- **Modern system** (`src/tui/view/views/`): `ViewState` trait with per-tab state structs. Events return `EventResult` enums for navigation, overlays, status messages. Only the Quality tab uses this system as a proof-of-concept.
+- **ViewApp** (`src/tui/view/app.rs`, `src/tui/view/views/`): Handles single-SBOM/CBOM view mode. Profile-driven tab system via `ViewTab::tabs_for_profile(BomProfile)` — SBOM mode shows 8 tabs, CBOM mode shows 8 crypto-specific tabs. Quality scoring uses `ScoringProfile::Cbom` when CBOM is detected. Runtime toggle via `P` key re-scores with the selected profile.
 
-Both systems coexist. The `App` struct has a `quality_view: Option<QualityView>` field that dispatches to the modern system when present. Migration of remaining tabs to the `ViewState` trait is possible but not planned — the legacy system works and is well-tested.
+Both app types share rendering utilities in `src/tui/shared/` (quality charts, component info, theme) and use `RenderContext` for read-only frame preparation.
 
 ## Invariants and Conventions
 
@@ -127,13 +132,14 @@ Both systems coexist. The `App` struct has a `quality_view: Option<QualityView>`
 - **Matching rules**: Configurable matching behavior via YAML configs and custom rule engine.
 - **Enrichment**: OSV/KEV integration for vulnerability data and EOL detection via endoflife.date API (feature-gated).
 - **Reports**: Add new generators by implementing ReportGenerator.
-- **Compliance**: Add new standards by extending the quality scorer (currently: NTIA, FDA, CRA, NIST SSDF, EO 14028).
+- **Compliance**: Add new standards by extending the quality scorer (currently: NTIA, FDA, CRA Phase 1/2, NIST SSDF, EO 14028, CNSA 2.0, NIST PQC).
+- **CBOM Scoring**: Add new crypto quality categories by extending `CryptographyMetrics` and adding scoring methods. New `ScoringProfile` variants can define custom weight distributions.
+- **BOM Profiles**: Add new profile types beyond SBOM/CBOM by extending `BomProfile` enum and `tabs_for_profile()`.
 
 ## Known Technical Debt
 
 - Multi-SBOM fleet commands (diff-multi, timeline, matrix) bypass the pipeline (no enrichment, limited output formats). The `query` command supports enrichment.
 - Enrichment is orchestrated by CLI, not the pipeline module.
-- ~112 `unwrap()` calls across 27 files (most in non-production code: cache, parsers, config) and ~30 `expect()` calls (safe-by-construction).
-- 12 lock-poisoning patterns (`lock().unwrap()` / `lock().expect()`).
-- 45 integration tests across 7 test files in `tests/`.
-- TUI dual system (legacy + ViewState trait) — only Quality migrated.
+- TUI has two parallel app types (DiffApp for diff modes, ViewApp for view mode) — intentionally separate but share rendering utilities.
+- SPDX 3.0 parser does not extract crypto properties (CycloneDX-only for CBOM).
+- ~996 tests across 19 test suites (708 unit + 288 integration/doc).
