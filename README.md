@@ -5,7 +5,7 @@
 <h1 align="center">sbom-tools</h1>
 
 <p align="center">
-  Know exactly what changed in your software supply chain.
+  Know exactly what changed in your software supply chain — from components to cryptography.
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@
   <a href="https://scorecard.dev/viewer/?uri=github.com/sbom-tool/sbom-tools"><img src="https://api.scorecard.dev/projects/github.com/sbom-tool/sbom-tools/badge" alt="OpenSSF Scorecard"></a>
 </p>
 
-Semantic SBOM diff and analysis tool. Compare, validate, and assess the quality of SBOMs across CycloneDX and SPDX formats.
+Semantic SBOM/CBOM diff, quality scoring, and analysis tool. Compare, validate, and grade software and cryptographic bills of materials across CycloneDX and SPDX formats.
 
 ![sbom-tools diff summary](assets/tui-diff-summary.svg)
 
@@ -33,6 +33,9 @@ Semantic SBOM diff and analysis tool. Compare, validate, and assess the quality 
 - **Vulnerability Enrichment** — Integration with OSV and KEV databases to track new and resolved vulnerabilities, with VEX (Vulnerability Exploitability eXchange) overlay support (feature-gated)
 - **EOL Detection** — End-of-life status for components via endoflife.date API with TUI visualization and compliance integration (feature-gated)
 - **Quality Assessment** — Score SBOMs against compliance standards including NTIA, FDA, CRA (Cyber Resilience Act), NIST SSDF, and EO 14028, with quality delta tracking across versions
+- **CBOM Quality Scoring** — Grade cryptographic inventory health across 8 categories: algorithm strength, PQC readiness, OID coverage, crypto completeness, key/certificate lifecycle, and cross-reference resolution, with hard caps for broken cryptography and compromised keys
+- **PQC Compliance** — CNSA 2.0 (NSA) and NIST IR 8547 post-quantum cryptography compliance checking with per-algorithm PASS/FAIL assessment
+- **Cryptographic Inventory** — Parse CycloneDX 1.6/1.7 `cryptoProperties` (algorithms, certificates, keys, protocols) with auto-detection of CBOM vs SBOM profiles
 - **Fleet Comparison** — 1:N baseline comparison, timeline analysis across versions, and NxN matrix analysis, all with enrichment support
 - **Incremental Diff** — Section-selective recomputation for partial changes with cached matching results
 - **VEX Tracking** — Detect VEX state transitions (NotAffected → Affected) across SBOM versions, with `--fail-on-vex-gap` CI gate
@@ -71,7 +74,7 @@ Each pre-built archive is signed with [Sigstore](https://www.sigstore.dev/) and 
 # Verify Sigstore signature (requires cosign)
 cosign verify-blob \
   --bundle sbom-tools-macos-aarch64.tar.gz.bundle \
-  --certificate-identity 'https://github.com/sbom-tool/sbom-tools/.github/workflows/publish-crates.yml@refs/tags/v0.1.15' \
+  --certificate-identity 'https://github.com/sbom-tool/sbom-tools/.github/workflows/publish-crates.yml@refs/tags/v0.1.19' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   sbom-tools-macos-aarch64.tar.gz
 
@@ -80,7 +83,7 @@ gh attestation verify sbom-tools-macos-aarch64.tar.gz \
   --repo sbom-tool/sbom-tools
 ```
 
-Replace `v0.1.15` with the version you downloaded. Homebrew users do not need to verify manually — Homebrew validates the source tarball SHA256 automatically.
+Replace `v0.1.19` with the version you downloaded. Homebrew users do not need to verify manually — Homebrew validates the source tarball SHA256 automatically.
 
 ### From crates.io
 
@@ -308,6 +311,12 @@ sbom-tools timeline v1.json v2.json v3.json --enrich-vulns
 
 # Enrich an SBOM with vulnerability + EOL data
 sbom-tools enrich app.cdx.json --enrich-vulns --enrich-eol -O enriched.json
+
+# Grade cryptographic inventory quality
+sbom-tools quality cbom.cdx.json --profile cbom
+
+# View CBOM with crypto-specific tabs
+sbom-tools view cbom.cdx.json --bom-type cbom
 ```
 
 ### Diff
@@ -387,6 +396,7 @@ Launches an interactive TUI with component tree, vulnerability details, license 
 | `--ecosystem <name>` | Filter components by ecosystem (e.g., `npm`, `cargo`, `pypi`) |
 | `--enrich-eol` | Detect end-of-life status via endoflife.date API |
 | `--validate-ntia` | Validate against NTIA minimum elements |
+| `--bom-type <type>` | BOM type override (`sbom`, `cbom`). Auto-detected from content if omitted |
 
 </details>
 
@@ -422,7 +432,7 @@ Scores an SBOM from 0–100 using a weighted profile. Use `--min-score` to fail 
 
 | Flag | Description |
 |------|-------------|
-| `--profile <name>` | Scoring profile: `minimal`, `standard` (default), `security`, `license-compliance`, `cra`, `comprehensive` |
+| `--profile <name>` | Scoring profile: `minimal`, `standard` (default), `security`, `license-compliance`, `cra`, `comprehensive`, `cbom` |
 | `--min-score <n>` | Fail if quality score is below threshold (0–100) |
 | `--recommendations` | Show detailed improvement recommendations |
 | `--metrics` | Show detailed scoring metrics |
@@ -558,7 +568,7 @@ Compare two SBOMs with semantic change detection across 9 tabs.
 
 ### View Mode
 
-Explore a single SBOM interactively across 8 tabs.
+Explore a single SBOM or CBOM interactively. SBOM mode shows 8 tabs (Overview, Tree, Vulnerabilities, Licenses, Dependencies, Quality, Compliance, Source). CBOM mode auto-detects and shows crypto-specific tabs (Overview, Algorithms, Certificates, Keys, Protocols, Quality, PQC Compliance, Source). Press `P` to toggle between modes.
 
 **Overview** — SBOM metadata, component statistics, and vulnerability summary.
 
@@ -590,8 +600,9 @@ Explore a single SBOM interactively across 8 tabs.
 | `Enter` / `Space` | Expand / collapse |
 | `/` | Search |
 | `f` | Filter panel |
-| `s` | Sync panels (Source) / sort |
+| `s` | Sync panels (Source) / sort (Algorithms, Vulnerabilities) |
 | `w` | Switch focus (Source, Side-by-Side) |
+| `P` | Toggle SBOM/CBOM profile |
 | `v` | Tree / raw toggle (Source) |
 | `e` | Export |
 | `T` | Cycle theme |
@@ -790,7 +801,7 @@ src/
 ├── matching/     Multi-tier fuzzy matching (PURL, alias, ecosystem, adaptive, LSH)
 ├── diff/         Semantic diffing engine with graph support + incremental section-selective diff
 ├── enrichment/   OSV/KEV vulnerability data + EOL detection + VEX (feature-gated)
-├── quality/      8-category scoring engine + 9 compliance standards (NTIA/FDA/CRA/SSDF/EO 14028)
+├── quality/      8-category scoring engine + CBOM crypto scoring profile + 11 compliance standards (NTIA/FDA/CRA/SSDF/EO 14028/CNSA 2.0/NIST PQC)
 ├── pipeline/     parse → enrich → diff → report orchestration + shared enrichment pipeline
 ├── reports/      9 output format generators + streaming reporter
 ├── verification/ File hash verification + component hash auditing
