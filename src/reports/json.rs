@@ -2,9 +2,9 @@
 
 use super::{ReportConfig, ReportError, ReportFormat, ReportGenerator, ReportType};
 use crate::diff::DiffResult;
-use crate::model::NormalizedSbom;
+use crate::model::{Component, NormalizedSbom, VulnerabilityRef};
 use crate::quality::{ComplianceChecker, ComplianceLevel, ComplianceResult};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 
 /// JSON report generator
@@ -172,6 +172,46 @@ impl ReportGenerator for JsonReporter {
             .unwrap_or_else(|| ComplianceChecker::new(ComplianceLevel::CraPhase2).check(sbom));
         let compliance = CraComplianceDetail::from_result(cra_result);
 
+        let direct_ids = sbom.direct_dependency_ids();
+        let primary_id = sbom.primary_component_id.as_ref();
+
+        let components: Vec<ComponentView> = sbom
+            .components
+            .values()
+            .map(|c| {
+                let kind = classify_dependency(&c.canonical_id, primary_id, &direct_ids);
+                ComponentView {
+                    name: c.name.clone(),
+                    version: c.version.clone(),
+                    ecosystem: c.ecosystem.as_ref().map(std::string::ToString::to_string),
+                    licenses: c
+                        .licenses
+                        .declared
+                        .iter()
+                        .map(|l| l.expression.clone())
+                        .collect(),
+                    supplier: c.supplier.as_ref().map(|s| s.name.clone()),
+                    dependency_kind: kind,
+                    vulnerability_count: c.vulnerabilities.len(),
+                    vulnerabilities: c.vulnerabilities.iter().map(VulnerabilityView::from).collect(),
+                    eol_status: c.eol.as_ref().map(|e| e.status.label().to_string()),
+                    eol_date: c
+                        .eol
+                        .as_ref()
+                        .and_then(|e| e.eol_date.map(|d| d.to_string())),
+                    eol_product: c.eol.as_ref().map(|e| e.product.clone()),
+                }
+            })
+            .collect();
+
+        let mut vulnerabilities: Vec<FlatVulnerabilityView> = Vec::new();
+        for comp in sbom.components.values() {
+            let kind = classify_dependency(&comp.canonical_id, primary_id, &direct_ids);
+            for v in &comp.vulnerabilities {
+                vulnerabilities.push(FlatVulnerabilityView::from_pair(comp, v, kind));
+            }
+        }
+
         let report = JsonViewReport {
             metadata: JsonViewMetadata {
                 tool: ToolInfo {
@@ -196,29 +236,8 @@ impl ReportGenerator for JsonReporter {
                 vulnerability_counts: sbom.vulnerability_counts(),
             },
             compliance,
-            components: sbom
-                .components
-                .values()
-                .map(|c| ComponentView {
-                    name: c.name.clone(),
-                    version: c.version.clone(),
-                    ecosystem: c.ecosystem.as_ref().map(std::string::ToString::to_string),
-                    licenses: c
-                        .licenses
-                        .declared
-                        .iter()
-                        .map(|l| l.expression.clone())
-                        .collect(),
-                    supplier: c.supplier.as_ref().map(|s| s.name.clone()),
-                    vulnerabilities: c.vulnerabilities.len(),
-                    eol_status: c.eol.as_ref().map(|e| e.status.label().to_string()),
-                    eol_date: c
-                        .eol
-                        .as_ref()
-                        .and_then(|e| e.eol_date.map(|d| d.to_string())),
-                    eol_product: c.eol.as_ref().map(|e| e.product.clone()),
-                })
-                .collect(),
+            components,
+            vulnerabilities,
         };
 
         let json = if self.pretty {
@@ -463,6 +482,10 @@ struct JsonViewReport {
     summary: ViewSummary,
     compliance: CraComplianceDetail,
     components: Vec<ComponentView>,
+    /// Flattened list of every vulnerability across all components,
+    /// annotated with the package it affects and whether that package is
+    /// a direct or transitive dependency of the primary component.
+    vulnerabilities: Vec<FlatVulnerabilityView>,
 }
 
 #[derive(Serialize)]
@@ -487,11 +510,165 @@ struct ComponentView {
     ecosystem: Option<String>,
     licenses: Vec<String>,
     supplier: Option<String>,
-    vulnerabilities: usize,
+    /// "primary", "direct", or "transitive" relative to the SBOM's primary component.
+    dependency_kind: DependencyKind,
+    /// Number of vulnerabilities affecting this component.
+    vulnerability_count: usize,
+    /// Structured vulnerability details (empty when none).
+    vulnerabilities: Vec<VulnerabilityView>,
     #[serde(skip_serializing_if = "Option::is_none")]
     eol_status: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     eol_date: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     eol_product: Option<String>,
+}
+
+#[derive(Serialize, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+enum DependencyKind {
+    Primary,
+    Direct,
+    Transitive,
+}
+
+fn classify_dependency(
+    id: &crate::model::CanonicalId,
+    primary: Option<&crate::model::CanonicalId>,
+    direct: &std::collections::HashSet<crate::model::CanonicalId>,
+) -> DependencyKind {
+    if primary == Some(id) {
+        DependencyKind::Primary
+    } else if direct.contains(id) {
+        DependencyKind::Direct
+    } else {
+        DependencyKind::Transitive
+    }
+}
+
+/// Per-component vulnerability detail (used both in `components[].vulnerabilities`
+/// and as the body of `vulnerabilities[]` at the top level of the view report).
+#[derive(Serialize, Clone)]
+struct VulnerabilityView {
+    /// Vulnerability identifier (CVE, GHSA, OSV, etc.).
+    id: String,
+    /// Source database (NVD, OSV, GHSA, ...).
+    source: String,
+    /// Severity label ("Critical", "High", ...) when known.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    severity: Option<String>,
+    /// Highest CVSS base score across attached CVSS records.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cvss_score: Option<f32>,
+    /// CVSS vector string of the highest-scoring record, if any.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cvss_vector: Option<String>,
+    /// First non-empty fixed version reported across the vulnerability's
+    /// remediation records, when available.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    fixed_version: Option<String>,
+    /// CWE identifiers.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    cwes: Vec<String>,
+    /// `true` when listed in CISA's Known Exploited Vulnerabilities catalog.
+    kev: bool,
+    /// KEV catalog metadata (due date, ransomware flag, ...).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    kev_info: Option<KevInfoView>,
+    /// VEX status when an applicable VEX statement is attached.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    vex_status: Option<String>,
+    /// Short description, when supplied by the source.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    description: Option<String>,
+    /// Publication date (RFC 3339), when supplied.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    published: Option<String>,
+    /// Last-modified date (RFC 3339), when supplied.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    modified: Option<String>,
+}
+
+#[derive(Serialize, Clone)]
+struct KevInfoView {
+    date_added: String,
+    due_date: String,
+    known_ransomware_use: bool,
+}
+
+impl From<&VulnerabilityRef> for VulnerabilityView {
+    fn from(v: &VulnerabilityRef) -> Self {
+        let (cvss_score, cvss_vector) = v
+            .cvss
+            .iter()
+            .max_by(|a, b| {
+                a.base_score
+                    .partial_cmp(&b.base_score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .map_or((None, None), |c| (Some(c.base_score), c.vector.clone()));
+
+        Self {
+            id: v.id.clone(),
+            source: v.source.to_string(),
+            severity: v.severity.as_ref().map(ToString::to_string),
+            cvss_score,
+            cvss_vector,
+            fixed_version: v
+                .remediation
+                .as_ref()
+                .and_then(|r| r.fixed_version.clone()),
+            cwes: v.cwes.clone(),
+            kev: v.is_kev,
+            kev_info: v.kev_info.as_ref().map(|k| KevInfoView {
+                date_added: rfc3339(k.date_added),
+                due_date: rfc3339(k.due_date),
+                known_ransomware_use: k.known_ransomware_use,
+            }),
+            vex_status: v.vex_status.as_ref().map(|s| format!("{s:?}")),
+            description: v.description.clone(),
+            published: v.published.map(rfc3339),
+            modified: v.modified.map(rfc3339),
+        }
+    }
+}
+
+fn rfc3339(dt: DateTime<Utc>) -> String {
+    dt.to_rfc3339()
+}
+
+/// Top-level flattened vulnerability entry: a `VulnerabilityView` joined with
+/// the affected package, so consumers can iterate vulnerabilities without
+/// walking the components array.
+#[derive(Serialize)]
+struct FlatVulnerabilityView {
+    /// Vulnerability details.
+    #[serde(flatten)]
+    vuln: VulnerabilityView,
+    /// Affected package name.
+    package: String,
+    /// Affected package version, when known.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    package_version: Option<String>,
+    /// Ecosystem of the affected package, when known.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ecosystem: Option<String>,
+    /// Direct/transitive classification of the affected package.
+    dependency_kind: DependencyKind,
+    /// Convenience boolean — `true` when `dependency_kind` is `direct` or `primary`.
+    is_direct: bool,
+}
+
+impl FlatVulnerabilityView {
+    fn from_pair(comp: &Component, v: &VulnerabilityRef, kind: DependencyKind) -> Self {
+        let is_direct = matches!(kind, DependencyKind::Direct | DependencyKind::Primary);
+        Self {
+            vuln: VulnerabilityView::from(v),
+            package: comp.name.clone(),
+            package_version: comp.version.clone(),
+            ecosystem: comp.ecosystem.as_ref().map(ToString::to_string),
+            dependency_kind: kind,
+            is_direct,
+        }
+    }
 }
