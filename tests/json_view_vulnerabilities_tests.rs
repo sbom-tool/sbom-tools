@@ -34,8 +34,8 @@ fn base_document_metadata() -> DocumentMetadata {
 }
 
 fn vulnerable_component(name: &str, version: &str, vuln_id: &str) -> Component {
-    let mut comp = Component::new(name.to_string(), format!("{name}-ref"))
-        .with_version(version.to_string());
+    let mut comp =
+        Component::new(name.to_string(), format!("{name}-ref")).with_version(version.to_string());
 
     let mut v = VulnerabilityRef::new(vuln_id.to_string(), VulnerabilitySource::Osv);
     v.severity = Some(Severity::High);

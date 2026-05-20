@@ -193,7 +193,11 @@ impl ReportGenerator for JsonReporter {
                     supplier: c.supplier.as_ref().map(|s| s.name.clone()),
                     dependency_kind: kind,
                     vulnerability_count: c.vulnerabilities.len(),
-                    vulnerabilities: c.vulnerabilities.iter().map(VulnerabilityView::from).collect(),
+                    vulnerabilities: c
+                        .vulnerabilities
+                        .iter()
+                        .map(VulnerabilityView::from)
+                        .collect(),
                     eol_status: c.eol.as_ref().map(|e| e.status.label().to_string()),
                     eol_date: c
                         .eol
@@ -614,10 +618,7 @@ impl From<&VulnerabilityRef> for VulnerabilityView {
             severity: v.severity.as_ref().map(ToString::to_string),
             cvss_score,
             cvss_vector,
-            fixed_version: v
-                .remediation
-                .as_ref()
-                .and_then(|r| r.fixed_version.clone()),
+            fixed_version: v.remediation.as_ref().and_then(|r| r.fixed_version.clone()),
             cwes: v.cwes.clone(),
             kev: v.is_kev,
             kev_info: v.kev_info.as_ref().map(|k| KevInfoView {
