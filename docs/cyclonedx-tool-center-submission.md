@@ -52,7 +52,7 @@ Save as `tools/sbom_tools.json`:
     "publisher": "sbom-tool",
     "description": "Semantic SBOM diff and analysis tool for CycloneDX and SPDX. Compares SBOMs, enriches with vulnerability and EOL data, scores quality, checks compliance, and supports continuous watch monitoring.",
     "repository_url": "https://github.com/sbom-tool/sbom-tools",
-    "website_url": "https://github.com/sbom-tool/sbom-tools",
+    "website_url": "https://sbom.tools",
     "capabilities": [
       "SBOM",
       "VDR/VEX"
@@ -124,8 +124,9 @@ Save as `tools/sbom_tools.json`:
 
 ### Notes before submitting
 
-- **Verify `repository_url`/`website_url`.** Both point at the GitHub repo above —
-  change them if a project website or a different canonical repo exists.
+- **Verify `repository_url`/`website_url`.** `repository_url` is the GitHub repo
+  above; `website_url` is <https://sbom.tools>. Update either if the canonical
+  locations change.
 - **`supportedLanguages` is intentionally omitted.** That field means the *ecosystems
   the tool analyzes*, not the tool's own language. sbom-tools is format- and
   ecosystem-agnostic, so leaving it empty is more accurate than enumerating languages.
