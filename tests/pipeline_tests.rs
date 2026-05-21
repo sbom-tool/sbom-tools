@@ -120,6 +120,8 @@ mod parse_stage {
 
 mod diff_stage {
     use super::*;
+    use sbom_tools::diff::DiffEngine;
+    use sbom_tools::model::{Component, DocumentMetadata, NormalizedSbom};
 
     fn demo_diff_config(old: &str, new: &str) -> sbom_tools::DiffConfig {
         DiffConfigBuilder::new()
@@ -128,6 +130,21 @@ mod diff_stage {
             .output_format(ReportFormat::Json)
             .build()
             .expect("valid config")
+    }
+
+    fn synthetic_sbom(range: std::ops::Range<usize>, version: &str) -> NormalizedSbom {
+        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+
+        for index in range {
+            let component = Component::new(
+                format!("component-{index}"),
+                format!("component-{index}-ref"),
+            )
+            .with_version(version.to_string());
+            sbom.add_component(component);
+        }
+
+        sbom
     }
 
     #[test]
@@ -168,6 +185,10 @@ mod diff_stage {
             result.summary.total_changes, 0,
             "Identical SBOMs should have no changes"
         );
+        assert_eq!(
+            result.semantic_score, 100.0,
+            "Identical SBOMs should report full similarity"
+        );
     }
 
     #[test]
@@ -189,6 +210,70 @@ mod diff_stage {
         assert!(
             result.semantic_score > 0.0,
             "Cross-format diff should find some similarity"
+        );
+    }
+
+    #[test]
+    fn compute_diff_large_change_set_stays_within_similarity_bounds() {
+        let old = synthetic_sbom(0..138, "1.0.0");
+        let mut new = synthetic_sbom(26..138, "1.0.0");
+
+        for index in 26..60 {
+            let updated = Component::new(
+                format!("component-{index}"),
+                format!("component-{index}-ref"),
+            )
+            .with_version("2.0.0".to_string());
+            new.add_component(updated);
+        }
+
+        let result = DiffEngine::new().diff(&old, &new).expect("diff should succeed");
+
+        assert!(
+            (0.0..=100.0).contains(&result.semantic_score),
+            "similarity should stay within 0..=100, got {}",
+            result.semantic_score
+        );
+        assert!(
+            result.semantic_score < 100.0,
+            "large change sets should not report perfect similarity"
+        );
+    }
+
+    #[test]
+    fn compute_diff_similarity_is_bounded_in_both_directions() {
+        let old = synthetic_sbom(0..138, "1.0.0");
+        let mut new = synthetic_sbom(26..138, "1.0.0");
+
+        for index in 26..60 {
+            let updated = Component::new(
+                format!("component-{index}"),
+                format!("component-{index}-ref"),
+            )
+            .with_version("2.0.0".to_string());
+            new.add_component(updated);
+        }
+
+        let forward = DiffEngine::new().diff(&old, &new).expect("forward diff should succeed");
+        let reverse = DiffEngine::new().diff(&new, &old).expect("reverse diff should succeed");
+
+        for (label, score) in [
+            ("forward", forward.semantic_score),
+            ("reverse", reverse.semantic_score),
+        ] {
+            assert!(
+                (0.0..=100.0).contains(&score),
+                "{label} similarity should stay within 0..=100, got {score}"
+            );
+            assert!(
+                score < 100.0,
+                "{label} large change set should not report perfect similarity"
+            );
+        }
+
+        assert!(
+            (forward.semantic_score - reverse.semantic_score).abs() < f64::EPSILON,
+            "similarity should be direction-independent for symmetric change costs"
         );
     }
 

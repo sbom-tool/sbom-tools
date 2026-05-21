@@ -134,6 +134,7 @@ impl DiffEngine {
 
         // Quick check: if content hashes match, SBOMs are identical
         if old.content_hash == new.content_hash && old.content_hash != 0 {
+            result.semantic_score = 100.0;
             return Ok(result);
         }
 
@@ -220,7 +221,7 @@ impl DiffEngine {
         }
 
         // Calculate semantic score
-        result.semantic_score = self.compute_semantic_score(&result);
+        result.semantic_score = self.compute_semantic_score(&result, old, new);
 
         result.calculate_summary();
         Ok(result)
@@ -398,14 +399,20 @@ impl DiffEngine {
         }
 
         // Always recompute summary and semantic score since they depend on all sections
-        result.semantic_score = self.compute_semantic_score(&result);
+        result.semantic_score =
+            self.compute_semantic_score(&result, &old_filtered, &new_filtered);
         result.calculate_summary();
         Ok(result)
     }
 
     /// Compute the semantic score from a `DiffResult`.
-    fn compute_semantic_score(&self, result: &DiffResult) -> f64 {
-        self.cost_model.calculate_semantic_score(
+    fn compute_semantic_score(
+        &self,
+        result: &DiffResult,
+        old_sbom: &NormalizedSbom,
+        new_sbom: &NormalizedSbom,
+    ) -> f64 {
+        let raw_cost = self.cost_model.calculate_semantic_score(
             result.components.added.len(),
             result.components.removed.len(),
             result.components.modified.len(),
@@ -414,7 +421,42 @@ impl DiffEngine {
             result.vulnerabilities.resolved.len(),
             result.dependencies.added.len(),
             result.dependencies.removed.len(),
-        )
+        );
+
+        self.normalize_semantic_score(raw_cost, result, old_sbom, new_sbom)
+    }
+
+    fn normalize_semantic_score(
+        &self,
+        raw_cost: f64,
+        result: &DiffResult,
+        old_sbom: &NormalizedSbom,
+        new_sbom: &NormalizedSbom,
+    ) -> f64 {
+        let component_budget = (old_sbom.component_count() + new_sbom.component_count()) as f64
+            * f64::from(self.cost_model.component_added.max(self.cost_model.component_removed));
+        let dependency_budget = (old_sbom.edges.len() + new_sbom.edges.len()) as f64
+            * f64::from(self.cost_model.dependency_added.max(self.cost_model.dependency_removed));
+        let vulnerability_budget = (old_sbom.vulnerability_counts().total()
+            + new_sbom.vulnerability_counts().total()) as f64
+            * f64::from(self.cost_model.vulnerability_introduced);
+        let modification_budget = result.components.modified.len() as f64
+            * f64::from(
+                self.cost_model
+                    .version_major
+                    .max(self.cost_model.license_changed),
+            );
+
+        let total_budget = component_budget
+            + dependency_budget
+            + vulnerability_budget
+            + modification_budget;
+
+        if total_budget <= f64::EPSILON {
+            return 100.0;
+        }
+
+        (100.0 * (1.0 - (raw_cost / total_budget))).clamp(0.0, 100.0)
     }
 }
 
