@@ -660,16 +660,37 @@ fn write_cra_compliance_diff_html(
     write_conformity_assessment_html(html, new)?;
     write_reporting_channels_html(html, new)?;
 
-    if !new.violations.is_empty() {
-        writeln!(html, "    <h3>Violations (New SBOM)</h3>")?;
-        write_violation_table_html(html, &new.violations)?;
-    }
+    write_compact_diff_violation_summary_html(html, new)?;
 
     writeln!(html, "</div>")?;
     writeln!(
         html,
         "<a href=\"#top\" class=\"back-to-top\">Back to top</a>"
     )
+}
+
+fn write_compact_diff_violation_summary_html(
+    html: &mut String,
+    result: &ComplianceResult,
+) -> std::fmt::Result {
+    if result.violations.is_empty() {
+        return Ok(());
+    }
+
+    let aggregated = aggregate_violations_html(&result.violations);
+    writeln!(html, "    <h3>Violation Summary (New SBOM)</h3>")?;
+    writeln!(
+        html,
+        "    <p>{} total findings across {} distinct requirement groups.</p>",
+        result.violations.len(),
+        aggregated.len()
+    )?;
+    writeln!(
+        html,
+        "    <p><em>Use sbom-tools view or JSON/SARIF output for full CRA violation detail.</em></p>"
+    )?;
+
+    Ok(())
 }
 
 /// Write a CRA compliance section for view reports.

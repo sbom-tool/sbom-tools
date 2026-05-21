@@ -812,11 +812,31 @@ fn write_cra_compliance_diff(
     // Reporting channels (CRA Art. 14) — derived from new SBOM violations
     write_reporting_channels_md(md, new)?;
 
-    // Show new SBOM violations if any
-    if !new.violations.is_empty() {
-        writeln!(md, "### Violations (New SBOM)\n")?;
-        write_violation_table(md, &new.violations)?;
+    write_compact_diff_violation_summary(md, new)?;
+
+    Ok(())
+}
+
+fn write_compact_diff_violation_summary(
+    md: &mut String,
+    result: &ComplianceResult,
+) -> std::fmt::Result {
+    if result.violations.is_empty() {
+        return Ok(());
     }
+
+    let aggregated = aggregate_violations(&result.violations);
+    writeln!(md, "### Violation Summary (New SBOM)\n")?;
+    writeln!(
+        md,
+        "- {} total findings across {} distinct requirement groups.",
+        result.violations.len(),
+        aggregated.len()
+    )?;
+    writeln!(
+        md,
+        "- Use `sbom-tools view ... -o markdown|html` or JSON/SARIF output for full CRA violation detail.\n"
+    )?;
 
     Ok(())
 }

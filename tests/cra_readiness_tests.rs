@@ -11,7 +11,9 @@ use sbom_tools::parsers::parse_sbom_str;
 use sbom_tools::quality::{
     ComplianceChecker, ComplianceLevel, ViolationCategory, ViolationSeverity,
 };
-use sbom_tools::reports::{JsonReporter, ReportConfig, ReportGenerator, SarifReporter};
+use sbom_tools::reports::{
+    HtmlReporter, JsonReporter, MarkdownReporter, ReportConfig, ReportGenerator, SarifReporter,
+};
 
 fn base_document_metadata() -> DocumentMetadata {
     DocumentMetadata {
@@ -255,4 +257,83 @@ fn diff_reports_include_cra_compliance() {
             .map(|s| s.starts_with("SBOM-CRA-"))
             .unwrap_or(false)
     }));
+}
+
+#[test]
+fn diff_markdown_and_html_reports_compact_cra_details() {
+    let old_doc = base_document_metadata();
+    let new_doc = base_document_metadata();
+
+    let mut old_sbom = NormalizedSbom::new(old_doc);
+    old_sbom.add_component(cra_ready_component("lib-old"));
+    old_sbom.calculate_content_hash();
+
+    let mut new_sbom = NormalizedSbom::new(new_doc);
+    for index in 0..40 {
+        let comp = Component::new(format!("lib-{index}"), format!("lib-{index}-ref"));
+        new_sbom.add_component(comp);
+    }
+    new_sbom.calculate_content_hash();
+
+    let diff = DiffEngine::new()
+        .diff(&old_sbom, &new_sbom)
+        .expect("diff should succeed");
+    let config = ReportConfig::default();
+
+    let markdown = MarkdownReporter::new()
+        .generate_diff_report(&diff, &old_sbom, &new_sbom, &config)
+        .expect("Markdown diff report failed");
+    assert!(markdown.contains("## CRA Compliance"));
+    assert!(markdown.contains("### Violation Summary (New SBOM)"));
+    assert!(markdown.contains("full CRA violation detail"));
+    assert!(!markdown.contains("### Violations (New SBOM)"));
+    assert!(!markdown.contains("| Severity | Category | Standard refs | Requirement | Message | Remediation |"));
+
+    let html = HtmlReporter::new()
+        .generate_diff_report(&diff, &old_sbom, &new_sbom, &config)
+        .expect("HTML diff report failed");
+    assert!(html.contains("<h2>CRA Compliance</h2>"));
+    assert!(html.contains("Violation Summary (New SBOM)"));
+    assert!(html.contains("full CRA violation detail"));
+    assert!(!html.contains("Violations (New SBOM)</h3>"));
+    assert!(!html.contains("<th>Severity</th>"));
+}
+
+#[test]
+fn diff_markdown_and_html_reports_stay_compact_in_both_directions() {
+    let old_doc = base_document_metadata();
+    let new_doc = base_document_metadata();
+
+    let mut old_sbom = NormalizedSbom::new(old_doc);
+    old_sbom.add_component(cra_ready_component("lib-old"));
+    old_sbom.calculate_content_hash();
+
+    let mut new_sbom = NormalizedSbom::new(new_doc);
+    for index in 0..40 {
+        let comp = Component::new(format!("lib-{index}"), format!("lib-{index}-ref"));
+        new_sbom.add_component(comp);
+    }
+    new_sbom.calculate_content_hash();
+
+    let config = ReportConfig::default();
+
+    for (from, to) in [(&old_sbom, &new_sbom), (&new_sbom, &old_sbom)] {
+        let diff = DiffEngine::new()
+            .diff(from, to)
+            .expect("diff should succeed in either direction");
+
+        let markdown = MarkdownReporter::new()
+            .generate_diff_report(&diff, from, to, &config)
+            .expect("Markdown diff report failed");
+        assert!(markdown.contains("### Violation Summary (New SBOM)"));
+        assert!(!markdown.contains("### Violations (New SBOM)"));
+        assert!(!markdown.contains("| Severity | Category | Standard refs | Requirement | Message | Remediation |"));
+
+        let html = HtmlReporter::new()
+            .generate_diff_report(&diff, from, to, &config)
+            .expect("HTML diff report failed");
+        assert!(html.contains("Violation Summary (New SBOM)"));
+        assert!(!html.contains("Violations (New SBOM)</h3>"));
+        assert!(!html.contains("<th>Severity</th>"));
+    }
 }
