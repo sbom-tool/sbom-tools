@@ -287,7 +287,11 @@ fn diff_markdown_and_html_reports_compact_cra_details() {
     assert!(markdown.contains("### Violation Summary (New SBOM)"));
     assert!(markdown.contains("full CRA violation detail"));
     assert!(!markdown.contains("### Violations (New SBOM)"));
-    assert!(!markdown.contains("| Severity | Category | Standard refs | Requirement | Message | Remediation |"));
+    assert!(
+        !markdown.contains(
+            "| Severity | Category | Standard refs | Requirement | Message | Remediation |"
+        )
+    );
 
     let html = HtmlReporter::new()
         .generate_diff_report(&diff, &old_sbom, &new_sbom, &config)
@@ -327,7 +331,9 @@ fn diff_markdown_and_html_reports_stay_compact_in_both_directions() {
             .expect("Markdown diff report failed");
         assert!(markdown.contains("### Violation Summary (New SBOM)"));
         assert!(!markdown.contains("### Violations (New SBOM)"));
-        assert!(!markdown.contains("| Severity | Category | Standard refs | Requirement | Message | Remediation |"));
+        assert!(!markdown.contains(
+            "| Severity | Category | Standard refs | Requirement | Message | Remediation |"
+        ));
 
         let html = HtmlReporter::new()
             .generate_diff_report(&diff, from, to, &config)
