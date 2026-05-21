@@ -399,8 +399,7 @@ impl DiffEngine {
         }
 
         // Always recompute summary and semantic score since they depend on all sections
-        result.semantic_score =
-            self.compute_semantic_score(&result, &old_filtered, &new_filtered);
+        result.semantic_score = self.compute_semantic_score(&result, &old_filtered, &new_filtered);
         result.calculate_summary();
         Ok(result)
     }
@@ -434,9 +433,17 @@ impl DiffEngine {
         new_sbom: &NormalizedSbom,
     ) -> f64 {
         let component_budget = (old_sbom.component_count() + new_sbom.component_count()) as f64
-            * f64::from(self.cost_model.component_added.max(self.cost_model.component_removed));
+            * f64::from(
+                self.cost_model
+                    .component_added
+                    .max(self.cost_model.component_removed),
+            );
         let dependency_budget = (old_sbom.edges.len() + new_sbom.edges.len()) as f64
-            * f64::from(self.cost_model.dependency_added.max(self.cost_model.dependency_removed));
+            * f64::from(
+                self.cost_model
+                    .dependency_added
+                    .max(self.cost_model.dependency_removed),
+            );
         let vulnerability_budget = (old_sbom.vulnerability_counts().total()
             + new_sbom.vulnerability_counts().total()) as f64
             * f64::from(self.cost_model.vulnerability_introduced);
@@ -447,10 +454,8 @@ impl DiffEngine {
                     .max(self.cost_model.license_changed),
             );
 
-        let total_budget = component_budget
-            + dependency_budget
-            + vulnerability_budget
-            + modification_budget;
+        let total_budget =
+            component_budget + dependency_budget + vulnerability_budget + modification_budget;
 
         if total_budget <= f64::EPSILON {
             return 100.0;

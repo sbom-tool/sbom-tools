@@ -227,7 +227,9 @@ mod diff_stage {
             new.add_component(updated);
         }
 
-        let result = DiffEngine::new().diff(&old, &new).expect("diff should succeed");
+        let result = DiffEngine::new()
+            .diff(&old, &new)
+            .expect("diff should succeed");
 
         assert!(
             (0.0..=100.0).contains(&result.semantic_score),
@@ -254,8 +256,12 @@ mod diff_stage {
             new.add_component(updated);
         }
 
-        let forward = DiffEngine::new().diff(&old, &new).expect("forward diff should succeed");
-        let reverse = DiffEngine::new().diff(&new, &old).expect("reverse diff should succeed");
+        let forward = DiffEngine::new()
+            .diff(&old, &new)
+            .expect("forward diff should succeed");
+        let reverse = DiffEngine::new()
+            .diff(&new, &old)
+            .expect("reverse diff should succeed");
 
         for (label, score) in [
             ("forward", forward.semantic_score),
