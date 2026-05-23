@@ -277,9 +277,15 @@ mod diff_stage {
             );
         }
 
+        // Tolerance is loose enough to survive future reorderings of the
+        // floating-point ops in `normalize_semantic_score` but tight enough
+        // that any genuine direction-dependent skew gets caught.
         assert!(
-            (forward.semantic_score - reverse.semantic_score).abs() < f64::EPSILON,
-            "similarity should be direction-independent for symmetric change costs"
+            (forward.semantic_score - reverse.semantic_score).abs() < 1e-9,
+            "similarity should be direction-independent for symmetric change costs: \
+             forward={forward_score}, reverse={reverse_score}",
+            forward_score = forward.semantic_score,
+            reverse_score = reverse.semantic_score,
         );
     }
 
