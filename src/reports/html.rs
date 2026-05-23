@@ -677,17 +677,16 @@ fn write_compact_diff_violation_summary_html(
         return Ok(());
     }
 
-    let aggregated = aggregate_violations_html(&result.violations);
+    let group_count = count_violation_groups_html(&result.violations);
     writeln!(html, "    <h3>Violation Summary (New SBOM)</h3>")?;
     writeln!(
         html,
-        "    <p>{} total findings across {} distinct requirement groups.</p>",
+        "    <p>{} total findings across {group_count} distinct requirement groups.</p>",
         result.violations.len(),
-        aggregated.len()
     )?;
     writeln!(
         html,
-        "    <p><em>Use sbom-tools view or JSON/SARIF output for full CRA violation detail.</em></p>"
+        "    <p><em>Re-run with <code>sbom-tools diff ... -o json</code> or <code>-o sarif</code> for the full CRA violation detail.</em></p>"
     )?;
 
     Ok(())
@@ -855,6 +854,22 @@ fn channel_status_html(result: &ComplianceResult, needle: &str) -> ChannelStatus
             ViolationSeverity::Info => ChannelStatusHtml::MissingPreDeadline,
         },
     }
+}
+
+/// Count distinct `(severity, category, requirement)` violation groups without
+/// allocating the full aggregated representation.
+fn count_violation_groups_html(violations: &[crate::quality::Violation]) -> usize {
+    use std::collections::HashSet;
+    let mut groups: HashSet<(u8, &str, &str)> = HashSet::new();
+    for v in violations {
+        let sev_ord = match v.severity {
+            ViolationSeverity::Error => 0,
+            ViolationSeverity::Warning => 1,
+            ViolationSeverity::Info => 2,
+        };
+        groups.insert((sev_ord, v.category.name(), v.requirement.as_str()));
+    }
+    groups.len()
 }
 
 /// Aggregate violations by (severity, category, requirement) to reduce noise.
