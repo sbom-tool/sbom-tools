@@ -25,13 +25,15 @@ Two submission paths:
 ## Step-by-step (manual path)
 
 1. Fork <https://github.com/CycloneDX/tool-center> and clone your fork.
-2. Create `tools/sbom_tools.json` (lowercase, underscores — matches existing files
-   like `apko.json`, `amazon_inspector_sbom_generator.json`).
+2. Create `tools/semantic_sbom_diff.json` (lowercase, underscores — matches existing files
+   like `apko.json`, `amazon_inspector_sbom_generator.json`). The filename must match
+   the tool's `name` (parentheses stripped) — reviewers will request a rename if it
+   doesn't (see [tool-center#111](https://github.com/CycloneDX/tool-center/pull/111)).
 3. Paste the entry from the next section.
 4. Validate it against `schemas/tool.schema.json` before pushing, e.g.:
    ```bash
    pip install check-jsonschema
-   check-jsonschema --schemafile schemas/tool.schema.json tools/sbom_tools.json
+   check-jsonschema --schemafile schemas/tool.schema.json tools/semantic_sbom_diff.json
    ```
 5. Optionally run `python helpers/tools-assemble.py` to confirm it merges cleanly.
 6. Commit, push, and open a PR. In the PR description confirm: the tool is
@@ -41,14 +43,14 @@ Two submission paths:
 
 ## Ready-to-use entry for sbom-tools
 
-Save as `tools/sbom_tools.json`:
+Save as `tools/semantic_sbom_diff.json`:
 
 ```json
 {
   "$schema": "https://cyclonedx.org/schema/tool-center-v2.tool.schema.json",
   "specVersion": "2.0",
   "tool": {
-    "name": "sbom-tools",
+    "name": "Semantic SBOM Diff (sbom-tools)",
     "publisher": "sbom-tool",
     "description": "Semantic SBOM diff and analysis tool for CycloneDX and SPDX. Compares SBOMs, enriches with vulnerability and EOL data, scores quality, checks compliance, and supports continuous watch monitoring.",
     "repository_url": "https://github.com/sbom-tool/sbom-tools",
@@ -108,7 +110,7 @@ Save as `tools/sbom_tools.json`:
 
 | Field | Value | Rationale |
 |-------|-------|-----------|
-| `name` / `publisher` | `sbom-tools` / `sbom-tool` | Crate name and the GitHub org that owns the repo. |
+| `name` / `publisher` | `Semantic SBOM Diff (sbom-tools)` / `sbom-tool` | Leads with the functional differentiator (the original generic `sbom-tools` was flagged as too broad in [tool-center#111](https://github.com/CycloneDX/tool-center/pull/111)); crate name retained in parentheses for discoverability. Publisher is the GitHub org. |
 | `description` | 1 sentence, <250 chars | Schema caps `description` at 250 chars (min 10); keep it plain text. |
 | `capabilities` | `SBOM`, `VDR/VEX` | Core SBOM diff/analysis plus the OpenVEX integration (`vex` subcommand). |
 | `availability` | `OPEN_SOURCE`, `OSI_APPROVED` | MIT-licensed (MIT is OSI-approved). |
