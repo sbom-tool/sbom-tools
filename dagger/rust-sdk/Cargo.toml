@@ -6,6 +6,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-dagger-sdk = "0.21.0"
+dagger-sdk = "0.21.4"
 eyre = "0.6"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
