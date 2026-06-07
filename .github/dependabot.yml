@@ -1,17 +1,90 @@
 version: 2
+
 updates:
+  # ── GitHub Actions (all workflows) ─────────────────────────────
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    groups:
+      # Batch minor/patch action bumps into one PR; majors stay separate for review.
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
+  # ── Root Cargo workspace ───────────────────────────────────────
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "rust"
+    cooldown:
+      # Let fresh releases settle before opening a PR (dampens yanked/regressed crates).
+      default-days: 5
+    groups:
+      cargo:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
+  # ── Fuzzing harness (independent workspace; see fuzz/Cargo.toml [workspace]) ──
+  - package-ecosystem: "cargo"
+    directory: "/fuzz"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "rust"
+      - "fuzzing"
+    cooldown:
+      default-days: 5
+    groups:
+      fuzz-cargo:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # ── Dagger CI pipeline SDK (excluded from the root workspace) ───
   - package-ecosystem: "cargo"
     directory: "/dagger/rust-sdk"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "rust"
+      - "ci"
+    cooldown:
+      default-days: 5
+    groups:
+      dagger-cargo:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # ── Go bindings module ─────────────────────────────────────────
+  - package-ecosystem: "gomod"
+    directory: "/bindings/go"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "go"
