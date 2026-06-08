@@ -184,6 +184,30 @@ fn format_quality_json(report: &QualityReport, config: &QualityConfig) -> String
 
 /// Format quality report as SARIF 2.1.0
 fn format_quality_sarif(report: &QualityReport, config: &QualityConfig) -> String {
+    // AI-readiness uses a dedicated SBOM-AIBOM-* SARIF rule family (one result per
+    // failing model-card check), with a rule table and run-level properties.
+    if report.profile == ScoringProfile::AiReadiness
+        && let Some(metrics) = report.ai_readiness_metrics.as_ref()
+    {
+        let na = metrics.is_not_applicable();
+        let score = if na { None } else { Some(report.overall_score) };
+        let grade = if na { "N/A" } else { report.grade.letter() };
+        return crate::reports::generate_ai_readiness_sarif(
+            metrics,
+            &config
+                .sbom_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy(),
+            &config.profile,
+            score,
+            grade,
+        )
+        .unwrap_or_else(|_| {
+            serde_json::to_string_pretty(&serde_json::json!({ "runs": [] })).unwrap_or_default()
+        });
+    }
+
     let not_applicable = report
         .ai_readiness_metrics
         .as_ref()
@@ -706,9 +730,20 @@ mod tests {
         let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
         let out = format_quality_sarif(&report, &ai_config(ReportFormat::Sarif, None));
         let value: serde_json::Value = serde_json::from_str(&out).expect("valid SARIF JSON");
-        let props = &value["runs"][0]["properties"];
+        let run = &value["runs"][0];
+        let props = &run["properties"];
         assert_eq!(props["applicable"], json!(false));
         assert!(props["overall_score"].is_null());
         assert_eq!(props["grade"], json!("N/A"));
+        // The dedicated SBOM-AIBOM-* rule family is now emitted (was absent before),
+        // and N/A yields no findings.
+        let rules = run["tool"]["driver"]["rules"]
+            .as_array()
+            .expect("rules array");
+        assert!(
+            rules.iter().any(|r| r["id"] == json!("SBOM-AIBOM-001")),
+            "expected SBOM-AIBOM rule table"
+        );
+        assert!(run["results"].as_array().expect("results array").is_empty());
     }
 }

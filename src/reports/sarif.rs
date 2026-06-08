@@ -252,6 +252,7 @@ impl ReportGenerator for SarifReporter {
                     },
                 },
                 results,
+                properties: None,
             }],
         };
 
@@ -316,6 +317,7 @@ impl ReportGenerator for SarifReporter {
                     },
                 },
                 results,
+                properties: None,
             }],
         };
 
@@ -326,6 +328,186 @@ impl ReportGenerator for SarifReporter {
     fn format(&self) -> ReportFormat {
         ReportFormat::Sarif
     }
+}
+
+/// Map an AI-readiness check ID (`AI-001`..`AI-009`) to its SARIF rule ID.
+/// Unknown IDs fall back to the `SBOM-AIBOM-GENERAL` rule so a future tenth
+/// check never silently drops (`AiCheck`/`AiReadinessMetrics` are `#[non_exhaustive]`).
+fn ai_check_to_rule_id(check_id: &str) -> &'static str {
+    match check_id {
+        "AI-001" => "SBOM-AIBOM-001",
+        "AI-002" => "SBOM-AIBOM-002",
+        "AI-003" => "SBOM-AIBOM-003",
+        "AI-004" => "SBOM-AIBOM-004",
+        "AI-005" => "SBOM-AIBOM-005",
+        "AI-006" => "SBOM-AIBOM-006",
+        "AI-007" => "SBOM-AIBOM-007",
+        "AI-008" => "SBOM-AIBOM-008",
+        "AI-009" => "SBOM-AIBOM-009",
+        _ => "SBOM-AIBOM-GENERAL",
+    }
+}
+
+/// Default SARIF severity for each AI-readiness check. AI transparency is a
+/// best-practice (not a mandated minimum element), so there are no hard
+/// `error`s; documentation gaps are `warning`, softer/contextual gaps `note`.
+/// This is the single source of truth shared by the rule table and the results.
+fn aibom_level(check_id: &str) -> SarifLevel {
+    match check_id {
+        "AI-001" | "AI-002" | "AI-003" | "AI-005" | "AI-009" => SarifLevel::Warning,
+        _ => SarifLevel::Note,
+    }
+}
+
+/// SARIF rule table for the AI BOM model-card completeness checks. The
+/// `short_description` text matches the scorer's `CHECK_DEFS` names exactly.
+fn get_sarif_aibom_rules() -> Vec<SarifRule> {
+    // (rule id, AI check id for level lookup, PascalCase name, description).
+    // Descriptions match the scorer's CHECK_DEFS names exactly.
+    [
+        (
+            "SBOM-AIBOM-001",
+            "AI-001",
+            "AibomModelCardUrl",
+            "Model card URL present",
+        ),
+        (
+            "SBOM-AIBOM-002",
+            "AI-002",
+            "AibomArchitectureFamily",
+            "Architecture family declared",
+        ),
+        (
+            "SBOM-AIBOM-003",
+            "AI-003",
+            "AibomTrainingDatasets",
+            "Training datasets referenced",
+        ),
+        (
+            "SBOM-AIBOM-004",
+            "AI-004",
+            "AibomQuantitativeAnalysis",
+            "Quantitative analysis present",
+        ),
+        (
+            "SBOM-AIBOM-005",
+            "AI-005",
+            "AibomFairnessAssessment",
+            "Fairness assessments included",
+        ),
+        (
+            "SBOM-AIBOM-006",
+            "AI-006",
+            "AibomEnergyConsumption",
+            "Energy consumption disclosed",
+        ),
+        (
+            "SBOM-AIBOM-007",
+            "AI-007",
+            "AibomUseCases",
+            "Use-cases documented",
+        ),
+        (
+            "SBOM-AIBOM-008",
+            "AI-008",
+            "AibomLimitations",
+            "Known limitations stated",
+        ),
+        (
+            "SBOM-AIBOM-009",
+            "AI-009",
+            "AibomEthicalConsiderations",
+            "Ethical considerations present",
+        ),
+        (
+            "SBOM-AIBOM-GENERAL",
+            "AI-GENERAL",
+            "AibomGeneral",
+            "AI BOM model-card completeness",
+        ),
+    ]
+    .into_iter()
+    .map(|(rule_id, check_id, name, desc)| SarifRule {
+        id: rule_id.to_string(),
+        name: name.to_string(),
+        short_description: SarifMessage {
+            text: desc.to_string(),
+        },
+        default_configuration: SarifConfiguration {
+            level: aibom_level(check_id),
+        },
+    })
+    .collect()
+}
+
+/// Generate a SARIF 2.1.0 report for an AI-readiness assessment, emitting one
+/// `SBOM-AIBOM-*` result per failing check (findings-only, mirroring the
+/// compliance SARIF). The rule table and run-level properties are always
+/// emitted, including for the not-applicable (no ML components) case.
+pub fn generate_ai_readiness_sarif(
+    metrics: &crate::quality::AiReadinessMetrics,
+    sbom_name: &str,
+    profile: &str,
+    overall_score: Option<f32>,
+    grade: &str,
+) -> Result<String, ReportError> {
+    let results: Vec<SarifResult> = metrics
+        .checks
+        .iter()
+        .filter(|check| !check.passed)
+        .map(|check| {
+            let rule_id = ai_check_to_rule_id(&check.id);
+            let detail_suffix = check
+                .detail
+                .as_ref()
+                .map(|d| format!(" — {d}"))
+                .unwrap_or_default();
+            SarifResult {
+                rule_id: rule_id.to_string(),
+                level: aibom_level(&check.id),
+                message: SarifMessage {
+                    text: format!(
+                        "AIBOM check {} failed: {} ({:.0}% weight){detail_suffix}",
+                        check.id,
+                        check.name,
+                        check.weight * 100.0
+                    ),
+                },
+                locations: vec![],
+                properties: Some(SarifResultProperties {
+                    standard_ids: vec![format!("AIBOM:{}", check.id)],
+                    standard_help_uris: rule_help_uri(rule_id)
+                        .map(|u| vec![u.to_string()])
+                        .unwrap_or_default(),
+                }),
+            }
+        })
+        .collect();
+
+    let sarif = SarifReport {
+        schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
+        version: "2.1.0".to_string(),
+        runs: vec![SarifRun {
+            tool: SarifTool {
+                driver: SarifDriver {
+                    name: "sbom-tools".to_string(),
+                    version: env!("CARGO_PKG_VERSION").to_string(),
+                    information_uri: "https://github.com/binarly-io/sbom-tools".to_string(),
+                    rules: SarifRuleWithUri::wrap_all(get_sarif_aibom_rules()),
+                },
+            },
+            results,
+            properties: Some(SarifRunProperties {
+                applicable: !metrics.is_not_applicable(),
+                overall_score,
+                grade: grade.to_string(),
+                sbom: sbom_name.to_string(),
+                profile: profile.to_string(),
+            }),
+        }],
+    };
+
+    serde_json::to_string_pretty(&sarif).map_err(|e| ReportError::SerializationError(e.to_string()))
 }
 
 pub fn generate_compliance_sarif(result: &ComplianceResult) -> Result<String, ReportError> {
@@ -343,6 +525,7 @@ pub fn generate_compliance_sarif(result: &ComplianceResult) -> Result<String, Re
                 },
             },
             results: compliance_results_to_sarif(result, None),
+            properties: None,
         }],
     };
 
@@ -376,6 +559,7 @@ pub fn generate_multi_compliance_sarif(
                 },
             },
             results: all_results,
+            properties: None,
         }],
     };
 
@@ -681,6 +865,8 @@ fn rule_help_uri(rule_id: &str) -> Option<&'static str> {
         )
     } else if rule_id.starts_with("SBOM-CSAF-") {
         Some("https://docs.oasis-open.org/csaf/csaf/v2.0/csaf-v2.0.html")
+    } else if rule_id.starts_with("SBOM-AIBOM-") {
+        Some("https://cyclonedx.org/capabilities/mlbom/")
     } else {
         None
     }
@@ -1428,6 +1614,23 @@ struct SarifReport {
 struct SarifRun {
     tool: SarifTool,
     results: Vec<SarifResult>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    properties: Option<SarifRunProperties>,
+}
+
+/// Run-level properties for an AI-readiness SARIF report. Mirrors the run
+/// properties the hand-rolled quality SARIF emitted (minus `compliant`, which
+/// is not meaningful for an AI-only report). `overall_score` is always emitted
+/// (as `null` for the not-applicable case) so machine consumers can distinguish
+/// "score 0" from "not applicable".
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SarifRunProperties {
+    applicable: bool,
+    overall_score: Option<f32>,
+    grade: String,
+    sbom: String,
+    profile: String,
 }
 
 #[derive(Serialize)]
