@@ -341,7 +341,7 @@ mod parser_tests {
         let path = fixture_path("cyclonedx/minimal-mlbom.cdx.json");
         let sbom = parse_sbom(&path).expect("Failed to parse CycloneDX ML BOM fixture");
 
-        assert_eq!(sbom.component_count(), 3);
+        assert_eq!(sbom.component_count(), 4);
 
         let bert = sbom
             .components
@@ -354,13 +354,32 @@ mod parser_tests {
         );
 
         let ml_info = bert.ml_model.as_ref().expect("ML metadata missing");
+        // Spec nesting: approach/architectureFamily/modelArchitecture/task live under modelParameters.
         assert_eq!(ml_info.approach.as_deref(), Some("supervised"));
         assert_eq!(ml_info.architecture_family.as_deref(), Some("transformer"));
+        // architecture_name is read from the spec `modelArchitecture` string.
         assert_eq!(ml_info.architecture_name.as_deref(), Some("bert"));
         assert_eq!(ml_info.task.as_deref(), Some("nlp"));
-        assert_eq!(ml_info.quantization.as_deref(), Some("fp32"));
+        // `quantization` has no home in the CycloneDX 1.6 modelCard schema → never populated.
+        assert_eq!(ml_info.quantization, None);
+        // Limitations come from considerations.technicalLimitations (array).
+        assert_eq!(
+            ml_info.limitations.as_deref(),
+            Some("Optimized for English text; may not generalize to non-English languages.")
+        );
+        // Energy from considerations.environmentalConsiderations[].activityEnergyCost.value (kWh).
         assert_eq!(ml_info.energy_kwh_training, Some(1500.0));
+        // datasets: one spec `{ref}` data-reference and one inline componentData.
         assert_eq!(ml_info.training_datasets.len(), 2);
+        assert_eq!(
+            ml_info.training_datasets[0].reference.as_deref(),
+            Some("data-wikipedia")
+        );
+        assert_eq!(ml_info.training_datasets[0].name, None);
+        assert_eq!(
+            ml_info.training_datasets[1].name.as_deref(),
+            Some("bookscorpus-800M")
+        );
         assert_eq!(
             ml_info.model_card_url.as_deref(),
             Some("https://huggingface.co/google-bert/bert-base-uncased")
@@ -369,6 +388,8 @@ mod parser_tests {
 
     #[test]
     fn test_parse_cyclonedx_model_card_sums_training_energy() {
+        // Spec shape: energyConsumption.activity + activityEnergyCost { value, unit }.
+        // Only "training" activities are summed; other activities are excluded.
         let content = r#"{
                     "bomFormat": "CycloneDX",
                     "specVersion": "1.6",
@@ -379,14 +400,16 @@ mod parser_tests {
                             "type": "machine-learning-model",
                             "name": "bert-base",
                             "modelCard": {
-                                "approach": { "type": "supervised" },
-                                "architectureFamily": "transformer",
+                                "modelParameters": {
+                                    "approach": { "type": "supervised" },
+                                    "architectureFamily": "transformer"
+                                },
                                 "considerations": {
                                     "environmentalConsiderations": {
                                         "energyConsumptions": [
-                                            { "type": "training", "value": 100.0 },
-                                            { "type": "inference", "value": 5.0 },
-                                            { "type": "training", "value": 25.0 }
+                                            { "activity": "training", "activityEnergyCost": { "value": 100.0, "unit": "kWh" } },
+                                            { "activity": "inference", "activityEnergyCost": { "value": 5.0, "unit": "kWh" } },
+                                            { "activity": "training", "activityEnergyCost": { "value": 25.0, "unit": "kWh" } }
                                         ]
                                     }
                                 }
@@ -427,11 +450,83 @@ mod parser_tests {
             .dataset
             .as_ref()
             .expect("dataset metadata missing");
-        assert_eq!(dataset.dataset_type.as_deref(), Some("training"));
+        // componentData.type uses the spec enum ("dataset"), parsed from the `data` array.
+        assert_eq!(dataset.dataset_type.as_deref(), Some("dataset"));
+        // Spec key is `sensitiveData`.
         assert_eq!(dataset.sensitivity_classifications, vec!["pii", "phi"]);
+        // owners + custodians + stewards are folded in, as display names (org name, else
+        // contact name, else contact email), preserving owners -> custodians -> stewards order.
         assert_eq!(
             dataset.governance_owners,
-            vec!["data-team@example.com", "ml-ops@example.com"]
+            vec![
+                "Data Platform Team",
+                "Jane Doe",
+                "ML Ops",
+                "steward@example.com"
+            ]
+        );
+    }
+
+    #[test]
+    fn test_parse_cyclonedx_data_component_array_and_tolerance() {
+        // Regression: spec `component.data` is an ARRAY of componentData. A spec-compliant
+        // array previously failed to parse the ENTIRE SBOM; assert it now parses end-to-end
+        // and that object-form governance parties + sensitiveData are extracted.
+        let content = r#"{
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.6",
+            "version": 1,
+            "components": [
+                {
+                    "bom-ref": "ds-spec",
+                    "type": "data",
+                    "name": "spec-array-dataset",
+                    "data": [
+                        {
+                            "type": "dataset",
+                            "name": "corpus",
+                            "sensitiveData": ["pii"],
+                            "governance": {
+                                "owners": [ { "organization": { "name": "Acme AI" } } ],
+                                "custodians": [ { "contact": { "name": "Custodian C" } } ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }"#;
+
+        let sbom = parse_sbom_str(content).expect("spec array-form `data` must parse");
+        let ds = sbom
+            .components
+            .values()
+            .find(|c| c.name == "spec-array-dataset")
+            .expect("dataset component not found");
+        let info = ds.dataset.as_ref().expect("dataset metadata missing");
+        assert_eq!(info.dataset_type.as_deref(), Some("dataset"));
+        assert_eq!(info.sensitivity_classifications, vec!["pii"]);
+        assert_eq!(info.governance_owners, vec!["Acme AI", "Custodian C"]);
+
+        // Backward-compat: the legacy single-object `data`, the `sensitivityData` key, and
+        // bare-string governance owners are still tolerated (see the fixture's legacy component).
+        let legacy_path = fixture_path("cyclonedx/minimal-dataset.cdx.json");
+        let legacy_sbom = parse_sbom(&legacy_path).expect("Failed to parse dataset fixture");
+        let legacy = legacy_sbom
+            .components
+            .values()
+            .find(|c| c.name == "legacy-dataset-v1")
+            .expect("legacy dataset not found");
+        let legacy_info = legacy
+            .dataset
+            .as_ref()
+            .expect("legacy dataset metadata missing");
+        assert_eq!(
+            legacy_info.sensitivity_classifications,
+            vec!["confidential"]
+        );
+        assert_eq!(
+            legacy_info.governance_owners,
+            vec!["legacy-team@example.com"]
         );
     }
 

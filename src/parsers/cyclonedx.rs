@@ -484,46 +484,44 @@ impl CycloneDxParser {
         if let Some(model_card) = &cdx.model_card {
             let mut ml_info = crate::model::MlModelInfo::default();
 
-            if let Some(approach) = &model_card.approach {
-                ml_info.approach = approach.approach_type.clone();
-            }
-
-            if let Some(arch_family) = &model_card.architecture_family {
-                ml_info.architecture_family = Some(arch_family.clone());
-            }
-
+            // Per the CycloneDX 1.6 schema, `approach`, `architectureFamily`,
+            // `modelArchitecture`, `task` and `datasets` all live under `modelParameters`.
             if let Some(model_params) = &model_card.model_parameters {
+                if let Some(approach) = &model_params.approach {
+                    ml_info.approach = approach.approach_type.clone();
+                }
+                ml_info.architecture_family = model_params.architecture_family.clone();
                 ml_info.task = model_params.task.clone();
 
-                if let Some(arch) = &model_params.architecture {
-                    ml_info.architecture_name = arch.name.clone();
+                // Spec: `modelArchitecture` is a string; fall back to the non-spec
+                // `architecture.name` object only if the string form is absent.
+                ml_info.architecture_name = model_params.model_architecture.clone().or_else(|| {
+                    model_params
+                        .architecture
+                        .as_ref()
+                        .and_then(|arch| arch.name.clone())
+                });
+
+                for dataset in &model_params.datasets {
+                    ml_info.training_datasets.push(dataset.to_model());
                 }
-
-                // Collect training datasets
-                for dataset_ref in &model_params.datasets {
-                    ml_info.training_datasets.push(crate::model::DatasetRef {
-                        name: dataset_ref.name.clone(),
-                        purl: dataset_ref.purl.clone(),
-                    });
-                }
             }
 
-            if let Some(quantization) = &model_card.quantization {
-                ml_info.quantization = quantization.mode.clone();
-            }
+            // `quantization` has no home in the CycloneDX 1.6 modelCard schema, so it is
+            // intentionally not parsed (left as None) rather than read from a non-existent field.
 
-            if let Some(limitations) = &model_card.limitations {
-                ml_info.limitations = Some(limitations.clone());
-            }
-
-            // Extract energy consumption from considerations
             if let Some(considerations) = &model_card.considerations {
+                // Spec: limitations live in `considerations.technicalLimitations` (array).
+                if !considerations.technical_limitations.is_empty() {
+                    ml_info.limitations = Some(considerations.technical_limitations.join("; "));
+                }
+
                 if let Some(env_considerations) = &considerations.environmental_considerations {
                     let total_training_energy: f64 = env_considerations
                         .energy_consumptions
                         .iter()
                         .filter(|energy| energy.activity.as_deref() == Some("training"))
-                        .filter_map(|energy| energy.energy_kwh)
+                        .filter_map(CdxEnergyConsumption::training_energy_kwh)
                         .sum();
 
                     if total_training_energy > 0.0 {
@@ -543,18 +541,28 @@ impl CycloneDxParser {
             comp.ml_model = Some(ml_info);
         }
 
-        // Set dataset metadata (CycloneDX 1.5+)
-        if let Some(data_component) = &cdx.data_component {
-            let dataset_info = crate::model::DatasetInfo {
-                dataset_type: data_component.data_type.clone(),
-                sensitivity_classifications: data_component.sensitivity_data.clone(),
-                governance_owners: data_component
+        // Set dataset metadata (CycloneDX 1.5+). Per spec `component.data` is an array of
+        // componentData; a `data` component is represented by its first entry.
+        if let Some(data_component) = cdx.data_components.first() {
+            let governance_owners =
+                data_component
                     .governance
                     .as_ref()
-                    .map_or_else(Vec::new, |governance| governance.owners.clone()),
-            };
+                    .map_or_else(Vec::new, |governance| {
+                        governance
+                            .owners
+                            .iter()
+                            .chain(governance.custodians.iter())
+                            .chain(governance.stewards.iter())
+                            .filter_map(CdxGovParty::display_name)
+                            .collect()
+                    });
 
-            comp.dataset = Some(dataset_info);
+            comp.dataset = Some(crate::model::DatasetInfo {
+                dataset_type: data_component.data_type.clone(),
+                sensitivity_classifications: data_component.sensitivity_data.clone(),
+                governance_owners,
+            });
         }
 
         // Set cryptographic properties (1.6+)
@@ -1420,9 +1428,14 @@ struct CdxComponent {
     /// ML Model metadata (CycloneDX 1.5+)
     #[serde(rename = "modelCard")]
     model_card: Option<CdxMlModelCard>,
-    /// Dataset metadata (CycloneDX 1.5+, used when component type is "data")
-    #[serde(rename = "data")]
-    data_component: Option<CdxDataComponent>,
+    /// Dataset metadata (CycloneDX 1.5+). Per spec `data` is an array of componentData;
+    /// a single object is also accepted for non-spec emitters.
+    #[serde(
+        rename = "data",
+        default,
+        deserialize_with = "deserialize_component_data"
+    )]
+    data_components: Vec<CdxDataComponent>,
     /// Cryptographic properties (1.6+)
     crypto_properties: Option<CdxCryptoProperties>,
 }
@@ -1479,11 +1492,7 @@ struct CdxProperty {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CdxMlModelCard {
-    approach: Option<CdxMlApproach>,
-    architecture_family: Option<String>,
     model_parameters: Option<CdxModelParameters>,
-    quantization: Option<CdxQuantization>,
-    limitations: Option<String>,
     considerations: Option<CdxConsiderations>,
 }
 
@@ -1497,10 +1506,15 @@ struct CdxMlApproach {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CdxModelParameters {
+    approach: Option<CdxMlApproach>,
     task: Option<String>,
+    architecture_family: Option<String>,
+    /// Spec: `modelArchitecture` is a string (e.g. "ResNet-50").
+    model_architecture: Option<String>,
+    /// Non-spec object form `{ name }`, retained as a fallback only.
     architecture: Option<CdxModelArchitecture>,
     #[serde(default)]
-    datasets: Vec<CdxDatasetRef>,
+    datasets: Vec<CdxDatasetChoice>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1509,23 +1523,48 @@ struct CdxModelArchitecture {
     name: Option<String>,
 }
 
+/// A `modelParameters.datasets` item: the spec data-reference form `{ "ref": ... }`, or an
+/// inline dataset (spec `componentData` carrying a `name`, or the non-spec `{ name, purl }`).
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct CdxDatasetRef {
-    name: Option<String>,
-    #[serde(default)]
-    purl: Option<String>,
+#[serde(untagged)]
+enum CdxDatasetChoice {
+    Reference {
+        #[serde(rename = "ref")]
+        reference: String,
+    },
+    Inline(CdxDatasetInline),
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct CdxQuantization {
-    mode: Option<String>,
+struct CdxDatasetInline {
+    name: Option<String>,
+    /// Non-spec; spec `componentData` datasets have no purl.
+    purl: Option<String>,
+}
+
+impl CdxDatasetChoice {
+    fn to_model(&self) -> crate::model::DatasetRef {
+        match self {
+            Self::Reference { reference } => crate::model::DatasetRef {
+                reference: Some(reference.clone()),
+                name: None,
+                purl: None,
+            },
+            Self::Inline(inline) => crate::model::DatasetRef {
+                reference: None,
+                name: inline.name.clone(),
+                purl: inline.purl.clone(),
+            },
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CdxConsiderations {
+    #[serde(default)]
+    technical_limitations: Vec<String>,
     environmental_considerations: Option<CdxEnvironmentalConsiderations>,
 }
 
@@ -1541,8 +1580,43 @@ struct CdxEnvironmentalConsiderations {
 struct CdxEnergyConsumption {
     #[serde(alias = "type")]
     activity: Option<String>,
+    /// Spec: `activityEnergyCost` is an energyMeasure `{ value, unit }`.
+    activity_energy_cost: Option<CdxEnergyMeasure>,
+    /// Non-spec flat kWh value; fallback only.
     #[serde(rename = "energyKwh", alias = "value")]
     energy_kwh: Option<f64>,
+}
+
+impl CdxEnergyConsumption {
+    /// Training energy in kWh: prefer the spec `activityEnergyCost` (unit-normalized),
+    /// otherwise the non-spec flat value.
+    fn training_energy_kwh(&self) -> Option<f64> {
+        self.activity_energy_cost
+            .as_ref()
+            .map(CdxEnergyMeasure::as_kwh)
+            .or(self.energy_kwh)
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CdxEnergyMeasure {
+    value: f64,
+    unit: Option<String>,
+}
+
+impl CdxEnergyMeasure {
+    /// Normalize the measure to kWh based on its unit (defaults to kWh when unspecified).
+    fn as_kwh(&self) -> f64 {
+        match self.unit.as_deref() {
+            Some("Wh") => self.value / 1_000.0,
+            Some("MWh") => self.value * 1_000.0,
+            Some("J") => self.value / 3_600_000.0,
+            Some("kJ") => self.value / 3_600.0,
+            Some("MJ") => self.value / 3.6,
+            _ => self.value,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -1550,16 +1624,88 @@ struct CdxEnergyConsumption {
 struct CdxDataComponent {
     #[serde(rename = "type")]
     data_type: Option<String>,
-    #[serde(default)]
+    /// Spec key is `sensitiveData`; `sensitivityData` accepted for non-spec emitters.
+    #[serde(rename = "sensitiveData", alias = "sensitivityData", default)]
     sensitivity_data: Vec<String>,
     governance: Option<CdxDataGovernance>,
 }
 
-#[derive(Debug, Deserialize)]
+/// Accept `component.data` as either the spec array of componentData or a single object.
+fn deserialize_component_data<'de, D>(deserializer: D) -> Result<Vec<CdxDataComponent>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum OneOrMany {
+        Many(Vec<CdxDataComponent>),
+        One(CdxDataComponent),
+    }
+
+    Ok(match Option::<OneOrMany>::deserialize(deserializer)? {
+        None => Vec::new(),
+        Some(OneOrMany::Many(items)) => items,
+        Some(OneOrMany::One(item)) => vec![item],
+    })
+}
+
+#[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 struct CdxDataGovernance {
     #[serde(default)]
-    owners: Vec<String>,
+    owners: Vec<CdxGovParty>,
+    #[serde(default)]
+    custodians: Vec<CdxGovParty>,
+    #[serde(default)]
+    stewards: Vec<CdxGovParty>,
+}
+
+/// A data-governance responsible party: the spec object `{ organization | contact }`,
+/// or a bare string for non-spec emitters.
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum CdxGovParty {
+    Text(String),
+    Structured(CdxGovPartyObj),
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct CdxGovPartyObj {
+    organization: Option<CdxGovOrganization>,
+    contact: Option<CdxGovContact>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CdxGovOrganization {
+    name: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CdxGovContact {
+    name: Option<String>,
+    email: Option<String>,
+}
+
+impl CdxGovParty {
+    /// A human-readable display name for a governance party.
+    fn display_name(&self) -> Option<String> {
+        match self {
+            Self::Text(text) => Some(text.clone()),
+            Self::Structured(party) => party
+                .organization
+                .as_ref()
+                .and_then(|org| org.name.clone())
+                .or_else(|| {
+                    party
+                        .contact
+                        .as_ref()
+                        .and_then(|contact| contact.name.clone().or_else(|| contact.email.clone()))
+                }),
+        }
+    }
 }
 
 // ── CycloneDX Crypto Deserialization Structs (1.6+) ─────────────────────

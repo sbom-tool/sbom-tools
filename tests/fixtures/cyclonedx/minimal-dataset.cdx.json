@@ -25,35 +25,45 @@
       "name": "training-dataset-v1",
       "version": "1.0.0",
       "description": "Primary training dataset for model development",
-      "data": {
-        "type": "training",
-        "contents": {
-          "properties": [
-            {
-              "name": "size",
-              "value": "500GB"
-            },
-            {
-              "name": "records",
-              "value": "10M"
-            },
-            {
-              "name": "format",
-              "value": "parquet"
-            }
-          ]
-        },
-        "sensitivityData": [
-          "pii",
-          "phi"
-        ],
-        "governance": {
-          "owners": [
-            "data-team@example.com",
-            "ml-ops@example.com"
-          ]
+      "data": [
+        {
+          "type": "dataset",
+          "name": "training-corpus",
+          "sensitiveData": [
+            "pii",
+            "phi"
+          ],
+          "governance": {
+            "owners": [
+              {
+                "organization": {
+                  "name": "Data Platform Team"
+                }
+              },
+              {
+                "contact": {
+                  "name": "Jane Doe",
+                  "email": "jane@example.com"
+                }
+              }
+            ],
+            "custodians": [
+              {
+                "organization": {
+                  "name": "ML Ops"
+                }
+              }
+            ],
+            "stewards": [
+              {
+                "contact": {
+                  "email": "steward@example.com"
+                }
+              }
+            ]
+          }
         }
-      }
+      ]
     },
     {
       "bom-ref": "dataset-validation-1",
@@ -61,24 +71,30 @@
       "name": "validation-dataset-v1",
       "version": "1.0.0",
       "description": "Validation dataset for model evaluation",
-      "data": {
-        "type": "validation",
-        "sensitivityData": [
-          "pii"
-        ]
-      }
+      "data": [
+        {
+          "type": "dataset",
+          "name": "validation-corpus",
+          "sensitiveData": [
+            "pii"
+          ]
+        }
+      ]
     },
     {
-      "bom-ref": "dataset-test-1",
+      "bom-ref": "dataset-legacy-1",
       "type": "data",
-      "name": "test-dataset-v1",
+      "name": "legacy-dataset-v1",
       "version": "1.0.0",
-      "description": "Test dataset for final model evaluation",
+      "description": "Legacy emitter: single-object data, sensitivityData, string owners (tolerated)",
       "data": {
-        "type": "testing",
+        "type": "dataset",
+        "sensitivityData": [
+          "confidential"
+        ],
         "governance": {
           "owners": [
-            "qa-team@example.com"
+            "legacy-team@example.com"
           ]
         }
       }

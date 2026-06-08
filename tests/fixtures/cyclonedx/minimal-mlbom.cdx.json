@@ -26,36 +26,35 @@
       "version": "1.0.0",
       "description": "BERT base model for NLP tasks",
       "modelCard": {
-        "approach": {
-          "type": "supervised"
-        },
-        "architectureFamily": "transformer",
         "modelParameters": {
-          "task": "nlp",
-          "architecture": {
-            "name": "bert"
+          "approach": {
+            "type": "supervised"
           },
+          "task": "nlp",
+          "architectureFamily": "transformer",
+          "modelArchitecture": "bert",
           "datasets": [
             {
-              "name": "wikipedia-2.5B",
-              "purl": "pkg:generic/wikipedia/2.5B"
+              "ref": "data-wikipedia"
             },
             {
-              "name": "bookscorpus-800M",
-              "purl": "pkg:generic/bookscorpus/800M"
+              "type": "dataset",
+              "name": "bookscorpus-800M"
             }
           ]
         },
-        "quantization": {
-          "mode": "fp32"
-        },
-        "limitations": "Optimized for English text; may not generalize to non-English languages.",
         "considerations": {
+          "technicalLimitations": [
+            "Optimized for English text; may not generalize to non-English languages."
+          ],
           "environmentalConsiderations": {
             "energyConsumptions": [
               {
-                "type": "training",
-                "value": 1500.0
+                "activity": "training",
+                "activityEnergyCost": {
+                  "value": 1500.0,
+                  "unit": "kWh"
+                }
               }
             ]
           }
@@ -75,21 +74,43 @@
       "version": "2.0.0",
       "description": "GPT-2 language model",
       "modelCard": {
-        "approach": {
-          "type": "unsupervised"
-        },
-        "architectureFamily": "transformer",
         "modelParameters": {
+          "approach": {
+            "type": "unsupervised"
+          },
           "task": "nlp",
-          "architecture": {
-            "name": "gpt"
-          }
+          "architectureFamily": "transformer",
+          "modelArchitecture": "gpt"
         },
-        "quantization": {
-          "mode": "int8"
-        },
-        "limitations": "May generate biased or harmful content."
+        "considerations": {
+          "technicalLimitations": [
+            "May generate biased or harmful content."
+          ]
+        }
       }
+    },
+    {
+      "bom-ref": "data-wikipedia",
+      "type": "data",
+      "name": "wikipedia-2.5B",
+      "data": [
+        {
+          "type": "dataset",
+          "name": "wikipedia-dump",
+          "sensitiveData": [
+            "none"
+          ],
+          "governance": {
+            "owners": [
+              {
+                "organization": {
+                  "name": "Wikimedia Foundation"
+                }
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

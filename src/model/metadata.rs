@@ -548,9 +548,12 @@ pub struct MlModelInfo {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct DatasetRef {
-    /// Dataset name
+    /// BOM-ref / BOM-Link to a dataset component (CycloneDX `modelParameters.datasets` `{ref}` form)
+    pub reference: Option<String>,
+    /// Dataset name (from an inline `componentData` dataset)
     pub name: Option<String>,
-    /// Package URL (PURL) if the dataset is packaged
+    /// Package URL (PURL). Not part of the CycloneDX spec for datasets; retained for
+    /// non-spec emitters and is `None` for spec-conformant input.
     pub purl: Option<String>,
 }
 
