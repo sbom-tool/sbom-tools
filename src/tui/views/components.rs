@@ -506,6 +506,22 @@ fn render_diff_detail(
             }
         }
 
+        // ML model / dataset metadata (CycloneDX ML BOM, SPDX 3.0 AI). Resolve from the
+        // new SBOM, falling back to the old one so removed components still display.
+        let ml_comp = full_component.or_else(|| {
+            ctx.old_sbom.as_ref().and_then(|sbom| {
+                sbom.components
+                    .get(&crate::model::CanonicalId::from_format_id(&comp.id))
+            })
+        });
+        if let Some(fc) = ml_comp {
+            lines.extend(crate::tui::shared::components::render_ml_dataset_lines(
+                fc.ml_model.as_ref(),
+                fc.dataset.as_ref(),
+                area.width,
+            ));
+        }
+
         // Match confidence (item 1.5) — show how old/new components were correlated
         if let Some(match_info) = &comp.match_info {
             let scheme = colors();

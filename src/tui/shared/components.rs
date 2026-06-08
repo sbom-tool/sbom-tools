@@ -3,6 +3,7 @@
 //! Pure rendering functions that take domain values directly, with no
 //! dependency on `App` or `ViewApp`.
 
+use crate::model::{DatasetInfo, MlModelInfo};
 use crate::tui::security::LicenseRisk;
 use crate::tui::theme::colors;
 use ratatui::{
@@ -275,6 +276,155 @@ pub fn render_flagged_lines(
     lines
 }
 
+/// Render the ML model / dataset metadata section for a component detail panel.
+///
+/// Surfaces the raw `MlModelInfo` / `DatasetInfo` captured by the parsers
+/// (architecture, datasets, energy, governance, …) — distinct from the
+/// AI-readiness *scoring* panels. Returns an empty `Vec` when the component has
+/// neither ML model nor dataset metadata, so callers need no surrounding guard.
+#[must_use]
+pub fn render_ml_dataset_lines(
+    ml: Option<&MlModelInfo>,
+    dataset: Option<&DatasetInfo>,
+    area_width: u16,
+) -> Vec<Line<'static>> {
+    if ml.is_none() && dataset.is_none() {
+        return vec![];
+    }
+    let scheme = colors();
+    let width = area_width as usize;
+
+    let mut lines = vec![
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("━━━ ", Style::default().fg(scheme.border)),
+            Span::styled("ML / Dataset", Style::default().fg(scheme.accent).bold()),
+            Span::styled(" ━━━", Style::default().fg(scheme.border)),
+        ]),
+    ];
+
+    if let Some(ml) = ml {
+        // Architecture: "family / name", or whichever single value is present.
+        let arch = match (
+            ml.architecture_family.as_deref(),
+            ml.architecture_name.as_deref(),
+        ) {
+            (Some(f), Some(n)) => Some(format!("{f} / {n}")),
+            (Some(v), None) | (None, Some(v)) => Some(v.to_string()),
+            (None, None) => None,
+        };
+        if let Some(arch) = arch {
+            lines.push(Line::from(vec![
+                Span::styled("  Architecture: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(arch, Style::default().fg(scheme.accent)),
+            ]));
+        }
+        if let Some(approach) = &ml.approach {
+            lines.push(Line::from(vec![
+                Span::styled("  Approach: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(approach.clone(), Style::default().fg(scheme.text)),
+            ]));
+        }
+        if let Some(task) = &ml.task {
+            lines.push(Line::from(vec![
+                Span::styled("  Task: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(task.clone(), Style::default().fg(scheme.text)),
+            ]));
+        }
+        if let Some(energy) = ml.energy_kwh_training {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "  Training Energy: ",
+                    Style::default().fg(scheme.text_muted),
+                ),
+                Span::styled(format!("{energy:.2} kWh"), Style::default().fg(scheme.text)),
+            ]));
+        }
+        if let Some(limitations) = &ml.limitations {
+            lines.push(Line::from(vec![
+                Span::styled("  Limitations: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(
+                    crate::tui::widgets::truncate_str(limitations, width.saturating_sub(15)),
+                    Style::default().fg(scheme.text).italic(),
+                ),
+            ]));
+        }
+        if let Some(url) = &ml.model_card_url {
+            lines.push(Line::from(vec![
+                Span::styled("  Model Card: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(
+                    crate::tui::widgets::truncate_str(url, width.saturating_sub(14)),
+                    Style::default().fg(scheme.text),
+                ),
+            ]));
+        }
+        if !ml.training_datasets.is_empty() {
+            lines.push(Line::from(vec![Span::styled(
+                format!("  Datasets ({}):", ml.training_datasets.len()),
+                Style::default().fg(scheme.text_muted),
+            )]));
+            const MAX_DATASETS: usize = 5;
+            for ds in ml.training_datasets.iter().take(MAX_DATASETS) {
+                let label = ds
+                    .name
+                    .as_deref()
+                    .or(ds.reference.as_deref())
+                    .or(ds.purl.as_deref())
+                    .unwrap_or("(unnamed)");
+                lines.push(Line::from(vec![
+                    Span::styled("    • ", Style::default().fg(scheme.text_muted)),
+                    Span::styled(
+                        crate::tui::widgets::truncate_str(label, width.saturating_sub(8)),
+                        Style::default().fg(scheme.text),
+                    ),
+                ]));
+            }
+            if ml.training_datasets.len() > MAX_DATASETS {
+                lines.push(Line::styled(
+                    format!(
+                        "    ... and {} more",
+                        ml.training_datasets.len() - MAX_DATASETS
+                    ),
+                    Style::default().fg(scheme.text_muted),
+                ));
+            }
+        }
+    }
+
+    if let Some(dataset) = dataset {
+        if let Some(dataset_type) = &dataset.dataset_type {
+            lines.push(Line::from(vec![
+                Span::styled("  Dataset Type: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(dataset_type.clone(), Style::default().fg(scheme.text)),
+            ]));
+        }
+        if !dataset.sensitivity_classifications.is_empty() {
+            lines.push(Line::from(vec![
+                Span::styled("  Sensitivity: ", Style::default().fg(scheme.text_muted)),
+                // Sensitive/PII data is high-attention — flag it with the critical color.
+                Span::styled(
+                    dataset.sensitivity_classifications.join(", "),
+                    Style::default().fg(scheme.critical),
+                ),
+            ]));
+        }
+        if !dataset.governance_owners.is_empty() {
+            lines.push(Line::from(vec![
+                Span::styled("  Governance: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(
+                    crate::tui::widgets::truncate_str(
+                        &dataset.governance_owners.join(", "),
+                        width.saturating_sub(14),
+                    ),
+                    Style::default().fg(scheme.text),
+                ),
+            ]));
+        }
+    }
+
+    lines
+}
+
 /// Render standard component info lines for detail panels.
 ///
 /// Produces a consistent set of sections for any component:
@@ -530,4 +680,86 @@ pub fn render_empty_detail_panel(
         .alignment(Alignment::Center);
 
     frame.render_widget(detail, area);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::DatasetRef;
+
+    fn plain_text(lines: &[Line<'static>]) -> String {
+        lines
+            .iter()
+            .map(|l| {
+                l.spans
+                    .iter()
+                    .map(|s| s.content.as_ref())
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    #[test]
+    fn ml_dataset_lines_empty_when_no_metadata() {
+        assert!(render_ml_dataset_lines(None, None, 80).is_empty());
+    }
+
+    #[test]
+    fn ml_dataset_lines_render_model_fields() {
+        let ml = MlModelInfo {
+            architecture_family: Some("transformer".to_string()),
+            architecture_name: Some("bert".to_string()),
+            task: Some("nlp".to_string()),
+            energy_kwh_training: Some(1500.0),
+            model_card_url: Some("https://example.test/card".to_string()),
+            training_datasets: vec![DatasetRef {
+                reference: None,
+                name: Some("wikipedia".to_string()),
+                purl: None,
+            }],
+            ..MlModelInfo::default()
+        };
+        let text = plain_text(&render_ml_dataset_lines(Some(&ml), None, 80));
+        assert!(text.contains("ML / Dataset"));
+        assert!(text.contains("Architecture: transformer / bert"));
+        assert!(text.contains("Task: nlp"));
+        assert!(text.contains("1500.00 kWh"));
+        assert!(text.contains("Datasets (1):"));
+        assert!(text.contains("wikipedia"));
+    }
+
+    #[test]
+    fn ml_dataset_lines_render_dataset_sensitivity() {
+        let dataset = DatasetInfo {
+            dataset_type: Some("dataset".to_string()),
+            sensitivity_classifications: vec!["pii".to_string(), "phi".to_string()],
+            governance_owners: vec!["Data Team".to_string()],
+            ..DatasetInfo::default()
+        };
+        let text = plain_text(&render_ml_dataset_lines(None, Some(&dataset), 80));
+        assert!(text.contains("Dataset Type: dataset"));
+        assert!(text.contains("Sensitivity: pii, phi"));
+        assert!(text.contains("Governance: Data Team"));
+    }
+
+    #[test]
+    fn ml_dataset_lines_dataset_ref_precedence_and_overflow() {
+        let datasets: Vec<DatasetRef> = (0..7)
+            .map(|i| DatasetRef {
+                reference: Some(format!("ref-{i}")),
+                name: None,
+                purl: None,
+            })
+            .collect();
+        let ml = MlModelInfo {
+            training_datasets: datasets,
+            ..MlModelInfo::default()
+        };
+        let text = plain_text(&render_ml_dataset_lines(Some(&ml), None, 80));
+        // reference is used when name is absent; only 5 shown + overflow line.
+        assert!(text.contains("Datasets (7):"));
+        assert!(text.contains("ref-0"));
+        assert!(text.contains("... and 2 more"));
+    }
 }

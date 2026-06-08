@@ -556,6 +556,13 @@ fn render_overview_tab(
         }
     }
 
+    // ── ML model / dataset metadata (CycloneDX ML BOM, SPDX 3.0 AI) ──
+    lines.extend(crate::tui::shared::components::render_ml_dataset_lines(
+        comp.ml_model.as_ref(),
+        comp.dataset.as_ref(),
+        area.width,
+    ));
+
     // ── Data completeness indicator ──
 
     let field_count = 6;
