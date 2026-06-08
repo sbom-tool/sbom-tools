@@ -43,6 +43,6 @@ pub use metrics::{
     LifecycleMetrics, ProvenanceMetrics, VulnerabilityMetrics,
 };
 pub use scorer::{
-    QualityGrade, QualityReport, QualityScorer, Recommendation, RecommendationCategory,
-    SCORING_ENGINE_VERSION, ScoringProfile,
+    AiCheck, AiReadinessMetrics, QualityGrade, QualityReport, QualityScorer, Recommendation,
+    RecommendationCategory, SCORING_ENGINE_VERSION, ScoringProfile,
 };

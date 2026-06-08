@@ -111,8 +111,14 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
     let output_target = OutputTarget::from_option(config.output_file);
     write_output(&output_text, &output_target, false)?;
 
-    // Check minimum score threshold
+    // Check minimum score threshold. An N/A AI-readiness report (no ML components)
+    // has no meaningful score, so it must not trip the threshold gate.
+    let ai_not_applicable = report
+        .ai_readiness_metrics
+        .as_ref()
+        .is_some_and(crate::quality::AiReadinessMetrics::is_not_applicable);
     if let Some(threshold) = config.min_score
+        && !ai_not_applicable
         && report.overall_score < threshold
     {
         tracing::error!(
@@ -137,9 +143,10 @@ fn parse_scoring_profile(profile_name: &str) -> Result<ScoringProfile> {
         "bsi" | "tr-03183" | "tr03183" | "bsi-tr-03183-2" => Ok(ScoringProfile::BsiTr03183_2),
         "comprehensive" | "full" => Ok(ScoringProfile::Comprehensive),
         "cbom" | "cryptographic" => Ok(ScoringProfile::Cbom),
+        "ai-readiness" | "ai_readiness" => Ok(ScoringProfile::AiReadiness),
         _ => {
             bail!(
-                "Unknown scoring profile: {profile_name}. Valid options: minimal, standard, security, license-compliance, cra, bsi, comprehensive, cbom"
+                "Unknown scoring profile: {profile_name}. Valid options: minimal, standard, security, license-compliance, cra, bsi, comprehensive, cbom, ai-readiness"
             );
         }
     }
@@ -147,18 +154,40 @@ fn parse_scoring_profile(profile_name: &str) -> Result<ScoringProfile> {
 
 /// Format quality report as JSON
 fn format_quality_json(report: &QualityReport, config: &QualityConfig) -> String {
+    let not_applicable = report
+        .ai_readiness_metrics
+        .as_ref()
+        .is_some_and(crate::quality::AiReadinessMetrics::is_not_applicable);
+
+    // Serialize the report, then for an N/A AI-readiness result replace the
+    // overall_score/grade so machine consumers don't read a 0.0 / "F" as a real
+    // failing score (the standard 8-category pipeline did not run).
+    let mut report_value = serde_json::to_value(report).unwrap_or_default();
+    if not_applicable && let Some(obj) = report_value.as_object_mut() {
+        obj.insert("overall_score".to_string(), serde_json::Value::Null);
+        obj.insert(
+            "grade".to_string(),
+            serde_json::Value::String("N/A".to_string()),
+        );
+    }
+
     let output = json!({
         "tool": "sbom-tools",
         "version": env!("CARGO_PKG_VERSION"),
         "sbom": config.sbom_path.file_name().unwrap_or_default().to_string_lossy(),
         "profile": config.profile,
-        "report": report,
+        "applicable": !not_applicable,
+        "report": report_value,
     });
     serde_json::to_string_pretty(&output).unwrap_or_default()
 }
 
 /// Format quality report as SARIF 2.1.0
 fn format_quality_sarif(report: &QualityReport, config: &QualityConfig) -> String {
+    let not_applicable = report
+        .ai_readiness_metrics
+        .as_ref()
+        .is_some_and(crate::quality::AiReadinessMetrics::is_not_applicable);
     let mut results = Vec::new();
 
     // Add compliance violations as SARIF results
@@ -218,8 +247,9 @@ fn format_quality_sarif(report: &QualityReport, config: &QualityConfig) -> Strin
             "properties": {
                 "sbom": config.sbom_path.file_name().unwrap_or_default().to_string_lossy(),
                 "profile": config.profile,
-                "overall_score": report.overall_score,
-                "grade": report.grade.letter(),
+                "applicable": !not_applicable,
+                "overall_score": if not_applicable { serde_json::Value::Null } else { json!(report.overall_score) },
+                "grade": if not_applicable { "N/A" } else { report.grade.letter() },
                 "compliant": report.compliance.is_compliant,
             }
         }]
@@ -232,6 +262,12 @@ fn format_quality_sarif(report: &QualityReport, config: &QualityConfig) -> Strin
 fn format_quality_report(report: &QualityReport, config: &QualityConfig) -> String {
     let mut lines = Vec::new();
     let use_color = !config.no_color && std::env::var("NO_COLOR").is_err();
+
+    // AI-readiness uses a dedicated report layout (per-check pass/fail, not the
+    // standard 8 category scores).
+    if report.profile == ScoringProfile::AiReadiness {
+        return format_ai_readiness_report(report, config, use_color);
+    }
 
     // Color codes
     let (grade_color, reset) = if use_color {
@@ -421,9 +457,106 @@ fn format_quality_report(report: &QualityReport, config: &QualityConfig) -> Stri
     lines.join("\n")
 }
 
+/// Render the AI-readiness profile as a per-check pass/fail report.
+fn format_ai_readiness_report(
+    report: &QualityReport,
+    config: &QualityConfig,
+    use_color: bool,
+) -> String {
+    let mut lines = Vec::new();
+    let Some(metrics) = report.ai_readiness_metrics.as_ref() else {
+        return String::new();
+    };
+    let reset = if use_color { "\x1b[0m" } else { "" };
+
+    lines.push(format!(
+        "SBOM Quality Report: {}",
+        config
+            .sbom_path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+    ));
+    lines.push(format!("Profile: {}", config.profile));
+    lines.push(String::new());
+
+    if metrics.is_not_applicable() {
+        let muted = if use_color { "\x1b[33m" } else { "" };
+        lines.push(format!("Overall Score: {muted}N/A{reset}"));
+        lines.push(
+            metrics
+                .na_reason
+                .clone()
+                .unwrap_or_else(|| "AI readiness is not applicable for this SBOM".to_string()),
+        );
+        return lines.join("\n");
+    }
+
+    let grade_color = if use_color {
+        match report.grade {
+            QualityGrade::A | QualityGrade::B => "\x1b[32m",
+            QualityGrade::C | QualityGrade::D => "\x1b[33m",
+            QualityGrade::F => "\x1b[31m",
+        }
+    } else {
+        ""
+    };
+    lines.push(format!(
+        "Overall Score: {}{:.1}/100 (Grade: {}){}",
+        grade_color,
+        report.overall_score,
+        report.grade.letter(),
+        reset
+    ));
+    lines.push(format!(
+        "ML Components: {} total, {} fully documented",
+        metrics.ml_component_count, metrics.components_fully_documented
+    ));
+    lines.push(String::new());
+    lines.push("AI Readiness Checks:".to_string());
+
+    for check in &metrics.checks {
+        let status = if check.passed { "PASS" } else { "FAIL" };
+        let status_color = if use_color {
+            if check.passed { "\x1b[32m" } else { "\x1b[31m" }
+        } else {
+            ""
+        };
+        lines.push(format!(
+            "  {}{}{} {} ({:.0}%)",
+            status_color,
+            status,
+            reset,
+            check.id,
+            check.weight * 100.0
+        ));
+        lines.push(format!("    {}", check.name));
+        if config.show_metrics
+            && let Some(detail) = &check.detail
+        {
+            lines.push(format!("    {detail}"));
+        }
+    }
+    lines.push(String::new());
+
+    if config.show_recommendations && !report.recommendations.is_empty() {
+        lines.push("Recommendations:".to_string());
+        for rec in report.recommendations.iter().take(10) {
+            lines.push(format!(
+                "  [P{}] {} ({} affected, +{:.1} impact)",
+                rec.priority, rec.message, rec.affected_count, rec.impact
+            ));
+        }
+        lines.push(String::new());
+    }
+
+    lines.join("\n")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::{Component, ComponentType, DocumentMetadata, MlModelInfo, NormalizedSbom};
 
     #[test]
     fn test_parse_scoring_profile() {
@@ -484,5 +617,98 @@ mod tests {
             parse_scoring_profile("cyber-resilience").unwrap(),
             ScoringProfile::Cra
         ));
+        assert!(matches!(
+            parse_scoring_profile("ai-readiness").unwrap(),
+            ScoringProfile::AiReadiness
+        ));
+    }
+
+    fn ai_config(output: ReportFormat, min_score: Option<f32>) -> QualityConfig {
+        QualityConfig {
+            sbom_path: PathBuf::from("model.cdx.json"),
+            profile: "ai-readiness".to_string(),
+            output,
+            output_file: None,
+            show_recommendations: true,
+            show_metrics: true,
+            min_score,
+            no_color: true,
+            cra_sidecar_path: None,
+            cra_product_class: None,
+        }
+    }
+
+    fn fully_documented_ml_sbom() -> NormalizedSbom {
+        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+        let mut component = Component::new("bert-base".to_string(), "ml-model-1".to_string())
+            .with_version("1.0.0".to_string());
+        component.component_type = ComponentType::MachineLearningModel;
+        component.ml_model = Some(MlModelInfo {
+            architecture_family: Some("transformer".to_string()),
+            training_datasets: vec![crate::model::DatasetRef {
+                reference: None,
+                name: Some("dataset".to_string()),
+                purl: None,
+            }],
+            energy_kwh_training: Some(20.0),
+            model_card_url: Some("https://example.test/model-card".to_string()),
+            limitations: Some("Only validated for English text".to_string()),
+            ..MlModelInfo::default()
+        });
+        component.extensions.raw = Some(json!({
+            "mlModel": { "modelCard": {
+                "quantitativeAnalysis": { "performanceMetrics": [{ "type": "accuracy", "value": 0.97 }] },
+                "considerations": {
+                    "fairnessConsiderations": ["Reviewed"],
+                    "useCases": ["Classification"],
+                    "ethicalConsiderations": ["Human review required"]
+                }
+            }}
+        }));
+        sbom.add_component(component);
+        sbom
+    }
+
+    #[test]
+    fn test_format_quality_report_ai_readiness_shows_checks() {
+        let sbom = fully_documented_ml_sbom();
+        let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
+        let output = format_quality_report(&report, &ai_config(ReportFormat::Summary, None));
+        assert!(output.contains("AI Readiness Checks:"));
+        assert!(output.contains("PASS AI-001"));
+        assert!(!output.contains("Category Scores:"));
+    }
+
+    #[test]
+    fn test_format_quality_report_ai_readiness_na_shows_na() {
+        let sbom = NormalizedSbom::new(DocumentMetadata::default());
+        let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
+        let output = format_quality_report(&report, &ai_config(ReportFormat::Summary, Some(70.0)));
+        assert!(output.contains("Overall Score: N/A"));
+        assert!(output.contains("No machine-learning-model components found"));
+    }
+
+    #[test]
+    fn test_format_quality_json_ai_readiness_na_is_not_misleading() {
+        let sbom = NormalizedSbom::new(DocumentMetadata::default());
+        let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
+        let out = format_quality_json(&report, &ai_config(ReportFormat::Json, None));
+        let value: serde_json::Value = serde_json::from_str(&out).expect("valid JSON");
+        // N/A must not serialize as a real 0.0 / "F" score.
+        assert_eq!(value["applicable"], json!(false));
+        assert!(value["report"]["overall_score"].is_null());
+        assert_eq!(value["report"]["grade"], json!("N/A"));
+    }
+
+    #[test]
+    fn test_format_quality_sarif_ai_readiness_na_is_not_misleading() {
+        let sbom = NormalizedSbom::new(DocumentMetadata::default());
+        let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
+        let out = format_quality_sarif(&report, &ai_config(ReportFormat::Sarif, None));
+        let value: serde_json::Value = serde_json::from_str(&out).expect("valid SARIF JSON");
+        let props = &value["runs"][0]["properties"];
+        assert_eq!(props["applicable"], json!(false));
+        assert!(props["overall_score"].is_null());
+        assert_eq!(props["grade"], json!("N/A"));
     }
 }

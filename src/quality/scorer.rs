@@ -5,6 +5,7 @@
 
 use crate::model::{CompletenessDeclaration, NormalizedSbom, SbomFormat};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use super::compliance::{ComplianceChecker, ComplianceLevel, ComplianceResult};
 use super::metrics::{
@@ -15,6 +16,22 @@ use super::metrics::{
 
 /// Quality scoring engine version
 pub const SCORING_ENGINE_VERSION: &str = "2.0";
+
+/// Returns true if any of the JSON pointers resolves to a non-empty value in `raw`.
+/// Used by the AI-readiness profile to inspect model-card fields preserved in
+/// `Component.extensions.raw` that are not surfaced into the typed model.
+fn has_non_empty_pointer(raw: Option<&Value>, pointers: &[&str]) -> bool {
+    pointers
+        .iter()
+        .filter_map(|pointer| raw.and_then(|value| value.pointer(pointer)))
+        .any(|value| match value {
+            Value::Null => false,
+            Value::Array(items) => !items.is_empty(),
+            Value::Object(entries) => !entries.is_empty(),
+            Value::String(text) => !text.trim().is_empty(),
+            _ => true,
+        })
+}
 
 /// Scoring profile determines weights and thresholds
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -37,6 +54,8 @@ pub enum ScoringProfile {
     Comprehensive,
     /// CBOM - cryptographic BOM focus (algorithm strength, PQC readiness, key/cert lifecycle)
     Cbom,
+    /// AI/ML readiness - evaluates model-card completeness for machine-learning components
+    AiReadiness,
 }
 
 impl ScoringProfile {
@@ -51,6 +70,7 @@ impl ScoringProfile {
             Self::BsiTr03183_2 => ComplianceLevel::BsiTr03183_2,
             Self::Comprehensive => ComplianceLevel::Comprehensive,
             Self::Cbom => ComplianceLevel::Comprehensive,
+            Self::AiReadiness => ComplianceLevel::Comprehensive,
         }
     }
 
@@ -145,6 +165,18 @@ impl ScoringProfile {
                 integrity: 0.15,
                 provenance: 0.08,
                 lifecycle: 0.02,
+            },
+            // AiReadiness uses a dedicated scoring path; these weights are only a
+            // structural fallback and are never reached in normal execution.
+            Self::AiReadiness => ScoringWeights {
+                completeness: 0.25,
+                identifiers: 0.15,
+                licenses: 0.15,
+                vulnerabilities: 0.10,
+                dependencies: 0.10,
+                integrity: 0.08,
+                provenance: 0.10,
+                lifecycle: 0.07,
             },
         }
     }
@@ -281,6 +313,46 @@ pub struct Recommendation {
     pub affected_count: usize,
 }
 
+/// Single AI-readiness check result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct AiCheck {
+    /// Machine-readable ID, e.g. "AI-001"
+    pub id: String,
+    /// Human-readable name
+    pub name: String,
+    /// Whether the check passed for every ML component
+    pub passed: bool,
+    /// Optional detail message (per-component pass/fail)
+    pub detail: Option<String>,
+    /// Relative weight of this check (0.0–1.0)
+    pub weight: f32,
+}
+
+/// AI/ML model-card completeness metrics (populated only for the `AiReadiness` profile)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct AiReadinessMetrics {
+    /// Number of ML model components found
+    pub ml_component_count: usize,
+    /// True when no ML components were found — the score is N/A
+    pub not_applicable: bool,
+    /// Human-readable reason for N/A (when `not_applicable` is true)
+    pub na_reason: Option<String>,
+    /// Per-check results
+    pub checks: Vec<AiCheck>,
+    /// Number of ML components that passed every check
+    pub components_fully_documented: usize,
+}
+
+impl AiReadinessMetrics {
+    /// Whether AI readiness is not applicable to this SBOM (no ML components).
+    #[must_use]
+    pub const fn is_not_applicable(&self) -> bool {
+        self.not_applicable
+    }
+}
+
 /// Category for recommendations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -316,6 +388,7 @@ impl RecommendationCategory {
 /// Complete quality report for an SBOM
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[must_use]
+#[non_exhaustive]
 pub struct QualityReport {
     /// Scoring engine version
     pub scoring_engine_version: String,
@@ -372,6 +445,8 @@ pub struct QualityReport {
     pub compliance: ComplianceResult,
     /// Prioritized recommendations
     pub recommendations: Vec<Recommendation>,
+    /// AI/ML readiness metrics (`Some` only when profile is `AiReadiness`)
+    pub ai_readiness_metrics: Option<AiReadinessMetrics>,
 }
 
 /// Quality scorer for SBOMs
@@ -427,6 +502,12 @@ impl QualityScorer {
 
     /// Score an SBOM
     pub fn score(&self, sbom: &NormalizedSbom) -> QualityReport {
+        // AI readiness uses a dedicated scoring path that is incompatible with the
+        // standard 8-category pipeline.
+        if self.profile == ScoringProfile::AiReadiness {
+            return self.score_ai_readiness(sbom);
+        }
+
         let total_components = sbom.components.len();
         let is_cyclonedx = sbom.document.format == SbomFormat::CycloneDx;
 
@@ -567,7 +648,240 @@ impl QualityScorer {
             cryptography_metrics,
             compliance,
             recommendations,
+            ai_readiness_metrics: None,
         }
+    }
+
+    /// Score ML model-card completeness for the AI-readiness profile.
+    ///
+    /// Filters to `MachineLearningModel` components and evaluates nine model-card
+    /// checks (AI-001..AI-009). The returned `QualityReport` has all standard
+    /// category scores zeroed/`None`; the rich data lives in `ai_readiness_metrics`.
+    /// When the SBOM has no ML components the report is marked not-applicable.
+    fn score_ai_readiness(&self, sbom: &NormalizedSbom) -> QualityReport {
+        use crate::model::ComponentType;
+
+        // Standard metrics are still computed so the report is structurally valid.
+        let completeness_metrics = CompletenessMetrics::from_sbom(sbom);
+        let identifier_metrics = IdentifierMetrics::from_sbom(sbom);
+        let license_metrics = LicenseMetrics::from_sbom(sbom);
+        let vulnerability_metrics = VulnerabilityMetrics::from_sbom(sbom);
+        let dependency_metrics = DependencyMetrics::from_sbom(sbom);
+        let hash_quality_metrics = HashQualityMetrics::from_sbom(sbom);
+        let provenance_metrics = ProvenanceMetrics::from_sbom(sbom);
+        let auditability_metrics = AuditabilityMetrics::from_sbom(sbom);
+        let lifecycle_metrics = LifecycleMetrics::from_sbom(sbom);
+
+        let compliance = ComplianceChecker::new(self.profile.compliance_level()).check(sbom);
+
+        let make_report = |overall_score: f32,
+                           grade: QualityGrade,
+                           recommendations: Vec<Recommendation>,
+                           metrics: AiReadinessMetrics| QualityReport {
+            scoring_engine_version: SCORING_ENGINE_VERSION.to_string(),
+            overall_score,
+            grade,
+            profile: self.profile,
+            completeness_score: 0.0,
+            identifier_score: 0.0,
+            license_score: 0.0,
+            vulnerability_score: None,
+            dependency_score: 0.0,
+            integrity_score: 0.0,
+            provenance_score: 0.0,
+            lifecycle_score: None,
+            completeness_metrics: completeness_metrics.clone(),
+            identifier_metrics: identifier_metrics.clone(),
+            license_metrics: license_metrics.clone(),
+            vulnerability_metrics: vulnerability_metrics.clone(),
+            dependency_metrics: dependency_metrics.clone(),
+            hash_quality_metrics: hash_quality_metrics.clone(),
+            provenance_metrics: provenance_metrics.clone(),
+            auditability_metrics: auditability_metrics.clone(),
+            lifecycle_metrics: lifecycle_metrics.clone(),
+            cryptography_score: None,
+            cryptography_metrics: CryptographyMetrics::default(),
+            compliance: compliance.clone(),
+            recommendations,
+            ai_readiness_metrics: Some(metrics),
+        };
+
+        let ml_components: Vec<_> = sbom
+            .components
+            .values()
+            .filter(|c| c.component_type == ComponentType::MachineLearningModel)
+            .collect();
+
+        if ml_components.is_empty() {
+            let metrics = AiReadinessMetrics {
+                ml_component_count: 0,
+                not_applicable: true,
+                na_reason: Some(
+                    "No machine-learning-model components found in this SBOM".to_string(),
+                ),
+                checks: Vec::new(),
+                components_fully_documented: 0,
+            };
+            return make_report(0.0, QualityGrade::F, Vec::new(), metrics);
+        }
+
+        // Per-check (id, name, weight); weights sum to 1.0 across the nine checks.
+        const CHECK_DEFS: [(&str, &str, f32); 9] = [
+            ("AI-001", "Model card URL present", 0.15),
+            ("AI-002", "Architecture family declared", 0.12),
+            ("AI-003", "Training datasets referenced", 0.12),
+            ("AI-004", "Quantitative analysis present", 0.12),
+            ("AI-005", "Fairness assessments included", 0.11),
+            ("AI-006", "Energy consumption disclosed", 0.10),
+            ("AI-007", "Use-cases documented", 0.10),
+            ("AI-008", "Known limitations stated", 0.09),
+            ("AI-009", "Ethical considerations present", 0.09),
+        ];
+
+        let n = ml_components.len();
+        let mut total_weighted_score = 0.0_f32;
+        let mut components_fully_documented = 0_usize;
+        let mut component_details: Vec<Vec<String>> = vec![Vec::new(); CHECK_DEFS.len()];
+        let mut failing_components = vec![0_usize; CHECK_DEFS.len()];
+
+        for component in &ml_components {
+            let ml = component.ml_model.as_ref();
+            let raw = component.extensions.raw.as_ref();
+
+            let results: [bool; 9] = [
+                // AI-001: model card URL
+                ml.and_then(|m| m.model_card_url.as_ref()).is_some(),
+                // AI-002: architecture family
+                ml.and_then(|m| m.architecture_family.as_ref()).is_some(),
+                // AI-003: training datasets
+                ml.is_some_and(|m| !m.training_datasets.is_empty()),
+                // AI-004: quantitative analysis (preserved in raw extensions)
+                has_non_empty_pointer(
+                    raw,
+                    &[
+                        "/modelCard/quantitativeAnalysis",
+                        "/mlModel/modelCard/quantitativeAnalysis",
+                    ],
+                ),
+                // AI-005: fairness assessments
+                has_non_empty_pointer(
+                    raw,
+                    &[
+                        "/modelCard/considerations/fairnessConsiderations",
+                        "/mlModel/modelCard/considerations/fairnessConsiderations",
+                        "/mlModel/considerations/fairnessConsiderations",
+                    ],
+                ),
+                // AI-006: energy consumption
+                ml.and_then(|m| m.energy_kwh_training).is_some(),
+                // AI-007: use-cases
+                has_non_empty_pointer(
+                    raw,
+                    &[
+                        "/modelCard/considerations/useCases",
+                        "/mlModel/modelCard/considerations/useCases",
+                        "/mlModel/considerations/useCases",
+                    ],
+                ),
+                // AI-008: limitations
+                ml.and_then(|m| m.limitations.as_ref()).is_some(),
+                // AI-009: ethical considerations
+                has_non_empty_pointer(
+                    raw,
+                    &[
+                        "/modelCard/considerations/ethicalConsiderations",
+                        "/mlModel/modelCard/considerations/ethicalConsiderations",
+                        "/mlModel/considerations/ethicalConsiderations",
+                    ],
+                ),
+            ];
+
+            if results.iter().all(|&p| p) {
+                components_fully_documented += 1;
+            }
+
+            total_weighted_score += results
+                .iter()
+                .zip(CHECK_DEFS.iter())
+                .map(|(&passed, (_, _, w))| if passed { *w } else { 0.0 })
+                .sum::<f32>();
+
+            for (i, &passed) in results.iter().enumerate() {
+                component_details[i].push(format!(
+                    "{}: {}",
+                    component.name,
+                    if passed { "pass" } else { "fail" }
+                ));
+                if !passed {
+                    failing_components[i] += 1;
+                }
+            }
+        }
+
+        let checks: Vec<AiCheck> = CHECK_DEFS
+            .iter()
+            .enumerate()
+            .map(|(i, (id, name, weight))| {
+                let failures = failing_components[i];
+                let detail = if component_details[i].is_empty() {
+                    None
+                } else {
+                    Some(format!(
+                        "{}/{} components passed; {}",
+                        n - failures,
+                        n,
+                        component_details[i].join("; ")
+                    ))
+                };
+                AiCheck {
+                    id: (*id).to_string(),
+                    name: (*name).to_string(),
+                    passed: failures == 0,
+                    detail,
+                    weight: *weight,
+                }
+            })
+            .collect();
+
+        // Average across all ML components, scaled to 0-100.
+        let overall_score = ((total_weighted_score / n as f32) * 100.0).min(100.0);
+
+        let mut recommendations: Vec<Recommendation> = checks
+            .iter()
+            .zip(failing_components.iter())
+            .filter(|(c, _)| !c.passed)
+            .enumerate()
+            .map(|(i, (chk, &affected_count))| Recommendation {
+                priority: (i as u8 / 3) + 1,
+                category: RecommendationCategory::Completeness,
+                message: format!("[{}] {}", chk.id, chk.name),
+                impact: chk.weight * 100.0,
+                affected_count,
+            })
+            .collect();
+
+        recommendations.sort_by(|a, b| {
+            a.priority.cmp(&b.priority).then_with(|| {
+                b.impact
+                    .partial_cmp(&a.impact)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+        });
+
+        let metrics = AiReadinessMetrics {
+            ml_component_count: n,
+            not_applicable: false,
+            na_reason: None,
+            checks,
+            components_fully_documented,
+        };
+
+        make_report(
+            overall_score,
+            QualityGrade::from_score(overall_score),
+            recommendations,
+            metrics,
+        )
     }
 
     /// Apply hard score caps for critical issues
@@ -955,6 +1269,8 @@ impl Default for QualityScorer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::{Component, ComponentType, DocumentMetadata, MlModelInfo};
+    use serde_json::json;
 
     #[test]
     fn test_grade_from_score() {
@@ -979,6 +1295,10 @@ mod tests {
             ScoringProfile::Comprehensive.compliance_level(),
             ComplianceLevel::Comprehensive
         );
+        assert_eq!(
+            ScoringProfile::AiReadiness.compliance_level(),
+            ComplianceLevel::Comprehensive
+        );
     }
 
     #[test]
@@ -991,6 +1311,7 @@ mod tests {
             ScoringProfile::Cra,
             ScoringProfile::Comprehensive,
             ScoringProfile::Cbom,
+            ScoringProfile::AiReadiness,
         ];
         for profile in &profiles {
             let w = profile.weights();
@@ -1056,5 +1377,148 @@ mod tests {
             "weak algo should cap at D, got {}",
             report.overall_score
         );
+    }
+
+    fn ml_component(bom_ref: &str, name: &str, ml: MlModelInfo, raw: Value) -> Component {
+        let mut component =
+            Component::new(name.to_string(), bom_ref.to_string()).with_version("1.0.0".to_string());
+        component.component_type = ComponentType::MachineLearningModel;
+        component.ml_model = Some(ml);
+        component.extensions.raw = Some(raw);
+        component
+    }
+
+    #[test]
+    fn test_ai_readiness_not_applicable_without_ml_components() {
+        let sbom = NormalizedSbom::new(DocumentMetadata::default());
+        let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
+        let metrics = report
+            .ai_readiness_metrics
+            .expect("AI readiness metrics should be present");
+        assert!(metrics.is_not_applicable());
+        assert_eq!(metrics.ml_component_count, 0);
+        assert!(metrics.checks.is_empty());
+    }
+
+    #[test]
+    fn test_ai_readiness_reads_nested_model_card_extensions() {
+        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+        let ml = MlModelInfo {
+            architecture_family: Some("transformer".to_string()),
+            training_datasets: vec![crate::model::DatasetRef {
+                reference: None,
+                name: Some("wikipedia-2.5B".to_string()),
+                purl: None,
+            }],
+            energy_kwh_training: Some(1500.0),
+            model_card_url: Some("https://example.test/model-card".to_string()),
+            limitations: Some("Only validated for English text".to_string()),
+            ..MlModelInfo::default()
+        };
+        let raw = json!({
+            "mlModel": {
+                "modelCard": {
+                    "quantitativeAnalysis": {
+                        "performanceMetrics": [{ "type": "accuracy", "value": 0.97 }]
+                    },
+                    "considerations": {
+                        "fairnessConsiderations": ["Assessed on demographic parity"],
+                        "useCases": ["Document classification"],
+                        "ethicalConsiderations": ["Human review required for sensitive domains"]
+                    }
+                }
+            }
+        });
+        sbom.add_component(ml_component("ml-1", "bert-base", ml, raw));
+
+        let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
+        let metrics = report
+            .ai_readiness_metrics
+            .expect("AI readiness metrics should be present");
+        assert!(!metrics.is_not_applicable());
+        // All nine checks should pass → fully documented, perfect score.
+        for check in &metrics.checks {
+            assert!(check.passed, "expected {} to pass", check.id);
+        }
+        assert_eq!(metrics.components_fully_documented, 1);
+        assert!((report.overall_score - 100.0).abs() < 0.01);
+        assert_eq!(report.grade, QualityGrade::A);
+    }
+
+    #[test]
+    fn test_ai_readiness_fails_check_when_any_model_is_missing_it() {
+        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+        let complete_ml = MlModelInfo {
+            architecture_family: Some("transformer".to_string()),
+            training_datasets: vec![crate::model::DatasetRef {
+                reference: None,
+                name: Some("dataset".to_string()),
+                purl: None,
+            }],
+            energy_kwh_training: Some(10.0),
+            model_card_url: Some("https://example.test/model-card".to_string()),
+            limitations: Some("Only validated for English text".to_string()),
+            ..MlModelInfo::default()
+        };
+        let complete_raw = json!({
+            "mlModel": { "modelCard": {
+                "quantitativeAnalysis": { "performanceMetrics": [{ "type": "accuracy", "value": 0.98 }] },
+                "considerations": {
+                    "fairnessConsiderations": ["Reviewed"],
+                    "useCases": ["Classification"],
+                    "ethicalConsiderations": ["Human review required"]
+                }
+            }}
+        });
+        sbom.add_component(ml_component(
+            "ml-1",
+            "complete-model",
+            complete_ml.clone(),
+            complete_raw,
+        ));
+
+        // Second model is missing fairness assessments.
+        let incomplete_raw = json!({
+            "mlModel": { "modelCard": {
+                "quantitativeAnalysis": { "performanceMetrics": [{ "type": "accuracy", "value": 0.94 }] },
+                "considerations": {
+                    "useCases": ["Classification"],
+                    "ethicalConsiderations": ["Human review required"]
+                }
+            }}
+        });
+        sbom.add_component(ml_component(
+            "ml-2",
+            "incomplete-model",
+            complete_ml,
+            incomplete_raw,
+        ));
+
+        let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
+        let metrics = report
+            .ai_readiness_metrics
+            .expect("AI readiness metrics should be present");
+        let fairness = metrics
+            .checks
+            .iter()
+            .find(|c| c.id == "AI-005")
+            .expect("AI-005 should be present");
+        assert!(
+            !fairness.passed,
+            "AI-005 should fail when any model is missing fairness data"
+        );
+        assert!(
+            fairness
+                .detail
+                .as_deref()
+                .unwrap_or_default()
+                .contains("1/2 components passed")
+        );
+        let rec = report
+            .recommendations
+            .iter()
+            .find(|r| r.message.contains("AI-005"))
+            .expect("missing fairness recommendation");
+        assert_eq!(rec.affected_count, 1);
     }
 }

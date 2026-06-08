@@ -33,6 +33,9 @@ pub const fn get_profile_weights(
         ScoringProfile::BsiTr03183_2 => (0.10, 0.22, 0.08, 0.10, 0.12, 0.18, 0.12, 0.08),
         ScoringProfile::Comprehensive => (0.15, 0.13, 0.13, 0.10, 0.12, 0.12, 0.13, 0.12),
         ScoringProfile::Cbom => (0.15, 0.15, 0.22, 0.10, 0.13, 0.15, 0.08, 0.02),
+        // AiReadiness uses its own scoring path; neutral weights here keep the
+        // standard category bar chart from rendering misleading values.
+        ScoringProfile::AiReadiness => (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
     }
 }
 
@@ -497,6 +500,11 @@ pub fn render_quality_summary(
     report: &QualityReport,
     selected_rec: usize,
 ) {
+    if report.profile == ScoringProfile::AiReadiness {
+        render_ai_readiness_summary(frame, area, report, selected_rec);
+        return;
+    }
+
     let scheme = colors();
     // Adaptive layout: cap bar chart height, give more space to recommendations
     let rec_count = report.recommendations.len().min(6);
@@ -630,6 +638,143 @@ pub fn render_quality_summary(
 
     // Bottom row: full-width recommendations
     render_top_recommendations(frame, chunks[3], report, selected_rec);
+}
+
+/// Render the AI-readiness summary view (per-check pass/fail table, not the 8-category chart).
+fn render_ai_readiness_summary(
+    frame: &mut Frame,
+    area: Rect,
+    report: &QualityReport,
+    selected_rec: usize,
+) {
+    let scheme = colors();
+    let Some(metrics) = report.ai_readiness_metrics.as_ref() else {
+        return;
+    };
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(4),
+            Constraint::Length(5),
+            Constraint::Min(10),
+            Constraint::Min(8),
+        ])
+        .split(area);
+
+    let score_label = if metrics.is_not_applicable() {
+        "N/A".to_string()
+    } else {
+        format!("{:.0}/100", report.overall_score)
+    };
+    let grade_label = if metrics.is_not_applicable() {
+        "Not applicable".to_string()
+    } else {
+        report.grade.letter().to_string()
+    };
+    let score_style = if metrics.is_not_applicable() {
+        Style::default().fg(scheme.warning).bold()
+    } else {
+        Style::default().fg(grade_color(report.grade)).bold()
+    };
+    let header = Paragraph::new(Line::from(vec![
+        Span::styled("Overall Score: ", Style::default().fg(scheme.text)),
+        Span::styled(score_label, score_style),
+        Span::styled(
+            format!(" ({grade_label}) "),
+            Style::default().fg(scheme.muted),
+        ),
+        Span::styled("| Profile: ", Style::default().fg(scheme.text)),
+        Span::styled("AiReadiness", Style::default().fg(scheme.primary)),
+    ]))
+    .block(
+        Block::default()
+            .title(" AI Readiness Summary ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(scheme.primary)),
+    );
+    frame.render_widget(header, chunks[0]);
+
+    let summary_lines = if metrics.is_not_applicable() {
+        vec![
+            Line::styled(
+                " AI readiness not applicable for this SBOM",
+                Style::default().fg(scheme.warning).bold(),
+            ),
+            Line::from(metrics.na_reason.clone().unwrap_or_default()),
+        ]
+    } else {
+        vec![
+            Line::from(vec![
+                Span::styled(" ML Components: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(
+                    metrics.ml_component_count.to_string(),
+                    Style::default().fg(scheme.primary).bold(),
+                ),
+                Span::styled(
+                    "  |  Fully documented: ",
+                    Style::default().fg(scheme.text_muted),
+                ),
+                Span::styled(
+                    metrics.components_fully_documented.to_string(),
+                    Style::default().fg(scheme.success).bold(),
+                ),
+            ]),
+            Line::from(vec![Span::styled(
+                " Checks passing for every ML component are shown below.",
+                Style::default().fg(scheme.text_muted),
+            )]),
+        ]
+    };
+    let summary = Paragraph::new(summary_lines).block(
+        Block::default()
+            .title(" AI Readiness Overview ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(scheme.primary)),
+    );
+    frame.render_widget(summary, chunks[1]);
+
+    let rows: Vec<Row> = metrics
+        .checks
+        .iter()
+        .map(|check| {
+            let status = if check.passed { "PASS" } else { "FAIL" };
+            let status_style = if check.passed {
+                Style::default().fg(scheme.success)
+            } else {
+                Style::default().fg(scheme.error)
+            };
+            Row::new(vec![
+                check.id.clone(),
+                check.name.clone(),
+                format!("{:.0}%", check.weight * 100.0),
+                status.to_string(),
+            ])
+            .style(status_style)
+        })
+        .collect();
+    let checks = Table::new(
+        rows,
+        [
+            Constraint::Length(8),
+            Constraint::Min(28),
+            Constraint::Length(8),
+            Constraint::Length(8),
+        ],
+    )
+    .block(
+        Block::default()
+            .title(" AI Readiness Checks ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(scheme.accent)),
+    )
+    .header(
+        Row::new(vec!["Check", "Description", "Weight", "Status"])
+            .style(Style::default().fg(scheme.accent).bold())
+            .bottom_margin(1),
+    );
+    frame.render_widget(checks, chunks[2]);
+
+    render_quality_recommendations(frame, chunks[3], report, selected_rec, 0);
 }
 
 /// Render a compact 4-line header with grade, inline bar, score, profile, and strongest/weakest.
@@ -1178,6 +1323,11 @@ pub fn render_score_gauge(frame: &mut Frame, area: Rect, report: &QualityReport,
 }
 
 pub fn render_score_breakdown(frame: &mut Frame, area: Rect, report: &QualityReport) {
+    if report.profile == ScoringProfile::AiReadiness {
+        render_ai_readiness_breakdown(frame, area, report);
+        return;
+    }
+
     let scheme = colors();
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -1316,6 +1466,64 @@ pub fn render_score_breakdown(frame: &mut Frame, area: Rect, report: &QualityRep
     frame.render_widget(factors_widget, chunks[2]);
 }
 
+fn render_ai_readiness_breakdown(frame: &mut Frame, area: Rect, report: &QualityReport) {
+    let scheme = colors();
+    let Some(metrics) = report.ai_readiness_metrics.as_ref() else {
+        return;
+    };
+
+    let rows: Vec<Row> = metrics
+        .checks
+        .iter()
+        .map(|check| {
+            let contribution = if check.passed {
+                check.weight * 100.0
+            } else {
+                0.0
+            };
+            Row::new(vec![
+                check.id.clone(),
+                check.name.clone(),
+                format!("{:.0}%", check.weight * 100.0),
+                if check.passed { "PASS" } else { "FAIL" }.to_string(),
+                format!("+{contribution:.1}pts"),
+                check.detail.clone().unwrap_or_default(),
+            ])
+        })
+        .collect();
+
+    let table = Table::new(
+        rows,
+        [
+            Constraint::Length(8),
+            Constraint::Length(24),
+            Constraint::Length(8),
+            Constraint::Length(8),
+            Constraint::Length(12),
+            Constraint::Min(30),
+        ],
+    )
+    .block(
+        Block::default()
+            .title(" AI Readiness Breakdown ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(scheme.primary)),
+    )
+    .header(
+        Row::new(vec![
+            "Check",
+            "Description",
+            "Weight",
+            "Status",
+            "Contrib.",
+            "Detail",
+        ])
+        .style(Style::default().fg(scheme.accent).bold())
+        .bottom_margin(1),
+    );
+    frame.render_widget(table, area);
+}
+
 fn create_breakdown_row(name: &str, score: f32, weight: f32, explanation: &str) -> Row<'static> {
     let contribution = score * weight;
     let sc = score_color(score);
@@ -1331,6 +1539,11 @@ fn create_breakdown_row(name: &str, score: f32, weight: f32, explanation: &str) 
 }
 
 pub fn render_quality_metrics(frame: &mut Frame, area: Rect, report: &QualityReport) {
+    if report.profile == ScoringProfile::AiReadiness {
+        render_ai_readiness_metrics(frame, area, report);
+        return;
+    }
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -1345,6 +1558,68 @@ pub fn render_quality_metrics(frame: &mut Frame, area: Rect, report: &QualityRep
     render_id_license_details(frame, chunks[1], report);
     render_integrity_provenance_details(frame, chunks[2], report);
     render_dependency_details(frame, chunks[3], report);
+}
+
+fn render_ai_readiness_metrics(frame: &mut Frame, area: Rect, report: &QualityReport) {
+    let scheme = colors();
+    let Some(metrics) = report.ai_readiness_metrics.as_ref() else {
+        return;
+    };
+
+    let mut lines = vec![
+        Line::from(vec![
+            Span::styled("ML components: ", Style::default().fg(scheme.text_muted)),
+            Span::styled(
+                metrics.ml_component_count.to_string(),
+                Style::default().fg(scheme.primary),
+            ),
+        ]),
+        Line::from(vec![
+            Span::styled("Fully documented: ", Style::default().fg(scheme.text_muted)),
+            Span::styled(
+                metrics.components_fully_documented.to_string(),
+                Style::default().fg(scheme.success),
+            ),
+        ]),
+        Line::from(""),
+    ];
+
+    if metrics.is_not_applicable() {
+        lines.push(Line::styled(
+            metrics.na_reason.clone().unwrap_or_default(),
+            Style::default().fg(scheme.warning),
+        ));
+    } else {
+        for check in &metrics.checks {
+            let status_style = if check.passed {
+                Style::default().fg(scheme.success)
+            } else {
+                Style::default().fg(scheme.error)
+            };
+            lines.push(Line::from(vec![
+                Span::styled(format!("{} ", check.id), Style::default().fg(scheme.accent)),
+                Span::styled(if check.passed { "PASS" } else { "FAIL" }, status_style),
+                Span::styled(
+                    format!(" {:.0}% {}", check.weight * 100.0, check.name),
+                    Style::default().fg(scheme.text),
+                ),
+            ]));
+            if let Some(detail) = &check.detail {
+                lines.push(Line::from(vec![
+                    Span::raw("  "),
+                    Span::styled(detail.clone(), Style::default().fg(scheme.text_muted)),
+                ]));
+            }
+        }
+    }
+
+    let paragraph = Paragraph::new(lines).block(
+        Block::default()
+            .title(" AI Readiness Metrics ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(scheme.primary)),
+    );
+    frame.render_widget(paragraph, area);
 }
 
 pub fn render_completeness_details(frame: &mut Frame, area: Rect, report: &QualityReport) {
@@ -1720,8 +1995,13 @@ pub fn render_quality_recommendations(
     let mut lines: Vec<Line> = vec![];
 
     if report.recommendations.is_empty() {
+        let success_message = if report.profile == ScoringProfile::AiReadiness {
+            " Excellent! All AI readiness checks passed for every ML component."
+        } else {
+            " Excellent! This SBOM meets all quality standards."
+        };
         lines.push(Line::styled(
-            " Excellent! This SBOM meets all quality standards.",
+            success_message,
             Style::default().fg(scheme.success).bold(),
         ));
         lines.push(Line::from(""));

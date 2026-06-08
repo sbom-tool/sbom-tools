@@ -45,6 +45,7 @@ pub enum SbomToolsScoringProfile {
     LicenseCompliance = 3,
     Cra = 4,
     Comprehensive = 5,
+    AiReadiness = 6,
 }
 
 impl SbomToolsScoringProfile {
@@ -56,6 +57,7 @@ impl SbomToolsScoringProfile {
             Self::LicenseCompliance => ScoringProfile::LicenseCompliance,
             Self::Cra => ScoringProfile::Cra,
             Self::Comprehensive => ScoringProfile::Comprehensive,
+            Self::AiReadiness => ScoringProfile::AiReadiness,
         }
     }
 }
