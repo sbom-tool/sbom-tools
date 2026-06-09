@@ -5,7 +5,7 @@
 //! SPDX 3.0 uses an element-based graph model with typed elements and
 //! relationships as first-class objects.
 //!
-//! Supported profiles: Core, Software, Security, SimpleLicensing.
+//! Supported profiles: Core, Software, Security, SimpleLicensing, AI, Dataset.
 
 use crate::model::{
     Annotation, CanonicalId, Component, ComponentType, Creator, CreatorType, CvssScore,
@@ -57,7 +57,7 @@ impl Spdx3Parser {
         let mut agent_map: HashMap<String, Spdx3Agent> = HashMap::new();
         let mut vuln_map: HashMap<String, Spdx3Vulnerability> = HashMap::new();
         let mut relationships: Vec<Spdx3Relationship> = Vec::new();
-        let mut packages: Vec<Spdx3Package> = Vec::new();
+        let mut packages: Vec<(Spdx3Package, PackageKind)> = Vec::new();
         let mut files: Vec<Spdx3File> = Vec::new();
         let mut snippets: Vec<Spdx3Snippet> = Vec::new();
         let mut annotations: Vec<Spdx3Annotation> = Vec::new();
@@ -71,7 +71,9 @@ impl Spdx3Parser {
             for element in elements {
                 // Track duplicate element IDs
                 let element_id = match &element {
-                    Spdx3Element::Package(pkg) => pkg.spdx_id.clone(),
+                    Spdx3Element::Package(pkg)
+                    | Spdx3Element::AiPackage(pkg)
+                    | Spdx3Element::DatasetPackage(pkg) => pkg.spdx_id.clone(),
                     Spdx3Element::File(file) => file.spdx_id.clone(),
                     Spdx3Element::Relationship(rel) => rel.spdx_id.clone(),
                     Spdx3Element::Vulnerability(vuln) => vuln.spdx_id.clone(),
@@ -101,7 +103,11 @@ impl Spdx3Parser {
                 }
 
                 match element {
-                    Spdx3Element::Package(pkg) => packages.push(*pkg),
+                    Spdx3Element::Package(pkg) => packages.push((*pkg, PackageKind::Software)),
+                    Spdx3Element::AiPackage(pkg) => packages.push((*pkg, PackageKind::AiModel)),
+                    Spdx3Element::DatasetPackage(pkg) => {
+                        packages.push((*pkg, PackageKind::Dataset));
+                    }
                     Spdx3Element::File(file) => files.push(*file),
                     Spdx3Element::Snippet(snippet) => snippets.push(snippet),
                     Spdx3Element::Relationship(rel)
@@ -182,8 +188,8 @@ impl Spdx3Parser {
         // Convert packages to components
         let mut id_map: HashMap<String, CanonicalId> = HashMap::new();
 
-        for pkg in &packages {
-            let comp = self.convert_package(pkg, &agent_map);
+        for (pkg, kind) in &packages {
+            let comp = self.convert_package(pkg, *kind, &agent_map);
             let spdx_id = pkg.spdx_id.clone().unwrap_or_else(|| comp.name.clone());
             id_map.insert(spdx_id, comp.canonical_id.clone());
             sbom.add_component(comp);
@@ -385,6 +391,7 @@ impl Spdx3Parser {
     fn convert_package(
         &self,
         pkg: &Spdx3Package,
+        kind: PackageKind,
         agent_map: &HashMap<String, Spdx3Agent>,
     ) -> Component {
         let format_id = pkg
@@ -439,6 +446,7 @@ impl Spdx3Parser {
                 "firmware" => ComponentType::Firmware,
                 "file" | "source" | "archive" => ComponentType::File,
                 "data" | "documentation" => ComponentType::Data,
+                "model" => ComponentType::MachineLearningModel,
                 "platform" => ComponentType::Platform,
                 other => ComponentType::Other(other.to_string()),
             };
@@ -496,6 +504,143 @@ impl Spdx3Parser {
         // Set description and copyright
         comp.description.clone_from(&pkg.description);
         comp.copyright.clone_from(&pkg.copyright_text);
+
+        // ── SPDX 3.0 AI / Dataset profile extraction ──
+        // The element `type` (kind) is authoritative; override whatever
+        // primary_purpose inferred so an ai_AIPackage/dataset_DatasetPackage
+        // always maps to the right ComponentType.
+        match kind {
+            PackageKind::AiModel => {
+                comp.component_type = ComponentType::MachineLearningModel;
+                // SPDX 3.0 has no model-card-URL property; approximate AI-001 from
+                // a `documentation` external reference.
+                let model_card_url = comp
+                    .external_refs
+                    .iter()
+                    .find(|r| r.ref_type == ExternalRefType::Documentation)
+                    .map(|r| r.url.clone());
+                comp.ml_model = Some(crate::model::MlModelInfo {
+                    // ai_typeOfModel is a free-string list; treat the first as the
+                    // family (cross-format approximation — see metadata.rs docs).
+                    architecture_family: pkg
+                        .ai_type_of_model
+                        .as_ref()
+                        .and_then(|v| v.first().cloned()),
+                    limitations: pkg.ai_limitation.clone(),
+                    energy_kwh_training: pkg
+                        .ai_energy_consumption
+                        .as_ref()
+                        .and_then(Spdx3EnergyConsumption::training_energy_kwh),
+                    model_card_url,
+                    // training_datasets are linked via Relationships in SPDX, not
+                    // an inline field; relationship-derivation is future work.
+                    ..Default::default()
+                });
+
+                // Bridge non-typed AI signals into extensions.raw (CycloneDX
+                // modelCard layout) so the AI-readiness raw-pointer checks
+                // (AI-004/005/007/009) can see them. Each is an approximation of
+                // the closest SPDX AI field; only non-empty values are emitted.
+                let quant: Vec<serde_json::Value> = pkg
+                    .ai_metric
+                    .clone()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .chain(pkg.ai_metric_decision_threshold.clone().unwrap_or_default())
+                    .collect();
+                let fairness: Vec<String> = pkg
+                    .ai_model_explainability
+                    .clone()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .chain(pkg.ai_safety_risk_assessment.clone())
+                    .collect();
+                let use_cases: Vec<String> = pkg
+                    .ai_information_about_application
+                    .clone()
+                    .into_iter()
+                    .chain(pkg.ai_domain.clone().unwrap_or_default())
+                    .collect();
+                let ethical: Vec<String> = pkg
+                    .ai_standard_compliance
+                    .clone()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .chain(pkg.ai_use_sensitive_personal_information.clone())
+                    .collect();
+
+                let mut model_card = serde_json::Map::new();
+                if !quant.is_empty() {
+                    model_card.insert(
+                        "quantitativeAnalysis".to_string(),
+                        serde_json::json!({ "performanceMetrics": quant }),
+                    );
+                }
+                let mut considerations = serde_json::Map::new();
+                if !fairness.is_empty() {
+                    considerations.insert(
+                        "fairnessConsiderations".to_string(),
+                        serde_json::json!(fairness),
+                    );
+                }
+                if !use_cases.is_empty() {
+                    considerations.insert("useCases".to_string(), serde_json::json!(use_cases));
+                }
+                if !ethical.is_empty() {
+                    considerations.insert(
+                        "ethicalConsiderations".to_string(),
+                        serde_json::json!(ethical),
+                    );
+                }
+                if !considerations.is_empty() {
+                    model_card.insert(
+                        "considerations".to_string(),
+                        serde_json::Value::Object(considerations),
+                    );
+                }
+                if !model_card.is_empty() {
+                    comp.extensions.raw =
+                        Some(serde_json::json!({ "mlModel": { "modelCard": model_card } }));
+                }
+            }
+            PackageKind::Dataset => {
+                comp.component_type = ComponentType::Data;
+                let mut sensitivity = Vec::new();
+                // Only an explicit "yes" implies PII; "no"/"noAssertion" do not.
+                if pkg.dataset_has_sensitive_personal_information.as_deref() == Some("yes") {
+                    sensitivity.push("pii".to_string());
+                }
+                if let Some(level) = &pkg.dataset_confidentiality_level {
+                    sensitivity.push(level.clone());
+                }
+                // Governance owners: supplied_by ∪ originated_by agent names.
+                let mut owners: Vec<String> = Vec::new();
+                for refs in [pkg.supplied_by.as_ref(), pkg.originated_by.as_ref()]
+                    .into_iter()
+                    .flatten()
+                {
+                    for agent_ref in refs {
+                        if let Some(name) = agent_map.get(agent_ref).and_then(|a| a.name.clone())
+                            && !owners.contains(&name)
+                        {
+                            owners.push(name);
+                        }
+                    }
+                }
+                comp.dataset = Some(crate::model::DatasetInfo {
+                    // SPDX dataset_datasetType is a data MODALITY (text/image/…),
+                    // not a train/test split — a documented cross-format divergence.
+                    dataset_type: pkg
+                        .dataset_dataset_type
+                        .as_ref()
+                        .and_then(|v| v.first().cloned()),
+                    sensitivity_classifications: sensitivity,
+                    governance_owners: owners,
+                    ..Default::default()
+                });
+            }
+            PackageKind::Software => {}
+        }
 
         comp.calculate_content_hash();
         comp
@@ -1154,6 +1299,13 @@ enum Spdx3Element {
     Package(Box<Spdx3Package>),
     #[serde(alias = "software_File", alias = "Software_File")]
     File(Box<Spdx3File>),
+    /// SPDX 3.0 AI profile package (deserializes into the shared Package struct,
+    /// which it extends with `ai_*` fields).
+    #[serde(alias = "ai_AIPackage", alias = "AIPackage")]
+    AiPackage(Box<Spdx3Package>),
+    /// SPDX 3.0 Dataset profile package.
+    #[serde(alias = "dataset_DatasetPackage", alias = "DatasetPackage")]
+    DatasetPackage(Box<Spdx3Package>),
     #[serde(alias = "software_Snippet", alias = "Software_Snippet")]
     Snippet(Spdx3Snippet),
     Relationship(Spdx3Relationship),
@@ -1257,6 +1409,135 @@ struct Spdx3Package {
     built_time: Option<String>,
     release_time: Option<String>,
     creation_info: Option<Spdx3CreationInfo>,
+    // ── AI profile (ai_AIPackage). camelCase rename_all would drop the `ai_`
+    //    prefix, so each key is renamed explicitly. ──
+    #[serde(rename = "ai_typeOfModel")]
+    ai_type_of_model: Option<Vec<String>>,
+    #[serde(rename = "ai_energyConsumption")]
+    ai_energy_consumption: Option<Spdx3EnergyConsumption>,
+    #[serde(rename = "ai_informationAboutTraining")]
+    ai_information_about_training: Option<String>,
+    #[serde(rename = "ai_informationAboutApplication")]
+    ai_information_about_application: Option<String>,
+    #[serde(rename = "ai_limitation")]
+    ai_limitation: Option<String>,
+    #[serde(rename = "ai_modelExplainability")]
+    ai_model_explainability: Option<Vec<String>>,
+    #[serde(rename = "ai_safetyRiskAssessment")]
+    ai_safety_risk_assessment: Option<String>,
+    #[serde(rename = "ai_domain")]
+    ai_domain: Option<Vec<String>>,
+    #[serde(rename = "ai_standardCompliance")]
+    ai_standard_compliance: Option<Vec<String>>,
+    #[serde(rename = "ai_metric")]
+    ai_metric: Option<Vec<serde_json::Value>>,
+    #[serde(rename = "ai_metricDecisionThreshold")]
+    ai_metric_decision_threshold: Option<Vec<serde_json::Value>>,
+    #[serde(rename = "ai_useSensitivePersonalInformation")]
+    ai_use_sensitive_personal_information: Option<String>,
+    #[serde(rename = "ai_modelDataPreprocessing")]
+    ai_model_data_preprocessing: Option<Vec<String>>,
+    // ── Dataset profile (dataset_DatasetPackage). ──
+    #[serde(rename = "dataset_datasetType")]
+    dataset_dataset_type: Option<Vec<String>>,
+    #[serde(rename = "dataset_hasSensitivePersonalInformation")]
+    dataset_has_sensitive_personal_information: Option<String>,
+    #[serde(rename = "dataset_confidentialityLevel")]
+    dataset_confidentiality_level: Option<String>,
+    #[serde(rename = "dataset_intendedUse")]
+    dataset_intended_use: Option<String>,
+    #[serde(rename = "dataset_knownBias")]
+    dataset_known_bias: Option<Vec<String>>,
+    #[serde(rename = "dataset_anonymizationMethodUsed")]
+    dataset_anonymization_method_used: Option<Vec<String>>,
+    #[serde(rename = "dataset_dataPreprocessing")]
+    dataset_data_preprocessing: Option<Vec<String>>,
+}
+
+/// Element kind, tracked from the SPDX 3.0 `type` so the converter can map an
+/// `ai_AIPackage`/`dataset_DatasetPackage` (which share `Spdx3Package`) to the
+/// right normalized `ComponentType` and extraction path.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PackageKind {
+    Software,
+    AiModel,
+    Dataset,
+}
+
+/// SPDX 3.0 AI profile `EnergyConsumption`.
+#[derive(Debug, Deserialize, Clone)]
+#[allow(dead_code)]
+struct Spdx3EnergyConsumption {
+    #[serde(rename = "ai_trainingEnergyConsumption")]
+    ai_training_energy_consumption: Option<Vec<Spdx3EnergyConsumptionDescription>>,
+    #[serde(rename = "ai_finetuningEnergyConsumption")]
+    ai_finetuning_energy_consumption: Option<Vec<Spdx3EnergyConsumptionDescription>>,
+    #[serde(rename = "ai_inferenceEnergyConsumption")]
+    ai_inference_energy_consumption: Option<Vec<Spdx3EnergyConsumptionDescription>>,
+}
+
+/// One `EnergyConsumptionDescription` (`ai_energyQuantity` + `ai_energyUnit`).
+#[derive(Debug, Deserialize, Clone)]
+struct Spdx3EnergyConsumptionDescription {
+    #[serde(
+        rename = "ai_energyQuantity",
+        default,
+        deserialize_with = "de_string_or_number_opt"
+    )]
+    ai_energy_quantity: Option<f64>,
+    #[serde(rename = "ai_energyUnit")]
+    ai_energy_unit: Option<String>,
+}
+
+impl Spdx3EnergyConsumption {
+    /// Total training energy in kWh, or `None` if no quantifiable entry exists.
+    /// Unlike the CycloneDX path (which delegates to `CdxEnergyMeasure::as_kwh`),
+    /// SPDX uses `EnergyUnitType` strings; unknown units are skipped rather than
+    /// summed in the wrong unit.
+    fn training_energy_kwh(&self) -> Option<f64> {
+        let entries = self.ai_training_energy_consumption.as_ref()?;
+        let total: f64 = entries
+            .iter()
+            .filter_map(Spdx3EnergyConsumptionDescription::as_kwh)
+            .sum();
+        (total > 0.0).then_some(total)
+    }
+}
+
+impl Spdx3EnergyConsumptionDescription {
+    fn as_kwh(&self) -> Option<f64> {
+        let value = self.ai_energy_quantity?;
+        let kwh = match self.ai_energy_unit.as_deref() {
+            Some("kilowattHour") | None => value,
+            Some("wattHour") => value / 1_000.0,
+            Some("megawattHour") => value * 1_000.0,
+            Some("joule") => value / 3_600_000.0,
+            Some("kilojoule") => value / 3_600.0,
+            Some("megajoule") => value / 3.6,
+            // Unknown unit: skip rather than corrupt the kWh sum.
+            Some(_) => return None,
+        };
+        Some(kwh)
+    }
+}
+
+/// Deserialize an optional `f64` that the SPDX spec examples sometimes serialize
+/// as a JSON string (e.g. `"36.5"`).
+fn de_string_or_number_opt<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StrOrNum {
+        Num(f64),
+        Str(String),
+    }
+    Ok(match Option::<StrOrNum>::deserialize(deserializer)? {
+        None => None,
+        Some(StrOrNum::Num(n)) => Some(n),
+        Some(StrOrNum::Str(s)) => s.trim().parse::<f64>().ok(),
+    })
 }
 
 /// SPDX 3.0 File (Software profile)
@@ -1541,5 +1822,41 @@ mod tests {
         let parser = Spdx3Parser::new();
         assert!(parser.supported_versions().contains(&"3.0"));
         assert!(parser.supported_versions().contains(&"3.0.1"));
+    }
+
+    #[test]
+    fn test_spdx3_ai_dataset_type_tags_deserialize() {
+        // Guard against alias typos silently routing to Spdx3Element::Unknown.
+        let ai: Spdx3Element =
+            serde_json::from_str(r#"{"type": "ai_AIPackage", "spdxId": "urn:x:m", "name": "m"}"#)
+                .expect("ai_AIPackage should deserialize");
+        assert!(matches!(ai, Spdx3Element::AiPackage(_)));
+
+        let ds: Spdx3Element = serde_json::from_str(
+            r#"{"type": "dataset_DatasetPackage", "spdxId": "urn:x:d", "name": "d"}"#,
+        )
+        .expect("dataset_DatasetPackage should deserialize");
+        assert!(matches!(ds, Spdx3Element::DatasetPackage(_)));
+    }
+
+    #[test]
+    fn test_spdx3_training_energy_kwh_sum_and_units() {
+        // Only training entries count; unknown units are skipped; megajoule converts.
+        let ec: Spdx3EnergyConsumption = serde_json::from_str(
+            r#"{
+                "ai_trainingEnergyConsumption": [
+                    {"ai_energyQuantity": "100", "ai_energyUnit": "kilowattHour"},
+                    {"ai_energyQuantity": 3.6, "ai_energyUnit": "megajoule"}
+                ],
+                "ai_inferenceEnergyConsumption": [
+                    {"ai_energyQuantity": 999, "ai_energyUnit": "kilowattHour"}
+                ]
+            }"#,
+        )
+        .expect("energy consumption should deserialize");
+        // 100 kWh + (3.6 MJ -> 1.0 kWh) = 101.0; inference is excluded; the
+        // string quantity "100" parses.
+        let total = ec.training_energy_kwh().expect("training energy");
+        assert!((total - 101.0).abs() < 1e-9, "got {total}");
     }
 }

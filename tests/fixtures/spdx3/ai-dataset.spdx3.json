@@ -1,0 +1,83 @@
+{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "type": "SpdxDocument",
+  "spdxId": "urn:spdx:doc:ai-dataset",
+  "name": "SPDX 3.0 AI + Dataset Test Document",
+  "creationInfo": {
+    "specVersion": "3.0.1",
+    "created": "2026-03-27T00:00:00Z",
+    "createdBy": ["urn:spdx:agent:acme-ai"],
+    "createdUsing": ["urn:spdx:tool:sbom-gen"]
+  },
+  "profileConformance": ["core", "software", "ai", "dataset"],
+  "rootElement": ["urn:spdx:pkg:bert-base"],
+  "element": [
+    {
+      "type": "Organization",
+      "spdxId": "urn:spdx:agent:acme-ai",
+      "name": "Acme AI"
+    },
+    {
+      "type": "Tool",
+      "spdxId": "urn:spdx:tool:sbom-gen",
+      "name": "SBOM Generator 3.0"
+    },
+    {
+      "type": "ai_AIPackage",
+      "spdxId": "urn:spdx:pkg:bert-base",
+      "name": "bert-base",
+      "packageVersion": "1.0.0",
+      "packageUrl": "pkg:huggingface/google-bert/bert-base-uncased@1.0.0",
+      "primaryPurpose": "model",
+      "suppliedBy": ["urn:spdx:agent:acme-ai"],
+      "description": "BERT base model for NLP tasks",
+      "ai_typeOfModel": ["transformer"],
+      "ai_limitation": "Optimized for English text; may not generalize to other languages.",
+      "ai_informationAboutApplication": "Document classification and NLP downstream tasks",
+      "ai_modelExplainability": ["SHAP"],
+      "ai_safetyRiskAssessment": "low",
+      "ai_domain": ["nlp"],
+      "ai_useSensitivePersonalInformation": "no",
+      "ai_standardCompliance": ["ISO/IEC 42001"],
+      "ai_metric": [{ "key": "accuracy", "value": "0.97" }],
+      "ai_energyConsumption": {
+        "ai_trainingEnergyConsumption": [
+          { "ai_energyQuantity": 1500, "ai_energyUnit": "kilowattHour" }
+        ]
+      },
+      "externalRef": [
+        {
+          "externalRefType": "documentation",
+          "locator": ["https://huggingface.co/google-bert/bert-base-uncased"]
+        }
+      ]
+    },
+    {
+      "type": "dataset_DatasetPackage",
+      "spdxId": "urn:spdx:pkg:training-dataset-v1",
+      "name": "training-dataset-v1",
+      "packageVersion": "1.0.0",
+      "primaryPurpose": "data",
+      "suppliedBy": ["urn:spdx:agent:acme-ai"],
+      "description": "Primary training dataset",
+      "dataset_datasetType": ["text"],
+      "dataset_hasSensitivePersonalInformation": "yes",
+      "dataset_confidentialityLevel": "restricted"
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "urn:spdx:pkg:libtokenizer",
+      "name": "libtokenizer",
+      "packageVersion": "2.1.0",
+      "packageUrl": "pkg:cargo/libtokenizer@2.1.0",
+      "primaryPurpose": "library"
+    },
+    {
+      "type": "Relationship",
+      "spdxId": "urn:spdx:rel:1",
+      "relationshipType": "dependsOn",
+      "from": "urn:spdx:pkg:bert-base",
+      "to": ["urn:spdx:pkg:libtokenizer"]
+    }
+  ]
+}

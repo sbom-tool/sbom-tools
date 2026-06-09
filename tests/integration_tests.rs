@@ -731,6 +731,104 @@ mod parser_tests {
     }
 
     #[test]
+    fn test_parse_spdx3_ai_package() {
+        let path = fixture_path("spdx3/ai-dataset.spdx3.json");
+        let sbom = parse_sbom(&path).expect("Failed to parse SPDX 3.0 AI BOM");
+
+        let bert = sbom
+            .components
+            .values()
+            .find(|c| c.name == "bert-base")
+            .expect("bert-base not found");
+        assert_eq!(
+            bert.component_type,
+            sbom_tools::model::ComponentType::MachineLearningModel
+        );
+        let ml = bert.ml_model.as_ref().expect("ML metadata missing");
+        // ai_typeOfModel[0] -> architecture_family.
+        assert_eq!(ml.architecture_family.as_deref(), Some("transformer"));
+        assert!(
+            ml.limitations
+                .as_deref()
+                .unwrap_or_default()
+                .contains("English")
+        );
+        // Energy from ai_energyConsumption.ai_trainingEnergyConsumption (kWh).
+        assert_eq!(ml.energy_kwh_training, Some(1500.0));
+        // model_card_url approximated from the `documentation` external reference.
+        assert_eq!(
+            ml.model_card_url.as_deref(),
+            Some("https://huggingface.co/google-bert/bert-base-uncased")
+        );
+    }
+
+    #[test]
+    fn test_parse_spdx3_dataset_package() {
+        let path = fixture_path("spdx3/ai-dataset.spdx3.json");
+        let sbom = parse_sbom(&path).expect("Failed to parse SPDX 3.0 dataset");
+
+        let dataset = sbom
+            .components
+            .values()
+            .find(|c| c.name == "training-dataset-v1")
+            .expect("dataset not found");
+        assert_eq!(
+            dataset.component_type,
+            sbom_tools::model::ComponentType::Data
+        );
+        let info = dataset.dataset.as_ref().expect("dataset metadata missing");
+        // dataset_datasetType[0] (modality) -> dataset_type.
+        assert_eq!(info.dataset_type.as_deref(), Some("text"));
+        // hasSensitivePersonalInformation=="yes" -> "pii"; confidentialityLevel added.
+        assert!(
+            info.sensitivity_classifications
+                .contains(&"pii".to_string())
+        );
+        assert!(
+            info.sensitivity_classifications
+                .contains(&"restricted".to_string())
+        );
+        // governance_owners resolved from suppliedBy agent.
+        assert!(info.governance_owners.contains(&"Acme AI".to_string()));
+    }
+
+    #[test]
+    fn test_spdx3_ai_readiness_scores() {
+        use sbom_tools::quality::{QualityScorer, ScoringProfile};
+
+        let path = fixture_path("spdx3/ai-dataset.spdx3.json");
+        let sbom = parse_sbom(&path).expect("Failed to parse SPDX 3.0 AI BOM");
+        // ai pkg + dataset pkg + software pkg (agents are not components).
+        assert!(sbom.component_count() >= 3);
+
+        let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
+        let metrics = report
+            .ai_readiness_metrics
+            .as_ref()
+            .expect("AI readiness metrics");
+        assert!(!metrics.is_not_applicable());
+        assert_eq!(metrics.ml_component_count, 1);
+
+        let passed = |id: &str| {
+            metrics
+                .checks
+                .iter()
+                .find(|c| c.id == id)
+                .unwrap_or_else(|| panic!("check {id} missing"))
+                .passed
+        };
+        // Typed checks (minus AI-003 training datasets, linked via relationships
+        // in SPDX and not derived in v1).
+        for id in ["AI-001", "AI-002", "AI-006", "AI-008"] {
+            assert!(passed(id), "expected typed check {id} to pass");
+        }
+        // Raw-pointer checks satisfied via the extensions.raw bridge.
+        for id in ["AI-004", "AI-005", "AI-007", "AI-009"] {
+            assert!(passed(id), "expected raw-bridge check {id} to pass");
+        }
+    }
+
+    #[test]
     fn test_spdx3_cross_format_diff_with_cyclonedx() {
         // Test that SPDX 3.0 and CycloneDX SBOMs can be diffed against each other
         let spdx3_path = fixture_path("spdx3/minimal.spdx3.json");
