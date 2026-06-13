@@ -357,6 +357,11 @@ impl ChangeComputer for ComponentChangeComputer {
             }
         }
 
+        // Removed/modified are collected from hash-map iteration; sort by ID
+        // for deterministic output ordering
+        result.removed.sort_by(|a, b| a.id.cmp(&b.id));
+        result.modified.sort_by(|a, b| a.id.cmp(&b.id));
+
         result
     }
 

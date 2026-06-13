@@ -175,7 +175,10 @@ impl DiffEngine {
 
         // Compute match metrics for observability
         {
-            let scores: Vec<f64> = component_matches.pairs.values().copied().collect();
+            // Sorted so float accumulation order (and thus the serialized
+            // average) is identical across runs
+            let mut scores: Vec<f64> = component_matches.pairs.values().copied().collect();
+            scores.sort_unstable_by(f64::total_cmp);
             let exact = scores.iter().filter(|&&s| s >= 0.99).count();
             let fuzzy = scores.len() - exact;
             let matched_count = scores.len();

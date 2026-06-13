@@ -22,6 +22,25 @@ use crate::model::{CanonicalId, Component, NormalizedSbom};
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
+/// Fixed seed for `MinHash` coefficient generation.
+///
+/// Coefficients must be identical across runs so that LSH candidate sets —
+/// and therefore diff results for large SBOMs — are reproducible. Never seed
+/// from input data or process-local randomness.
+const MINHASH_COEFF_SEED: u64 = 0x9E37_79B9_7F4A_7C15;
+
+/// splitmix64 PRNG step (public-domain generator by Sebastiano Vigna).
+///
+/// Produces well-distributed 64-bit values from a sequential seed, which is
+/// all `MinHash` needs for its `h(x) = a*x + b` coefficient pairs.
+fn splitmix64(state: &mut u64) -> u64 {
+    *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+    let mut z = *state;
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
+}
+
 /// Configuration for LSH index.
 #[derive(Debug, Clone)]
 pub struct LshConfig {
@@ -151,17 +170,14 @@ impl LshIndex {
     /// Create a new LSH index with the given configuration.
     #[must_use]
     pub fn new(config: LshConfig) -> Self {
-        use std::collections::hash_map::RandomState;
-        use std::hash::BuildHasher;
-
-        // Generate random hash coefficients
+        // Generate hash coefficients deterministically from a fixed seed
         let mut hash_coeffs = Vec::with_capacity(config.num_hashes);
-        let random_state = RandomState::new();
+        let mut seed = MINHASH_COEFF_SEED;
 
-        for i in 0..config.num_hashes {
-            let a = random_state.hash_one(i as u64 * 31337) | 1; // Ensure odd (coprime with 2^64)
+        for _ in 0..config.num_hashes {
+            let a = splitmix64(&mut seed) | 1; // Ensure odd (coprime with 2^64)
 
-            let b = random_state.hash_one(i as u64 * 7919 + 12345);
+            let b = splitmix64(&mut seed);
 
             hash_coeffs.push((a, b));
         }
@@ -220,9 +236,13 @@ impl LshIndex {
     }
 
     /// Find candidates using a pre-computed signature.
+    ///
+    /// Candidates are returned in deterministic band/bucket order so that
+    /// downstream truncation selects the same subset across runs.
     #[must_use]
     pub fn find_candidates_by_signature(&self, signature: &MinHashSignature) -> Vec<CanonicalId> {
-        let mut candidates = HashSet::new();
+        let mut candidates = Vec::new();
+        let mut seen = HashSet::new();
         let rows_per_band = self.config.rows_per_band();
 
         for (band_idx, bucket_map) in self.buckets.iter().enumerate() {
@@ -230,12 +250,14 @@ impl LshIndex {
 
             if let Some(ids) = bucket_map.get(&band_hash) {
                 for id in ids {
-                    candidates.insert(id.clone());
+                    if seen.insert(id.clone()) {
+                        candidates.push(id.clone());
+                    }
                 }
             }
         }
 
-        candidates.into_iter().collect()
+        candidates
     }
 
     /// Find candidates for a component from another index.
@@ -538,6 +560,32 @@ mod tests {
             "lodash vs lodash-es ({:.2}) should be more similar than lodash vs completely-different ({:.2})",
             sim_12,
             sim_13
+        );
+    }
+
+    #[test]
+    fn test_lsh_deterministic_across_instances() {
+        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+        for name in ["lodash", "lodash-es", "underscore", "react", "angular"] {
+            sbom.add_component(make_component(name));
+        }
+
+        let index_a = LshIndex::build(&sbom, LshConfig::default_balanced());
+        let index_b = LshIndex::build(&sbom, LshConfig::default_balanced());
+
+        for id in sbom.components.keys() {
+            assert_eq!(
+                index_a.get_signature(id).unwrap().values,
+                index_b.get_signature(id).unwrap().values,
+                "signatures must be identical across index instances"
+            );
+        }
+
+        let query = make_component("lodash");
+        assert_eq!(
+            index_a.find_candidates(&query),
+            index_b.find_candidates(&query),
+            "candidate lists must be identical (same content and order)"
         );
     }
 

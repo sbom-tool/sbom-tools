@@ -125,6 +125,9 @@ impl VulnerabilityChangeSet {
     }
 
     /// Sort vulnerabilities by severity (critical first).
+    ///
+    /// Ties are broken by vulnerability and component ID since the details
+    /// are collected from hash-map iteration in otherwise random order.
     pub fn sort_by_severity(&mut self) {
         let severity_order = |s: &str| match s {
             "Critical" => 0,
@@ -133,11 +136,21 @@ impl VulnerabilityChangeSet {
             "Low" => 3,
             _ => 4,
         };
+        let detail_order = |a: &VulnerabilityDetail, b: &VulnerabilityDetail| {
+            severity_order(&a.severity)
+                .cmp(&severity_order(&b.severity))
+                .then_with(|| a.id.cmp(&b.id))
+                .then_with(|| a.component_id.cmp(&b.component_id))
+        };
 
-        self.introduced
-            .sort_by(|a, b| severity_order(&a.severity).cmp(&severity_order(&b.severity)));
-        self.resolved
-            .sort_by(|a, b| severity_order(&a.severity).cmp(&severity_order(&b.severity)));
+        self.introduced.sort_by(detail_order);
+        self.resolved.sort_by(detail_order);
+        self.persistent.sort_by(detail_order);
+        self.vex_changes.sort_by(|a, b| {
+            a.vuln_id
+                .cmp(&b.vuln_id)
+                .then_with(|| a.component_name.cmp(&b.component_name))
+        });
     }
 }
 

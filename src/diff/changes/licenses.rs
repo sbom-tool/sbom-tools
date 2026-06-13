@@ -77,6 +77,15 @@ impl ChangeComputer for LicenseChangeComputer {
             }
         }
 
+        // License sets are collected from hash-map iteration; sort for
+        // deterministic output ordering
+        result
+            .new_licenses
+            .sort_by(|a, b| a.license.cmp(&b.license));
+        result
+            .removed_licenses
+            .sort_by(|a, b| a.license.cmp(&b.license));
+
         result
     }
 

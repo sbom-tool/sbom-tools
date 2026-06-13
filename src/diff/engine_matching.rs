@@ -423,15 +423,20 @@ fn optimal_assignment(
         return Vec::new();
     }
 
-    // Build unique sets of old and new IDs from candidates
+    // Build unique sets of old and new IDs from candidates, in stable order
+    // so solver tie-breaking is reproducible across runs
     let old_ids: Vec<CanonicalId> = {
         let set: HashSet<_> = candidates.iter().map(|(o, _, _)| o.clone()).collect();
-        set.into_iter().collect()
+        let mut ids: Vec<_> = set.into_iter().collect();
+        ids.sort_by(|a, b| a.value().cmp(b.value()));
+        ids
     };
 
     let new_ids: Vec<CanonicalId> = {
         let set: HashSet<_> = candidates.iter().map(|(_, n, _)| n.clone()).collect();
-        set.into_iter().collect()
+        let mut ids: Vec<_> = set.into_iter().collect();
+        ids.sort_by(|a, b| a.value().cmp(b.value()));
+        ids
     };
 
     let n = old_ids.len().max(new_ids.len());
@@ -531,7 +536,13 @@ fn greedy_assignment(
     use std::cmp::Ordering;
 
     let mut sorted: Vec<_> = candidates.to_vec();
-    sorted.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(Ordering::Equal));
+    // Break score ties by ID so the greedy result is stable across runs
+    sorted.sort_by(|a, b| {
+        b.2.partial_cmp(&a.2)
+            .unwrap_or(Ordering::Equal)
+            .then_with(|| a.0.value().cmp(b.0.value()))
+            .then_with(|| a.1.value().cmp(b.1.value()))
+    });
 
     let mut result = Vec::new();
     let mut used_old: HashSet<CanonicalId> = HashSet::new();

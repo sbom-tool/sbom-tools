@@ -323,26 +323,33 @@ impl ComponentIndex {
         }
 
         // Priority 3: Similar prefixes (1-char difference in prefix)
+        // Iterated in sorted prefix order so truncation is deterministic
         if candidates.len() < max_candidates && source_entry.prefix.len() >= 2 {
             let prefix_2 = &source_entry.prefix[..2.min(source_entry.prefix.len())];
-            for (prefix, ids) in &self.by_prefix {
-                if prefix.starts_with(prefix_2) && prefix != &source_entry.prefix {
-                    for id in ids {
-                        if id.as_ref() != source_id
-                            && !seen.contains(id)
-                            && let Some(entry) = self.entries.get(id.as_ref())
-                        {
-                            let len_diff = (source_entry.name_length as i32
-                                - entry.name_length as i32)
-                                .unsigned_abs() as usize;
-                            if len_diff <= max_length_diff {
-                                candidates.push(Arc::clone(id));
-                                seen.insert(Arc::clone(id));
-                            }
+            let mut similar_prefixes: Vec<_> = self
+                .by_prefix
+                .iter()
+                .filter(|(prefix, _)| {
+                    prefix.starts_with(prefix_2) && *prefix != &source_entry.prefix
+                })
+                .collect();
+            similar_prefixes.sort_by(|a, b| a.0.cmp(b.0));
+
+            for (_prefix, ids) in similar_prefixes {
+                for id in ids {
+                    if id.as_ref() != source_id
+                        && !seen.contains(id)
+                        && let Some(entry) = self.entries.get(id.as_ref())
+                    {
+                        let len_diff = (source_entry.name_length as i32 - entry.name_length as i32)
+                            .unsigned_abs() as usize;
+                        if len_diff <= max_length_diff {
+                            candidates.push(Arc::clone(id));
+                            seen.insert(Arc::clone(id));
                         }
-                        if candidates.len() >= max_candidates {
-                            break;
-                        }
+                    }
+                    if candidates.len() >= max_candidates {
+                        break;
                     }
                 }
                 if candidates.len() >= max_candidates {
@@ -374,12 +381,13 @@ impl ComponentIndex {
                 2
             };
 
-            // Sort by trigram overlap count (descending)
+            // Sort by trigram overlap count (descending), breaking ties by ID
+            // so truncation is deterministic
             let mut scored: Vec<_> = trigram_scores
                 .into_iter()
                 .filter(|(_, count)| *count >= min_shared)
                 .collect();
-            scored.sort_by(|a, b| b.1.cmp(&a.1));
+            scored.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.value().cmp(b.0.value())));
 
             for (id, _score) in scored {
                 if candidates.len() >= max_candidates {
