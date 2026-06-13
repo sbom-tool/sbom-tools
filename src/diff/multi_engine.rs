@@ -14,7 +14,7 @@ use super::multi::{
 };
 use super::{DiffEngine, DiffResult};
 use crate::error::SbomDiffError;
-use crate::matching::FuzzyMatchConfig;
+use crate::matching::{FuzzyMatchConfig, MatchingRulesConfig};
 use crate::model::{NormalizedSbom, VulnerabilityCounts};
 use std::collections::{HashMap, HashSet};
 
@@ -30,6 +30,8 @@ pub struct MultiDiffEngine {
     include_unchanged: bool,
     /// Graph diff configuration (optional).
     graph_diff_config: Option<super::GraphDiffConfig>,
+    /// Custom matching rules (applied when building the engine).
+    matching_rules: Option<MatchingRulesConfig>,
     /// Caching wrapper built lazily on first diff operation.
     incremental: Option<IncrementalDiffEngine>,
 }
@@ -41,6 +43,7 @@ impl MultiDiffEngine {
             fuzzy_config: None,
             include_unchanged: false,
             graph_diff_config: None,
+            matching_rules: None,
             incremental: None,
         }
     }
@@ -69,6 +72,14 @@ impl MultiDiffEngine {
         self
     }
 
+    /// Apply custom matching rules to every pairwise diff.
+    #[must_use]
+    pub fn with_matching_rules(mut self, rules: MatchingRulesConfig) -> Self {
+        self.matching_rules = Some(rules);
+        self.incremental = None;
+        self
+    }
+
     /// Build the configured `DiffEngine` and wrap it in an `IncrementalDiffEngine`.
     fn ensure_engine(&mut self) {
         if self.incremental.is_none() {
@@ -79,6 +90,14 @@ impl MultiDiffEngine {
             engine = engine.include_unchanged(self.include_unchanged);
             if let Some(config) = self.graph_diff_config.clone() {
                 engine = engine.with_graph_diff(config);
+            }
+            if let Some(rules) = self.matching_rules.clone() {
+                match crate::matching::RuleEngine::new(rules) {
+                    Ok(rule_engine) => engine = engine.with_rule_engine(rule_engine),
+                    Err(err) => {
+                        tracing::warn!("Failed to initialize matching rule engine: {err}");
+                    }
+                }
             }
             self.incremental = Some(IncrementalDiffEngine::new(engine));
         }

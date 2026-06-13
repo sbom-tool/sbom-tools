@@ -9,7 +9,7 @@ mod output;
 mod parse;
 mod report_stage;
 
-pub use diff_stage::compute_diff;
+pub use diff_stage::{apply_post_diff_filters, compute_diff, graph_diff_config_from};
 pub use enrich::{AggregatedEnrichmentStats, enrich_sbom_full, enrich_sboms};
 pub use output::{OutputTarget, auto_detect_format, should_use_color, write_output};
 pub use parse::{ParsedSbom, parse_sbom_with_context};

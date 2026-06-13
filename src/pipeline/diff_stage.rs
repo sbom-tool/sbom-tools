@@ -3,11 +3,74 @@
 //! Encapsulates the core diff logic: building the engine, applying matching
 //! rules, running the diff, and post-processing (severity/VEX filtering).
 
-use crate::config::DiffConfig;
+use crate::config::{DiffConfig, FilterConfig, GraphAwareDiffConfig};
 use crate::diff::{DiffEngine, DiffResult, GraphDiffConfig};
 use crate::matching::{FuzzyMatchConfig, MatchingRulesConfig};
 use crate::model::NormalizedSbom;
 use anyhow::Result;
+
+/// Convert a [`GraphAwareDiffConfig`] (CLI/config representation) into the
+/// engine-level [`GraphDiffConfig`] consumed by the diff engine.
+///
+/// Shared between the single-SBOM pipeline and the multi-SBOM commands so that
+/// `--graph-max-depth`, `--graph-relations`, and reparenting/depth toggles take
+/// effect identically in both paths.
+#[must_use]
+pub fn graph_diff_config_from(config: &GraphAwareDiffConfig) -> GraphDiffConfig {
+    GraphDiffConfig {
+        detect_reparenting: config.detect_reparenting,
+        detect_depth_changes: config.detect_depth_changes,
+        max_depth: config.max_depth,
+        relation_filter: config.relation_filter.clone(),
+    }
+}
+
+/// Apply the graph impact threshold to an already-computed [`DiffResult`].
+///
+/// Mirrors the post-processing the single-SBOM pipeline performs after the
+/// engine runs. Recomputes the graph summary and overall summary so the result
+/// stays internally consistent.
+fn apply_graph_impact_threshold(result: &mut DiffResult, threshold: &str) {
+    let min_impact = crate::diff::GraphChangeImpact::from_label(threshold);
+    let impact_rank = |i: &crate::diff::GraphChangeImpact| match i {
+        crate::diff::GraphChangeImpact::Critical => 4,
+        crate::diff::GraphChangeImpact::High => 3,
+        crate::diff::GraphChangeImpact::Medium => 2,
+        crate::diff::GraphChangeImpact::Low => 1,
+    };
+    let min_rank = impact_rank(&min_impact);
+    result
+        .graph_changes
+        .retain(|c| impact_rank(&c.impact) >= min_rank);
+    result.graph_summary = Some(crate::diff::GraphChangeSummary::from_changes(
+        &result.graph_changes,
+    ));
+    result.calculate_summary();
+}
+
+/// Apply severity, VEX, and graph-impact post-processing filters to a
+/// [`DiffResult`], driven by filtering and graph configuration.
+///
+/// Shared between the single-SBOM pipeline and the multi-SBOM commands so that
+/// `--severity`, `--exclude-vex-resolved`, and `--graph-impact-threshold` are
+/// honored consistently across `diff`, `diff-multi`, `timeline`, and `matrix`.
+pub fn apply_post_diff_filters(
+    result: &mut DiffResult,
+    filtering: &FilterConfig,
+    graph: &GraphAwareDiffConfig,
+) {
+    if graph.enabled
+        && let Some(ref threshold) = graph.impact_threshold
+    {
+        apply_graph_impact_threshold(result, threshold);
+    }
+    if let Some(ref sev) = filtering.min_severity {
+        result.filter_by_severity(sev);
+    }
+    if filtering.exclude_vex_resolved {
+        result.filter_by_vex();
+    }
+}
 
 /// Run the core diff computation between two SBOMs.
 ///
@@ -38,12 +101,7 @@ pub fn compute_diff(
         if !quiet {
             tracing::info!("Graph-aware diffing enabled");
         }
-        engine = engine.with_graph_diff(GraphDiffConfig {
-            detect_reparenting: config.graph_diff.detect_reparenting,
-            detect_depth_changes: config.graph_diff.detect_depth_changes,
-            max_depth: config.graph_diff.max_depth,
-            relation_filter: config.graph_diff.relation_filter.clone(),
-        });
+        engine = engine.with_graph_diff(graph_diff_config_from(&config.graph_diff));
     }
 
     // Apply matching rules if loaded and not in dry-run mode
@@ -59,53 +117,28 @@ pub fn compute_diff(
         .diff(old_sbom, new_sbom)
         .map_err(|e| super::PipelineError::DiffFailed { source: e.into() })?;
 
-    // Apply graph impact threshold filter if specified
-    if config.graph_diff.enabled {
-        if let Some(ref threshold) = config.graph_diff.impact_threshold {
-            let min_impact = crate::diff::GraphChangeImpact::from_label(threshold);
-            let impact_rank = |i: &crate::diff::GraphChangeImpact| match i {
-                crate::diff::GraphChangeImpact::Critical => 4,
-                crate::diff::GraphChangeImpact::High => 3,
-                crate::diff::GraphChangeImpact::Medium => 2,
-                crate::diff::GraphChangeImpact::Low => 1,
-            };
-            let min_rank = impact_rank(&min_impact);
-            result
-                .graph_changes
-                .retain(|c| impact_rank(&c.impact) >= min_rank);
-            result.graph_summary = Some(crate::diff::GraphChangeSummary::from_changes(
-                &result.graph_changes,
-            ));
-            result.calculate_summary();
-            if !quiet {
+    apply_post_diff_filters(&mut result, &config.filtering, &config.graph_diff);
+
+    if !quiet {
+        if config.graph_diff.enabled {
+            if let Some(ref threshold) = config.graph_diff.impact_threshold {
                 tracing::info!("Filtered graph changes to impact >= {threshold}");
             }
+            if let Some(ref summary) = result.graph_summary {
+                tracing::info!(
+                    "Graph changes: {} total ({} added, {} removed, {} reparented, {} depth changes)",
+                    summary.total_changes,
+                    summary.dependencies_added,
+                    summary.dependencies_removed,
+                    summary.reparented,
+                    summary.depth_changed
+                );
+            }
         }
-
-        if !quiet && let Some(ref summary) = result.graph_summary {
-            tracing::info!(
-                "Graph changes: {} total ({} added, {} removed, {} reparented, {} depth changes)",
-                summary.total_changes,
-                summary.dependencies_added,
-                summary.dependencies_removed,
-                summary.reparented,
-                summary.depth_changed
-            );
-        }
-    }
-
-    // Apply severity filtering if specified
-    if let Some(ref sev) = config.filtering.min_severity {
-        result.filter_by_severity(sev);
-        if !quiet {
+        if let Some(ref sev) = config.filtering.min_severity {
             tracing::info!("Filtered vulnerabilities to severity >= {}", sev);
         }
-    }
-
-    // Apply VEX filtering if requested
-    if config.filtering.exclude_vex_resolved {
-        result.filter_by_vex();
-        if !quiet {
+        if config.filtering.exclude_vex_resolved {
             tracing::info!("Filtered out vulnerabilities with VEX status not_affected or fixed");
         }
     }

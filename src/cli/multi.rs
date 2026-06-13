@@ -3,24 +3,94 @@
 //! Implements the `diff-multi`, `timeline`, and `matrix` subcommands.
 //! Uses the pipeline module for parsing and enrichment (shared with `diff`).
 
-use crate::config::{MatrixConfig, MultiDiffConfig, TimelineConfig};
-use crate::diff::MultiDiffEngine;
-use crate::matching::FuzzyMatchConfig;
+use crate::config::{
+    FilterConfig, GraphAwareDiffConfig, MatchingRulesPathConfig, MatrixConfig, MultiDiffConfig,
+    TimelineConfig,
+};
+use crate::diff::{DiffResult, MultiDiffEngine};
+use crate::matching::{FuzzyMatchConfig, MatchingRulesConfig};
 use crate::model::NormalizedSbom;
 use crate::pipeline::{
-    OutputTarget, auto_detect_format, enrich_sbom_full, enrich_sboms, exit_codes,
-    parse_sbom_with_context, write_output,
+    OutputTarget, apply_post_diff_filters, auto_detect_format, enrich_sbom_full, enrich_sboms,
+    exit_codes, graph_diff_config_from, parse_sbom_with_context, write_output,
 };
 use crate::reports::ReportFormat;
 use crate::tui::{App, run_tui};
 use anyhow::{Result, bail};
 use std::path::{Path, PathBuf};
 
-/// Resolve output target and effective format from config.
-fn resolve_output(output: &crate::config::OutputConfig) -> (OutputTarget, ReportFormat) {
+/// How a multi-SBOM command should emit its result.
+enum MultiOutput {
+    /// Launch the interactive TUI.
+    Tui,
+    /// Serialize to pretty JSON and write to the resolved target.
+    Json(OutputTarget),
+}
+
+/// Resolve and validate the output mode for a multi-SBOM command.
+///
+/// Multi-SBOM results only have two real renderers: the interactive TUI and
+/// pretty JSON. `auto` resolves to TUI on a terminal and JSON when piped/redirected.
+/// Any other explicitly requested format (summary, table, markdown, sarif, …) has
+/// no multi-SBOM renderer, so it is rejected with a clear error rather than
+/// silently emitting JSON.
+fn resolve_multi_output(output: &crate::config::OutputConfig) -> Result<MultiOutput> {
     let target = OutputTarget::from_option(output.file.clone());
-    let format = auto_detect_format(output.format, &target);
-    (target, format)
+    match output.format {
+        ReportFormat::Tui => Ok(MultiOutput::Tui),
+        ReportFormat::Json => Ok(MultiOutput::Json(target)),
+        ReportFormat::Auto => match auto_detect_format(ReportFormat::Auto, &target) {
+            ReportFormat::Tui => Ok(MultiOutput::Tui),
+            // Off-TTY `auto` resolves to summary in single-diff; multi has no
+            // summary renderer, so default the piped case to JSON.
+            _ => Ok(MultiOutput::Json(target)),
+        },
+        other => bail!(
+            "output format '{other}' is not supported for multi-SBOM commands \
+             (diff-multi/timeline/matrix); supported formats: tui, json"
+        ),
+    }
+}
+
+/// Load custom matching rules from a path config, mirroring the single-diff
+/// pipeline: a missing/invalid file is logged and skipped rather than aborting,
+/// and dry-run mode parses-but-skips application.
+fn load_multi_rules(rules: &MatchingRulesPathConfig) -> Option<MatchingRulesConfig> {
+    let path = rules.rules_file.as_ref()?;
+    match MatchingRulesConfig::from_file(path) {
+        Ok(loaded) => {
+            if rules.dry_run {
+                tracing::info!("Dry-run mode: matching rules parsed but not applied");
+                None
+            } else {
+                Some(loaded)
+            }
+        }
+        Err(e) => {
+            tracing::warn!("Failed to load matching rules: {e}");
+            None
+        }
+    }
+}
+
+/// Build a `MultiDiffEngine` with graph diffing and matching rules wired in
+/// from CLI configuration.
+fn build_multi_engine(
+    fuzzy_config: FuzzyMatchConfig,
+    include_unchanged: bool,
+    graph: &GraphAwareDiffConfig,
+    rules: &MatchingRulesPathConfig,
+) -> MultiDiffEngine {
+    let mut engine = MultiDiffEngine::new()
+        .with_fuzzy_config(fuzzy_config)
+        .include_unchanged(include_unchanged);
+    if graph.enabled {
+        engine = engine.with_graph_diff(graph_diff_config_from(graph));
+    }
+    if let Some(loaded) = load_multi_rules(rules) {
+        engine = engine.with_matching_rules(loaded);
+    }
+    engine
 }
 
 /// Run the diff-multi command (1:N comparison), returning the desired exit code.
@@ -43,6 +113,9 @@ pub fn run_diff_multi(config: MultiDiffConfig) -> Result<i32> {
         target_sboms.len()
     );
 
+    // Validate output mode before doing work so unsupported formats fail fast.
+    let output_mode = resolve_multi_output(&config.output)?;
+
     let fuzzy_config = get_fuzzy_config(&config.matching.fuzzy_preset);
 
     // Prepare target references with names
@@ -53,21 +126,26 @@ pub fn run_diff_multi(config: MultiDiffConfig) -> Result<i32> {
         .collect();
 
     // Run multi-diff
-    let mut engine = MultiDiffEngine::new()
-        .with_fuzzy_config(fuzzy_config)
-        .include_unchanged(config.matching.include_unchanged);
-    if config.graph_diff.enabled {
-        engine = engine.with_graph_diff(crate::diff::GraphDiffConfig::default());
-    }
+    let mut engine = build_multi_engine(
+        fuzzy_config,
+        config.matching.include_unchanged,
+        &config.graph_diff,
+        &config.rules,
+    );
 
     let baseline_name = get_sbom_name(&config.baseline);
 
-    let result = engine.diff_multi(
+    let mut result = engine.diff_multi(
         baseline_parsed.sbom(),
         &baseline_name,
         &config.baseline.to_string_lossy(),
         &target_refs,
     )?;
+
+    // Apply severity/VEX/graph-impact post-processing to each pairwise diff.
+    for comparison in &mut result.comparisons {
+        apply_post_diff_filters(&mut comparison.diff, &config.filtering, &config.graph_diff);
+    }
 
     tracing::info!(
         "Multi-diff complete: {} comparisons, max deviation: {:.1}%",
@@ -76,12 +154,16 @@ pub fn run_diff_multi(config: MultiDiffConfig) -> Result<i32> {
     );
 
     // Determine exit code
-    let exit_code = determine_multi_exit_code(&config.behavior, &result);
+    let exit_code = determine_multi_exit_code(
+        &config.behavior,
+        &config.filtering,
+        result.comparisons.iter().map(|c| &c.diff),
+    );
 
-    // Output result
-    let (output_target, effective_output) = resolve_output(&config.output);
-
-    if effective_output == ReportFormat::Tui {
+    if let MultiOutput::Json(ref output_target) = output_mode {
+        let json = serde_json::to_string_pretty(&result)?;
+        write_output(&json, output_target, quiet)?;
+    } else {
         let mut app = App::new_multi_diff(result);
         app.export_template = config.output.export_template.clone();
 
@@ -103,9 +185,6 @@ pub fn run_diff_multi(config: MultiDiffConfig) -> Result<i32> {
         }
 
         run_tui(&mut app)?;
-    } else {
-        let json = serde_json::to_string_pretty(&result)?;
-        write_output(&json, &output_target, quiet)?;
     }
 
     Ok(exit_code)
@@ -119,6 +198,9 @@ pub fn run_timeline(config: TimelineConfig) -> Result<i32> {
     if config.sbom_paths.len() < 2 {
         bail!("Timeline analysis requires at least 2 SBOMs");
     }
+
+    // Validate output mode before doing work so unsupported formats fail fast.
+    let output_mode = resolve_multi_output(&config.output)?;
 
     let (sboms, _enrich_stats) =
         parse_and_enrich_sboms(&config.sbom_paths, &config.enrichment, quiet)?;
@@ -135,29 +217,41 @@ pub fn run_timeline(config: TimelineConfig) -> Result<i32> {
         .collect();
 
     // Run timeline analysis
-    let mut engine = MultiDiffEngine::new().with_fuzzy_config(fuzzy_config);
-    if config.graph_diff.enabled {
-        engine = engine.with_graph_diff(crate::diff::GraphDiffConfig::default());
+    let mut engine = build_multi_engine(
+        fuzzy_config,
+        config.matching.include_unchanged,
+        &config.graph_diff,
+        &config.rules,
+    );
+    let mut result = engine.timeline(&sbom_refs)?;
+
+    // Apply severity/VEX/graph-impact post-processing to each incremental diff.
+    for diff in result
+        .incremental_diffs
+        .iter_mut()
+        .chain(result.cumulative_from_first.iter_mut())
+    {
+        apply_post_diff_filters(diff, &config.filtering, &config.graph_diff);
     }
-    let result = engine.timeline(&sbom_refs)?;
 
     tracing::info!(
         "Timeline analysis complete: {} incremental diffs",
         result.incremental_diffs.len()
     );
 
-    // Output result
-    let (output_target, effective_output) = resolve_output(&config.output);
-
     // Determine exit code
-    let exit_code = determine_timeline_exit_code(&config.behavior, &result);
+    let exit_code = determine_multi_exit_code(
+        &config.behavior,
+        &config.filtering,
+        result.incremental_diffs.iter(),
+    );
 
-    if effective_output == ReportFormat::Tui {
+    if let MultiOutput::Json(ref output_target) = output_mode {
+        let json = serde_json::to_string_pretty(&result)?;
+        write_output(&json, output_target, quiet)?;
+    } else {
         let mut app = App::new_timeline(result);
         run_tui(&mut app)?;
-    } else {
-        let json = serde_json::to_string_pretty(&result)?;
-        write_output(&json, &output_target, quiet)?;
     }
 
     Ok(exit_code)
@@ -171,6 +265,9 @@ pub fn run_matrix(config: MatrixConfig) -> Result<i32> {
     if config.sbom_paths.len() < 2 {
         bail!("Matrix comparison requires at least 2 SBOMs");
     }
+
+    // Validate output mode before doing work so unsupported formats fail fast.
+    let output_mode = resolve_multi_output(&config.output)?;
 
     let (sboms, _enrich_stats) =
         parse_and_enrich_sboms(&config.sbom_paths, &config.enrichment, quiet)?;
@@ -191,11 +288,18 @@ pub fn run_matrix(config: MatrixConfig) -> Result<i32> {
         .collect();
 
     // Run matrix comparison
-    let mut engine = MultiDiffEngine::new().with_fuzzy_config(fuzzy_config);
-    if config.graph_diff.enabled {
-        engine = engine.with_graph_diff(crate::diff::GraphDiffConfig::default());
+    let mut engine = build_multi_engine(
+        fuzzy_config,
+        config.matching.include_unchanged,
+        &config.graph_diff,
+        &config.rules,
+    );
+    let mut result = engine.matrix(&sbom_refs, Some(config.cluster_threshold))?;
+
+    // Apply severity/VEX/graph-impact post-processing to each pairwise diff.
+    for diff in result.diffs.iter_mut().flatten() {
+        apply_post_diff_filters(diff, &config.filtering, &config.graph_diff);
     }
-    let result = engine.matrix(&sbom_refs, Some(config.cluster_threshold))?;
 
     tracing::info!(
         "Matrix comparison complete: {} pairs computed",
@@ -210,18 +314,19 @@ pub fn run_matrix(config: MatrixConfig) -> Result<i32> {
         );
     }
 
-    // Output result
-    let (output_target, effective_output) = resolve_output(&config.output);
-
     // Determine exit code
-    let exit_code = determine_matrix_exit_code(&config.behavior, &result);
+    let exit_code = determine_multi_exit_code(
+        &config.behavior,
+        &config.filtering,
+        result.diffs.iter().flatten(),
+    );
 
-    if effective_output == ReportFormat::Tui {
+    if let MultiOutput::Json(ref output_target) = output_mode {
+        let json = serde_json::to_string_pretty(&result)?;
+        write_output(&json, output_target, quiet)?;
+    } else {
         let mut app = App::new_matrix(result);
         run_tui(&mut app)?;
-    } else {
-        let json = serde_json::to_string_pretty(&result)?;
-        write_output(&json, &output_target, quiet)?;
     }
 
     Ok(exit_code)
@@ -257,85 +362,50 @@ pub(crate) fn parse_multiple_sboms(paths: &[PathBuf]) -> Result<Vec<NormalizedSb
     Ok(sboms)
 }
 
-/// Determine exit code for multi-SBOM commands based on behavior config.
-fn determine_multi_exit_code(
+/// Determine the exit code for a multi-SBOM command from its pairwise diffs.
+///
+/// Aggregates VEX gaps, introduced vulnerabilities, and total changes across
+/// every pairwise [`DiffResult`] the command produced. Priority mirrors the
+/// single-SBOM `diff` gate (highest code wins): VEX gaps (4) > vulns (2) >
+/// changes (1). `--fail-on-vex-gap` is checked first because it is the most
+/// specific signal a user can ask for.
+fn determine_multi_exit_code<'a, I>(
     behavior: &crate::config::BehaviorConfig,
-    result: &crate::diff::MultiDiffResult,
-) -> i32 {
-    let (total_introduced, total_changes) =
-        result
-            .comparisons
-            .iter()
-            .fold((0usize, 0usize), |(vi, tc), c| {
-                (
-                    vi + c.diff.summary.vulnerabilities_introduced,
-                    tc + c.diff.summary.total_changes,
-                )
-            });
+    filtering: &FilterConfig,
+    diffs: I,
+) -> i32
+where
+    I: IntoIterator<Item = &'a DiffResult>,
+{
+    let mut total_introduced = 0usize;
+    let mut total_changes = 0usize;
+    let mut total_gaps = 0usize;
+    let mut introduced_gaps = 0usize;
+    let mut persistent_gaps = 0usize;
 
+    for diff in diffs {
+        total_introduced += diff.summary.vulnerabilities_introduced;
+        total_changes += diff.summary.total_changes;
+        if filtering.fail_on_vex_gap {
+            let vex = diff.vulnerabilities.vex_summary();
+            introduced_gaps += vex.introduced_without_vex;
+            persistent_gaps += vex.persistent_without_vex;
+            total_gaps += vex.introduced_without_vex + vex.persistent_without_vex;
+        }
+    }
+
+    if filtering.fail_on_vex_gap && total_gaps > 0 {
+        eprintln!(
+            "VEX gap: {total_gaps} vulnerability(ies) lack VEX statements \
+             ({introduced_gaps} introduced, {persistent_gaps} persistent)",
+        );
+        return exit_codes::VEX_GAPS_FOUND;
+    }
     if behavior.fail_on_vuln && total_introduced > 0 {
         return exit_codes::VULNS_INTRODUCED;
     }
     if behavior.fail_on_change && total_changes > 0 {
         return exit_codes::CHANGES_DETECTED;
-    }
-    exit_codes::SUCCESS
-}
-
-/// Determine exit code for timeline commands based on behavior config.
-fn determine_timeline_exit_code(
-    behavior: &crate::config::BehaviorConfig,
-    result: &crate::diff::TimelineResult,
-) -> i32 {
-    if behavior.fail_on_vuln {
-        let total_introduced: usize = result
-            .incremental_diffs
-            .iter()
-            .map(|d| d.summary.vulnerabilities_introduced)
-            .sum();
-        if total_introduced > 0 {
-            return exit_codes::VULNS_INTRODUCED;
-        }
-    }
-    if behavior.fail_on_change {
-        let total_changes: usize = result
-            .incremental_diffs
-            .iter()
-            .map(|d| d.summary.total_changes)
-            .sum();
-        if total_changes > 0 {
-            return exit_codes::CHANGES_DETECTED;
-        }
-    }
-    exit_codes::SUCCESS
-}
-
-/// Determine exit code for matrix commands based on behavior config.
-fn determine_matrix_exit_code(
-    behavior: &crate::config::BehaviorConfig,
-    result: &crate::diff::MatrixResult,
-) -> i32 {
-    if behavior.fail_on_vuln {
-        let total_introduced: usize = result
-            .diffs
-            .iter()
-            .flatten()
-            .map(|d| d.summary.vulnerabilities_introduced)
-            .sum();
-        if total_introduced > 0 {
-            return exit_codes::VULNS_INTRODUCED;
-        }
-    }
-    if behavior.fail_on_change {
-        let total_changes: usize = result
-            .diffs
-            .iter()
-            .flatten()
-            .map(|d| d.summary.total_changes)
-            .sum();
-        if total_changes > 0 {
-            return exit_codes::CHANGES_DETECTED;
-        }
     }
     exit_codes::SUCCESS
 }
@@ -408,5 +478,81 @@ mod tests {
         assert_eq!(refs.len(), 2);
         assert_eq!(refs[0].1, "first");
         assert_eq!(refs[1].1, "second");
+    }
+
+    fn output_config(format: ReportFormat, file: Option<PathBuf>) -> crate::config::OutputConfig {
+        crate::config::OutputConfig {
+            format,
+            file,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn resolve_multi_output_accepts_tui_and_json() {
+        assert!(matches!(
+            resolve_multi_output(&output_config(ReportFormat::Tui, None)).unwrap(),
+            MultiOutput::Tui
+        ));
+        assert!(matches!(
+            resolve_multi_output(&output_config(ReportFormat::Json, None)).unwrap(),
+            MultiOutput::Json(_)
+        ));
+    }
+
+    #[test]
+    fn resolve_multi_output_auto_to_file_is_json() {
+        // Writing to a file is never a TTY, so `auto` must resolve to JSON.
+        let cfg = output_config(ReportFormat::Auto, Some(PathBuf::from("/tmp/out.json")));
+        assert!(matches!(
+            resolve_multi_output(&cfg).unwrap(),
+            MultiOutput::Json(_)
+        ));
+    }
+
+    #[test]
+    fn resolve_multi_output_rejects_unsupported_formats() {
+        for fmt in [
+            ReportFormat::Table,
+            ReportFormat::Markdown,
+            ReportFormat::Summary,
+            ReportFormat::Sarif,
+            ReportFormat::Html,
+            ReportFormat::Csv,
+            ReportFormat::SideBySide,
+        ] {
+            let result = resolve_multi_output(&output_config(fmt, None));
+            let msg = match result {
+                Ok(_) => panic!("format {fmt} must be rejected"),
+                Err(e) => e.to_string(),
+            };
+            assert!(
+                msg.contains("not supported for multi-SBOM commands"),
+                "{msg}"
+            );
+            assert!(msg.contains("tui, json"), "{msg}");
+        }
+    }
+
+    #[test]
+    fn determine_multi_exit_code_change_gate() {
+        let mut diff = DiffResult::new();
+        diff.summary.total_changes = 3;
+        let behavior = crate::config::BehaviorConfig {
+            fail_on_change: true,
+            ..Default::default()
+        };
+        let filtering = FilterConfig::default();
+        assert_eq!(
+            determine_multi_exit_code(&behavior, &filtering, std::iter::once(&diff)),
+            exit_codes::CHANGES_DETECTED
+        );
+
+        // Without the gate flag, the same diff is success.
+        let behavior = crate::config::BehaviorConfig::default();
+        assert_eq!(
+            determine_multi_exit_code(&behavior, &filtering, std::iter::once(&diff)),
+            exit_codes::SUCCESS
+        );
     }
 }

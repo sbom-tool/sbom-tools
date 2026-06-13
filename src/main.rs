@@ -69,8 +69,8 @@ EXAMPLES:
     sbom-tools diff old.json new.json --fail-on-vex-gap --vex vex.json
     sbom-tools quality app.cdx.json --min-score 70
 
-  Fleet / multi-SBOM analysis:
-    sbom-tools diff-multi baseline.json device-*.json -o table
+  Fleet / multi-SBOM analysis (interactive TUI or -o json):
+    sbom-tools diff-multi baseline.json device-*.json -o json
     sbom-tools timeline v1.json v2.json v3.json --enrich-vulns
     sbom-tools matrix *.cdx.json --cluster-threshold 0.9
 
@@ -401,7 +401,7 @@ struct ValidateArgs {
 #[derive(Parser)]
 #[command(after_help = "EXAMPLES:
     sbom-tools diff-multi baseline.json target1.json target2.json
-    sbom-tools diff-multi baseline.json devices/*.json -o table
+    sbom-tools diff-multi baseline.json devices/*.json -o json
     sbom-tools diff-multi base.json t1.json t2.json --enrich-vulns --fail-on-vuln")]
 struct DiffMultiArgs {
     /// Path to the baseline SBOM
@@ -411,7 +411,7 @@ struct DiffMultiArgs {
     #[arg(required = true)]
     targets: Vec<PathBuf>,
 
-    /// Output format (auto detects TTY: tui if interactive, summary otherwise)
+    /// Output format: tui (interactive, default on a TTY) or json (default when piped)
     #[arg(short, long, default_value = "auto")]
     output: ReportFormat,
 
@@ -471,14 +471,14 @@ struct DiffMultiArgs {
 #[derive(Parser)]
 #[command(after_help = "EXAMPLES:
     sbom-tools timeline v1.0.json v1.1.json v1.2.json             # Version evolution
-    sbom-tools timeline releases/*.json --enrich-vulns -o markdown # Vuln trend report
+    sbom-tools timeline releases/*.json --enrich-vulns -o json     # Vuln trend report
     sbom-tools timeline *.json --fail-on-vuln --fail-on-change     # CI gate")]
 struct TimelineArgs {
     /// Paths to SBOMs in chronological order (oldest first)
     #[arg(required = true)]
     sboms: Vec<PathBuf>,
 
-    /// Output format (auto detects TTY: tui if interactive, summary otherwise)
+    /// Output format: tui (interactive, default on a TTY) or json (default when piped)
     #[arg(short, long, default_value = "auto")]
     output: ReportFormat,
 
@@ -534,14 +534,14 @@ struct TimelineArgs {
 #[derive(Parser)]
 #[command(after_help = "EXAMPLES:
     sbom-tools matrix v1.json v2.json v3.json                     # NxN comparison
-    sbom-tools matrix *.cdx.json --cluster-threshold 0.9 -o table # Clustering
+    sbom-tools matrix *.cdx.json --cluster-threshold 0.9 -o json  # Clustering
     sbom-tools matrix *.json --enrich-vulns --fail-on-vuln         # CI with enrichment")]
 struct MatrixArgs {
     /// Paths to SBOMs to compare
     #[arg(required = true)]
     sboms: Vec<PathBuf>,
 
-    /// Output format (auto detects TTY: tui if interactive, summary otherwise)
+    /// Output format: tui (interactive, default on a TTY) or json (default when piped)
     #[arg(short, long, default_value = "auto")]
     output: ReportFormat,
 
