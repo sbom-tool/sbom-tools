@@ -374,6 +374,17 @@ pub fn run_query(config: QueryConfig, filter: QueryFilter) -> Result<i32> {
         );
     }
 
+    // Stdin can only be consumed once, so at most one input may be "-".
+    if config
+        .sbom_paths
+        .iter()
+        .filter(|p| crate::pipeline::is_stdin_path(p))
+        .count()
+        > 1
+    {
+        bail!("Cannot read more than one SBOM from stdin ('-')");
+    }
+
     let sboms = super::multi::parse_multiple_sboms(&config.sbom_paths)?;
 
     // Optionally enrich with vulnerability data

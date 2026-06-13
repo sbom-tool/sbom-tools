@@ -13,6 +13,11 @@ readme = "README.md"
 repository = "https://github.com/sbom-tool/sbom-tools"
 keywords = ["sbom", "cyclonedx", "spdx", "diff", "security"]
 categories = ["command-line-utilities", "development-tools", "security"]
+# Keep multi-MB test fixtures out of the published crate (only used by ignored,
+# locally-run integration tests). Wildcards match the large generated SBOM.
+exclude = [
+    "tests/fixtures/cyclonedx/sbom-cyclone-dx-json-*.json",
+]
 
 [lib]
 name = "sbom_tools"

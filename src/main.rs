@@ -2103,7 +2103,8 @@ fn split_query_args(args: &[String]) -> (Option<String>, Vec<PathBuf>) {
     }
 
     let first = &args[0];
-    let looks_like_file = first.contains(std::path::MAIN_SEPARATOR)
+    let looks_like_file = first == sbom_tools::pipeline::STDIN_PATH
+        || first.contains(std::path::MAIN_SEPARATOR)
         || first.contains('/')
         || has_sbom_extension(first)
         || Path::new(first).is_file();

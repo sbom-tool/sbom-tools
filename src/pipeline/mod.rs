@@ -12,7 +12,7 @@ mod report_stage;
 pub use diff_stage::{apply_post_diff_filters, compute_diff, graph_diff_config_from};
 pub use enrich::{AggregatedEnrichmentStats, enrich_sbom_full, enrich_sboms};
 pub use output::{OutputTarget, auto_detect_format, should_use_color, write_output};
-pub use parse::{ParsedSbom, parse_sbom_with_context};
+pub use parse::{ParsedSbom, STDIN_PATH, is_stdin_path, parse_sbom_with_context, read_input};
 pub use report_stage::output_report;
 
 #[cfg(feature = "enrichment")]

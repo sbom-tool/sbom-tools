@@ -28,7 +28,8 @@ Semantic SBOM/CBOM diff, quality scoring, and analysis tool. Compare, validate, 
 
 - **Semantic Diffing** — Component-level change detection (added, removed, modified), dependency graph diffing, vulnerability tracking, and license change analysis
 - **Multi-Format Support** — CycloneDX (1.4–1.7) and SPDX (2.2–2.3, 3.0) in JSON, JSON-LD, XML, tag-value, and RDF/XML with automatic format detection
-- **Streaming Parser** — Memory-efficient parsing for very large SBOMs (>512MB) with progress reporting
+- **Stdin Input** — Every analysis command accepts `-` as the input path, reading the SBOM from standard input so generated/fetched SBOMs can be piped in without temp files (e.g. `syft -o cyclonedx-json . | sbom-tools quality -`)
+- **Streaming Report Output** — Large diff reports are streamed to JSON without buffering the whole document in memory; inputs are capped at 512 MB
 - **Fuzzy Matching** — Multi-tier matching engine using exact PURL match, alias lookup, ecosystem-specific normalization, and string similarity with adaptive thresholds and LSH indexing
 - **Vulnerability Enrichment** — Integration with OSV and KEV databases to track new and resolved vulnerabilities, with VEX (Vulnerability Exploitability eXchange) overlay support (feature-gated)
 - **EOL Detection** — End-of-life status for components via endoflife.date API with TUI visualization and compliance integration (feature-gated)
@@ -317,6 +318,13 @@ sbom-tools quality cbom.cdx.json --profile cbom
 
 # View CBOM with crypto-specific tabs
 sbom-tools view cbom.cdx.json --bom-type cbom
+
+# Pipe an SBOM in via stdin with '-' (no temp file needed)
+syft -o cyclonedx-json . | sbom-tools quality - --profile security
+cosign download sbom my-image:latest | sbom-tools validate - --standard ntia
+
+# Diff a freshly generated SBOM against a committed baseline ('-' = one side only)
+syft -o cyclonedx-json . | sbom-tools diff baseline.cdx.json -
 ```
 
 ### Diff
@@ -797,7 +805,7 @@ src/
 ├── cli/          Command handlers (diff, view, validate, quality, query, fleet, vex, watch, ...)
 ├── config/       YAML/JSON config with presets, validation, schema generation
 ├── model/        Canonical SBOM representation (NormalizedSbom, Component, CanonicalId)
-├── parsers/      Format detection + parsing (streaming for >512MB)
+├── parsers/      Format detection + parsing (stdin via '-', 512 MB input cap)
 ├── matching/     Multi-tier fuzzy matching (PURL, alias, ecosystem, adaptive, LSH)
 ├── diff/         Semantic diffing engine with graph support + incremental section-selective diff
 ├── enrichment/   OSV/KEV vulnerability data + EOL detection + VEX (feature-gated)

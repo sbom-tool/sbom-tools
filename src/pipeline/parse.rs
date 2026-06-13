@@ -3,8 +3,56 @@
 //! Provides functions for parsing SBOMs with context and optional enrichment.
 
 use crate::model::NormalizedSbom;
-use anyhow::Result;
+use crate::parsers::MAX_SBOM_FILE_SIZE;
+use anyhow::{Context, Result, bail};
+use std::io::Read;
 use std::path::Path;
+
+/// The path token that selects standard input instead of a file.
+pub const STDIN_PATH: &str = "-";
+
+/// Returns true when `path` refers to standard input (the `-` token).
+#[must_use]
+pub fn is_stdin_path(path: &Path) -> bool {
+    path.as_os_str() == STDIN_PATH
+}
+
+/// Read an SBOM input to a string, applying the [`MAX_SBOM_FILE_SIZE`] guard.
+///
+/// `path` of `"-"` reads the full document from standard input (for CI pipelines
+/// that pipe an SBOM in-flight, e.g. `syft -o cyclonedx-json | sbom-tools quality -`);
+/// any other path reads the file. Either way the result is capped at 512 MB so a
+/// runaway input cannot exhaust memory.
+pub fn read_input(path: &Path) -> Result<String> {
+    if is_stdin_path(path) {
+        let mut buf = String::new();
+        let limit = MAX_SBOM_FILE_SIZE + 1;
+        let read = std::io::stdin()
+            .lock()
+            .take(limit)
+            .read_to_string(&mut buf)
+            .context("Failed to read SBOM from stdin")?;
+        if read as u64 > MAX_SBOM_FILE_SIZE {
+            bail!(
+                "SBOM on stdin exceeds the {} MB limit. Split the document or filter it (e.g. `sbom-tools tailor`) before piping.",
+                MAX_SBOM_FILE_SIZE / (1024 * 1024),
+            );
+        }
+        return Ok(buf);
+    }
+
+    let size = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+    if size > MAX_SBOM_FILE_SIZE {
+        bail!(
+            "SBOM file {} is {} MB, exceeding the {} MB limit. Split the document or filter it (e.g. `sbom-tools tailor`) before processing.",
+            path.display(),
+            size / (1024 * 1024),
+            MAX_SBOM_FILE_SIZE / (1024 * 1024),
+        );
+    }
+    std::fs::read_to_string(path)
+        .with_context(|| format!("Failed to read SBOM file {}", path.display()))
+}
 
 /// A parsed SBOM with optional enrichment stats
 pub struct ParsedSbom {
@@ -72,13 +120,16 @@ pub fn parse_sbom_with_context(path: &Path, quiet: bool) -> Result<ParsedSbom> {
         tracing::info!("Parsing SBOM: {:?}", path);
     }
 
-    let path_display = path.display().to_string();
+    let path_display = if is_stdin_path(path) {
+        "<stdin>".to_string()
+    } else {
+        path.display().to_string()
+    };
 
-    let raw_content =
-        std::fs::read_to_string(path).map_err(|e| super::PipelineError::ParseFailed {
-            path: path_display.clone(),
-            source: e.into(),
-        })?;
+    let raw_content = read_input(path).map_err(|e| super::PipelineError::ParseFailed {
+        path: path_display.clone(),
+        source: e,
+    })?;
     let sbom = crate::parsers::parse_sbom_str(&raw_content).map_err(|e| {
         super::PipelineError::ParseFailed {
             path: path_display,
@@ -296,5 +347,30 @@ mod tests {
         let (recovered, raw) = parsed.into_parts();
         assert_eq!(recovered.component_count(), 0);
         assert_eq!(raw, "test");
+    }
+
+    #[test]
+    fn test_is_stdin_path() {
+        assert!(is_stdin_path(Path::new("-")));
+        assert!(!is_stdin_path(Path::new("sbom.json")));
+        assert!(!is_stdin_path(Path::new("./-")));
+        assert!(!is_stdin_path(Path::new("-.json")));
+    }
+
+    #[test]
+    fn test_read_input_reads_file() {
+        let dir = std::env::temp_dir();
+        let path = dir.join("sbom_tools_read_input_test.json");
+        std::fs::write(&path, "{\"hello\":\"world\"}").expect("write temp file");
+        let content = read_input(&path).expect("read should succeed");
+        assert_eq!(content, "{\"hello\":\"world\"}");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_read_input_missing_file_errors() {
+        let err = read_input(Path::new("/nonexistent/sbom_tools_missing.json"))
+            .expect_err("missing file should error");
+        assert!(err.to_string().contains("Failed to read SBOM file"));
     }
 }

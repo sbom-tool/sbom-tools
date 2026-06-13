@@ -86,19 +86,19 @@ pub fn detect_format(content: &str) -> Option<DetectedFormat> {
     }
 }
 
-/// Maximum SBOM file size (512 MB). Files larger than this should use the streaming parser.
-const MAX_SBOM_FILE_SIZE: u64 = 512 * 1024 * 1024;
+/// Maximum SBOM file size (512 MB), enforced to bound memory use when loading a
+/// whole document into a string. Inputs larger than this are rejected.
+pub(crate) const MAX_SBOM_FILE_SIZE: u64 = 512 * 1024 * 1024;
 
 /// Detect SBOM format from file content and parse accordingly
 ///
 /// Uses confidence-based detection to select the best parser.
 /// Returns an error if the file exceeds [`MAX_SBOM_FILE_SIZE`] to prevent OOM.
-/// For very large files, use the streaming parser instead.
 pub fn parse_sbom(path: &Path) -> Result<NormalizedSbom, ParseError> {
     let metadata = std::fs::metadata(path).map_err(|e| ParseError::IoError(e.to_string()))?;
     if metadata.len() > MAX_SBOM_FILE_SIZE {
         return Err(ParseError::IoError(format!(
-            "SBOM file is {} MB, exceeding the {} MB limit. Use the streaming parser for large files.",
+            "SBOM file is {} MB, exceeding the {} MB limit. Split the document or filter it (e.g. `sbom-tools tailor`) before processing.",
             metadata.len() / (1024 * 1024),
             MAX_SBOM_FILE_SIZE / (1024 * 1024),
         )));

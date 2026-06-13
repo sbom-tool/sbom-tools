@@ -4,12 +4,12 @@
 
 use crate::config::DiffConfig;
 use crate::pipeline::{
-    OutputTarget, auto_detect_format, compute_diff, exit_codes, output_report,
+    OutputTarget, auto_detect_format, compute_diff, exit_codes, is_stdin_path, output_report,
     parse_sbom_with_context,
 };
 use crate::reports::ReportFormat;
 use crate::tui::{App, run_tui};
-use anyhow::Result;
+use anyhow::{Result, bail};
 
 /// Run the diff command, returning the desired exit code.
 ///
@@ -22,6 +22,11 @@ use anyhow::Result;
 #[allow(clippy::needless_pass_by_value)]
 pub fn run_diff(config: DiffConfig) -> Result<i32> {
     let quiet = config.behavior.quiet;
+
+    // Stdin can only be consumed once, so a diff can read at most one side from "-".
+    if is_stdin_path(&config.paths.old) && is_stdin_path(&config.paths.new) {
+        bail!("Cannot read both SBOMs from stdin ('-'); only one '-' is allowed per diff");
+    }
 
     // Parse SBOMs
     let mut old_parsed = parse_sbom_with_context(&config.paths.old, quiet)?;
