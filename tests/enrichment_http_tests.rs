@@ -197,6 +197,36 @@ fn cached_component_results_skip_network() {
 }
 
 #[test]
+fn repeated_enrichment_does_not_duplicate_vulnerabilities() {
+    let server = MockServer::start();
+    let cache_dir = tempfile::tempdir().unwrap();
+
+    server.mock(|when, then| {
+        when.method(POST).path("/v1/querybatch");
+        then.status(200)
+            .json_body(querybatch_stub_body(&[&[VULN_ID]]));
+    });
+    server.mock(|when, then| {
+        when.method(GET).path(format!("/v1/vulns/{VULN_ID}"));
+        then.status(200).json_body(full_vuln_body(VULN_ID));
+    });
+
+    let enricher =
+        OsvEnricher::new(enricher_config(&server, cache_dir.path().to_path_buf())).unwrap();
+    let mut components = vec![make_component("lodash", "4.17.20")];
+
+    enricher.enrich(&mut components).unwrap();
+    assert_eq!(components[0].vulnerabilities.len(), 1);
+
+    enricher.enrich(&mut components).unwrap();
+    assert_eq!(
+        components[0].vulnerabilities.len(),
+        1,
+        "re-enrichment must not duplicate vulnerabilities"
+    );
+}
+
+#[test]
 fn failed_hydration_keeps_stub_and_is_not_cached() {
     let server = MockServer::start();
     let cache_dir = tempfile::tempdir().unwrap();

@@ -1585,6 +1585,7 @@ fn main() -> Result<()> {
                 timeout_secs: args.api_timeout,
                 enable_eol: args.enrich_eol,
                 vex_paths: Vec::new(), // VEX paths handled separately
+                ..Default::default()
             };
 
             let config = sbom_tools::config::VexConfig {

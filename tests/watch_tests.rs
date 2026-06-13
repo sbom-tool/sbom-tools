@@ -203,6 +203,154 @@ fn test_watch_loop_initial_scan_parses_fixtures() {
 }
 
 // ============================================================================
+// Enrichment-aware watch loop (mock OSV API)
+// ============================================================================
+
+#[cfg(feature = "enrichment")]
+mod enrichment_loop {
+    use super::*;
+    use httpmock::prelude::*;
+
+    const VULN_ID: &str = "GHSA-watch-test-0001";
+
+    fn sbom_body(version: &str) -> String {
+        serde_json::json!({
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.5",
+            "version": 1,
+            "components": [{
+                "type": "library",
+                "name": "lodash",
+                "version": version,
+                "purl": format!("pkg:npm/lodash@{version}")
+            }]
+        })
+        .to_string()
+    }
+
+    fn full_vuln_body() -> serde_json::Value {
+        serde_json::json!({
+            "id": VULN_ID,
+            "summary": "Prototype pollution in lodash",
+            "modified": "2026-01-10T00:00:00Z",
+            "severity": [
+                {"type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}
+            ]
+        })
+    }
+
+    #[test]
+    fn test_watch_loop_enriched_reparse_no_false_resolved_alerts() {
+        let server = MockServer::start();
+        let health_mock = server.mock(|when, then| {
+            when.method(GET).path("/v1/vulns/OSV-2020-1");
+            then.status(404);
+        });
+        let batch_mock = server.mock(|when, then| {
+            when.method(POST).path("/v1/querybatch");
+            then.status(200).json_body(serde_json::json!({
+                "results": [{"vulns": [{"id": VULN_ID, "modified": "2026-01-10T00:00:00Z"}]}]
+            }));
+        });
+        let vuln_mock = server.mock(|when, then| {
+            when.method(GET).path(format!("/v1/vulns/{VULN_ID}"));
+            then.status(200).json_body(full_vuln_body());
+        });
+
+        let watch_dir = tempfile::tempdir().expect("create watch dir");
+        let cache_dir = tempfile::tempdir().expect("create cache dir");
+        let out_dir = tempfile::tempdir().expect("create out dir");
+        let sbom_path = watch_dir.path().join("app.cdx.json");
+        std::fs::write(&sbom_path, sbom_body("4.17.20")).expect("write sbom");
+        let output_file = out_dir.path().join("events.ndjson");
+
+        let config = WatchConfig {
+            watch_dirs: vec![watch_dir.path().to_path_buf()],
+            poll_interval: Duration::from_millis(50),
+            enrich_interval: Duration::from_millis(150),
+            debounce: Duration::ZERO,
+            output: sbom_tools::config::OutputConfig {
+                format: sbom_tools::reports::ReportFormat::Json,
+                file: Some(output_file.clone()),
+                ..Default::default()
+            },
+            enrichment: sbom_tools::config::EnrichmentConfig {
+                enabled: true,
+                cache_dir: Some(cache_dir.path().to_path_buf()),
+                timeout_secs: 5,
+                api_base: Some(server.base_url()),
+                ..Default::default()
+            },
+            webhook_url: None,
+            exit_on_change: true,
+            max_snapshots: 10,
+            quiet: true,
+            dry_run: false,
+            cra_standards_enabled: false,
+            cra_standards_interval: Duration::from_secs(86_400),
+            cra_standards_timeout: Duration::from_secs(10),
+        };
+
+        let config_clone = config.clone();
+        let handle = std::thread::spawn(move || sbom_tools::watch::run_watch_loop(&config_clone));
+
+        // Let the initial scan plus at least one periodic enrichment cycle run,
+        // then touch the file with a component version bump
+        std::thread::sleep(Duration::from_millis(500));
+        std::fs::write(&sbom_path, sbom_body("4.17.21")).expect("modify sbom");
+
+        let result = handle.join().expect("thread join");
+        assert!(result.is_ok(), "watch loop should exit cleanly: {result:?}");
+
+        // Initial scan, first periodic cycle, and the re-parse must all enrich
+        assert!(
+            batch_mock.hits() >= 3,
+            "expected >=3 querybatch calls, got {}",
+            batch_mock.hits()
+        );
+        assert!(vuln_mock.hits() >= 1);
+        assert!(health_mock.hits() >= 3);
+
+        let output = std::fs::read_to_string(&output_file).expect("read ndjson output");
+        let events: Vec<serde_json::Value> = output
+            .lines()
+            .map(|l| serde_json::from_str(l).expect("valid NDJSON line"))
+            .collect();
+
+        let changes: Vec<&serde_json::Value> =
+            events.iter().filter(|e| e["type"] == "change").collect();
+        assert!(!changes.is_empty(), "expected a change event: {events:?}");
+        for change in &changes {
+            assert_eq!(
+                change["resolved_vulns"].as_array().map(Vec::len),
+                Some(0),
+                "vuln still present must not be alerted as resolved: {change}"
+            );
+            assert_eq!(
+                change["new_vulns"].as_array().map(Vec::len),
+                Some(0),
+                "known vuln must not be re-alerted as new: {change}"
+            );
+        }
+
+        assert!(
+            !events.iter().any(|e| e["type"] == "new_vulns"),
+            "enrichment cycles must not re-announce known vulns: {events:?}"
+        );
+
+        let statuses: Vec<&serde_json::Value> =
+            events.iter().filter(|e| e["type"] == "status").collect();
+        assert!(!statuses.is_empty(), "expected status events: {events:?}");
+        for status in &statuses {
+            assert_eq!(
+                status["vulns"], 1,
+                "vuln count must stay at 1 across enrichment cycles: {status}"
+            );
+        }
+    }
+}
+
+// ============================================================================
 // NDJSON output verification
 // ============================================================================
 

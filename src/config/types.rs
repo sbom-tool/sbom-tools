@@ -799,6 +799,9 @@ pub struct EnrichmentConfig {
     /// Paths to external VEX documents (OpenVEX format)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub vex_paths: Vec<std::path::PathBuf>,
+    /// OSV API base URL override (defaults to the public OSV API)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_base: Option<String>,
 }
 
 impl Default for EnrichmentConfig {
@@ -813,6 +816,7 @@ impl Default for EnrichmentConfig {
             timeout_secs: 30,
             enable_eol: false,
             vex_paths: Vec::new(),
+            api_base: None,
         }
     }
 }
@@ -860,6 +864,13 @@ impl EnrichmentConfig {
     #[must_use]
     pub fn with_vex_paths(mut self, paths: Vec<std::path::PathBuf>) -> Self {
         self.vex_paths = paths;
+        self
+    }
+
+    /// Override the OSV API base URL.
+    #[must_use]
+    pub fn with_api_base(mut self, api_base: impl Into<String>) -> Self {
+        self.api_base = Some(api_base.into());
         self
     }
 }
