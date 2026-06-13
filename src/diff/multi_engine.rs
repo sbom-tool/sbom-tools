@@ -13,6 +13,7 @@ use super::multi::{
     VersionChangeType, VersionSpread, VulnerabilityMatrix, VulnerabilitySnapshot,
 };
 use super::{DiffEngine, DiffResult};
+use crate::error::SbomDiffError;
 use crate::matching::FuzzyMatchConfig;
 use crate::model::{NormalizedSbom, VulnerabilityCounts};
 use std::collections::{HashMap, HashSet};
@@ -84,23 +85,32 @@ impl MultiDiffEngine {
     }
 
     /// Perform a single diff using the cached incremental engine.
-    fn cached_diff(&mut self, old: &NormalizedSbom, new: &NormalizedSbom) -> DiffResult {
+    fn cached_diff(
+        &mut self,
+        old: &NormalizedSbom,
+        new: &NormalizedSbom,
+    ) -> Result<DiffResult, SbomDiffError> {
         self.ensure_engine();
-        self.incremental
+        Ok(self
+            .incremental
             .as_ref()
             .expect("engine initialized by ensure_engine")
-            .diff(old, new)
-            .into_result()
+            .diff(old, new)?
+            .into_result())
     }
 
     /// Perform 1:N diff-multi comparison (baseline vs multiple targets)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any pairwise diff computation fails.
     pub fn diff_multi(
         &mut self,
         baseline: &NormalizedSbom,
         baseline_name: &str,
         baseline_path: &str,
         targets: &[(&NormalizedSbom, &str, &str)], // (sbom, name, path)
-    ) -> MultiDiffResult {
+    ) -> Result<MultiDiffResult, SbomDiffError> {
         let baseline_info = SbomInfo::from_sbom(
             baseline,
             baseline_name.to_string(),
@@ -121,7 +131,7 @@ impl MultiDiffEngine {
         }
 
         for (target_sbom, target_name, target_path) in targets {
-            let diff = self.cached_diff(baseline, target_sbom);
+            let diff = self.cached_diff(baseline, target_sbom)?;
             let target_info = SbomInfo::from_sbom(
                 target_sbom,
                 target_name.to_string(),
@@ -161,11 +171,11 @@ impl MultiDiffEngine {
                 self.find_divergent_components(baseline, target_sbom, target_name, &all_versions);
         }
 
-        MultiDiffResult {
+        Ok(MultiDiffResult {
             baseline: baseline_info,
             comparisons,
             summary,
-        }
+        })
     }
 
     fn compute_multi_diff_summary(
@@ -387,10 +397,14 @@ impl MultiDiffEngine {
     }
 
     /// Perform timeline analysis across ordered SBOM versions
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any pairwise diff computation fails.
     pub fn timeline(
         &mut self,
         sboms: &[(&NormalizedSbom, &str, &str)], // (sbom, name, path)
-    ) -> TimelineResult {
+    ) -> Result<TimelineResult, SbomDiffError> {
         let sbom_infos: Vec<SbomInfo> = sboms
             .iter()
             .map(|(sbom, name, path)| SbomInfo::from_sbom(sbom, name.to_string(), path.to_string()))
@@ -399,7 +413,7 @@ impl MultiDiffEngine {
         // Compute incremental diffs (adjacent pairs)
         let mut incremental_diffs: Vec<DiffResult> = vec![];
         for i in 0..sboms.len().saturating_sub(1) {
-            let diff = self.cached_diff(sboms[i].0, sboms[i + 1].0);
+            let diff = self.cached_diff(sboms[i].0, sboms[i + 1].0)?;
             incremental_diffs.push(diff);
         }
 
@@ -407,7 +421,7 @@ impl MultiDiffEngine {
         let mut cumulative_from_first: Vec<DiffResult> = vec![];
         if !sboms.is_empty() {
             for i in 1..sboms.len() {
-                let diff = self.cached_diff(sboms[0].0, sboms[i].0);
+                let diff = self.cached_diff(sboms[0].0, sboms[i].0)?;
                 cumulative_from_first.push(diff);
             }
         }
@@ -416,12 +430,12 @@ impl MultiDiffEngine {
         let evolution_summary =
             self.build_evolution_summary(sboms, &sbom_infos, &incremental_diffs);
 
-        TimelineResult {
+        Ok(TimelineResult {
             sboms: sbom_infos,
             incremental_diffs,
             cumulative_from_first,
             evolution_summary,
-        }
+        })
     }
 
     fn build_evolution_summary(
@@ -608,11 +622,15 @@ impl MultiDiffEngine {
     }
 
     /// Perform N×N matrix comparison
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any pairwise diff computation fails.
     pub fn matrix(
         &mut self,
         sboms: &[(&NormalizedSbom, &str, &str)], // (sbom, name, path)
         similarity_threshold: Option<f64>,
-    ) -> MatrixResult {
+    ) -> Result<MatrixResult, SbomDiffError> {
         let sbom_infos: Vec<SbomInfo> = sboms
             .iter()
             .map(|(sbom, name, path)| SbomInfo::from_sbom(sbom, name.to_string(), path.to_string()))
@@ -628,7 +646,7 @@ impl MultiDiffEngine {
         let mut idx = 0;
         for i in 0..n {
             for j in (i + 1)..n {
-                let diff = self.cached_diff(sboms[i].0, sboms[j].0);
+                let diff = self.cached_diff(sboms[i].0, sboms[j].0)?;
                 let similarity = diff.semantic_score / 100.0;
                 similarity_scores[idx] = similarity;
                 diffs[idx] = Some(diff);
@@ -640,12 +658,12 @@ impl MultiDiffEngine {
         let clustering = similarity_threshold
             .map(|threshold| self.cluster_sboms(&sbom_infos, &similarity_scores, threshold));
 
-        MatrixResult {
+        Ok(MatrixResult {
             sboms: sbom_infos,
             diffs,
             similarity_scores,
             clustering,
-        }
+        })
     }
 
     fn cluster_sboms(

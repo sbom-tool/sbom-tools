@@ -67,7 +67,7 @@ pub fn run_diff_multi(config: MultiDiffConfig) -> Result<i32> {
         &baseline_name,
         &config.baseline.to_string_lossy(),
         &target_refs,
-    );
+    )?;
 
     tracing::info!(
         "Multi-diff complete: {} comparisons, max deviation: {:.1}%",
@@ -139,7 +139,7 @@ pub fn run_timeline(config: TimelineConfig) -> Result<i32> {
     if config.graph_diff.enabled {
         engine = engine.with_graph_diff(crate::diff::GraphDiffConfig::default());
     }
-    let result = engine.timeline(&sbom_refs);
+    let result = engine.timeline(&sbom_refs)?;
 
     tracing::info!(
         "Timeline analysis complete: {} incremental diffs",
@@ -195,7 +195,7 @@ pub fn run_matrix(config: MatrixConfig) -> Result<i32> {
     if config.graph_diff.enabled {
         engine = engine.with_graph_diff(crate::diff::GraphDiffConfig::default());
     }
-    let result = engine.matrix(&sbom_refs, Some(config.cluster_threshold));
+    let result = engine.matrix(&sbom_refs, Some(config.cluster_threshold))?;
 
     tracing::info!(
         "Matrix comparison complete: {} pairs computed",

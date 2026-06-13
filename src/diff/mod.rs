@@ -26,7 +26,7 @@
 //! // For repeated diffs, use the incremental engine:
 //! use sbom_tools::diff::IncrementalDiffEngine;
 //! let incremental = IncrementalDiffEngine::new(engine);
-//! let result = incremental.diff(&old, &new);
+//! let result = incremental.diff(&old, &new)?;
 //! if result.was_cached() {
 //!     println!("Cache hit!");
 //! }

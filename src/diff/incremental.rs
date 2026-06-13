@@ -19,6 +19,7 @@
 //! - Cold start: Same as regular diff
 
 use crate::diff::{DiffEngine, DiffResult};
+use crate::error::SbomDiffError;
 use crate::model::NormalizedSbom;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
@@ -306,18 +307,18 @@ impl DiffCache {
     ///
     /// Returns `Some` if an exact match is found and still valid.
     pub fn get(&self, key: &DiffCacheKey) -> Option<Arc<DiffResult>> {
-        let mut stats = self.stats.write().expect("stats lock poisoned");
-        stats.lookups += 1;
-
         let result = {
-            let cache = self.cache.read().expect("cache lock poisoned");
-            cache.get(key).and_then(|entry| {
-                entry
-                    .is_valid(self.config.ttl)
-                    .then(|| Arc::clone(&entry.result))
+            let mut cache = self.cache.write().expect("cache lock poisoned");
+            cache.get_mut(key).and_then(|entry| {
+                entry.is_valid(self.config.ttl).then(|| {
+                    entry.hit_count += 1;
+                    Arc::clone(&entry.result)
+                })
             })
         };
 
+        let mut stats = self.stats.write().expect("stats lock poisoned");
+        stats.lookups += 1;
         if let Some(ref result) = result {
             stats.hits += 1;
             stats.time_saved_ms += Self::estimate_computation_time(result);
@@ -400,6 +401,16 @@ impl Default for DiffCache {
 // Incremental Diff Engine
 // ============================================================================
 
+/// Metadata about the last diffed pair, used for incremental updates.
+struct LastDiffMeta {
+    /// Cache key of the last diffed pair
+    key: DiffCacheKey,
+    /// Section hashes from the last pair's old SBOM
+    old_hashes: SectionHashes,
+    /// Section hashes from the last pair's new SBOM
+    new_hashes: SectionHashes,
+}
+
 /// A diff engine wrapper that supports incremental computation and caching.
 ///
 /// Wraps the standard `DiffEngine` and adds:
@@ -412,8 +423,7 @@ pub struct IncrementalDiffEngine {
     /// Result cache
     cache: DiffCache,
     /// Track previous computation for incremental updates
-    last_old_hashes: RwLock<Option<SectionHashes>>,
-    last_new_hashes: RwLock<Option<SectionHashes>>,
+    last_diff: RwLock<Option<LastDiffMeta>>,
 }
 
 impl IncrementalDiffEngine {
@@ -423,8 +433,7 @@ impl IncrementalDiffEngine {
         Self {
             engine,
             cache: DiffCache::new(),
-            last_old_hashes: RwLock::new(None),
-            last_new_hashes: RwLock::new(None),
+            last_diff: RwLock::new(None),
         }
     }
 
@@ -434,88 +443,91 @@ impl IncrementalDiffEngine {
         Self {
             engine,
             cache: DiffCache::with_config(config),
-            last_old_hashes: RwLock::new(None),
-            last_new_hashes: RwLock::new(None),
+            last_diff: RwLock::new(None),
         }
     }
 
     /// Perform a diff, using cache when possible.
     ///
     /// Returns the diff result and metadata about cache usage.
-    pub fn diff(&self, old: &NormalizedSbom, new: &NormalizedSbom) -> IncrementalDiffResult {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the underlying diff computation fails.
+    pub fn diff(
+        &self,
+        old: &NormalizedSbom,
+        new: &NormalizedSbom,
+    ) -> Result<IncrementalDiffResult, SbomDiffError> {
         let start = Instant::now();
         let cache_key = DiffCacheKey::from_sboms(old, new);
 
         // Check for exact cache hit
         if let Some(cached) = self.cache.get(&cache_key) {
-            return IncrementalDiffResult {
+            return Ok(IncrementalDiffResult {
                 result: (*cached).clone(),
                 cache_hit: CacheHitType::Full,
                 sections_recomputed: ChangedSections::default(),
                 computation_time: start.elapsed(),
-            };
+            });
         }
 
         // Compute section hashes
         let old_hashes = SectionHashes::from_sbom(old);
         let new_hashes = SectionHashes::from_sbom(new);
 
-        // Check for incremental opportunity
-        let changed = {
-            let last_old = self
-                .last_old_hashes
-                .read()
-                .expect("last_old_hashes lock poisoned");
-            let last_new = self
-                .last_new_hashes
-                .read()
-                .expect("last_new_hashes lock poisoned");
+        // Check for incremental opportunity against the last diffed pair
+        let (changed, prev_key) = {
+            let last = self.last_diff.read().expect("last_diff lock poisoned");
+            match &*last {
+                Some(meta) => {
+                    let old_changed = old_hashes != meta.old_hashes;
+                    let new_changed = new_hashes != meta.new_hashes;
 
-            if let (Some(prev_old), Some(prev_new)) = (&*last_old, &*last_new) {
-                // Check what changed since last computation
-                let old_changed = old_hashes != *prev_old;
-                let new_changed = new_hashes != *prev_new;
-
-                if !old_changed && !new_changed {
-                    // Nothing changed, but we don't have the result cached
-                    // This shouldn't normally happen, but fall through to full compute
-                    None
-                } else {
-                    Some(
-                        prev_old
-                            .changed_sections(&old_hashes)
-                            .or(&prev_new.changed_sections(&new_hashes)),
-                    )
+                    if !old_changed && !new_changed {
+                        // Nothing changed, but we don't have the result cached
+                        // This shouldn't normally happen, but fall through to full compute
+                        (None, None)
+                    } else {
+                        (
+                            Some(
+                                meta.old_hashes
+                                    .changed_sections(&old_hashes)
+                                    .or(&meta.new_hashes.changed_sections(&new_hashes)),
+                            ),
+                            Some(meta.key.clone()),
+                        )
+                    }
                 }
-            } else {
-                None
+                None => (None, None),
             }
         };
 
         // Section-selective or full computation
         let (result, cache_hit, sections_recomputed) = if let Some(ref changed) = changed
+            && let Some(ref prev_key) = prev_key
             && !changed.all()
             && changed.any()
         {
-            // We know which sections changed and it's a partial change —
-            // try to reuse cached sections from a previous result
-            if let Some(prev_result) = self.find_previous_result() {
+            // Change detection is relative to the last diffed pair, so only
+            // that exact pair's cached result is a valid splice base
+            if let Some(prev_result) = self.find_previous_result(prev_key) {
                 match self.engine.diff_sections(old, new, changed, &prev_result) {
                     Ok(result) => (result, CacheHitType::Partial, changed.clone()),
                     Err(_) => {
-                        // Fall back to full computation on any error
-                        let result = self.engine.diff(old, new).unwrap_or_default();
+                        // Fall back to full computation on diff_sections errors
+                        let result = self.engine.diff(old, new)?;
                         (result, CacheHitType::Miss, ChangedSections::all_changed())
                     }
                 }
             } else {
-                // No previous result to build on — full computation
-                let result = self.engine.diff(old, new).unwrap_or_default();
+                // Last pair's entry was evicted or expired — full computation
+                let result = self.engine.diff(old, new)?;
                 (result, CacheHitType::Miss, ChangedSections::all_changed())
             }
         } else {
             // Either no change detection possible, or all sections changed — full computation
-            let result = self.engine.diff(old, new).unwrap_or_default();
+            let result = self.engine.diff(old, new)?;
             let sections = changed.unwrap_or_else(ChangedSections::all_changed);
             (result, CacheHitType::Miss, sections)
         };
@@ -529,40 +541,37 @@ impl IncrementalDiffEngine {
 
         // Cache the result
         self.cache.put(
-            cache_key,
+            cache_key.clone(),
             result.clone(),
             old_hashes.clone(),
             new_hashes.clone(),
         );
 
-        // Update last hashes
-        *self
-            .last_old_hashes
-            .write()
-            .expect("last_old_hashes lock poisoned") = Some(old_hashes);
-        *self
-            .last_new_hashes
-            .write()
-            .expect("last_new_hashes lock poisoned") = Some(new_hashes);
+        // Update last diff metadata
+        *self.last_diff.write().expect("last_diff lock poisoned") = Some(LastDiffMeta {
+            key: cache_key,
+            old_hashes,
+            new_hashes,
+        });
 
-        IncrementalDiffResult {
+        Ok(IncrementalDiffResult {
             result,
             cache_hit,
             sections_recomputed,
             computation_time: start.elapsed(),
-        }
+        })
     }
 
-    /// Find a previous cached result to use as a base for incremental recomputation.
+    /// Find the last diffed pair's cached result to use as a base for
+    /// incremental recomputation.
     ///
-    /// Returns the most recently accessed (highest hit count) cached result,
-    /// which is the best candidate for reuse since it likely covers similar SBOMs.
-    fn find_previous_result(&self) -> Option<Arc<DiffResult>> {
+    /// Section change detection is computed against the last diffed pair, so
+    /// only that exact pair's cached entry is a valid splice base.
+    fn find_previous_result(&self, key: &DiffCacheKey) -> Option<Arc<DiffResult>> {
         let cache = self.cache.cache.read().ok()?;
         cache
-            .values()
-            .filter(|e| e.is_valid(Duration::from_secs(3600)))
-            .max_by_key(|e| e.hit_count)
+            .get(key)
+            .filter(|e| e.is_valid(self.cache.config.ttl))
             .map(|e| Arc::clone(&e.result))
     }
 
@@ -779,11 +788,11 @@ mod tests {
         let new = make_sbom("new", &["a", "b", "d"]);
 
         // First diff should be a miss
-        let result1 = incremental.diff(&old, &new);
+        let result1 = incremental.diff(&old, &new).expect("diff should succeed");
         assert_eq!(result1.cache_hit, CacheHitType::Miss);
 
         // Same diff should be a hit
-        let result2 = incremental.diff(&old, &new);
+        let result2 = incremental.diff(&old, &new).expect("diff should succeed");
         assert_eq!(result2.cache_hit, CacheHitType::Full);
 
         // Stats should reflect this
@@ -913,14 +922,14 @@ mod tests {
         let old = make_sbom("old", &["a", "b", "c"]);
         let new1 = make_sbom("new1", &["a", "b", "d"]);
 
-        // First diff populates last_old_hashes and last_new_hashes
-        let result1 = incremental.diff(&old, &new1);
+        // First diff populates the last-diff metadata
+        let result1 = incremental.diff(&old, &new1).expect("diff should succeed");
         assert_eq!(result1.cache_hit, CacheHitType::Miss);
 
         // Second diff with different SBOMs (different content hashes = no exact cache hit)
-        // but last_old_hashes/last_new_hashes are now set, so change detection runs
+        // but the last-diff metadata is now set, so change detection runs
         let new2 = make_sbom("new2", &["a", "b", "e"]);
-        let result2 = incremental.diff(&old, &new2);
+        let result2 = incremental.diff(&old, &new2).expect("diff should succeed");
 
         // This should either be a Partial hit (if section-selective kicked in)
         // or a Miss (if all sections changed). Either way, it should produce a valid result.
@@ -935,8 +944,12 @@ mod tests {
     fn test_find_previous_result_empty_cache() {
         let engine = DiffEngine::new();
         let incremental = IncrementalDiffEngine::new(engine);
+        let key = DiffCacheKey {
+            old_hash: 1,
+            new_hash: 2,
+        };
         // With an empty cache, find_previous_result should return None
-        assert!(incremental.find_previous_result().is_none());
+        assert!(incremental.find_previous_result(&key).is_none());
     }
 
     #[test]
@@ -948,9 +961,101 @@ mod tests {
         let new = make_sbom("new", &["a", "c"]);
 
         // Populate the cache
-        let _ = incremental.diff(&old, &new);
+        let _ = incremental.diff(&old, &new).expect("diff should succeed");
 
-        // Now find_previous_result should return Some
-        assert!(incremental.find_previous_result().is_some());
+        // The diffed pair's key should be retrievable; an unrelated key should not
+        let key = DiffCacheKey::from_sboms(&old, &new);
+        assert!(incremental.find_previous_result(&key).is_some());
+        let other_key = DiffCacheKey {
+            old_hash: key.old_hash.wrapping_add(1),
+            new_hash: key.new_hash,
+        };
+        assert!(incremental.find_previous_result(&other_key).is_none());
+    }
+
+    fn assert_sections_match(actual: &DiffResult, expected: &DiffResult) {
+        assert_eq!(
+            actual.components.added.len(),
+            expected.components.added.len()
+        );
+        assert_eq!(
+            actual.components.removed.len(),
+            expected.components.removed.len()
+        );
+        assert_eq!(
+            actual.components.modified.len(),
+            expected.components.modified.len()
+        );
+        assert_eq!(
+            actual.licenses.new_licenses.len(),
+            expected.licenses.new_licenses.len()
+        );
+        assert_eq!(
+            actual.licenses.removed_licenses.len(),
+            expected.licenses.removed_licenses.len()
+        );
+        assert_eq!(
+            actual.vulnerabilities.introduced.len(),
+            expected.vulnerabilities.introduced.len()
+        );
+        assert_eq!(
+            actual.vulnerabilities.resolved.len(),
+            expected.vulnerabilities.resolved.len()
+        );
+        assert_eq!(
+            actual.dependencies.added.len(),
+            expected.dependencies.added.len()
+        );
+        assert_eq!(
+            actual.dependencies.removed.len(),
+            expected.dependencies.removed.len()
+        );
+    }
+
+    #[test]
+    fn test_no_cross_pair_section_splice() {
+        // Note: DiffEngine::diff has no constructible Err path today, so the
+        // Result-propagation change is covered at the type level only.
+        let incremental = IncrementalDiffEngine::new(DiffEngine::new());
+
+        let a_old = make_sbom("a-old", &["a", "b", "c"]);
+        let a_new = make_sbom("a-new", &["a", "b", "d"]);
+        let b_old = make_sbom("b-old", &["x", "y"]);
+        let b_new = make_sbom("b-new", &["x", "z", "w"]);
+
+        // Pair A first, then pair B through the same engine
+        let _ = incremental
+            .diff(&a_old, &a_new)
+            .expect("diff should succeed");
+        let b_result = incremental
+            .diff(&b_old, &b_new)
+            .expect("diff should succeed");
+
+        // Every section of B's result must match a from-scratch full diff —
+        // no sections spliced in from pair A's cached result
+        let fresh = DiffEngine::new()
+            .diff(&b_old, &b_new)
+            .expect("diff should succeed");
+        assert_sections_match(&b_result.result, &fresh);
+    }
+
+    #[test]
+    fn test_partial_splice_uses_last_pair_base() {
+        let incremental = IncrementalDiffEngine::new(DiffEngine::new());
+
+        let s0 = make_sbom("s0", &["a", "b", "c"]);
+        let s1 = make_sbom("s1", &["a", "b", "d"]);
+        let s2 = make_sbom("s2", &["a", "b", "e"]);
+
+        // s0->s1 first so that s0->s2 only differs in the components section
+        let _ = incremental.diff(&s0, &s1).expect("diff should succeed");
+        let result = incremental.diff(&s0, &s2).expect("diff should succeed");
+        assert_eq!(result.cache_hit, CacheHitType::Partial);
+
+        // The spliced result must match a from-scratch full diff of s0->s2
+        let fresh = DiffEngine::new()
+            .diff(&s0, &s2)
+            .expect("diff should succeed");
+        assert_sections_match(&result.result, &fresh);
     }
 }
