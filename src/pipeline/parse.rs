@@ -103,7 +103,7 @@ pub fn parse_sbom_with_context(path: &Path, quiet: bool) -> Result<ParsedSbom> {
 pub fn build_enrichment_config(
     config: &crate::config::EnrichmentConfig,
 ) -> crate::enrichment::OsvEnricherConfig {
-    crate::enrichment::OsvEnricherConfig {
+    let mut osv_config = crate::enrichment::OsvEnricherConfig {
         cache_dir: config
             .cache_dir
             .clone()
@@ -112,7 +112,11 @@ pub fn build_enrichment_config(
         bypass_cache: config.bypass_cache,
         timeout: std::time::Duration::from_secs(config.timeout_secs),
         ..Default::default()
+    };
+    if let Some(ref api_base) = config.api_base {
+        osv_config.api_base = api_base.clone();
     }
+    osv_config
 }
 
 /// Enrich an SBOM with vulnerability data from OSV

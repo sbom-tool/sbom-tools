@@ -203,7 +203,7 @@ impl VulnerabilityEnricher for OsvEnricher {
             if !vulns.is_empty() {
                 stats.components_with_vulns += 1;
                 stats.total_vulns_found += vulns.len();
-                components[idx].vulnerabilities.extend(vulns);
+                merge_vulnerabilities(&mut components[idx], vulns);
             }
         }
 
@@ -236,7 +236,7 @@ impl VulnerabilityEnricher for OsvEnricher {
                         if !vulns.is_empty() {
                             stats.components_with_vulns += 1;
                             stats.total_vulns_found += vulns.len();
-                            components[idx].vulnerabilities.extend(vulns);
+                            merge_vulnerabilities(&mut components[idx], vulns);
                         }
                     }
                 }
@@ -256,6 +256,21 @@ impl VulnerabilityEnricher for OsvEnricher {
 
     fn is_available(&self) -> bool {
         self.client.health_check().unwrap_or(false)
+    }
+}
+
+/// Append vulnerabilities to a component, skipping ids it already carries so
+/// repeated enrichment runs are idempotent.
+fn merge_vulnerabilities(component: &mut Component, vulns: Vec<VulnerabilityRef>) {
+    let mut seen: std::collections::HashSet<String> = component
+        .vulnerabilities
+        .iter()
+        .map(|v| v.id.clone())
+        .collect();
+    for vuln in vulns {
+        if seen.insert(vuln.id.clone()) {
+            component.vulnerabilities.push(vuln);
+        }
     }
 }
 

@@ -178,6 +178,36 @@ pub fn run_watch_loop(config: &WatchConfig) -> anyhow::Result<()> {
     }
 }
 
+/// Enrich an SBOM in place with OSV/EOL/VEX data per the watch config.
+///
+/// `bypass_cache` forces fresh OSV/EOL data (used by periodic enrichment
+/// cycles); otherwise the configured cache behavior applies.
+#[cfg(feature = "enrichment")]
+fn enrich_watched_sbom(sbom: &mut NormalizedSbom, config: &WatchConfig, bypass_cache: bool) {
+    let mut osv_config = crate::pipeline::build_enrichment_config(&config.enrichment);
+    osv_config.bypass_cache = osv_config.bypass_cache || bypass_cache;
+    crate::pipeline::enrich_sbom(sbom, &osv_config, true);
+
+    if config.enrichment.enable_eol {
+        let eol_config = crate::enrichment::EolClientConfig {
+            cache_dir: config
+                .enrichment
+                .cache_dir
+                .clone()
+                .unwrap_or_else(crate::pipeline::dirs::eol_cache_dir),
+            cache_ttl: std::time::Duration::from_secs(config.enrichment.cache_ttl_hours * 3600),
+            bypass_cache,
+            timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
+            ..Default::default()
+        };
+        crate::pipeline::enrich_eol(sbom, &eol_config, true);
+    }
+
+    if !config.enrichment.vex_paths.is_empty() {
+        crate::pipeline::enrich_vex(sbom, &config.enrichment.vex_paths, true);
+    }
+}
+
 /// Parse and record the initial state of a discovered SBOM (no diff).
 ///
 /// When enrichment is enabled, also enriches the SBOM with vulnerability/EOL/VEX
@@ -194,29 +224,7 @@ fn process_initial(path: &Path, config: &WatchConfig, state: &mut WatchState) {
             // Enrich on initial scan when enrichment is configured
             #[cfg(feature = "enrichment")]
             if config.enrichment.enabled {
-                let osv_config = crate::pipeline::build_enrichment_config(&config.enrichment);
-                crate::pipeline::enrich_sbom(&mut sbom, &osv_config, true);
-
-                if config.enrichment.enable_eol {
-                    let eol_config = crate::enrichment::EolClientConfig {
-                        cache_dir: config
-                            .enrichment
-                            .cache_dir
-                            .clone()
-                            .unwrap_or_else(crate::pipeline::dirs::eol_cache_dir),
-                        cache_ttl: std::time::Duration::from_secs(
-                            config.enrichment.cache_ttl_hours * 3600,
-                        ),
-                        timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
-                        ..Default::default()
-                    };
-                    crate::pipeline::enrich_eol(&mut sbom, &eol_config, true);
-                }
-
-                if !config.enrichment.vex_paths.is_empty() {
-                    crate::pipeline::enrich_vex(&mut sbom, &config.enrichment.vex_paths, true);
-                }
-
+                enrich_watched_sbom(&mut sbom, config, false);
                 entry.last_enriched = Some(Instant::now());
             }
 
@@ -237,9 +245,14 @@ fn process_initial(path: &Path, config: &WatchConfig, state: &mut WatchState) {
 }
 
 /// Handle a new or modified SBOM file: parse, diff against previous, alert.
+///
+/// When enrichment is enabled, the re-parsed SBOM is enriched before diffing;
+/// otherwise every file touch would report all previously enriched
+/// vulnerabilities as resolved.
+#[allow(unused_variables)]
 fn process_sbom_change(
     path: &Path,
-    _config: &WatchConfig,
+    config: &WatchConfig,
     state: &mut WatchState,
     sinks: &mut [Box<dyn AlertSink>],
     engine: &DiffEngine,
@@ -251,7 +264,14 @@ fn process_sbom_change(
 
     match crate::pipeline::parse_sbom_with_context(path, true) {
         Ok(parsed) => {
-            let new_sbom = parsed.into_sbom();
+            let mut new_sbom = parsed.into_sbom();
+
+            #[cfg(feature = "enrichment")]
+            if config.enrichment.enabled {
+                enrich_watched_sbom(&mut new_sbom, config, false);
+                entry.last_enriched = Some(Instant::now());
+            }
+
             entry.component_count = new_sbom.component_count();
             entry.vuln_count = count_vulns(&new_sbom);
             entry.eol_count = count_eol(&new_sbom);
@@ -404,23 +424,6 @@ fn run_enrichment_cycle(
 
     #[cfg(feature = "enrichment")]
     {
-        let osv_config = crate::pipeline::build_enrichment_config(&config.enrichment);
-        let eol_config = if config.enrichment.enable_eol {
-            Some(crate::enrichment::EolClientConfig {
-                cache_dir: config
-                    .enrichment
-                    .cache_dir
-                    .clone()
-                    .unwrap_or_else(crate::pipeline::dirs::eol_cache_dir),
-                cache_ttl: std::time::Duration::from_secs(config.enrichment.cache_ttl_hours * 3600),
-                bypass_cache: true, // force fresh data during enrichment cycles
-                timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
-                ..Default::default()
-            })
-        } else {
-            None
-        };
-
         let paths: Vec<_> = state
             .sboms
             .iter()
@@ -445,20 +448,8 @@ fn run_enrichment_cycle(
                 .flat_map(|c| c.vulnerabilities.iter().map(|v| v.id.clone()))
                 .collect();
 
-            // OSV enrichment (with cache bypass for fresh data)
-            let mut bypass_config = osv_config.clone();
-            bypass_config.bypass_cache = true;
-            crate::pipeline::enrich_sbom(sbom, &bypass_config, true);
-
-            // EOL enrichment
-            if let Some(ref eol_cfg) = eol_config {
-                crate::pipeline::enrich_eol(sbom, eol_cfg, true);
-            }
-
-            // VEX enrichment
-            if !config.enrichment.vex_paths.is_empty() {
-                crate::pipeline::enrich_vex(sbom, &config.enrichment.vex_paths, true);
-            }
+            // Bypass caches so enrichment cycles see fresh data
+            enrich_watched_sbom(sbom, config, true);
 
             entry.last_enriched = Some(Instant::now());
             entry.vuln_count = count_vulns(sbom);
