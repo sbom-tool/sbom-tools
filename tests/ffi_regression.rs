@@ -7,8 +7,8 @@ mod common;
 
 use common::ffi_helpers::{consume_result, into_c_string};
 use sbom_tools::ffi::{
-    SbomToolsErrorCode, sbom_tools_diff_sboms_json, sbom_tools_parse_sbom_path_json,
-    sbom_tools_parse_sbom_str_json,
+    SbomToolsErrorCode, SbomToolsScoringProfile, sbom_tools_diff_sboms_json,
+    sbom_tools_parse_sbom_path_json, sbom_tools_parse_sbom_str_json, sbom_tools_score_sbom_json,
 };
 use std::ffi::CString;
 use std::path::Path;
@@ -112,6 +112,56 @@ fn regression_cross_format_diff_cyclonedx_vs_spdx() {
     assert!(
         value["summary"].is_object(),
         "diff should have a summary object"
+    );
+}
+
+/// Regression: scoring a 40K-component linear dependency chain through FFI
+/// must not abort the host process (cycle detection is iterative, not recursive).
+#[test]
+fn regression_score_deep_dependency_chain_does_not_abort() {
+    let n = 40_000usize;
+    let components: Vec<serde_json::Value> = (0..n)
+        .map(|i| {
+            serde_json::json!({
+                "type": "library",
+                "bom-ref": format!("ref-{i}"),
+                "name": format!("node-{i}"),
+                "version": "1.0.0"
+            })
+        })
+        .collect();
+    let dependencies: Vec<serde_json::Value> = (0..n - 1)
+        .map(|i| {
+            serde_json::json!({
+                "ref": format!("ref-{i}"),
+                "dependsOn": [format!("ref-{}", i + 1)]
+            })
+        })
+        .collect();
+    let bom = serde_json::json!({
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.5",
+        "version": 1,
+        "components": components,
+        "dependencies": dependencies
+    });
+
+    let content_c = into_c_string(&bom.to_string());
+    let parsed = consume_result(sbom_tools_parse_sbom_str_json(content_c.as_ptr()))
+        .expect("deep-chain CycloneDX should parse");
+    let parsed_c = into_c_string(&parsed);
+
+    let score_json = consume_result(sbom_tools_score_sbom_json(
+        parsed_c.as_ptr(),
+        SbomToolsScoringProfile::Standard,
+    ))
+    .expect("scoring deep chain should succeed");
+
+    let value: serde_json::Value = serde_json::from_str(&score_json).expect("score is JSON");
+    assert_eq!(
+        value["dependency_metrics"]["cycle_count"].as_u64(),
+        Some(0),
+        "linear chain has no cycles"
     );
 }
 

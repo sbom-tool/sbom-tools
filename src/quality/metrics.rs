@@ -683,7 +683,7 @@ impl VulnerabilityMetrics {
 // ============================================================================
 
 /// Maximum edge count before skipping expensive graph analysis
-const MAX_EDGES_FOR_GRAPH_ANALYSIS: usize = 50_000;
+const MAX_EDGES_FOR_GRAPH_ANALYSIS: usize = 1_000_000;
 
 // ============================================================================
 // Software complexity index
@@ -764,7 +764,7 @@ pub struct DependencyMetrics {
     pub orphan_components: usize,
     /// Root components (no incoming deps, but has outgoing)
     pub root_components: usize,
-    /// Number of dependency cycles detected
+    /// Number of dependency cycles detected (SCCs with more than one node, plus self-loops)
     pub cycle_count: usize,
     /// Number of disconnected subgraphs (islands)
     pub island_count: usize,
@@ -841,7 +841,7 @@ impl DependencyMetrics {
         // BFS from roots to compute depth
         let (max_depth, avg_depth) = compute_depth(&roots, &children);
 
-        // DFS cycle detection
+        // Iterative Tarjan SCC cycle detection
         let cycle_count = detect_cycles(&all_ids, &children);
 
         // Union-Find for island/subgraph detection
@@ -954,43 +954,90 @@ fn compute_depth(
     (Some(max_d), avg)
 }
 
-/// DFS-based cycle detection (white/gray/black coloring)
+/// Iterative Tarjan SCC-based cycle detection.
+///
+/// Counts each strongly connected component with more than one node as a
+/// single cycle, plus single-node components with a self-loop. Uses explicit
+/// stacks instead of recursion so arbitrarily deep graphs cannot overflow
+/// the call stack.
 fn detect_cycles(all_nodes: &[&str], children: &HashMap<&str, Vec<&str>>) -> usize {
-    const WHITE: u8 = 0;
-    const GRAY: u8 = 1;
-    const BLACK: u8 = 2;
-
-    let mut color: HashMap<&str, u8> = HashMap::with_capacity(all_nodes.len());
+    let mut index_of: HashMap<&str, usize> = HashMap::with_capacity(all_nodes.len());
     for &node in all_nodes {
-        color.insert(node, WHITE);
+        let next = index_of.len();
+        index_of.entry(node).or_insert(next);
+    }
+    for (&from, kids) in children {
+        let next = index_of.len();
+        index_of.entry(from).or_insert(next);
+        for &kid in kids {
+            let next = index_of.len();
+            index_of.entry(kid).or_insert(next);
+        }
     }
 
-    let mut cycles = 0;
+    let node_count = index_of.len();
+    let mut adjacency: Vec<Vec<usize>> = vec![Vec::new(); node_count];
+    let mut has_self_loop = vec![false; node_count];
+    for (from, kids) in children {
+        let from_idx = index_of[from];
+        for kid in kids {
+            let kid_idx = index_of[kid];
+            if from_idx == kid_idx {
+                has_self_loop[from_idx] = true;
+            }
+            adjacency[from_idx].push(kid_idx);
+        }
+    }
 
-    fn dfs<'a>(
-        node: &'a str,
-        children: &HashMap<&str, Vec<&'a str>>,
-        color: &mut HashMap<&'a str, u8>,
-        cycles: &mut usize,
-    ) {
-        color.insert(node, GRAY);
+    const UNVISITED: usize = usize::MAX;
+    let mut order = vec![UNVISITED; node_count];
+    let mut lowlink = vec![0usize; node_count];
+    let mut on_stack = vec![false; node_count];
+    let mut scc_stack: Vec<usize> = Vec::new();
+    let mut call_stack: Vec<(usize, usize)> = Vec::new();
+    let mut next_order = 0usize;
+    let mut cycles = 0usize;
 
-        if let Some(kids) = children.get(node) {
-            for &kid in kids {
-                match color.get(kid).copied().unwrap_or(WHITE) {
-                    GRAY => *cycles += 1, // back edge = cycle
-                    WHITE => dfs(kid, children, color, cycles),
-                    _ => {}
+    for start in 0..node_count {
+        if order[start] != UNVISITED {
+            continue;
+        }
+        call_stack.push((start, 0));
+        while let Some(frame) = call_stack.last_mut() {
+            let node = frame.0;
+            if frame.1 == 0 {
+                order[node] = next_order;
+                lowlink[node] = next_order;
+                next_order += 1;
+                scc_stack.push(node);
+                on_stack[node] = true;
+            }
+            if let Some(&target) = adjacency[node].get(frame.1) {
+                frame.1 += 1;
+                if order[target] == UNVISITED {
+                    call_stack.push((target, 0));
+                } else if on_stack[target] {
+                    lowlink[node] = lowlink[node].min(order[target]);
+                }
+            } else {
+                call_stack.pop();
+                if let Some(&(parent, _)) = call_stack.last() {
+                    lowlink[parent] = lowlink[parent].min(lowlink[node]);
+                }
+                if lowlink[node] == order[node] {
+                    let mut scc_size = 0usize;
+                    while let Some(member) = scc_stack.pop() {
+                        on_stack[member] = false;
+                        scc_size += 1;
+                        if member == node {
+                            break;
+                        }
+                    }
+                    if scc_size > 1 || has_self_loop[node] {
+                        cycles += 1;
+                    }
                 }
             }
-        }
-
-        color.insert(node, BLACK);
-    }
-
-    for &node in all_nodes {
-        if color.get(node).copied().unwrap_or(WHITE) == WHITE {
-            dfs(node, children, &mut color, &mut cycles);
         }
     }
 
@@ -2063,6 +2110,7 @@ mod tests {
         let children: HashMap<&str, Vec<&str>> =
             HashMap::from([("a", vec!["b"]), ("b", vec!["c"])]);
         let all_nodes = vec!["a", "b", "c"];
+        // Linear chain has no SCC with more than one node
         assert_eq!(detect_cycles(&all_nodes, &children), 0);
     }
 
@@ -2071,7 +2119,75 @@ mod tests {
         let children: HashMap<&str, Vec<&str>> =
             HashMap::from([("a", vec!["b"]), ("b", vec!["c"]), ("c", vec!["a"])]);
         let all_nodes = vec!["a", "b", "c"];
+        // a→b→c→a forms a single 3-node SCC = one cycle
         assert_eq!(detect_cycles(&all_nodes, &children), 1);
+    }
+
+    #[test]
+    fn test_cycle_detection_deep_linear_chain_no_overflow() {
+        let n = 40_000usize;
+        let names: Vec<String> = (0..n).map(|i| format!("node-{i}")).collect();
+        let all_nodes: Vec<&str> = names.iter().map(String::as_str).collect();
+        let mut children: HashMap<&str, Vec<&str>> = HashMap::new();
+        for w in all_nodes.windows(2) {
+            children.entry(w[0]).or_default().push(w[1]);
+        }
+        assert_eq!(detect_cycles(&all_nodes, &children), 0);
+    }
+
+    #[test]
+    fn test_cycle_detection_diamond_dag() {
+        let children: HashMap<&str, Vec<&str>> =
+            HashMap::from([("a", vec!["b", "c"]), ("b", vec!["d"]), ("c", vec!["d"])]);
+        let all_nodes = vec!["a", "b", "c", "d"];
+        assert_eq!(detect_cycles(&all_nodes, &children), 0);
+    }
+
+    #[test]
+    fn test_cycle_detection_multi_back_edge_scc_counts_once() {
+        let children: HashMap<&str, Vec<&str>> = HashMap::from([
+            ("a", vec!["b", "c"]),
+            ("b", vec!["a", "c"]),
+            ("c", vec!["a", "b"]),
+        ]);
+        let all_nodes = vec!["a", "b", "c"];
+        // One SCC with multiple back edges still counts as a single cycle
+        assert_eq!(detect_cycles(&all_nodes, &children), 1);
+    }
+
+    #[test]
+    fn test_cycle_detection_self_loop_counts_once() {
+        let children: HashMap<&str, Vec<&str>> =
+            HashMap::from([("a", vec!["a", "b"]), ("b", vec!["c"])]);
+        let all_nodes = vec!["a", "b", "c"];
+        assert_eq!(detect_cycles(&all_nodes, &children), 1);
+    }
+
+    #[test]
+    fn test_quality_scorer_deep_chain_end_to_end() {
+        use crate::model::{Component, DependencyEdge, DependencyType};
+        use crate::quality::{QualityScorer, ScoringProfile};
+
+        let n = 40_000usize;
+        let mut sbom = NormalizedSbom::default();
+        let mut ids = Vec::with_capacity(n);
+        for i in 0..n {
+            let component = Component::new(format!("node-{i}"), format!("ref-{i}"));
+            ids.push(component.canonical_id.clone());
+            sbom.add_component(component);
+        }
+        for w in ids.windows(2) {
+            sbom.add_edge(DependencyEdge::new(
+                w[0].clone(),
+                w[1].clone(),
+                DependencyType::DependsOn,
+            ));
+        }
+
+        let report = QualityScorer::new(ScoringProfile::Standard).score(&sbom);
+        assert!(!report.dependency_metrics.graph_analysis_skipped);
+        assert_eq!(report.dependency_metrics.cycle_count, 0);
+        assert_eq!(report.dependency_metrics.max_depth, Some(n - 1));
     }
 
     #[test]

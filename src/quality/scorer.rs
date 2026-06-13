@@ -15,7 +15,7 @@ use super::metrics::{
 };
 
 /// Quality scoring engine version
-pub const SCORING_ENGINE_VERSION: &str = "2.0";
+pub const SCORING_ENGINE_VERSION: &str = "2.1";
 
 /// Returns true if any of the JSON pointers resolves to a non-empty value in `raw`.
 /// Used by the AI-readiness profile to inspect model-card fields preserved in
@@ -1345,7 +1345,7 @@ mod tests {
 
     #[test]
     fn test_scoring_engine_version() {
-        assert_eq!(SCORING_ENGINE_VERSION, "2.0");
+        assert_eq!(SCORING_ENGINE_VERSION, "2.1");
     }
 
     #[test]

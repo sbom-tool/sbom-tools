@@ -49,3 +49,8 @@ doc = false
 name = "fuzz_detect_format"
 path = "fuzz_targets/fuzz_detect_format.rs"
 doc = false
+
+[[bin]]
+name = "fuzz_score_sbom"
+path = "fuzz_targets/fuzz_score_sbom.rs"
+doc = false
