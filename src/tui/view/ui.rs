@@ -27,6 +27,7 @@ pub fn run_view_tui(app: &mut ViewApp) -> io::Result<()> {
     set_theme(Theme::from_name(prefs.theme.as_str()));
 
     // Setup terminal
+    crate::tui::shared::install_panic_hook();
     enable_raw_mode()?;
     let mut stdout = stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;

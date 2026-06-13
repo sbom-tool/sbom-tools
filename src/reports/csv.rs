@@ -97,7 +97,7 @@ impl ReportGenerator for CsvReporter {
                 .join("; ");
             let vuln_count = comp.vulnerabilities.len();
             let ecosystem = comp.ecosystem.as_ref().map(|e| format!("{e:?}"));
-            let ecosystem = ecosystem.as_deref().unwrap_or("-");
+            let ecosystem = escape_csv_opt(ecosystem.as_deref());
 
             let eol_status = comp.eol.as_ref().map_or("-", |e| e.status.label());
             let eol_date = comp
@@ -118,7 +118,7 @@ impl ReportGenerator for CsvReporter {
                 .and_then(|cp| {
                     cp.algorithm_properties
                         .as_ref()
-                        .and_then(|a| a.algorithm_family.clone())
+                        .and_then(|a| a.algorithm_family.as_deref().map(escape_csv))
                 })
                 .unwrap_or_default();
             let quantum_level = comp
@@ -135,10 +135,10 @@ impl ReportGenerator for CsvReporter {
                 content,
                 "\"{}\",\"{}\",\"{}\",\"{:?}\",\"{}\",\"{}\",{},\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"",
                 escape_csv(&comp.name),
-                comp.version.as_deref().unwrap_or("-"),
+                escape_csv_opt(comp.version.as_deref()),
                 ecosystem,
                 comp.component_type,
-                comp.identifiers.purl.as_deref().unwrap_or("-"),
+                escape_csv_opt(comp.identifiers.purl.as_deref()),
                 escape_csv(&licenses),
                 vuln_count,
                 eol_status,
@@ -168,9 +168,9 @@ fn write_component_line(
         "{},\"{}\",\"{}\",\"{}\",\"{}\"",
         change_type,
         escape_csv(&comp.name),
-        comp.old_version.as_deref().unwrap_or("-"),
-        comp.new_version.as_deref().unwrap_or("-"),
-        comp.ecosystem.as_deref().unwrap_or("-")
+        escape_csv_opt(comp.old_version.as_deref()),
+        escape_csv_opt(comp.new_version.as_deref()),
+        escape_csv_opt(comp.ecosystem.as_deref())
     );
 }
 
@@ -210,8 +210,22 @@ fn write_vuln_line(content: &mut String, status: &str, vuln: &VulnerabilityDetai
 
 /// Escape a string for CSV embedding: double-quote escaping per RFC 4180,
 /// plus newline flattening since fields are already wrapped in double quotes.
+///
+/// Values starting with a formula trigger (`=`, `+`, `-`, `@`, tab, CR) are
+/// prefixed with a single quote so spreadsheet applications treat them as
+/// text rather than executable formulas (OWASP CSV injection guidance).
 fn escape_csv(s: &str) -> String {
-    s.replace('"', "\"\"").replace('\n', " ")
+    let escaped = s.replace('"', "\"\"").replace('\n', " ");
+    if s.starts_with(['=', '+', '-', '@', '\t', '\r']) {
+        format!("'{escaped}")
+    } else {
+        escaped
+    }
+}
+
+/// Escape an optional string for CSV embedding, returning "-" for `None`.
+fn escape_csv_opt(s: Option<&str>) -> String {
+    s.map_or_else(|| "-".to_string(), escape_csv)
 }
 
 fn format_sla_csv(vuln: &VulnerabilityDetail) -> String {
@@ -221,5 +235,50 @@ fn format_sla_csv(vuln: &VulnerabilityDetail) -> String {
         SlaStatus::NoDueDate => vuln
             .days_since_published
             .map_or_else(|| "-".to_string(), |d| format!("{d}d old")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn escape_csv_guards_formula_triggers() {
+        assert_eq!(escape_csv("=1+2"), "'=1+2");
+        assert_eq!(escape_csv("+SUM(A1:A2)"), "'+SUM(A1:A2)");
+        assert_eq!(escape_csv("-2+3"), "'-2+3");
+        assert_eq!(escape_csv("@cmd"), "'@cmd");
+        assert_eq!(escape_csv("\tpayload"), "'\tpayload");
+        assert_eq!(escape_csv("\rpayload"), "'\rpayload");
+        // Scoped npm names share the '@' trigger; the quote prefix keeps them
+        // readable while staying inert in spreadsheets
+        assert_eq!(escape_csv("@types/node"), "'@types/node");
+    }
+
+    #[test]
+    fn escape_csv_guards_formula_after_quote_doubling() {
+        assert_eq!(escape_csv("=cmd|'/c calc'!A0"), "'=cmd|'/c calc'!A0");
+        assert_eq!(escape_csv("=\"evil\""), "'=\"\"evil\"\"");
+    }
+
+    #[test]
+    fn escape_csv_leaves_benign_values_alone() {
+        assert_eq!(escape_csv("lodash"), "lodash");
+        assert_eq!(escape_csv("1.2.3"), "1.2.3");
+        assert_eq!(
+            escape_csv("pkg:npm/lodash@4.17.21"),
+            "pkg:npm/lodash@4.17.21"
+        );
+        assert_eq!(escape_csv("MIT OR Apache-2.0"), "MIT OR Apache-2.0");
+        assert_eq!(escape_csv("name \"quoted\""), "name \"\"quoted\"\"");
+        assert_eq!(escape_csv("line1\nline2"), "line1 line2");
+        assert_eq!(escape_csv(""), "");
+    }
+
+    #[test]
+    fn escape_csv_opt_uses_placeholder_for_none() {
+        assert_eq!(escape_csv_opt(None), "-");
+        assert_eq!(escape_csv_opt(Some("=evil")), "'=evil");
+        assert_eq!(escape_csv_opt(Some("1.0.0")), "1.0.0");
     }
 }
