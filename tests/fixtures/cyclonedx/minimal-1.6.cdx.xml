@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:bd1f9783-29e4-4b3c-9b80-f6f9f8c2a51d" version="1">
+  <components>
+    <component type="library" bom-ref="pkg:pypi/requests@2.31.0">
+      <name>requests</name>
+      <version>2.31.0</version>
+      <purl>pkg:pypi/requests@2.31.0</purl>
+      <swhid>swh:1:rel:22ece559cc7cc2364edc5e5593d63ae8bd229f9f</swhid>
+    </component>
+  </components>
+</bom>

@@ -39,6 +39,42 @@ fn golden_parse_cyclonedx_with_vulnerabilities() {
 }
 
 #[test]
+fn golden_parse_cyclonedx_xml_minimal_14() {
+    let sbom = parse_sbom(Path::new("tests/fixtures/cyclonedx/minimal-1.4.cdx.xml"))
+        .expect("failed to parse minimal CycloneDX 1.4 XML fixture");
+
+    assert_eq!(sbom.component_count(), 2);
+    assert_eq!(sbom.edges.len(), 0);
+    assert_eq!(sbom.vulnerability_counts().total(), 0);
+    assert_eq!(sbom.document.spec_version, "1.4");
+}
+
+#[test]
+fn golden_parse_cyclonedx_xml_minimal_15() {
+    let sbom = parse_sbom(Path::new("tests/fixtures/cyclonedx/minimal-1.5.cdx.xml"))
+        .expect("failed to parse minimal CycloneDX 1.5 XML fixture");
+
+    // 2 components: metadata.component (acme-app) + log4j-core
+    assert_eq!(sbom.component_count(), 2);
+    assert_eq!(sbom.edges.len(), 1);
+    assert_eq!(sbom.vulnerability_counts().total(), 1);
+    assert_eq!(sbom.vulnerability_counts().critical, 1);
+    assert_eq!(sbom.document.spec_version, "1.5");
+    assert!(sbom.primary_component_id.is_some());
+}
+
+#[test]
+fn golden_parse_cyclonedx_xml_minimal_16() {
+    let sbom = parse_sbom(Path::new("tests/fixtures/cyclonedx/minimal-1.6.cdx.xml"))
+        .expect("failed to parse minimal CycloneDX 1.6 XML fixture");
+
+    assert_eq!(sbom.component_count(), 1);
+    assert_eq!(sbom.edges.len(), 0);
+    assert_eq!(sbom.vulnerability_counts().total(), 0);
+    assert_eq!(sbom.document.spec_version, "1.6");
+}
+
+#[test]
 fn golden_diff_demo_pair() {
     let old_sbom = parse_sbom(Path::new("tests/fixtures/demo-old.cdx.json"))
         .expect("failed to parse demo-old fixture");

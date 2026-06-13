@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.4" serialNumber="urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79" version="1">
+  <components>
+    <component type="library" bom-ref="pkg:npm/lodash@4.17.21">
+      <name>lodash</name>
+      <version>4.17.21</version>
+      <licenses>
+        <license>
+          <id>MIT</id>
+        </license>
+      </licenses>
+      <purl>pkg:npm/lodash@4.17.21</purl>
+    </component>
+    <component type="library" bom-ref="pkg:npm/express@4.18.2">
+      <name>express</name>
+      <version>4.18.2</version>
+      <purl>pkg:npm/express@4.18.2</purl>
+    </component>
+  </components>
+</bom>

@@ -66,20 +66,26 @@ impl CycloneDxParser {
         // Convert XML structure to common BOM structure
         let bom = CycloneDxBom {
             bom_format: Some("CycloneDX".to_string()),
-            spec_version: cdx.version.unwrap_or_else(|| "1.4".to_string()),
+            spec_version: xml_spec_version(cdx.xmlns.as_deref(), cdx.version.as_deref()),
             serial_number: cdx.serial_number,
-            version: cdx.bom_version,
+            version: cdx.version.as_deref().and_then(|v| v.parse().ok()),
             metadata: cdx.metadata.map(|m| CdxMetadata {
                 timestamp: m.timestamp,
                 tools: m.tools.map(|t| t.tool),
                 authors: None,
-                component: m.component,
+                component: m.component.map(Into::into),
                 lifecycles: None,
                 distribution_constraints: None,
             }),
-            components: cdx.components.map(|c| c.component),
-            dependencies: cdx.dependencies.map(|d| d.dependency),
-            vulnerabilities: cdx.vulnerabilities.map(|v| v.vulnerability),
+            components: cdx
+                .components
+                .map(|c| c.component.into_iter().map(Into::into).collect()),
+            dependencies: cdx
+                .dependencies
+                .map(|d| d.dependency.into_iter().map(Into::into).collect()),
+            vulnerabilities: cdx
+                .vulnerabilities
+                .map(|v| v.vulnerability.into_iter().map(Into::into).collect()),
             compositions: None,
             signature: None,
             citations: None,
@@ -1876,19 +1882,41 @@ struct CdxAnalysis {
 // XML uses wrapper elements for collections (e.g., <components><component>...)
 // =============================================================================
 
+/// Derive the spec version of an XML BOM.
+///
+/// Spec-conformant documents carry it in the xmlns namespace URI
+/// (e.g., `http://cyclonedx.org/schema/bom/1.5`); the `version` attribute is
+/// the integer BOM document version. Documents that put a dotted spec version
+/// in the `version` attribute are accepted for back-compat.
+fn xml_spec_version(xmlns: Option<&str>, version_attr: Option<&str>) -> String {
+    if let Some(ns) = xmlns
+        && ns.contains("cyclonedx.org/schema/bom/")
+        && let Some(segment) = ns.rsplit('/').next()
+        && !segment.is_empty()
+    {
+        return segment.to_string();
+    }
+    if let Some(v) = version_attr
+        && v.contains('.')
+    {
+        return v.to_string();
+    }
+    "1.4".to_string()
+}
+
 /// Root BOM element for XML format
 #[derive(Debug, Deserialize)]
 #[serde(rename = "bom")]
 struct CycloneDxBomXml {
-    /// Version attribute on bom element (e.g., version="1.5")
+    /// Namespace attribute carrying the spec version (e.g., `.../schema/bom/1.5`)
+    #[serde(rename = "@xmlns")]
+    xmlns: Option<String>,
+    /// Version attribute on bom element: the integer BOM document version
     #[serde(rename = "@version")]
     version: Option<String>,
     /// Serial number attribute
     #[serde(rename = "@serialNumber")]
     serial_number: Option<String>,
-    /// BOM version (integer)
-    #[serde(rename = "@bomVersion")]
-    bom_version: Option<u32>,
     /// Metadata element
     metadata: Option<CdxMetadataXml>,
     /// Components wrapper element
@@ -1904,7 +1932,7 @@ struct CycloneDxBomXml {
 struct CdxMetadataXml {
     timestamp: Option<String>,
     tools: Option<CdxToolsXml>,
-    component: Option<CdxComponent>,
+    component: Option<CdxComponentXml>,
 }
 
 /// Tools wrapper element for XML format
@@ -1918,13 +1946,12 @@ struct CdxToolsXml {
 #[derive(Debug, Deserialize)]
 struct CdxComponentsXml {
     #[serde(rename = "component", default)]
-    component: Vec<CdxComponent>,
+    component: Vec<CdxComponentXml>,
 }
 
-/// Component element for XML format (reuses JSON struct with additional XML attributes)
+/// Component element for XML format (attributes plus wrapper child elements)
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 struct CdxComponentXml {
     /// Type attribute (e.g., type="library")
     #[serde(rename = "@type")]
@@ -1935,8 +1962,12 @@ struct CdxComponentXml {
     name: String,
     version: Option<String>,
     group: Option<String>,
+    scope: Option<String>,
     purl: Option<String>,
     cpe: Option<String>,
+    /// Software Heritage persistent identifiers (1.6+)
+    #[serde(default)]
+    swhid: Vec<String>,
     description: Option<String>,
     author: Option<String>,
     copyright: Option<String>,
@@ -1946,31 +1977,113 @@ struct CdxComponentXml {
     #[serde(rename = "externalReferences")]
     external_references: Option<CdxExternalReferencesXml>,
     properties: Option<CdxPropertiesXml>,
+    /// Package URL Version Range syntax (1.7+)
+    version_range: Option<String>,
     /// Cryptographic properties (1.6+, camelCase in XML)
     #[serde(rename = "cryptoProperties")]
     crypto_properties: Option<CdxCryptoProperties>,
 }
 
+impl From<CdxComponentXml> for CdxComponent {
+    fn from(xml: CdxComponentXml) -> Self {
+        let licenses = xml.licenses.map(|wrapper| {
+            wrapper
+                .licenses
+                .into_iter()
+                .map(|choice| match choice {
+                    CdxLicenseChoiceXml::License(license) => CdxLicenseChoice {
+                        license: Some(license),
+                        expression: None,
+                    },
+                    CdxLicenseChoiceXml::Expression(expression) => CdxLicenseChoice {
+                        license: None,
+                        expression: Some(expression),
+                    },
+                })
+                .collect()
+        });
+
+        let hashes = xml.hashes.map(|wrapper| {
+            wrapper
+                .hash
+                .into_iter()
+                .map(|h| CdxHash {
+                    alg: h.alg,
+                    content: h.content,
+                })
+                .collect()
+        });
+
+        let external_references = xml.external_references.map(|wrapper| {
+            wrapper
+                .reference
+                .into_iter()
+                .map(|r| CdxExternalReference {
+                    ref_type: r.ref_type,
+                    url: r.url,
+                    comment: r.comment,
+                })
+                .collect()
+        });
+
+        let properties = xml.properties.map(|wrapper| {
+            wrapper
+                .property
+                .into_iter()
+                .map(|p| CdxProperty {
+                    name: p.name,
+                    value: p.value,
+                })
+                .collect()
+        });
+
+        Self {
+            component_type: xml.component_type,
+            bom_ref: xml.bom_ref,
+            name: xml.name,
+            version: xml.version,
+            group: xml.group,
+            scope: xml.scope,
+            purl: xml.purl,
+            cpe: xml.cpe,
+            swhid: xml.swhid,
+            description: xml.description,
+            author: xml.author,
+            copyright: xml.copyright,
+            licenses,
+            supplier: xml.supplier,
+            hashes,
+            external_references,
+            properties,
+            is_external: false,
+            version_range: xml.version_range,
+            // XML deserialization of modelCard/data is not supported yet;
+            // AI/ML BOM metadata is only parsed from JSON documents.
+            model_card: None,
+            data_components: Vec::new(),
+            crypto_properties: xml.crypto_properties,
+        }
+    }
+}
+
 /// Licenses wrapper element for XML format
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct CdxLicensesXml {
     #[serde(rename = "$value", default)]
     licenses: Vec<CdxLicenseChoiceXml>,
 }
 
-/// License choice for XML format (can be license or expression element)
+/// License choice for XML format: either a `<license>` or `<expression>` element
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
-struct CdxLicenseChoiceXml {
-    license: Option<CdxLicense>,
-    expression: Option<String>,
+enum CdxLicenseChoiceXml {
+    #[serde(rename = "license")]
+    License(CdxLicense),
+    #[serde(rename = "expression")]
+    Expression(String),
 }
 
 /// Hashes wrapper element for XML format
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct CdxHashesXml {
     #[serde(rename = "hash", default)]
     hash: Vec<CdxHashXml>,
@@ -1978,7 +2091,6 @@ struct CdxHashesXml {
 
 /// Hash element for XML format
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct CdxHashXml {
     #[serde(rename = "@alg")]
     alg: String,
@@ -1988,7 +2100,6 @@ struct CdxHashXml {
 
 /// External references wrapper element for XML format
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct CdxExternalReferencesXml {
     #[serde(rename = "reference", default)]
     reference: Vec<CdxExternalReferenceXml>,
@@ -1996,7 +2107,6 @@ struct CdxExternalReferencesXml {
 
 /// External reference element for XML format
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct CdxExternalReferenceXml {
     #[serde(rename = "@type")]
     ref_type: String,
@@ -2006,7 +2116,6 @@ struct CdxExternalReferenceXml {
 
 /// Properties wrapper element for XML format
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct CdxPropertiesXml {
     #[serde(rename = "property", default)]
     property: Vec<CdxPropertyXml>,
@@ -2014,7 +2123,6 @@ struct CdxPropertiesXml {
 
 /// Property element for XML format
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct CdxPropertyXml {
     #[serde(rename = "@name")]
     name: String,
@@ -2026,30 +2134,388 @@ struct CdxPropertyXml {
 #[derive(Debug, Deserialize)]
 struct CdxDependenciesXml {
     #[serde(rename = "dependency", default)]
-    dependency: Vec<CdxDependency>,
+    dependency: Vec<CdxDependencyXml>,
 }
 
 /// Dependency element for XML format
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct CdxDependencyXml {
     #[serde(rename = "@ref")]
     ref_field: String,
     #[serde(rename = "dependency", default)]
     depends_on: Vec<CdxDependencyRefXml>,
+    /// CycloneDX 1.7: components this ref provides/implements
+    #[serde(rename = "provides", default)]
+    provides: Vec<CdxDependencyRefXml>,
 }
 
 /// Dependency reference for XML nested dependencies
 #[derive(Debug, Deserialize)]
-#[allow(dead_code)]
 struct CdxDependencyRefXml {
     #[serde(rename = "@ref")]
     ref_field: String,
+}
+
+impl From<CdxDependencyXml> for CdxDependency {
+    fn from(xml: CdxDependencyXml) -> Self {
+        let depends_on: Vec<String> = xml.depends_on.into_iter().map(|d| d.ref_field).collect();
+        let provides: Vec<String> = xml.provides.into_iter().map(|p| p.ref_field).collect();
+        Self {
+            ref_field: xml.ref_field,
+            depends_on: (!depends_on.is_empty()).then_some(depends_on),
+            provides: (!provides.is_empty()).then_some(provides),
+        }
+    }
 }
 
 /// Vulnerabilities wrapper element for XML format
 #[derive(Debug, Deserialize)]
 struct CdxVulnerabilitiesXml {
     #[serde(rename = "vulnerability", default)]
-    vulnerability: Vec<CdxVulnerability>,
+    vulnerability: Vec<CdxVulnerabilityXml>,
+}
+
+/// Vulnerability element for XML format
+#[derive(Debug, Deserialize)]
+struct CdxVulnerabilityXml {
+    id: String,
+    source: Option<CdxVulnSource>,
+    description: Option<String>,
+    recommendation: Option<String>,
+    ratings: Option<CdxRatingsXml>,
+    cwes: Option<CdxCwesXml>,
+    affects: Option<CdxAffectsXml>,
+    analysis: Option<CdxAnalysisXml>,
+}
+
+/// Ratings wrapper element for XML format
+#[derive(Debug, Deserialize)]
+struct CdxRatingsXml {
+    #[serde(rename = "rating", default)]
+    rating: Vec<CdxRating>,
+}
+
+/// CWEs wrapper element for XML format
+#[derive(Debug, Deserialize)]
+struct CdxCwesXml {
+    #[serde(rename = "cwe", default)]
+    cwe: Vec<u32>,
+}
+
+/// Affects wrapper element for XML format
+#[derive(Debug, Deserialize)]
+struct CdxAffectsXml {
+    #[serde(rename = "target", default)]
+    target: Vec<CdxAffectsTargetXml>,
+}
+
+/// Affects target element for XML format
+#[derive(Debug, Deserialize)]
+struct CdxAffectsTargetXml {
+    #[serde(rename = "ref")]
+    ref_field: String,
+    versions: Option<CdxVersionsXml>,
+}
+
+/// Affected versions wrapper element for XML format
+#[derive(Debug, Deserialize)]
+struct CdxVersionsXml {
+    #[serde(rename = "version", default)]
+    version: Vec<CdxVersionAffected>,
+}
+
+/// Analysis element for XML format
+#[derive(Debug, Deserialize)]
+struct CdxAnalysisXml {
+    state: Option<String>,
+    justification: Option<String>,
+    detail: Option<String>,
+    responses: Option<CdxResponsesXml>,
+}
+
+/// Analysis responses wrapper element for XML format
+#[derive(Debug, Deserialize)]
+struct CdxResponsesXml {
+    #[serde(rename = "response", default)]
+    response: Vec<String>,
+}
+
+impl From<CdxVulnerabilityXml> for CdxVulnerability {
+    fn from(xml: CdxVulnerabilityXml) -> Self {
+        Self {
+            id: xml.id,
+            source: xml.source,
+            description: xml.description,
+            recommendation: xml.recommendation,
+            ratings: xml.ratings.map(|r| r.rating),
+            cwes: xml.cwes.map(|c| c.cwe),
+            affects: xml.affects.map(|a| {
+                a.target
+                    .into_iter()
+                    .map(|t| CdxAffects {
+                        ref_field: t.ref_field,
+                        versions: t.versions.map(|v| v.version),
+                    })
+                    .collect()
+            }),
+            analysis: xml.analysis.map(|a| CdxAnalysis {
+                state: a.state,
+                justification: a.justification,
+                response: a.responses.map(|r| r.response),
+                detail: a.detail,
+            }),
+        }
+    }
+}
+
+// =============================================================================
+// Tests
+// =============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(xml: &str) -> NormalizedSbom {
+        CycloneDxParser::new()
+            .parse_str(xml)
+            .expect("XML should parse")
+    }
+
+    fn component<'a>(sbom: &'a NormalizedSbom, name: &str) -> &'a Component {
+        sbom.components
+            .values()
+            .find(|c| c.name == name)
+            .unwrap_or_else(|| panic!("component {name} not found"))
+    }
+
+    #[test]
+    fn test_xml_component_attributes_parse() {
+        let sbom = parse(
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.5" version="1">
+  <components>
+    <component type="library" bom-ref="pkg:npm/lodash@4.17.21">
+      <name>lodash</name>
+      <version>4.17.21</version>
+      <purl>pkg:npm/lodash@4.17.21</purl>
+    </component>
+  </components>
+</bom>"#,
+        );
+
+        assert_eq!(sbom.component_count(), 1);
+        let comp = component(&sbom, "lodash");
+        assert_eq!(comp.component_type, ComponentType::Library);
+        assert_eq!(comp.version.as_deref(), Some("4.17.21"));
+        assert_eq!(
+            comp.identifiers.purl.as_deref(),
+            Some("pkg:npm/lodash@4.17.21")
+        );
+        assert_eq!(comp.identifiers.format_id, "pkg:npm/lodash@4.17.21");
+    }
+
+    #[test]
+    fn test_xml_license_choice() {
+        let sbom = parse(
+            r#"<bom xmlns="http://cyclonedx.org/schema/bom/1.5" version="1">
+  <components>
+    <component type="library">
+      <name>lib-a</name>
+      <licenses>
+        <license><id>MIT</id></license>
+        <license><name>Custom License</name></license>
+        <expression>Apache-2.0 OR MIT</expression>
+      </licenses>
+    </component>
+  </components>
+</bom>"#,
+        );
+
+        let declared: Vec<&str> = component(&sbom, "lib-a")
+            .licenses
+            .declared
+            .iter()
+            .map(|l| l.expression.as_str())
+            .collect();
+        assert_eq!(declared, vec!["MIT", "Custom License", "Apache-2.0 OR MIT"]);
+    }
+
+    #[test]
+    fn test_xml_sha256_hash_parses() {
+        let sbom = parse(
+            r#"<bom xmlns="http://cyclonedx.org/schema/bom/1.5" version="1">
+  <components>
+    <component type="library">
+      <name>lib-a</name>
+      <hashes>
+        <hash alg="SHA-256">d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592</hash>
+      </hashes>
+    </component>
+  </components>
+</bom>"#,
+        );
+
+        let comp = component(&sbom, "lib-a");
+        assert_eq!(comp.hashes.len(), 1);
+        assert_eq!(comp.hashes[0].algorithm, HashAlgorithm::Sha256);
+        assert_eq!(
+            comp.hashes[0].value,
+            "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592"
+        );
+    }
+
+    #[test]
+    fn test_xml_nested_dependencies_produce_edges() {
+        let sbom = parse(
+            r#"<bom xmlns="http://cyclonedx.org/schema/bom/1.5" version="1">
+  <components>
+    <component type="application" bom-ref="app">
+      <name>app</name>
+    </component>
+    <component type="library" bom-ref="lib-a">
+      <name>lib-a</name>
+    </component>
+    <component type="library" bom-ref="lib-b">
+      <name>lib-b</name>
+    </component>
+  </components>
+  <dependencies>
+    <dependency ref="app">
+      <dependency ref="lib-a"/>
+      <dependency ref="lib-b"/>
+    </dependency>
+    <dependency ref="lib-a">
+      <dependency ref="lib-b"/>
+    </dependency>
+  </dependencies>
+</bom>"#,
+        );
+
+        assert_eq!(sbom.edges.len(), 3);
+        let app_id = &component(&sbom, "app").canonical_id;
+        let lib_b_id = &component(&sbom, "lib-b").canonical_id;
+        assert!(
+            sbom.edges
+                .iter()
+                .any(|e| &e.from == app_id && &e.to == lib_b_id)
+        );
+    }
+
+    #[test]
+    fn test_xml_metadata_component_becomes_primary() {
+        let sbom = parse(
+            r#"<bom xmlns="http://cyclonedx.org/schema/bom/1.5" version="1">
+  <metadata>
+    <timestamp>2024-01-15T10:00:00Z</timestamp>
+    <component type="application" bom-ref="acme-app">
+      <name>acme-app</name>
+      <version>1.0.0</version>
+    </component>
+  </metadata>
+  <components>
+    <component type="library">
+      <name>lib-a</name>
+    </component>
+  </components>
+</bom>"#,
+        );
+
+        assert_eq!(sbom.component_count(), 2);
+        let primary_id = sbom
+            .primary_component_id
+            .as_ref()
+            .expect("primary component should be set");
+        assert_eq!(
+            sbom.components.get(primary_id).map(|c| c.name.as_str()),
+            Some("acme-app")
+        );
+    }
+
+    #[test]
+    fn test_xml_spec_version_from_xmlns() {
+        let sbom = parse(
+            r#"<bom xmlns="http://cyclonedx.org/schema/bom/1.6" version="3">
+  <components>
+    <component type="library">
+      <name>lib-a</name>
+      <swhid>swh:1:rel:22ece559cc7cc2364edc5e5593d63ae8bd229f9f</swhid>
+    </component>
+  </components>
+</bom>"#,
+        );
+
+        assert_eq!(sbom.document.spec_version, "1.6");
+        assert!(
+            component(&sbom, "lib-a")
+                .identifiers
+                .swhid
+                .iter()
+                .any(|s| s.to_string().contains("swh:1:rel:"))
+        );
+    }
+
+    #[test]
+    fn test_xml_spec_version_helper_fallbacks() {
+        assert_eq!(
+            xml_spec_version(Some("http://cyclonedx.org/schema/bom/1.5"), Some("1")),
+            "1.5"
+        );
+        assert_eq!(xml_spec_version(None, Some("1.4")), "1.4");
+        assert_eq!(xml_spec_version(None, Some("1")), "1.4");
+        assert_eq!(
+            xml_spec_version(Some("http://example.com/other"), None),
+            "1.4"
+        );
+    }
+
+    #[test]
+    fn test_xml_vulnerability_attaches_to_component() {
+        let sbom = parse(
+            r#"<bom xmlns="http://cyclonedx.org/schema/bom/1.5" version="1">
+  <components>
+    <component type="library" bom-ref="pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1">
+      <name>log4j-core</name>
+      <version>2.14.1</version>
+    </component>
+  </components>
+  <vulnerabilities>
+    <vulnerability>
+      <id>CVE-2021-44228</id>
+      <source>
+        <name>NVD</name>
+        <url>https://nvd.nist.gov/vuln/detail/CVE-2021-44228</url>
+      </source>
+      <ratings>
+        <rating>
+          <score>10.0</score>
+          <severity>critical</severity>
+          <method>CVSSv31</method>
+          <vector>CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H</vector>
+        </rating>
+      </ratings>
+      <affects>
+        <target>
+          <ref>pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1</ref>
+          <versions>
+            <version>
+              <version>2.14.1</version>
+              <status>affected</status>
+            </version>
+          </versions>
+        </target>
+      </affects>
+    </vulnerability>
+  </vulnerabilities>
+</bom>"#,
+        );
+
+        let comp = component(&sbom, "log4j-core");
+        assert_eq!(comp.vulnerabilities.len(), 1);
+        let vuln = &comp.vulnerabilities[0];
+        assert_eq!(vuln.id, "CVE-2021-44228");
+        assert_eq!(vuln.severity, Some(Severity::Critical));
+        assert_eq!(vuln.affected_versions, vec!["2.14.1".to_string()]);
+        assert_eq!(sbom.vulnerability_counts().critical, 1);
+    }
 }

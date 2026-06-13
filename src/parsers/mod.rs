@@ -152,6 +152,18 @@ mod tests {
     }
 
     #[test]
+    fn test_detect_cyclonedx_xml() {
+        let content = r#"<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.5" version="1">
+  <components/>
+</bom>"#;
+        let detected = detect_format(content).expect("Should detect format");
+        assert_eq!(detected.format_name, "CycloneDX");
+        assert!(detected.confidence >= 0.75);
+        assert_eq!(detected.variant, Some("XML".to_string()));
+    }
+
+    #[test]
     fn test_detect_spdx_json() {
         let content = r#"{"spdxVersion": "SPDX-2.3", "SPDXID": "SPDXRef-DOCUMENT"}"#;
         let detected = detect_format(content).expect("Should detect format");
