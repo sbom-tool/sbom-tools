@@ -57,7 +57,7 @@ jobs:
           key: fuzz-${{ matrix.target }}
 
       - name: Install cargo-fuzz
-        run: cargo install cargo-fuzz --locked
+        run: cargo +nightly install cargo-fuzz --locked
 
       - name: Run fuzzer
         run: |
