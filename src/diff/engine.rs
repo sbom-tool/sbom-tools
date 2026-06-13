@@ -278,6 +278,7 @@ impl DiffEngine {
         let lic_changes = lic_computer.compute(old, new, &match_result.matches);
         result.licenses.new_licenses = lic_changes.new_licenses;
         result.licenses.removed_licenses = lic_changes.removed_licenses;
+        result.licenses.component_changes = lic_changes.component_changes;
 
         // Vulnerability changes
         let vuln_computer = VulnerabilityChangeComputer::new();
@@ -386,6 +387,7 @@ impl DiffEngine {
                 lic_computer.compute(&old_filtered, &new_filtered, &component_matches.matches);
             result.licenses.new_licenses = lic_changes.new_licenses;
             result.licenses.removed_licenses = lic_changes.removed_licenses;
+            result.licenses.component_changes = lic_changes.component_changes;
         }
 
         if sections.vulnerabilities {
