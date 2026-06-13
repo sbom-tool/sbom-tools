@@ -175,10 +175,17 @@ pub fn load_or_default(explicit_path: Option<&Path>) -> (AppConfig, Option<PathB
 impl AppConfig {
     /// Merge another config into this one, with `other` taking precedence.
     ///
-    /// This is useful for layering CLI args over file config.
+    /// This is useful for layering CLI args over file config. A field in
+    /// `other` overrides the corresponding field in `self` only when it
+    /// differs from the built-in default — a default-valued field is treated
+    /// as "unset" and leaves `self` untouched. The sentinel is read from
+    /// `Self::default()` rather than an inlined literal so it can never drift
+    /// away from the actual default.
     pub fn merge(&mut self, other: &Self) {
+        let defaults = Self::default();
+
         // Matching config
-        if other.matching.fuzzy_preset != crate::config::FuzzyPreset::Balanced {
+        if other.matching.fuzzy_preset != defaults.matching.fuzzy_preset {
             self.matching.fuzzy_preset = other.matching.fuzzy_preset.clone();
         }
         if other.matching.threshold.is_some() {
@@ -189,7 +196,7 @@ impl AppConfig {
         }
 
         // Output config - only override if explicitly set
-        if other.output.format != crate::reports::ReportFormat::Auto {
+        if other.output.format != defaults.output.format {
             self.output.format = other.output.format;
         }
         if other.output.file.is_some() {
@@ -258,7 +265,7 @@ impl AppConfig {
         }
 
         // TUI config
-        if other.tui.theme != crate::config::ThemeName::Dark {
+        if other.tui.theme != defaults.tui.theme {
             self.tui.theme = other.tui.theme.clone();
         }
 
@@ -465,6 +472,61 @@ behavior:
         );
         assert_eq!(base.matching.threshold, Some(0.95));
         assert!(base.behavior.fail_on_vuln);
+    }
+
+    #[test]
+    fn test_merge_default_valued_override_does_not_clobber_base() {
+        // A default-valued override field must NOT overwrite a non-default base
+        // value — the sentinel is the built-in default, read dynamically.
+        let mut base = AppConfig {
+            matching: super::super::types::MatchingConfig {
+                fuzzy_preset: crate::config::FuzzyPreset::Strict,
+                ..Default::default()
+            },
+            output: super::super::types::OutputConfig {
+                format: crate::reports::ReportFormat::Json,
+                ..Default::default()
+            },
+            ..AppConfig::default()
+        };
+
+        // `other` carries only defaults (Balanced / Auto) — nothing should win.
+        base.merge(&AppConfig::default());
+
+        assert_eq!(
+            base.matching.fuzzy_preset,
+            crate::config::FuzzyPreset::Strict,
+            "default fuzzy_preset must not clobber a non-default base"
+        );
+        assert_eq!(
+            base.output.format,
+            crate::reports::ReportFormat::Json,
+            "default output.format must not clobber a non-default base"
+        );
+    }
+
+    #[test]
+    fn test_from_file_with_overrides_cli_wins() {
+        // File sets Strict; an explicit non-default CLI override (Permissive)
+        // must take precedence after the merge.
+        let tmp = TempDir::new().unwrap();
+        let path = tmp.path().join("cfg.yaml");
+        std::fs::write(&path, "matching:\n  fuzzy_preset: strict\n").unwrap();
+
+        let cli = AppConfig {
+            matching: super::super::types::MatchingConfig {
+                fuzzy_preset: crate::config::FuzzyPreset::Permissive,
+                ..Default::default()
+            },
+            ..AppConfig::default()
+        };
+
+        let (merged, loaded_from) = AppConfig::from_file_with_overrides(Some(&path), &cli);
+        assert_eq!(loaded_from.as_deref(), Some(path.as_path()));
+        assert_eq!(
+            merged.matching.fuzzy_preset,
+            crate::config::FuzzyPreset::Permissive
+        );
     }
 
     #[test]

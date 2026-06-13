@@ -8,13 +8,16 @@
     clippy::needless_pass_by_value
 )]
 
+mod cli_config;
+
 use anyhow::{Context, Result};
-use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
+use clap::{ArgMatches, Args, CommandFactory, FromArgMatches, Parser, Subcommand, ValueEnum};
 use clap_complete::{Shell, generate};
+use cli_config::{EffectiveConfig, arg_was_set_sub, resolve, resolve_bool};
 use sbom_tools::{
     cli,
     config::{
-        BehaviorConfig, DiffConfig, DiffPaths, EcosystemRulesConfig, EnrichmentConfig,
+        AppConfig, BehaviorConfig, DiffConfig, DiffPaths, EcosystemRulesConfig, EnrichmentConfig,
         FilterConfig, FuzzyPreset, GraphAwareDiffConfig, MatchingConfig, MatchingRulesPathConfig,
         MatrixConfig, MultiDiffConfig, OutputConfig, QueryConfig, TimelineConfig, ViewConfig,
         WatchConfig,
@@ -121,6 +124,10 @@ struct Cli {
     #[arg(long, global = true)]
     config: Option<PathBuf>,
 
+    /// Skip config-file discovery entirely (ignore any `.sbom-tools.yaml`)
+    #[arg(long, global = true, conflicts_with = "config")]
+    no_config: bool,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -180,6 +187,33 @@ impl SharedEnrichmentArgs {
             vex_paths: self.vex.clone(),
             ..Default::default()
         }
+    }
+}
+
+/// Build the effective `EnrichmentConfig`, layering CLI enrichment flags over
+/// the `enrichment:` section of the loaded config file.
+///
+/// The CLI value always wins when any enrichment flag was passed; otherwise the
+/// file's enrichment block (if present) supplies the base. When neither layer
+/// requested enrichment, the CLI-derived config (disabled) is returned so cache
+/// directory / timeout defaults stay intact.
+fn seed_enrichment(
+    args: &SharedEnrichmentArgs,
+    sub: Option<&ArgMatches>,
+    app: &AppConfig,
+) -> EnrichmentConfig {
+    let cli = args.to_enrichment_config();
+    let cli_touched = cli.enabled
+        || cli.enable_eol
+        || arg_was_set_sub(sub, "vuln_cache_dir")
+        || arg_was_set_sub(sub, "vuln_cache_ttl")
+        || arg_was_set_sub(sub, "api_timeout")
+        || arg_was_set_sub(sub, "refresh_vulns")
+        || !cli.vex_paths.is_empty();
+
+    match (&app.enrichment, cli_touched) {
+        (Some(file), false) => file.clone(),
+        _ => cli,
     }
 }
 
@@ -897,6 +931,19 @@ enum Commands {
     Man,
 }
 
+impl Commands {
+    /// Whether this command seeds a per-command config from the loaded
+    /// `AppConfig`. Meta commands (config management, shell completions, man
+    /// page, schema generation) don't, so a broken or missing config file must
+    /// never block them — they get a lenient (unvalidated) load instead.
+    const fn consumes_config(&self) -> bool {
+        !matches!(
+            self,
+            Self::Config { .. } | Self::Completions { .. } | Self::ConfigSchema { .. } | Self::Man
+        )
+    }
+}
+
 /// Sub-subcommands for the `config` command
 #[derive(Subcommand)]
 enum ConfigAction {
@@ -906,6 +953,8 @@ enum ConfigAction {
     Path,
     /// Generate an example .sbom-tools.yaml in the current directory
     Init,
+    /// Load + validate the config and print the effective merged settings
+    Check,
 }
 
 /// Sub-subcommands for the `vex` command
@@ -1235,7 +1284,8 @@ fn validate_vex_state(s: &str) -> std::result::Result<String, String> {
 }
 
 fn main() -> Result<()> {
-    let cli = Cli::parse();
+    let matches = Cli::command().get_matches();
+    let cli = Cli::from_arg_matches(&matches).unwrap_or_else(|e| e.exit());
 
     // Initialize logging
     let log_level = if cli.verbose { "debug" } else { "info" };
@@ -1246,10 +1296,26 @@ fn main() -> Result<()> {
         .with(tracing_subscriber::fmt::layer().with_target(false))
         .init();
 
+    // Load the file-based config once, up front, so every command can use it
+    // as the base layer that explicit CLI flags override. Consuming commands
+    // get a strict (validated) load so a broken file fails loudly; meta
+    // commands (config management, completions, man, schema) get a lenient load
+    // so they are never blocked by an unrelated invalid config.
+    let effective = if cli.command.consumes_config() {
+        EffectiveConfig::load(cli.config.as_deref(), cli.no_config)?
+    } else {
+        EffectiveConfig::load_lenient(cli.config.as_deref(), cli.no_config)
+    };
+    let app = effective.into_app_config();
+    // Per-subcommand argument matches, used to detect which CLI flags were set
+    // explicitly (vs. left at their clap default).
+    let sub_matches = matches.subcommand().map(|(_, m)| m);
+
     // Dispatch to command handlers
     match cli.command {
         Commands::Diff(args) => {
-            let enrichment = args.enrichment.to_enrichment_config();
+            let sm = sub_matches;
+            let enrichment = seed_enrichment(&args.enrichment, sm, &app);
 
             let config = DiffConfig {
                 paths: DiffPaths {
@@ -1257,10 +1323,14 @@ fn main() -> Result<()> {
                     new: args.new,
                 },
                 output: OutputConfig {
-                    format: args.output,
+                    format: resolve(
+                        args.output,
+                        arg_was_set_sub(sm, "output"),
+                        Some(app.output.format),
+                    ),
                     file: args.output_file,
                     report_types: args.reports,
-                    no_color: cli.no_color,
+                    no_color: resolve_bool(cli.no_color, app.output.no_color),
                     streaming: sbom_tools::config::StreamingConfig {
                         threshold_bytes: args.streaming_threshold * 1024 * 1024,
                         force: args.streaming,
@@ -1270,22 +1340,41 @@ fn main() -> Result<()> {
                     export_template: cli.export_template.clone(),
                 },
                 matching: MatchingConfig {
-                    fuzzy_preset: args.fuzzy_preset,
-                    threshold: None,
-                    include_unchanged: args.include_unchanged,
+                    fuzzy_preset: resolve(
+                        args.fuzzy_preset.clone(),
+                        arg_was_set_sub(sm, "fuzzy_preset"),
+                        Some(app.matching.fuzzy_preset.clone()),
+                    ),
+                    threshold: app.matching.threshold,
+                    include_unchanged: resolve_bool(
+                        args.include_unchanged,
+                        app.matching.include_unchanged,
+                    ),
                 },
                 filtering: FilterConfig {
-                    only_changes: args.only_changes,
-                    min_severity: args.severity,
-                    exclude_vex_resolved: args.exclude_vex_resolved,
-                    fail_on_vex_gap: args.fail_on_vex_gap,
+                    only_changes: resolve_bool(args.only_changes, app.filtering.only_changes),
+                    min_severity: args.severity.or_else(|| app.filtering.min_severity.clone()),
+                    exclude_vex_resolved: resolve_bool(
+                        args.exclude_vex_resolved,
+                        app.filtering.exclude_vex_resolved,
+                    ),
+                    fail_on_vex_gap: resolve_bool(
+                        args.fail_on_vex_gap,
+                        app.filtering.fail_on_vex_gap,
+                    ),
                 },
                 behavior: BehaviorConfig {
-                    fail_on_vuln: args.fail_on_vuln,
-                    fail_on_change: args.fail_on_change,
-                    quiet: cli.quiet,
-                    explain_matches: args.explain_matches,
-                    recommend_threshold: args.recommend_threshold,
+                    fail_on_vuln: resolve_bool(args.fail_on_vuln, app.behavior.fail_on_vuln),
+                    fail_on_change: resolve_bool(args.fail_on_change, app.behavior.fail_on_change),
+                    quiet: resolve_bool(cli.quiet, app.behavior.quiet),
+                    explain_matches: resolve_bool(
+                        args.explain_matches,
+                        app.behavior.explain_matches,
+                    ),
+                    recommend_threshold: resolve_bool(
+                        args.recommend_threshold,
+                        app.behavior.recommend_threshold,
+                    ),
                 },
                 graph_diff: if args.graph_diff {
                     let mut gdc = GraphAwareDiffConfig::enabled();
@@ -1299,16 +1388,24 @@ fn main() -> Result<()> {
                     }
                     gdc
                 } else {
-                    GraphAwareDiffConfig::default()
+                    app.graph_diff.clone()
                 },
                 rules: MatchingRulesPathConfig {
-                    rules_file: args.enrichment.matching_rules,
-                    dry_run: args.dry_run_rules,
+                    rules_file: args
+                        .enrichment
+                        .matching_rules
+                        .or_else(|| app.rules.rules_file.clone()),
+                    dry_run: resolve_bool(args.dry_run_rules, app.rules.dry_run),
                 },
                 ecosystem_rules: EcosystemRulesConfig {
-                    config_file: args.ecosystem_rules,
-                    disabled: args.no_ecosystem_rules,
-                    detect_typosquats: args.detect_typosquats,
+                    config_file: args
+                        .ecosystem_rules
+                        .or_else(|| app.ecosystem_rules.config_file.clone()),
+                    disabled: resolve_bool(args.no_ecosystem_rules, app.ecosystem_rules.disabled),
+                    detect_typosquats: resolve_bool(
+                        args.detect_typosquats,
+                        app.ecosystem_rules.detect_typosquats,
+                    ),
                 },
                 enrichment,
             };
@@ -1321,23 +1418,28 @@ fn main() -> Result<()> {
         }
 
         Commands::View(args) => {
-            let enrichment = args.enrichment.to_enrichment_config();
+            let sm = sub_matches;
+            let enrichment = seed_enrichment(&args.enrichment, sm, &app);
 
             let config = ViewConfig {
                 sbom_path: args.sbom,
                 output: OutputConfig {
-                    format: args.output,
+                    format: resolve(
+                        args.output,
+                        arg_was_set_sub(sm, "output"),
+                        Some(app.output.format),
+                    ),
                     file: args.output_file,
                     report_types: ReportType::All,
-                    no_color: cli.no_color,
+                    no_color: resolve_bool(cli.no_color, app.output.no_color),
                     streaming: sbom_tools::config::StreamingConfig::default(),
                     export_template: cli.export_template.clone(),
                 },
                 validate_ntia: args.validate_ntia,
-                min_severity: args.severity,
+                min_severity: args.severity.or_else(|| app.filtering.min_severity.clone()),
                 vulnerable_only: args.vulnerable_only,
                 ecosystem_filter: args.ecosystem,
-                fail_on_vuln: args.fail_on_vuln,
+                fail_on_vuln: resolve_bool(args.fail_on_vuln, app.behavior.fail_on_vuln),
                 bom_profile: args
                     .bom_type
                     .as_deref()
@@ -1371,32 +1473,50 @@ fn main() -> Result<()> {
         }
 
         Commands::DiffMulti(args) => {
-            let enrichment = args.enrichment.to_enrichment_config();
+            let sm = sub_matches;
+            let enrichment = seed_enrichment(&args.enrichment, sm, &app);
             let config = MultiDiffConfig {
                 baseline: args.baseline,
                 targets: args.targets,
                 output: OutputConfig {
-                    format: args.output,
+                    format: resolve(
+                        args.output,
+                        arg_was_set_sub(sm, "output"),
+                        Some(app.output.format),
+                    ),
                     file: args.output_file,
-                    no_color: cli.no_color,
+                    no_color: resolve_bool(cli.no_color, app.output.no_color),
                     export_template: cli.export_template.clone(),
                     ..Default::default()
                 },
                 matching: MatchingConfig {
-                    fuzzy_preset: args.fuzzy_preset,
-                    include_unchanged: args.include_unchanged,
-                    ..Default::default()
+                    fuzzy_preset: resolve(
+                        args.fuzzy_preset.clone(),
+                        arg_was_set_sub(sm, "fuzzy_preset"),
+                        Some(app.matching.fuzzy_preset.clone()),
+                    ),
+                    include_unchanged: resolve_bool(
+                        args.include_unchanged,
+                        app.matching.include_unchanged,
+                    ),
+                    threshold: app.matching.threshold,
                 },
                 filtering: FilterConfig {
-                    min_severity: args.severity,
-                    exclude_vex_resolved: args.exclude_vex_resolved,
-                    fail_on_vex_gap: args.fail_on_vex_gap,
+                    min_severity: args.severity.or_else(|| app.filtering.min_severity.clone()),
+                    exclude_vex_resolved: resolve_bool(
+                        args.exclude_vex_resolved,
+                        app.filtering.exclude_vex_resolved,
+                    ),
+                    fail_on_vex_gap: resolve_bool(
+                        args.fail_on_vex_gap,
+                        app.filtering.fail_on_vex_gap,
+                    ),
                     ..Default::default()
                 },
                 behavior: BehaviorConfig {
-                    fail_on_vuln: args.fail_on_vuln,
-                    fail_on_change: args.fail_on_change,
-                    quiet: cli.quiet,
+                    fail_on_vuln: resolve_bool(args.fail_on_vuln, app.behavior.fail_on_vuln),
+                    fail_on_change: resolve_bool(args.fail_on_change, app.behavior.fail_on_change),
+                    quiet: resolve_bool(cli.quiet, app.behavior.quiet),
                     ..Default::default()
                 },
                 graph_diff: if args.graph_diff {
@@ -1411,13 +1531,16 @@ fn main() -> Result<()> {
                     }
                     gdc
                 } else {
-                    GraphAwareDiffConfig::default()
+                    app.graph_diff.clone()
                 },
                 rules: MatchingRulesPathConfig {
-                    rules_file: args.enrichment.matching_rules,
+                    rules_file: args
+                        .enrichment
+                        .matching_rules
+                        .or_else(|| app.rules.rules_file.clone()),
                     ..Default::default()
                 },
-                ecosystem_rules: Default::default(),
+                ecosystem_rules: app.ecosystem_rules.clone(),
                 enrichment,
             };
             let exit_code = cli::run_diff_multi(config)?;
@@ -1428,30 +1551,46 @@ fn main() -> Result<()> {
         }
 
         Commands::Timeline(args) => {
-            let enrichment = args.enrichment.to_enrichment_config();
+            let sm = sub_matches;
+            let enrichment = seed_enrichment(&args.enrichment, sm, &app);
             let config = TimelineConfig {
                 sbom_paths: args.sboms,
                 output: OutputConfig {
-                    format: args.output,
+                    format: resolve(
+                        args.output,
+                        arg_was_set_sub(sm, "output"),
+                        Some(app.output.format),
+                    ),
                     file: args.output_file,
-                    no_color: cli.no_color,
+                    no_color: resolve_bool(cli.no_color, app.output.no_color),
                     export_template: cli.export_template.clone(),
                     ..Default::default()
                 },
                 matching: MatchingConfig {
-                    fuzzy_preset: args.fuzzy_preset,
+                    fuzzy_preset: resolve(
+                        args.fuzzy_preset.clone(),
+                        arg_was_set_sub(sm, "fuzzy_preset"),
+                        Some(app.matching.fuzzy_preset.clone()),
+                    ),
+                    threshold: app.matching.threshold,
                     ..Default::default()
                 },
                 filtering: FilterConfig {
-                    min_severity: args.severity,
-                    exclude_vex_resolved: args.exclude_vex_resolved,
-                    fail_on_vex_gap: args.fail_on_vex_gap,
+                    min_severity: args.severity.or_else(|| app.filtering.min_severity.clone()),
+                    exclude_vex_resolved: resolve_bool(
+                        args.exclude_vex_resolved,
+                        app.filtering.exclude_vex_resolved,
+                    ),
+                    fail_on_vex_gap: resolve_bool(
+                        args.fail_on_vex_gap,
+                        app.filtering.fail_on_vex_gap,
+                    ),
                     ..Default::default()
                 },
                 behavior: BehaviorConfig {
-                    fail_on_vuln: args.fail_on_vuln,
-                    fail_on_change: args.fail_on_change,
-                    quiet: cli.quiet,
+                    fail_on_vuln: resolve_bool(args.fail_on_vuln, app.behavior.fail_on_vuln),
+                    fail_on_change: resolve_bool(args.fail_on_change, app.behavior.fail_on_change),
+                    quiet: resolve_bool(cli.quiet, app.behavior.quiet),
                     ..Default::default()
                 },
                 graph_diff: if args.graph_diff {
@@ -1466,13 +1605,16 @@ fn main() -> Result<()> {
                     }
                     gdc
                 } else {
-                    GraphAwareDiffConfig::default()
+                    app.graph_diff.clone()
                 },
                 rules: MatchingRulesPathConfig {
-                    rules_file: args.enrichment.matching_rules,
+                    rules_file: args
+                        .enrichment
+                        .matching_rules
+                        .or_else(|| app.rules.rules_file.clone()),
                     ..Default::default()
                 },
-                ecosystem_rules: Default::default(),
+                ecosystem_rules: app.ecosystem_rules.clone(),
                 enrichment,
             };
             let exit_code = cli::run_timeline(config)?;
@@ -1483,31 +1625,47 @@ fn main() -> Result<()> {
         }
 
         Commands::Matrix(args) => {
-            let enrichment = args.enrichment.to_enrichment_config();
+            let sm = sub_matches;
+            let enrichment = seed_enrichment(&args.enrichment, sm, &app);
             let config = MatrixConfig {
                 sbom_paths: args.sboms,
                 output: OutputConfig {
-                    format: args.output,
+                    format: resolve(
+                        args.output,
+                        arg_was_set_sub(sm, "output"),
+                        Some(app.output.format),
+                    ),
                     file: args.output_file,
-                    no_color: cli.no_color,
+                    no_color: resolve_bool(cli.no_color, app.output.no_color),
                     export_template: cli.export_template.clone(),
                     ..Default::default()
                 },
                 matching: MatchingConfig {
-                    fuzzy_preset: args.fuzzy_preset,
+                    fuzzy_preset: resolve(
+                        args.fuzzy_preset.clone(),
+                        arg_was_set_sub(sm, "fuzzy_preset"),
+                        Some(app.matching.fuzzy_preset.clone()),
+                    ),
+                    threshold: app.matching.threshold,
                     ..Default::default()
                 },
                 cluster_threshold: args.cluster_threshold,
                 filtering: FilterConfig {
-                    min_severity: args.severity,
-                    exclude_vex_resolved: args.exclude_vex_resolved,
-                    fail_on_vex_gap: args.fail_on_vex_gap,
+                    min_severity: args.severity.or_else(|| app.filtering.min_severity.clone()),
+                    exclude_vex_resolved: resolve_bool(
+                        args.exclude_vex_resolved,
+                        app.filtering.exclude_vex_resolved,
+                    ),
+                    fail_on_vex_gap: resolve_bool(
+                        args.fail_on_vex_gap,
+                        app.filtering.fail_on_vex_gap,
+                    ),
                     ..Default::default()
                 },
                 behavior: BehaviorConfig {
-                    fail_on_vuln: args.fail_on_vuln,
-                    fail_on_change: args.fail_on_change,
-                    quiet: cli.quiet,
+                    fail_on_vuln: resolve_bool(args.fail_on_vuln, app.behavior.fail_on_vuln),
+                    fail_on_change: resolve_bool(args.fail_on_change, app.behavior.fail_on_change),
+                    quiet: resolve_bool(cli.quiet, app.behavior.quiet),
                     ..Default::default()
                 },
                 graph_diff: if args.graph_diff {
@@ -1522,13 +1680,16 @@ fn main() -> Result<()> {
                     }
                     gdc
                 } else {
-                    GraphAwareDiffConfig::default()
+                    app.graph_diff.clone()
                 },
                 rules: MatchingRulesPathConfig {
-                    rules_file: args.enrichment.matching_rules,
+                    rules_file: args
+                        .enrichment
+                        .matching_rules
+                        .or_else(|| app.rules.rules_file.clone()),
                     ..Default::default()
                 },
-                ecosystem_rules: Default::default(),
+                ecosystem_rules: app.ecosystem_rules.clone(),
                 enrichment,
             };
             let exit_code = cli::run_matrix(config)?;
@@ -1539,15 +1700,21 @@ fn main() -> Result<()> {
         }
 
         Commands::Quality(args) => {
+            let sm = sub_matches;
+            let output = resolve(
+                args.output,
+                arg_was_set_sub(sm, "output"),
+                Some(app.output.format),
+            );
             let exit_code = cli::run_quality(
                 args.sbom,
                 args.profile,
-                args.output,
+                output,
                 args.output_file,
                 args.recommendations,
                 args.metrics,
                 args.min_score,
-                cli.no_color,
+                resolve_bool(cli.no_color, app.output.no_color),
                 args.cra_sidecar,
                 args.cra_product_class,
             )?;
@@ -1671,7 +1838,8 @@ fn main() -> Result<()> {
         }
 
         Commands::Watch(args) => {
-            let enrichment = args.enrichment.to_enrichment_config();
+            let sm = sub_matches;
+            let enrichment = seed_enrichment(&args.enrichment, sm, &app);
 
             let config = WatchConfig {
                 watch_dirs: args.dirs,
@@ -1679,10 +1847,14 @@ fn main() -> Result<()> {
                 enrich_interval: parse_duration(&args.enrich_interval)?,
                 debounce: parse_duration(&args.debounce)?,
                 output: OutputConfig {
-                    format: args.output,
+                    format: resolve(
+                        args.output,
+                        arg_was_set_sub(sm, "output"),
+                        Some(app.output.format),
+                    ),
                     file: args.output_file,
                     report_types: ReportType::All,
-                    no_color: cli.no_color,
+                    no_color: resolve_bool(cli.no_color, app.output.no_color),
                     streaming: sbom_tools::config::StreamingConfig::default(),
                     export_template: None,
                 },
@@ -1690,7 +1862,7 @@ fn main() -> Result<()> {
                 webhook_url: args.webhook,
                 exit_on_change: args.exit_on_change,
                 max_snapshots: args.max_snapshots,
-                quiet: cli.quiet,
+                quiet: resolve_bool(cli.quiet, app.behavior.quiet),
                 dry_run: args.dry_run,
                 cra_standards_enabled: args.cra_standards,
                 cra_standards_interval: parse_duration(&args.cra_standards_interval)?,
@@ -1721,10 +1893,15 @@ fn main() -> Result<()> {
 
         Commands::Config { action } => match action {
             ConfigAction::Show => {
-                let (config, loaded_from) =
-                    sbom_tools::config::load_or_default(cli.config.as_deref());
+                let (config, loaded_from) = if cli.no_config {
+                    (AppConfig::default(), None)
+                } else {
+                    sbom_tools::config::load_or_default(cli.config.as_deref())
+                };
                 if let Some(path) = &loaded_from {
                     eprintln!("# Loaded from: {}", path.display());
+                } else if cli.no_config {
+                    eprintln!("# Config discovery disabled (--no-config); showing defaults");
                 } else {
                     eprintln!("# No config file found; showing defaults");
                 }
@@ -1777,6 +1954,23 @@ fn main() -> Result<()> {
                 std::fs::write(&target, content)
                     .with_context(|| format!("failed to write {}", target.display()))?;
                 eprintln!("Created {}", target.display());
+                Ok(())
+            }
+            ConfigAction::Check => {
+                // Strict load: surfaces a hard error (with field-level detail)
+                // when the discovered config fails validation.
+                let checked = EffectiveConfig::load(cli.config.as_deref(), cli.no_config)?;
+                match checked.loaded_from() {
+                    Some(path) => eprintln!("# Valid. Loaded from: {}", path.display()),
+                    None if cli.no_config => eprintln!(
+                        "# Valid. Config discovery disabled (--no-config); showing defaults"
+                    ),
+                    None => eprintln!("# Valid. No config file found; showing defaults"),
+                }
+                let config = checked.into_app_config();
+                let yaml =
+                    serde_yaml_ng::to_string(&config).context("failed to serialize config")?;
+                print!("{yaml}");
                 Ok(())
             }
         },
