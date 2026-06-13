@@ -181,6 +181,18 @@ impl LicenseExpression {
     }
 }
 
+/// Rank a license family by restrictiveness (higher is more restrictive).
+fn family_restrictiveness(family: &LicenseFamily) -> u8 {
+    match family {
+        LicenseFamily::Proprietary => 5,
+        LicenseFamily::Copyleft => 4,
+        LicenseFamily::WeakCopyleft => 3,
+        LicenseFamily::Permissive => 2,
+        LicenseFamily::PublicDomain => 1,
+        LicenseFamily::Other => 0,
+    }
+}
+
 /// Classify an SPDX license ID into a license family.
 fn classify_spdx_license(id: spdx::LicenseId) -> LicenseFamily {
     let name = id.name;
@@ -283,15 +295,33 @@ impl LicenseInfo {
         licenses
     }
 
-    /// Check if there are potential license conflicts across declared expressions.
+    /// Get the effective license family across all expressions.
     ///
-    /// A conflict exists when one declared expression requires copyleft compliance
+    /// Per-expression OR-choice is already resolved inside
+    /// [`LicenseExpression::family`]; multiple expressions (declared and
+    /// concluded) are treated conjunctively (conservative), so the most
+    /// restrictive family wins:
+    /// Proprietary > Copyleft > `WeakCopyleft` > Permissive > `PublicDomain` > Other.
+    /// Returns [`LicenseFamily::Other`] when no licenses are present.
+    #[must_use]
+    pub fn effective_family(&self) -> LicenseFamily {
+        self.all_licenses()
+            .into_iter()
+            .map(LicenseExpression::family)
+            .max_by_key(family_restrictiveness)
+            .unwrap_or(LicenseFamily::Other)
+    }
+
+    /// Check if there are potential license conflicts across license expressions
+    /// (declared and concluded).
+    ///
+    /// A conflict exists when one expression requires copyleft compliance
     /// and another declares proprietary terms. Note that a single expression like
     /// "MIT OR GPL-2.0" is NOT a conflict — it offers a choice.
     pub fn has_conflicts(&self) -> bool {
         let families: Vec<LicenseFamily> = self
-            .declared
-            .iter()
+            .all_licenses()
+            .into_iter()
             .map(LicenseExpression::family)
             .collect();
 
@@ -325,5 +355,56 @@ impl LicenseEvidence {
             file_path: None,
             line_number: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn info(declared: &[&str], concluded: Option<&str>) -> LicenseInfo {
+        let mut info = LicenseInfo::new();
+        for lic in declared {
+            info.add_declared(LicenseExpression::new((*lic).to_string()));
+        }
+        info.concluded = concluded.map(|c| LicenseExpression::new(c.to_string()));
+        info
+    }
+
+    #[test]
+    fn effective_family_precedence() {
+        assert_eq!(info(&[], None).effective_family(), LicenseFamily::Other);
+        assert_eq!(
+            info(&["MIT"], None).effective_family(),
+            LicenseFamily::Permissive
+        );
+        assert_eq!(
+            info(&["MIT", "GPL-3.0-only"], None).effective_family(),
+            LicenseFamily::Copyleft
+        );
+        assert_eq!(
+            info(&["MIT", "LGPL-3.0-only"], None).effective_family(),
+            LicenseFamily::WeakCopyleft
+        );
+        assert_eq!(
+            info(&["GPL-3.0-only", "Proprietary"], None).effective_family(),
+            LicenseFamily::Proprietary
+        );
+        assert_eq!(
+            info(&["MIT"], Some("GPL-3.0-only")).effective_family(),
+            LicenseFamily::Copyleft
+        );
+    }
+
+    #[test]
+    fn has_conflicts_includes_concluded() {
+        let conflicted = info(&["Proprietary"], Some("GPL-3.0-only"));
+        assert!(conflicted.has_conflicts());
+
+        let declared_only = info(&["GPL-3.0-only", "Proprietary"], None);
+        assert!(declared_only.has_conflicts());
+
+        let no_conflict = info(&["MIT"], Some("GPL-3.0-only"));
+        assert!(!no_conflict.has_conflicts());
     }
 }

@@ -43,14 +43,7 @@ pub fn check_license_propagation(sbom: &NormalizedSbom) -> Vec<LicenseConflict> 
     let families: HashMap<&CanonicalId, LicenseFamily> = sbom
         .components
         .iter()
-        .map(|(id, comp)| {
-            let family = comp
-                .licenses
-                .declared
-                .first()
-                .map_or(LicenseFamily::Other, |l| l.family());
-            (id, family)
-        })
+        .map(|(id, comp)| (id, comp.licenses.effective_family()))
         .collect();
 
     let mut conflicts = Vec::new();
@@ -213,6 +206,53 @@ mod tests {
         let conflicts = check_license_propagation(&sbom);
         assert_eq!(conflicts.len(), 1);
         assert!(conflicts[0].reason.contains("copyleft"));
+    }
+
+    #[test]
+    fn second_declared_copyleft_detected() {
+        let mut sbom = NormalizedSbom::default();
+        let app = make_component("app", "MIT");
+        let mut lib = make_component("dual-lib", "MIT");
+        lib.licenses
+            .add_declared(LicenseExpression::new("GPL-3.0-only".to_string()));
+        let app_id = app.canonical_id.clone();
+        let lib_id = lib.canonical_id.clone();
+        sbom.components.insert(app_id.clone(), app);
+        sbom.components.insert(lib_id.clone(), lib);
+        sbom.edges.push(DependencyEdge {
+            from: app_id,
+            to: lib_id,
+            relationship: DependencyType::DependsOn,
+            scope: None,
+        });
+
+        let conflicts = check_license_propagation(&sbom);
+        assert_eq!(conflicts.len(), 1);
+        assert_eq!(conflicts[0].dependency, "dual-lib");
+        assert_eq!(conflicts[0].dependency_family, LicenseFamily::Copyleft);
+    }
+
+    #[test]
+    fn concluded_copyleft_detected() {
+        let mut sbom = NormalizedSbom::default();
+        let app = make_component("app", "MIT");
+        let mut lib = make_component("concluded-lib", "MIT");
+        lib.licenses.concluded = Some(LicenseExpression::new("GPL-3.0-only".to_string()));
+        let app_id = app.canonical_id.clone();
+        let lib_id = lib.canonical_id.clone();
+        sbom.components.insert(app_id.clone(), app);
+        sbom.components.insert(lib_id.clone(), lib);
+        sbom.edges.push(DependencyEdge {
+            from: app_id,
+            to: lib_id,
+            relationship: DependencyType::DependsOn,
+            scope: None,
+        });
+
+        let conflicts = check_license_propagation(&sbom);
+        assert_eq!(conflicts.len(), 1);
+        assert_eq!(conflicts[0].dependency, "concluded-lib");
+        assert_eq!(conflicts[0].dependency_family, LicenseFamily::Copyleft);
     }
 
     #[test]
