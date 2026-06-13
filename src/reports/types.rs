@@ -32,6 +32,8 @@ pub enum ReportFormat {
     Table,
     /// CSV for spreadsheet import
     Csv,
+    /// Newline-delimited JSON (one record per line, streaming-friendly)
+    Ndjson,
 }
 
 impl std::fmt::Display for ReportFormat {
@@ -47,6 +49,7 @@ impl std::fmt::Display for ReportFormat {
             Self::Summary => write!(f, "summary"),
             Self::Table => write!(f, "table"),
             Self::Csv => write!(f, "csv"),
+            Self::Ndjson => write!(f, "ndjson"),
         }
     }
 }

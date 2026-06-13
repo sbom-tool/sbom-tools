@@ -204,7 +204,9 @@ impl std::str::FromStr for ThemeName {
 }
 
 /// Fuzzy matching preset
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(
+    Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, clap::ValueEnum,
+)]
 #[serde(rename_all = "kebab-case")]
 pub enum FuzzyPreset {
     /// Strict matching (fewer false positives)
@@ -215,10 +217,13 @@ pub enum FuzzyPreset {
     /// Permissive matching (fewer false negatives)
     Permissive,
     /// Strict matching optimized for multi-SBOM comparison
+    #[value(alias = "strict_multi")]
     StrictMulti,
     /// Balanced matching optimized for multi-SBOM comparison
+    #[value(alias = "balanced_multi")]
     BalancedMulti,
     /// Security-focused matching
+    #[value(alias = "security_focused")]
     SecurityFocused,
 }
 

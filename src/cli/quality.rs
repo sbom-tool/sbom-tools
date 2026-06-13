@@ -126,7 +126,7 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
             report.overall_score,
             threshold
         );
-        return Ok(exit_codes::CHANGES_DETECTED);
+        return Ok(exit_codes::QUALITY_BELOW_THRESHOLD);
     }
 
     Ok(exit_codes::SUCCESS)

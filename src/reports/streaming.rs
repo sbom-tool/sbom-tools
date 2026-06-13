@@ -29,7 +29,7 @@
 //! ndjson.write_components(&result.components)?;
 //! ```
 
-use super::{ReportConfig, ReportError, ReportFormat, ReportType, WriterReporter};
+use super::{ReportConfig, ReportError, ReportFormat, ReportGenerator, ReportType, WriterReporter};
 use crate::diff::DiffResult;
 use crate::model::NormalizedSbom;
 use chrono::Utc;
@@ -683,7 +683,53 @@ impl WriterReporter for NdjsonReporter {
     }
 
     fn format(&self) -> ReportFormat {
-        ReportFormat::Json // NDJSON is a variant of JSON
+        ReportFormat::Ndjson
+    }
+}
+
+/// `ReportGenerator` adapter for [`NdjsonReporter`].
+///
+/// [`NdjsonReporter`] implements [`WriterReporter`] directly so it can stream
+/// without buffering, which makes it incompatible with the blanket
+/// `WriterReporter` impl over `ReportGenerator`. This thin wrapper bridges it
+/// into the `Box<dyn ReportGenerator>` world used by `create_reporter`,
+/// buffering the NDJSON into a `String` on demand.
+#[derive(Default)]
+pub struct NdjsonReportGenerator;
+
+impl NdjsonReportGenerator {
+    /// Create a new NDJSON report generator.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self
+    }
+}
+
+impl ReportGenerator for NdjsonReportGenerator {
+    fn generate_diff_report(
+        &self,
+        result: &DiffResult,
+        old_sbom: &NormalizedSbom,
+        new_sbom: &NormalizedSbom,
+        config: &ReportConfig,
+    ) -> Result<String, ReportError> {
+        let mut buf = Vec::new();
+        NdjsonReporter::new().write_diff_to(result, old_sbom, new_sbom, config, &mut buf)?;
+        String::from_utf8(buf).map_err(|e| ReportError::SerializationError(e.to_string()))
+    }
+
+    fn generate_view_report(
+        &self,
+        sbom: &NormalizedSbom,
+        config: &ReportConfig,
+    ) -> Result<String, ReportError> {
+        let mut buf = Vec::new();
+        NdjsonReporter::new().write_view_to(sbom, config, &mut buf)?;
+        String::from_utf8(buf).map_err(|e| ReportError::SerializationError(e.to_string()))
+    }
+
+    fn format(&self) -> ReportFormat {
+        ReportFormat::Ndjson
     }
 }
 
@@ -804,7 +850,30 @@ mod tests {
     #[test]
     fn test_ndjson_reporter_implements_writer_reporter() {
         let reporter = NdjsonReporter::new();
-        assert_eq!(WriterReporter::format(&reporter), ReportFormat::Json);
+        assert_eq!(WriterReporter::format(&reporter), ReportFormat::Ndjson);
+    }
+
+    #[test]
+    fn test_ndjson_report_generator_reports_ndjson_format() {
+        let generator = NdjsonReportGenerator::new();
+        assert_eq!(ReportGenerator::format(&generator), ReportFormat::Ndjson);
+    }
+
+    #[test]
+    fn test_ndjson_report_generator_view_yields_ndjson_lines() {
+        use crate::model::NormalizedSbom;
+
+        let sbom = NormalizedSbom::default();
+        let config = ReportConfig::default();
+        let generator = NdjsonReportGenerator::new();
+        let report = generator
+            .generate_view_report(&sbom, &config)
+            .expect("view report should render");
+
+        let first = report.lines().next().expect("at least one NDJSON line");
+        let value: serde_json::Value =
+            serde_json::from_str(first).expect("first line should be valid json");
+        assert_eq!(value["type"], "metadata");
     }
 
     #[test]

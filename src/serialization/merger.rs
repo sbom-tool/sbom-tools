@@ -39,9 +39,11 @@ impl Default for MergeConfig {
 }
 
 /// Strategy for deduplicating components during merge
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, clap::ValueEnum)]
+#[serde(rename_all = "kebab-case")]
 pub enum DeduplicationStrategy {
     /// Deduplicate by package name + version
+    #[default]
     Name,
     /// Deduplicate by PURL (exact match)
     Purl,

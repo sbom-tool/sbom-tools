@@ -38,7 +38,9 @@ pub use sarif::{
     generate_ai_readiness_sarif, generate_compliance_sarif, generate_multi_compliance_sarif,
 };
 pub use sidebyside::SideBySideReporter;
-pub use streaming::{NdjsonReporter, NdjsonWriter, StreamingJsonReporter, StreamingJsonWriter};
+pub use streaming::{
+    NdjsonReportGenerator, NdjsonReporter, NdjsonWriter, StreamingJsonReporter, StreamingJsonWriter,
+};
 pub use summary::{SummaryReporter, TableReporter};
 pub use types::{MinSeverity, ReportConfig, ReportFormat, ReportMetadata, ReportType};
 
@@ -228,5 +230,6 @@ pub fn create_reporter_with_options(
             }
         }
         ReportFormat::Csv => Box::new(CsvReporter::new()),
+        ReportFormat::Ndjson => Box::new(NdjsonReportGenerator::new()),
     }
 }

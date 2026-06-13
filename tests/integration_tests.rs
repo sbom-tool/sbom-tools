@@ -2665,7 +2665,7 @@ mod streaming_tests {
         let reporter = NdjsonReporter::new();
         assert_eq!(
             WriterReporter::format(&reporter),
-            sbom_tools::ReportFormat::Json,
+            sbom_tools::ReportFormat::Ndjson,
             "NdjsonReporter should implement WriterReporter"
         );
     }

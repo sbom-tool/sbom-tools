@@ -3,7 +3,7 @@
 //! Implements the `validate` subcommand for validating SBOMs against compliance standards.
 
 use crate::model::{CreatorType, ExternalRefType, HashAlgorithm, NormalizedSbom, Severity};
-use crate::pipeline::{OutputTarget, parse_sbom_with_context, write_output};
+use crate::pipeline::{OutputTarget, exit_codes, parse_sbom_with_context, write_output};
 use crate::quality::{
     ComplianceChecker, ComplianceLevel, ComplianceResult, Violation, ViolationCategory,
     ViolationSeverity,
@@ -13,7 +13,17 @@ use anyhow::{Result, bail};
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-/// Run the validate command
+/// Run the validate command, returning the desired exit code.
+///
+/// # Exit codes
+/// - [`exit_codes::SUCCESS`] (0): compliant (no errors; no warnings when
+///   `--fail-on-warning` is set)
+/// - [`exit_codes::COMPLIANCE_ERRORS`] (1): one or more compliance errors found
+/// - [`exit_codes::COMPLIANCE_WARNINGS`] (2): warnings found with
+///   `--fail-on-warning`
+///
+/// The caller is responsible for calling `std::process::exit()` with the
+/// returned code when it is non-zero.
 #[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 pub fn run_validate(
     sbom_path: PathBuf,
@@ -24,7 +34,7 @@ pub fn run_validate(
     summary: bool,
     cra_sidecar_path: Option<PathBuf>,
     cra_product_class: Option<String>,
-) -> Result<()> {
+) -> Result<i32> {
     let parsed = parse_sbom_with_context(&sbom_path, false)?;
 
     // Load CRA sidecar — explicit flag wins, otherwise auto-discover next to the SBOM
@@ -120,10 +130,10 @@ pub fn run_validate(
         }
 
         if result.error_count > 0 {
-            std::process::exit(1);
+            return Ok(exit_codes::COMPLIANCE_ERRORS);
         }
         if fail_on_warning && result.warning_count > 0 {
-            std::process::exit(2);
+            return Ok(exit_codes::COMPLIANCE_WARNINGS);
         }
     } else {
         // Multi-standard: merge results for output
@@ -136,14 +146,14 @@ pub fn run_validate(
         let has_errors = results.iter().any(|r| r.error_count > 0);
         let has_warnings = results.iter().any(|r| r.warning_count > 0);
         if has_errors {
-            std::process::exit(1);
+            return Ok(exit_codes::COMPLIANCE_ERRORS);
         }
         if fail_on_warning && has_warnings {
-            std::process::exit(2);
+            return Ok(exit_codes::COMPLIANCE_WARNINGS);
         }
     }
 
-    Ok(())
+    Ok(exit_codes::SUCCESS)
 }
 
 fn write_compliance_output(

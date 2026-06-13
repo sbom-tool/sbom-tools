@@ -58,6 +58,21 @@ pub mod exit_codes {
     pub const VEX_GAPS_FOUND: i32 = 4;
     /// License policy violations found
     pub const LICENSE_VIOLATIONS: i32 = 5;
+
+    // --- Per-command meanings (aliases preserving the numeric values above) ---
+
+    /// `validate`: compliance errors found (non-compliant SBOM). Same value as
+    /// [`CHANGES_DETECTED`].
+    pub const COMPLIANCE_ERRORS: i32 = CHANGES_DETECTED;
+    /// `validate --fail-on-warning`: compliance warnings found. Same value as
+    /// [`VULNS_INTRODUCED`].
+    pub const COMPLIANCE_WARNINGS: i32 = VULNS_INTRODUCED;
+    /// `quality --min-score`: overall score below the requested threshold. Same
+    /// value as [`CHANGES_DETECTED`].
+    pub const QUALITY_BELOW_THRESHOLD: i32 = CHANGES_DETECTED;
+    /// `query`: no components matched the filter. Same value as
+    /// [`CHANGES_DETECTED`].
+    pub const NO_MATCHES: i32 = CHANGES_DETECTED;
 }
 
 /// Platform-specific cache directory utilities
@@ -126,6 +141,22 @@ mod tests {
         assert_eq!(exit_codes::VULNS_INTRODUCED, 2);
         assert_eq!(exit_codes::ERROR, 3);
         assert_eq!(exit_codes::VEX_GAPS_FOUND, 4);
+        assert_eq!(exit_codes::LICENSE_VIOLATIONS, 5);
+    }
+
+    #[test]
+    fn test_per_command_exit_code_aliases_preserve_values() {
+        // Per-command aliases must not introduce new numeric exit codes.
+        assert_eq!(exit_codes::COMPLIANCE_ERRORS, exit_codes::CHANGES_DETECTED);
+        assert_eq!(
+            exit_codes::COMPLIANCE_WARNINGS,
+            exit_codes::VULNS_INTRODUCED
+        );
+        assert_eq!(
+            exit_codes::QUALITY_BELOW_THRESHOLD,
+            exit_codes::CHANGES_DETECTED
+        );
+        assert_eq!(exit_codes::NO_MATCHES, exit_codes::CHANGES_DETECTED);
     }
 
     #[test]

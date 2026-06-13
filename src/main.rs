@@ -9,14 +9,15 @@
 )]
 
 use anyhow::{Context, Result};
-use clap::{Args, CommandFactory, Parser, Subcommand};
+use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::{Shell, generate};
 use sbom_tools::{
     cli,
     config::{
         BehaviorConfig, DiffConfig, DiffPaths, EcosystemRulesConfig, EnrichmentConfig,
-        FilterConfig, GraphAwareDiffConfig, MatchingConfig, MatchingRulesPathConfig, MatrixConfig,
-        MultiDiffConfig, OutputConfig, QueryConfig, TimelineConfig, ViewConfig, WatchConfig,
+        FilterConfig, FuzzyPreset, GraphAwareDiffConfig, MatchingConfig, MatchingRulesPathConfig,
+        MatrixConfig, MultiDiffConfig, OutputConfig, QueryConfig, TimelineConfig, ViewConfig,
+        WatchConfig,
     },
     pipeline::dirs,
     reports::{ReportFormat, ReportType},
@@ -34,7 +35,7 @@ const fn build_long_version() -> &'static str {
         "\n  CycloneDX: 1.4, 1.5, 1.6, 1.7 (JSON, XML)",
         "\n  SPDX:      2.2, 2.3 (JSON, tag-value, RDF/XML), 3.0 (JSON-LD)",
         "\n\nOutput Formats:",
-        "\n  tui, json, sarif, markdown, html, summary, table, side-by-side",
+        "\n  tui, json, ndjson, sarif, markdown, html, summary, table, side-by-side",
         "\n\nFeatures:",
         "\n  Semantic diff, fuzzy matching, vulnerability tracking, license analysis"
     )
@@ -184,7 +185,14 @@ impl SharedEnrichmentArgs {
 
 /// Arguments for the `diff` subcommand
 #[derive(Parser)]
-#[command(after_help = "EXAMPLES:
+#[command(after_help = "EXIT CODES:
+    0  No changes detected (or --no-fail-on-change)
+    1  Changes detected (--fail-on-change)
+    2  Vulnerabilities introduced (--fail-on-vuln)
+    3  Error occurred
+    4  VEX gaps found (--fail-on-vex-gap)
+
+EXAMPLES:
     sbom-tools diff old.cdx.json new.cdx.json                    # Interactive TUI
     sbom-tools diff old.json new.json -o summary --fail-on-vuln   # CI gate
     sbom-tools diff old.json new.json --enrich-vulns -o sarif     # Enriched SARIF
@@ -209,9 +217,9 @@ struct DiffArgs {
     #[arg(long, default_value = "all")]
     reports: ReportType,
 
-    /// Fuzzy matching preset (strict, balanced, permissive)
-    #[arg(long, default_value = "balanced")]
-    fuzzy_preset: String,
+    /// Fuzzy matching preset
+    #[arg(long, value_enum, default_value_t = FuzzyPreset::Balanced)]
+    fuzzy_preset: FuzzyPreset,
 
     /// Include unchanged components in output
     #[arg(long)]
@@ -354,7 +362,13 @@ struct ViewArgs {
 
 /// Arguments for the `validate` subcommand
 #[derive(Parser)]
-#[command(after_help = "EXAMPLES:
+#[command(after_help = "EXIT CODES:
+    0  Compliant (no errors; no warnings with --fail-on-warning)
+    1  Compliance errors found (non-compliant)
+    2  Compliance warnings found (only with --fail-on-warning)
+    3  Error occurred
+
+EXAMPLES:
     sbom-tools validate app.cdx.json                              # NTIA minimum
     sbom-tools validate app.cdx.json --standard cra,eo14028       # Multi-standard
     sbom-tools validate app.cdx.json --standard ntia -o sarif     # SARIF for CI
@@ -419,9 +433,9 @@ struct DiffMultiArgs {
     #[arg(short = 'O', long)]
     output_file: Option<PathBuf>,
 
-    /// Fuzzy matching preset (strict, balanced, permissive)
-    #[arg(long, default_value = "balanced")]
-    fuzzy_preset: String,
+    /// Fuzzy matching preset
+    #[arg(long, value_enum, default_value_t = FuzzyPreset::Balanced)]
+    fuzzy_preset: FuzzyPreset,
 
     /// Include unchanged components in output
     #[arg(long)]
@@ -486,9 +500,9 @@ struct TimelineArgs {
     #[arg(short = 'O', long)]
     output_file: Option<PathBuf>,
 
-    /// Fuzzy matching preset (strict, balanced, permissive)
-    #[arg(long, default_value = "balanced")]
-    fuzzy_preset: String,
+    /// Fuzzy matching preset
+    #[arg(long, value_enum, default_value_t = FuzzyPreset::Balanced)]
+    fuzzy_preset: FuzzyPreset,
 
     /// Enable graph-aware diffing for timeline analysis
     #[arg(long)]
@@ -549,9 +563,9 @@ struct MatrixArgs {
     #[arg(short = 'O', long)]
     output_file: Option<PathBuf>,
 
-    /// Fuzzy matching preset (strict, balanced, permissive)
-    #[arg(long, default_value = "balanced")]
-    fuzzy_preset: String,
+    /// Fuzzy matching preset
+    #[arg(long, value_enum, default_value_t = FuzzyPreset::Balanced)]
+    fuzzy_preset: FuzzyPreset,
 
     /// Similarity threshold for clustering (0.0-1.0)
     #[arg(long, default_value = "0.8")]
@@ -599,7 +613,12 @@ struct MatrixArgs {
 
 /// Arguments for the `quality` subcommand
 #[derive(Parser)]
-#[command(after_help = "EXAMPLES:
+#[command(after_help = "EXIT CODES:
+    0  Score meets the --min-score threshold (or no threshold set)
+    1  Overall score below --min-score
+    3  Error occurred
+
+EXAMPLES:
     sbom-tools quality app.cdx.json                                # Score overview
     sbom-tools quality app.cdx.json --profile security --metrics   # Detailed metrics
     sbom-tools quality app.cdx.json --min-score 70 -o json         # CI gate with export
@@ -647,7 +666,12 @@ struct QualityArgs {
 
 /// Arguments for the `query` subcommand
 #[derive(Parser)]
-#[command(after_help = "EXAMPLES:
+#[command(after_help = "EXIT CODES:
+    0  At least one component matched the filter
+    1  No components matched the filter
+    3  Error occurred
+
+EXAMPLES:
     sbom-tools query log4j fleet/*.json                            # Search by name
     sbom-tools query --affected-by CVE-2021-44228 *.json           # Search by CVE
     sbom-tools query --ecosystem npm --license GPL fleet/*.json     # Multi-filter
@@ -908,8 +932,8 @@ struct VexExportArgs {
     vex: Vec<PathBuf>,
 
     /// Output advisory format. Currently: csaf (CSAF v2.0).
-    #[arg(short, long, default_value = "csaf")]
-    format: String,
+    #[arg(short, long, value_enum, default_value = "csaf")]
+    format: VexExportFormatArg,
 
     /// Output file path (stdout if not specified)
     #[arg(short = 'O', long)]
@@ -992,9 +1016,10 @@ enum VerifyAction {
             short = 'f',
             long = "output",
             alias = "format",
+            value_enum,
             default_value = "table"
         )]
-        format: String,
+        format: TableJsonFormat,
     },
 }
 
@@ -1026,9 +1051,10 @@ struct LicenseCheckArgs {
         short = 'f',
         long = "output",
         alias = "format",
+        value_enum,
         default_value = "table"
     )]
-    output_format: String,
+    output_format: TableJsonFormat,
 }
 
 /// Arguments for the `enrich` subcommand
@@ -1104,9 +1130,9 @@ struct MergeArgs {
     #[arg(short = 'O', long)]
     output_file: Option<PathBuf>,
 
-    /// Deduplication strategy (name, purl, none)
-    #[arg(long, default_value = "name")]
-    dedup: String,
+    /// Deduplication strategy
+    #[arg(long, value_enum, default_value = "name")]
+    dedup: sbom_tools::serialization::DeduplicationStrategy,
 }
 
 /// Arguments for the `cra-standards-watch` subcommand. Curated, offline-first
@@ -1118,8 +1144,8 @@ struct MergeArgs {
     sbom-tools cra-standards-watch --check-online    # HEAD-probe each URL")]
 struct CraStandardsWatchArgs {
     /// Output format: table (default) or json
-    #[arg(short, long, default_value = "table")]
-    format: String,
+    #[arg(short, long, value_enum, default_value = "table")]
+    format: TableJsonFormat,
 
     /// Issue HEAD requests against each tracked URL and report HTTP status
     #[arg(long)]
@@ -1156,6 +1182,37 @@ struct CraDocsArgs {
     /// Sidecar `productClass` wins.
     #[arg(long, value_name = "CLASS")]
     cra_product_class: Option<String>,
+}
+
+/// Dedicated table/json output format for commands that only emit those two
+/// shapes (`license-check`, `verify audit-hashes`, `cra-standards-watch`).
+///
+/// Kept separate from the 10-variant [`ReportFormat`] so that unknown values
+/// fail at parse time with a did-you-mean hint instead of silently degrading.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+enum TableJsonFormat {
+    /// Human-readable table (default)
+    #[default]
+    Table,
+    /// Machine-readable JSON
+    Json,
+}
+
+impl TableJsonFormat {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Table => "table",
+            Self::Json => "json",
+        }
+    }
+}
+
+/// Advisory export format for `vex export`. Currently only CSAF v2.0.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+enum VexExportFormatArg {
+    /// CSAF v2.0 advisory document (default)
+    #[default]
+    Csaf,
 }
 
 /// Validate VEX state filter values at the CLI boundary.
@@ -1213,7 +1270,7 @@ fn main() -> Result<()> {
                     export_template: cli.export_template.clone(),
                 },
                 matching: MatchingConfig {
-                    fuzzy_preset: args.fuzzy_preset.parse().unwrap_or_default(),
+                    fuzzy_preset: args.fuzzy_preset,
                     threshold: None,
                     include_unchanged: args.include_unchanged,
                 },
@@ -1296,16 +1353,22 @@ fn main() -> Result<()> {
             Ok(())
         }
 
-        Commands::Validate(args) => cli::run_validate(
-            args.sbom,
-            args.standard,
-            args.output,
-            args.output_file,
-            args.fail_on_warning,
-            args.summary,
-            args.cra_sidecar,
-            args.cra_product_class,
-        ),
+        Commands::Validate(args) => {
+            let exit_code = cli::run_validate(
+                args.sbom,
+                args.standard,
+                args.output,
+                args.output_file,
+                args.fail_on_warning,
+                args.summary,
+                args.cra_sidecar,
+                args.cra_product_class,
+            )?;
+            if exit_code != 0 {
+                std::process::exit(exit_code);
+            }
+            Ok(())
+        }
 
         Commands::DiffMulti(args) => {
             let enrichment = args.enrichment.to_enrichment_config();
@@ -1320,7 +1383,7 @@ fn main() -> Result<()> {
                     ..Default::default()
                 },
                 matching: MatchingConfig {
-                    fuzzy_preset: args.fuzzy_preset.parse().unwrap_or_default(),
+                    fuzzy_preset: args.fuzzy_preset,
                     include_unchanged: args.include_unchanged,
                     ..Default::default()
                 },
@@ -1376,7 +1439,7 @@ fn main() -> Result<()> {
                     ..Default::default()
                 },
                 matching: MatchingConfig {
-                    fuzzy_preset: args.fuzzy_preset.parse().unwrap_or_default(),
+                    fuzzy_preset: args.fuzzy_preset,
                     ..Default::default()
                 },
                 filtering: FilterConfig {
@@ -1431,7 +1494,7 @@ fn main() -> Result<()> {
                     ..Default::default()
                 },
                 matching: MatchingConfig {
-                    fuzzy_preset: args.fuzzy_preset.parse().unwrap_or_default(),
+                    fuzzy_preset: args.fuzzy_preset,
                     ..Default::default()
                 },
                 cluster_threshold: args.cluster_threshold,
@@ -1542,7 +1605,11 @@ fn main() -> Result<()> {
                 group_by_sbom: args.group_by_sbom,
             };
 
-            cli::run_query(config, filter)
+            let exit_code = cli::run_query(config, filter)?;
+            if exit_code != 0 {
+                std::process::exit(exit_code);
+            }
+            Ok(())
         }
 
         Commands::Vex { action } => {
@@ -1551,11 +1618,8 @@ fn main() -> Result<()> {
                 VexAction::Status(args) => (args, cli::VexAction::Status),
                 VexAction::Filter(args) => (args, cli::VexAction::Filter),
                 VexAction::Export(export_args) => {
-                    let fmt = match export_args.format.to_lowercase().as_str() {
-                        "csaf" | "csaf-v2.0" | "csaf2" => cli::VexExportFormat::Csaf,
-                        other => {
-                            anyhow::bail!("Unsupported VEX export format '{other}'. Valid: csaf")
-                        }
+                    let fmt = match export_args.format {
+                        VexExportFormatArg::Csaf => cli::VexExportFormat::Csaf,
                     };
                     let synth_args = VexArgs {
                         sbom: export_args.sbom,
@@ -1728,9 +1792,10 @@ fn main() -> Result<()> {
                     expected,
                     hash_file,
                 },
-                VerifyAction::AuditHashes { file, format } => {
-                    cli::VerifyAction::AuditHashes { file, format }
-                }
+                VerifyAction::AuditHashes { file, format } => cli::VerifyAction::AuditHashes {
+                    file,
+                    format: format.as_str().to_string(),
+                },
             };
 
             let exit_code = cli::run_verify(cli_action, cli.quiet)?;
@@ -1746,7 +1811,7 @@ fn main() -> Result<()> {
                 args.policy.as_ref(),
                 args.check_propagation,
                 args.strict,
-                &args.output_format,
+                args.output_format.as_str(),
                 cli.quiet,
             )?;
             if exit_code != 0 {
@@ -1792,13 +1857,9 @@ fn main() -> Result<()> {
         }
 
         Commands::Merge(args) => {
-            let dedup_strategy = match args.dedup.to_lowercase().as_str() {
-                "purl" => sbom_tools::serialization::DeduplicationStrategy::Purl,
-                "none" => sbom_tools::serialization::DeduplicationStrategy::None,
-                _ => sbom_tools::serialization::DeduplicationStrategy::Name,
+            let config = sbom_tools::serialization::MergeConfig {
+                dedup_strategy: args.dedup,
             };
-
-            let config = sbom_tools::serialization::MergeConfig { dedup_strategy };
 
             let exit_code = cli::run_merge(
                 &args.primary,
@@ -1821,7 +1882,7 @@ fn main() -> Result<()> {
         ),
 
         Commands::CraStandardsWatch(args) => cli::run_cra_standards_watch(
-            cli::WatchOutputFormat::parse(&args.format)?,
+            cli::WatchOutputFormat::parse(args.format.as_str())?,
             args.check_online,
             args.timeout,
         ),

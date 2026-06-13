@@ -7,7 +7,7 @@ use crate::config::QueryConfig;
 use crate::model::{
     Component, ComponentType, CryptoAssetType, NormalizedSbom, NormalizedSbomIndex,
 };
-use crate::pipeline::{OutputTarget, auto_detect_format, write_output};
+use crate::pipeline::{OutputTarget, auto_detect_format, exit_codes, write_output};
 use crate::reports::ReportFormat;
 use anyhow::{Result, bail};
 use serde::Serialize;
@@ -354,9 +354,16 @@ pub(crate) struct QueryResult {
 // Core Implementation
 // ============================================================================
 
-/// Run the query command.
+/// Run the query command, returning the desired exit code.
+///
+/// # Exit codes
+/// - [`exit_codes::SUCCESS`] (0): at least one component matched the filter
+/// - [`exit_codes::NO_MATCHES`] (1): no components matched the filter
+///
+/// The caller is responsible for calling `std::process::exit()` with the
+/// returned code when it is non-zero.
 #[allow(clippy::needless_pass_by_value)]
-pub fn run_query(config: QueryConfig, filter: QueryFilter) -> Result<()> {
+pub fn run_query(config: QueryConfig, filter: QueryFilter) -> Result<i32> {
     if config.sbom_paths.is_empty() {
         bail!("No SBOM files specified");
     }
@@ -475,12 +482,11 @@ pub fn run_query(config: QueryConfig, filter: QueryFilter) -> Result<()> {
 
     write_output(&output, &target, false)?;
 
-    // Exit code: 1 if no matches
     if result.matches.is_empty() {
-        std::process::exit(1);
+        return Ok(exit_codes::NO_MATCHES);
     }
 
-    Ok(())
+    Ok(exit_codes::SUCCESS)
 }
 
 /// Build a `QueryMatch` from a component and its source.
