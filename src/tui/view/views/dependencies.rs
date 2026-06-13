@@ -38,8 +38,17 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
         .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
         .split(area);
 
-    // Build the dependency graph once and reuse it
-    let deps = build_dependency_graph(app);
+    // Build the dependency graph once on first render and cache it. `app.sbom`
+    // is immutable during view mode, so the graph never needs invalidation.
+    if app.dependency_state.cached_graph.is_none() {
+        let graph = build_dependency_graph(app);
+        app.dependency_state.cached_graph = Some(graph);
+    }
+    let deps = app
+        .dependency_state
+        .cached_graph
+        .take()
+        .expect("graph cached above");
 
     // Auto-expand root nodes on first visit
     if !deps.roots.is_empty() && !app.dependency_state.roots_initialized {
@@ -51,6 +60,8 @@ pub fn render_dependencies(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
 
     render_dependency_tree(frame, chunks[0], app, &deps);
     render_dependency_stats(frame, chunks[1], app, &deps);
+
+    app.dependency_state.cached_graph = Some(deps);
 }
 
 /// A flattened dependency node for rendering.
@@ -1198,7 +1209,8 @@ fn render_dependency_stats(
     }
 }
 
-struct DependencyGraph {
+#[derive(Debug, Clone)]
+pub(crate) struct DependencyGraph {
     /// Node ID -> display name
     names: HashMap<String, String>,
     /// Node ID -> list of child IDs
@@ -1315,31 +1327,156 @@ fn dependency_tag(rel: &DependencyType) -> &'static str {
     }
 }
 
+/// Compute the longest dependency chain (in node count) using an iterative
+/// Kahn topological pass with memoized per-node depth.
+///
+/// Nodes that remain with non-zero in-degree after the queue drains are members
+/// of a cycle; they keep depth 0, matching the prior recursive semantics where a
+/// back-edge into a node already on the path contributed 0. No recursion and no
+/// path enumeration, so diamond-heavy DAGs and very deep chains stay linear.
 fn calculate_max_depth(deps: &DependencyGraph) -> usize {
-    fn depth_of(node: &str, deps: &DependencyGraph, visited: &mut HashSet<String>) -> usize {
-        if visited.contains(node) {
-            return 0;
+    // In-degree over the edges that actually exist between known nodes.
+    let mut in_degree: HashMap<&str, usize> =
+        deps.names.keys().map(|id| (id.as_str(), 0usize)).collect();
+    for children in deps.edges.values() {
+        for child in children {
+            if let Some(d) = in_degree.get_mut(child.as_str()) {
+                *d += 1;
+            }
         }
-        visited.insert(node.to_string());
-
-        let child_depth = deps.edges.get(node).map_or(0, |children| {
-            children
-                .iter()
-                .map(|c| depth_of(c, deps, visited))
-                .max()
-                .unwrap_or(0)
-        });
-
-        visited.remove(node);
-        child_depth + 1
     }
 
-    let mut max_depth = 0;
+    // depth[node] = longest chain ending at this node, counted in nodes.
+    let mut depth: HashMap<&str, usize> = HashMap::with_capacity(deps.names.len());
+    let mut queue: std::collections::VecDeque<&str> = in_degree
+        .iter()
+        .filter(|&(_, &d)| d == 0)
+        .map(|(&id, _)| id)
+        .collect();
 
-    for root in &deps.roots {
-        let d = depth_of(root, deps, &mut HashSet::new());
-        max_depth = max_depth.max(d);
+    let mut max_depth = 0;
+    while let Some(node) = queue.pop_front() {
+        let node_depth = *depth.entry(node).or_insert(1);
+        max_depth = max_depth.max(node_depth);
+
+        if let Some(children) = deps.edges.get(node) {
+            for child in children {
+                let child = child.as_str();
+                let entry = depth.entry(child).or_insert(0);
+                *entry = (*entry).max(node_depth + 1);
+                if let Some(d) = in_degree.get_mut(child) {
+                    *d -= 1;
+                    if *d == 0 {
+                        queue.push_back(child);
+                    }
+                }
+            }
+        }
     }
 
     max_depth
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Build a minimal graph from edges (parent -> children); roots are nodes
+    /// with no incoming edge. Only the fields `calculate_max_depth` reads are
+    /// populated.
+    fn graph_from_edges(node_count: usize, edges: &[(usize, usize)]) -> DependencyGraph {
+        let id = |n: usize| format!("n{n}");
+        let mut names = HashMap::new();
+        let mut edge_map: HashMap<String, Vec<String>> = HashMap::new();
+        let mut has_parent = HashSet::new();
+        for n in 0..node_count {
+            names.insert(id(n), id(n));
+        }
+        for &(from, to) in edges {
+            edge_map.entry(id(from)).or_default().push(id(to));
+            has_parent.insert(id(to));
+        }
+        let mut roots: Vec<String> = (0..node_count)
+            .map(id)
+            .filter(|n| !has_parent.contains(n))
+            .collect();
+        roots.sort();
+
+        DependencyGraph {
+            names,
+            edges: edge_map,
+            roots,
+            vuln_counts: HashMap::new(),
+            max_severities: HashMap::new(),
+            relationships: HashMap::new(),
+            reverse_edges: HashMap::new(),
+            max_depth: 0,
+        }
+    }
+
+    #[test]
+    fn max_depth_simple_chain() {
+        // n0 -> n1 -> n2 -> n3 : longest chain is 4 nodes.
+        let graph = graph_from_edges(4, &[(0, 1), (1, 2), (2, 3)]);
+        assert_eq!(calculate_max_depth(&graph), 4);
+    }
+
+    #[test]
+    fn max_depth_single_node() {
+        let graph = graph_from_edges(1, &[]);
+        assert_eq!(calculate_max_depth(&graph), 1);
+    }
+
+    #[test]
+    fn max_depth_cycle_members_contribute_zero() {
+        // A pure cycle (no in-degree-0 node) has no topological order; every node
+        // stays at depth 0.
+        let graph = graph_from_edges(3, &[(0, 1), (1, 2), (2, 0)]);
+        assert_eq!(calculate_max_depth(&graph), 0);
+
+        // n0 feeds into a 2-node cycle (n1 <-> n2). Under Kahn, any node with an
+        // incoming cycle edge keeps non-zero in-degree and never gets a depth, so
+        // only the acyclic prefix n0 is counted.
+        let graph = graph_from_edges(3, &[(0, 1), (1, 2), (2, 1)]);
+        assert_eq!(calculate_max_depth(&graph), 1);
+
+        // An acyclic prefix that is longer before reaching the cycle is measured
+        // fully: n0 -> n1 -> n2, then n2 <-> n3 cycle. n2 and n3 are cycle members
+        // (each has an incoming cycle edge), so only n0 -> n1 counts: depth 2.
+        let graph = graph_from_edges(4, &[(0, 1), (1, 2), (2, 3), (3, 2)]);
+        assert_eq!(calculate_max_depth(&graph), 2);
+    }
+
+    #[test]
+    fn max_depth_diamond_lattice_is_linear() {
+        // A layered diamond lattice: each node in layer L points to both nodes in
+        // layer L+1. The number of distinct root->leaf simple paths is 2^layers,
+        // which is exponential — the old path-enumerating recursion blows up here.
+        // The iterative pass visits each node/edge once and must finish instantly.
+        const LAYERS: usize = 50;
+        let mut edges = Vec::new();
+        // Layout: node index = layer * 2 + slot, slot in {0,1}.
+        let idx = |layer: usize, slot: usize| layer * 2 + slot;
+        for layer in 0..LAYERS {
+            for from_slot in 0..2 {
+                for to_slot in 0..2 {
+                    edges.push((idx(layer, from_slot), idx(layer + 1, to_slot)));
+                }
+            }
+        }
+        let node_count = (LAYERS + 1) * 2;
+        let graph = graph_from_edges(node_count, &edges);
+        // Longest chain walks one node per layer plus the final layer: LAYERS + 1.
+        assert_eq!(calculate_max_depth(&graph), LAYERS + 1);
+    }
+
+    #[test]
+    fn max_depth_deep_chain_no_stack_overflow() {
+        // A 40K-node linear chain would overflow the stack under the old
+        // recursion (recursion depth == chain length). Iterative Kahn handles it.
+        const N: usize = 40_000;
+        let edges: Vec<(usize, usize)> = (0..N - 1).map(|i| (i, i + 1)).collect();
+        let graph = graph_from_edges(N, &edges);
+        assert_eq!(calculate_max_depth(&graph), N);
+    }
 }

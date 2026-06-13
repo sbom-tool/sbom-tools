@@ -2667,6 +2667,8 @@ pub(crate) struct DependencyViewState {
     pub cached_flat_nodes: Vec<super::views::FlatDepNode>,
     /// Cached search match count (query, count)
     cached_search_match: (String, Option<usize>),
+    /// Lazily-built dependency graph (built once; `sbom` is immutable in view mode)
+    pub(crate) cached_graph: Option<super::views::DependencyGraph>,
 }
 
 impl DependencyViewState {
@@ -2683,6 +2685,7 @@ impl DependencyViewState {
             expanded_snapshot: HashSet::new(),
             cached_flat_nodes: Vec::new(),
             cached_search_match: (String::new(), None),
+            cached_graph: None,
         }
     }
 

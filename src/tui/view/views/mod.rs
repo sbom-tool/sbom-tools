@@ -20,6 +20,7 @@ pub use certificates::render_certificates;
 pub(crate) use compliance::build_groups;
 pub use compliance::{StandardComplianceState, compute_compliance_results, render_compliance};
 pub use crypto::render_crypto;
+pub(crate) use dependencies::DependencyGraph;
 pub use dependencies::{FlatDepNode, render_dependencies};
 pub use keys::render_keys;
 pub use licenses::render_licenses;
