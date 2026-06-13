@@ -955,6 +955,42 @@ mod diff_engine_tests {
     }
 
     #[test]
+    fn test_diff_detects_component_license_changes() {
+        let old_content = r#"{
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.5",
+            "version": 1,
+            "components": [
+                {"type": "library", "bom-ref": "a@1.0", "name": "a", "version": "1.0.0",
+                 "licenses": [{"license": {"id": "MIT"}}]}
+            ]
+        }"#;
+
+        let new_content = r#"{
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.5",
+            "version": 1,
+            "components": [
+                {"type": "library", "bom-ref": "a@1.0", "name": "a", "version": "1.0.0",
+                 "licenses": [{"license": {"id": "Apache-2.0"}}]}
+            ]
+        }"#;
+
+        let old = parse_sbom_str(old_content).unwrap();
+        let new = parse_sbom_str(new_content).unwrap();
+
+        let engine = DiffEngine::new();
+        let result = engine.diff(&old, &new).expect("diff should succeed");
+
+        assert_eq!(result.licenses.component_changes.len(), 1);
+        let change = &result.licenses.component_changes[0];
+        assert_eq!(change.component_name, "a");
+        assert_eq!(change.old_licenses, vec!["MIT".to_string()]);
+        assert_eq!(change.new_licenses, vec!["Apache-2.0".to_string()]);
+        assert!(result.semantic_score < 100.0);
+    }
+
+    #[test]
     fn test_diff_detects_version_changes() {
         let old_content = r#"{
             "bomFormat": "CycloneDX",

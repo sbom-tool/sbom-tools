@@ -4,7 +4,8 @@
 //! enabling modular and testable diff operations.
 
 use super::{
-    ComponentChange, DependencyChange, LicenseChange, VexStatusChange, VulnerabilityDetail,
+    ComponentChange, ComponentLicenseChange, DependencyChange, LicenseChange, VexStatusChange,
+    VulnerabilityDetail,
 };
 use crate::model::{CanonicalId, NormalizedSbom};
 use std::collections::HashMap;
@@ -86,7 +87,7 @@ impl DependencyChangeSet {
 pub struct LicenseChangeSet {
     pub new_licenses: Vec<LicenseChange>,
     pub removed_licenses: Vec<LicenseChange>,
-    pub component_changes: Vec<(String, String, String)>, // (component, old_license, new_license)
+    pub component_changes: Vec<ComponentLicenseChange>,
 }
 
 impl LicenseChangeSet {

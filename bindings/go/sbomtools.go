@@ -39,6 +39,7 @@ const (
 	LicenseComplianceProfile ScoringProfile = ScoringProfile(C.SBOM_TOOLS_PROFILE_LICENSE_COMPLIANCE)
 	CRAProfile               ScoringProfile = ScoringProfile(C.SBOM_TOOLS_PROFILE_CRA)
 	ComprehensiveProfile     ScoringProfile = ScoringProfile(C.SBOM_TOOLS_PROFILE_COMPREHENSIVE)
+	AIReadinessProfile       ScoringProfile = ScoringProfile(C.SBOM_TOOLS_PROFILE_AI_READINESS)
 )
 
 type Error struct {

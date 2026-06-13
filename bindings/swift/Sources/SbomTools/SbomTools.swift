@@ -67,6 +67,7 @@ public enum SbomToolsScoring: UInt32 {
     case licenseCompliance = 3
     case cra = 4
     case comprehensive = 5
+    case aiReadiness = 6
 }
 
 public struct SbomToolsError: Error, CustomStringConvertible {

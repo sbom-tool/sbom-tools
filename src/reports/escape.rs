@@ -13,6 +13,27 @@
 //!
 //! All user-controllable data MUST be escaped before embedding in reports.
 
+use std::borrow::Cow;
+
+/// Sanitize a string for safe terminal (TTY) output.
+///
+/// Strips control characters — C0 controls except `\n` and `\t`, DEL, and C1
+/// controls — including ESC (0x1B), which neutralizes ANSI escape sequences
+/// embedded in untrusted SBOM data (cursor movement, screen clearing, title
+/// changes, etc.). Returns the input unchanged when nothing needs stripping.
+#[must_use]
+pub(crate) fn sanitize_terminal(s: &str) -> Cow<'_, str> {
+    fn is_disallowed(c: char) -> bool {
+        c.is_control() && c != '\n' && c != '\t'
+    }
+
+    if s.contains(is_disallowed) {
+        Cow::Owned(s.chars().filter(|&c| !is_disallowed(c)).collect())
+    } else {
+        Cow::Borrowed(s)
+    }
+}
+
 /// Escape a string for safe inclusion in HTML content.
 ///
 /// Escapes the following characters:
@@ -297,6 +318,43 @@ mod tests {
         assert_eq!(escape_html("日本語"), "日本語");
         assert_eq!(escape_markdown_table("émoji 🎉"), "émoji 🎉");
         assert_eq!(escape_html("Ω ≈ ∞"), "Ω ≈ ∞");
+    }
+
+    #[test]
+    fn test_sanitize_terminal_ansi_neutralized() {
+        // ESC is stripped, so the CSI sequence loses its meaning
+        assert_eq!(
+            sanitize_terminal("\x1b[31mevil\x1b[0m"),
+            Cow::<str>::Owned("[31mevil[0m".to_string())
+        );
+        // OSC title change
+        assert_eq!(sanitize_terminal("\x1b]0;pwned\x07name"), "]0;pwnedname");
+    }
+
+    #[test]
+    fn test_sanitize_terminal_control_chars_stripped() {
+        assert_eq!(sanitize_terminal("a\x07b\x08c"), "abc");
+        assert_eq!(sanitize_terminal("over\rwrite"), "overwrite");
+        assert_eq!(sanitize_terminal("\x00null\x7f"), "null");
+        // C1 controls
+        assert_eq!(sanitize_terminal("a\u{9b}31mb"), "a31mb");
+    }
+
+    #[test]
+    fn test_sanitize_terminal_preserves_safe_input() {
+        assert!(matches!(
+            sanitize_terminal("lodash@4.17.21"),
+            Cow::Borrowed("lodash@4.17.21")
+        ));
+        assert!(matches!(
+            sanitize_terminal("日本語 émoji 🎉"),
+            Cow::Borrowed(_)
+        ));
+        assert!(matches!(
+            sanitize_terminal("line1\nline2\ttabbed"),
+            Cow::Borrowed(_)
+        ));
+        assert!(matches!(sanitize_terminal(""), Cow::Borrowed("")));
     }
 
     #[test]

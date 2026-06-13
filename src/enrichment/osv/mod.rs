@@ -15,8 +15,8 @@ use crate::enrichment::cache::{CacheKey, FileCache};
 use crate::enrichment::stats::{EnrichmentError, EnrichmentStats};
 use crate::enrichment::traits::VulnerabilityEnricher;
 use crate::error::Result;
-use crate::model::{Component, Ecosystem};
-use response::OsvQuery;
+use crate::model::{Component, Ecosystem, VulnerabilityRef};
+use response::{OsvQuery, OsvVulnerability};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -33,6 +33,8 @@ pub struct OsvEnricherConfig {
     pub timeout: Duration,
     /// OSV API base URL
     pub api_base: String,
+    /// Maximum retries for failed requests
+    pub max_retries: u8,
 }
 
 impl Default for OsvEnricherConfig {
@@ -43,6 +45,7 @@ impl Default for OsvEnricherConfig {
             bypass_cache: false,
             timeout: Duration::from_secs(30),
             api_base: "https://api.osv.dev".to_string(),
+            max_retries: 3,
         }
     }
 }
@@ -60,6 +63,7 @@ impl OsvEnricher {
         let client_config = OsvClientConfig {
             api_base: config.api_base,
             timeout: config.timeout,
+            max_retries: config.max_retries,
             ..Default::default()
         };
 
@@ -104,6 +108,64 @@ impl OsvEnricher {
 
         None
     }
+
+    /// Cache key for an individual vulnerability record.
+    fn vuln_cache_key(vuln_id: &str) -> CacheKey {
+        CacheKey::new(None, format!("osv-vuln:{vuln_id}"), None, None)
+    }
+
+    /// Hydrate querybatch stubs into full vulnerability records.
+    ///
+    /// The `/v1/querybatch` endpoint returns only `{id, modified}` per
+    /// vulnerability, so each record is fetched from `/v1/vulns/{id}` (or the
+    /// per-vulnerability cache) before mapping. Returns the mapped
+    /// vulnerabilities and whether every record was fully hydrated; records
+    /// that could not be fetched fall back to the id-only stub.
+    fn hydrate_vulns(
+        &self,
+        stubs: &[OsvVulnerability],
+        stats: &mut EnrichmentStats,
+    ) -> (Vec<VulnerabilityRef>, bool) {
+        let mut vulns = Vec::with_capacity(stubs.len());
+        let mut complete = true;
+
+        for stub in stubs {
+            let key = Self::vuln_cache_key(&stub.id);
+
+            if !self.bypass_cache
+                && let Some(cached) = self.cache.get(&key)
+                && let Some(vuln) = cached.into_iter().next()
+            {
+                stats.cache_hits += 1;
+                vulns.push(vuln);
+                continue;
+            }
+
+            stats.api_calls += 1;
+            match self.client.get_vulnerability(&stub.id) {
+                Ok(Some(full)) => {
+                    let vuln = mapper::map_osv_to_vulnerability_ref(&full);
+                    if let Err(e) = self.cache.set(&key, std::slice::from_ref(&vuln)) {
+                        stats
+                            .errors
+                            .push(EnrichmentError::CacheError(e.to_string()));
+                    }
+                    vulns.push(vuln);
+                }
+                Ok(None) => {
+                    complete = false;
+                    vulns.push(mapper::map_osv_to_vulnerability_ref(stub));
+                }
+                Err(e) => {
+                    complete = false;
+                    stats.errors.push(EnrichmentError::ApiError(e.to_string()));
+                    vulns.push(mapper::map_osv_to_vulnerability_ref(stub));
+                }
+            }
+        }
+
+        (vulns, complete)
+    }
 }
 
 impl VulnerabilityEnricher for OsvEnricher {
@@ -122,7 +184,7 @@ impl VulnerabilityEnricher for OsvEnricher {
         stats.components_skipped = components.len() - queries.len();
 
         // Separate cached vs needs-fetch
-        let mut cached_results: Vec<(usize, Vec<crate::model::VulnerabilityRef>)> = Vec::new();
+        let mut cached_results: Vec<(usize, Vec<VulnerabilityRef>)> = Vec::new();
         let mut to_fetch: Vec<(usize, CacheKey, OsvQuery)> = Vec::new();
 
         for (idx, key, query) in queries {
@@ -161,14 +223,11 @@ impl VulnerabilityEnricher for OsvEnricher {
                             .into_iter()
                             .flat_map(|r| r.results.into_iter()),
                     ) {
-                        let vulns: Vec<_> = result
-                            .vulns
-                            .iter()
-                            .map(mapper::map_osv_to_vulnerability_ref)
-                            .collect();
+                        let (vulns, complete) = self.hydrate_vulns(&result.vulns, &mut stats);
 
-                        // Cache the result (even if empty)
-                        if let Err(e) = self.cache.set(&key, &vulns) {
+                        // Cache the result (even if empty), but only when
+                        // fully hydrated so failures are retried next run
+                        if complete && let Err(e) = self.cache.set(&key, &vulns) {
                             stats
                                 .errors
                                 .push(EnrichmentError::CacheError(e.to_string()));
