@@ -72,6 +72,7 @@ ffi = []
 
 [dev-dependencies]
 criterion = "0.8"
+httpmock = "0.7"
 proptest = "1.11"
 tempfile = "3.27"
 
