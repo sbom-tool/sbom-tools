@@ -21,25 +21,25 @@ import (
 type ErrorCode uint32
 
 const (
-	ErrorCodeOK          ErrorCode = ErrorCode(C.SBOM_TOOLS_ERROR_OK)
-	ErrorCodeParse       ErrorCode = ErrorCode(C.SBOM_TOOLS_ERROR_PARSE)
-	ErrorCodeDiff        ErrorCode = ErrorCode(C.SBOM_TOOLS_ERROR_DIFF)
-	ErrorCodeValidation  ErrorCode = ErrorCode(C.SBOM_TOOLS_ERROR_VALIDATION)
-	ErrorCodeIO          ErrorCode = ErrorCode(C.SBOM_TOOLS_ERROR_IO)
-	ErrorCodeUnsupported ErrorCode = ErrorCode(C.SBOM_TOOLS_ERROR_UNSUPPORTED)
-	ErrorCodeInternal    ErrorCode = ErrorCode(C.SBOM_TOOLS_ERROR_INTERNAL)
+	ErrorCodeOK          ErrorCode = ErrorCode(C.SBOM_TOOLS_ERROR_CODE_OK)
+	ErrorCodeParse       ErrorCode = ErrorCode(C.SBOM_TOOLS_ERROR_CODE_PARSE)
+	ErrorCodeDiff        ErrorCode = ErrorCode(C.SBOM_TOOLS_ERROR_CODE_DIFF)
+	ErrorCodeValidation  ErrorCode = ErrorCode(C.SBOM_TOOLS_ERROR_CODE_VALIDATION)
+	ErrorCodeIO          ErrorCode = ErrorCode(C.SBOM_TOOLS_ERROR_CODE_IO)
+	ErrorCodeUnsupported ErrorCode = ErrorCode(C.SBOM_TOOLS_ERROR_CODE_UNSUPPORTED)
+	ErrorCodeInternal    ErrorCode = ErrorCode(C.SBOM_TOOLS_ERROR_CODE_INTERNAL)
 )
 
 type ScoringProfile uint32
 
 const (
-	MinimalProfile           ScoringProfile = ScoringProfile(C.SBOM_TOOLS_PROFILE_MINIMAL)
-	StandardProfile          ScoringProfile = ScoringProfile(C.SBOM_TOOLS_PROFILE_STANDARD)
-	SecurityProfile          ScoringProfile = ScoringProfile(C.SBOM_TOOLS_PROFILE_SECURITY)
-	LicenseComplianceProfile ScoringProfile = ScoringProfile(C.SBOM_TOOLS_PROFILE_LICENSE_COMPLIANCE)
-	CRAProfile               ScoringProfile = ScoringProfile(C.SBOM_TOOLS_PROFILE_CRA)
-	ComprehensiveProfile     ScoringProfile = ScoringProfile(C.SBOM_TOOLS_PROFILE_COMPREHENSIVE)
-	AIReadinessProfile       ScoringProfile = ScoringProfile(C.SBOM_TOOLS_PROFILE_AI_READINESS)
+	MinimalProfile           ScoringProfile = ScoringProfile(C.SBOM_TOOLS_SCORING_PROFILE_MINIMAL)
+	StandardProfile          ScoringProfile = ScoringProfile(C.SBOM_TOOLS_SCORING_PROFILE_STANDARD)
+	SecurityProfile          ScoringProfile = ScoringProfile(C.SBOM_TOOLS_SCORING_PROFILE_SECURITY)
+	LicenseComplianceProfile ScoringProfile = ScoringProfile(C.SBOM_TOOLS_SCORING_PROFILE_LICENSE_COMPLIANCE)
+	CRAProfile               ScoringProfile = ScoringProfile(C.SBOM_TOOLS_SCORING_PROFILE_CRA)
+	ComprehensiveProfile     ScoringProfile = ScoringProfile(C.SBOM_TOOLS_SCORING_PROFILE_COMPREHENSIVE)
+	AIReadinessProfile       ScoringProfile = ScoringProfile(C.SBOM_TOOLS_SCORING_PROFILE_AI_READINESS)
 )
 
 type Error struct {
@@ -392,7 +392,7 @@ func consumeResult(result C.SbomToolsStringResult) ([]byte, error) {
 	// Pointer zeroing in free() defends against accidental double-free on copies.
 	defer C.sbom_tools_string_result_free(result)
 
-	if result.error_code != C.SBOM_TOOLS_ERROR_OK {
+	if result.error_code != C.SBOM_TOOLS_ERROR_CODE_OK {
 		var message string
 		if result.error_message != nil {
 			message = C.GoString(result.error_message)

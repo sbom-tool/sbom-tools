@@ -96,10 +96,20 @@ echo "==> Bumping Cargo.toml to $VERSION"
 sed -i.bak "s/^version = \"$CURRENT\"/version = \"$VERSION\"/" Cargo.toml
 rm -f Cargo.toml.bak
 
+# The FFI crate version and its `=$CURRENT` path-dep pin on the root crate must
+# move in lockstep, or `cargo publish` fails on a version mismatch.
+FFI_MANIFEST="crates/sbom-tools-ffi/Cargo.toml"
+echo "==> Bumping $FFI_MANIFEST to $VERSION"
+sed -i.bak \
+    -e "s/^version = \"$CURRENT\"/version = \"$VERSION\"/" \
+    -e "s/version = \"=$CURRENT\"/version = \"=$VERSION\"/" \
+    "$FFI_MANIFEST"
+rm -f "$FFI_MANIFEST.bak"
+
 # Update Cargo.lock
 cargo check --quiet 2>/dev/null
 
-git add Cargo.toml Cargo.lock
+git add Cargo.toml "$FFI_MANIFEST" Cargo.lock
 git commit -m "Bump version to $VERSION"
 git push -u origin "$RELEASE_BRANCH"
 

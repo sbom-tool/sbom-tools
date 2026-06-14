@@ -9,6 +9,26 @@ on:
 permissions: read-all
 
 jobs:
+  header-drift:
+    name: cbindgen Header Drift
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
+        with:
+          toolchain: stable
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - name: Install cbindgen
+        # >= 0.29 is required for the edition-2024 `#[unsafe(no_mangle)]` attribute.
+        run: cargo install cbindgen --version '^0.29' --locked
+      - name: Regenerate sbom_tools.h from src/ffi.rs
+        run: ./scripts/gen-ffi-header.sh
+      - name: Fail if the committed header drifted from the Rust source
+        run: git diff --exit-code -- bindings/swift/Sources/CSbomTools/include/sbom_tools.h
+
   constant-parity:
     name: Binding Constant Parity
     runs-on: ubuntu-latest

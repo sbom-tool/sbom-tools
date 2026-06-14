@@ -349,7 +349,7 @@ public enum SbomTools {
     public static func encode<T: Encodable>(_ value: T) throws -> String {
         let data = try JSONEncoder().encode(value)
         guard let json = String(data: data, encoding: .utf8) else {
-            throw SbomToolsError(code: UInt32(SBOM_TOOLS_ERROR_INTERNAL.rawValue), message: "failed to encode JSON payload")
+            throw SbomToolsError(code: UInt32(SBOM_TOOLS_ERROR_CODE_INTERNAL.rawValue), message: "failed to encode JSON payload")
         }
         return json
     }
@@ -357,13 +357,13 @@ public enum SbomTools {
     private static func consume(_ result: SbomToolsStringResult) throws -> String {
         defer { sbom_tools_string_result_free(result) }
 
-        if result.error_code != SBOM_TOOLS_ERROR_OK {
+        if result.error_code != SBOM_TOOLS_ERROR_CODE_OK {
             let message = result.error_message.map { String(cString: $0) } ?? "unknown error"
             throw SbomToolsError(code: UInt32(result.error_code.rawValue), message: message)
         }
 
         guard let data = result.data else {
-            throw SbomToolsError(code: UInt32(SBOM_TOOLS_ERROR_INTERNAL.rawValue), message: "missing ABI payload")
+            throw SbomToolsError(code: UInt32(SBOM_TOOLS_ERROR_CODE_INTERNAL.rawValue), message: "missing ABI payload")
         }
 
         return String(cString: data)

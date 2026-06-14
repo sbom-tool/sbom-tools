@@ -15,7 +15,7 @@ fail() {
   failures=$((failures + 1))
 }
 
-# SBOM_TOOLS_PROFILE_AI_READINESS -> aiReadiness
+# AI_READINESS -> aiReadiness (prefix already stripped by the caller)
 to_swift_case() {
   local raw="$1" out="" part lower first=1
   for part in $(echo "$raw" | tr '_' ' '); do
@@ -30,10 +30,12 @@ to_swift_case() {
   echo "$out"
 }
 
-constants="$(grep -Eo 'SBOM_TOOLS_(PROFILE|ERROR)_[A-Z0-9_]+ = [0-9]+' "$header")"
+# cbindgen qualifies enum variants with the full type name, so error codes are
+# SBOM_TOOLS_ERROR_CODE_* and scoring profiles are SBOM_TOOLS_SCORING_PROFILE_*.
+constants="$(grep -Eo 'SBOM_TOOLS_(SCORING_PROFILE|ERROR_CODE)_[A-Z0-9_]+ = [0-9]+' "$header")"
 
 if [ -z "$constants" ]; then
-  echo "No SBOM_TOOLS_PROFILE_*/SBOM_TOOLS_ERROR_* constants found in $header" >&2
+  echo "No SBOM_TOOLS_SCORING_PROFILE_*/SBOM_TOOLS_ERROR_CODE_* constants found in $header" >&2
   exit 2
 fi
 
@@ -49,11 +51,11 @@ done <<<"$constants"
 
 # Swift mirrors profiles in the SbomToolsScoring enum; error codes are consumed
 # directly from the vendored header via CSbomTools, so only profiles can drift.
-profiles="$(echo "$constants" | grep '^SBOM_TOOLS_PROFILE_')"
+profiles="$(echo "$constants" | grep '^SBOM_TOOLS_SCORING_PROFILE_')"
 scoring_enum="$(sed -n '/enum SbomToolsScoring/,/^}/p' "$swift_wrapper")"
 
 while read -r name _ value; do
-  case_name="$(to_swift_case "${name#SBOM_TOOLS_PROFILE_}")"
+  case_name="$(to_swift_case "${name#SBOM_TOOLS_SCORING_PROFILE_}")"
   if ! echo "$scoring_enum" | grep -Eq "case[[:space:]]+${case_name}[[:space:]]*=[[:space:]]*${value}(\$|[^0-9])"; then
     fail "Swift SbomToolsScoring missing 'case $case_name = $value' (from $name) in ${swift_wrapper#"$repo_root"/}"
   fi
