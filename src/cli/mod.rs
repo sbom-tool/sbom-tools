@@ -3,6 +3,8 @@
 //! This module provides testable command handlers that are invoked by main.rs.
 //! Each handler implements the business logic for a specific CLI subcommand.
 
+#[cfg(feature = "enrichment")]
+mod cache;
 mod cra_docs;
 mod cra_standards_watch;
 mod diff;
@@ -20,6 +22,8 @@ mod vex;
 mod view;
 mod watch;
 
+#[cfg(feature = "enrichment")]
+pub use cache::{CacheAction, run_cache};
 pub use cra_docs::run_cra_docs;
 pub use cra_standards_watch::{
     OnlineProbe, TrackedStandard, WatchOutputFormat, cra_catalogue, probe_cra_standards,

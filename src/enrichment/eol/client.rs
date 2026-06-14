@@ -179,6 +179,8 @@ impl EolClient {
         }
 
         let url = format!("{}/api/all.json", self.config.base_url);
+        crate::enrichment::source::offline_guard(&url)
+            .map_err(|e| EnrichmentError::Offline(e.to_string()))?;
         let client = crate::enrichment::source::http_client(self.config.timeout)
             .map_err(|e| EnrichmentError::ApiError(e.to_string()))?;
 
@@ -233,6 +235,8 @@ impl EolClient {
         }
 
         let url = format!("{}/api/{}.json", self.config.base_url, product);
+        crate::enrichment::source::offline_guard(&url)
+            .map_err(|e| EnrichmentError::Offline(e.to_string()))?;
         let client = crate::enrichment::source::http_client(self.config.timeout)
             .map_err(|e| EnrichmentError::ApiError(e.to_string()))?;
 
@@ -309,11 +313,24 @@ pub struct EolEnricher {
 impl EolEnricher {
     /// Create a new EOL enricher.
     ///
-    /// Fetches the product list from the API (or cache) and initializes the mapper.
+    /// Fetches the product list from the API (or cache) and initializes the
+    /// mapper. In offline mode the product-list fetch is served from cache when
+    /// present; when it is not cached the enricher is still constructed with an
+    /// empty product list so an `--offline` run degrades gracefully (every
+    /// component is skipped) rather than failing outright.
     pub fn new(config: EolClientConfig) -> Result<Self, EnrichmentError> {
         let client = EolClient::new(config);
         let mut stats = EolEnrichmentStats::default();
-        let product_list = client.fetch_product_list(&mut stats)?;
+        let product_list = match client.fetch_product_list(&mut stats) {
+            Ok(list) => list,
+            Err(EnrichmentError::Offline(_)) if crate::enrichment::source::is_offline() => {
+                tracing::warn!(
+                    "EOL product list not in cache while offline; EOL enrichment will be skipped"
+                );
+                Vec::new()
+            }
+            Err(e) => return Err(e),
+        };
         let mapper = ProductMapper::new(product_list);
 
         Ok(Self {

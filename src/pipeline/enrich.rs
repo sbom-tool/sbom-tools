@@ -70,6 +70,17 @@ pub fn enrich_sbom_full(
 ) -> AggregatedEnrichmentStats {
     let mut stats = AggregatedEnrichmentStats::default();
 
+    // Honor offline mode regardless of entry point: the process-wide switch
+    // gates every source's network layer and flips cache reads to
+    // stale-if-offline. `main` already sets this for the CLI; setting it here
+    // makes library callers (and tests) offline-correct too.
+    crate::enrichment::source::set_offline(config.offline);
+    if config.offline && !quiet {
+        stats
+            .warnings
+            .push("Offline mode: enrichment served from cache only (no network)".into());
+    }
+
     // 1. OSV vulnerability enrichment
     if config.enabled {
         let osv_config = super::build_enrichment_config(config);

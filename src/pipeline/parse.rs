@@ -214,7 +214,10 @@ pub fn enrich_sbom(
 
     match OsvEnricher::new(config.clone()) {
         Ok(enricher) => {
-            if !enricher.is_available() {
+            // The availability probe is a live network call. In offline mode it
+            // would always fail and wrongly skip cache-served enrichment, so it
+            // is bypassed: enrichment proceeds straight to the cache.
+            if !crate::enrichment::source::is_offline() && !enricher.is_available() {
                 eprintln!("Warning: OSV API unavailable, skipping vulnerability enrichment");
                 return None;
             }

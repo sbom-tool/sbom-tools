@@ -131,6 +131,12 @@ struct Cli {
     #[arg(long, global = true, conflicts_with = "config")]
     no_config: bool,
 
+    /// Offline mode: never make network calls; enrichment is served purely from
+    /// cache (including TTL-expired entries, with a staleness warning). For
+    /// air-gapped environments. Also settable via `SBOM_TOOLS_OFFLINE`.
+    #[arg(long, global = true, env = "SBOM_TOOLS_OFFLINE")]
+    offline: bool,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -229,6 +235,7 @@ fn seed_enrichment(
     args: &SharedEnrichmentArgs,
     sub: Option<&ArgMatches>,
     app: &AppConfig,
+    offline: bool,
 ) -> EnrichmentConfig {
     let cli = args.to_enrichment_config();
     let cli_touched = cli.enabled
@@ -242,10 +249,14 @@ fn seed_enrichment(
         || arg_was_set_sub(sub, "refresh_vulns")
         || !cli.vex_paths.is_empty();
 
-    match (&app.enrichment, cli_touched) {
+    let mut config = match (&app.enrichment, cli_touched) {
         (Some(file), false) => file.clone(),
         _ => cli,
-    }
+    };
+    // The global --offline flag (or config) wins; either layer enabling it is
+    // honored so an air-gapped config file can't be silently overridden.
+    config.offline = offline || config.offline;
+    config
 }
 
 /// Arguments for the `diff` subcommand
@@ -949,6 +960,13 @@ enum Commands {
         action: VerifyAction,
     },
 
+    /// Manage the enrichment cache (status, warm, clear, export, import)
+    #[cfg(feature = "enrichment")]
+    Cache {
+        #[command(subcommand)]
+        action: cli::CacheAction,
+    },
+
     /// Check license policy compliance
     LicenseCheck(LicenseCheckArgs),
 
@@ -976,8 +994,16 @@ impl Commands {
     /// Whether this command seeds a per-command config from the loaded
     /// `AppConfig`. Meta commands (config management, shell completions, man
     /// page, schema generation) don't, so a broken or missing config file must
-    /// never block them — they get a lenient (unvalidated) load instead.
+    /// never block them — they get a lenient (unvalidated) load instead. Cache
+    /// management is likewise config-independent (it only touches the on-disk
+    /// cache) and must stay usable for recovery even with a broken config.
     const fn consumes_config(&self) -> bool {
+        // Cache management is config-independent (it only touches the on-disk
+        // cache) and must stay usable for recovery even with a broken config.
+        #[cfg(feature = "enrichment")]
+        if matches!(self, Self::Cache { .. }) {
+            return false;
+        }
         !matches!(
             self,
             Self::Config { .. } | Self::Completions { .. } | Self::ConfigSchema { .. } | Self::Man
@@ -1348,6 +1374,15 @@ fn main() -> Result<()> {
         EffectiveConfig::load_lenient(cli.config.as_deref(), cli.no_config)
     };
     let app = effective.into_app_config();
+
+    // Resolve offline mode once: the global --offline flag (or
+    // SBOM_TOOLS_OFFLINE), OR the config file's enrichment.offline. Setting the
+    // process-wide switch here makes every code path — including the cache
+    // subcommand and watch loop — refuse network calls and serve stale cache.
+    let offline = cli.offline || app.enrichment.as_ref().is_some_and(|e| e.offline);
+    #[cfg(feature = "enrichment")]
+    sbom_tools::enrichment::source::set_offline(offline);
+
     // Per-subcommand argument matches, used to detect which CLI flags were set
     // explicitly (vs. left at their clap default).
     let sub_matches = matches.subcommand().map(|(_, m)| m);
@@ -1357,7 +1392,7 @@ fn main() -> Result<()> {
         Commands::Diff(args) => {
             let sm = sub_matches;
             let fail_on_kev = resolve_bool(args.fail_on_kev, app.behavior.fail_on_kev);
-            let mut enrichment = seed_enrichment(&args.enrichment, sm, &app);
+            let mut enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
             // --fail-on-kev is meaningless without KEV data, so it implies --kev.
             if fail_on_kev {
                 enrichment.enable_kev = true;
@@ -1466,7 +1501,7 @@ fn main() -> Result<()> {
 
         Commands::View(args) => {
             let sm = sub_matches;
-            let enrichment = seed_enrichment(&args.enrichment, sm, &app);
+            let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
 
             let config = ViewConfig {
                 sbom_path: args.sbom,
@@ -1521,7 +1556,7 @@ fn main() -> Result<()> {
 
         Commands::DiffMulti(args) => {
             let sm = sub_matches;
-            let enrichment = seed_enrichment(&args.enrichment, sm, &app);
+            let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
             let config = MultiDiffConfig {
                 baseline: args.baseline,
                 targets: args.targets,
@@ -1599,7 +1634,7 @@ fn main() -> Result<()> {
 
         Commands::Timeline(args) => {
             let sm = sub_matches;
-            let enrichment = seed_enrichment(&args.enrichment, sm, &app);
+            let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
             let config = TimelineConfig {
                 sbom_paths: args.sboms,
                 output: OutputConfig {
@@ -1673,7 +1708,7 @@ fn main() -> Result<()> {
 
         Commands::Matrix(args) => {
             let sm = sub_matches;
-            let enrichment = seed_enrichment(&args.enrichment, sm, &app);
+            let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
             let config = MatrixConfig {
                 sbom_paths: args.sboms,
                 output: OutputConfig {
@@ -1753,7 +1788,7 @@ fn main() -> Result<()> {
                 arg_was_set_sub(sm, "output"),
                 Some(app.output.format),
             );
-            let enrichment = seed_enrichment(&args.enrichment, sm, &app);
+            let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
             let exit_code = cli::run_quality(
                 args.sbom,
                 args.profile,
@@ -1888,7 +1923,7 @@ fn main() -> Result<()> {
 
         Commands::Watch(args) => {
             let sm = sub_matches;
-            let enrichment = seed_enrichment(&args.enrichment, sm, &app);
+            let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
 
             let config = WatchConfig {
                 watch_dirs: args.dirs,
@@ -2048,6 +2083,15 @@ fn main() -> Result<()> {
             Ok(())
         }
 
+        #[cfg(feature = "enrichment")]
+        Commands::Cache { action } => {
+            let exit_code = cli::run_cache(action, cli.quiet)?;
+            if exit_code != 0 {
+                std::process::exit(exit_code);
+            }
+            Ok(())
+        }
+
         Commands::LicenseCheck(args) => {
             let exit_code = cli::run_license_check(
                 &args.file,
@@ -2065,7 +2109,8 @@ fn main() -> Result<()> {
 
         #[cfg(feature = "enrichment")]
         Commands::Enrich(args) => {
-            let enrichment = args.enrichment.to_enrichment_config();
+            let mut enrichment = args.enrichment.to_enrichment_config();
+            enrichment.offline = offline || enrichment.offline;
 
             let exit_code =
                 cli::run_enrich(&args.file, args.output_file.as_ref(), enrichment, cli.quiet)?;

@@ -827,6 +827,10 @@ pub struct EnrichmentConfig {
     /// Primarily a test seam for pointing the EPSS enricher at a mock server.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub epss_url: Option<String>,
+    /// Offline mode: never make network calls. Enrichment is served purely
+    /// from cache (including TTL-expired entries, with a staleness warning).
+    #[serde(default)]
+    pub offline: bool,
 }
 
 impl Default for EnrichmentConfig {
@@ -847,6 +851,7 @@ impl Default for EnrichmentConfig {
             api_base: None,
             kev_url: None,
             epss_url: None,
+            offline: false,
         }
     }
 }
@@ -936,6 +941,13 @@ impl EnrichmentConfig {
     #[must_use]
     pub const fn with_staleness(mut self) -> Self {
         self.enable_staleness = true;
+        self
+    }
+
+    /// Enable offline mode (serve enrichment purely from cache).
+    #[must_use]
+    pub const fn with_offline(mut self) -> Self {
+        self.offline = true;
         self
     }
 }

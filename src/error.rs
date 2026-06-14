@@ -169,6 +169,9 @@ pub enum EnrichmentErrorKind {
 
     #[error("Provider unavailable: {0}")]
     ProviderUnavailable(String),
+
+    #[error("offline: not in cache ({0})")]
+    Offline(String),
 }
 
 // ============================================================================

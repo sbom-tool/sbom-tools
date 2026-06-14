@@ -98,6 +98,8 @@ pub enum EnrichmentError {
     Timeout,
     /// Component missing required identifiers
     MissingIdentifiers(String),
+    /// Offline mode: the requested resource was not in cache
+    Offline(String),
 }
 
 impl fmt::Display for EnrichmentError {
@@ -111,6 +113,7 @@ impl fmt::Display for EnrichmentError {
             Self::MissingIdentifiers(name) => {
                 write!(f, "Component '{name}' missing identifiers for query")
             }
+            Self::Offline(what) => write!(f, "offline: not in cache ({what})"),
         }
     }
 }

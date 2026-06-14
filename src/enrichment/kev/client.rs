@@ -118,6 +118,8 @@ impl KevClient {
     /// Fetch catalog from CISA API
     #[cfg(feature = "enrichment")]
     fn fetch_from_api(&self) -> Result<KevCatalog, EnrichmentError> {
+        crate::enrichment::source::offline_guard(&self.config.kev_url)
+            .map_err(|e| EnrichmentError::Offline(e.to_string()))?;
         let client = crate::enrichment::source::http_client(self.config.timeout)
             .map_err(|e| EnrichmentError::ApiError(e.to_string()))?;
 

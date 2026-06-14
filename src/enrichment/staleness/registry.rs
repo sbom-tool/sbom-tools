@@ -145,6 +145,8 @@ impl RegistryClient {
     fn query_npm(&self, name: &str) -> Result<Option<PackageMetadata>, EnrichmentError> {
         let url = format!("https://registry.npmjs.org/{name}");
 
+        crate::enrichment::source::offline_guard(&url)
+            .map_err(|e| EnrichmentError::Offline(e.to_string()))?;
         let client = crate::enrichment::source::http_client(self.config.timeout)
             .map_err(|e| EnrichmentError::ApiError(e.to_string()))?;
 
@@ -206,6 +208,8 @@ impl RegistryClient {
     fn query_pypi(&self, name: &str) -> Result<Option<PackageMetadata>, EnrichmentError> {
         let url = format!("https://pypi.org/pypi/{name}/json");
 
+        crate::enrichment::source::offline_guard(&url)
+            .map_err(|e| EnrichmentError::Offline(e.to_string()))?;
         let client = crate::enrichment::source::http_client(self.config.timeout)
             .map_err(|e| EnrichmentError::ApiError(e.to_string()))?;
 
@@ -284,6 +288,8 @@ impl RegistryClient {
     fn query_crates_io(&self, name: &str) -> Result<Option<PackageMetadata>, EnrichmentError> {
         let url = format!("https://crates.io/api/v1/crates/{name}");
 
+        crate::enrichment::source::offline_guard(&url)
+            .map_err(|e| EnrichmentError::Offline(e.to_string()))?;
         // The shared client already sends a CARGO_PKG_NAME/CARGO_PKG_VERSION
         // User-Agent, which satisfies the crates.io UA requirement.
         let client = crate::enrichment::source::http_client(self.config.timeout)

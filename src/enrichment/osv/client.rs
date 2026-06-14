@@ -58,8 +58,7 @@ impl OsvClient {
     /// Check if the OSV API is available.
     pub fn health_check(&self) -> Result<bool> {
         let url = format!("{}/v1/vulns/OSV-2020-1", self.config.api_base);
-        let response = get_with_retry(&self.client, &url, self.config.max_retries)
-            .map_err(|e| network_error("Health check request failed", &e))?;
+        let response = get_with_retry(&self.client, &url, self.config.max_retries)?;
         Ok(response.status().is_success() || response.status().as_u16() == 404)
     }
 
@@ -116,6 +115,7 @@ impl OsvClient {
         url: &str,
         request_body: &OsvBatchRequest,
     ) -> Result<OsvBatchResponse> {
+        crate::enrichment::source::offline_guard(url)?;
         let response = self
             .client
             .post(url)
@@ -150,8 +150,7 @@ impl OsvClient {
     ) -> Result<Option<super::response::OsvVulnerability>> {
         let url = format!("{}/v1/vulns/{}", self.config.api_base, vuln_id);
 
-        let response = get_with_retry(&self.client, &url, self.config.max_retries)
-            .map_err(|e| network_error("Failed to fetch vulnerability", &e))?;
+        let response = get_with_retry(&self.client, &url, self.config.max_retries)?;
 
         if response.status().as_u16() == 404 {
             return Ok(None);

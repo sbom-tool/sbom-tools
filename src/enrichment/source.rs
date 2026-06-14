@@ -21,7 +21,30 @@ use serde::de::DeserializeOwned;
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
+
+/// Process-global offline switch.
+///
+/// In air-gapped (CRA / FDA / defense) deployments the tool must serve
+/// enrichment data purely from cache and never attempt a network call. This is
+/// a process-wide flag rather than per-config because the HTTP choke point
+/// ([`http_client`]) and the cache ([`JsonCache`]) are reached through many
+/// independently-constructed source configs; threading a bool through every one
+/// would be invasive and easy to miss. It is set once, early, from the global
+/// `--offline` flag / `SBOM_TOOLS_OFFLINE` env.
+static OFFLINE: AtomicBool = AtomicBool::new(false);
+
+/// Enable or disable offline mode for the whole process.
+pub fn set_offline(offline: bool) {
+    OFFLINE.store(offline, Ordering::Relaxed);
+}
+
+/// Whether the process is running in offline mode.
+#[must_use]
+pub fn is_offline() -> bool {
+    OFFLINE.load(Ordering::Relaxed)
+}
 
 /// Schema version embedded in every cache envelope.
 ///
@@ -74,16 +97,26 @@ pub fn cache_dir() -> Option<PathBuf> {
     }
 }
 
+/// Root cache directory for all enrichment sources, i.e. `…/sbom-tools`.
+///
+/// This is the parent of every per-source namespace directory; the `cache`
+/// subcommand uses it to enumerate, size, export, and import the cache as a
+/// whole. Falls back to a `.cache`-relative path when no platform cache
+/// directory is available, matching [`namespaced_cache_dir`].
+#[must_use]
+pub fn root_cache_dir() -> PathBuf {
+    cache_dir()
+        .unwrap_or_else(|| PathBuf::from(".cache"))
+        .join("sbom-tools")
+}
+
 /// Cache directory for an enrichment source, e.g. `…/sbom-tools/osv`.
 ///
 /// Falls back to a `.cache`-relative path only when no platform cache
 /// directory is available, matching the previous per-source behavior.
 #[must_use]
 pub fn namespaced_cache_dir(namespace: &str) -> PathBuf {
-    cache_dir()
-        .unwrap_or_else(|| PathBuf::from(".cache"))
-        .join("sbom-tools")
-        .join(namespace)
+    root_cache_dir().join(namespace)
 }
 
 // ============================================================================
@@ -94,6 +127,23 @@ pub fn namespaced_cache_dir(namespace: &str) -> PathBuf {
 ///
 /// All sources share the same `CARGO_PKG_NAME/CARGO_PKG_VERSION` User-Agent so
 /// upstream registries see a single, identifiable client.
+/// Refuse a network operation when the process is in offline mode.
+///
+/// Building a [`reqwest`] client makes no network call, so [`http_client`] is
+/// not gated; the guard is applied at the request-dispatch layer
+/// ([`get_with_retry`] and each source's direct `.send()`) so that a warm cache
+/// is still served before any refusal. `what` describes the resource the caller
+/// was about to fetch, for a clear "offline: not in cache (<what>)" error.
+pub fn offline_guard(what: &str) -> Result<()> {
+    if is_offline() {
+        return Err(crate::error::SbomDiffError::enrichment(
+            "offline mode",
+            crate::error::EnrichmentErrorKind::Offline(what.to_string()),
+        ));
+    }
+    Ok(())
+}
+
 #[cfg(feature = "enrichment")]
 pub fn http_client(timeout: Duration) -> reqwest::Result<reqwest::blocking::Client> {
     reqwest::blocking::Client::builder()
@@ -148,13 +198,17 @@ fn parse_retry_after(headers: &reqwest::header::HeaderMap) -> Option<Duration> {
 /// `max_retries` times, honoring `Retry-After` on `429`. Non-retryable
 /// responses (including `4xx` other than `429`) are returned to the caller on
 /// the first attempt for status inspection.
+///
+/// In offline mode the request is refused up front with an
+/// [`EnrichmentErrorKind::Offline`](crate::error::EnrichmentErrorKind::Offline)
+/// error before any socket is opened.
 #[cfg(feature = "enrichment")]
 pub fn get_with_retry(
     client: &reqwest::blocking::Client,
     url: &str,
     max_retries: u8,
-) -> reqwest::Result<reqwest::blocking::Response> {
-    let mut last_err: Option<reqwest::Error> = None;
+) -> Result<reqwest::blocking::Response> {
+    offline_guard(url)?;
 
     for attempt in 0..=u32::from(max_retries) {
         if attempt > 0 {
@@ -180,16 +234,33 @@ pub fn get_with_retry(
             Err(e) => {
                 if attempt < u32::from(max_retries) {
                     std::thread::sleep(backoff_delay(attempt + 1, None));
-                    last_err = Some(e);
                     continue;
                 }
-                return Err(e);
+                return Err(network_error("request failed", &e));
             }
         }
     }
 
     // Unreachable in practice: the loop always returns on the final attempt.
-    Err(last_err.expect("retry loop returns on final attempt"))
+    Err(network_error_msg("retry loop returned no response"))
+}
+
+/// Wrap a [`reqwest::Error`] in our enrichment network-error variant.
+#[cfg(feature = "enrichment")]
+fn network_error(context: &str, err: &reqwest::Error) -> crate::error::SbomDiffError {
+    crate::error::SbomDiffError::enrichment(
+        context,
+        crate::error::EnrichmentErrorKind::NetworkError(err.to_string()),
+    )
+}
+
+/// Build a network-error variant from a bare message.
+#[cfg(feature = "enrichment")]
+fn network_error_msg(msg: &str) -> crate::error::SbomDiffError {
+    crate::error::SbomDiffError::enrichment(
+        "network",
+        crate::error::EnrichmentErrorKind::NetworkError(msg.to_string()),
+    )
 }
 
 // ============================================================================
@@ -307,24 +378,62 @@ where
     ///
     /// Returns `None` (evicting the file) when the entry is missing, older
     /// than the TTL, has a mismatched schema version, or fails to parse.
+    ///
+    /// One exception: in process-wide [offline](is_offline) mode a TTL-expired
+    /// entry is **served** (and *not* evicted) so an air-gapped run can fall
+    /// back to whatever data is on disk. A staleness warning is logged. The
+    /// online path is unchanged — expired entries are still evicted on read.
     #[must_use]
     pub fn get_named(&self, file_name: &str) -> Option<T> {
+        let (value, stale_by) = self.get_named_allow_stale(file_name)?;
+        if let Some(age) = stale_by {
+            tracing::warn!(
+                "serving stale cache entry {file_name}: {} day(s) past its TTL (offline mode)",
+                age.as_secs() / 86_400
+            );
+        }
+        Some(value)
+    }
+
+    /// Read a cached value, tolerating TTL expiry when offline.
+    ///
+    /// Returns the payload together with a staleness signal: `Some(age)` is the
+    /// amount the entry is *past* its TTL when it was served despite being
+    /// expired (only possible in offline mode), or `None` when the entry was
+    /// still fresh.
+    ///
+    /// Unlike [`get_named`](Self::get_named), this never logs; it is the
+    /// building block callers use when they want to surface the staleness
+    /// (e.g. as CRA evidence) rather than only warn.
+    #[must_use]
+    pub fn get_named_allow_stale(&self, file_name: &str) -> Option<(T, Option<Duration>)> {
         let path = self.path_for(file_name);
 
         let metadata = fs::metadata(&path).ok()?;
         let modified = metadata.modified().ok()?;
-        if modified.elapsed().ok()? > self.ttl {
-            let _ = fs::remove_file(&path);
-            return None;
+        let age = modified.elapsed().ok()?;
+        let mut stale_by = None;
+        if age > self.ttl {
+            // Online: an expired entry is a miss and is evicted on read (the
+            // E1 cache tests assert this). Offline: keep it and serve it so an
+            // air-gapped run has a stale-if-offline fallback.
+            if is_offline() {
+                stale_by = Some(age - self.ttl);
+            } else {
+                let _ = fs::remove_file(&path);
+                return None;
+            }
         }
 
         let data = fs::read_to_string(&path).ok()?;
         let envelope: CacheEnvelope<T> = serde_json::from_str(&data).ok()?;
         if envelope.schema_version != CACHE_SCHEMA_VERSION {
+            // A schema mismatch is a hard miss in every mode: the payload shape
+            // changed and must never be deserialized as the old one.
             let _ = fs::remove_file(&path);
             return None;
         }
-        Some(envelope.payload)
+        Some((envelope.payload, stale_by))
     }
 
     /// Atomically write a value under `file_name`.
