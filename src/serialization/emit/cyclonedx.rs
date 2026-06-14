@@ -348,7 +348,10 @@ fn emit_model_card(component: &Component, report: &mut FidelityReport) -> Option
             model_card.insert("modelParameters".to_string(), Value::Object(params));
         }
 
-        // considerations from typed limitations + energy.
+        // considerations from typed limitations + energy + the AI-readiness
+        // fields (fairness / ethics / use-cases). These mirror the exact spec
+        // field names + shapes the CycloneDX parser reads so an AI-BOM round-trips
+        // without regressing AI-005/007/009 scoring.
         let mut considerations = model_card
             .get("considerations")
             .and_then(Value::as_object)
@@ -368,8 +371,86 @@ fn emit_model_card(component: &Component, report: &mut FidelityReport) -> Option
                 }),
             );
         }
+        // considerations.fairnessAssessments[] — spec object shape
+        // { groupAtRisk, benefits, harms, mitigationStrategy } (camelCase, the
+        // parser's CdxFairnessObj). Only non-null fields are emitted.
+        if !ml.fairness.is_empty() {
+            let assessments: Vec<Value> = ml
+                .fairness
+                .iter()
+                .map(|f| {
+                    let mut o = Map::new();
+                    if let Some(group) = &f.group_at_risk {
+                        o.insert("groupAtRisk".to_string(), json!(group));
+                    }
+                    if let Some(benefits) = &f.benefits {
+                        o.insert("benefits".to_string(), json!(benefits));
+                    }
+                    if let Some(harms) = &f.harms {
+                        o.insert("harms".to_string(), json!(harms));
+                    }
+                    if let Some(mitigation) = &f.mitigation_strategy {
+                        o.insert("mitigationStrategy".to_string(), json!(mitigation));
+                    }
+                    Value::Object(o)
+                })
+                .collect();
+            considerations.insert("fairnessAssessments".to_string(), Value::Array(assessments));
+        }
+        // considerations.ethicalConsiderations[] — spec object shape
+        // { name, mitigationStrategy } (the parser's CdxEthicalObj).
+        if !ml.ethical_considerations.is_empty() {
+            let ethics: Vec<Value> = ml
+                .ethical_considerations
+                .iter()
+                .map(|e| {
+                    let mut o = Map::new();
+                    if let Some(name) = &e.name {
+                        o.insert("name".to_string(), json!(name));
+                    }
+                    if let Some(mitigation) = &e.mitigation_strategy {
+                        o.insert("mitigationStrategy".to_string(), json!(mitigation));
+                    }
+                    Value::Object(o)
+                })
+                .collect();
+            considerations.insert("ethicalConsiderations".to_string(), Value::Array(ethics));
+        }
+        // considerations.useCases — spec string array.
+        if !ml.use_cases.is_empty() {
+            considerations.insert("useCases".to_string(), json!(ml.use_cases));
+        }
         if !considerations.is_empty() {
             model_card.insert("considerations".to_string(), Value::Object(considerations));
+        }
+
+        // modelCard.quantitativeAnalysis.performanceMetrics[] — spec object shape
+        // { type, value, slice } (the parser's CdxPerformanceMetric).
+        if !ml.performance_metrics.is_empty() {
+            let metrics: Vec<Value> = ml
+                .performance_metrics
+                .iter()
+                .map(|m| {
+                    let mut o = Map::new();
+                    if let Some(metric_type) = &m.metric_type {
+                        o.insert("type".to_string(), json!(metric_type));
+                    }
+                    if let Some(value) = &m.value {
+                        o.insert("value".to_string(), json!(value));
+                    }
+                    if let Some(slice) = &m.slice {
+                        o.insert("slice".to_string(), json!(slice));
+                    }
+                    Value::Object(o)
+                })
+                .collect();
+            let mut quant = model_card
+                .get("quantitativeAnalysis")
+                .and_then(Value::as_object)
+                .cloned()
+                .unwrap_or_default();
+            quant.insert("performanceMetrics".to_string(), Value::Array(metrics));
+            model_card.insert("quantitativeAnalysis".to_string(), Value::Object(quant));
         }
         report.synthesized("modelCard from ml_model");
     }

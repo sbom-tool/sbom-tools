@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 use sbom_tools::parsers::parse_sbom_str;
+use sbom_tools::quality::{QualityScorer, ScoringProfile};
 use sbom_tools::serialization::emit::{self, EmitTarget, preserve_source_json};
 
 const FIXTURES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
@@ -268,6 +269,65 @@ fn ai_bom_convert_preserves_ml_bridge() {
 
     // Pure CycloneDX→CycloneDX of a typed model is not lossy.
     assert!(!report.is_lossy(), "report:\n{}", report.render());
+}
+
+/// Score `sbom_json` with the AiReadiness profile and return
+/// (overall_score, ids of the AI checks that passed).
+fn ai_readiness(sbom_json: &str) -> (f32, Vec<String>) {
+    let sbom = parse_sbom_str(sbom_json).expect("AI-BOM must parse");
+    let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
+    let metrics = report
+        .ai_readiness_metrics
+        .expect("AiReadiness profile yields ai_readiness_metrics");
+    assert!(
+        !metrics.is_not_applicable(),
+        "fixture must contain ML components"
+    );
+    let passed: Vec<String> = metrics
+        .checks
+        .iter()
+        .filter(|c| c.passed)
+        .map(|c| c.id.clone())
+        .collect();
+    (report.overall_score, passed)
+}
+
+#[test]
+fn ai_bom_convert_preserves_typed_ai_readiness_score() {
+    // Regression: the CycloneDX emitter previously dropped the typed AI fields
+    // (fairness / ethics / use-cases / performance metrics), so converting a
+    // fully-documented ML-BOM through `convert --to cyclonedx` regressed the
+    // AI-readiness score by ~37pt and flipped AI-004/005/007/009 pass→fail.
+    // No --preserve here: the typed path alone must round-trip.
+    let raw = read_fixture("cyclonedx/aibom-complete.cdx.json");
+    let sbom = parse_sbom_str(&raw).unwrap();
+
+    let (before, passed_before) = ai_readiness(&raw);
+
+    // A fully-documented model must already pass the transparency checks.
+    for id in ["AI-004", "AI-005", "AI-007", "AI-009"] {
+        assert!(
+            passed_before.contains(&id.to_string()),
+            "fixture should pass {id} before conversion: {passed_before:?}"
+        );
+    }
+
+    let (emitted, _report) = emit::emit(&sbom, EmitTarget::CycloneDx).unwrap();
+    let (after, passed_after) = ai_readiness(&emitted);
+
+    // The four typed-field checks must survive the round-trip.
+    for id in ["AI-004", "AI-005", "AI-007", "AI-009"] {
+        assert!(
+            passed_after.contains(&id.to_string()),
+            "{id} must still pass after convert→cyclonedx: {passed_after:?}"
+        );
+    }
+
+    // The overall score must not regress (allow ≤2pt float/normalization noise).
+    assert!(
+        after >= before - 2.0,
+        "AI-readiness regressed on round-trip: before={before:.1} after={after:.1}"
+    );
 }
 
 #[test]

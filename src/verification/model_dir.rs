@@ -103,9 +103,16 @@ const fn is_verifiable(alg: &HashAlgorithm) -> bool {
 /// files found under `model_dir`.
 #[must_use]
 pub fn verify_model_dir(sbom: &NormalizedSbom, model_dir: &Path) -> ModelVerifyReport {
+    // Canonicalize the model-dir root once so symlink-escape detection (below)
+    // compares against a fully-resolved root. If the root itself can't be
+    // canonicalized (e.g. it does not exist), fall back to the path as given;
+    // the walk will simply find nothing.
+    let root = std::fs::canonicalize(model_dir).unwrap_or_else(|_| model_dir.to_path_buf());
+
     // Index files by basename (for direct-filename matches) once, so a large
-    // model directory is walked a single time.
-    let index = FileIndex::build(model_dir);
+    // model directory is walked a single time. Paths that resolve outside the
+    // root (via symlinks) are excluded by the index.
+    let index = FileIndex::build(&root);
 
     let mut report = ModelVerifyReport {
         model_dir: model_dir.display().to_string(),
@@ -123,7 +130,7 @@ pub fn verify_model_dir(sbom: &NormalizedSbom, model_dir: &Path) -> ModelVerifyR
         }
         report.total_models += 1;
 
-        let record = verify_component(component, model_dir, &index);
+        let record = verify_component(component, &root, &index);
         match record.result {
             ModelVerifyResult::Verified => report.verified_count += 1,
             ModelVerifyResult::Mismatch => report.mismatch_count += 1,
@@ -268,30 +275,61 @@ fn filename_candidates(component: &Component) -> Vec<String> {
 /// match both the sha256-named blob and a plain `model.safetensors` regardless
 /// of nesting. When several files share a basename the first seen wins; that is
 /// acceptable because hash verification still rejects a wrong file.
+///
+/// Indexed paths are stored in canonicalized form and are guaranteed to resolve
+/// *inside* the model-dir root: a symlink (or a `..` segment) that escapes the
+/// root is skipped, so `verify --model-dir` can never be tricked into reading a
+/// file outside the tree it was pointed at. HuggingFace's intra-tree
+/// `snapshots → blobs` symlinks still resolve fine because they stay under root.
 struct FileIndex {
     by_name: HashMap<String, PathBuf>,
 }
 
 impl FileIndex {
+    /// Build the index from a *canonicalized* `root`. Every candidate path is
+    /// itself canonicalized (which follows symlinks) and only retained when the
+    /// resolved path is still within `root`; this is the symlink-escape bound.
     fn build(root: &Path) -> Self {
         let mut by_name = HashMap::new();
         let mut stack = vec![root.to_path_buf()];
+        // Directories are canonical here, so a `visited` set makes the walk
+        // robust against symlinked-directory cycles within the tree.
+        let mut visited: std::collections::HashSet<PathBuf> = std::collections::HashSet::new();
 
         while let Some(dir) = stack.pop() {
+            if !visited.insert(dir.clone()) {
+                continue;
+            }
             let Ok(entries) = std::fs::read_dir(&dir) else {
                 continue;
             };
             for entry in entries.flatten() {
                 let path = entry.path();
-                // Resolve symlinks (HF snapshots are symlinks into blobs/).
-                let meta = match std::fs::metadata(&path) {
+                // Resolve the entry fully (follows symlinks, normalizes `..`).
+                // A path that fails to resolve (dangling symlink) is skipped.
+                let Ok(resolved) = std::fs::canonicalize(&path) else {
+                    continue;
+                };
+                // Reject anything that escapes the model-dir root. Without this a
+                // crafted `model.safetensors -> /etc/passwd` (or `../secret`)
+                // symlink would let an attacker have the verifier read an
+                // arbitrary file outside the directory under audit.
+                if !resolved.starts_with(root) {
+                    continue;
+                }
+                let meta = match std::fs::metadata(&resolved) {
                     Ok(m) => m,
                     Err(_) => continue,
                 };
                 if meta.is_dir() {
-                    stack.push(path);
+                    stack.push(resolved);
                 } else if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                    by_name.entry(name.to_lowercase()).or_insert(path.clone());
+                    // Key on the on-disk basename (e.g. the human-readable
+                    // snapshot name), but store the bounded, resolved path so the
+                    // subsequent hash read targets the in-tree bytes.
+                    by_name
+                        .entry(name.to_lowercase())
+                        .or_insert_with(|| resolved.clone());
                 }
             }
         }
@@ -409,6 +447,70 @@ mod tests {
         let report = verify_model_dir(&sbom, dir.path());
         assert_eq!(report.no_hash_count, 1);
         assert_eq!(report.components[0].result, ModelVerifyResult::NoHash);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn does_not_follow_symlink_escaping_model_dir() {
+        use std::os::unix::fs::symlink;
+
+        // The real weight bytes live OUTSIDE the model directory.
+        let outside = tempfile::tempdir().unwrap();
+        let weights = b"weights that live outside the model dir";
+        let hex = sha256_hex(weights);
+        let secret = outside.path().join("model.safetensors");
+        fs::write(&secret, weights).unwrap();
+
+        // Inside the model dir, a symlink with a plausible weight name points at
+        // the out-of-tree file. A naive verifier would follow it and report
+        // VERIFIED, leaking the result of reading an arbitrary path.
+        let model_dir = tempfile::tempdir().unwrap();
+        symlink(&secret, model_dir.path().join("model.safetensors")).unwrap();
+
+        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+        sbom.add_component(model_component("escape", &hex));
+
+        let report = verify_model_dir(&sbom, model_dir.path());
+        assert_eq!(report.total_models, 1);
+        assert_eq!(
+            report.verified_count, 0,
+            "a symlink escaping the model dir must not be followed/verified"
+        );
+        assert_eq!(
+            report.components[0].result,
+            ModelVerifyResult::Missing,
+            "out-of-tree symlink target is treated as no in-tree file found"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn follows_intra_tree_symlink_like_hf_cache() {
+        use std::os::unix::fs::symlink;
+
+        // HuggingFace layout: blobs/<sha256> with a snapshots/ symlink that stays
+        // WITHIN the model dir. This must still verify (the escape guard only
+        // rejects targets that leave the root).
+        let dir = tempfile::tempdir().unwrap();
+        let weights = b"in-tree hf blob bytes";
+        let hex = sha256_hex(weights);
+
+        let blobs = dir.path().join("blobs");
+        let snapshots = dir.path().join("snapshots").join("main");
+        fs::create_dir_all(&blobs).unwrap();
+        fs::create_dir_all(&snapshots).unwrap();
+        let blob = blobs.join(&hex);
+        fs::write(&blob, weights).unwrap();
+        symlink(&blob, snapshots.join("model.safetensors")).unwrap();
+
+        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+        sbom.add_component(model_component("bert", &hex));
+
+        let report = verify_model_dir(&sbom, dir.path());
+        assert_eq!(
+            report.verified_count, 1,
+            "intra-tree HF snapshot→blob symlink must still verify"
+        );
     }
 
     #[test]
