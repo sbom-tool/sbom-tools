@@ -280,22 +280,42 @@ impl ComponentIndex {
         let mut candidates: Vec<Arc<CanonicalId>> = Vec::new();
         let mut seen: HashSet<Arc<CanonicalId>> = HashSet::new();
 
-        // Priority 1: Same ecosystem candidates
+        // Pre-compute the source trigram set once for ranking within buckets.
+        let source_trigrams: HashSet<&str> =
+            source_entry.trigrams.iter().map(String::as_str).collect();
+
+        // Priority 1: Same ecosystem candidates.
+        //
+        // Rank by trigram overlap with the source *before* the global
+        // truncate(max_candidates), so the true match survives when an
+        // ecosystem bucket is larger than max_candidates (insertion order would
+        // otherwise cut the real match purely by where it landed in the SBOM).
         if let Some(ref eco) = source_entry.ecosystem
             && let Some(ids) = self.by_ecosystem.get(eco)
         {
+            let mut ranked: Vec<(usize, &Arc<CanonicalId>)> = Vec::new();
             for id in ids {
-                if id.as_ref() != source_id && !seen.contains(id) {
-                    // Apply length filter
-                    if let Some(entry) = self.entries.get(id.as_ref()) {
-                        let len_diff = (source_entry.name_length as i32 - entry.name_length as i32)
-                            .unsigned_abs() as usize;
-                        if len_diff <= max_length_diff {
-                            candidates.push(Arc::clone(id));
-                            seen.insert(Arc::clone(id));
-                        }
+                if id.as_ref() != source_id
+                    && !seen.contains(id)
+                    && let Some(entry) = self.entries.get(id.as_ref())
+                {
+                    let len_diff = (source_entry.name_length as i32 - entry.name_length as i32)
+                        .unsigned_abs() as usize;
+                    if len_diff <= max_length_diff {
+                        let overlap = entry
+                            .trigrams
+                            .iter()
+                            .filter(|t| source_trigrams.contains(t.as_str()))
+                            .count();
+                        ranked.push((overlap, id));
                     }
                 }
+            }
+            // Higher overlap first; ties broken by ID for deterministic output.
+            ranked.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.value().cmp(b.1.value())));
+            for (_, id) in ranked {
+                candidates.push(Arc::clone(id));
+                seen.insert(Arc::clone(id));
             }
         }
 

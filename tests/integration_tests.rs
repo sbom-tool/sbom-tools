@@ -2691,3 +2691,139 @@ mod streaming_tests {
         assert_eq!(sbom.component_count(), 4);
     }
 }
+
+// ============================================================================
+// Sparse Assignment Matching Tests
+// ============================================================================
+
+mod sparse_assignment_tests {
+    use super::*;
+    use sbom_tools::model::{Component, DocumentMetadata, Ecosystem, NormalizedSbom};
+    use std::time::Instant;
+
+    /// Build a component whose canonical ID comes solely from its (unstable)
+    /// format id, so two SBOMs using different format ids share *no* canonical
+    /// IDs even when names/versions match — forcing the fuzzy assignment path.
+    fn comp(format_id: &str, name: &str, version: &str, eco: Ecosystem) -> Component {
+        let mut c = Component::new(name.to_string(), format_id.to_string())
+            .with_version(version.to_string());
+        c.ecosystem = Some(eco);
+        c.calculate_content_hash();
+        c
+    }
+
+    #[test]
+    fn disjoint_canonical_ids_match_fast_and_sensibly() {
+        // Two medium SBOMs describing the same packages but with regenerated
+        // bom-refs (different format ids → disjoint canonical IDs). Every
+        // component therefore enters fuzzy assignment.
+        let names: Vec<(String, &str)> = (0..400)
+            .map(|i| {
+                (
+                    format!("lib-{i:04}"),
+                    if i % 2 == 0 { "npm" } else { "pypi" },
+                )
+            })
+            .collect();
+
+        let mut old = NormalizedSbom::new(DocumentMetadata::default());
+        let mut new = NormalizedSbom::new(DocumentMetadata::default());
+        for (i, (name, eco_str)) in names.iter().enumerate() {
+            let eco = Ecosystem::from_purl_type(eco_str);
+            old.add_component(comp(&format!("old-ref-{i}"), name, "1.0.0", eco.clone()));
+            // Same name + ecosystem, bumped version, brand-new ref.
+            new.add_component(comp(&format!("new-ref-{i}"), name, "2.0.0", eco));
+        }
+
+        // No canonical IDs are shared between the two documents.
+        let shared = old
+            .components
+            .keys()
+            .filter(|id| new.components.contains_key(*id))
+            .count();
+        assert_eq!(shared, 0, "test setup must have disjoint canonical IDs");
+
+        let engine = DiffEngine::new();
+        let start = Instant::now();
+        let result = engine.diff(&old, &new).expect("diff should succeed");
+        let elapsed = start.elapsed();
+
+        // The dense-matrix path would effectively hang here; the sparse solver
+        // must finish near-instantly. Generous bound to stay CI-stable.
+        assert!(
+            elapsed.as_secs() < 10,
+            "fuzzy assignment took too long: {elapsed:?}"
+        );
+
+        // Same-name components should pair up as modifications, not be reported
+        // as a wholesale add/remove churn.
+        assert!(
+            result.components.modified.len() >= 380,
+            "expected nearly all 400 components matched as modified, got {}",
+            result.components.modified.len()
+        );
+        assert!(
+            result.components.added.len() <= 20,
+            "expected few spurious additions, got {}",
+            result.components.added.len()
+        );
+        assert!(
+            result.components.removed.len() <= 20,
+            "expected few spurious removals, got {}",
+            result.components.removed.len()
+        );
+
+        // Spot-check a specific pair was matched (lib-0100 v1 → v2).
+        let matched = result
+            .components
+            .modified
+            .iter()
+            .any(|change| change.name == "lib-0100");
+        assert!(matched, "lib-0100 should be matched across versions");
+    }
+
+    #[test]
+    fn trigram_ranking_surfaces_true_match_in_oversized_bucket() {
+        // One ecosystem bucket far larger than max_candidates (100). The true
+        // match for the source shares all trigrams with it; the decoys share
+        // none. Without trigram ranking of Priority-1 candidates, the true
+        // match could be cut by truncate(max_candidates) purely by insertion
+        // order — here it is deliberately placed last.
+        let mut old = NormalizedSbom::new(DocumentMetadata::default());
+        old.add_component(comp("old-target", "libsignal", "1.0.0", Ecosystem::Npm));
+
+        let mut new = NormalizedSbom::new(DocumentMetadata::default());
+        // 250 decoys with names that share no trigrams with "libsignal".
+        for i in 0..250 {
+            new.add_component(comp(
+                &format!("new-decoy-{i}"),
+                &format!("zzqx{i:04}wkpv"),
+                "1.0.0",
+                Ecosystem::Npm,
+            ));
+        }
+        // The real match, inserted last so insertion-order truncation would drop it.
+        new.add_component(comp("new-target", "libsignal", "2.0.0", Ecosystem::Npm));
+
+        let engine = DiffEngine::new();
+        let result = engine.diff(&old, &new).expect("diff should succeed");
+
+        let matched = result
+            .components
+            .modified
+            .iter()
+            .any(|change| change.name == "libsignal");
+        assert!(
+            matched,
+            "trigram ranking should surface libsignal despite the oversized bucket; \
+             modified={:?}, removed={}",
+            result
+                .components
+                .modified
+                .iter()
+                .map(|c| c.name.as_str())
+                .collect::<Vec<_>>(),
+            result.components.removed.len()
+        );
+    }
+}

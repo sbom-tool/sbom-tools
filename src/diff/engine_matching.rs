@@ -111,8 +111,8 @@ pub fn match_components(
         )
     };
 
-    // Phase 4: Optimal assignment using Hungarian algorithm or fallback
-    let assignment = optimal_assignment(&candidates, &unmatched_old, large_sbom_config);
+    // Phase 4: Optimal assignment over the sparse candidate edge list
+    let assignment = sparse_assignment(&candidates);
 
     // Apply assignment results
     for (old_id, new_id, score) in assignment {
@@ -409,206 +409,333 @@ fn find_cross_ecosystem_candidates(
     results
 }
 
-/// Perform optimal assignment using Hungarian algorithm or fallback strategies.
+/// Cost matrix scaling factor: float scores in `[0, 1]` are mapped to integer
+/// costs so the solver can use exact comparisons (no float epsilon issues).
+const ASSIGNMENT_COST_SCALE: i64 = 1_000_000;
+
+/// Sparse assignment over the candidate edge list via successive shortest
+/// augmenting paths (Dijkstra with reduced costs / dual potentials).
 ///
-/// For small to medium problems, uses the Hungarian algorithm (Kuhn-Munkres)
-/// for globally optimal bipartite matching. For large problems, falls back
-/// to greedy with 2-opt swaps for performance.
-fn optimal_assignment(
-    candidates: &[(CanonicalId, CanonicalId, f64)],
-    _unmatched_old: &[&CanonicalId],
-    config: &LargeSbomConfig,
-) -> Vec<(CanonicalId, CanonicalId, f64)> {
-    if candidates.is_empty() {
-        return Vec::new();
-    }
-
-    // Build unique sets of old and new IDs from candidates, in stable order
-    // so solver tie-breaking is reproducible across runs
-    let old_ids: Vec<CanonicalId> = {
-        let set: HashSet<_> = candidates.iter().map(|(o, _, _)| o.clone()).collect();
-        let mut ids: Vec<_> = set.into_iter().collect();
-        ids.sort_by(|a, b| a.value().cmp(b.value()));
-        ids
-    };
-
-    let new_ids: Vec<CanonicalId> = {
-        let set: HashSet<_> = candidates.iter().map(|(_, n, _)| n.clone()).collect();
-        let mut ids: Vec<_> = set.into_iter().collect();
-        ids.sort_by(|a, b| a.value().cmp(b.value()));
-        ids
-    };
-
-    let n = old_ids.len().max(new_ids.len());
-
-    // Choose assignment method based on problem size
-    if n <= config.hungarian_threshold {
-        hungarian_assignment(candidates, &old_ids, &new_ids)
-    } else if config.enable_swap_optimization {
-        greedy_with_swaps(candidates, config.max_swap_iterations)
-    } else {
-        greedy_assignment(candidates)
-    }
-}
-
-/// Hungarian algorithm (Kuhn-Munkres) for optimal bipartite matching.
+/// Solves maximum-weight bipartite matching without materializing a dense n×n
+/// matrix: the graph is stored as per-source adjacency lists of the actual
+/// candidate edges, so both memory and time scale with the number of candidate
+/// edges (≤~100 per source), not with the product of the two SBOM sizes.
 ///
-/// Returns the globally optimal assignment that maximizes total score.
-fn hungarian_assignment(
+/// Each real edge has non-negative integer cost `SCALE − score·SCALE` (lower =
+/// better match), and every source additionally gets a dummy "leave unmatched"
+/// object of cost `SCALE` (= score 0). The result is therefore a min-cost
+/// **perfect** matching over non-negative costs — a setting where Dijkstra with
+/// potentials is exact — and a source prefers a real object precisely when its
+/// score is positive, recovering max-weight behavior. Re-routing existing
+/// matches along augmenting paths is what makes this globally optimal rather
+/// than greedy.
+///
+/// Determinism: old/new IDs are indexed in sorted value order (preserving
+/// #218's ordering invariant), adjacency lists are object-index sorted, and
+/// path-search ties break by smaller object index, so repeated runs over
+/// identical input produce identical output.
+fn sparse_assignment(
     candidates: &[(CanonicalId, CanonicalId, f64)],
-    old_ids: &[CanonicalId],
-    new_ids: &[CanonicalId],
 ) -> Vec<(CanonicalId, CanonicalId, f64)> {
-    use pathfinding::kuhn_munkres::kuhn_munkres_min;
-    use pathfinding::matrix::Matrix;
+    // Stable, sorted index spaces for old and new IDs so tie-breaking is
+    // reproducible across runs (keeps #218's determinism guarantee).
+    let old_ids = sorted_unique_ids(candidates.iter().map(|(o, _, _)| o));
+    let new_ids = sorted_unique_ids(candidates.iter().map(|(_, n, _)| n));
 
-    if old_ids.is_empty() || new_ids.is_empty() {
-        return Vec::new();
-    }
-
-    // Build index maps
     let old_idx: HashMap<&CanonicalId, usize> =
         old_ids.iter().enumerate().map(|(i, id)| (id, i)).collect();
     let new_idx: HashMap<&CanonicalId, usize> =
         new_ids.iter().enumerate().map(|(i, id)| (id, i)).collect();
 
-    // Build score matrix (we need to track actual scores separately)
-    let mut scores: HashMap<(usize, usize), f64> = HashMap::new();
-    for (old_id, new_id, score) in candidates {
-        if let (Some(&oi), Some(&ni)) = (old_idx.get(old_id), new_idx.get(new_id)) {
-            // Keep the best score if there are duplicates
-            let entry = scores.entry((oi, ni)).or_insert(0.0);
-            if *score > *entry {
-                *entry = *score;
+    let num_old = old_ids.len();
+    let num_real = new_ids.len();
+    // One dummy object per source (indices num_real..num_real+num_old) lets a
+    // source stay unmatched at cost SCALE without breaking the perfect-matching
+    // formulation. Dummy `num_real + i` is reachable only from source `i`.
+    let num_obj = num_real + num_old;
+
+    // Per-source adjacency: (object index, non-negative integer cost). Duplicate
+    // (old, new) edges collapse to the lowest cost (= highest score). Edges are
+    // object-index sorted so the search is deterministic regardless of HashMap
+    // iteration order.
+    let mut adjacency: Vec<Vec<(usize, i64)>> = vec![Vec::new(); num_old];
+    {
+        let mut edge_best: HashMap<(usize, usize), i64> = HashMap::new();
+        for (old_id, new_id, score) in candidates {
+            if let (Some(&oi), Some(&ni)) = (old_idx.get(old_id), new_idx.get(new_id)) {
+                let clamped = score.clamp(0.0, 1.0);
+                let cost = ASSIGNMENT_COST_SCALE - (clamped * ASSIGNMENT_COST_SCALE as f64) as i64;
+                let entry = edge_best.entry((oi, ni)).or_insert(i64::MAX);
+                if cost < *entry {
+                    *entry = cost;
+                }
             }
         }
+        for ((oi, ni), cost) in edge_best {
+            adjacency[oi].push((ni, cost));
+        }
+        for (src, edges) in adjacency.iter_mut().enumerate() {
+            // Dummy object for this source: cost SCALE == score 0.
+            edges.push((num_real + src, ASSIGNMENT_COST_SCALE));
+            edges.sort_by_key(|&(obj, _)| obj);
+        }
     }
 
-    // Create cost matrix for Hungarian algorithm
-    // Scale to i64 and negate for minimization (we want max score)
-    let n = old_ids.len().max(new_ids.len());
-    let scale = 1_000_000i64;
+    // Matching state: object -> source, source -> object.
+    let mut object_owner: Vec<Option<usize>> = vec![None; num_obj];
+    let mut source_obj: Vec<Option<usize>> = vec![None; num_old];
+    // Dual potentials for reduced-cost Dijkstra (keeps reduced edge costs ≥ 0).
+    let mut potential: Vec<i64> = vec![0; num_obj];
 
-    let weights: Vec<Vec<i64>> = (0..n)
-        .map(|i| {
-            (0..n)
-                .map(|j| {
-                    if i < old_ids.len() && j < new_ids.len() {
-                        // Negate score for minimization, use large value for no edge
-                        let score = scores.get(&(i, j)).copied().unwrap_or(0.0);
-                        if score > 0.0 {
-                            -((score * scale as f64) as i64)
-                        } else {
-                            scale // Large cost for no edge
+    // Per-augmentation scratch reused across iterations. `touched` records which
+    // objects had their dist set this round, so reset, the settle scan, and the
+    // potential update all run over only the reachable objects — keeping cost
+    // proportional to the candidate edges, not to num_obj.
+    let mut dist: Vec<i64> = vec![i64::MAX; num_obj];
+    let mut src_for_obj: Vec<Option<usize>> = vec![None; num_obj];
+    let mut visited: Vec<bool> = vec![false; num_obj];
+    let mut touched: Vec<usize> = Vec::new();
+
+    // Augment one source at a time, in sorted order, via the shortest
+    // alternating path to a free object. Every source can always reach its own
+    // free dummy, so each augmentation succeeds.
+    for start in 0..num_old {
+        for &obj in &touched {
+            dist[obj] = i64::MAX;
+            src_for_obj[obj] = None;
+            visited[obj] = false;
+        }
+        touched.clear();
+
+        // Seed: relax the free start source's own edges.
+        for &(obj, cost) in &adjacency[start] {
+            let reduced = cost - potential[obj];
+            if reduced < dist[obj] {
+                if dist[obj] == i64::MAX {
+                    touched.push(obj);
+                }
+                dist[obj] = reduced;
+                src_for_obj[obj] = Some(start);
+            }
+        }
+
+        let mut found_obj: Option<usize> = None;
+
+        loop {
+            // Settle the unvisited touched object with minimum distance (ties:
+            // lowest index, which keeps the search deterministic).
+            let mut best_obj = None;
+            let mut best_dist = i64::MAX;
+            for &obj in &touched {
+                if !visited[obj] && dist[obj] < best_dist {
+                    best_dist = dist[obj];
+                    best_obj = Some(obj);
+                }
+            }
+
+            let Some(obj) = best_obj else { break };
+            visited[obj] = true;
+
+            match object_owner[obj] {
+                None => {
+                    // Free object reached: this is the shortest augmenting path.
+                    found_obj = Some(obj);
+                    break;
+                }
+                Some(owner) => {
+                    // Object is taken. Extend the path through its owner: the
+                    // owner gives up `obj` (subtract that edge's reduced cost)
+                    // and bids on each of its other objects.
+                    let owner_obj_reduced = adjacency[owner]
+                        .iter()
+                        .find(|(o, _)| *o == obj)
+                        .map_or(0, |&(_, c)| c - potential[obj]);
+                    for &(obj2, cost) in &adjacency[owner] {
+                        if visited[obj2] {
+                            continue;
                         }
-                    } else {
-                        0 // Padding for square matrix
+                        let reduced = cost - potential[obj2];
+                        let nd = dist[obj] - owner_obj_reduced + reduced;
+                        if nd < dist[obj2] {
+                            if dist[obj2] == i64::MAX {
+                                touched.push(obj2);
+                            }
+                            dist[obj2] = nd;
+                            src_for_obj[obj2] = Some(owner);
+                        }
                     }
-                })
-                .collect()
-        })
-        .collect();
-
-    let matrix = Matrix::from_rows(weights).expect("Matrix creation failed");
-
-    // Run Hungarian algorithm
-    let (_, assignment) = kuhn_munkres_min(&matrix);
-
-    // Convert assignment back to result
-    let mut result = Vec::new();
-    for (old_i, new_i) in assignment.into_iter().enumerate() {
-        if old_i < old_ids.len()
-            && new_i < new_ids.len()
-            && let Some(&score) = scores.get(&(old_i, new_i))
-            && score > 0.0
-        {
-            result.push((old_ids[old_i].clone(), new_ids[new_i].clone(), score));
+                }
+            }
         }
-    }
 
-    result
-}
-
-/// Simple greedy assignment (sort by score, assign greedily).
-fn greedy_assignment(
-    candidates: &[(CanonicalId, CanonicalId, f64)],
-) -> Vec<(CanonicalId, CanonicalId, f64)> {
-    use std::cmp::Ordering;
-
-    let mut sorted: Vec<_> = candidates.to_vec();
-    // Break score ties by ID so the greedy result is stable across runs
-    sorted.sort_by(|a, b| {
-        b.2.partial_cmp(&a.2)
-            .unwrap_or(Ordering::Equal)
-            .then_with(|| a.0.value().cmp(b.0.value()))
-            .then_with(|| a.1.value().cmp(b.1.value()))
-    });
-
-    let mut result = Vec::new();
-    let mut used_old: HashSet<CanonicalId> = HashSet::new();
-    let mut used_new: HashSet<CanonicalId> = HashSet::new();
-
-    for (old_id, new_id, score) in sorted {
-        if !used_old.contains(&old_id) && !used_new.contains(&new_id) {
-            used_old.insert(old_id.clone());
-            used_new.insert(new_id.clone());
-            result.push((old_id, new_id, score));
+        // Shift potentials by the settled distances so reduced costs stay
+        // non-negative for the next augmentation.
+        for &obj in &touched {
+            if visited[obj] {
+                potential[obj] += dist[obj];
+            }
         }
-    }
 
-    result
-}
-
-/// Greedy assignment with 2-opt swap optimization.
-///
-/// Starts with greedy assignment, then iteratively swaps pairs that
-/// would improve total score.
-fn greedy_with_swaps(
-    candidates: &[(CanonicalId, CanonicalId, f64)],
-    max_iterations: usize,
-) -> Vec<(CanonicalId, CanonicalId, f64)> {
-    // Start with greedy assignment
-    let mut result = greedy_assignment(candidates);
-
-    if result.len() < 2 {
-        return result;
-    }
-
-    // Build lookup for quick score access
-    let score_lookup: HashMap<(&CanonicalId, &CanonicalId), f64> =
-        candidates.iter().map(|(o, n, s)| ((o, n), *s)).collect();
-
-    // 2-opt: Try swapping pairs to improve total score
-    let mut improved = true;
-    let mut iterations = 0;
-
-    while improved && iterations < max_iterations {
-        improved = false;
-        iterations += 1;
-
-        for i in 0..result.len() {
-            for j in (i + 1)..result.len() {
-                // Clone values to avoid borrow issues
-                let (old_i, new_i, score_i) = result[i].clone();
-                let (old_j, new_j, score_j) = result[j].clone();
-
-                // Current total score for these two pairs
-                let current_score = score_i + score_j;
-
-                // Score if we swap new assignments
-                let swapped_score_i = score_lookup.get(&(&old_i, &new_j)).copied().unwrap_or(0.0);
-                let swapped_score_j = score_lookup.get(&(&old_j, &new_i)).copied().unwrap_or(0.0);
-                let swapped_total = swapped_score_i + swapped_score_j;
-
-                // If swap improves score, apply it
-                if swapped_total > current_score && swapped_score_i > 0.0 && swapped_score_j > 0.0 {
-                    result[i] = (old_i, new_j, swapped_score_i);
-                    result[j] = (old_j, new_i, swapped_score_j);
-                    improved = true;
+        // Augment: walk the alternating path back to `start`, flipping matches.
+        if let Some(mut obj) = found_obj {
+            loop {
+                let src = src_for_obj[obj].expect("path object has a source");
+                let prev_obj = source_obj[src];
+                object_owner[obj] = Some(src);
+                source_obj[src] = Some(obj);
+                match prev_obj {
+                    Some(p) => obj = p,
+                    None => break,
                 }
             }
         }
     }
 
+    // Cost lookup for materializing the final scores (real edges only).
+    let edge_cost: HashMap<(usize, usize), i64> = adjacency
+        .iter()
+        .enumerate()
+        .flat_map(|(src, edges)| {
+            edges
+                .iter()
+                .filter(move |(obj, _)| *obj < num_real)
+                .map(move |&(obj, cost)| ((src, obj), cost))
+        })
+        .collect();
+
+    let mut result = Vec::new();
+    for (src, obj) in source_obj.iter().enumerate() {
+        if let Some(obj) = obj
+            && *obj < num_real
+            && let Some(&cost) = edge_cost.get(&(src, *obj))
+        {
+            let score = (ASSIGNMENT_COST_SCALE - cost) as f64 / ASSIGNMENT_COST_SCALE as f64;
+            if score > 0.0 {
+                result.push((old_ids[src].clone(), new_ids[*obj].clone(), score));
+            }
+        }
+    }
     result
+}
+
+/// Collect a sorted, de-duplicated list of IDs in value order.
+fn sorted_unique_ids<'a, I>(ids: I) -> Vec<CanonicalId>
+where
+    I: Iterator<Item = &'a CanonicalId>,
+{
+    let set: HashSet<&CanonicalId> = ids.collect();
+    let mut ids: Vec<CanonicalId> = set.into_iter().cloned().collect();
+    ids.sort_by(|a, b| a.value().cmp(b.value()));
+    ids
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cid(s: &str) -> CanonicalId {
+        CanonicalId::from_format_id(s)
+    }
+
+    /// Total score of an assignment, for comparing solver output against the
+    /// known optimum.
+    fn total_score(assignment: &[(CanonicalId, CanonicalId, f64)]) -> f64 {
+        assignment.iter().map(|(_, _, s)| s).sum()
+    }
+
+    #[test]
+    fn empty_candidates_yield_empty_assignment() {
+        assert!(sparse_assignment(&[]).is_empty());
+    }
+
+    #[test]
+    fn sparse_assignment_is_one_to_one() {
+        // Two sources both prefer the same object; solver must split them.
+        let candidates = vec![
+            (cid("o1"), cid("n1"), 0.9),
+            (cid("o1"), cid("n2"), 0.6),
+            (cid("o2"), cid("n1"), 0.8),
+            (cid("o2"), cid("n2"), 0.5),
+        ];
+        let result = sparse_assignment(&candidates);
+
+        let old_used: HashSet<_> = result.iter().map(|(o, _, _)| o.clone()).collect();
+        let new_used: HashSet<_> = result.iter().map(|(_, n, _)| n.clone()).collect();
+        assert_eq!(
+            old_used.len(),
+            result.len(),
+            "each old id used at most once"
+        );
+        assert_eq!(
+            new_used.len(),
+            result.len(),
+            "each new id used at most once"
+        );
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn sparse_assignment_finds_global_optimum_over_greedy_trap() {
+        // Greedy by score would take (o1,n1)=0.95 first, forcing o2->n2=0.10
+        // (total 1.05). The optimal assignment is o1->n2=0.80, o2->n1=0.90
+        // (total 1.70). The solver must find the optimum, not the greedy pick.
+        let candidates = vec![
+            (cid("o1"), cid("n1"), 0.95),
+            (cid("o1"), cid("n2"), 0.80),
+            (cid("o2"), cid("n1"), 0.90),
+            (cid("o2"), cid("n2"), 0.10),
+        ];
+        let result = sparse_assignment(&candidates);
+
+        assert!(
+            (total_score(&result) - 1.70).abs() < 1e-9,
+            "expected optimal total 1.70, got {} from {:?}",
+            total_score(&result),
+            result
+        );
+    }
+
+    #[test]
+    fn sparse_assignment_handles_more_sources_than_objects() {
+        // Three sources, two objects: one source must remain unassigned.
+        let candidates = vec![
+            (cid("o1"), cid("n1"), 0.9),
+            (cid("o2"), cid("n1"), 0.7),
+            (cid("o2"), cid("n2"), 0.6),
+            (cid("o3"), cid("n2"), 0.8),
+        ];
+        let result = sparse_assignment(&candidates);
+
+        // At most two matches (two objects), all distinct objects.
+        assert!(result.len() <= 2);
+        let new_used: HashSet<_> = result.iter().map(|(_, n, _)| n.clone()).collect();
+        assert_eq!(new_used.len(), result.len());
+        // Optimum is o1->n1 (0.9) + o3->n2 (0.8) = 1.7.
+        assert!(
+            (total_score(&result) - 1.70).abs() < 1e-9,
+            "expected optimal total 1.70, got {}",
+            total_score(&result)
+        );
+    }
+
+    #[test]
+    fn sparse_assignment_is_deterministic() {
+        // Symmetric scores create ties; output must be stable across runs and
+        // independent of input edge order.
+        let candidates = vec![
+            (cid("a"), cid("x"), 0.5),
+            (cid("a"), cid("y"), 0.5),
+            (cid("b"), cid("x"), 0.5),
+            (cid("b"), cid("y"), 0.5),
+        ];
+        let mut shuffled = candidates.clone();
+        shuffled.reverse();
+
+        let r1 = sparse_assignment(&candidates);
+        let r2 = sparse_assignment(&candidates);
+        let r3 = sparse_assignment(&shuffled);
+
+        assert_eq!(r1, r2, "repeated runs must match");
+        assert_eq!(r1, r3, "result must not depend on edge insertion order");
+    }
 }
