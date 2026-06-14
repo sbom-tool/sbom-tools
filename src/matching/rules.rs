@@ -534,6 +534,7 @@ impl EcosystemRules {
             Ecosystem::Deb => "deb".to_string(),
             Ecosystem::Rpm => "rpm".to_string(),
             Ecosystem::Apk => "apk".to_string(),
+            Ecosystem::HuggingFace => "huggingface".to_string(),
             Ecosystem::Generic => "generic".to_string(),
             Ecosystem::Unknown(s) => s.to_lowercase(),
         }

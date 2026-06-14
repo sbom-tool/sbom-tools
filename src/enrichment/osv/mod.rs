@@ -92,14 +92,24 @@ impl OsvEnricher {
             component.version.clone(),
         );
 
-        // Prefer PURL if available
+        // Prefer PURL if available. A `pkg:huggingface` PURL is forwarded as-is:
+        // OSV does not index the HuggingFace ecosystem, so it simply returns no
+        // vulns (harmless), but routing the query keeps the component in the
+        // pipeline rather than counting it as skipped, and exploitability for
+        // ML models is supplied downstream by KEV/advisory linkage on any
+        // identifier-referenced CVEs (see `merge_vulnerabilities` consumers).
         if let Some(ref purl) = component.identifiers.purl {
             return Some((cache_key, OsvQuery::from_purl(purl.clone())));
         }
 
-        // Fallback to name + ecosystem + version
+        // Fallback to name + ecosystem + version. Skip ecosystems OSV cannot
+        // resolve (empty string) — e.g. HuggingFace — so we never send a query
+        // that OSV would reject or, worse, silently mis-key.
         if let (Some(ecosystem), Some(version)) = (&component.ecosystem, &component.version) {
             let osv_ecosystem = ecosystem_to_osv_string(ecosystem);
+            if osv_ecosystem.is_empty() {
+                return None;
+            }
             return Some((
                 cache_key,
                 OsvQuery::from_package(component.name.clone(), osv_ecosystem, version.clone()),
@@ -297,6 +307,13 @@ fn ecosystem_to_osv_string(ecosystem: &Ecosystem) -> String {
         Ecosystem::Deb => "Debian".to_string(),
         Ecosystem::Rpm => "AlmaLinux".to_string(), // Or could be other RPM-based
         Ecosystem::Apk => "Alpine".to_string(),
+        // OSV (osv.dev) has NO ecosystem for HuggingFace / ML models. Returning
+        // an empty string is the honest signal "OSV cannot resolve this by
+        // name+ecosystem". A `pkg:huggingface` PURL query is still forwarded
+        // (OSV returns nothing for it), and real exploitability data for ML
+        // components comes from KEV/advisory linkage on CVE identifiers the
+        // model already carries — not from an OSV ecosystem lookup.
+        Ecosystem::HuggingFace => String::new(),
         Ecosystem::Generic => "OSS-Fuzz".to_string(),
         Ecosystem::Unknown(s) => s.clone(),
     }
@@ -311,5 +328,59 @@ mod tests {
         assert_eq!(ecosystem_to_osv_string(&Ecosystem::Npm), "npm");
         assert_eq!(ecosystem_to_osv_string(&Ecosystem::PyPi), "PyPI");
         assert_eq!(ecosystem_to_osv_string(&Ecosystem::Cargo), "crates.io");
+    }
+
+    #[test]
+    fn huggingface_has_no_osv_ecosystem_string() {
+        // OSV does not index HuggingFace; the honest mapping is an empty string
+        // so `build_query` never sends a name+ecosystem query OSV would reject.
+        assert!(ecosystem_to_osv_string(&Ecosystem::HuggingFace).is_empty());
+    }
+
+    fn test_enricher() -> OsvEnricher {
+        let dir = std::env::temp_dir().join(format!("osv-test-{}", std::process::id()));
+        OsvEnricher::new(OsvEnricherConfig {
+            cache_dir: dir,
+            ..Default::default()
+        })
+        .expect("enricher")
+    }
+
+    #[test]
+    fn build_query_forwards_huggingface_purl() {
+        use crate::model::{Component, ComponentType};
+        let enricher = test_enricher();
+
+        let mut comp = Component::new("bert".to_string(), "ml-1".to_string())
+            .with_purl("pkg:huggingface/google-bert/bert-base-uncased".to_string());
+        comp.component_type = ComponentType::MachineLearningModel;
+
+        // The HuggingFace PURL resolves to Ecosystem::HuggingFace...
+        assert_eq!(comp.ecosystem, Some(Ecosystem::HuggingFace));
+        // ...and OSV enrichment is still ATTEMPTED via the PURL query (not skipped),
+        // so the model participates in the exploitability pipeline.
+        let query = enricher.build_query(&comp);
+        assert!(
+            matches!(query, Some((_, OsvQuery::Purl { .. }))),
+            "HuggingFace model with a PURL must be queried by PURL"
+        );
+    }
+
+    #[test]
+    fn build_query_skips_huggingface_name_fallback() {
+        use crate::model::{Component, ComponentType, Ecosystem};
+        let enricher = test_enricher();
+
+        // No PURL — only ecosystem + version. OSV cannot resolve HuggingFace by
+        // name+ecosystem, so we must NOT fabricate a garbage query.
+        let mut comp = Component::new("bert".to_string(), "ml-2".to_string());
+        comp.component_type = ComponentType::MachineLearningModel;
+        comp.ecosystem = Some(Ecosystem::HuggingFace);
+        comp.version = Some("v1".to_string());
+
+        assert!(
+            enricher.build_query(&comp).is_none(),
+            "HuggingFace without a PURL must not emit a name+ecosystem OSV query"
+        );
     }
 }

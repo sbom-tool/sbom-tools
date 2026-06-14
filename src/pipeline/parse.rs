@@ -486,12 +486,13 @@ pub fn enrich_huggingface(
         Ok(stats) => {
             if !quiet {
                 eprintln!(
-                    "HuggingFace enrichment: {} models resolved, {} enriched, {} weight hashes, {} tasks, {} licenses",
+                    "HuggingFace enrichment: {} models resolved, {} enriched, {} weight hashes, {} tasks, {} licenses, {} PURLs added",
                     stats.models_resolved,
                     stats.models_enriched,
                     stats.hashes_added,
                     stats.tasks_added,
                     stats.licenses_added,
+                    stats.purls_added,
                 );
             }
             Some(stats)

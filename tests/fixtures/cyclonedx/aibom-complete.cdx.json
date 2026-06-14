@@ -97,6 +97,10 @@
         {
           "type": "model-card",
           "url": "https://example.test/model-cards/sentiment-classifier"
+        },
+        {
+          "type": "advisories",
+          "url": "https://example.test/security/sentiment-classifier-advisories"
         }
       ]
     },

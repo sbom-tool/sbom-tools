@@ -56,6 +56,10 @@
         {
           "externalRefType": "documentation",
           "locator": ["https://huggingface.co/google-bert/bert-base-uncased"]
+        },
+        {
+          "externalRefType": "securityAdvisory",
+          "locator": ["https://example.test/security/bert-base-advisories"]
         }
       ]
     },

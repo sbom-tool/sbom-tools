@@ -669,6 +669,11 @@ pub enum Ecosystem {
     Deb,
     Rpm,
     Apk,
+    /// HuggingFace Hub ML model (`pkg:huggingface/...`). Not a classical
+    /// package ecosystem; surfaced so ML components are routed through the
+    /// vulnerability/exploitability enrichment stack rather than silently
+    /// treated as `Unknown`.
+    HuggingFace,
     Generic,
     Unknown(String),
 }
@@ -698,6 +703,7 @@ impl Ecosystem {
             "deb" => Self::Deb,
             "rpm" => Self::Rpm,
             "apk" => Self::Apk,
+            "huggingface" => Self::HuggingFace,
             "generic" => Self::Generic,
             other => Self::Unknown(other.to_string()),
         }
@@ -727,6 +733,7 @@ impl fmt::Display for Ecosystem {
             Self::Deb => write!(f, "deb"),
             Self::Rpm => write!(f, "rpm"),
             Self::Apk => write!(f, "apk"),
+            Self::HuggingFace => write!(f, "huggingface"),
             Self::Generic => write!(f, "generic"),
             Self::Unknown(s) => write!(f, "{s}"),
         }

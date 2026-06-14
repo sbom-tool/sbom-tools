@@ -77,6 +77,10 @@ pub struct HuggingFaceEnrichmentStats {
     pub hashes_added: usize,
     /// Components that received a `task` from `pipeline_tag`.
     pub tasks_added: usize,
+    /// Components that received a synthesized `pkg:huggingface` PURL (resolved
+    /// via a model-card URL but lacking a PURL), making them resolvable to
+    /// `Ecosystem::HuggingFace` for vulnerability enrichment.
+    pub purls_added: usize,
     /// Components that received a license (only when none was declared).
     pub licenses_added: usize,
     /// API calls performed (cache misses).
@@ -210,6 +214,15 @@ impl HuggingFaceClient {
             };
             stats.models_resolved += 1;
 
+            // Ensure a `pkg:huggingface/...` PURL is present so the component is
+            // resolvable to `Ecosystem::HuggingFace` and routed through the
+            // vulnerability/exploitability enrichment stack (OSV PURL query +
+            // KEV/advisory linkage). When the model was resolved only via a
+            // model-card URL it has no PURL; synthesize one from the model id.
+            if ensure_huggingface_purl(component, &model_id) {
+                stats.purls_added += 1;
+            }
+
             let info = match self.resolve(&model_id, &mut stats) {
                 Ok(Some(info)) => info,
                 Ok(None) => continue,
@@ -255,6 +268,20 @@ pub fn resolve_model_id(component: &Component) -> Option<String> {
         .external_refs
         .iter()
         .find_map(|r| model_id_from_hf_url(&r.url))
+}
+
+/// Ensure the component carries a `pkg:huggingface/{model_id}` PURL.
+///
+/// Returns `true` if a PURL was synthesized. A component already carrying any
+/// PURL is left untouched (we never overwrite an existing identifier). The
+/// synthesized PURL makes the component resolvable to `Ecosystem::HuggingFace`,
+/// routing it through the OSV/KEV exploitability enrichment stack.
+fn ensure_huggingface_purl(component: &mut Component, model_id: &str) -> bool {
+    if component.identifiers.purl.is_some() {
+        return false;
+    }
+    component.set_purl(format!("pkg:huggingface/{model_id}"));
+    true
 }
 
 /// Extract `{org}/{name}` from a `pkg:huggingface/...` PURL.
@@ -506,6 +533,40 @@ mod tests {
         assert_eq!(c.ml_model.as_ref().unwrap().task.as_deref(), Some("nlp"));
         assert_eq!(stats.licenses_added, 0);
         assert_eq!(stats.tasks_added, 0);
+    }
+
+    #[test]
+    fn ensure_purl_synthesizes_from_model_card_url() {
+        use crate::model::Ecosystem;
+        // Model resolved via a model-card URL, no PURL.
+        let mut c = ml_component(None);
+        c.ml_model = Some(MlModelInfo {
+            model_card_url: Some(
+                "https://huggingface.co/google-bert/bert-base-uncased".to_string(),
+            ),
+            ..MlModelInfo::default()
+        });
+        let model_id = resolve_model_id(&c).expect("resolvable via URL");
+
+        assert!(ensure_huggingface_purl(&mut c, &model_id));
+        assert_eq!(
+            c.identifiers.purl.as_deref(),
+            Some("pkg:huggingface/google-bert/bert-base-uncased")
+        );
+        // The synthesized PURL must resolve to the HuggingFace ecosystem so the
+        // component is routed through vulnerability enrichment.
+        assert_eq!(c.ecosystem, Some(Ecosystem::HuggingFace));
+    }
+
+    #[test]
+    fn ensure_purl_never_overwrites_existing() {
+        let mut c = ml_component(Some("pkg:huggingface/org/name@v1"));
+        assert!(!ensure_huggingface_purl(&mut c, "org/name"));
+        assert_eq!(
+            c.identifiers.purl.as_deref(),
+            Some("pkg:huggingface/org/name@v1"),
+            "an existing PURL must be preserved verbatim"
+        );
     }
 
     #[test]

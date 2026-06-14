@@ -706,6 +706,14 @@ impl Component {
     /// Set the PURL and update canonical ID
     #[must_use]
     pub fn with_purl(mut self, purl: String) -> Self {
+        self.set_purl(purl);
+        self
+    }
+
+    /// Set the PURL in place, refreshing the canonical ID and deriving the
+    /// ecosystem from the PURL type. Mirrors [`Self::with_purl`] for callers
+    /// holding a `&mut Component` (e.g. enrichment that synthesizes a PURL).
+    pub fn set_purl(&mut self, purl: String) {
         self.identifiers.purl = Some(purl);
         self.canonical_id = self.identifiers.canonical_id();
 
@@ -717,8 +725,6 @@ impl Component {
         {
             self.ecosystem = Some(Ecosystem::from_purl_type(purl_type));
         }
-
-        self
     }
 
     /// Set the version and try to parse as semver

@@ -350,7 +350,7 @@ impl ReportGenerator for SarifReporter {
     }
 }
 
-/// Map an AI-readiness check ID (`AI-001`..`AI-010`) to its SARIF rule ID.
+/// Map an AI-readiness check ID (`AI-001`..`AI-011`) to its SARIF rule ID.
 /// Unknown IDs fall back to the `SBOM-AIBOM-GENERAL` rule so a future check
 /// never silently drops (`AiCheck`/`AiReadinessMetrics` are `#[non_exhaustive]`).
 fn ai_check_to_rule_id(check_id: &str) -> &'static str {
@@ -365,6 +365,7 @@ fn ai_check_to_rule_id(check_id: &str) -> &'static str {
         "AI-008" => "SBOM-AIBOM-008",
         "AI-009" => "SBOM-AIBOM-009",
         "AI-010" => "SBOM-AIBOM-010",
+        "AI-011" => "SBOM-AIBOM-011",
         _ => "SBOM-AIBOM-GENERAL",
     }
 }
@@ -375,10 +376,14 @@ fn ai_check_to_rule_id(check_id: &str) -> &'static str {
 /// This is the single source of truth shared by the rule table and the results.
 fn aibom_level(check_id: &str) -> SarifLevel {
     match check_id {
-        // AI-010 is the weight-hash integrity check: a missing weight hash
-        // defeats tamper verification, so it is a `warning` like the other
-        // load-bearing transparency checks (not a soft `note`).
-        "AI-001" | "AI-002" | "AI-003" | "AI-005" | "AI-009" | "AI-010" => SarifLevel::Warning,
+        // AI-010 is the weight-hash integrity check and AI-011 the
+        // exploitability/advisory-reference check: both are load-bearing
+        // security signals (tamper verification and vulnerability tooling
+        // linkage), so they are `warning` like the other load-bearing checks
+        // rather than a soft `note`.
+        "AI-001" | "AI-002" | "AI-003" | "AI-005" | "AI-009" | "AI-010" | "AI-011" => {
+            SarifLevel::Warning
+        }
         _ => SarifLevel::Note,
     }
 }
@@ -448,6 +453,12 @@ fn get_sarif_aibom_rules() -> Vec<SarifRule> {
             "AI-010",
             "AibomModelWeightHashes",
             "Model weight hashes present",
+        ),
+        (
+            "SBOM-AIBOM-011",
+            "AI-011",
+            "AibomExploitabilityReference",
+            "Exploitability/advisory reference present",
         ),
         (
             "SBOM-AIBOM-GENERAL",

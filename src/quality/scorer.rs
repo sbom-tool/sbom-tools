@@ -33,6 +33,27 @@ fn has_non_empty_pointer(raw: Option<&Value>, pointers: &[&str]) -> bool {
         })
 }
 
+/// Returns true if a component is connected to the vulnerability/exploitability
+/// tooling stack: it carries at least one vulnerability reference (which
+/// OSV/KEV/EPSS/VEX enrichment acts on) OR a security/advisory external
+/// reference an analyst can pivot on. This realizes the BSI thesis that an AI
+/// SBOM is only useful when linked to cybersecurity tooling.
+fn ml_has_exploitability_reference(component: &crate::model::Component) -> bool {
+    use crate::model::ExternalRefType;
+    if !component.vulnerabilities.is_empty() {
+        return true;
+    }
+    component.external_refs.iter().any(|r| {
+        matches!(
+            r.ref_type,
+            ExternalRefType::Advisories
+                | ExternalRefType::SecurityContact
+                | ExternalRefType::VulnerabilityAssertion
+                | ExternalRefType::ExploitabilityStatement
+        )
+    })
+}
+
 /// Scoring profile determines weights and thresholds
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -654,8 +675,10 @@ impl QualityScorer {
 
     /// Score ML model-card completeness for the AI-readiness profile.
     ///
-    /// Filters to `MachineLearningModel` components and evaluates ten model-card
-    /// checks (AI-001..AI-010, the last being a weight-hash integrity check). The
+    /// Filters to `MachineLearningModel` components and evaluates eleven checks
+    /// (AI-001..AI-011): AI-001..AI-009 cover model-card transparency, AI-010 is
+    /// a weight-hash integrity check, and AI-011 verifies the component is
+    /// connected to the vulnerability/exploitability tooling stack. The
     /// returned `QualityReport` has all standard category scores zeroed/`None`;
     /// the rich data lives in `ai_readiness_metrics`.
     /// When the SBOM has no ML components the report is marked not-applicable.
@@ -731,7 +754,7 @@ impl QualityScorer {
         // carries weight comparable to the transparency checks. The literals are
         // chosen for readability; they no longer sum to exactly 1.0 once AI-010 is
         // added, so they are renormalized below to keep the total at 1.0.
-        const CHECK_DEFS: [(&str, &str, f32); 10] = [
+        const CHECK_DEFS: [(&str, &str, f32); 11] = [
             ("AI-001", "Model card URL present", 0.15),
             ("AI-002", "Architecture family declared", 0.12),
             ("AI-003", "Training datasets referenced", 0.12),
@@ -742,6 +765,11 @@ impl QualityScorer {
             ("AI-008", "Known limitations stated", 0.09),
             ("AI-009", "Ethical considerations present", 0.09),
             ("AI-010", "Model weight hashes present", 0.12),
+            // AI-011 closes the BSI "vulnerability/exploitability referencing"
+            // gap for AI clusters: a model is only connected to the security
+            // tooling stack if it carries a CVE/advisory reference that OSV/KEV
+            // /EPSS/VEX can act on. Weighted like the integrity check (AI-010).
+            ("AI-011", "Exploitability/advisory reference present", 0.12),
         ];
 
         // Renormalize the per-check weights so they sum to exactly 1.0. Without
@@ -759,7 +787,7 @@ impl QualityScorer {
             let ml = component.ml_model.as_ref();
             let raw = component.extensions.raw.as_ref();
 
-            let results: [bool; 10] = [
+            let results: [bool; 11] = [
                 // AI-001: model card URL
                 ml.and_then(|m| m.model_card_url.as_ref()).is_some(),
                 // AI-002: architecture family
@@ -820,6 +848,11 @@ impl QualityScorer {
                 // its weights can be verified against tampering. Hashes typically
                 // arrive via HuggingFace enrichment (siblings[].lfs.sha256).
                 !component.hashes.is_empty(),
+                // AI-011: exploitability/advisory reference present. The model is
+                // only connected to the cybersecurity tooling stack (OSV/KEV/EPSS
+                // /VEX) when it carries at least one vulnerability reference OR a
+                // security/advisory external reference an analyst can pivot on.
+                ml_has_exploitability_reference(component),
             ];
 
             if results.iter().all(|&p| p) {
@@ -1462,6 +1495,13 @@ mod tests {
             crate::model::HashAlgorithm::Sha256,
             "a".repeat(64),
         ));
+        // A vulnerability reference makes the AI-011 exploitability check pass.
+        component
+            .vulnerabilities
+            .push(crate::model::VulnerabilityRef::new(
+                "CVE-2024-0001".to_string(),
+                crate::model::VulnerabilitySource::Cve,
+            ));
         sbom.add_component(component);
 
         let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
@@ -1469,11 +1509,11 @@ mod tests {
             .ai_readiness_metrics
             .expect("AI readiness metrics should be present");
         assert!(!metrics.is_not_applicable());
-        // All ten checks should pass → fully documented, perfect score.
+        // All eleven checks should pass → fully documented, perfect score.
         for check in &metrics.checks {
             assert!(check.passed, "expected {} to pass", check.id);
         }
-        assert_eq!(metrics.checks.len(), 10, "AI-001..AI-010 are all reported");
+        assert_eq!(metrics.checks.len(), 11, "AI-001..AI-011 are all reported");
         // The renormalized per-check weights must still sum to 1.0.
         let weight_total: f32 = metrics.checks.iter().map(|c| c.weight).sum();
         assert!(
@@ -1599,6 +1639,74 @@ mod tests {
                 .unwrap_or_default()
                 .contains("1/2 components passed"),
             "AI-010 detail should report 1/2 models passing"
+        );
+    }
+
+    #[test]
+    fn test_ai_011_exploitability_reference_check() {
+        use crate::model::{
+            ExternalRefType, ExternalReference, VulnerabilityRef, VulnerabilitySource,
+        };
+
+        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+
+        // Model 1: carries a vulnerability reference → AI-011 passes.
+        let mut with_vuln = ml_component("ml-1", "with-vuln", MlModelInfo::default(), json!({}));
+        with_vuln.vulnerabilities.push(VulnerabilityRef::new(
+            "CVE-2024-1234".to_string(),
+            VulnerabilitySource::Cve,
+        ));
+        sbom.add_component(with_vuln);
+
+        // Model 2: carries a security advisory external reference → AI-011 passes.
+        let mut with_advisory =
+            ml_component("ml-2", "with-advisory", MlModelInfo::default(), json!({}));
+        with_advisory.external_refs.push(ExternalReference {
+            ref_type: ExternalRefType::Advisories,
+            url: "https://example.test/advisory".to_string(),
+            comment: None,
+            hashes: Vec::new(),
+        });
+        sbom.add_component(with_advisory);
+
+        let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
+        let metrics = report
+            .ai_readiness_metrics
+            .expect("AI readiness metrics should be present");
+        let ai011 = metrics
+            .checks
+            .iter()
+            .find(|c| c.id == "AI-011")
+            .expect("AI-011 should be present");
+        assert!(
+            ai011.passed,
+            "AI-011 should pass when every model carries a vuln or advisory reference"
+        );
+    }
+
+    #[test]
+    fn test_ai_011_fails_without_exploitability_reference() {
+        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+        // A model with neither a vuln ref nor an advisory external reference.
+        sbom.add_component(ml_component(
+            "ml-1",
+            "no-refs",
+            MlModelInfo::default(),
+            json!({}),
+        ));
+
+        let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
+        let metrics = report
+            .ai_readiness_metrics
+            .expect("AI readiness metrics should be present");
+        let ai011 = metrics
+            .checks
+            .iter()
+            .find(|c| c.id == "AI-011")
+            .expect("AI-011 should be present");
+        assert!(
+            !ai011.passed,
+            "AI-011 should fail when a model has no exploitability/advisory reference"
         );
     }
 }
