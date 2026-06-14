@@ -1,11 +1,14 @@
 //! KEV catalog client with caching support.
 
 use super::catalog::{KevCatalog, KevCatalogResponse};
+use crate::enrichment::source::{JsonCache, namespaced_cache_dir};
 use crate::enrichment::stats::EnrichmentError;
 use crate::model::{KevInfo, VulnerabilityRef};
-use std::fs;
 use std::path::PathBuf;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
+
+/// Cache file name for the serialized KEV catalog.
+const KEV_CACHE_FILE: &str = "kev_catalog.json";
 
 /// Default CISA KEV catalog URL
 pub const KEV_CATALOG_URL: &str =
@@ -40,41 +43,7 @@ impl Default for KevClientConfig {
 
 /// Get the default cache directory
 fn default_cache_dir() -> PathBuf {
-    dirs_cache_dir()
-        .unwrap_or_else(|| PathBuf::from(".cache"))
-        .join("sbom-tools")
-        .join("kev")
-}
-
-/// Get cache directory (platform-aware)
-fn dirs_cache_dir() -> Option<PathBuf> {
-    #[cfg(target_os = "macos")]
-    {
-        std::env::var("HOME")
-            .ok()
-            .map(|h| PathBuf::from(h).join("Library").join("Caches"))
-    }
-    #[cfg(target_os = "linux")]
-    {
-        std::env::var("XDG_CACHE_HOME")
-            .ok()
-            .map(PathBuf::from)
-            .or_else(|| {
-                std::env::var("HOME")
-                    .ok()
-                    .map(|h| PathBuf::from(h).join(".cache"))
-            })
-    }
-    #[cfg(target_os = "windows")]
-    {
-        std::env::var("LOCALAPPDATA").ok().map(PathBuf::from)
-    }
-    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-    {
-        std::env::var("HOME")
-            .ok()
-            .map(|h| PathBuf::from(h).join(".cache"))
-    }
+    namespaced_cache_dir("kev")
 }
 
 /// KEV enrichment statistics
@@ -118,63 +87,38 @@ impl KevClient {
         Self::new(KevClientConfig::default())
     }
 
-    /// Get the cache file path
-    fn cache_file_path(&self) -> PathBuf {
-        self.config.cache_dir.join("kev_catalog.json")
+    /// Open the shared file cache for the serialized catalog.
+    fn cache(&self) -> Result<JsonCache<KevCatalog>, EnrichmentError> {
+        JsonCache::new(self.config.cache_dir.clone(), self.config.cache_ttl)
+            .map_err(|e| EnrichmentError::CacheError(e.to_string()))
     }
 
-    /// Check if cache is valid
+    /// Check if a valid (unexpired, current-schema) cached catalog exists.
     fn is_cache_valid(&self) -> bool {
         if self.config.bypass_cache {
             return false;
         }
-
-        let cache_path = self.cache_file_path();
-        if !cache_path.exists() {
-            return false;
-        }
-
-        // Check cache age
-        if let Ok(metadata) = fs::metadata(&cache_path)
-            && let Ok(modified) = metadata.modified()
-            && let Ok(elapsed) = SystemTime::now().duration_since(modified)
-        {
-            return elapsed < self.config.cache_ttl;
-        }
-
-        false
+        self.cache()
+            .ok()
+            .is_some_and(|c| c.get_named(KEV_CACHE_FILE).is_some())
     }
 
     /// Load catalog from cache
     fn load_from_cache(&self) -> Option<KevCatalog> {
-        let cache_path = self.cache_file_path();
-        let content = fs::read_to_string(&cache_path).ok()?;
-        serde_json::from_str(&content).ok()
+        self.cache().ok()?.get_named(KEV_CACHE_FILE)
     }
 
     /// Save catalog to cache
     fn save_to_cache(&self, catalog: &KevCatalog) -> Result<(), EnrichmentError> {
-        let cache_path = self.cache_file_path();
-
-        // Ensure cache directory exists
-        if let Some(parent) = cache_path.parent() {
-            fs::create_dir_all(parent).map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
-        }
-
-        let content = serde_json::to_string(catalog)
-            .map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
-
-        fs::write(&cache_path, content).map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
-
-        Ok(())
+        self.cache()?
+            .set_named(KEV_CACHE_FILE, catalog)
+            .map_err(|e| EnrichmentError::CacheError(e.to_string()))
     }
 
     /// Fetch catalog from CISA API
     #[cfg(feature = "enrichment")]
     fn fetch_from_api(&self) -> Result<KevCatalog, EnrichmentError> {
-        let client = reqwest::blocking::Client::builder()
-            .timeout(self.config.timeout)
-            .build()
+        let client = crate::enrichment::source::http_client(self.config.timeout)
             .map_err(|e| EnrichmentError::ApiError(e.to_string()))?;
 
         let response = client

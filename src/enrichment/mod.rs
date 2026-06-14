@@ -20,6 +20,7 @@ mod cache;
 pub mod eol;
 pub mod kev;
 pub mod osv;
+pub mod source;
 pub mod staleness;
 mod stats;
 mod traits;
@@ -29,6 +30,7 @@ pub use cache::{CacheKey, FileCache};
 pub use eol::{EolClientConfig, EolEnricher, EolEnrichmentStats};
 pub use kev::{KevCatalog, KevClient, KevClientConfig, KevEnrichmentStats};
 pub use osv::{OsvEnricher, OsvEnricherConfig};
+pub use source::{CacheStats, EnrichmentSource, JsonCache};
 pub use staleness::{RegistryConfig, StalenessEnricher, StalenessEnrichmentStats};
 pub use stats::{EnrichmentError, EnrichmentStats};
 pub use traits::{NoOpEnricher, VulnerabilityEnricher};
@@ -76,45 +78,7 @@ impl Default for EnricherConfig {
     }
 }
 
-/// Get the default cache directory
+/// Get the default cache directory.
 fn default_cache_dir() -> PathBuf {
-    dirs::cache_dir()
-        .unwrap_or_else(|| PathBuf::from(".cache"))
-        .join("sbom-tools")
-        .join("osv")
-}
-
-/// Try to get dirs crate functionality, fallback to home dir
-mod dirs {
-    use std::path::PathBuf;
-
-    pub fn cache_dir() -> Option<PathBuf> {
-        #[cfg(target_os = "macos")]
-        {
-            std::env::var("HOME")
-                .ok()
-                .map(|h| PathBuf::from(h).join("Library").join("Caches"))
-        }
-        #[cfg(target_os = "linux")]
-        {
-            std::env::var("XDG_CACHE_HOME")
-                .ok()
-                .map(PathBuf::from)
-                .or_else(|| {
-                    std::env::var("HOME")
-                        .ok()
-                        .map(|h| PathBuf::from(h).join(".cache"))
-                })
-        }
-        #[cfg(target_os = "windows")]
-        {
-            std::env::var("LOCALAPPDATA").ok().map(PathBuf::from)
-        }
-        #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-        {
-            std::env::var("HOME")
-                .ok()
-                .map(|h| PathBuf::from(h).join(".cache"))
-        }
-    }
+    source::namespaced_cache_dir("osv")
 }

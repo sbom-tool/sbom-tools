@@ -1,13 +1,13 @@
 //! Package registry clients for staleness detection.
 
+use crate::enrichment::source::{JsonCache, namespaced_cache_dir};
 use crate::enrichment::stats::EnrichmentError;
 use crate::model::{Component, Ecosystem, StalenessInfo, StalenessLevel};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs;
 use std::path::PathBuf;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 /// Registry client configuration
 #[derive(Debug, Clone)]
@@ -40,40 +40,14 @@ impl Default for RegistryConfig {
 }
 
 fn default_cache_dir() -> PathBuf {
-    dirs_cache_dir()
-        .unwrap_or_else(|| PathBuf::from(".cache"))
-        .join("sbom-tools")
-        .join("staleness")
+    namespaced_cache_dir("staleness")
 }
 
-fn dirs_cache_dir() -> Option<PathBuf> {
-    #[cfg(target_os = "macos")]
-    {
-        std::env::var("HOME")
-            .ok()
-            .map(|h| PathBuf::from(h).join("Library").join("Caches"))
-    }
-    #[cfg(target_os = "linux")]
-    {
-        std::env::var("XDG_CACHE_HOME")
-            .ok()
-            .map(PathBuf::from)
-            .or_else(|| {
-                std::env::var("HOME")
-                    .ok()
-                    .map(|h| PathBuf::from(h).join(".cache"))
-            })
-    }
-    #[cfg(target_os = "windows")]
-    {
-        std::env::var("LOCALAPPDATA").ok().map(PathBuf::from)
-    }
-    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-    {
-        std::env::var("HOME")
-            .ok()
-            .map(|h| PathBuf::from(h).join(".cache"))
-    }
+/// Filesystem-safe cache file name for a registry key (e.g. `npm:lodash` →
+/// `npm_lodash.json`).
+fn cache_filename(key: &str) -> String {
+    let safe_key = key.replace(['/', ':'], "_");
+    format!("{safe_key}.json")
 }
 
 /// Package metadata from registry
@@ -145,54 +119,25 @@ impl RegistryClient {
         format!("{ecosystem}:{name}")
     }
 
-    /// Get cache file path
-    fn cache_file(&self, key: &str) -> PathBuf {
-        let safe_key = key.replace(['/', ':'], "_");
-        self.config.cache_dir.join(format!("{safe_key}.json"))
+    /// Open the shared file cache for package metadata.
+    fn disk_cache(&self) -> Result<JsonCache<PackageMetadata>, EnrichmentError> {
+        JsonCache::new(self.config.cache_dir.clone(), self.config.cache_ttl)
+            .map_err(|e| EnrichmentError::CacheError(e.to_string()))
     }
 
-    /// Check if cache is valid
-    fn is_cache_valid(&self, key: &str) -> bool {
-        if self.config.bypass_cache {
-            return false;
-        }
-
-        let cache_path = self.cache_file(key);
-        if !cache_path.exists() {
-            return false;
-        }
-
-        if let Ok(metadata) = fs::metadata(&cache_path)
-            && let Ok(modified) = metadata.modified()
-            && let Ok(elapsed) = SystemTime::now().duration_since(modified)
-        {
-            return elapsed < self.config.cache_ttl;
-        }
-
-        false
-    }
-
-    /// Load from cache
+    /// Load from disk cache
     fn load_from_cache(&self, key: &str) -> Option<PackageMetadata> {
-        let cache_path = self.cache_file(key);
-        let content = fs::read_to_string(&cache_path).ok()?;
-        serde_json::from_str(&content).ok()
+        if self.config.bypass_cache {
+            return None;
+        }
+        self.disk_cache().ok()?.get_named(&cache_filename(key))
     }
 
-    /// Save to cache
+    /// Save to disk cache
     fn save_to_cache(&self, key: &str, metadata: &PackageMetadata) -> Result<(), EnrichmentError> {
-        let cache_path = self.cache_file(key);
-
-        if let Some(parent) = cache_path.parent() {
-            fs::create_dir_all(parent).map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
-        }
-
-        let content = serde_json::to_string(metadata)
-            .map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
-
-        fs::write(&cache_path, content).map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
-
-        Ok(())
+        self.disk_cache()?
+            .set_named(&cache_filename(key), metadata)
+            .map_err(|e| EnrichmentError::CacheError(e.to_string()))
     }
 
     /// Query npm registry
@@ -200,9 +145,7 @@ impl RegistryClient {
     fn query_npm(&self, name: &str) -> Result<Option<PackageMetadata>, EnrichmentError> {
         let url = format!("https://registry.npmjs.org/{name}");
 
-        let client = reqwest::blocking::Client::builder()
-            .timeout(self.config.timeout)
-            .build()
+        let client = crate::enrichment::source::http_client(self.config.timeout)
             .map_err(|e| EnrichmentError::ApiError(e.to_string()))?;
 
         let response = client.get(&url).send();
@@ -263,9 +206,7 @@ impl RegistryClient {
     fn query_pypi(&self, name: &str) -> Result<Option<PackageMetadata>, EnrichmentError> {
         let url = format!("https://pypi.org/pypi/{name}/json");
 
-        let client = reqwest::blocking::Client::builder()
-            .timeout(self.config.timeout)
-            .build()
+        let client = crate::enrichment::source::http_client(self.config.timeout)
             .map_err(|e| EnrichmentError::ApiError(e.to_string()))?;
 
         let response = client.get(&url).send();
@@ -343,10 +284,9 @@ impl RegistryClient {
     fn query_crates_io(&self, name: &str) -> Result<Option<PackageMetadata>, EnrichmentError> {
         let url = format!("https://crates.io/api/v1/crates/{name}");
 
-        let client = reqwest::blocking::Client::builder()
-            .timeout(self.config.timeout)
-            .user_agent("sbom-tools/1.0")
-            .build()
+        // The shared client already sends a CARGO_PKG_NAME/CARGO_PKG_VERSION
+        // User-Agent, which satisfies the crates.io UA requirement.
+        let client = crate::enrichment::source::http_client(self.config.timeout)
             .map_err(|e| EnrichmentError::ApiError(e.to_string()))?;
 
         let response = client.get(&url).send();
@@ -431,9 +371,7 @@ impl RegistryClient {
         }
 
         // Check disk cache
-        if self.is_cache_valid(&cache_key)
-            && let Some(metadata) = self.load_from_cache(&cache_key)
-        {
+        if let Some(metadata) = self.load_from_cache(&cache_key) {
             self.cache.insert(cache_key.clone(), metadata.clone());
             return Ok(Some(metadata));
         }

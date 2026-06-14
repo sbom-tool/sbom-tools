@@ -1,14 +1,15 @@
 //! EOL API client and enricher for the endoflife.date API.
 
 use super::mapping::ProductMapper;
+use crate::enrichment::source::{JsonCache, namespaced_cache_dir};
 use crate::enrichment::stats::EnrichmentError;
 use crate::model::{Component, EolInfo, EolStatus};
 use chrono::NaiveDate;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs;
 use std::path::PathBuf;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 // ============================================================================
 // API response types
@@ -114,40 +115,7 @@ impl Default for EolClientConfig {
 }
 
 fn default_cache_dir() -> PathBuf {
-    dirs_cache_dir()
-        .unwrap_or_else(|| PathBuf::from(".cache"))
-        .join("sbom-tools")
-        .join("eol")
-}
-
-fn dirs_cache_dir() -> Option<PathBuf> {
-    #[cfg(target_os = "macos")]
-    {
-        std::env::var("HOME")
-            .ok()
-            .map(|h| PathBuf::from(h).join("Library").join("Caches"))
-    }
-    #[cfg(target_os = "linux")]
-    {
-        std::env::var("XDG_CACHE_HOME")
-            .ok()
-            .map(PathBuf::from)
-            .or_else(|| {
-                std::env::var("HOME")
-                    .ok()
-                    .map(|h| PathBuf::from(h).join(".cache"))
-            })
-    }
-    #[cfg(target_os = "windows")]
-    {
-        std::env::var("LOCALAPPDATA").ok().map(PathBuf::from)
-    }
-    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-    {
-        std::env::var("HOME")
-            .ok()
-            .map(|h| PathBuf::from(h).join(".cache"))
-    }
+    namespaced_cache_dir("eol")
 }
 
 // ============================================================================
@@ -202,17 +170,16 @@ impl EolClient {
         stats: &mut EolEnrichmentStats,
     ) -> Result<Vec<String>, EnrichmentError> {
         let cache_key = "eol_products";
-        if self.is_cache_valid(cache_key, self.config.product_list_ttl)
-            && let Some(products) = self.load_from_cache::<Vec<String>>(cache_key)
+        let cache = self.cache::<Vec<String>>(self.config.product_list_ttl)?;
+        if !self.config.bypass_cache
+            && let Some(products) = cache.get_named(&cache_filename(cache_key))
         {
             stats.cache_hits += 1;
             return Ok(products);
         }
 
         let url = format!("{}/api/all.json", self.config.base_url);
-        let client = reqwest::blocking::Client::builder()
-            .timeout(self.config.timeout)
-            .build()
+        let client = crate::enrichment::source::http_client(self.config.timeout)
             .map_err(|e| EnrichmentError::ApiError(e.to_string()))?;
 
         stats.api_calls += 1;
@@ -233,7 +200,9 @@ impl EolClient {
             .json()
             .map_err(|e| EnrichmentError::ParseError(e.to_string()))?;
 
-        self.save_to_cache(cache_key, &products)?;
+        cache
+            .set_named(&cache_filename(cache_key), &products)
+            .map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
         Ok(products)
     }
 
@@ -255,17 +224,16 @@ impl EolClient {
         stats: &mut EolEnrichmentStats,
     ) -> Result<Vec<EolCycle>, EnrichmentError> {
         let cache_key = format!("eol_{product}");
-        if self.is_cache_valid(&cache_key, self.config.cache_ttl)
-            && let Some(cycles) = self.load_from_cache::<Vec<EolCycle>>(&cache_key)
+        let cache = self.cache::<Vec<EolCycle>>(self.config.cache_ttl)?;
+        if !self.config.bypass_cache
+            && let Some(cycles) = cache.get_named(&cache_filename(&cache_key))
         {
             stats.cache_hits += 1;
             return Ok(cycles);
         }
 
         let url = format!("{}/api/{}.json", self.config.base_url, product);
-        let client = reqwest::blocking::Client::builder()
-            .timeout(self.config.timeout)
-            .build()
+        let client = crate::enrichment::source::http_client(self.config.timeout)
             .map_err(|e| EnrichmentError::ApiError(e.to_string()))?;
 
         stats.api_calls += 1;
@@ -286,7 +254,9 @@ impl EolClient {
             .json()
             .map_err(|e| EnrichmentError::ParseError(e.to_string()))?;
 
-        self.save_to_cache(&cache_key, &cycles)?;
+        cache
+            .set_named(&cache_filename(&cache_key), &cycles)
+            .map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
         Ok(cycles)
     }
 
@@ -303,48 +273,25 @@ impl EolClient {
 
     // ---- Cache helpers ----
 
-    fn cache_file(&self, key: &str) -> PathBuf {
-        let safe_key = key.replace(['/', ':'], "_");
-        self.config.cache_dir.join(format!("{safe_key}.json"))
+    /// Open the shared file cache for payloads of type `T` with the given TTL.
+    ///
+    /// EOL uses two TTLs (a long one for the product list, a shorter one for
+    /// per-product cycles), so the cache is built per call with the relevant
+    /// TTL rather than stored on the client.
+    fn cache<T>(&self, ttl: Duration) -> Result<JsonCache<T>, EnrichmentError>
+    where
+        T: Serialize + DeserializeOwned,
+    {
+        JsonCache::new(self.config.cache_dir.clone(), ttl)
+            .map_err(|e| EnrichmentError::CacheError(e.to_string()))
     }
+}
 
-    fn is_cache_valid(&self, key: &str, ttl: Duration) -> bool {
-        if self.config.bypass_cache {
-            return false;
-        }
-        let cache_path = self.cache_file(key);
-        if !cache_path.exists() {
-            return false;
-        }
-        if let Ok(metadata) = fs::metadata(&cache_path)
-            && let Ok(modified) = metadata.modified()
-            && let Ok(elapsed) = SystemTime::now().duration_since(modified)
-        {
-            return elapsed < ttl;
-        }
-        false
-    }
-
-    fn load_from_cache<T: serde::de::DeserializeOwned>(&self, key: &str) -> Option<T> {
-        let cache_path = self.cache_file(key);
-        let content = fs::read_to_string(&cache_path).ok()?;
-        serde_json::from_str(&content).ok()
-    }
-
-    fn save_to_cache<T: serde::Serialize>(
-        &self,
-        key: &str,
-        data: &T,
-    ) -> Result<(), EnrichmentError> {
-        let cache_path = self.cache_file(key);
-        if let Some(parent) = cache_path.parent() {
-            fs::create_dir_all(parent).map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
-        }
-        let content =
-            serde_json::to_string(data).map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
-        fs::write(&cache_path, content).map_err(|e| EnrichmentError::CacheError(e.to_string()))?;
-        Ok(())
-    }
+/// Filesystem-safe cache file name for an EOL key (e.g. `eol_python` →
+/// `eol_python.json`).
+fn cache_filename(key: &str) -> String {
+    let safe_key = key.replace(['/', ':'], "_");
+    format!("{safe_key}.json")
 }
 
 // ============================================================================

@@ -1,6 +1,7 @@
 //! OSV API HTTP client.
 
 use super::response::{OsvBatchRequest, OsvBatchResponse, OsvQuery};
+use crate::enrichment::source::{get_with_retry, http_client};
 use crate::error::{EnrichmentErrorKind, Result, SbomDiffError};
 use reqwest::blocking::Client;
 use std::time::Duration;
@@ -48,14 +49,7 @@ fn api_error(msg: impl Into<String>) -> SbomDiffError {
 impl OsvClient {
     /// Create a new OSV client.
     pub fn new(config: OsvClientConfig) -> Result<Self> {
-        let client = Client::builder()
-            .timeout(config.timeout)
-            .user_agent(concat!(
-                env!("CARGO_PKG_NAME"),
-                "/",
-                env!("CARGO_PKG_VERSION")
-            ))
-            .build()
+        let client = http_client(config.timeout)
             .map_err(|e| network_error("Failed to create HTTP client", &e))?;
 
         Ok(Self { client, config })
@@ -64,10 +58,7 @@ impl OsvClient {
     /// Check if the OSV API is available.
     pub fn health_check(&self) -> Result<bool> {
         let url = format!("{}/v1/vulns/OSV-2020-1", self.config.api_base);
-        let response = self
-            .client
-            .get(&url)
-            .send()
+        let response = get_with_retry(&self.client, &url, self.config.max_retries)
             .map_err(|e| network_error("Health check request failed", &e))?;
         Ok(response.status().is_success() || response.status().as_u16() == 404)
     }
@@ -159,10 +150,7 @@ impl OsvClient {
     ) -> Result<Option<super::response::OsvVulnerability>> {
         let url = format!("{}/v1/vulns/{}", self.config.api_base, vuln_id);
 
-        let response = self
-            .client
-            .get(&url)
-            .send()
+        let response = get_with_retry(&self.client, &url, self.config.max_retries)
             .map_err(|e| network_error("Failed to fetch vulnerability", &e))?;
 
         if response.status().as_u16() == 404 {

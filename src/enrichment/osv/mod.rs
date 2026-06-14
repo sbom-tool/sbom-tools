@@ -40,7 +40,7 @@ pub struct OsvEnricherConfig {
 impl Default for OsvEnricherConfig {
     fn default() -> Self {
         Self {
-            cache_dir: PathBuf::from(".cache/sbom-tools/osv"),
+            cache_dir: crate::enrichment::source::namespaced_cache_dir("osv"),
             cache_ttl: Duration::from_secs(24 * 3600),
             bypass_cache: false,
             timeout: Duration::from_secs(30),
