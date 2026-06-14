@@ -3,7 +3,9 @@
 use super::{ReportConfig, ReportError, ReportFormat, ReportGenerator, ReportType};
 use crate::diff::{DiffResult, SlaStatus, VulnerabilityDetail};
 use crate::model::NormalizedSbom;
-use crate::quality::{ComplianceChecker, ComplianceLevel, ComplianceResult, ViolationSeverity};
+use crate::quality::{
+    ComplianceChecker, ComplianceLevel, ComplianceResult, ViolationSeverity, rule_meta,
+};
 use serde::Serialize;
 
 /// SARIF report generator
@@ -606,192 +608,6 @@ const fn violation_severity_to_level(severity: ViolationSeverity) -> SarifLevel 
     }
 }
 
-/// Map a violation's requirement string to a specific SARIF rule ID.
-fn violation_to_rule_id(requirement: &str) -> &'static str {
-    let req = requirement.to_lowercase();
-
-    // NTIA-specific rules
-    if req.starts_with("ntia") {
-        if req.contains("author") {
-            return "SBOM-NTIA-AUTHOR";
-        } else if req.contains("component name") {
-            return "SBOM-NTIA-NAME";
-        } else if req.contains("version") {
-            return "SBOM-NTIA-VERSION";
-        } else if req.contains("supplier") {
-            return "SBOM-NTIA-SUPPLIER";
-        } else if req.contains("unique identifier") {
-            return "SBOM-NTIA-IDENTIFIER";
-        } else if req.contains("dependency") {
-            return "SBOM-NTIA-DEPENDENCY";
-        }
-        return "SBOM-NTIA-GENERAL";
-    }
-
-    // FDA-specific rules
-    if req.starts_with("fda") {
-        if req.contains("author") || req.contains("creator") {
-            return "SBOM-FDA-CREATOR";
-        } else if req.contains("serial") || req.contains("namespace") {
-            return "SBOM-FDA-NAMESPACE";
-        } else if req.contains("name") || req.contains("title") {
-            return "SBOM-FDA-NAME";
-        } else if req.contains("supplier") || req.contains("manufacturer") {
-            return "SBOM-FDA-SUPPLIER";
-        } else if req.contains("hash") {
-            return "SBOM-FDA-HASH";
-        } else if req.contains("identifier") {
-            return "SBOM-FDA-IDENTIFIER";
-        } else if req.contains("version") {
-            return "SBOM-FDA-VERSION";
-        } else if req.contains("dependency") || req.contains("orphan") {
-            return "SBOM-FDA-DEPENDENCY";
-        } else if req.contains("support") || req.contains("contact") {
-            return "SBOM-FDA-SUPPORT";
-        } else if req.contains("vulnerabilit") || req.contains("security") {
-            return "SBOM-FDA-SECURITY";
-        }
-        return "SBOM-FDA-GENERAL";
-    }
-
-    // NIST SSDF rules
-    if req.starts_with("nist ssdf") {
-        if req.contains("ps.1") {
-            return "SBOM-SSDF-PS1";
-        } else if req.contains("ps.2") {
-            return "SBOM-SSDF-PS2";
-        } else if req.contains("ps.3") {
-            return "SBOM-SSDF-PS3";
-        } else if req.contains("po.1") {
-            return "SBOM-SSDF-PO1";
-        } else if req.contains("po.3") {
-            return "SBOM-SSDF-PO3";
-        } else if req.contains("pw.4") {
-            return "SBOM-SSDF-PW4";
-        } else if req.contains("pw.6") {
-            return "SBOM-SSDF-PW6";
-        } else if req.contains("rv.1") {
-            return "SBOM-SSDF-RV1";
-        }
-        return "SBOM-SSDF-GENERAL";
-    }
-
-    // EO 14028 rules
-    if req.starts_with("eo 14028") {
-        if req.contains("machine-readable") || req.contains("format") {
-            return "SBOM-EO14028-FORMAT";
-        } else if req.contains("auto") || req.contains("generation") {
-            return "SBOM-EO14028-AUTOGEN";
-        } else if req.contains("creator") {
-            return "SBOM-EO14028-CREATOR";
-        } else if req.contains("unique ident") {
-            return "SBOM-EO14028-IDENTIFIER";
-        } else if req.contains("dependency") || req.contains("relationship") {
-            return "SBOM-EO14028-DEPENDENCY";
-        } else if req.contains("version") {
-            return "SBOM-EO14028-VERSION";
-        } else if req.contains("integrity") || req.contains("hash") {
-            return "SBOM-EO14028-INTEGRITY";
-        } else if req.contains("disclosure") || req.contains("vulnerab") {
-            return "SBOM-EO14028-DISCLOSURE";
-        } else if req.contains("supplier") {
-            return "SBOM-EO14028-SUPPLIER";
-        }
-        return "SBOM-EO14028-GENERAL";
-    }
-
-    // BSI TR-03183-2 rules (matched before generic CRA logic)
-    if req.contains("bsi tr-03183-2") || req.contains("tr-03183-2") {
-        if req.contains("§5.1") {
-            return "SBOM-BSI-TR-03183-2-5-1";
-        } else if req.contains("§5.2") {
-            return "SBOM-BSI-TR-03183-2-5-2";
-        } else if req.contains("§5.3") {
-            return "SBOM-BSI-TR-03183-2-5-3";
-        } else if req.contains("§5.4") {
-            return "SBOM-BSI-TR-03183-2-5-4";
-        } else if req.contains("§5.5") {
-            return "SBOM-BSI-TR-03183-2-5-5";
-        } else if req.contains("§6") {
-            return "SBOM-BSI-TR-03183-2-6";
-        }
-        return "SBOM-BSI-TR-03183-2-GENERAL";
-    }
-
-    // CRA prEN 40000-1-3 normative requirement IDs (most-specific first)
-    if req.contains("[pre-8-rq-02]") || req.contains("pre-8-rq-02") {
-        "SBOM-CRA-PRE-8-RQ-02"
-    } else if req.contains("[pre-7-rq-07-re]") || req.contains("pre-7-rq-07-re") {
-        "SBOM-CRA-PRE-7-RQ-07-RE"
-    }
-    // CRA-specific rules (original logic)
-    else if req.contains("art. 13(3)") || req.contains("art.13(3)") {
-        "SBOM-CRA-ART-13-3"
-    } else if req.contains("art. 13(4)") || req.contains("art.13(4)") {
-        "SBOM-CRA-ART-13-4"
-    } else if req.contains("art. 13(6)") || req.contains("art.13(6)") {
-        "SBOM-CRA-ART-13-6"
-    } else if req.contains("art. 13(7)") || req.contains("art.13(7)") {
-        "SBOM-CRA-ART-13-7"
-    } else if req.contains("art. 13(8)") || req.contains("art.13(8)") {
-        "SBOM-CRA-ART-13-8"
-    } else if req.contains("art. 13(11)") || req.contains("art.13(11)") {
-        "SBOM-CRA-ART-13-11"
-    } else if req.contains("art. 13(12)") || req.contains("art.13(12)") {
-        "SBOM-CRA-ART-13-12"
-    } else if req.contains("art. 13(15)") || req.contains("art.13(15)") {
-        "SBOM-CRA-ART-13-15"
-    } else if req.contains("art. 13(5)") || req.contains("art.13(5)") {
-        "SBOM-CRA-ART-13-5"
-    } else if req.contains("art. 13(9)") || req.contains("art.13(9)") {
-        "SBOM-CRA-ART-13-9"
-    } else if req.contains("annex vii") {
-        "SBOM-CRA-ANNEX-VII"
-    } else if req.contains("annex iii") {
-        "SBOM-CRA-ANNEX-III"
-    } else if req.contains("annex i") || req.contains("annex_i") {
-        "SBOM-CRA-ANNEX-I"
-    }
-    // CNSA 2.0 rules
-    else if req.contains("cnsa 2.0 symmetric") {
-        "SBOM-CNSA2-ALG-001"
-    } else if req.contains("cnsa 2.0 hash") {
-        "SBOM-CNSA2-ALG-002"
-    } else if req.contains("cnsa 2.0 kem") {
-        "SBOM-CNSA2-ALG-003"
-    } else if req.contains("cnsa 2.0 signature") {
-        "SBOM-CNSA2-ALG-004"
-    } else if req.contains("cnsa 2.0 level 5") {
-        "SBOM-CNSA2-ALG-007"
-    } else if req.contains("cnsa 2.0 pqc migration") {
-        "SBOM-CNSA2-ALG-006"
-    } else if req.contains("cnsa 2.0 certificate") {
-        "SBOM-CNSA2-CERT-001"
-    } else if req.starts_with("cnsa 2.0") {
-        "SBOM-CNSA2-GENERAL"
-    }
-    // NIST PQC rules
-    else if req.contains("ir 8547: quantum-vulnerable") {
-        "SBOM-PQC-001"
-    } else if req.contains("ir 8547: quantum assessment") {
-        "SBOM-PQC-012"
-    } else if req.contains("ir 8547: recommended transition") {
-        "SBOM-PQC-010"
-    } else if req.contains("sp 800-131a: disallowed") {
-        "SBOM-PQC-005"
-    } else if req.contains("sp 800-131a rev 3: ecb") {
-        "SBOM-PQC-008"
-    } else if req.contains("fips 203/204/205") {
-        "SBOM-PQC-009"
-    } else if req.contains("nist: minimum key size") {
-        "SBOM-PQC-KEY-001"
-    } else if req.starts_with("ir 8547") || req.starts_with("sp 800-131a") {
-        "SBOM-PQC-GENERAL"
-    } else {
-        "SBOM-CRA-GENERAL"
-    }
-}
-
 fn compliance_results_to_sarif(result: &ComplianceResult, label: Option<&str>) -> Vec<SarifResult> {
     let prefix = label.map(|l| format!("{l} - ")).unwrap_or_default();
     result
@@ -817,8 +633,15 @@ fn compliance_results_to_sarif(result: &ComplianceResult, label: Option<&str>) -
                     standard_help_uris,
                 })
             };
+            // The externally-visible SARIF rule ID comes from the rule
+            // registry keyed by the violation's stable `rule_id` — never from
+            // re-parsing the human-readable requirement string. Unregistered
+            // keys fall back to the generic CRA rule.
+            let sarif_rule_id = rule_meta(v.rule_id)
+                .map_or("SBOM-CRA-GENERAL", |m| m.sarif_id)
+                .to_string();
             SarifResult {
-                rule_id: violation_to_rule_id(&v.requirement).to_string(),
+                rule_id: sarif_rule_id,
                 level: violation_severity_to_level(v.severity),
                 message: SarifMessage {
                     text: format!(

@@ -34,8 +34,8 @@ mod scorer;
 
 pub use compliance::{
     ClassCheck, ComplianceChecker, ComplianceLevel, ComplianceResult, ConformityAssessmentSummary,
-    ConformityEvidence, CraPhase, StandardKind, StandardRef, Violation, ViolationCategory,
-    ViolationSeverity,
+    ConformityEvidence, CraPhase, RuleMeta, StandardKind, StandardRef, Violation,
+    ViolationCategory, ViolationSeverity, rule_meta,
 };
 pub use metrics::{
     AuditabilityMetrics, CompletenessMetrics, ComplexityFactors, ComplexityLevel,

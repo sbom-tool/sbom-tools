@@ -320,6 +320,7 @@ fn check_ntia_compliance(sbom: &NormalizedSbom) -> ComplianceResult {
             message: "Missing author/creator information".to_string(),
             element: None,
             requirement: "NTIA Minimum Elements: Author".to_string(),
+            rule_id: "SBOM-NTIA-AUTHOR",
             standard_refs: Vec::new(),
         });
     }
@@ -332,6 +333,7 @@ fn check_ntia_compliance(sbom: &NormalizedSbom) -> ComplianceResult {
                 message: "Component missing name".to_string(),
                 element: None,
                 requirement: "NTIA Minimum Elements: Component Name".to_string(),
+                rule_id: "SBOM-NTIA-NAME",
                 standard_refs: Vec::new(),
             });
         }
@@ -342,6 +344,7 @@ fn check_ntia_compliance(sbom: &NormalizedSbom) -> ComplianceResult {
                 message: format!("Component '{}' missing version", comp.name),
                 element: Some(comp.name.clone()),
                 requirement: "NTIA Minimum Elements: Version".to_string(),
+                rule_id: "SBOM-NTIA-VERSION",
                 standard_refs: Vec::new(),
             });
         }
@@ -352,6 +355,7 @@ fn check_ntia_compliance(sbom: &NormalizedSbom) -> ComplianceResult {
                 message: format!("Component '{}' missing supplier", comp.name),
                 element: Some(comp.name.clone()),
                 requirement: "NTIA Minimum Elements: Supplier Name".to_string(),
+                rule_id: "SBOM-NTIA-SUPPLIER",
                 standard_refs: Vec::new(),
             });
         }
@@ -368,6 +372,7 @@ fn check_ntia_compliance(sbom: &NormalizedSbom) -> ComplianceResult {
                 ),
                 element: Some(comp.name.clone()),
                 requirement: "NTIA Minimum Elements: Unique Identifier".to_string(),
+                rule_id: "SBOM-NTIA-IDENTIFIER",
                 standard_refs: Vec::new(),
             });
         }
@@ -380,6 +385,7 @@ fn check_ntia_compliance(sbom: &NormalizedSbom) -> ComplianceResult {
             message: "Missing dependency relationships".to_string(),
             element: None,
             requirement: "NTIA Minimum Elements: Dependency Relationship".to_string(),
+            rule_id: "SBOM-NTIA-DEPENDENCY",
             standard_refs: Vec::new(),
         });
     }
@@ -414,6 +420,11 @@ fn check_fda_compliance(sbom: &NormalizedSbom) -> ComplianceResult {
             requirement: format!("FDA Medical Device: {}", issue.category),
             message: issue.message,
             element: None,
+            rule_id: match issue.category {
+                "Dependency" => "SBOM-FDA-DEPENDENCY",
+                "Security" => "SBOM-FDA-SECURITY",
+                _ => "SBOM-FDA-GENERAL",
+            },
             standard_refs: Vec::new(),
         })
         .collect();

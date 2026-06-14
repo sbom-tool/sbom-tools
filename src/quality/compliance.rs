@@ -344,6 +344,610 @@ impl StandardKind {
     }
 }
 
+/// Static metadata attached to a compliance rule. The `rule_id` on every
+/// [`Violation`] indexes into [`rule_meta`]; the registry — not the
+/// human-readable message — is the single source of truth for the
+/// externally-visible SARIF rule ID, the harmonised-standard cross-references,
+/// and the remediation text. Rewording a message can no longer silently
+/// re-bucket a GitHub code-scanning rule or drop a prEN/BSI reference.
+#[derive(Debug, Clone, Copy)]
+pub struct RuleMeta {
+    /// Externally-visible SARIF rule ID (e.g., `SBOM-CRA-ART-13-4`). GitHub
+    /// code scanning dedups on this value, so it must stay stable.
+    pub sarif_id: &'static str,
+    /// Documentation-default severity for the rule. Push sites may still
+    /// escalate/relax the concrete [`Violation::severity`] by product class or
+    /// CRA phase; this default is surfaced in the SARIF rule catalogue.
+    pub default_severity: ViolationSeverity,
+    /// Harmonised-standard / regulation cross-references, in display order.
+    pub refs: &'static [(StandardKind, &'static str)],
+    /// Remediation guidance shown in reports and the TUI.
+    pub remediation: &'static str,
+}
+
+/// Generic fallback remediation, shared by rules with no bespoke guidance.
+const REMEDIATION_GENERIC: &str = "Review the requirement and update the SBOM accordingly. Consult the EU CRA regulation (EU 2024/2847) for detailed guidance.";
+
+/// SSDF practices share one remediation paragraph.
+const REMEDIATION_SSDF: &str = "Follow NIST SP 800-218 SSDF practices: include tool provenance, source VCS references, build metadata, and cryptographic hashes for all components.";
+
+/// EO 14028 §4 requirements share one remediation paragraph.
+const REMEDIATION_EO14028: &str = "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.3+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.";
+
+/// Look up the static [`RuleMeta`] for a stable internal rule key.
+///
+/// The key is the [`Violation::rule_id`] set at each check site. Returns
+/// `None` for unregistered keys — the exhaustive test
+/// `every_emitted_violation_has_a_registered_rule_id` guarantees no live check
+/// site emits an unregistered key.
+#[must_use]
+pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
+    use StandardKind as K;
+    const CRA: K = K::CraArticle;
+    const ANNEX: K = K::CraAnnex;
+    const PREN: K = K::Pren40000_1_3;
+    let meta = match rule_id {
+        // ---- CRA Articles ------------------------------------------------
+        "SBOM-CRA-ART-13-2" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(CRA, "Art. 13(2)")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-CRA-ART-13-3" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-3",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(CRA, "Art. 13(3)")],
+            remediation: "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(3) requires timely updates reflecting the current state of the software.",
+        },
+        "SBOM-CRA-ART-13-4" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-4",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(CRA, "Art. 13(4)"), (PREN, "PRE-7-RQ-04")],
+            remediation: "Ensure the SBOM is produced in CycloneDX 1.4+ (JSON or XML), SPDX 2.3+ (JSON or tag-value), or SPDX 3.0+ (JSON-LD). Older format versions may not be recognized as machine-readable under the CRA.",
+        },
+        "SBOM-CRA-ART-13-5" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-5",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(CRA, "Art. 13(5)")],
+            remediation: "Ensure every component has license information. CycloneDX: use component.licenses[]. SPDX 2.x: use PackageLicenseDeclared / PackageLicenseConcluded. SPDX 3.0: use HAS_DECLARED_LICENSE / HAS_CONCLUDED_LICENSE relationships.",
+        },
+        "SBOM-CRA-ART-13-6-CONTACT" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-6",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(CRA, "Art. 13(6)")],
+            remediation: "Add a security contact or vulnerability disclosure URL. CycloneDX: add a component externalReference with type 'security-contact' or set metadata.manufacturer.contact. SPDX: add an SECURITY external reference.",
+        },
+        "SBOM-CRA-ART-13-6-METADATA" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-6",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(CRA, "Art. 13(6)")],
+            remediation: "Add severity (e.g., CVSS score) and remediation details to each vulnerability entry. CycloneDX: use vulnerability.ratings[].score and vulnerability.analysis. SPDX: use annotation or externalRef.",
+        },
+        "SBOM-CRA-ART-13-7" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-7",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(CRA, "Art. 13(7)"), (PREN, "RLS-2-RQ-03-RE")],
+            remediation: "Reference a coordinated vulnerability disclosure policy. CycloneDX: add an externalReference of type 'advisories' linking to your disclosure policy. SPDX: add an external document reference.",
+        },
+        "SBOM-CRA-ART-13-8" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-8",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(CRA, "Art. 13(8)")],
+            remediation: "Specify when security updates will no longer be provided. CycloneDX 1.5+: use component.releaseNotes or metadata properties. SPDX: use an annotation with end-of-support date.",
+        },
+        "SBOM-CRA-ART-13-9" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-9",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(CRA, "Art. 13(9)")],
+            remediation: "Include vulnerability data or add a vulnerability-assertion external reference stating no known vulnerabilities. CycloneDX: use the vulnerabilities array. SPDX: use annotations or external references.",
+        },
+        "SBOM-CRA-ART-13-11" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-11",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(CRA, "Art. 13(11)")],
+            remediation: "Include lifecycle or end-of-support metadata for components. CycloneDX: use component properties (e.g., cdx:lifecycle:status). SPDX: use annotations.",
+        },
+        "SBOM-CRA-ART-13-12-PRODUCT" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-12",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(CRA, "Art. 13(12)")],
+            remediation: "The SBOM must identify the product by name. CycloneDX: set metadata.component.name. SPDX: set documentDescribes with the primary package name.",
+        },
+        "SBOM-CRA-ART-13-12-VERSION" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-12",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(CRA, "Art. 13(12)"), (PREN, "PRE-7-RQ-06")],
+            remediation: "Every component must have a version string. Use the actual release version (e.g., '1.2.3'), not a range or placeholder.",
+        },
+        "SBOM-CRA-ART-13-15" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-15",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(CRA, "Art. 13(15)")],
+            remediation: "Identify the manufacturer/supplier. CycloneDX: set metadata.manufacturer or component.supplier. SPDX: set PackageSupplier.",
+        },
+        "SBOM-CRA-ART-13-15-EMAIL" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-15",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(CRA, "Art. 13(15)")],
+            remediation: "Provide a valid contact email for the manufacturer. The email must contain an @ sign with valid local and domain parts.",
+        },
+        "SBOM-CRA-ART-14" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(CRA, "Art. 14")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-CRA-ART-24" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_GENERIC,
+        },
+        // ---- CRA Annexes -------------------------------------------------
+        "SBOM-CRA-ANNEX-I-IDENTIFIER" => RuleMeta {
+            sarif_id: "SBOM-CRA-ANNEX-I",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(ANNEX, "Annex I"), (PREN, "PRE-7-RQ-07")],
+            remediation: "Add a PURL, CPE, or SWID tag to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21).",
+        },
+        "SBOM-CRA-ANNEX-I-TRACEABILITY" => RuleMeta {
+            sarif_id: "SBOM-CRA-ANNEX-I",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(ANNEX, "Annex I Part II"), (PREN, "PRE-7-RQ-07")],
+            remediation: "Add a PURL, CPE, or SWID tag to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21).",
+        },
+        "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN" => RuleMeta {
+            sarif_id: "SBOM-CRA-ANNEX-I",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[
+                (ANNEX, "Annex I Part II"),
+                (ANNEX, "Annex I Part III"),
+                (PREN, "PRE-7-RQ-01"),
+                (PREN, "PRE-7-RQ-03"),
+            ],
+            remediation: "Add dependency relationships between components. CycloneDX: use the dependencies array. SPDX: use DEPENDS_ON relationships.",
+        },
+        "SBOM-CRA-ANNEX-I-INTEGRITY" => RuleMeta {
+            sarif_id: "SBOM-CRA-ANNEX-I",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(ANNEX, "Annex I")],
+            remediation: "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification.",
+        },
+        "SBOM-CRA-ANNEX-I-DEPENDENCY" => RuleMeta {
+            sarif_id: "SBOM-CRA-ANNEX-I",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(ANNEX, "Annex I")],
+            remediation: "Add dependency relationships between components. CycloneDX: use the dependencies array. SPDX: use DEPENDS_ON relationships.",
+        },
+        "SBOM-CRA-ANNEX-I-PRIMARY" => RuleMeta {
+            sarif_id: "SBOM-CRA-ANNEX-I",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(ANNEX, "Annex I")],
+            remediation: "Identify the top-level product component. CycloneDX: set metadata.component. SPDX: use documentDescribes to point to the primary package.",
+        },
+        "SBOM-CRA-ANNEX-I-CONTROLS" => RuleMeta {
+            sarif_id: "SBOM-CRA-ANNEX-I",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(ANNEX, "Annex I")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-CRA-ANNEX-III" => RuleMeta {
+            sarif_id: "SBOM-CRA-ANNEX-III",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(ANNEX, "Annex III")],
+            remediation: "Add document-level integrity metadata: a serial number (CycloneDX: serialNumber, SPDX: documentNamespace), or a digital signature/attestation with a cryptographic hash.",
+        },
+        "SBOM-CRA-ANNEX-IV" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(ANNEX, "Annex IV")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-CRA-ANNEX-VII" => RuleMeta {
+            sarif_id: "SBOM-CRA-ANNEX-VII",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(ANNEX, "Annex VII")],
+            remediation: "Reference the EU Declaration of Conformity. CycloneDX: add an externalReference of type 'attestation' or 'certification'. SPDX: add an external document reference.",
+        },
+        "SBOM-CRA-ANNEX-VIII" => RuleMeta {
+            // Historically matched the "annex vii" substring of "annex viii".
+            sarif_id: "SBOM-CRA-ANNEX-VII",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(ANNEX, "Annex VIII")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-CRA-PRE-8-RQ-02" => RuleMeta {
+            sarif_id: "SBOM-CRA-PRE-8-RQ-02",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(PREN, "PRE-8-RQ-02")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-CRA-PRE-7-RQ-07-RE" => RuleMeta {
+            sarif_id: "SBOM-CRA-PRE-7-RQ-07-RE",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[
+                (ANNEX, "Annex I Part II"),
+                (PREN, "PRE-7-RQ-07"),
+                (PREN, "PRE-7-RQ-07-RE"),
+            ],
+            remediation: "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification.",
+        },
+        // ---- Generic CRA / document-level (no specific article) ----------
+        "SBOM-CRA-GENERAL" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_GENERIC,
+        },
+        // ---- EUCC Substantial (reference-only profile) -------------------
+        "SBOM-EUCC" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_GENERIC,
+        },
+        // ---- NTIA --------------------------------------------------------
+        "SBOM-NTIA-VERSION" => RuleMeta {
+            sarif_id: "SBOM-NTIA-VERSION",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-NTIA-SUPPLIER" => RuleMeta {
+            sarif_id: "SBOM-NTIA-SUPPLIER",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-NTIA-DEPENDENCY" => RuleMeta {
+            sarif_id: "SBOM-NTIA-DEPENDENCY",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        // ---- FDA ---------------------------------------------------------
+        "SBOM-FDA-SUPPLIER" => RuleMeta {
+            sarif_id: "SBOM-FDA-SUPPLIER",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-FDA-SUPPORT" => RuleMeta {
+            sarif_id: "SBOM-FDA-SUPPORT",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-FDA-NAME" => RuleMeta {
+            sarif_id: "SBOM-FDA-GENERAL",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-FDA-VERSION" => RuleMeta {
+            sarif_id: "SBOM-FDA-VERSION",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-FDA-IDENTIFIER" => RuleMeta {
+            sarif_id: "SBOM-FDA-IDENTIFIER",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-FDA-HASH" => RuleMeta {
+            sarif_id: "SBOM-FDA-HASH",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        // FDA rules emitted by the `validate` NTIA/FDA fast-path
+        // (`cli::validate`), which builds violations directly without
+        // populating `standard_refs`.
+        "SBOM-FDA-CREATOR" => RuleMeta {
+            sarif_id: "SBOM-FDA-CREATOR",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-FDA-NAMESPACE" => RuleMeta {
+            sarif_id: "SBOM-FDA-NAMESPACE",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-FDA-DEPENDENCY" => RuleMeta {
+            sarif_id: "SBOM-FDA-DEPENDENCY",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-FDA-SECURITY" => RuleMeta {
+            sarif_id: "SBOM-FDA-SECURITY",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-FDA-GENERAL" => RuleMeta {
+            sarif_id: "SBOM-FDA-GENERAL",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        // NTIA rules emitted by the `validate` fast-path.
+        "SBOM-NTIA-AUTHOR" => RuleMeta {
+            sarif_id: "SBOM-NTIA-AUTHOR",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-NTIA-NAME" => RuleMeta {
+            sarif_id: "SBOM-NTIA-NAME",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-NTIA-IDENTIFIER" => RuleMeta {
+            sarif_id: "SBOM-NTIA-IDENTIFIER",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-NTIA-GENERAL" => RuleMeta {
+            sarif_id: "SBOM-NTIA-GENERAL",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        // Catch-all rule keys for the SSDF / EO 14028 profiles; not currently
+        // emitted by any check site but kept so the registry mirrors the full
+        // SARIF rule catalogue.
+        "SBOM-SSDF-GENERAL" => RuleMeta {
+            sarif_id: "SBOM-SSDF-GENERAL",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::NistSsdf, "SP 800-218")],
+            remediation: REMEDIATION_SSDF,
+        },
+        "SBOM-EO14028-GENERAL" => RuleMeta {
+            sarif_id: "SBOM-EO14028-GENERAL",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::Eo14028, "EO 14028 §4")],
+            remediation: REMEDIATION_EO14028,
+        },
+        // ---- NIST SSDF ---------------------------------------------------
+        "SBOM-SSDF-PS1" => RuleMeta {
+            sarif_id: "SBOM-SSDF-PS1",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::NistSsdf, "PS.1")],
+            remediation: REMEDIATION_SSDF,
+        },
+        "SBOM-SSDF-PS2" => RuleMeta {
+            sarif_id: "SBOM-SSDF-PS2",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::NistSsdf, "PS.2")],
+            remediation: REMEDIATION_SSDF,
+        },
+        "SBOM-SSDF-PS3" => RuleMeta {
+            sarif_id: "SBOM-SSDF-PS3",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::NistSsdf, "PS.3")],
+            remediation: REMEDIATION_SSDF,
+        },
+        "SBOM-SSDF-PO1" => RuleMeta {
+            sarif_id: "SBOM-SSDF-PO1",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::NistSsdf, "PO.1")],
+            remediation: REMEDIATION_SSDF,
+        },
+        "SBOM-SSDF-PO3" => RuleMeta {
+            sarif_id: "SBOM-SSDF-PO3",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::NistSsdf, "PO.3")],
+            remediation: REMEDIATION_SSDF,
+        },
+        "SBOM-SSDF-PW4" => RuleMeta {
+            sarif_id: "SBOM-SSDF-PW4",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::NistSsdf, "PW.4")],
+            remediation: REMEDIATION_SSDF,
+        },
+        "SBOM-SSDF-PW6" => RuleMeta {
+            sarif_id: "SBOM-SSDF-PW6",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::NistSsdf, "PW.6")],
+            remediation: REMEDIATION_SSDF,
+        },
+        "SBOM-SSDF-RV1" => RuleMeta {
+            sarif_id: "SBOM-SSDF-RV1",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::NistSsdf, "RV.1")],
+            remediation: REMEDIATION_SSDF,
+        },
+        // ---- EO 14028 ----------------------------------------------------
+        "SBOM-EO14028-FORMAT" => RuleMeta {
+            sarif_id: "SBOM-EO14028-FORMAT",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::Eo14028, "EO 14028 §4")],
+            remediation: REMEDIATION_EO14028,
+        },
+        "SBOM-EO14028-AUTOGEN" => RuleMeta {
+            sarif_id: "SBOM-EO14028-AUTOGEN",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::Eo14028, "EO 14028 §4")],
+            remediation: REMEDIATION_EO14028,
+        },
+        "SBOM-EO14028-CREATOR" => RuleMeta {
+            sarif_id: "SBOM-EO14028-CREATOR",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::Eo14028, "EO 14028 §4")],
+            remediation: REMEDIATION_EO14028,
+        },
+        "SBOM-EO14028-IDENTIFIER" => RuleMeta {
+            sarif_id: "SBOM-EO14028-IDENTIFIER",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::Eo14028, "EO 14028 §4")],
+            remediation: REMEDIATION_EO14028,
+        },
+        "SBOM-EO14028-DEPENDENCY" => RuleMeta {
+            sarif_id: "SBOM-EO14028-DEPENDENCY",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::Eo14028, "EO 14028 §4")],
+            remediation: REMEDIATION_EO14028,
+        },
+        "SBOM-EO14028-VERSION" => RuleMeta {
+            sarif_id: "SBOM-EO14028-VERSION",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::Eo14028, "EO 14028 §4")],
+            remediation: REMEDIATION_EO14028,
+        },
+        "SBOM-EO14028-INTEGRITY" => RuleMeta {
+            sarif_id: "SBOM-EO14028-INTEGRITY",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::Eo14028, "EO 14028 §4")],
+            remediation: REMEDIATION_EO14028,
+        },
+        "SBOM-EO14028-DISCLOSURE" => RuleMeta {
+            sarif_id: "SBOM-EO14028-DISCLOSURE",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::Eo14028, "EO 14028 §4")],
+            remediation: REMEDIATION_EO14028,
+        },
+        "SBOM-EO14028-SUPPLIER" => RuleMeta {
+            sarif_id: "SBOM-EO14028-SUPPLIER",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::Eo14028, "EO 14028 §4")],
+            remediation: REMEDIATION_EO14028,
+        },
+        // ---- BSI TR-03183-2 ----------------------------------------------
+        "SBOM-BSI-TR-03183-2-5-1" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-5-1",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiTr03183_2, "§5.1")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-BSI-TR-03183-2-5-2" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-5-2",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiTr03183_2, "§5.2")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-BSI-TR-03183-2-5-3" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-5-3",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiTr03183_2, "§5.3")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-BSI-TR-03183-2-5-4" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-5-4",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiTr03183_2, "§5.4")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-BSI-TR-03183-2-5-5" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-5-5",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiTr03183_2, "§5.5")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-BSI-TR-03183-2-6" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-6",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::BsiTr03183_2, "§6")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        // ---- CNSA 2.0 ----------------------------------------------------
+        "SBOM-CNSA2-ALG-001" => RuleMeta {
+            sarif_id: "SBOM-CNSA2-ALG-001",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-CNSA2-ALG-002" => RuleMeta {
+            sarif_id: "SBOM-CNSA2-ALG-002",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-CNSA2-ALG-003" => RuleMeta {
+            sarif_id: "SBOM-CNSA2-ALG-003",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-CNSA2-ALG-004" => RuleMeta {
+            sarif_id: "SBOM-CNSA2-ALG-004",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-CNSA2-ALG-006" => RuleMeta {
+            sarif_id: "SBOM-CNSA2-ALG-006",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-CNSA2-ALG-007" => RuleMeta {
+            sarif_id: "SBOM-CNSA2-ALG-007",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-CNSA2-CERT-001" => RuleMeta {
+            sarif_id: "SBOM-CNSA2-CERT-001",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        // ---- NIST PQC ----------------------------------------------------
+        "SBOM-PQC-001" => RuleMeta {
+            sarif_id: "SBOM-PQC-001",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-PQC-012" => RuleMeta {
+            sarif_id: "SBOM-PQC-012",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-PQC-010" => RuleMeta {
+            sarif_id: "SBOM-PQC-010",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-PQC-005" => RuleMeta {
+            sarif_id: "SBOM-PQC-005",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-PQC-008" => RuleMeta {
+            sarif_id: "SBOM-PQC-008",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-PQC-009" => RuleMeta {
+            sarif_id: "SBOM-PQC-009",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::NistPqc, "NIST PQC")],
+            remediation: REMEDIATION_GENERIC,
+        },
+        "SBOM-PQC-KEY-001" => RuleMeta {
+            sarif_id: "SBOM-PQC-KEY-001",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: REMEDIATION_GENERIC,
+        },
+        _ => return None,
+    };
+    Some(meta)
+}
+
 /// A compliance violation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Violation {
@@ -357,251 +961,61 @@ pub struct Violation {
     pub element: Option<String>,
     /// Standard/requirement being violated
     pub requirement: String,
+    /// Stable internal rule key, set at the check site, indexing into
+    /// [`rule_meta`]. This — not the human-readable message — drives the
+    /// externally-visible SARIF rule ID, the harmonised-standard references,
+    /// and the remediation text. Defaults to `"SBOM-CRA-GENERAL"` for
+    /// violations built outside the checker (e.g., from external config).
+    ///
+    /// Skipped during (de)serialization: it is a `&'static str` runtime index,
+    /// not part of the JSON contract. Round-tripped payloads resolve back to
+    /// the default; `standard_refs` already carries the serialized references.
+    #[serde(skip, default = "default_rule_id")]
+    pub rule_id: &'static str,
     /// Structured references to harmonised-standard / regulation clauses.
     ///
-    /// Populated by `ComplianceChecker::check()` from `requirement` via
-    /// `Violation::derive_standard_refs()`. Empty when a violation cannot be
-    /// mapped (e.g., custom rules from external configuration).
+    /// Populated by `ComplianceChecker::check()` from [`Violation::rule_id`]
+    /// via [`rule_meta`]. Empty when a violation's rule maps to no references.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub standard_refs: Vec<StandardRef>,
 }
 
+/// Serde default for [`Violation::rule_id`] when deserializing payloads that
+/// predate the field.
+fn default_rule_id() -> &'static str {
+    "SBOM-CRA-GENERAL"
+}
+
 impl Violation {
-    /// Derive structured standard references from the violation's
-    /// `requirement` string.
+    /// Structured standard references for this violation, looked up from the
+    /// rule registry by [`Violation::rule_id`].
     ///
-    /// Maps each violation to the canonical IDs in the parallel CRA standards
-    /// hierarchies — CRA regulation articles/annexes, prEN 40000-1-3 normative
-    /// requirements, BSI TR-03183, and adjacent profiles (NIST SSDF, EO 14028,
-    /// FDA, NTIA). The output is deterministic and regenerated on each call,
-    /// so the canonical source of truth remains the `requirement` string.
+    /// References are returned in registry order — typically the most specific
+    /// harmonised-standard ID first, then the regulation reference. The
+    /// registry, not the human-readable `requirement` string, is the single
+    /// source of truth, so rewording a message can never silently drop a
+    /// prEN/BSI cross-reference.
     ///
-    /// References are emitted in registration order — typically the most
-    /// specific harmonised-standard ID first, then the regulation reference.
-    ///
-    /// `ComplianceChecker::check()` invokes this once and stores the result
-    /// in `Violation::standard_refs`, so most consumers should read the field
+    /// `ComplianceChecker::check()` calls this once and stores the result in
+    /// `Violation::standard_refs`, so most consumers should read the field
     /// directly rather than re-deriving.
     #[must_use]
-    pub fn derive_standard_refs(&self) -> Vec<StandardRef> {
-        let req = self.requirement.to_lowercase();
-        let mut refs: Vec<StandardRef> = Vec::new();
-
-        // ---- CRA Articles -------------------------------------------------
-        let cra_articles: &[(&str, &str)] = &[
-            ("art. 13(2)", "Art. 13(2)"),
-            ("art. 13(3)", "Art. 13(3)"),
-            ("art. 13(4)", "Art. 13(4)"),
-            ("art. 13(5)", "Art. 13(5)"),
-            ("art. 13(6)", "Art. 13(6)"),
-            ("art. 13(7)", "Art. 13(7)"),
-            ("art. 13(8)", "Art. 13(8)"),
-            ("art. 13(9)", "Art. 13(9)"),
-            ("art. 13(11)", "Art. 13(11)"),
-            ("art. 13(12)", "Art. 13(12)"),
-            ("art. 13(15)", "Art. 13(15)"),
-            ("art. 14", "Art. 14"),
-        ];
-        for (needle, id) in cra_articles {
-            if req.contains(needle) {
-                refs.push(StandardRef::new(StandardKind::CraArticle, *id));
-            }
-        }
-
-        // ---- CRA Annexes --------------------------------------------------
-        if req.contains("annex i, part iii") || req.contains("annex i part iii") {
-            refs.push(StandardRef::new(StandardKind::CraAnnex, "Annex I Part III"));
-        }
-        if req.contains("annex i, part ii") || req.contains("annex i part ii") {
-            refs.push(StandardRef::new(StandardKind::CraAnnex, "Annex I Part II"));
-        }
-        if req.contains("annex i,") || req.contains("annex i:") || req.contains("annex i ") {
-            // Avoid double-pushing when more specific Part II/III already matched
-            let already = refs
-                .iter()
-                .any(|r| r.standard == StandardKind::CraAnnex && r.id.starts_with("Annex I"));
-            if !already {
-                refs.push(StandardRef::new(StandardKind::CraAnnex, "Annex I"));
-            }
-        }
-        if req.contains("annex iii") {
-            refs.push(StandardRef::new(StandardKind::CraAnnex, "Annex III"));
-        }
-        if req.contains("annex iv") {
-            refs.push(StandardRef::new(StandardKind::CraAnnex, "Annex IV"));
-        }
-        if req.contains("annex v") && !req.contains("annex vii") {
-            refs.push(StandardRef::new(StandardKind::CraAnnex, "Annex V"));
-        }
-        if req.contains("annex vii") {
-            refs.push(StandardRef::new(StandardKind::CraAnnex, "Annex VII"));
-        }
-        if req.contains("annex viii") {
-            refs.push(StandardRef::new(StandardKind::CraAnnex, "Annex VIII"));
-        }
-
-        // ---- prEN 40000-1-3 normative requirement IDs ---------------------
-        // First, harvest any IDs already mentioned literally in `requirement`.
-        for token in [
-            "PRE-7-RQ-01",
-            "PRE-7-RQ-03",
-            "PRE-7-RQ-04",
-            "PRE-7-RQ-06",
-            "PRE-7-RQ-07",
-            "PRE-7-RQ-07-RE",
-            "PRE-8-RQ-02",
-            "RLS-2-RQ-03-RE",
-        ] {
-            if self.requirement.contains(token) {
-                refs.push(StandardRef::new(StandardKind::Pren40000_1_3, token));
-            }
-        }
-
-        // Inferred mappings — only add if the literal ID was not already present.
-        // (Inline `iter().any()` checks rather than a closure to avoid borrow conflicts.)
-
-        // Art. 13(4) machine-readable format → [PRE-7-RQ-04]
-        if req.contains("art. 13(4)")
-            && req.contains("machine-readable")
-            && !refs.iter().any(|r| r.id == "PRE-7-RQ-04")
-        {
-            refs.push(StandardRef::new(StandardKind::Pren40000_1_3, "PRE-7-RQ-04"));
-        }
-        // Art. 13(7) coordinated disclosure → [RLS-2-RQ-03-RE]
-        if req.contains("art. 13(7)") && !refs.iter().any(|r| r.id == "RLS-2-RQ-03-RE") {
-            refs.push(StandardRef::new(
-                StandardKind::Pren40000_1_3,
-                "RLS-2-RQ-03-RE",
-            ));
-        }
-        // Annex I Part III supply chain → [PRE-7-RQ-01] + [PRE-7-RQ-03]
-        if req.contains("annex i, part iii") || req.contains("annex i part iii") {
-            if !refs.iter().any(|r| r.id == "PRE-7-RQ-01") {
-                refs.push(StandardRef::new(StandardKind::Pren40000_1_3, "PRE-7-RQ-01"));
-            }
-            if !refs.iter().any(|r| r.id == "PRE-7-RQ-03") {
-                refs.push(StandardRef::new(StandardKind::Pren40000_1_3, "PRE-7-RQ-03"));
-            }
-        }
-        // Annex I identifier traceability → [PRE-7-RQ-07]
-        if (req.contains("annex i") && req.contains("identifier"))
-            && !refs.iter().any(|r| r.id == "PRE-7-RQ-07")
-        {
-            refs.push(StandardRef::new(StandardKind::Pren40000_1_3, "PRE-7-RQ-07"));
-        }
-        // Component version (Art. 13(12)) → [PRE-7-RQ-06]
-        if req.contains("art. 13(12)")
-            && req.contains("version")
-            && !refs.iter().any(|r| r.id == "PRE-7-RQ-06")
-        {
-            refs.push(StandardRef::new(StandardKind::Pren40000_1_3, "PRE-7-RQ-06"));
-        }
-        // CSAF advisory format (Art. 13(7)/Annex I Part II 5)
-        if (req.contains("csaf") || req.contains("iso/iec 20153"))
-            && !refs.iter().any(|r| r.standard == StandardKind::Csaf2)
-        {
-            refs.push(StandardRef::new(StandardKind::Csaf2, "CSAF v2.0"));
-        }
-
-        // ---- Adjacent profiles --------------------------------------------
-        if req.contains("nist ssdf") || req.contains("sp 800-218") {
-            // Try to extract the practice ID (e.g., "PS.1", "PW.4", "RV.1")
-            for needle in [
-                "ps.1", "ps.2", "ps.3", "po.1", "po.3", "pw.4", "pw.6", "rv.1",
-            ] {
-                if req.contains(needle) {
-                    refs.push(StandardRef::new(
-                        StandardKind::NistSsdf,
-                        needle.to_uppercase(),
-                    ));
-                }
-            }
-            if !refs.iter().any(|r| r.standard == StandardKind::NistSsdf) {
-                refs.push(StandardRef::new(StandardKind::NistSsdf, "SP 800-218"));
-            }
-        }
-        if req.contains("eo 14028") || req.contains("executive order 14028") {
-            refs.push(StandardRef::new(StandardKind::Eo14028, "EO 14028 §4"));
-        }
-        if req.contains("fda") {
-            refs.push(StandardRef::new(
-                StandardKind::FdaPremarket,
-                "FDA Premarket",
-            ));
-        }
-        if req.contains("ntia") {
-            refs.push(StandardRef::new(
-                StandardKind::NtiaMinimum,
-                "NTIA Minimum Elements",
-            ));
-        }
-        if req.contains("cnsa") {
-            refs.push(StandardRef::new(StandardKind::Cnsa2, "CNSA 2.0"));
-        }
-        if req.contains("nist pqc")
-            || req.contains("fips 203")
-            || req.contains("fips 204")
-            || req.contains("fips 205")
-        {
-            refs.push(StandardRef::new(StandardKind::NistPqc, "NIST PQC"));
-        }
-
-        refs
+    pub fn registry_standard_refs(&self) -> Vec<StandardRef> {
+        rule_meta(self.rule_id)
+            .map(|m| {
+                m.refs
+                    .iter()
+                    .map(|(kind, id)| StandardRef::new(*kind, *id))
+                    .collect()
+            })
+            .unwrap_or_default()
     }
 
-    /// Return remediation guidance for this violation based on the requirement.
+    /// Remediation guidance for this violation, looked up from the rule
+    /// registry by [`Violation::rule_id`].
     #[must_use]
     pub fn remediation_guidance(&self) -> &'static str {
-        let req = self.requirement.to_lowercase();
-        if req.contains("art. 13(4)") {
-            "Ensure the SBOM is produced in CycloneDX 1.4+ (JSON or XML), SPDX 2.3+ (JSON or tag-value), or SPDX 3.0+ (JSON-LD). Older format versions may not be recognized as machine-readable under the CRA."
-        } else if req.contains("art. 13(6)") && req.contains("vulnerability metadata") {
-            "Add severity (e.g., CVSS score) and remediation details to each vulnerability entry. CycloneDX: use vulnerability.ratings[].score and vulnerability.analysis. SPDX: use annotation or externalRef."
-        } else if req.contains("art. 13(6)") {
-            "Add a security contact or vulnerability disclosure URL. CycloneDX: add a component externalReference with type 'security-contact' or set metadata.manufacturer.contact. SPDX: add an SECURITY external reference."
-        } else if req.contains("art. 13(7)") {
-            "Reference a coordinated vulnerability disclosure policy. CycloneDX: add an externalReference of type 'advisories' linking to your disclosure policy. SPDX: add an external document reference."
-        } else if req.contains("art. 13(8)") {
-            "Specify when security updates will no longer be provided. CycloneDX 1.5+: use component.releaseNotes or metadata properties. SPDX: use an annotation with end-of-support date."
-        } else if req.contains("art. 13(11)") {
-            "Include lifecycle or end-of-support metadata for components. CycloneDX: use component properties (e.g., cdx:lifecycle:status). SPDX: use annotations."
-        } else if req.contains("art. 13(12)") && req.contains("version") {
-            "Every component must have a version string. Use the actual release version (e.g., '1.2.3'), not a range or placeholder."
-        } else if req.contains("art. 13(12)") {
-            "The SBOM must identify the product by name. CycloneDX: set metadata.component.name. SPDX: set documentDescribes with the primary package name."
-        } else if req.contains("art. 13(15)") && req.contains("email") {
-            "Provide a valid contact email for the manufacturer. The email must contain an @ sign with valid local and domain parts."
-        } else if req.contains("art. 13(15)") {
-            "Identify the manufacturer/supplier. CycloneDX: set metadata.manufacturer or component.supplier. SPDX: set PackageSupplier."
-        } else if req.contains("annex vii") {
-            "Reference the EU Declaration of Conformity. CycloneDX: add an externalReference of type 'attestation' or 'certification'. SPDX: add an external document reference."
-        } else if req.contains("annex i") && req.contains("identifier") {
-            "Add a PURL, CPE, or SWID tag to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21)."
-        } else if req.contains("annex i") && req.contains("dependency") {
-            "Add dependency relationships between components. CycloneDX: use the dependencies array. SPDX: use DEPENDS_ON relationships."
-        } else if req.contains("annex i") && req.contains("primary") {
-            "Identify the top-level product component. CycloneDX: set metadata.component. SPDX: use documentDescribes to point to the primary package."
-        } else if req.contains("annex i") && req.contains("hash") {
-            "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification."
-        } else if req.contains("annex i") && req.contains("traceability") {
-            "The primary product component needs a stable unique identifier (PURL or CPE) that persists across software updates for traceability."
-        } else if req.contains("art. 13(3)") {
-            "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(3) requires timely updates reflecting the current state of the software."
-        } else if req.contains("art. 13(5)") {
-            "Ensure every component has license information. CycloneDX: use component.licenses[]. SPDX 2.x: use PackageLicenseDeclared / PackageLicenseConcluded. SPDX 3.0: use HAS_DECLARED_LICENSE / HAS_CONCLUDED_LICENSE relationships."
-        } else if req.contains("art. 13(9)") {
-            "Include vulnerability data or add a vulnerability-assertion external reference stating no known vulnerabilities. CycloneDX: use the vulnerabilities array. SPDX: use annotations or external references."
-        } else if req.contains("annex i") && req.contains("supply chain") {
-            "Populate the supplier field for all components, especially transitive dependencies. CycloneDX: use component.supplier. SPDX: use PackageSupplier."
-        } else if req.contains("annex iii") {
-            "Add document-level integrity metadata: a serial number (CycloneDX: serialNumber, SPDX: documentNamespace), or a digital signature/attestation with a cryptographic hash."
-        } else if req.contains("nist ssdf") || req.contains("sp 800-218") {
-            "Follow NIST SP 800-218 SSDF practices: include tool provenance, source VCS references, build metadata, and cryptographic hashes for all components."
-        } else if req.contains("eo 14028") {
-            "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.3+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information."
-        } else {
-            "Review the requirement and update the SBOM accordingly. Consult the EU CRA regulation (EU 2024/2847) for detailed guidance."
-        }
+        rule_meta(self.rule_id).map_or(REMEDIATION_GENERIC, |m| m.remediation)
     }
 }
 
@@ -1017,10 +1431,10 @@ impl ComplianceChecker {
             }
         }
 
-        // Populate harmonised-standard references for every violation.
+        // Populate harmonised-standard references from the rule registry.
         for v in &mut violations {
             if v.standard_refs.is_empty() {
-                v.standard_refs = v.derive_standard_refs();
+                v.standard_refs = v.registry_standard_refs();
             }
         }
 
@@ -1164,6 +1578,7 @@ impl ComplianceChecker {
                 message: "SBOM must have creator/tool information".to_string(),
                 element: None,
                 requirement: "Document creator identification".to_string(),
+                rule_id: "SBOM-CRA-GENERAL",
                 standard_refs: Vec::new(),
             });
         }
@@ -1189,6 +1604,7 @@ impl ComplianceChecker {
                                 .to_string(),
                         element: None,
                         requirement: "CRA Art. 13(15): Manufacturer identification".to_string(),
+                        rule_id: "SBOM-CRA-ART-13-15",
                         standard_refs: Vec::new(),
                     });
                 } else {
@@ -1200,6 +1616,7 @@ impl ComplianceChecker {
                                 .to_string(),
                         element: None,
                         requirement: "CRA Art. 13(15): Manufacturer identification".to_string(),
+                        rule_id: "SBOM-CRA-ART-13-15",
                         standard_refs: Vec::new(),
                     });
                 }
@@ -1219,6 +1636,7 @@ impl ComplianceChecker {
                         ),
                         element: None,
                         requirement: "CRA Art. 13(15): Valid contact information".to_string(),
+                        rule_id: "SBOM-CRA-ART-13-15-EMAIL",
                         standard_refs: Vec::new(),
                     });
                 }
@@ -1236,6 +1654,7 @@ impl ComplianceChecker {
                         message: "[CRA Art. 13(12)] Product name provided via CRA sidecar (consider adding metadata.component.name to the SBOM)".to_string(),
                         element: None,
                         requirement: "CRA Art. 13(12): Product identification".to_string(),
+                        rule_id: "SBOM-CRA-ART-13-12-PRODUCT",
                         standard_refs: Vec::new(),
                     });
                 } else {
@@ -1246,6 +1665,7 @@ impl ComplianceChecker {
                             .to_string(),
                         element: None,
                         requirement: "CRA Art. 13(12): Product identification".to_string(),
+                        rule_id: "SBOM-CRA-ART-13-12-PRODUCT",
                         standard_refs: Vec::new(),
                     });
                 }
@@ -1279,6 +1699,7 @@ impl ComplianceChecker {
                         message: "[CRA Art. 13(6)] Security contact provided via CRA sidecar (consider adding a security-contact externalReference to the SBOM)".to_string(),
                         element: None,
                         requirement: "CRA Art. 13(6): Vulnerability disclosure contact".to_string(),
+                        rule_id: "SBOM-CRA-ART-13-6-CONTACT",
                         standard_refs: Vec::new(),
                     });
                 } else {
@@ -1288,6 +1709,7 @@ impl ComplianceChecker {
                         message: "[CRA Art. 13(6)] SBOM should include a security contact or vulnerability disclosure reference".to_string(),
                         element: None,
                         requirement: "CRA Art. 13(6): Vulnerability disclosure contact".to_string(),
+                        rule_id: "SBOM-CRA-ART-13-6-CONTACT",
                         standard_refs: Vec::new(),
                     });
                 }
@@ -1301,6 +1723,7 @@ impl ComplianceChecker {
                     message: "[CRA Annex I] SBOM should identify the primary product component (CycloneDX metadata.component or SPDX documentDescribes)".to_string(),
                     element: None,
                     requirement: "CRA Annex I: Primary product identification".to_string(),
+                    rule_id: "SBOM-CRA-ANNEX-I-PRIMARY",
                     standard_refs: Vec::new(),
                 });
             }
@@ -1313,6 +1736,7 @@ impl ComplianceChecker {
                     message: "[CRA Art. 13(8)] Consider specifying a support end date for security updates".to_string(),
                     element: None,
                     requirement: "CRA Art. 13(8): Support period disclosure".to_string(),
+                    rule_id: "SBOM-CRA-ART-13-8",
                     standard_refs: Vec::new(),
                 });
             }
@@ -1343,6 +1767,7 @@ impl ComplianceChecker {
                     ),
                     element: None,
                     requirement: "CRA Art. 13(4): Machine-readable SBOM format".to_string(),
+                    rule_id: "SBOM-CRA-ART-13-4",
                     standard_refs: Vec::new(),
                 });
             }
@@ -1364,6 +1789,7 @@ impl ComplianceChecker {
                             ),
                             element: Some(primary.name.clone()),
                             requirement: "CRA Annex I, Part II, 1: Product identifier traceability across updates".to_string(),
+                            rule_id: "SBOM-CRA-ANNEX-I-TRACEABILITY",
                             standard_refs: Vec::new(),
                         });
             }
@@ -1391,6 +1817,7 @@ impl ComplianceChecker {
                         message: "[CRA Art. 13(7)] CVD policy URL provided via CRA sidecar (consider adding an advisories externalReference to the SBOM)".to_string(),
                         element: None,
                         requirement: "CRA Art. 13(7): Coordinated vulnerability disclosure policy".to_string(),
+                        rule_id: "SBOM-CRA-ART-13-7",
                         standard_refs: Vec::new(),
                     });
                 } else {
@@ -1400,6 +1827,7 @@ impl ComplianceChecker {
                         message: "[CRA Art. 13(7)] SBOM should reference a coordinated vulnerability disclosure policy (advisories URL or disclosure URL)".to_string(),
                         element: None,
                         requirement: "CRA Art. 13(7): Coordinated vulnerability disclosure policy".to_string(),
+                        rule_id: "SBOM-CRA-ART-13-7",
                         standard_refs: Vec::new(),
                     });
                 }
@@ -1426,6 +1854,7 @@ impl ComplianceChecker {
                     message: "[CRA Art. 13(11)] Consider including component lifecycle/end-of-support information".to_string(),
                     element: None,
                     requirement: "CRA Art. 13(11): Component lifecycle status".to_string(),
+                    rule_id: "SBOM-CRA-ART-13-11",
                     standard_refs: Vec::new(),
                 });
             }
@@ -1458,6 +1887,7 @@ impl ComplianceChecker {
                     ),
                     element: None,
                     requirement: "CRA Annex VII: EU Declaration of Conformity reference".to_string(),
+                    rule_id: "SBOM-CRA-ANNEX-VII",
                     standard_refs: Vec::new(),
                 });
             }
@@ -1478,6 +1908,7 @@ impl ComplianceChecker {
                         .to_string(),
                     element: None,
                     requirement: "FDA: Manufacturer identification".to_string(),
+                    rule_id: "SBOM-FDA-SUPPLIER",
                     standard_refs: Vec::new(),
                 });
             }
@@ -1491,6 +1922,7 @@ impl ComplianceChecker {
                     message: "FDA: SBOM creators should include contact email".to_string(),
                     element: None,
                     requirement: "FDA: Contact information".to_string(),
+                    rule_id: "SBOM-FDA-SUPPORT",
                     standard_refs: Vec::new(),
                 });
             }
@@ -1503,6 +1935,7 @@ impl ComplianceChecker {
                     message: "FDA: SBOM should have a document name/title".to_string(),
                     element: None,
                     requirement: "FDA: Document identification".to_string(),
+                    rule_id: "SBOM-FDA-NAME",
                     standard_refs: Vec::new(),
                 });
             }
@@ -1533,6 +1966,7 @@ impl ComplianceChecker {
                 message: "SBOM should have a serial number/unique identifier".to_string(),
                 element: None,
                 requirement: "Document unique identification".to_string(),
+                rule_id: "SBOM-CRA-GENERAL",
                 standard_refs: Vec::new(),
             });
         }
@@ -1551,6 +1985,7 @@ impl ComplianceChecker {
                     message: "Component must have a name".to_string(),
                     element: Some(comp.identifiers.format_id.clone()),
                     requirement: "Component name (required)".to_string(),
+                    rule_id: "SBOM-CRA-GENERAL",
                     standard_refs: Vec::new(),
                 });
             }
@@ -1566,10 +2001,11 @@ impl ComplianceChecker {
                     | ComplianceLevel::Comprehensive
             ) && comp.version.is_none()
             {
-                let (req, msg) = match self.level {
+                let (req, msg, rule_id) = match self.level {
                     ComplianceLevel::FdaMedicalDevice => (
                         "FDA: Component version".to_string(),
                         format!("Component '{}' missing version", comp.name),
+                        "SBOM-FDA-VERSION",
                     ),
                     ComplianceLevel::CraPhase1 | ComplianceLevel::CraPhase2 => (
                         "CRA Art. 13(12): Component version".to_string(),
@@ -1577,10 +2013,12 @@ impl ComplianceChecker {
                             "[CRA Art. 13(12)] Component '{}' missing version",
                             comp.name
                         ),
+                        "SBOM-CRA-ART-13-12-VERSION",
                     ),
                     _ => (
                         "NTIA: Component version".to_string(),
                         format!("Component '{}' missing version", comp.name),
+                        "SBOM-NTIA-VERSION",
                     ),
                 };
                 violations.push(Violation {
@@ -1589,6 +2027,7 @@ impl ComplianceChecker {
                     message: msg,
                     element: Some(comp.name.clone()),
                     requirement: req,
+                    rule_id,
                     standard_refs: Vec::new(),
                 });
             }
@@ -1614,13 +2053,14 @@ impl ComplianceChecker {
                 } else {
                     ViolationSeverity::Warning
                 };
-                let (message, requirement) = match self.level {
+                let (message, requirement, rule_id) = match self.level {
                     ComplianceLevel::FdaMedicalDevice => (
                         format!(
                             "Component '{}' missing unique identifier (PURL/CPE/SWHID/SWID)",
                             comp.name
                         ),
                         "FDA: Unique component identifier".to_string(),
+                        "SBOM-FDA-IDENTIFIER",
                     ),
                     ComplianceLevel::CraPhase1 | ComplianceLevel::CraPhase2 => (
                         format!(
@@ -1628,6 +2068,7 @@ impl ComplianceChecker {
                             comp.name
                         ),
                         "CRA Annex I / prEN 40000-1-3 [PRE-7-RQ-07]: Unique component identifier (PURL/CPE/SWHID/SWID)".to_string(),
+                        "SBOM-CRA-ANNEX-I-IDENTIFIER",
                     ),
                     _ => (
                         format!(
@@ -1635,6 +2076,7 @@ impl ComplianceChecker {
                             comp.name
                         ),
                         "Standard identifier (PURL/CPE/SWHID)".to_string(),
+                        "SBOM-CRA-GENERAL",
                     ),
                 };
                 violations.push(Violation {
@@ -1643,6 +2085,7 @@ impl ComplianceChecker {
                     message,
                     element: Some(comp.name.clone()),
                     requirement,
+                    rule_id,
                     standard_refs: Vec::new(),
                 });
             }
@@ -1664,10 +2107,11 @@ impl ComplianceChecker {
                     }
                     _ => ViolationSeverity::Error,
                 };
-                let (message, requirement) = match self.level {
+                let (message, requirement, rule_id) = match self.level {
                     ComplianceLevel::FdaMedicalDevice => (
                         format!("Component '{}' missing supplier/manufacturer", comp.name),
                         "FDA: Supplier/manufacturer information".to_string(),
+                        "SBOM-FDA-SUPPLIER",
                     ),
                     ComplianceLevel::CraPhase1 | ComplianceLevel::CraPhase2 => (
                         format!(
@@ -1675,10 +2119,12 @@ impl ComplianceChecker {
                             comp.name
                         ),
                         "CRA Art. 13(15): Supplier/manufacturer information".to_string(),
+                        "SBOM-CRA-ART-13-15",
                     ),
                     _ => (
                         format!("Component '{}' missing supplier/manufacturer", comp.name),
                         "NTIA: Supplier information".to_string(),
+                        "SBOM-NTIA-SUPPLIER",
                     ),
                 };
                 violations.push(Violation {
@@ -1687,6 +2133,7 @@ impl ComplianceChecker {
                     message,
                     element: Some(comp.name.clone()),
                     requirement,
+                    rule_id,
                     standard_refs: Vec::new(),
                 });
             }
@@ -1704,6 +2151,7 @@ impl ComplianceChecker {
                     message: format!("Component '{}' should have license information", comp.name),
                     element: Some(comp.name.clone()),
                     requirement: "License declaration".to_string(),
+                    rule_id: "SBOM-CRA-GENERAL",
                     standard_refs: Vec::new(),
                 });
             }
@@ -1727,6 +2175,11 @@ impl ComplianceChecker {
                             "FDA: Cryptographic hash for integrity".to_string()
                         } else {
                             "Integrity verification (hashes)".to_string()
+                        },
+                        rule_id: if self.level == ComplianceLevel::FdaMedicalDevice {
+                            "SBOM-FDA-HASH"
+                        } else {
+                            "SBOM-CRA-GENERAL"
                         },
                         standard_refs: Vec::new(),
                     });
@@ -1760,6 +2213,7 @@ impl ComplianceChecker {
                             element: Some(comp.name.clone()),
                             requirement: "FDA: Strong cryptographic hash (SHA-256 or better)"
                                 .to_string(),
+                            rule_id: "SBOM-FDA-HASH",
                             standard_refs: Vec::new(),
                         });
                     }
@@ -1777,6 +2231,7 @@ impl ComplianceChecker {
                     ),
                     element: Some(comp.name.clone()),
                     requirement: "CRA Annex I: Component integrity information (hash)".to_string(),
+                    rule_id: "SBOM-CRA-ANNEX-I-INTEGRITY",
                     standard_refs: Vec::new(),
                 });
             }
@@ -1797,14 +2252,16 @@ impl ComplianceChecker {
             let has_multiple_components = sbom.components.len() > 1;
 
             if has_multiple_components && !has_deps {
-                let (message, requirement) = match self.level {
+                let (message, requirement, rule_id) = match self.level {
                     ComplianceLevel::CraPhase1 | ComplianceLevel::CraPhase2 => (
                         "[CRA Annex I] SBOM with multiple components must include dependency relationships".to_string(),
                         "CRA Annex I: Dependency relationships".to_string(),
+                        "SBOM-CRA-ANNEX-I-DEPENDENCY",
                     ),
                     _ => (
                         "SBOM with multiple components must include dependency relationships".to_string(),
                         "NTIA: Dependency relationships".to_string(),
+                        "SBOM-NTIA-DEPENDENCY",
                     ),
                 };
                 violations.push(Violation {
@@ -1813,6 +2270,7 @@ impl ComplianceChecker {
                     message,
                     element: None,
                     requirement,
+                    rule_id,
                     standard_refs: Vec::new(),
                 });
             }
@@ -1833,6 +2291,7 @@ impl ComplianceChecker {
                     message: "[CRA Annex I] SBOM appears to have multiple root components; identify a primary product component for top-level dependencies".to_string(),
                     element: None,
                     requirement: "CRA Annex I: Top-level dependency clarity".to_string(),
+                    rule_id: "SBOM-CRA-ANNEX-I-DEPENDENCY",
                     standard_refs: Vec::new(),
                 });
             }
@@ -1855,6 +2314,7 @@ impl ComplianceChecker {
                     ),
                     element: Some(comp.name.clone()),
                     requirement: "CRA Art. 13(6): Vulnerability metadata completeness".to_string(),
+                    rule_id: "SBOM-CRA-ART-13-6-METADATA",
                     standard_refs: Vec::new(),
                 });
             }
@@ -1872,6 +2332,7 @@ impl ComplianceChecker {
                         ),
                         element: Some(comp.name.clone()),
                         requirement: "CRA Art. 13(6): Remediation detail".to_string(),
+                        rule_id: "SBOM-CRA-ART-13-6-METADATA",
                         standard_refs: Vec::new(),
                     });
             }
@@ -1891,6 +2352,7 @@ impl ComplianceChecker {
                 ),
                 element: None,
                 requirement: "CRA Art. 13(3): SBOM update frequency".to_string(),
+                rule_id: "SBOM-CRA-ART-13-3",
                 standard_refs: Vec::new(),
             });
         } else if age_days > 30 {
@@ -1902,6 +2364,7 @@ impl ComplianceChecker {
                 ),
                 element: None,
                 requirement: "CRA Art. 13(3): SBOM update frequency".to_string(),
+                rule_id: "SBOM-CRA-ART-13-3",
                 standard_refs: Vec::new(),
             });
         }
@@ -1928,6 +2391,7 @@ impl ComplianceChecker {
                 ),
                 element: None,
                 requirement: "CRA Art. 13(5): Licensed component tracking".to_string(),
+                rule_id: "SBOM-CRA-ART-13-5",
                 standard_refs: Vec::new(),
             });
         }
@@ -1957,6 +2421,7 @@ impl ComplianceChecker {
                         .to_string(),
                 element: None,
                 requirement: "CRA Art. 13(9): Known vulnerabilities statement".to_string(),
+                rule_id: "SBOM-CRA-ART-13-9",
                 standard_refs: Vec::new(),
             });
         }
@@ -2002,6 +2467,7 @@ impl ComplianceChecker {
                     element: None,
                     requirement: "CRA Annex I, Part III / prEN 40000-1-3 [PRE-7-RQ-03]: Direct dependency supplier (mandatory)"
                         .to_string(),
+                    rule_id: "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
                     standard_refs: Vec::new(),
                 });
             }
@@ -2025,6 +2491,7 @@ impl ComplianceChecker {
                     element: None,
                     requirement: "CRA Annex I, Part III / prEN 40000-1-3 [PRE-7-RQ-03]: Transitive dependency supplier (recommended)"
                         .to_string(),
+                    rule_id: "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
                     standard_refs: Vec::new(),
                 });
             }
@@ -2089,6 +2556,7 @@ impl ComplianceChecker {
                         ),
                         element: None,
                         requirement: "CRA Annex I Part II / prEN 40000-1-3 [PRE-7-RQ-07-RE]: Vendor hash carry-through".to_string(),
+                        rule_id: "SBOM-CRA-PRE-7-RQ-07-RE",
                         standard_refs: Vec::new(),
                     });
                 }
@@ -2116,6 +2584,7 @@ impl ComplianceChecker {
                     .to_string(),
                 element: None,
                 requirement: "CRA Annex III: Document signature/integrity".to_string(),
+                rule_id: "SBOM-CRA-ANNEX-III",
                 standard_refs: Vec::new(),
             });
         }
@@ -2144,6 +2613,7 @@ impl ComplianceChecker {
                     message: "[CRA Art. 13(2)] No documented risk assessment referenced — add an externalReference of type 'risk-assessment' or supply riskAssessmentUrl in the CRA sidecar".to_string(),
                     element: None,
                     requirement: "CRA Art. 13(2): Documented risk assessment".to_string(),
+                    rule_id: "SBOM-CRA-ART-13-2",
                     standard_refs: Vec::new(),
                 });
             }
@@ -2186,6 +2656,7 @@ impl ComplianceChecker {
                 ),
                 element: None,
                 requirement: "CRA Art. 13(8): Support period / lifecycle management".to_string(),
+                rule_id: "SBOM-CRA-ART-13-8",
                 standard_refs: Vec::new(),
             });
         }
@@ -2208,6 +2679,7 @@ impl ComplianceChecker {
                 ),
                 element: None,
                 requirement: "CRA Art. 13(11): Component lifecycle monitoring".to_string(),
+                rule_id: "SBOM-CRA-ART-13-11",
                 standard_refs: Vec::new(),
             });
         }
@@ -2237,6 +2709,7 @@ impl ComplianceChecker {
                     element: None,
                     requirement: "CRA Art. 13(6): SPDX 3.0 Security profile conformance"
                         .to_string(),
+                    rule_id: "SBOM-CRA-ART-13-6-CONTACT",
                     standard_refs: Vec::new(),
                 });
             }
@@ -2265,6 +2738,7 @@ impl ComplianceChecker {
                     element: None,
                     requirement: "CRA Art. 13(5): SPDX 3.0 SimpleLicensing profile conformance"
                         .to_string(),
+                    rule_id: "SBOM-CRA-ART-13-5",
                     standard_refs: Vec::new(),
                 });
             }
@@ -2307,6 +2781,7 @@ impl ComplianceChecker {
                     requirement: format!(
                         "CRA Annex I Part I {id}: controls-assertion evidence (prEN 40000-1-2)"
                     ),
+                    rule_id: "SBOM-CRA-ANNEX-I-CONTROLS",
                     standard_refs: Vec::new(),
                 });
             }
@@ -2344,6 +2819,7 @@ impl ComplianceChecker {
                 element: None,
                 requirement: "CRA Annex IV: EUCC reference (Common Criteria certificate)"
                     .to_string(),
+                rule_id: "SBOM-CRA-ANNEX-IV",
                 standard_refs: Vec::new(),
             });
         }
@@ -2390,6 +2866,7 @@ impl ComplianceChecker {
                     "CRA Annex VIII: {} attestation reference",
                     route.label()
                 ),
+                rule_id: "SBOM-CRA-ANNEX-VIII",
                 standard_refs: Vec::new(),
             });
         }
@@ -2451,6 +2928,7 @@ impl ComplianceChecker {
                 element: None,
                 requirement: "CRA Art. 14: PSIRT contact for external vulnerability reports"
                     .to_string(),
+                rule_id: "SBOM-CRA-ART-14",
                 standard_refs: Vec::new(),
             });
         }
@@ -2468,6 +2946,7 @@ impl ComplianceChecker {
                 message: msg.to_string(),
                 element: None,
                 requirement: "CRA Art. 14(1): 24-hour early-warning channel".to_string(),
+                rule_id: "SBOM-CRA-ART-14",
                 standard_refs: Vec::new(),
             });
         }
@@ -2485,6 +2964,7 @@ impl ComplianceChecker {
                 message: msg.to_string(),
                 element: None,
                 requirement: "CRA Art. 14(2): 72-hour incident-report channel".to_string(),
+                rule_id: "SBOM-CRA-ART-14",
                 standard_refs: Vec::new(),
             });
         }
@@ -2501,6 +2981,7 @@ impl ComplianceChecker {
                     .to_string(),
                 element: None,
                 requirement: "CRA Art. 14(7): ENISA single reporting platform".to_string(),
+                rule_id: "SBOM-CRA-ART-14",
                 standard_refs: Vec::new(),
             });
         }
@@ -2546,6 +3027,7 @@ impl ComplianceChecker {
                     ),
                     element: Some(comp.name.clone()),
                     requirement: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware producer".to_string(),
+                    rule_id: "SBOM-CRA-PRE-8-RQ-02",
                     standard_refs: Vec::new(),
                 });
             }
@@ -2564,6 +3046,7 @@ impl ComplianceChecker {
                     ),
                     element: Some(comp.name.clone()),
                     requirement: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware identifier".to_string(),
+                    rule_id: "SBOM-CRA-PRE-8-RQ-02",
                     standard_refs: Vec::new(),
                 });
             }
@@ -2579,6 +3062,7 @@ impl ComplianceChecker {
                     ),
                     element: Some(comp.name.clone()),
                     requirement: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Firmware version".to_string(),
+                    rule_id: "SBOM-CRA-PRE-8-RQ-02",
                     standard_refs: Vec::new(),
                 });
             }
@@ -2601,6 +3085,7 @@ impl ComplianceChecker {
                         ),
                         element: Some(comp.name.clone()),
                         requirement: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Device firmware association".to_string(),
+                        rule_id: "SBOM-CRA-PRE-8-RQ-02",
                         standard_refs: Vec::new(),
                     });
                 }
@@ -2622,6 +3107,7 @@ impl ComplianceChecker {
                         .to_string(),
                 element: None,
                 requirement: "NIST SSDF PS.1: Provenance — creator identification".to_string(),
+                rule_id: "SBOM-SSDF-PS1",
                 standard_refs: Vec::new(),
             });
         }
@@ -2639,6 +3125,7 @@ impl ComplianceChecker {
                     .to_string(),
                 element: None,
                 requirement: "NIST SSDF PS.1: Provenance — tool identification".to_string(),
+                rule_id: "SBOM-SSDF-PS1",
                 standard_refs: Vec::new(),
             });
         }
@@ -2664,6 +3151,7 @@ impl ComplianceChecker {
                 ),
                 element: None,
                 requirement: "NIST SSDF PS.2: Build integrity — component hashes".to_string(),
+                rule_id: "SBOM-SSDF-PS2",
                 standard_refs: Vec::new(),
             });
         }
@@ -2682,6 +3170,7 @@ impl ComplianceChecker {
                     .to_string(),
                 element: None,
                 requirement: "NIST SSDF PO.1: Source code provenance — VCS references".to_string(),
+                rule_id: "SBOM-SSDF-PO1",
                 standard_refs: Vec::new(),
             });
         }
@@ -2703,6 +3192,7 @@ impl ComplianceChecker {
                     .to_string(),
                 element: None,
                 requirement: "NIST SSDF PO.3: Build provenance — build metadata".to_string(),
+                rule_id: "SBOM-SSDF-PO3",
                 standard_refs: Vec::new(),
             });
         }
@@ -2716,6 +3206,7 @@ impl ComplianceChecker {
                     .to_string(),
                 element: None,
                 requirement: "NIST SSDF PW.4: Dependency management — relationships".to_string(),
+                rule_id: "SBOM-SSDF-PW4",
                 standard_refs: Vec::new(),
             });
         }
@@ -2744,6 +3235,7 @@ impl ComplianceChecker {
                     .to_string(),
                 element: None,
                 requirement: "NIST SSDF PW.6: Vulnerability information".to_string(),
+                rule_id: "SBOM-SSDF-PW6",
                 standard_refs: Vec::new(),
             });
         }
@@ -2768,6 +3260,7 @@ impl ComplianceChecker {
                 element: None,
                 requirement: "NIST SSDF RV.1: Component identification — unique identifiers"
                     .to_string(),
+                rule_id: "SBOM-SSDF-RV1",
                 standard_refs: Vec::new(),
             });
         }
@@ -2787,6 +3280,7 @@ impl ComplianceChecker {
                 ),
                 element: None,
                 requirement: "NIST SSDF PS.3: Supplier identification".to_string(),
+                rule_id: "SBOM-SSDF-PS3",
                 standard_refs: Vec::new(),
             });
         }
@@ -2821,6 +3315,7 @@ impl ComplianceChecker {
                 ),
                 element: None,
                 requirement: "EO 14028 Sec 4(e): Machine-readable SBOM format".to_string(),
+                rule_id: "SBOM-EO14028-FORMAT",
                 standard_refs: Vec::new(),
             });
         }
@@ -2839,6 +3334,7 @@ impl ComplianceChecker {
                     .to_string(),
                 element: None,
                 requirement: "EO 14028 Sec 4(e): Automated SBOM generation".to_string(),
+                rule_id: "SBOM-EO14028-AUTOGEN",
                 standard_refs: Vec::new(),
             });
         }
@@ -2851,6 +3347,7 @@ impl ComplianceChecker {
                 message: "SBOM must identify its creator (vendor or tool)".to_string(),
                 element: None,
                 requirement: "EO 14028 Sec 4(e): SBOM creator identification".to_string(),
+                rule_id: "SBOM-EO14028-CREATOR",
                 standard_refs: Vec::new(),
             });
         }
@@ -2875,6 +3372,7 @@ impl ComplianceChecker {
                 ),
                 element: None,
                 requirement: "EO 14028 Sec 4(e): Component unique identification".to_string(),
+                rule_id: "SBOM-EO14028-IDENTIFIER",
                 standard_refs: Vec::new(),
             });
         }
@@ -2888,6 +3386,7 @@ impl ComplianceChecker {
                     .to_string(),
                 element: None,
                 requirement: "EO 14028 Sec 4(e): Dependency relationships".to_string(),
+                rule_id: "SBOM-EO14028-DEPENDENCY",
                 standard_refs: Vec::new(),
             });
         }
@@ -2907,6 +3406,7 @@ impl ComplianceChecker {
                 ),
                 element: None,
                 requirement: "EO 14028 Sec 4(e): Component version".to_string(),
+                rule_id: "SBOM-EO14028-VERSION",
                 standard_refs: Vec::new(),
             });
         }
@@ -2924,6 +3424,7 @@ impl ComplianceChecker {
                 message: format!("{without_hash}/{total} components missing cryptographic hashes"),
                 element: None,
                 requirement: "EO 14028 Sec 4(e): Component integrity verification".to_string(),
+                rule_id: "SBOM-EO14028-INTEGRITY",
                 standard_refs: Vec::new(),
             });
         }
@@ -2947,6 +3448,7 @@ impl ComplianceChecker {
                     .to_string(),
                 element: None,
                 requirement: "EO 14028 Sec 4(g): Vulnerability disclosure process".to_string(),
+                rule_id: "SBOM-EO14028-DISCLOSURE",
                 standard_refs: Vec::new(),
             });
         }
@@ -2968,6 +3470,7 @@ impl ComplianceChecker {
                     ),
                     element: None,
                     requirement: "EO 14028 Sec 4(e): Supplier identification".to_string(),
+                    rule_id: "SBOM-EO14028-SUPPLIER",
                     standard_refs: Vec::new(),
                 });
             }
@@ -2997,6 +3500,7 @@ impl ComplianceChecker {
                 message: format!("CycloneDX {version} is outdated, consider upgrading to 1.7+"),
                 element: None,
                 requirement: "Current CycloneDX version".to_string(),
+                rule_id: "SBOM-CRA-GENERAL",
                 standard_refs: Vec::new(),
             });
         }
@@ -3011,6 +3515,7 @@ impl ComplianceChecker {
                     message: format!("Component '{}' may be missing bom-ref", comp.name),
                     element: Some(comp.name.clone()),
                     requirement: "CycloneDX: bom-ref for dependency tracking".to_string(),
+                    rule_id: "SBOM-CRA-GENERAL",
                     standard_refs: Vec::new(),
                 });
             }
@@ -3029,6 +3534,7 @@ impl ComplianceChecker {
                 message: format!("Unknown SPDX version: {version}"),
                 element: None,
                 requirement: "Valid SPDX version".to_string(),
+                rule_id: "SBOM-CRA-GENERAL",
                 standard_refs: Vec::new(),
             });
         }
@@ -3058,6 +3564,7 @@ impl ComplianceChecker {
                     ),
                     element: Some(comp.name.clone()),
                     requirement: expected.to_string(),
+                    rule_id: "SBOM-CRA-GENERAL",
                     standard_refs: Vec::new(),
                 });
             }
@@ -3105,6 +3612,7 @@ impl ComplianceChecker {
                                         ),
                                         element: Some(comp.name.clone()),
                                         requirement: "CNSA 2.0 PQC Migration".to_string(),
+                                        rule_id: "SBOM-CNSA2-ALG-006",
                                         standard_refs: Vec::new(),
                                     });
                             } else if !is_symmetric_or_hash && ql < 5 {
@@ -3117,6 +3625,7 @@ impl ComplianceChecker {
                                     ),
                                     element: Some(comp.name.clone()),
                                     requirement: "CNSA 2.0 Level 5".to_string(),
+                                    rule_id: "SBOM-CNSA2-ALG-007",
                                     standard_refs: Vec::new(),
                                 });
                             }
@@ -3138,6 +3647,7 @@ impl ComplianceChecker {
                                     ),
                                     element: Some(comp.name.clone()),
                                     requirement: "CNSA 2.0 Symmetric".to_string(),
+                                    rule_id: "SBOM-CNSA2-ALG-001",
                                     standard_refs: Vec::new(),
                                 });
                             }
@@ -3156,6 +3666,7 @@ impl ComplianceChecker {
                                     ),
                                     element: Some(comp.name.clone()),
                                     requirement: "CNSA 2.0 Hash".to_string(),
+                                    rule_id: "SBOM-CNSA2-ALG-002",
                                     standard_refs: Vec::new(),
                                 });
                             }
@@ -3174,6 +3685,7 @@ impl ComplianceChecker {
                                     ),
                                     element: Some(comp.name.clone()),
                                     requirement: "CNSA 2.0 KEM".to_string(),
+                                    rule_id: "SBOM-CNSA2-ALG-003",
                                     standard_refs: Vec::new(),
                                 });
                             }
@@ -3192,6 +3704,7 @@ impl ComplianceChecker {
                                     ),
                                     element: Some(comp.name.clone()),
                                     requirement: "CNSA 2.0 Signature".to_string(),
+                                    rule_id: "SBOM-CNSA2-ALG-004",
                                     standard_refs: Vec::new(),
                                 });
                             }
@@ -3210,6 +3723,7 @@ impl ComplianceChecker {
                                     ),
                                     element: Some(comp.name.clone()),
                                     requirement: "CNSA 2.0 PQC Migration".to_string(),
+                                    rule_id: "SBOM-CNSA2-ALG-006",
                                     standard_refs: Vec::new(),
                                 });
                             }
@@ -3242,6 +3756,7 @@ impl ComplianceChecker {
                                 ),
                                 element: Some(comp.name.clone()),
                                 requirement: "CNSA 2.0 Certificate".to_string(),
+                                rule_id: "SBOM-CNSA2-CERT-001",
                                 standard_refs: Vec::new(),
                             });
                         }
@@ -3275,6 +3790,7 @@ impl ComplianceChecker {
                 message: "[BSI TR-03183-2 §5.1] SBOM author/creator missing".to_string(),
                 element: None,
                 requirement: "BSI TR-03183-2 §5.1: Author/creator identification".to_string(),
+                rule_id: "SBOM-BSI-TR-03183-2-5-1",
                 standard_refs: Vec::new(),
             });
         }
@@ -3292,6 +3808,7 @@ impl ComplianceChecker {
                 message: "[BSI TR-03183-2 §5.1] SBOM must identify the generation tool".to_string(),
                 element: None,
                 requirement: "BSI TR-03183-2 §5.1: Tool identification".to_string(),
+                rule_id: "SBOM-BSI-TR-03183-2-5-1",
                 standard_refs: Vec::new(),
             });
         }
@@ -3310,6 +3827,7 @@ impl ComplianceChecker {
                     .to_string(),
                 element: None,
                 requirement: "BSI TR-03183-2 §5.2: ISO-8601 timestamp".to_string(),
+                rule_id: "SBOM-BSI-TR-03183-2-5-2",
                 standard_refs: Vec::new(),
             });
         }
@@ -3331,6 +3849,7 @@ impl ComplianceChecker {
                     ),
                     element: Some(comp.name.clone()),
                     requirement: "BSI TR-03183-2 §5.3: Component identifier".to_string(),
+                    rule_id: "SBOM-BSI-TR-03183-2-5-3",
                     standard_refs: Vec::new(),
                 });
             }
@@ -3365,6 +3884,7 @@ impl ComplianceChecker {
                     element: Some(comp.name.clone()),
                     requirement: "BSI TR-03183-2 §5.4: Component cryptographic hash (SHA-256+)"
                         .to_string(),
+                    rule_id: "SBOM-BSI-TR-03183-2-5-4",
                     standard_refs: Vec::new(),
                 });
             }
@@ -3379,6 +3899,7 @@ impl ComplianceChecker {
                     .to_string(),
                 element: None,
                 requirement: "BSI TR-03183-2 §5.5: Dependency relationships".to_string(),
+                rule_id: "SBOM-BSI-TR-03183-2-5-5",
                 standard_refs: Vec::new(),
             });
         }
@@ -3404,6 +3925,7 @@ impl ComplianceChecker {
                 ),
                 element: None,
                 requirement: "BSI TR-03183-2 §6: Component license (recommended)".to_string(),
+                rule_id: "SBOM-BSI-TR-03183-2-6",
                 standard_refs: Vec::new(),
             });
         }
@@ -3428,6 +3950,7 @@ impl ComplianceChecker {
                 ),
                 element: None,
                 requirement: "BSI TR-03183-2 §6: Component supplier (recommended)".to_string(),
+                rule_id: "SBOM-BSI-TR-03183-2-6",
                 standard_refs: Vec::new(),
             });
         }
@@ -3487,6 +4010,7 @@ impl ComplianceChecker {
                 element: None,
                 requirement: "CRA Art. 24: Vulnerability-handling process (steward floor)"
                     .to_string(),
+                rule_id: "SBOM-CRA-ART-24",
                 standard_refs: Vec::new(),
             });
         }
@@ -3510,6 +4034,7 @@ impl ComplianceChecker {
                 element: None,
                 requirement: "CRA Art. 13(7): Coordinated vulnerability disclosure policy"
                     .to_string(),
+                rule_id: "SBOM-CRA-ART-13-7",
                 standard_refs: Vec::new(),
             });
         }
@@ -3550,6 +4075,7 @@ impl ComplianceChecker {
                 message: "[EUCC] Missing Common Criteria Protection Profile reference — set sidecar `eucc_protection_profile_id`".to_string(),
                 element: None,
                 requirement: "EUCC Substantial: Protection Profile reference".to_string(),
+                rule_id: "SBOM-EUCC",
                 standard_refs: Vec::new(),
             });
         }
@@ -3565,6 +4091,7 @@ impl ComplianceChecker {
                 message: "[EUCC] Missing Target of Evaluation reference — set sidecar `eucc_target_of_evaluation`".to_string(),
                 element: None,
                 requirement: "EUCC Substantial: Target of Evaluation reference".to_string(),
+                rule_id: "SBOM-EUCC",
                 standard_refs: Vec::new(),
             });
         }
@@ -3580,6 +4107,7 @@ impl ComplianceChecker {
                 message: "[EUCC] Missing ITSEF (IT Security Evaluation Facility) identifier — set sidecar `eucc_itsef_identifier`".to_string(),
                 element: None,
                 requirement: "EUCC Substantial: ITSEF identifier".to_string(),
+                rule_id: "SBOM-EUCC",
                 standard_refs: Vec::new(),
             });
         }
@@ -3593,6 +4121,7 @@ impl ComplianceChecker {
                     message: "[EUCC] Missing certificate valid-until date — set sidecar `eucc_valid_until`".to_string(),
                     element: None,
                     requirement: "EUCC Substantial: certificate valid-until date".to_string(),
+                    rule_id: "SBOM-EUCC",
                     standard_refs: Vec::new(),
                 });
             }
@@ -3606,6 +4135,7 @@ impl ComplianceChecker {
                     ),
                     element: None,
                     requirement: "EUCC Substantial: certificate validity".to_string(),
+                    rule_id: "SBOM-EUCC",
                     standard_refs: Vec::new(),
                 });
             }
@@ -3619,6 +4149,7 @@ impl ComplianceChecker {
                     ),
                     element: None,
                     requirement: "EUCC Substantial: certificate validity".to_string(),
+                    rule_id: "SBOM-EUCC",
                     standard_refs: Vec::new(),
                 });
             }
@@ -3645,6 +4176,7 @@ impl ComplianceChecker {
                 message: "[EUCC] No Certification/Attestation external reference points at an EUCC URL (recommended)".to_string(),
                 element: None,
                 requirement: "EUCC Substantial: Certification external reference".to_string(),
+                rule_id: "SBOM-EUCC",
                 standard_refs: Vec::new(),
             });
         }
@@ -3685,6 +4217,7 @@ impl ComplianceChecker {
                         ),
                         element: Some(comp.name.clone()),
                         requirement: "IR 8547: quantum-vulnerable".to_string(),
+                        rule_id: "SBOM-PQC-001",
                         standard_refs: Vec::new(),
                     });
                 }
@@ -3697,6 +4230,7 @@ impl ComplianceChecker {
                         message: format!("'{}' missing nistQuantumSecurityLevel field", comp.name),
                         element: Some(comp.name.clone()),
                         requirement: "IR 8547: quantum assessment required".to_string(),
+                        rule_id: "SBOM-PQC-012",
                         standard_refs: Vec::new(),
                     });
                 }
@@ -3714,6 +4248,7 @@ impl ComplianceChecker {
                             ),
                             element: Some(comp.name.clone()),
                             requirement: "SP 800-131A: disallowed".to_string(),
+                            rule_id: "SBOM-PQC-005",
                             standard_refs: Vec::new(),
                         });
                     }
@@ -3730,6 +4265,7 @@ impl ComplianceChecker {
                         ),
                         element: Some(comp.name.clone()),
                         requirement: "SP 800-131A Rev 3: ECB disallowed".to_string(),
+                        rule_id: "SBOM-PQC-008",
                         standard_refs: Vec::new(),
                     });
                 }
@@ -3747,6 +4283,7 @@ impl ComplianceChecker {
                             ),
                             element: Some(comp.name.clone()),
                             requirement: "FIPS 203/204/205: approved".to_string(),
+                            rule_id: "SBOM-PQC-009",
                             standard_refs: Vec::new(),
                         });
                     }
@@ -3763,6 +4300,7 @@ impl ComplianceChecker {
                         ),
                         element: Some(comp.name.clone()),
                         requirement: "IR 8547: recommended transition".to_string(),
+                        rule_id: "SBOM-PQC-010",
                         standard_refs: Vec::new(),
                     });
                 }
@@ -3788,6 +4326,7 @@ impl ComplianceChecker {
                         ),
                         element: Some(comp.name.clone()),
                         requirement: "NIST: minimum key size".to_string(),
+                        rule_id: "SBOM-PQC-KEY-001",
                         standard_refs: Vec::new(),
                     });
                 }
@@ -3897,6 +4436,7 @@ mod tests {
                 message: "Error 1".to_string(),
                 element: None,
                 requirement: "Test".to_string(),
+                rule_id: "SBOM-CRA-GENERAL",
                 standard_refs: Vec::new(),
             },
             Violation {
@@ -3905,6 +4445,7 @@ mod tests {
                 message: "Warning 1".to_string(),
                 element: None,
                 requirement: "Test".to_string(),
+                rule_id: "SBOM-CRA-GENERAL",
                 standard_refs: Vec::new(),
             },
             Violation {
@@ -3913,6 +4454,7 @@ mod tests {
                 message: "Info 1".to_string(),
                 element: None,
                 requirement: "Test".to_string(),
+                rule_id: "SBOM-CRA-GENERAL",
                 standard_refs: Vec::new(),
             },
         ];
@@ -4007,32 +4549,27 @@ mod tests {
         );
     }
 
-    fn make_violation(req: &str) -> Violation {
-        Violation {
+    fn refs_for(rule_id: &'static str) -> Vec<StandardRef> {
+        let v = Violation {
             severity: ViolationSeverity::Warning,
             category: ViolationCategory::DocumentMetadata,
-            message: req.to_string(),
+            message: String::new(),
             element: None,
-            requirement: req.to_string(),
+            requirement: String::new(),
+            rule_id,
             standard_refs: Vec::new(),
-        }
+        };
+        v.registry_standard_refs()
     }
 
     #[test]
-    fn standard_refs_extracts_cra_article() {
-        let v = make_violation("CRA Art. 13(4): Machine-readable SBOM format");
-        let refs = v.derive_standard_refs();
+    fn registry_refs_for_art_13_4_include_article_and_pren() {
+        let refs = refs_for("SBOM-CRA-ART-13-4");
         assert!(
             refs.iter()
                 .any(|r| r.standard == StandardKind::CraArticle && r.id == "Art. 13(4)"),
             "expected CRA Art. 13(4); got {refs:?}"
         );
-    }
-
-    #[test]
-    fn standard_refs_infers_pren_id_from_art_13_4() {
-        let v = make_violation("CRA Art. 13(4): Machine-readable SBOM format");
-        let refs = v.derive_standard_refs();
         assert!(
             refs.iter()
                 .any(|r| r.standard == StandardKind::Pren40000_1_3 && r.id == "PRE-7-RQ-04"),
@@ -4041,17 +4578,13 @@ mod tests {
     }
 
     #[test]
-    fn standard_refs_extracts_explicit_pren_id() {
-        let v = make_violation(
-            "CRA Annex I / prEN 40000-1-3 [PRE-7-RQ-07]: Unique component identifier",
-        );
-        let refs = v.derive_standard_refs();
+    fn registry_refs_for_annex_i_identifier_include_pren_07() {
+        let refs = refs_for("SBOM-CRA-ANNEX-I-IDENTIFIER");
         assert!(
             refs.iter()
                 .any(|r| r.standard == StandardKind::Pren40000_1_3 && r.id == "PRE-7-RQ-07"),
-            "expected explicit PRE-7-RQ-07; got {refs:?}"
+            "expected PRE-7-RQ-07; got {refs:?}"
         );
-        // Should not double-list it
         let pren_count = refs
             .iter()
             .filter(|r| r.standard == StandardKind::Pren40000_1_3 && r.id == "PRE-7-RQ-07")
@@ -4060,9 +4593,8 @@ mod tests {
     }
 
     #[test]
-    fn standard_refs_extracts_annex_i_part_iii() {
-        let v = make_violation("CRA Annex I, Part III: Supply chain transparency");
-        let refs = v.derive_standard_refs();
+    fn registry_refs_for_supply_chain_include_annex_and_pren() {
+        let refs = refs_for("SBOM-CRA-ANNEX-I-SUPPLY-CHAIN");
         assert!(
             refs.iter()
                 .any(|r| r.standard == StandardKind::CraAnnex && r.id == "Annex I Part III"),
@@ -4081,9 +4613,8 @@ mod tests {
     }
 
     #[test]
-    fn standard_refs_recognises_csaf_in_art_13_7() {
-        let v = make_violation("CRA Art. 13(7): Coordinated vulnerability disclosure policy");
-        let refs = v.derive_standard_refs();
+    fn registry_refs_for_art_13_7_include_pren_rls() {
+        let refs = refs_for("SBOM-CRA-ART-13-7");
         assert!(
             refs.iter()
                 .any(|r| r.standard == StandardKind::Pren40000_1_3 && r.id == "RLS-2-RQ-03-RE"),
@@ -4092,14 +4623,32 @@ mod tests {
     }
 
     #[test]
-    fn standard_refs_handles_nist_ssdf_practice() {
-        let v = make_violation("NIST SSDF PS.2: Build integrity — component hashes");
-        let refs = v.derive_standard_refs();
+    fn registry_refs_for_ssdf_ps2() {
+        let refs = refs_for("SBOM-SSDF-PS2");
         assert!(
             refs.iter()
                 .any(|r| r.standard == StandardKind::NistSsdf && r.id == "PS.2"),
             "expected NIST SSDF PS.2; got {refs:?}"
         );
+    }
+
+    /// Exhaustive registry coverage: every rule key emitted by the checker
+    /// across all compliance levels and a representative fixture set must
+    /// resolve in [`rule_meta`] — no orphan rules.
+    #[test]
+    fn every_emitted_violation_has_a_registered_rule_id() {
+        let sbom = NormalizedSbom::default();
+        for level in ComplianceLevel::all() {
+            let result = ComplianceChecker::new(*level).check(&sbom);
+            for v in &result.violations {
+                assert!(
+                    rule_meta(v.rule_id).is_some(),
+                    "level {level:?}: violation {:?} has unregistered rule_id {:?}",
+                    v.requirement,
+                    v.rule_id
+                );
+            }
+        }
     }
 
     #[test]
