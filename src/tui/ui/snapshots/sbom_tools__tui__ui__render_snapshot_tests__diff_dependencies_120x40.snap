@@ -1,0 +1,44 @@
+---
+source: src/tui/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  DIFF  │ acme-webapp@1.0.0 ⟷ acme-webapp@2.0.0
+
+ [1] Summary   │  [2] Components   │  [3] Dependencies   │  [4] Licenses   │  [5] Vulnerabilities   │  [6] Quality   │
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Transitive  Highlight  Cycles  │  Depth:5  Roots:50  Sort:Name
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+┌ Dependency Tree ────────────────────────────────────────────────────┐▲┌ Details ─────────────────────────────────────┐
+│Changes: +0 added, -0 removed                                        │█│Node Details                                  │
+│                                                                     │█│                                              │
+│No dependency changes detected                                       │█│Select a dependency node to view details      │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │█│                                              │
+│                                                                     │║│                                              │
+│                                                                     │║│                                              │
+└─────────────────────────────────────────────────────────────────────┘▼└──────────────────────────────────────────────┘
+ Components: 13 │ Vulns: 0 │ Score: 53.5
+     f filter  t transitive  h highlight  Enter expand  c component │  Tab switch  / search  e export  ? help  q quit

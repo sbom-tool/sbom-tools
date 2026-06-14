@@ -1,0 +1,44 @@
+---
+source: src/tui/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  DIFF  │ acme-webapp@1.0.0 ⟷ acme-webapp@2.0.0
+
+ [1] Summary   │  [2] Components   │  [3] Dependencies   │  [4] Licenses   │  [5] Vulnerabilities   │  [6] Quality   │
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                                      │
+│                                                           ✓                                                          │
+│                                                                                                                      │
+│                                            No structural changes detected                                            │
+│                                                                                                                      │
+│                            The dependency graph structure is identical between both SBOMs                            │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+ Components: 13 │ Vulns: 0 │ Score: 53.5
+                        ↑↓ select  PgUp/Dn page │  Tab switch  / search  e export  ? help  q quit

@@ -1,0 +1,44 @@
+---
+source: src/tui/view/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  VIEW  │ acme-webapp │ CycloneDX 1.5 │ [SBOM]
+
+ [1] Overview   │  [2] Components   │  [3] Vulns   │  [4] Licenses   │  [5] Deps   │  [6] Quality   │  [7] Compliance
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+┌ Components ────────┐┌ Vulnerabilities ───┐┌ Licenses ──────────┐┌ Document Info ─────────────────────────────────────┐
+│                    ││                    ││                    ││Name:    acme-webapp                                │
+│          9         ││          0         ││          3         ││Format:   CycloneDX 1.5                             │
+│     Components     ││   Vulnerabilities  ││   Unique Licenses  ││Created: 2024-06-15 10:00:00 (AGE)│
+│                    ││                    ││                    ││                                                    │
+│    2 ecosystems    ││     0C 0H 0M 0L    ││      1 unknown     ││[e] Export (JSON, SARIF, Markdown, HTML, CSV)       │
+│                    ││                    ││                    │└────────────────────────────────────────────────────┘
+└────────────────────┘└────────────────────┘└────────────────────┘┌ Top Vulnerable Components (0) ─────────────────────┐
+┌ Vulnerability Severity ────────────────────────────────────────┐│Component                        CVEs   Max Severity│
+│                                                                ││                                                    │
+│  Critical ░░░░░░░░░░░░░░░░░░░░     0 ( 0%)                     ││                                                    │
+│      High ░░░░░░░░░░░░░░░░░░░░     0 ( 0%)                     ││                                                    │
+│    Medium ░░░░░░░░░░░░░░░░░░░░     0 ( 0%)                     ││                                                    │
+│       Low ░░░░░░░░░░░░░░░░░░░░     0 ( 0%)                     ││                                                    │
+│                                                                ││                                                    │
+└────────────────────────────────────────────────────────────────┘│                                                    │
+┌ Ecosystem Distribution ────────────────────────────────────────┐│                                                    │
+│         npm ██████████████████████░░░     8 (88%)              ││                                                    │
+│       Other 1 more                                             ││                                                    │
+└────────────────────────────────────────────────────────────────┘│                                                    │
+┌ License Distribution ──────────────────────────────────────────┐│                                                    │
+│         MIT ████████████████░░░░░░░░░     6 (66%)              ││                                                    │
+│  Apache-2.0 █████░░░░░░░░░░░░░░░░░░░░     2 (22%)              ││                                                    │
+│       Other 1 more (1 unknown)                                 ││                                                    │
+│                                                                ││                                                    │
+│                                                                ││                                                    │
+│                                                                ││                                                    │
+│                                                                ││                                                    │
+│                                                                ││                                                    │
+│                                                                ││                                                    │
+│                                                                ││                                                    │
+│                                                                ││                                                    │
+└────────────────────────────────────────────────────────────────┘└────────────────────────────────────────────────────┘
+ Components: 9 │ Vulns: 0 │ Licenses: 3
+                                      Tab switch  / search  e export  ? help  q quit

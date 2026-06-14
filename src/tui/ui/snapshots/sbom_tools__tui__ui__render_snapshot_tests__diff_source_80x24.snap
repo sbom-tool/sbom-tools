@@ -1,0 +1,28 @@
+---
+source: src/tui/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  DIFF  │ acme-webapp@1.0.0 ⟷ acme-webapp@2.0.0
+
+ [1] Summary   │  [2] Components   │  [3] Dependencies   │  [4] Licenses   │  [5
+
+────────────────────────────────────────────────────────────────────────────────
+┌ Old SBOM [sync] -4 ~4 [Tree] (135 nod┐┌ New SBOM [sync] +4 ~4 [Tree] (126 nod┐
+│[▴░░░░░░░░░░░░░░░░░░░░░░░] 0 changes  ││[▴░░░░░░░░░░░░░░░░░░░░░░░] 0 changes  │
+│root                                  ││root                                  │
+│ > ▼ root: {} (7 keys)                ││ > ▼ root: {} (7 keys)                │
+│   ├─ bomFormat: "CycloneDX"          ││   ├─ bomFormat: "CycloneDX"          │
+│   ├─ ▶ components: [] (8 items)      ││   ├─ ▶ components: [] (8 items)      │
+│   ├─ ▶ dependencies: [] (4 items)    ││   ├─ ▶ dependencies: [] (5 items)    │
+│   ├─ ▶ metadata: 2024-01-15T10:00:00Z││   ├─ ▶ metadata: 2024-06-15T10:00:00Z│
+│   ├─ specVersion: "1.5"              ││   ├─ specVersion: "1.5"              │
+│   ├─ version: 1                      ││   ├─ version: 2                      │
+│   └─ ▶ vulnerabilities: [] (3 items) ││   └─ ▶ vulnerabilities: [] (2 items) │
+│                                      ││                                      │
+│                                      ││                                      │
+│                                      ││                                      │
+│                                      ││                                      │
+│                                      ││                                      │
+└──────────────────────── Ln 1/8 (12%) ┘└──────────────────────── Ln 1/8 (12%) ┘
+ Components: 13 │ Vulns: 0 │ Score: 53.5
+ w panel  v tree/raw  ↑↓ scroll │  Tab switch  / search  e export  ? help  q qui

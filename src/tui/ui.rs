@@ -22,6 +22,9 @@ use ratatui::{
 };
 use std::io::{self, stdout};
 
+#[cfg(test)]
+mod render_snapshot_tests;
+
 /// Run the TUI application
 pub fn run_tui(app: &mut App) -> io::Result<()> {
     // Load saved theme preference

@@ -1,0 +1,28 @@
+---
+source: src/tui/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  DIFF  │ acme-webapp@1.0.0 ⟷ acme-webapp@2.0.0
+
+ [1] Summary   │  [2] Components   │  [3] Dependencies   │  [4] Licenses   │  [5
+
+────────────────────────────────────────────────────────────────────────────────
+Filter:  All   [s] Sort: Severity  │  C  0  H  0  M  0  L  0 │ + 0  - 0  = 0  │
+
+────────────────────────────────────────────────────────────────────────────────
+┌──────────────────────────────────────────┐┌ Vulnerability Details ───────────┐
+│                                          ││                                  │
+│                     ✓                    ││                 ⚠                │
+│                                          ││                                  │
+│        No vulnerabilities detected       ││Select a vulnerability to view det│
+│                                          ││                                  │
+│Great news! No known vulnerabilities were ││   [↑↓] navigate  [Enter] expand  │
+│                                          ││                                  │
+│                                          ││                                  │
+│                                          ││                                  │
+│                                          ││                                  │
+│                                          ││                                  │
+│                                          ││                                  │
+└──────────────────────────────────────────┘└──────────────────────────────────┘
+ Components: 13 │ Vulns: 0 │ Score: 53.5
+   f filter  s sort  g group │  Tab switch  / search  e export  ? help  q quit

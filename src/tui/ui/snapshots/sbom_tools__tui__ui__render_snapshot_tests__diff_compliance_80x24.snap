@@ -1,0 +1,28 @@
+---
+source: src/tui/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  DIFF  │ acme-webapp@1.0.0 ⟷ acme-webapp@2.0.0
+
+ [1] Summary   │  [2] Components   │  [3] Dependencies   │  [4] Licenses   │  [5
+
+────────────────────────────────────────────────────────────────────────────────
+ Compliance Standards (←/→)
+ ✓ Min  │  ✗ Std  │  ✗ NTIA  │  ✗ CRA-1  │  ✗ CRA-2  │  ✗ FDA  │  ✗ SSDF  │  ✗ E
+────────────────────────────────────────────────────────────────────────────────
+┌ EU CRA Phase 1 (2027): FAIL 54% → FAIL 54%  unchanged ───────────────────────┐
+└──────────────────────────────────────────────────────────────────────────────┘
+┌ Compliance Diff Overview ────────────────────────────────────────────────────┐
+│                                                                              │
+│  Violation Diff:                                                             │
+│                                                                              │
+│      + 13 new violations introduced                                          │
+│      - 13 violations resolved                                                │
+│      = 30 violations persistent                                              │
+│                                                                              │
+│    Error count:  3 → 3  (0)                                                  │
+└──────────────────────────────────────────────────────────────────────────────┘
+f filter [All]  g group [flat]  ←/→ switch standard  v cycle view [Overview]  j/
+
+ Components: 13 │ Vulns: 0 │ Score: 53.5
+ ←→ standard  v view  g group  ↑↓ select │  Tab switch  / search  e export  ? he

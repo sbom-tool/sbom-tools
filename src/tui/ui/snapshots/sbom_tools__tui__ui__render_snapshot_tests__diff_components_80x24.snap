@@ -1,0 +1,28 @@
+---
+source: src/tui/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  DIFF  │ acme-webapp@1.0.0 ⟷ acme-webapp@2.0.0
+
+ [1] Summary   │  [2] Components   │  [3] Dependencies   │  [4] Licenses   │  [5
+
+────────────────────────────────────────────────────────────────────────────────
+Filter:  All   Sort: Name  │  [f] filter  [s] sort  [1/2/3/4/5/6/7/8] quick  [v]
+
+────────────────────────────────────────────────────────────────────────────────
+┌ Components (13) ─────────────────────────┐┌ Component Details ───────────────┐
+│               Name             Ol Ne E Ch▲│~ MODIFIED   Change Weight: 7     │
+│▶  ~ MODIFIED  acme-webapp      1. 2. - 1 █│                                  │
+│   ~ MODIFIED  axios            0. 1. n 1 █│Name: acme-webapp                 │
+│   + ADDED     dayjs            —  1. n - █│ID: acme-webapp                   │
+│   ~ MODIFIED  express          4. 4. n 1 █│Version: 1.0.0 → 2.0.0            │
+│   - REMOVED   jquery           3. —  n - █│                                  │
+│   ~ MODIFIED  lodash           4. 4. n 1 ║│━━━ Match ━━━                     │
+│   - REMOVED   moment           2. —  n - ║│Score: 1.00 via Fuzzy             │
+│   + ADDED     prisma           —  4. n - ║│Reason: Fuzzy match: 'acme-weba...│
+│   ~ MODIFIED  react            17 18 n 1 ║│• Jaro-Winkler 1.00 (w=0.6)       │
+│   - REMOVED   request          2. —  n - ║│• Levenshtein 1.00 (w=0.4)        │
+│   + ADDED     typescript       —  5. n - ▼│                                  │
+└──────────────────────────────────────────┘└──────────────────────────────────┘
+ Components: 13 │ Vulns: 0 │ Score: 53.5
+ f filter  s sort │  Tab switch  / search  e export  ? help  q quit [y] copy day

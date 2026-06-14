@@ -1,0 +1,44 @@
+---
+source: src/tui/view/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  VIEW  │ acme-webapp │ CycloneDX 1.5 │ [SBOM]
+
+ [1] Overview   │  [2] Components   │  [3] Vulns   │  [4] Licenses   │  [5] Deps   │  [6] Quality   │  [7] Compliance
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+┌ SBOM Source [Tree] (126 nodes) 'v':Raw ──────────────────────────────────────────┐┌ SBOM Map ────────────────────────┐
+│root                                                                              ││ CycloneDX 1.5 │ 2024-06-15       │
+│> ▼ root: {} (7 keys)                                                             ││──────────────────────────────────│
+│  ├─ bomFormat: "CycloneDX"                                                       ││ ▸ components     [8]  npm Unknown│
+│  ├─ ▶ components: [] (8 items)                                                   ││ ▸ dependencies                [5]│
+│  ├─ ▶ dependencies: [] (5 items)                                                 ││ ▸ metadata                    {2}│
+│  ├─ ▶ metadata: 2024-06-15T10:00:00Z                                             ││ ▸ vulnerabilities             [2]│
+│  ├─ specVersion: "1.5"                                                           ││──────────────────────────────────│
+│  ├─ version: 2                                                                   ││ root                             │
+│  └─ ▶ vulnerabilities: [] (2 items)                                              ││ 9 components                     │
+│                                                                                  ││ 3 licenses                       │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││                                  │
+│                                                                                  ││ ▓▓░░░░░░░░░░░░░░░░░░░░   1/8  12%│
+└──────────────────────────────────────────────────────────────────── Ln 1/8 (12%) ┘└──────────────────────────────────┘
+ Components: 9 │ Vulns: 0 │ Licenses: 3
+     v tree/raw  p panel  H/L fold all  Enter select │  Tab switch  / search  e export  ? help  q quit [y] copy root

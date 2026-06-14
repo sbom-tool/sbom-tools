@@ -30,6 +30,8 @@ pub(crate) mod render_context;
 pub(crate) mod security;
 pub(crate) mod shared;
 pub mod state;
+#[cfg(test)]
+pub(crate) mod test_support;
 pub mod theme;
 pub mod traits;
 mod ui;

@@ -1,0 +1,44 @@
+---
+source: src/tui/view/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  VIEW  │ acme-webapp │ CycloneDX 1.5 │ [SBOM]
+
+ [1] Overview   │  [2] Components   │  [3] Vulns   │  [4] Licenses   │  [5] Deps   │  [6] Quality   │  [7] Compliance
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+┌ Compliance Standards (←/→ to switch) ────────────────────────────────────────────────────────────────────────────────┐
+│  ⚠ Minimum(10)  │  ✗ Standard(13)  │  ✗ NTIA Minimum Elements(20)  │  ✗ EU CRA Phase 1 (2027)(43)  │  ✗ EU CRA Phase │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌ NTIA Minimum Elements ───────────────────────────────────────────────────────────┐┌ Summary ─────────────────────────┐
+│  NON-COMPLIANT — Errors must be fixed                                            ││ Errors:       11                 │
+│  Format    ██████████████████░░░░░░░░░░░░░░░░░░░░░░     9 (45.0%)                ││ Warnings:      0                 │
+│  Supplier  ██████████████████░░░░░░░░░░░░░░░░░░░░░░     9 (45.0%)                ││ Info:          9                 │
+│  Deps      ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░     1 (5.0%)                 ││ ────────────────                 │
+│  Doc Meta  ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░     1 (5.0%)                 ││ Total:        20                 │
+└──────────────────────────────────────────────────────────────────────────────────┘└──────────────────────────────────┘
+┌ Violations (grouped: 4 patterns, 20 total) ────────────────────┐┌ Affected (9)───────────────────────────────────────┐
+│Severity Category   Issue Pattern                        Count  ││  Component  missing supplier/manufacturer          │
+│                                                                ││  9 named                                           │
+│ERROR    Supplier   Component  missing supplier/manufact 9      ││  ──────────────────────────────                    │
+│ERROR    Doc Meta   SBOM must have creator/tool informat 1      ││  zod                                               │
+│ERROR    Deps       SBOM with multiple components must i 1      ││  axios                                             │
+│INFO     Format     Component  may be missing bom-ref    9      ││  dayjs                                             │
+│                                                                ││  react                                             │
+│                                                                ││  lodash                                            │
+│                                                                ││  prisma                                            │
+│                                                                ││  express                                           │
+│                                                                ││  typescript                                        │
+│                                                                ││  acme-webapp                                       │
+│                                                                ││                                                    │
+│                                                                ││                                                    │
+│                                                                ││                                                    │
+│                                                                ││                                                    │
+│                                                                ││                                                    │
+│                                                                ││                                                    │
+└────────────────────────────────────────────────────────────────┘└────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│←/→ standard  j/k navigate  Enter details  g view [Grouped]  f filter [All]  E export  ? help                         │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+ Components: 9 │ Vulns: 0 │ Licenses: 3
+ f filter  ←→ standard  ↑↓ select │  Tab switch  / search  e export  ? help  q quit [y] copy Component  missing supplier

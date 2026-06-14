@@ -1,0 +1,44 @@
+---
+source: src/tui/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  DIFF  │ acme-webapp@1.0.0 ⟷ acme-webapp@2.0.0
+
+ [1] Summary   │  [2] Components   │  [3] Dependencies   │  [4] Licenses   │  [5] Vulnerabilities   │  [6] Quality   │
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Group:  License   Sort: License  │  Risk:  All   │  Compat:  Off   │  Focus:  New   │  [g] grp [s] sort [r] risk [c] com
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                                      │
+│                                                           ✓                                                          │
+│                                                                                                                      │
+│                                              No license changes detected                                             │
+│                                                                                                                      │
+│                                    All licenses remain the same between both SBOMs                                   │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+ Components: 13 │ Vulns: 0 │ Score: 53.5
+              g group  s sort  r risk  c compat  Tab panel │  Tab switch  / search  e export  ? help  q quit

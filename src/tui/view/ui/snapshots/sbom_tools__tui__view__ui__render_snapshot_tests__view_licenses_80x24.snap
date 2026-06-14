@@ -1,0 +1,28 @@
+---
+source: src/tui/view/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  VIEW  │ acme-webapp │ CycloneDX 1.5 │ [SBOM]
+
+ [1] Overview   │  [2] Components   │  [3] Vulns   │  [4] Licenses   │  [5] Deps
+
+────────────────────────────────────────────────────────────────────────────────
+Group:  License   │  [g] toggle  [Enter] ins┌ License Details ─────────────────┐
+✓ 8  ⚠ 0  ? 1  │  3 total                   │MIT                               ▲
+                                            │                                  █
+┌ Licenses (3) ────────────────────────────┐│Category: Permissive              █
+│  License              Count     Category ││Risk: Low                         █
+│▶ MIT                     6 ████ Permissiv││Family: MIT                       █
+│  Apache-2.0              2 ███  Permissiv││Components: 6                     █
+│  Unknown                 1 ██   Unknown  ││                                  █
+│                                          ││Characteristics:                  █
+│                                          ││✓ Commercial use allowed          █
+│                                          ││✓ Modification allowed            █
+│                                          ││✓ Distribution allowed            █
+│                                          ││✗ Patent grant                    ║
+│                                          ││✗ Copyleft/Share-alike            ║
+│                                          ││                                  ║
+│                                          ││Components: 6 (1/7)               ▼
+└──────────────────────────────────────────┘└──────────────────────────────────┘
+ Components: 9 │ Vulns: 0 │ Licenses: 3
+ g group  Enter inspect  K/J scroll │  Tab switch  / search  e export  ? help  q

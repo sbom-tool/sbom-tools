@@ -1,0 +1,44 @@
+---
+source: src/tui/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  DIFF  │ acme-webapp@1.0.0 ⟷ acme-webapp@2.0.0
+
+ [1] Summary   │  [2] Components   │  [3] Dependencies   │  [4] Licenses   │  [5] Vulnerabilities   │  [6] Quality   │
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+┌ Summary ─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ High Risk   Score: 53.5  │  13 changes, 3 major bumps                                                                │
+│CycloneDX 1.5  Match: 1 exact, 4 fuzzy                                                                                │
+│──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+│ ▲ MAJOR  acme-webapp 1.0.0 → 2.0.0                                                                                   │
+│ ▲ MAJOR  axios 0.21.1 → 1.4.0                                                                                        │
+│ ▲ MAJOR  react 17.0.1 → 18.2.0                                                                                       │
+│ + 4 added (dayjs, typescript, zod, prisma)                                                                           │
+│ - 4 removed (jquery, moment, request, underscore)                                                                    │
+│ ✓ No new vulnerabilities                                                                                             │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌ Components ────────────────┐┌ Dependencies ──────────────┐┌ Vulnerabilities ───────────┐┌ Licenses ──────────────────┐
+│ + ADDED      4             ││ + ADDED     0              ││ ▲ NEW       0              ││ New:      0                │
+│ - REMOVED    4             ││ - REMOVED   0              ││ ▼ FIXED     0              ││ Removed:  0                │
+│ ~ MODIFIED   5             ││                            ││ ● PERSIST   0              ││ Changed:  0                │
+│                            ││No net change               ││ Not enriched               ││ Conflicts: 0               │
+└────────────────────────────┘└────────────────────────────┘└────────────────────────────┘└────────────────────────────┘
+┌ Matching ────────────────────────────────────────────────────────────┐┌ Security Policy ─────────────────────────────┐
+│Matched: 1 exact, 4 fuzzy                                             ││Policy:  Enterprise   Not checked  [P] check  │
+│Unmatched: 4 old, 4 new                                               ││                                              │
+│Avg score: 0.92  Min: 0.90                                            ││                                              │
+└──────────────────────────────────────────────────────────────────────┘└──────────────────────────────────────────────┘
+┌ Changes by Ecosystem ────────────────────────────────────┐┌ SBOM Comparison ─────────────────────────────────────────┐
+│██12███    1                                              ││                   Old     New   Delta                    │
+└──────────────────────────────────────────────────────────┘└──────────────────────────────────────────────────────────┘
+┌ All Changes (13) — MAJOR:3 minor:1 patch:1 +4 -4 ────────────────────────────────────────────────────────────────────┐
+│ ~ acme-webapp 1.0.0 → 2.0.0 MAJOR                                                                                    │
+│ ~ axios 0.21.1 → 1.4.0 MAJOR                                                                                         │
+│ ~ react 17.0.1 → 18.2.0 MAJOR                                                                                        │
+│ - jquery 3.5.1                                                                                                       │
+│ - moment 2.29.1                                                                                                      │
+│ - request 2.88.2                                                                                                     │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+ Components: 13 │ Vulns: 0 │ Score: 53.5
+                                      Tab switch  / search  e export  ? help  q quit

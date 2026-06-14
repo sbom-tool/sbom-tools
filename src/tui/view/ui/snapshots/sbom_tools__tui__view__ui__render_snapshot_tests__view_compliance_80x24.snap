@@ -1,0 +1,28 @@
+---
+source: src/tui/view/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  VIEW  │ acme-webapp │ CycloneDX 1.5 │ [SBOM]
+
+ [1] Overview   │  [2] Components   │  [3] Vulns   │  [4] Licenses   │  [5] Deps
+
+────────────────────────────────────────────────────────────────────────────────
+┌ Compliance Standards (←/→ to switch) ────────────────────────────────────────┐
+└──────────────────────────────────────────────────────────────────────────────┘
+┌ NTIA Minimum Elements ───────────────────────────────┐┌ Summary ─────────────┐
+└──────────────────────────────────────────────────────┘└──────────────────────┘
+┌ Violations (grouped: 4 patterns, 20 total┐┌ Affected (9) K/J scroll ─────────┐
+│Severi Catego Issue Pattern        Count  ││  Component  missing supplier/ma… █
+│                                          ││  9 named                         █
+│ERROR  Suppli Component  missing s 9      ││  ──────────────────────────────  █
+│ERROR  Doc Me SBOM must have creat 1      ││  zod                             █
+│ERROR  Deps   SBOM with multiple c 1      ││  axios                           █
+│INFO   Format Component  may be mi 9      ││  dayjs                           █
+│                                          ││  react                           ║
+│                                          ││  lodash                          ║
+└──────────────────────────────────────────┘└──────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│←/→ standard  j/k navigate  Enter details  g view [Grouped]  f filter [All]  E│
+└──────────────────────────────────────────────────────────────────────────────┘
+ Components: 9 │ Vulns: 0 │ Licenses: 3
+ f filter  ←→ standard  ↑↓ select │  Tab switch  / search  e export  ? help  q q

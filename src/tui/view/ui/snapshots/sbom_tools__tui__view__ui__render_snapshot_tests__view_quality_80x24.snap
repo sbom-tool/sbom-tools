@@ -1,0 +1,28 @@
+---
+source: src/tui/view/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  VIEW  │ acme-webapp │ CycloneDX 1.5 │ [SBOM]
+
+ [1] Overview   │  [2] Components   │  [3] Vulns   │  [4] Licenses   │  [5] Deps
+
+────────────────────────────────────────────────────────────────────────────────
+┌ SBOM Quality Score ──────────────────────────────────────────────────────────┐
+┌ Category Scores (passing: 70) ───────────┐┌ SBOM Checklist ──────────────────┐
+┌ Top Recommendations (7) [↑↓ select, Enter→detail] ───────────────────────────┐
+│> [P1] [Compliance] Fix 1 compliance error(s) to meet Standard requirements   │
+│       1 affected  |  +20.0pts                                                │
+│  [P2] [Provenance] Add SBOM creation tool information                        │
+│       0 affected  |  +8.0pts                                                 │
+│  [P2] [Identifiers] Add PURL or CPE identifiers to components                │
+│       1 affected  |  +2.2pts                                                 │
+│  [P3] [Provenance] Add VCS (source repository) URLs to components            │
+│       9 affected  |  +5.0pts                                                 │
+│  [P4] [Dependencies] Add dependency relationships between components         │
+│       9 affected  |  +10.0pts                                                │
+│  [P4] [Dependencies] Review orphan components that have no dependency relatio│
+│       9 affected  |  +5.0pts                                                 │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+ Components: 9 │ Vulns: 0 │ Licenses: 3
+ v view │  Tab switch  / search  e export  ? help  q quit [y] copy Fix 1 complia

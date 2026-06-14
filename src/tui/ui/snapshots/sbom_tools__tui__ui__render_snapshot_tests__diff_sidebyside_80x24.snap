@@ -1,0 +1,28 @@
+---
+source: src/tui/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  DIFF  │ acme-webapp@1.0.0 ⟷ acme-webapp@2.0.0
+
+ [1] Summary   │  [2] Components   │  [3] Dependencies   │  [4] Licenses   │  [5
+
+────────────────────────────────────────────────────────────────────────────────
+Mode: Grouped │ Focus:  ◄ Old │ New  │ Sync: Independent │ Change: 0/0 │ [a]lign
+
+┌ acme-webapp (Old) ◄ ────────────────┐ │┌ acme-webapp (New) ──────────────────┐
+│Removed: 4 │ Modified: 5             │ ││Added: 4 │ Modified: 5               │
+│                                     │ ││                                     │
+│─── Removed ───                      │ ││─── Added ───                        │
+│- jquery 3.5.1                       │ ││+ dayjs 1.11.7                       │
+│- moment 2.29.1                      │ ││+ typescript 5.0.4                   │
+│- request 2.88.2                     │ ││+ zod 3.21.4                         │
+│- underscore 1.12.0                  │ ◄│+ prisma 4.15.0                      │
+│                                     │ ││                                     │
+│─── Modified (old) ───               │ ││─── Modified (new) ───               │
+│~ acme-webapp 1.0.0                  │ ││~ acme-webapp 2.0.0                  │
+│~ axios 0.21.1                       │ ││~ axios 1.4.0                        │
+│~ express 4.17.1                     │ ││~ express 4.18.2                     │
+│~ lodash 4.17.20                     │ ││~ lodash 4.17.21                     │
+└─────────────────────────────────────┘ │└─────────────────────────────────────┘
+ Components: 13 │ Vulns: 0 │ Score: 53.5
+  ←→/p panel  J/K scroll both │  Tab switch  / search  e export  ? help  q quit

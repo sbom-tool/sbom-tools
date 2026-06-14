@@ -20,6 +20,9 @@ use std::io::{self, stdout};
 
 use super::events::{Event, EventHandler, handle_key_event, handle_mouse_event};
 
+#[cfg(test)]
+mod render_snapshot_tests;
+
 /// Run the `ViewApp` TUI.
 pub fn run_view_tui(app: &mut ViewApp) -> io::Result<()> {
     // Load theme preference
