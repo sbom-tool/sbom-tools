@@ -883,7 +883,8 @@ mod parser_tests {
         for id in ["AI-004", "AI-005", "AI-007", "AI-009"] {
             assert!(passed(id), "expected {id} to pass for CycloneDX ML-BOM");
         }
-        // Fully documented → all nine pass, grade A.
+        // Fully documented (including a weight hash for AI-010) → all ten pass,
+        // grade A.
         for check in &metrics.checks {
             assert!(check.passed, "expected {} to pass", check.id);
         }

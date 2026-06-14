@@ -180,6 +180,7 @@ fn cache_warm(sbom_path: &Path, all_sources: bool, quiet: bool) -> Result<i32> {
     config.enable_eol = all_sources;
     config.enable_kev = all_sources;
     config.enable_staleness = all_sources;
+    config.enable_huggingface = all_sources;
     // Force fresh fetches so every queryable component lands in the cache.
     config.bypass_cache = true;
     config.offline = false;
@@ -195,7 +196,7 @@ fn cache_warm(sbom_path: &Path, all_sources: bool, quiet: bool) -> Result<i32> {
             "Warmed cache for {n} component(s) from {} ({}).",
             sbom_path.display(),
             if all_sources {
-                "OSV, EOL, KEV, staleness"
+                "OSV, EOL, KEV, staleness, HuggingFace"
             } else {
                 "OSV"
             }

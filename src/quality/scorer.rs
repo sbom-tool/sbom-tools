@@ -654,9 +654,10 @@ impl QualityScorer {
 
     /// Score ML model-card completeness for the AI-readiness profile.
     ///
-    /// Filters to `MachineLearningModel` components and evaluates nine model-card
-    /// checks (AI-001..AI-009). The returned `QualityReport` has all standard
-    /// category scores zeroed/`None`; the rich data lives in `ai_readiness_metrics`.
+    /// Filters to `MachineLearningModel` components and evaluates ten model-card
+    /// checks (AI-001..AI-010, the last being a weight-hash integrity check). The
+    /// returned `QualityReport` has all standard category scores zeroed/`None`;
+    /// the rich data lives in `ai_readiness_metrics`.
     /// When the SBOM has no ML components the report is marked not-applicable.
     fn score_ai_readiness(&self, sbom: &NormalizedSbom) -> QualityReport {
         use crate::model::ComponentType;
@@ -725,8 +726,12 @@ impl QualityScorer {
             return make_report(0.0, QualityGrade::F, Vec::new(), metrics);
         }
 
-        // Per-check (id, name, weight); weights sum to 1.0 across the nine checks.
-        const CHECK_DEFS: [(&str, &str, f32); 9] = [
+        // Per-check (id, name, weight). AI-010 adds the integrity dimension —
+        // model-weight tampering is the canonical AI supply-chain attack — so it
+        // carries weight comparable to the transparency checks. The literals are
+        // chosen for readability; they no longer sum to exactly 1.0 once AI-010 is
+        // added, so they are renormalized below to keep the total at 1.0.
+        const CHECK_DEFS: [(&str, &str, f32); 10] = [
             ("AI-001", "Model card URL present", 0.15),
             ("AI-002", "Architecture family declared", 0.12),
             ("AI-003", "Training datasets referenced", 0.12),
@@ -736,7 +741,13 @@ impl QualityScorer {
             ("AI-007", "Use-cases documented", 0.10),
             ("AI-008", "Known limitations stated", 0.09),
             ("AI-009", "Ethical considerations present", 0.09),
+            ("AI-010", "Model weight hashes present", 0.12),
         ];
+
+        // Renormalize the per-check weights so they sum to exactly 1.0. Without
+        // this the literals above total 1.12 and a fully documented model would
+        // score >100 (before the .min(100.0) clamp), distorting partial scores.
+        let weight_sum: f32 = CHECK_DEFS.iter().map(|(_, _, w)| *w).sum();
 
         let n = ml_components.len();
         let mut total_weighted_score = 0.0_f32;
@@ -748,7 +759,7 @@ impl QualityScorer {
             let ml = component.ml_model.as_ref();
             let raw = component.extensions.raw.as_ref();
 
-            let results: [bool; 9] = [
+            let results: [bool; 10] = [
                 // AI-001: model card URL
                 ml.and_then(|m| m.model_card_url.as_ref()).is_some(),
                 // AI-002: architecture family
@@ -804,6 +815,11 @@ impl QualityScorer {
                             "/mlModel/considerations/ethicalConsiderations",
                         ],
                     ),
+                // AI-010: model weight hashes present. Integrity check — a
+                // MachineLearningModel component must carry at least one hash so
+                // its weights can be verified against tampering. Hashes typically
+                // arrive via HuggingFace enrichment (siblings[].lfs.sha256).
+                !component.hashes.is_empty(),
             ];
 
             if results.iter().all(|&p| p) {
@@ -813,7 +829,7 @@ impl QualityScorer {
             total_weighted_score += results
                 .iter()
                 .zip(CHECK_DEFS.iter())
-                .map(|(&passed, (_, _, w))| if passed { *w } else { 0.0 })
+                .map(|(&passed, (_, _, w))| if passed { *w / weight_sum } else { 0.0 })
                 .sum::<f32>();
 
             for (i, &passed) in results.iter().enumerate() {
@@ -848,7 +864,8 @@ impl QualityScorer {
                     name: (*name).to_string(),
                     passed: failures == 0,
                     detail,
-                    weight: *weight,
+                    // Expose the renormalized weight so reported weights sum to 1.0.
+                    weight: *weight / weight_sum,
                 }
             })
             .collect();
@@ -1439,17 +1456,30 @@ mod tests {
                 }
             }
         });
-        sbom.add_component(ml_component("ml-1", "bert-base", ml, raw));
+        let mut component = ml_component("ml-1", "bert-base", ml, raw);
+        // A weight hash makes the AI-010 integrity check pass.
+        component.hashes.push(crate::model::Hash::new(
+            crate::model::HashAlgorithm::Sha256,
+            "a".repeat(64),
+        ));
+        sbom.add_component(component);
 
         let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
         let metrics = report
             .ai_readiness_metrics
             .expect("AI readiness metrics should be present");
         assert!(!metrics.is_not_applicable());
-        // All nine checks should pass → fully documented, perfect score.
+        // All ten checks should pass → fully documented, perfect score.
         for check in &metrics.checks {
             assert!(check.passed, "expected {} to pass", check.id);
         }
+        assert_eq!(metrics.checks.len(), 10, "AI-001..AI-010 are all reported");
+        // The renormalized per-check weights must still sum to 1.0.
+        let weight_total: f32 = metrics.checks.iter().map(|c| c.weight).sum();
+        assert!(
+            (weight_total - 1.0).abs() < 0.001,
+            "renormalized weights must sum to 1.0, got {weight_total}"
+        );
         assert_eq!(metrics.components_fully_documented, 1);
         assert!((report.overall_score - 100.0).abs() < 0.01);
         assert_eq!(report.grade, QualityGrade::A);
@@ -1530,5 +1560,45 @@ mod tests {
             .find(|r| r.message.contains("AI-005"))
             .expect("missing fairness recommendation");
         assert_eq!(rec.affected_count, 1);
+    }
+
+    #[test]
+    fn test_ai_010_weight_hash_integrity_check() {
+        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+
+        // A model with no hashes fails AI-010; one with a hash passes it.
+        let bare = ml_component("ml-1", "no-hash", MlModelInfo::default(), json!({}));
+        sbom.add_component(bare);
+
+        let mut hashed = ml_component("ml-2", "with-hash", MlModelInfo::default(), json!({}));
+        hashed.hashes.push(crate::model::Hash::new(
+            crate::model::HashAlgorithm::Sha256,
+            "b".repeat(64),
+        ));
+        sbom.add_component(hashed);
+
+        let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
+        let metrics = report
+            .ai_readiness_metrics
+            .expect("AI readiness metrics should be present");
+
+        let ai010 = metrics
+            .checks
+            .iter()
+            .find(|c| c.id == "AI-010")
+            .expect("AI-010 should be present");
+        // One of two models lacks a hash, so the aggregate check fails.
+        assert!(
+            !ai010.passed,
+            "AI-010 should fail when any model is missing weight hashes"
+        );
+        assert!(
+            ai010
+                .detail
+                .as_deref()
+                .unwrap_or_default()
+                .contains("1/2 components passed"),
+            "AI-010 detail should report 1/2 models passing"
+        );
     }
 }

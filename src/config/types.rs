@@ -813,6 +813,10 @@ pub struct EnrichmentConfig {
     /// Enable dependency staleness enrichment via package registries
     #[serde(default)]
     pub enable_staleness: bool,
+    /// Enable HuggingFace Hub enrichment for ML-model components (injects
+    /// weight hashes, task from `pipeline_tag`, license, and a staleness signal)
+    #[serde(default)]
+    pub enable_huggingface: bool,
     /// Paths to external VEX documents (OpenVEX format)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub vex_paths: Vec<std::path::PathBuf>,
@@ -827,6 +831,10 @@ pub struct EnrichmentConfig {
     /// Primarily a test seam for pointing the EPSS enricher at a mock server.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub epss_url: Option<String>,
+    /// HuggingFace Hub API base URL override (defaults to the public Hub).
+    /// Primarily a test seam for pointing the HF enricher at a mock server.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub huggingface_url: Option<String>,
     /// Offline mode: never make network calls. Enrichment is served purely
     /// from cache (including TTL-expired entries, with a staleness warning).
     #[serde(default)]
@@ -847,10 +855,12 @@ impl Default for EnrichmentConfig {
             enable_kev: false,
             enable_epss: false,
             enable_staleness: false,
+            enable_huggingface: false,
             vex_paths: Vec::new(),
             api_base: None,
             kev_url: None,
             epss_url: None,
+            huggingface_url: None,
             offline: false,
         }
     }
@@ -941,6 +951,20 @@ impl EnrichmentConfig {
     #[must_use]
     pub const fn with_staleness(mut self) -> Self {
         self.enable_staleness = true;
+        self
+    }
+
+    /// Enable HuggingFace Hub enrichment for ML-model components.
+    #[must_use]
+    pub const fn with_huggingface(mut self) -> Self {
+        self.enable_huggingface = true;
+        self
+    }
+
+    /// Override the HuggingFace Hub API base URL (test seam).
+    #[must_use]
+    pub fn with_huggingface_url(mut self, url: impl Into<String>) -> Self {
+        self.huggingface_url = Some(url.into());
         self
     }
 

@@ -462,6 +462,47 @@ pub fn enrich_staleness(
     }
 }
 
+/// Enrich an SBOM's `MachineLearningModel` components with HuggingFace Hub data.
+///
+/// Injects weight hashes (`siblings[].lfs.sha256`), `task` (from `pipeline_tag`),
+/// a staleness signal (`lastModified`), and a declared license (only when none
+/// is declared). Returns enrichment stats, or `None` on initialization failure
+/// (non-fatal).
+#[cfg(feature = "enrichment")]
+pub fn enrich_huggingface(
+    sbom: &mut NormalizedSbom,
+    config: &crate::enrichment::HuggingFaceConfig,
+    quiet: bool,
+) -> Option<crate::enrichment::HuggingFaceEnrichmentStats> {
+    use crate::enrichment::HuggingFaceClient;
+
+    if !quiet {
+        eprintln!("Enriching ML-model components with HuggingFace Hub metadata...");
+    }
+
+    let mut client = HuggingFaceClient::new(config.clone());
+
+    match enrich_components_in_place(sbom, |comps| client.enrich_components(comps)) {
+        Ok(stats) => {
+            if !quiet {
+                eprintln!(
+                    "HuggingFace enrichment: {} models resolved, {} enriched, {} weight hashes, {} tasks, {} licenses",
+                    stats.models_resolved,
+                    stats.models_enriched,
+                    stats.hashes_added,
+                    stats.tasks_added,
+                    stats.licenses_added,
+                );
+            }
+            Some(stats)
+        }
+        Err(e) => {
+            eprintln!("Warning: HuggingFace enrichment failed: {e}");
+            None
+        }
+    }
+}
+
 /// Enrich an SBOM with VEX data from external OpenVEX documents.
 ///
 /// Returns enrichment statistics if any VEX documents were successfully loaded.

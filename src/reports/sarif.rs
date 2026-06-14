@@ -332,9 +332,9 @@ impl ReportGenerator for SarifReporter {
     }
 }
 
-/// Map an AI-readiness check ID (`AI-001`..`AI-009`) to its SARIF rule ID.
-/// Unknown IDs fall back to the `SBOM-AIBOM-GENERAL` rule so a future tenth
-/// check never silently drops (`AiCheck`/`AiReadinessMetrics` are `#[non_exhaustive]`).
+/// Map an AI-readiness check ID (`AI-001`..`AI-010`) to its SARIF rule ID.
+/// Unknown IDs fall back to the `SBOM-AIBOM-GENERAL` rule so a future check
+/// never silently drops (`AiCheck`/`AiReadinessMetrics` are `#[non_exhaustive]`).
 fn ai_check_to_rule_id(check_id: &str) -> &'static str {
     match check_id {
         "AI-001" => "SBOM-AIBOM-001",
@@ -346,6 +346,7 @@ fn ai_check_to_rule_id(check_id: &str) -> &'static str {
         "AI-007" => "SBOM-AIBOM-007",
         "AI-008" => "SBOM-AIBOM-008",
         "AI-009" => "SBOM-AIBOM-009",
+        "AI-010" => "SBOM-AIBOM-010",
         _ => "SBOM-AIBOM-GENERAL",
     }
 }
@@ -356,7 +357,10 @@ fn ai_check_to_rule_id(check_id: &str) -> &'static str {
 /// This is the single source of truth shared by the rule table and the results.
 fn aibom_level(check_id: &str) -> SarifLevel {
     match check_id {
-        "AI-001" | "AI-002" | "AI-003" | "AI-005" | "AI-009" => SarifLevel::Warning,
+        // AI-010 is the weight-hash integrity check: a missing weight hash
+        // defeats tamper verification, so it is a `warning` like the other
+        // load-bearing transparency checks (not a soft `note`).
+        "AI-001" | "AI-002" | "AI-003" | "AI-005" | "AI-009" | "AI-010" => SarifLevel::Warning,
         _ => SarifLevel::Note,
     }
 }
@@ -420,6 +424,12 @@ fn get_sarif_aibom_rules() -> Vec<SarifRule> {
             "AI-009",
             "AibomEthicalConsiderations",
             "Ethical considerations present",
+        ),
+        (
+            "SBOM-AIBOM-010",
+            "AI-010",
+            "AibomModelWeightHashes",
+            "Model weight hashes present",
         ),
         (
             "SBOM-AIBOM-GENERAL",

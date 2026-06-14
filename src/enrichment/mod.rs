@@ -19,6 +19,7 @@
 mod cache;
 pub mod eol;
 pub mod epss;
+pub mod huggingface;
 pub mod kev;
 pub mod osv;
 pub mod source;
@@ -30,6 +31,9 @@ pub mod vex;
 pub use cache::{CacheKey, FileCache};
 pub use eol::{EolClientConfig, EolEnricher, EolEnrichmentStats};
 pub use epss::{EpssClient, EpssClientConfig, EpssEnrichmentStats, EpssScores};
+pub use huggingface::{
+    HUGGINGFACE_API_URL, HuggingFaceClient, HuggingFaceConfig, HuggingFaceEnrichmentStats,
+};
 pub use kev::{KevCatalog, KevClient, KevClientConfig, KevEnrichmentStats};
 pub use osv::{OsvEnricher, OsvEnricherConfig};
 pub use source::{CacheStats, EnrichmentSource, JsonCache};

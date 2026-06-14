@@ -27,6 +27,9 @@ pub struct AggregatedEnrichmentStats {
     /// Dependency staleness enrichment stats
     #[cfg(feature = "enrichment")]
     pub staleness: Option<crate::enrichment::StalenessEnrichmentStats>,
+    /// HuggingFace Hub (ML-model) enrichment stats
+    #[cfg(feature = "enrichment")]
+    pub huggingface: Option<crate::enrichment::HuggingFaceEnrichmentStats>,
     /// Warnings for display (non-fatal enrichment failures)
     pub warnings: Vec<String>,
 }
@@ -50,6 +53,7 @@ impl AggregatedEnrichmentStats {
                 || self.kev.is_some()
                 || self.epss.is_some()
                 || self.staleness.is_some()
+                || self.huggingface.is_some()
         }
         #[cfg(not(feature = "enrichment"))]
         {
@@ -169,6 +173,29 @@ pub fn enrich_sbom_full(
         match super::enrich_staleness(sbom, &staleness_config, quiet) {
             Some(s) => stats.staleness = Some(s),
             None => stats.warnings.push("Staleness enrichment failed".into()),
+        }
+    }
+
+    // 4b. HuggingFace Hub — ML-model integrity (weight hashes) + task/license.
+    //     Runs as a component enricher; its injected hashes feed the AI-010
+    //     integrity check when quality scoring runs after the pipeline.
+    if config.enable_huggingface {
+        let mut hf_config = crate::enrichment::HuggingFaceConfig {
+            cache_dir: config
+                .cache_dir
+                .clone()
+                .unwrap_or_else(super::dirs::huggingface_cache_dir),
+            cache_ttl: std::time::Duration::from_secs(config.cache_ttl_hours * 3600),
+            bypass_cache: config.bypass_cache,
+            timeout: std::time::Duration::from_secs(config.timeout_secs),
+            ..Default::default()
+        };
+        if let Some(ref url) = config.huggingface_url {
+            hf_config.api_url = url.clone();
+        }
+        match super::enrich_huggingface(sbom, &hf_config, quiet) {
+            Some(s) => stats.huggingface = Some(s),
+            None => stats.warnings.push("HuggingFace enrichment failed".into()),
         }
     }
 

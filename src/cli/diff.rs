@@ -127,6 +127,17 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
         }
     }
 
+    // Enrich ML-model components with HuggingFace Hub data (weight hashes, task)
+    #[cfg(feature = "enrichment")]
+    if config.enrichment.enable_huggingface {
+        let hf_config = huggingface_client_config(&config.enrichment);
+        let hf_old = crate::pipeline::enrich_huggingface(old_parsed.sbom_mut(), &hf_config, quiet);
+        let hf_new = crate::pipeline::enrich_huggingface(new_parsed.sbom_mut(), &hf_config, quiet);
+        if hf_old.is_none() || hf_new.is_none() {
+            enrichment_warnings.push("HuggingFace enrichment failed");
+        }
+    }
+
     // Enrich with VEX data if VEX documents provided
     #[cfg(feature = "enrichment")]
     if !config.enrichment.vex_paths.is_empty() {
@@ -281,6 +292,28 @@ fn epss_client_config(
     };
     if let Some(ref url) = enrichment.epss_url {
         cfg.epss_url = url.clone();
+    }
+    cfg
+}
+
+/// Build a `HuggingFaceConfig` from the user-facing `EnrichmentConfig`, honoring
+/// the cache directory, TTL, timeout, and optional URL override.
+#[cfg(feature = "enrichment")]
+fn huggingface_client_config(
+    enrichment: &crate::config::EnrichmentConfig,
+) -> crate::enrichment::HuggingFaceConfig {
+    let mut cfg = crate::enrichment::HuggingFaceConfig {
+        cache_dir: enrichment
+            .cache_dir
+            .clone()
+            .unwrap_or_else(crate::pipeline::dirs::huggingface_cache_dir),
+        cache_ttl: std::time::Duration::from_secs(enrichment.cache_ttl_hours * 3600),
+        bypass_cache: enrichment.bypass_cache,
+        timeout: std::time::Duration::from_secs(enrichment.timeout_secs),
+        ..Default::default()
+    };
+    if let Some(ref url) = enrichment.huggingface_url {
+        cfg.api_url = url.clone();
     }
     cfg
 }

@@ -8,7 +8,9 @@ use anyhow::Result;
 
 use crate::parsers::parse_sbom;
 use crate::pipeline::exit_codes;
-use crate::verification::{audit_component_hashes, verify_file_hash};
+use crate::verification::{
+    ModelVerifyResult, audit_component_hashes, verify_file_hash, verify_model_dir,
+};
 
 /// Verify action to perform
 #[derive(Debug, Clone, clap::Subcommand)]
@@ -28,6 +30,23 @@ pub enum VerifyAction {
     AuditHashes {
         /// SBOM file to audit
         file: PathBuf,
+        /// Output format (table or json)
+        #[arg(
+            short = 'f',
+            long = "output",
+            alias = "format",
+            default_value = "table"
+        )]
+        format: String,
+    },
+    /// Verify ML-model weight files against the hashes recorded in an SBOM
+    ModelWeights {
+        /// SBOM file describing the model(s)
+        file: PathBuf,
+        /// Directory holding the weight files (supports the HuggingFace cache
+        /// snapshot layout where blobs are named by their SHA-256)
+        #[arg(long = "model-dir")]
+        model_dir: PathBuf,
         /// Output format (table or json)
         #[arg(
             short = 'f',
@@ -128,6 +147,64 @@ pub fn run_verify(action: VerifyAction, quiet: bool) -> Result<i32> {
 
             if report.missing_count > 0 || report.weak_only_count > 0 {
                 Ok(exit_codes::CHANGES_DETECTED) // non-zero for CI gating
+            } else {
+                Ok(exit_codes::SUCCESS)
+            }
+        }
+        VerifyAction::ModelWeights {
+            file,
+            model_dir,
+            format,
+        } => {
+            let sbom = parse_sbom(&file)?;
+            let report = verify_model_dir(&sbom, &model_dir);
+
+            if format == "json" {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+            } else {
+                println!("Model Weight Verification");
+                println!("=========================");
+                println!("Model dir: {}", report.model_dir);
+                println!(
+                    "Models: {}  Verified: {}  Mismatch: {}  Missing: {}  No-hash: {}",
+                    report.total_models,
+                    report.verified_count,
+                    report.mismatch_count,
+                    report.missing_count,
+                    report.no_hash_count,
+                );
+
+                for comp in &report.components {
+                    // A verified component is reported succinctly; everything
+                    // else (the actionable cases) gets its located file/hash.
+                    match comp.result {
+                        ModelVerifyResult::Verified => {
+                            println!(
+                                "  {} {} {} -> {}",
+                                comp.result.label(),
+                                comp.name,
+                                comp.version.as_deref().unwrap_or(""),
+                                comp.file.as_deref().unwrap_or("?"),
+                            );
+                        }
+                        _ => {
+                            println!(
+                                "  {} {} {}{}",
+                                comp.result.label(),
+                                comp.name,
+                                comp.version.as_deref().unwrap_or(""),
+                                comp.hash
+                                    .as_deref()
+                                    .map(|h| format!(" ({h})"))
+                                    .unwrap_or_default(),
+                            );
+                        }
+                    }
+                }
+            }
+
+            if report.has_failures() {
+                Ok(exit_codes::ERROR) // mismatch/missing weights → fail for CI gating
             } else {
                 Ok(exit_codes::SUCCESS)
             }

@@ -111,6 +111,28 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
         }
     }
 
+    // Enrich ML-model components with HuggingFace Hub data (weight hashes, task)
+    #[cfg(feature = "enrichment")]
+    if config.enrichment.enable_huggingface {
+        let mut hf_config = crate::enrichment::HuggingFaceConfig {
+            cache_dir: config
+                .enrichment
+                .cache_dir
+                .clone()
+                .unwrap_or_else(crate::pipeline::dirs::huggingface_cache_dir),
+            cache_ttl: std::time::Duration::from_secs(config.enrichment.cache_ttl_hours * 3600),
+            bypass_cache: config.enrichment.bypass_cache,
+            timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
+            ..Default::default()
+        };
+        if let Some(ref url) = config.enrichment.huggingface_url {
+            hf_config.api_url = url.clone();
+        }
+        if crate::pipeline::enrich_huggingface(parsed.sbom_mut(), &hf_config, false).is_none() {
+            enrichment_warnings.push("HuggingFace enrichment failed");
+        }
+    }
+
     // Enrich with VEX data if VEX documents provided
     #[cfg(feature = "enrichment")]
     if !config.enrichment.vex_paths.is_empty()

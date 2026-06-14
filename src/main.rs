@@ -168,6 +168,11 @@ struct SharedEnrichmentArgs {
     #[arg(long = "enrich-staleness", alias = "staleness")]
     enrich_staleness: bool,
 
+    /// Enrich ML-model components from the HuggingFace Hub (weight hashes from
+    /// `siblings[].lfs.sha256`, task from `pipeline_tag`, license, staleness)
+    #[arg(long = "huggingface", alias = "enrich-huggingface", alias = "hf")]
+    enrich_huggingface: bool,
+
     /// CISA KEV catalog URL override (test seam; defaults to the public feed)
     #[arg(long = "kev-url", env = "SBOM_TOOLS_KEV_URL", hide = true)]
     kev_url: Option<String>,
@@ -175,6 +180,14 @@ struct SharedEnrichmentArgs {
     /// FIRST EPSS scores URL override (test seam; defaults to the public feed)
     #[arg(long = "epss-url", env = "SBOM_TOOLS_EPSS_URL", hide = true)]
     epss_url: Option<String>,
+
+    /// HuggingFace Hub API base URL override (test seam; defaults to the public Hub)
+    #[arg(
+        long = "huggingface-url",
+        env = "SBOM_TOOLS_HUGGINGFACE_URL",
+        hide = true
+    )]
+    huggingface_url: Option<String>,
 
     /// Apply external VEX document(s) (OpenVEX format). Can be specified multiple times
     #[arg(long = "vex", value_name = "PATH")]
@@ -216,8 +229,10 @@ impl SharedEnrichmentArgs {
             enable_kev: self.enrich_kev,
             enable_epss: self.enrich_epss,
             enable_staleness: self.enrich_staleness,
+            enable_huggingface: self.enrich_huggingface,
             kev_url: self.kev_url.clone(),
             epss_url: self.epss_url.clone(),
+            huggingface_url: self.huggingface_url.clone(),
             vex_paths: self.vex.clone(),
             ..Default::default()
         }
@@ -243,6 +258,7 @@ fn seed_enrichment(
         || cli.enable_kev
         || cli.enable_epss
         || cli.enable_staleness
+        || cli.enable_huggingface
         || arg_was_set_sub(sub, "vuln_cache_dir")
         || arg_was_set_sub(sub, "vuln_cache_ttl")
         || arg_was_set_sub(sub, "api_timeout")
@@ -1130,6 +1146,24 @@ enum VerifyAction {
     AuditHashes {
         /// SBOM file to audit
         file: PathBuf,
+        /// Output format (table or json)
+        #[arg(
+            short = 'f',
+            long = "output",
+            alias = "format",
+            value_enum,
+            default_value = "table"
+        )]
+        format: TableJsonFormat,
+    },
+    /// Verify ML-model weight files against the hashes recorded in an SBOM
+    ModelWeights {
+        /// SBOM file describing the model(s)
+        file: PathBuf,
+        /// Directory holding the weight files (supports the HuggingFace cache
+        /// snapshot layout where blobs are named by their SHA-256)
+        #[arg(long = "model-dir")]
+        model_dir: PathBuf,
         /// Output format (table or json)
         #[arg(
             short = 'f',
@@ -2103,6 +2137,15 @@ fn main() -> Result<()> {
                 },
                 VerifyAction::AuditHashes { file, format } => cli::VerifyAction::AuditHashes {
                     file,
+                    format: format.as_str().to_string(),
+                },
+                VerifyAction::ModelWeights {
+                    file,
+                    model_dir,
+                    format,
+                } => cli::VerifyAction::ModelWeights {
+                    file,
+                    model_dir,
                     format: format.as_str().to_string(),
                 },
             };

@@ -82,6 +82,7 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
             || config.enrichment.enable_kev
             || config.enrichment.enable_epss
             || config.enrichment.enable_staleness
+            || config.enrichment.enable_huggingface
             || !config.enrichment.vex_paths.is_empty();
         if any_enrichment {
             let stats =
@@ -707,6 +708,11 @@ mod tests {
             limitations: Some("Only validated for English text".to_string()),
             ..MlModelInfo::default()
         });
+        // A weight hash satisfies the AI-010 integrity check.
+        component.hashes.push(crate::model::Hash::new(
+            crate::model::HashAlgorithm::Sha256,
+            "d".repeat(64),
+        ));
         component.extensions.raw = Some(json!({
             "mlModel": { "modelCard": {
                 "quantitativeAnalysis": { "performanceMetrics": [{ "type": "accuracy", "value": 0.97 }] },

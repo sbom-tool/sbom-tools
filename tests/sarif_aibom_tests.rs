@@ -65,7 +65,7 @@ fn result_rule_ids(value: &serde_json::Value) -> Vec<String> {
 fn aibom_rule_table_is_complete_with_help_uris() {
     let value = render_sarif(&NormalizedSbom::new(DocumentMetadata::default()));
     let ids = rule_ids(&value);
-    for n in 1..=9 {
+    for n in 1..=10 {
         assert!(
             ids.contains(&format!("SBOM-AIBOM-{n:03}")),
             "missing SBOM-AIBOM-{n:03}"
@@ -118,8 +118,9 @@ fn aibom_emits_result_per_failing_check() {
     // AI-001 (URL) and AI-002 (family) pass → no result for them.
     assert!(!ids.contains(&"SBOM-AIBOM-001".to_string()));
     assert!(!ids.contains(&"SBOM-AIBOM-002".to_string()));
-    // The remaining seven checks fail.
-    for n in 3..=9 {
+    // The remaining eight checks fail (AI-003..AI-010, the last being the
+    // weight-hash integrity check — this model carries no hashes).
+    for n in 3..=10 {
         assert!(
             ids.contains(&format!("SBOM-AIBOM-{n:03}")),
             "expected a finding for SBOM-AIBOM-{n:03}"
@@ -149,14 +150,20 @@ fn aibom_emits_result_per_failing_check() {
 #[test]
 fn aibom_passing_checks_produce_no_result() {
     // Document everything except training datasets (AI-003): the typed checks
-    // AI-001/002/006/008 and the raw-pointer checks AI-004/005/007/009 all pass,
-    // so the ONLY finding is SBOM-AIBOM-003. Confirms passing checks are skipped.
+    // AI-001/002/006/008, the raw-pointer checks AI-004/005/007/009, and the
+    // weight-hash integrity check AI-010 all pass, so the ONLY finding is
+    // SBOM-AIBOM-003. Confirms passing checks are skipped.
     let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
     sbom.add_component(ml_component(|ml, comp| {
         ml.architecture_family = Some("transformer".to_string());
         ml.model_card_url = Some("https://example.test/card".to_string());
         ml.energy_kwh_training = Some(12.5);
         ml.limitations = Some("English only".to_string());
+        // A weight hash satisfies the AI-010 integrity check.
+        comp.hashes.push(sbom_tools::model::Hash::new(
+            sbom_tools::model::HashAlgorithm::Sha256,
+            "c".repeat(64),
+        ));
         comp.extensions.raw = Some(serde_json::json!({
             "mlModel": { "modelCard": {
                 "quantitativeAnalysis": { "performanceMetrics": [{ "type": "accuracy", "value": 0.97 }] },
