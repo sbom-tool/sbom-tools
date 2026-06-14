@@ -1,0 +1,1530 @@
+---
+source: tests/golden_reports.rs
+expression: "render(&JsonReporter::new())"
+---
+{
+  "metadata": {
+    "tool": {
+      "name": "sbom-tools",
+      "version": "[VERSION]"
+    },
+    "generated_at": "[TIMESTAMP]",
+    "old_sbom": {
+      "format": "CycloneDX",
+      "file_path": "tests/fixtures/demo-old.cdx.json",
+      "component_count": 9
+    },
+    "new_sbom": {
+      "format": "CycloneDX",
+      "file_path": "tests/fixtures/demo-new.cdx.json",
+      "component_count": 9
+    }
+  },
+  "summary": {
+    "total_changes": 13,
+    "components": {
+      "added": 4,
+      "removed": 4,
+      "modified": 5
+    },
+    "vulnerabilities": {
+      "introduced": 0,
+      "resolved": 0,
+      "persistent": 0
+    },
+    "semantic_score": 53.48837209302326
+  },
+  "cra_compliance": {
+    "old": {
+      "is_compliant": false,
+      "level": "CraPhase2",
+      "violations": [
+        {
+          "severity": "Error",
+          "category": "DocumentMetadata",
+          "message": "SBOM must have creator/tool information",
+          "element": null,
+          "requirement": "Document creator identification"
+        },
+        {
+          "severity": "Warning",
+          "category": "DocumentMetadata",
+          "message": "[CRA Art. 13(15)] SBOM should identify the manufacturer (organization)",
+          "element": null,
+          "requirement": "CRA Art. 13(15): Manufacturer identification",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 13(6)] SBOM should include a security contact or vulnerability disclosure reference",
+          "element": null,
+          "requirement": "CRA Art. 13(6): Vulnerability disclosure contact",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(6)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 13(8)] Consider specifying a support end date for security updates",
+          "element": null,
+          "requirement": "CRA Art. 13(8): Support period disclosure",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(8)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "ComponentIdentification",
+          "message": "[CRA Annex I, Part II] Primary component 'acme-webapp' missing unique identifier (PURL/CPE) for cross-update traceability",
+          "element": "acme-webapp",
+          "requirement": "CRA Annex I, Part II, 1: Product identifier traceability across updates",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "Pren40000_1_3",
+              "id": "PRE-7-RQ-07"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 13(7)] SBOM should reference a coordinated vulnerability disclosure policy (advisories URL or disclosure URL)",
+          "element": null,
+          "requirement": "CRA Art. 13(7): Coordinated vulnerability disclosure policy",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(7)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "Pren40000_1_3",
+              "id": "RLS-2-RQ-03-RE"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 13(11)] Consider including component lifecycle/end-of-support information",
+          "element": null,
+          "requirement": "CRA Art. 13(11): Component lifecycle status",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(11)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "DocumentMetadata",
+          "message": "[CRA Annex VII] Missing reference to the EU Declaration of Conformity (attestation or certification external reference) for product class Default",
+          "element": null,
+          "requirement": "CRA Annex VII: EU Declaration of Conformity reference",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex VII",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "DocumentMetadata",
+          "message": "SBOM should have a serial number/unique identifier",
+          "element": null,
+          "requirement": "Document unique identification"
+        },
+        {
+          "severity": "Error",
+          "category": "ComponentIdentification",
+          "message": "[CRA Annex I, [PRE-7-RQ-07]] Component 'acme-webapp' missing unique identifier (PURL/CPE/SWHID/SWID)",
+          "element": "acme-webapp",
+          "requirement": "CRA Annex I / prEN 40000-1-3 [PRE-7-RQ-07]: Unique component identifier (PURL/CPE/SWHID/SWID)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "Pren40000_1_3",
+              "id": "PRE-7-RQ-07"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'acme-webapp' missing supplier/manufacturer",
+          "element": "acme-webapp",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'acme-webapp' missing cryptographic hash (recommended for integrity)",
+          "element": "acme-webapp",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'lodash' missing supplier/manufacturer",
+          "element": "lodash",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'lodash' missing cryptographic hash (recommended for integrity)",
+          "element": "lodash",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'express' missing supplier/manufacturer",
+          "element": "express",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'express' missing cryptographic hash (recommended for integrity)",
+          "element": "express",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'moment' missing supplier/manufacturer",
+          "element": "moment",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'moment' missing cryptographic hash (recommended for integrity)",
+          "element": "moment",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'request' missing supplier/manufacturer",
+          "element": "request",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'request' missing cryptographic hash (recommended for integrity)",
+          "element": "request",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'axios' missing supplier/manufacturer",
+          "element": "axios",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'axios' missing cryptographic hash (recommended for integrity)",
+          "element": "axios",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'underscore' missing supplier/manufacturer",
+          "element": "underscore",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'underscore' missing cryptographic hash (recommended for integrity)",
+          "element": "underscore",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'jquery' missing supplier/manufacturer",
+          "element": "jquery",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'jquery' missing cryptographic hash (recommended for integrity)",
+          "element": "jquery",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'react' missing supplier/manufacturer",
+          "element": "react",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'react' missing cryptographic hash (recommended for integrity)",
+          "element": "react",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Error",
+          "category": "DependencyInfo",
+          "message": "[CRA Annex I] SBOM with multiple components must include dependency relationships",
+          "element": null,
+          "requirement": "CRA Annex I: Dependency relationships",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'acme-webapp' may be missing bom-ref",
+          "element": "acme-webapp",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'lodash' may be missing bom-ref",
+          "element": "lodash",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'express' may be missing bom-ref",
+          "element": "express",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'moment' may be missing bom-ref",
+          "element": "moment",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'request' may be missing bom-ref",
+          "element": "request",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'axios' may be missing bom-ref",
+          "element": "axios",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'underscore' may be missing bom-ref",
+          "element": "underscore",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'jquery' may be missing bom-ref",
+          "element": "jquery",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'react' may be missing bom-ref",
+          "element": "react",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Warning",
+          "category": "DocumentMetadata",
+          "message": "[CRA Art. 13(3)] SBOM is 880 days old; CRA requires timely updates when components change",
+          "element": null,
+          "requirement": "CRA Art. 13(3): SBOM update frequency",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(3)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "LicenseInfo",
+          "message": "[CRA Art. 13(5)] 1/9 components (11%) missing license information",
+          "element": null,
+          "requirement": "CRA Art. 13(5): Licensed component tracking",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(5)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 13(9)] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
+          "element": null,
+          "requirement": "CRA Art. 13(9): Known vulnerabilities statement",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(9)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex III] Consider adding document-level integrity metadata (serial number, digital signature, or attestation with hash)",
+          "element": null,
+          "requirement": "CRA Annex III: Document signature/integrity",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex III",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "DocumentMetadata",
+          "message": "[CRA Art. 13(2)] No documented risk assessment referenced — add an externalReference of type 'risk-assessment' or supply riskAssessmentUrl in the CRA sidecar",
+          "element": null,
+          "requirement": "CRA Art. 13(2): Documented risk assessment",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(2)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "[ART14_SEV]",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 14] PSIRT URL missing — [ART14]",
+          "element": null,
+          "requirement": "CRA Art. 14: PSIRT contact for external vulnerability reports",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 14",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "[ART14_SEV]",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 14(1)] 24-hour early-warning channel missing — [ART14]",
+          "element": null,
+          "requirement": "CRA Art. 14(1): 24-hour early-warning channel",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 14",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "[ART14_SEV]",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 14(2)] 72-hour incident-report channel missing — [ART14]",
+          "element": null,
+          "requirement": "CRA Art. 14(2): 72-hour incident-report channel",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 14",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "[ART14_SEV]",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 14(7)] No ENISA single reporting platform identifier — track ENISA publication and add `enisaReportingPlatformId` to the CRA sidecar when available",
+          "element": null,
+          "requirement": "CRA Art. 14(7): ENISA single reporting platform",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 14",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        }
+      ],
+      "error_count": 3,
+      "warning_count": "[N]",
+      "info_count": "[N]",
+      "article_summary": {
+        "art_13_4_machine_readable_format": 0,
+        "art_13_6_vulnerability_disclosure": 1,
+        "art_13_7_coordinated_disclosure": 1,
+        "art_13_8_support_period": 1,
+        "art_13_11_component_lifecycle": 1,
+        "art_13_12_product_identification": 0,
+        "art_13_15_manufacturer_identification": 10,
+        "annex_i_technical_documentation": 13,
+        "annex_vii_declaration_of_conformity": 1
+      }
+    },
+    "new": {
+      "is_compliant": false,
+      "level": "CraPhase2",
+      "violations": [
+        {
+          "severity": "Error",
+          "category": "DocumentMetadata",
+          "message": "SBOM must have creator/tool information",
+          "element": null,
+          "requirement": "Document creator identification"
+        },
+        {
+          "severity": "Warning",
+          "category": "DocumentMetadata",
+          "message": "[CRA Art. 13(15)] SBOM should identify the manufacturer (organization)",
+          "element": null,
+          "requirement": "CRA Art. 13(15): Manufacturer identification",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 13(6)] SBOM should include a security contact or vulnerability disclosure reference",
+          "element": null,
+          "requirement": "CRA Art. 13(6): Vulnerability disclosure contact",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(6)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 13(8)] Consider specifying a support end date for security updates",
+          "element": null,
+          "requirement": "CRA Art. 13(8): Support period disclosure",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(8)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "ComponentIdentification",
+          "message": "[CRA Annex I, Part II] Primary component 'acme-webapp' missing unique identifier (PURL/CPE) for cross-update traceability",
+          "element": "acme-webapp",
+          "requirement": "CRA Annex I, Part II, 1: Product identifier traceability across updates",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "Pren40000_1_3",
+              "id": "PRE-7-RQ-07"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 13(7)] SBOM should reference a coordinated vulnerability disclosure policy (advisories URL or disclosure URL)",
+          "element": null,
+          "requirement": "CRA Art. 13(7): Coordinated vulnerability disclosure policy",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(7)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "Pren40000_1_3",
+              "id": "RLS-2-RQ-03-RE"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 13(11)] Consider including component lifecycle/end-of-support information",
+          "element": null,
+          "requirement": "CRA Art. 13(11): Component lifecycle status",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(11)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "DocumentMetadata",
+          "message": "[CRA Annex VII] Missing reference to the EU Declaration of Conformity (attestation or certification external reference) for product class Default",
+          "element": null,
+          "requirement": "CRA Annex VII: EU Declaration of Conformity reference",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex VII",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "DocumentMetadata",
+          "message": "SBOM should have a serial number/unique identifier",
+          "element": null,
+          "requirement": "Document unique identification"
+        },
+        {
+          "severity": "Error",
+          "category": "ComponentIdentification",
+          "message": "[CRA Annex I, [PRE-7-RQ-07]] Component 'acme-webapp' missing unique identifier (PURL/CPE/SWHID/SWID)",
+          "element": "acme-webapp",
+          "requirement": "CRA Annex I / prEN 40000-1-3 [PRE-7-RQ-07]: Unique component identifier (PURL/CPE/SWHID/SWID)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "Pren40000_1_3",
+              "id": "PRE-7-RQ-07"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'acme-webapp' missing supplier/manufacturer",
+          "element": "acme-webapp",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'acme-webapp' missing cryptographic hash (recommended for integrity)",
+          "element": "acme-webapp",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'lodash' missing supplier/manufacturer",
+          "element": "lodash",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'lodash' missing cryptographic hash (recommended for integrity)",
+          "element": "lodash",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'express' missing supplier/manufacturer",
+          "element": "express",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'express' missing cryptographic hash (recommended for integrity)",
+          "element": "express",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'dayjs' missing supplier/manufacturer",
+          "element": "dayjs",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'dayjs' missing cryptographic hash (recommended for integrity)",
+          "element": "dayjs",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'axios' missing supplier/manufacturer",
+          "element": "axios",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'axios' missing cryptographic hash (recommended for integrity)",
+          "element": "axios",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'react' missing supplier/manufacturer",
+          "element": "react",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'react' missing cryptographic hash (recommended for integrity)",
+          "element": "react",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'typescript' missing supplier/manufacturer",
+          "element": "typescript",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'typescript' missing cryptographic hash (recommended for integrity)",
+          "element": "typescript",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'zod' missing supplier/manufacturer",
+          "element": "zod",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'zod' missing cryptographic hash (recommended for integrity)",
+          "element": "zod",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[CRA Art. 13(15)] Component 'prisma' missing supplier/manufacturer",
+          "element": "prisma",
+          "requirement": "CRA Art. 13(15): Supplier/manufacturer information",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(15)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex I] Component 'prisma' missing cryptographic hash (recommended for integrity)",
+          "element": "prisma",
+          "requirement": "CRA Annex I: Component integrity information (hash)",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Error",
+          "category": "DependencyInfo",
+          "message": "[CRA Annex I] SBOM with multiple components must include dependency relationships",
+          "element": null,
+          "requirement": "CRA Annex I: Dependency relationships",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'acme-webapp' may be missing bom-ref",
+          "element": "acme-webapp",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'lodash' may be missing bom-ref",
+          "element": "lodash",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'express' may be missing bom-ref",
+          "element": "express",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'dayjs' may be missing bom-ref",
+          "element": "dayjs",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'axios' may be missing bom-ref",
+          "element": "axios",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'react' may be missing bom-ref",
+          "element": "react",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'typescript' may be missing bom-ref",
+          "element": "typescript",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'zod' may be missing bom-ref",
+          "element": "zod",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'prisma' may be missing bom-ref",
+          "element": "prisma",
+          "requirement": "CycloneDX: bom-ref for dependency tracking"
+        },
+        {
+          "severity": "Warning",
+          "category": "DocumentMetadata",
+          "message": "[CRA Art. 13(3)] SBOM is 728 days old; CRA requires timely updates when components change",
+          "element": null,
+          "requirement": "CRA Art. 13(3): SBOM update frequency",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(3)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "LicenseInfo",
+          "message": "[CRA Art. 13(5)] 1/9 components (11%) missing license information",
+          "element": null,
+          "requirement": "CRA Art. 13(5): Licensed component tracking",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(5)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 13(9)] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
+          "element": null,
+          "requirement": "CRA Art. 13(9): Known vulnerabilities statement",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(9)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[CRA Annex III] Consider adding document-level integrity metadata (serial number, digital signature, or attestation with hash)",
+          "element": null,
+          "requirement": "CRA Annex III: Document signature/integrity",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex III",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "Warning",
+          "category": "DocumentMetadata",
+          "message": "[CRA Art. 13(2)] No documented risk assessment referenced — add an externalReference of type 'risk-assessment' or supply riskAssessmentUrl in the CRA sidecar",
+          "element": null,
+          "requirement": "CRA Art. 13(2): Documented risk assessment",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(2)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "[ART14_SEV]",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 14] PSIRT URL missing — [ART14]",
+          "element": null,
+          "requirement": "CRA Art. 14: PSIRT contact for external vulnerability reports",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 14",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "[ART14_SEV]",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 14(1)] 24-hour early-warning channel missing — [ART14]",
+          "element": null,
+          "requirement": "CRA Art. 14(1): 24-hour early-warning channel",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 14",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "[ART14_SEV]",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 14(2)] 72-hour incident-report channel missing — [ART14]",
+          "element": null,
+          "requirement": "CRA Art. 14(2): 72-hour incident-report channel",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 14",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "severity": "[ART14_SEV]",
+          "category": "SecurityInfo",
+          "message": "[CRA Art. 14(7)] No ENISA single reporting platform identifier — track ENISA publication and add `enisaReportingPlatformId` to the CRA sidecar when available",
+          "element": null,
+          "requirement": "CRA Art. 14(7): ENISA single reporting platform",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 14",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        }
+      ],
+      "error_count": 3,
+      "warning_count": "[N]",
+      "info_count": "[N]",
+      "article_summary": {
+        "art_13_4_machine_readable_format": 0,
+        "art_13_6_vulnerability_disclosure": 1,
+        "art_13_7_coordinated_disclosure": 1,
+        "art_13_8_support_period": 1,
+        "art_13_11_component_lifecycle": 1,
+        "art_13_12_product_identification": 0,
+        "art_13_15_manufacturer_identification": 10,
+        "annex_i_technical_documentation": 13,
+        "annex_vii_declaration_of_conformity": 1
+      }
+    }
+  },
+  "reports": {
+    "components": {
+      "added": [
+        {
+          "id": "pkg:npm/dayjs@1.11.7",
+          "name": "dayjs",
+          "old_version": null,
+          "new_version": "1.11.7",
+          "ecosystem": "npm",
+          "change_type": "Added",
+          "field_changes": [],
+          "cost": 10
+        },
+        {
+          "id": "pkg:npm/typescript@5.0.4",
+          "name": "typescript",
+          "old_version": null,
+          "new_version": "5.0.4",
+          "ecosystem": "npm",
+          "change_type": "Added",
+          "field_changes": [],
+          "cost": 10
+        },
+        {
+          "id": "pkg:npm/zod@3.21.4",
+          "name": "zod",
+          "old_version": null,
+          "new_version": "3.21.4",
+          "ecosystem": "npm",
+          "change_type": "Added",
+          "field_changes": [],
+          "cost": 10
+        },
+        {
+          "id": "pkg:npm/prisma@4.15.0",
+          "name": "prisma",
+          "old_version": null,
+          "new_version": "4.15.0",
+          "ecosystem": "npm",
+          "change_type": "Added",
+          "field_changes": [],
+          "cost": 10
+        }
+      ],
+      "removed": [
+        {
+          "id": "pkg:npm/jquery@3.5.1",
+          "name": "jquery",
+          "old_version": "3.5.1",
+          "new_version": null,
+          "ecosystem": "npm",
+          "change_type": "Removed",
+          "field_changes": [],
+          "cost": 10
+        },
+        {
+          "id": "pkg:npm/moment@2.29.1",
+          "name": "moment",
+          "old_version": "2.29.1",
+          "new_version": null,
+          "ecosystem": "npm",
+          "change_type": "Removed",
+          "field_changes": [],
+          "cost": 10
+        },
+        {
+          "id": "pkg:npm/request@2.88.2",
+          "name": "request",
+          "old_version": "2.88.2",
+          "new_version": null,
+          "ecosystem": "npm",
+          "change_type": "Removed",
+          "field_changes": [],
+          "cost": 10
+        },
+        {
+          "id": "pkg:npm/underscore@1.12.0",
+          "name": "underscore",
+          "old_version": "1.12.0",
+          "new_version": null,
+          "ecosystem": "npm",
+          "change_type": "Removed",
+          "field_changes": [],
+          "cost": 10
+        }
+      ],
+      "modified": [
+        {
+          "id": "acme-webapp",
+          "name": "acme-webapp",
+          "old_version": "1.0.0",
+          "new_version": "2.0.0",
+          "ecosystem": null,
+          "change_type": "Modified",
+          "field_changes": [
+            {
+              "field": "version",
+              "old_value": "1.0.0",
+              "new_value": "2.0.0"
+            }
+          ],
+          "cost": 7,
+          "match_info": {
+            "score": 1.0,
+            "method": "Fuzzy",
+            "reason": "Fuzzy match: 'acme-webapp' ~ 'acme-webapp' with 100% similarity",
+            "score_breakdown": [
+              {
+                "name": "Jaro-Winkler",
+                "weight": 0.6,
+                "raw_score": 1.0,
+                "weighted_score": 0.6,
+                "description": "'acme-webapp' vs 'acme-webapp' = 1.00"
+              },
+              {
+                "name": "Levenshtein",
+                "weight": 0.4,
+                "raw_score": 1.0,
+                "weighted_score": 0.4,
+                "description": "edit distance 0 / max_len 11 = 1.00"
+              }
+            ],
+            "normalizations": [
+              "lowercase"
+            ],
+            "confidence_interval": {
+              "lower": 0.92,
+              "upper": 1.0,
+              "level": 0.95
+            }
+          }
+        },
+        {
+          "id": "pkg:npm/axios@1.4.0",
+          "name": "axios",
+          "old_version": "0.21.1",
+          "new_version": "1.4.0",
+          "ecosystem": "npm",
+          "change_type": "Modified",
+          "field_changes": [
+            {
+              "field": "version",
+              "old_value": "0.21.1",
+              "new_value": "1.4.0"
+            }
+          ],
+          "cost": 7,
+          "match_info": {
+            "score": 0.9,
+            "method": "EcosystemRule",
+            "reason": "Names match after npm ecosystem normalization: 'axios' -> 'axios'",
+            "normalizations": [
+              "npm_normalization"
+            ],
+            "confidence_interval": {
+              "lower": 0.87,
+              "upper": 0.93,
+              "level": 0.95
+            }
+          }
+        },
+        {
+          "id": "pkg:npm/express@4.18.2",
+          "name": "express",
+          "old_version": "4.17.1",
+          "new_version": "4.18.2",
+          "ecosystem": "npm",
+          "change_type": "Modified",
+          "field_changes": [
+            {
+              "field": "version",
+              "old_value": "4.17.1",
+              "new_value": "4.18.2"
+            }
+          ],
+          "cost": 4,
+          "match_info": {
+            "score": 0.9,
+            "method": "EcosystemRule",
+            "reason": "Names match after npm ecosystem normalization: 'express' -> 'express'",
+            "normalizations": [
+              "npm_normalization"
+            ],
+            "confidence_interval": {
+              "lower": 0.87,
+              "upper": 0.93,
+              "level": 0.95
+            }
+          }
+        },
+        {
+          "id": "pkg:npm/lodash@4.17.21",
+          "name": "lodash",
+          "old_version": "4.17.20",
+          "new_version": "4.17.21",
+          "ecosystem": "npm",
+          "change_type": "Modified",
+          "field_changes": [
+            {
+              "field": "version",
+              "old_value": "4.17.20",
+              "new_value": "4.17.21"
+            }
+          ],
+          "cost": 2,
+          "match_info": {
+            "score": 0.9,
+            "method": "EcosystemRule",
+            "reason": "Names match after npm ecosystem normalization: 'lodash' -> 'lodash'",
+            "normalizations": [
+              "npm_normalization"
+            ],
+            "confidence_interval": {
+              "lower": 0.87,
+              "upper": 0.93,
+              "level": 0.95
+            }
+          }
+        },
+        {
+          "id": "pkg:npm/react@18.2.0",
+          "name": "react",
+          "old_version": "17.0.1",
+          "new_version": "18.2.0",
+          "ecosystem": "npm",
+          "change_type": "Modified",
+          "field_changes": [
+            {
+              "field": "version",
+              "old_value": "17.0.1",
+              "new_value": "18.2.0"
+            }
+          ],
+          "cost": 7,
+          "match_info": {
+            "score": 0.9,
+            "method": "EcosystemRule",
+            "reason": "Names match after npm ecosystem normalization: 'react' -> 'react'",
+            "normalizations": [
+              "npm_normalization"
+            ],
+            "confidence_interval": {
+              "lower": 0.87,
+              "upper": 0.93,
+              "level": 0.95
+            }
+          }
+        }
+      ]
+    },
+    "dependencies": {
+      "added": [],
+      "removed": []
+    },
+    "licenses": {
+      "new_licenses": [],
+      "removed_licenses": [],
+      "conflicts": []
+    },
+    "vulnerabilities": {
+      "introduced": [],
+      "resolved": [],
+      "persistent": []
+    }
+  }
+}

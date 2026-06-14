@@ -1,0 +1,15 @@
+---
+source: tests/golden_reports.rs
+expression: "render(&SummaryReporter::new().no_color())"
+---
+SBOM Diff Summary
+────────────────────────────────────────
+Files:  acme-webapp → acme-webapp
+Size:  9 → 9 components
+
+Changes:
+  +4 components added
+  -4 components removed
+  ~5 components modified
+
+Similarity:  53.5%

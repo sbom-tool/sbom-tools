@@ -257,7 +257,10 @@ impl<'w, W: Write> StreamingJsonWriter<'w, W> {
         };
         self.write_key_value("metadata", &metadata, true)?;
 
-        // Write summary
+        // Write summary. Only emit a trailing comma when at least one report
+        // section follows; otherwise (e.g. an empty `report_types` selection)
+        // the comma would dangle before the closing `}` and produce invalid
+        // JSON.
         let summary = StreamingSummary {
             total_changes: result.summary.total_changes,
             components_added: result.summary.components_added,
@@ -267,7 +270,11 @@ impl<'w, W: Write> StreamingJsonWriter<'w, W> {
             vulnerabilities_resolved: result.summary.vulnerabilities_resolved,
             semantic_score: result.semantic_score,
         };
-        self.write_key_value("summary", &summary, true)?;
+        let any_section = config.includes(ReportType::Components)
+            || config.includes(ReportType::Vulnerabilities)
+            || config.includes(ReportType::Dependencies)
+            || config.includes(ReportType::Licenses);
+        self.write_key_value("summary", &summary, any_section)?;
 
         // Write components (streamed)
         if config.includes(ReportType::Components) {

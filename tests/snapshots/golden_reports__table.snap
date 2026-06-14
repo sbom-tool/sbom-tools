@@ -1,0 +1,21 @@
+---
+source: tests/golden_reports.rs
+expression: "render(&TableReporter::new().no_color())"
+---
+STATUS       COMPONENT                                OLD VERSION     NEW VERSION    
+─────────────────────────────────────────────────────────────────────────────────────
++ Added      dayjs                                    -               1.11.7         
++ Added      typescript                               -               5.0.4          
++ Added      zod                                      -               3.21.4         
++ Added      prisma                                   -               4.15.0         
+- Removed    jquery                                   3.5.1           -              
+- Removed    moment                                   2.29.1          -              
+- Removed    request                                  2.88.2          -              
+- Removed    underscore                               1.12.0          -              
+~ Modified   acme-webapp                              1.0.0           2.0.0          
+~ Modified   axios                                    0.21.1          1.4.0          
+~ Modified   express                                  4.17.1          4.18.2         
+~ Modified   lodash                                   4.17.20         4.17.21        
+~ Modified   react                                    17.0.1          18.2.0         
+
+Total: 4 added, 4 removed, 5 modified | Vulns: 0 new, 0 resolved | Similarity: 53.5%

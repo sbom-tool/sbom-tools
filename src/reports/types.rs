@@ -66,8 +66,6 @@ pub enum ReportType {
     Components,
     /// Dependency changes
     Dependencies,
-    /// OSS dependency changes
-    OssDependencies,
     /// License changes
     Licenses,
     /// Vulnerability changes
