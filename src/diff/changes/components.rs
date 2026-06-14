@@ -2,7 +2,10 @@
 
 use crate::diff::traits::{ChangeComputer, ComponentChangeSet, ComponentMatches};
 use crate::diff::{ComponentChange, CostModel, FieldChange};
-use crate::model::{Component, CryptoAssetType, CryptoProperties, NormalizedSbom};
+use crate::model::{
+    Component, CryptoAssetType, CryptoProperties, DatasetInfo, DatasetRef, MlModelInfo,
+    NormalizedSbom,
+};
 use std::collections::HashSet;
 
 /// Computes component-level changes between SBOMs.
@@ -15,30 +18,6 @@ impl ComponentChangeComputer {
     #[must_use]
     pub const fn new(cost_model: CostModel) -> Self {
         Self { cost_model }
-    }
-
-    fn serialize_optional<T: serde::Serialize>(value: &Option<T>) -> Option<String> {
-        value.as_ref().map(|value| {
-            serde_json::to_string(value).expect("serializing diff value should be infallible")
-        })
-    }
-
-    fn push_structured_change<T: serde::Serialize + PartialEq>(
-        changes: &mut Vec<FieldChange>,
-        field: &str,
-        old: &Option<T>,
-        new: &Option<T>,
-        total_cost: &mut u32,
-        field_cost: u32,
-    ) {
-        if old != new {
-            changes.push(FieldChange {
-                field: field.to_string(),
-                old_value: Self::serialize_optional(old),
-                new_value: Self::serialize_optional(new),
-            });
-            *total_cost += field_cost;
-        }
     }
 
     /// Compute individual field changes between two components.
@@ -128,22 +107,15 @@ impl ComponentChangeComputer {
             }
         }
 
-        Self::push_structured_change(
-            &mut changes,
-            "ml_model",
-            &old.ml_model,
-            &new.ml_model,
-            &mut total_cost,
-            self.cost_model.ml_model_changed,
-        );
-        Self::push_structured_change(
-            &mut changes,
-            "dataset",
-            &old.dataset,
-            &new.dataset,
-            &mut total_cost,
-            self.cost_model.dataset_changed,
-        );
+        // ML model metadata changes (granular, prefixed per-field)
+        if old.ml_model != new.ml_model {
+            total_cost += Self::compute_ml_changes(&self.cost_model, old, new, &mut changes);
+        }
+
+        // Dataset metadata changes (granular, prefixed per-field)
+        if old.dataset != new.dataset {
+            total_cost += Self::compute_dataset_changes(&self.cost_model, old, new, &mut changes);
+        }
 
         // Cryptographic property changes
         if old.crypto_properties != new.crypto_properties {
@@ -151,6 +123,298 @@ impl ComponentChangeComputer {
         }
 
         (changes, total_cost)
+    }
+
+    /// Push a scalar `Option<String>` field change when the values differ.
+    fn push_scalar_change(
+        changes: &mut Vec<FieldChange>,
+        field: &str,
+        old: &Option<String>,
+        new: &Option<String>,
+        cost: &mut u32,
+        field_cost: u32,
+    ) {
+        if old != new {
+            changes.push(FieldChange {
+                field: field.to_string(),
+                old_value: old.clone(),
+                new_value: new.clone(),
+            });
+            *cost += field_cost;
+        }
+    }
+
+    /// Stable identity key for a training-dataset reference: prefer the BOM-ref,
+    /// then the name, then the PURL. Used to detect added/removed datasets across
+    /// two model revisions.
+    fn dataset_ref_key(reference: &DatasetRef) -> Option<&str> {
+        reference
+            .reference
+            .as_deref()
+            .or(reference.name.as_deref())
+            .or(reference.purl.as_deref())
+    }
+
+    /// Compute ML-model-specific field changes between two components.
+    ///
+    /// Emits granular, prefixed `ml_*` field changes (approach, architecture, task,
+    /// quantization, model card) plus per-dataset `ml_training_dataset` add/remove
+    /// entries, rather than one opaque serialized blob. This surfaces model-swap
+    /// signals such as `fp32 -> int4` re-quantization or training-data provenance loss.
+    fn compute_ml_changes(
+        cost_model: &CostModel,
+        old: &Component,
+        new: &Component,
+        changes: &mut Vec<FieldChange>,
+    ) -> u32 {
+        let mut cost = 0u32;
+
+        match (&old.ml_model, &new.ml_model) {
+            (Some(old_ml), Some(new_ml)) => {
+                cost += Self::compute_ml_sub_changes(cost_model, old_ml, new_ml, changes);
+            }
+            (None, Some(_)) | (Some(_), None) => {
+                // Model metadata appeared or disappeared wholesale.
+                changes.push(FieldChange {
+                    field: "ml_model".to_string(),
+                    old_value: old.ml_model.as_ref().map(|_| "present".to_string()),
+                    new_value: new.ml_model.as_ref().map(|_| "present".to_string()),
+                });
+                cost += cost_model.ml_model_changed;
+            }
+            (None, None) => {}
+        }
+
+        cost
+    }
+
+    fn compute_ml_sub_changes(
+        cost_model: &CostModel,
+        old: &MlModelInfo,
+        new: &MlModelInfo,
+        changes: &mut Vec<FieldChange>,
+    ) -> u32 {
+        let mut cost = 0u32;
+
+        Self::push_scalar_change(
+            changes,
+            "ml_approach",
+            &old.approach,
+            &new.approach,
+            &mut cost,
+            cost_model.ml_approach_changed,
+        );
+
+        // Architecture family and name are reported under a single prefixed field
+        // so a "resnet -> bert" or "cnn -> transformer" swap reads as one signal.
+        let old_arch = Self::join_architecture(old);
+        let new_arch = Self::join_architecture(new);
+        Self::push_scalar_change(
+            changes,
+            "ml_architecture",
+            &old_arch,
+            &new_arch,
+            &mut cost,
+            cost_model.ml_architecture_changed,
+        );
+
+        Self::push_scalar_change(
+            changes,
+            "ml_task",
+            &old.task,
+            &new.task,
+            &mut cost,
+            cost_model.ml_task_changed,
+        );
+        Self::push_scalar_change(
+            changes,
+            "ml_quantization",
+            &old.quantization,
+            &new.quantization,
+            &mut cost,
+            cost_model.ml_quantization_changed,
+        );
+        Self::push_scalar_change(
+            changes,
+            "ml_model_card",
+            &old.model_card_url,
+            &new.model_card_url,
+            &mut cost,
+            cost_model.ml_model_card_changed,
+        );
+
+        cost += Self::compute_training_dataset_changes(cost_model, old, new, changes);
+
+        cost
+    }
+
+    /// Combine architecture family and name into a single display value.
+    fn join_architecture(ml: &MlModelInfo) -> Option<String> {
+        match (&ml.architecture_family, &ml.architecture_name) {
+            (Some(family), Some(name)) => Some(format!("{family}/{name}")),
+            (Some(value), None) | (None, Some(value)) => Some(value.clone()),
+            (None, None) => None,
+        }
+    }
+
+    /// Emit per-dataset `ml_training_dataset` add/remove changes keyed by
+    /// `DatasetRef.reference`-or-`name`. Training-dataset removal is treated as a
+    /// provenance-loss signal and carries a high cost.
+    fn compute_training_dataset_changes(
+        cost_model: &CostModel,
+        old: &MlModelInfo,
+        new: &MlModelInfo,
+        changes: &mut Vec<FieldChange>,
+    ) -> u32 {
+        let mut cost = 0u32;
+
+        let old_keys: HashSet<&str> = old
+            .training_datasets
+            .iter()
+            .filter_map(Self::dataset_ref_key)
+            .collect();
+        let new_keys: HashSet<&str> = new
+            .training_datasets
+            .iter()
+            .filter_map(Self::dataset_ref_key)
+            .collect();
+
+        // Removed training datasets (present in old, absent in new). Sorted for
+        // deterministic output.
+        let mut removed: Vec<&str> = old_keys.difference(&new_keys).copied().collect();
+        removed.sort_unstable();
+        for key in removed {
+            changes.push(FieldChange {
+                field: "ml_training_dataset".to_string(),
+                old_value: Some(key.to_string()),
+                new_value: None,
+            });
+            cost += cost_model.ml_training_dataset_removed;
+        }
+
+        // Added training datasets (absent in old, present in new).
+        let mut added: Vec<&str> = new_keys.difference(&old_keys).copied().collect();
+        added.sort_unstable();
+        for key in added {
+            changes.push(FieldChange {
+                field: "ml_training_dataset".to_string(),
+                old_value: None,
+                new_value: Some(key.to_string()),
+            });
+            cost += cost_model.ml_training_dataset_added;
+        }
+
+        cost
+    }
+
+    /// Compute dataset-component-specific field changes between two components.
+    ///
+    /// Emits granular, prefixed `dataset_*` field changes: type, per-classification
+    /// sensitivity add/remove, and governance. Gaining a sensitivity classification
+    /// (e.g. a dataset newly tagged `pii`) is a data-governance signal and carries
+    /// a high cost.
+    fn compute_dataset_changes(
+        cost_model: &CostModel,
+        old: &Component,
+        new: &Component,
+        changes: &mut Vec<FieldChange>,
+    ) -> u32 {
+        let mut cost = 0u32;
+
+        match (&old.dataset, &new.dataset) {
+            (Some(old_ds), Some(new_ds)) => {
+                cost += Self::compute_dataset_sub_changes(cost_model, old_ds, new_ds, changes);
+            }
+            (None, Some(_)) | (Some(_), None) => {
+                changes.push(FieldChange {
+                    field: "dataset".to_string(),
+                    old_value: old.dataset.as_ref().map(|_| "present".to_string()),
+                    new_value: new.dataset.as_ref().map(|_| "present".to_string()),
+                });
+                cost += cost_model.dataset_changed;
+            }
+            (None, None) => {}
+        }
+
+        cost
+    }
+
+    fn compute_dataset_sub_changes(
+        cost_model: &CostModel,
+        old: &DatasetInfo,
+        new: &DatasetInfo,
+        changes: &mut Vec<FieldChange>,
+    ) -> u32 {
+        let mut cost = 0u32;
+
+        Self::push_scalar_change(
+            changes,
+            "dataset_type",
+            &old.dataset_type,
+            &new.dataset_type,
+            &mut cost,
+            cost_model.dataset_type_changed,
+        );
+
+        // Sensitivity classifications: emit per-classification add/remove so a
+        // dataset newly gaining "pii" is visible and costly.
+        let old_sens: HashSet<&str> = old
+            .sensitivity_classifications
+            .iter()
+            .map(String::as_str)
+            .collect();
+        let new_sens: HashSet<&str> = new
+            .sensitivity_classifications
+            .iter()
+            .map(String::as_str)
+            .collect();
+
+        let mut added: Vec<&str> = new_sens.difference(&old_sens).copied().collect();
+        added.sort_unstable();
+        for class in added {
+            changes.push(FieldChange {
+                field: "dataset_sensitivity".to_string(),
+                old_value: None,
+                new_value: Some(class.to_string()),
+            });
+            cost += cost_model.dataset_sensitivity_added;
+        }
+
+        let mut removed: Vec<&str> = old_sens.difference(&new_sens).copied().collect();
+        removed.sort_unstable();
+        for class in removed {
+            changes.push(FieldChange {
+                field: "dataset_sensitivity".to_string(),
+                old_value: Some(class.to_string()),
+                new_value: None,
+            });
+            cost += cost_model.dataset_sensitivity_removed;
+        }
+
+        // Governance owners: report a single change when the owner set differs.
+        let old_gov: HashSet<&str> = old.governance_owners.iter().map(String::as_str).collect();
+        let new_gov: HashSet<&str> = new.governance_owners.iter().map(String::as_str).collect();
+        if old_gov != new_gov {
+            changes.push(FieldChange {
+                field: "dataset_governance".to_string(),
+                old_value: Self::join_sorted(&old.governance_owners),
+                new_value: Self::join_sorted(&new.governance_owners),
+            });
+            cost += cost_model.dataset_governance_changed;
+        }
+
+        cost
+    }
+
+    /// Join a list of strings into a deterministic, comma-separated display value,
+    /// or `None` when empty.
+    fn join_sorted(values: &[String]) -> Option<String> {
+        if values.is_empty() {
+            return None;
+        }
+        let mut sorted: Vec<&str> = values.iter().map(String::as_str).collect();
+        sorted.sort_unstable();
+        Some(sorted.join(", "))
     }
 
     /// Compute crypto-specific field changes between two components.
@@ -372,8 +636,9 @@ impl ChangeComputer for ComponentChangeComputer {
 
 #[cfg(test)]
 mod tests {
+    // `DatasetInfo`, `DatasetRef`, and `MlModelInfo` are re-exported via the
+    // parent module's `use crate::model::{...}`.
     use super::*;
-    use crate::model::{DatasetInfo, MlModelInfo};
 
     #[test]
     fn test_component_change_computer_default() {
@@ -392,12 +657,17 @@ mod tests {
         assert!(result.is_empty());
     }
 
+    /// Locate the single field change with the given field name, asserting it exists.
+    fn find_change<'a>(changes: &'a [FieldChange], field: &str) -> &'a FieldChange {
+        changes
+            .iter()
+            .find(|c| c.field == field)
+            .unwrap_or_else(|| panic!("expected a `{field}` field change, got {changes:?}"))
+    }
+
     #[test]
-    fn test_ml_model_change_uses_dedicated_cost() {
-        let computer = ComponentChangeComputer::new(CostModel {
-            ml_model_changed: 42,
-            ..CostModel::default()
-        });
+    fn test_ml_quantization_change_is_granular() {
+        let computer = ComponentChangeComputer::default();
         let mut old = Component::new("model".to_string(), "model@1".to_string());
         let mut new = old.clone();
 
@@ -406,39 +676,162 @@ mod tests {
             ..MlModelInfo::default()
         });
         new.ml_model = Some(MlModelInfo {
-            quantization: Some("int8".to_string()),
+            quantization: Some("int4".to_string()),
             ..MlModelInfo::default()
         });
 
         let (changes, total_cost) = computer.compute_field_changes(&old, &new);
 
-        assert_eq!(total_cost, 42);
-        assert_eq!(changes.len(), 1);
-        assert_eq!(changes[0].field, "ml_model");
+        // The opaque "ml_model" blob is gone; a prefixed ml_quantization change appears.
+        assert!(changes.iter().all(|c| c.field != "ml_model"));
+        let change = find_change(&changes, "ml_quantization");
+        assert_eq!(change.old_value.as_deref(), Some("fp32"));
+        assert_eq!(change.new_value.as_deref(), Some("int4"));
+        assert_eq!(total_cost, CostModel::default().ml_quantization_changed);
     }
 
     #[test]
-    fn test_dataset_change_uses_dedicated_cost() {
-        let computer = ComponentChangeComputer::new(CostModel {
-            dataset_changed: 17,
-            ..CostModel::default()
+    fn test_ml_architecture_and_task_changes_are_granular() {
+        let computer = ComponentChangeComputer::default();
+        let mut old = Component::new("model".to_string(), "model@1".to_string());
+        let mut new = old.clone();
+
+        old.ml_model = Some(MlModelInfo {
+            architecture_family: Some("cnn".to_string()),
+            architecture_name: Some("resnet".to_string()),
+            task: Some("computer-vision".to_string()),
+            ..MlModelInfo::default()
         });
+        new.ml_model = Some(MlModelInfo {
+            architecture_family: Some("transformer".to_string()),
+            architecture_name: Some("bert".to_string()),
+            task: Some("nlp".to_string()),
+            ..MlModelInfo::default()
+        });
+
+        let (changes, _) = computer.compute_field_changes(&old, &new);
+
+        let arch = find_change(&changes, "ml_architecture");
+        assert_eq!(arch.old_value.as_deref(), Some("cnn/resnet"));
+        assert_eq!(arch.new_value.as_deref(), Some("transformer/bert"));
+        let task = find_change(&changes, "ml_task");
+        assert_eq!(task.old_value.as_deref(), Some("computer-vision"));
+        assert_eq!(task.new_value.as_deref(), Some("nlp"));
+    }
+
+    #[test]
+    fn test_ml_training_dataset_removed_has_high_cost() {
+        let computer = ComponentChangeComputer::default();
+        let mut old = Component::new("model".to_string(), "model@1".to_string());
+        let mut new = old.clone();
+
+        old.ml_model = Some(MlModelInfo {
+            training_datasets: vec![
+                DatasetRef {
+                    reference: Some("ds-imagenet".to_string()),
+                    name: Some("imagenet".to_string()),
+                    purl: None,
+                },
+                DatasetRef {
+                    reference: Some("ds-coco".to_string()),
+                    name: Some("coco".to_string()),
+                    purl: None,
+                },
+            ],
+            ..MlModelInfo::default()
+        });
+        new.ml_model = Some(MlModelInfo {
+            training_datasets: vec![DatasetRef {
+                reference: Some("ds-imagenet".to_string()),
+                name: Some("imagenet".to_string()),
+                purl: None,
+            }],
+            ..MlModelInfo::default()
+        });
+
+        let (changes, total_cost) = computer.compute_field_changes(&old, &new);
+
+        let removed = find_change(&changes, "ml_training_dataset");
+        assert_eq!(removed.old_value.as_deref(), Some("ds-coco"));
+        assert_eq!(removed.new_value, None);
+        assert_eq!(total_cost, CostModel::default().ml_training_dataset_removed);
+    }
+
+    #[test]
+    fn test_dataset_sensitivity_escalation_has_high_cost() {
+        let computer = ComponentChangeComputer::default();
         let mut old = Component::new("dataset".to_string(), "dataset@1".to_string());
         let mut new = old.clone();
 
         old.dataset = Some(DatasetInfo {
             dataset_type: Some("training".to_string()),
+            sensitivity_classifications: vec!["public".to_string()],
             ..DatasetInfo::default()
         });
         new.dataset = Some(DatasetInfo {
-            dataset_type: Some("validation".to_string()),
+            dataset_type: Some("training".to_string()),
+            sensitivity_classifications: vec!["public".to_string(), "pii".to_string()],
             ..DatasetInfo::default()
         });
 
         let (changes, total_cost) = computer.compute_field_changes(&old, &new);
 
-        assert_eq!(total_cost, 17);
-        assert_eq!(changes.len(), 1);
-        assert_eq!(changes[0].field, "dataset");
+        // No opaque "dataset" blob; a prefixed dataset_sensitivity add appears.
+        assert!(changes.iter().all(|c| c.field != "dataset"));
+        let escalation = find_change(&changes, "dataset_sensitivity");
+        assert_eq!(escalation.old_value, None);
+        assert_eq!(escalation.new_value.as_deref(), Some("pii"));
+        assert_eq!(total_cost, CostModel::default().dataset_sensitivity_added);
+    }
+
+    #[test]
+    fn test_dataset_type_and_governance_changes_are_granular() {
+        let computer = ComponentChangeComputer::default();
+        let mut old = Component::new("dataset".to_string(), "dataset@1".to_string());
+        let mut new = old.clone();
+
+        old.dataset = Some(DatasetInfo {
+            dataset_type: Some("training".to_string()),
+            governance_owners: vec!["alice".to_string()],
+            ..DatasetInfo::default()
+        });
+        new.dataset = Some(DatasetInfo {
+            dataset_type: Some("validation".to_string()),
+            governance_owners: vec!["bob".to_string()],
+            ..DatasetInfo::default()
+        });
+
+        let (changes, _) = computer.compute_field_changes(&old, &new);
+
+        let ty = find_change(&changes, "dataset_type");
+        assert_eq!(ty.old_value.as_deref(), Some("training"));
+        assert_eq!(ty.new_value.as_deref(), Some("validation"));
+        let gov = find_change(&changes, "dataset_governance");
+        assert_eq!(gov.old_value.as_deref(), Some("alice"));
+        assert_eq!(gov.new_value.as_deref(), Some("bob"));
+    }
+
+    #[test]
+    fn test_security_focused_escalates_ml_and_dataset_costs() {
+        let secure = ComponentChangeComputer::new(CostModel::security_focused());
+        let default = ComponentChangeComputer::default();
+
+        let mut old = Component::new("dataset".to_string(), "dataset@1".to_string());
+        let mut new = old.clone();
+        old.dataset = Some(DatasetInfo {
+            sensitivity_classifications: vec![],
+            ..DatasetInfo::default()
+        });
+        new.dataset = Some(DatasetInfo {
+            sensitivity_classifications: vec!["pii".to_string()],
+            ..DatasetInfo::default()
+        });
+
+        let (_, secure_cost) = secure.compute_field_changes(&old, &new);
+        let (_, default_cost) = default.compute_field_changes(&old, &new);
+        assert!(
+            secure_cost > default_cost,
+            "security profile should weight PII escalation higher (secure={secure_cost}, default={default_cost})"
+        );
     }
 }

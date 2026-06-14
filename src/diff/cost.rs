@@ -26,6 +26,28 @@ pub struct CostModel {
     pub ml_model_changed: u32,
     /// Cost for dataset metadata change
     pub dataset_changed: u32,
+    /// Cost for ML approach change (e.g. supervised -> reinforcement-learning)
+    pub ml_approach_changed: u32,
+    /// Cost for ML architecture change (family or name, e.g. cnn -> transformer)
+    pub ml_architecture_changed: u32,
+    /// Cost for ML task change (e.g. nlp -> computer-vision)
+    pub ml_task_changed: u32,
+    /// Cost for ML quantization change (e.g. fp32 -> int4); a model-swap signal
+    pub ml_quantization_changed: u32,
+    /// Cost for ML model-card URL change
+    pub ml_model_card_changed: u32,
+    /// Cost for adding a training dataset to a model
+    pub ml_training_dataset_added: u32,
+    /// Cost for removing a training dataset from a model (provenance loss; HIGH)
+    pub ml_training_dataset_removed: u32,
+    /// Cost for dataset type change (e.g. training -> validation)
+    pub dataset_type_changed: u32,
+    /// Cost for dataset governance owners change
+    pub dataset_governance_changed: u32,
+    /// Cost for adding a dataset sensitivity classification (e.g. gaining PII; HIGH)
+    pub dataset_sensitivity_added: u32,
+    /// Cost for removing a dataset sensitivity classification
+    pub dataset_sensitivity_removed: u32,
     /// Cost for introducing a vulnerability
     pub vulnerability_introduced: u32,
     /// Reward (negative cost) for resolving a vulnerability
@@ -62,6 +84,17 @@ impl Default for CostModel {
             supplier_changed: 4,
             ml_model_changed: 6,
             dataset_changed: 5,
+            ml_approach_changed: 6,
+            ml_architecture_changed: 6,
+            ml_task_changed: 5,
+            ml_quantization_changed: 8,
+            ml_model_card_changed: 3,
+            ml_training_dataset_added: 5,
+            ml_training_dataset_removed: 12,
+            dataset_type_changed: 5,
+            dataset_governance_changed: 4,
+            dataset_sensitivity_added: 14,
+            dataset_sensitivity_removed: 6,
             vulnerability_introduced: 15,
             vulnerability_resolved: -3,
             dependency_added: 5,
@@ -89,6 +122,12 @@ impl CostModel {
             crypto_downgrade: 30,
             crypto_quantum_level_changed: 15,
             crypto_algorithm_changed: 12,
+            // Model-swap and data-governance escalations are security-relevant:
+            // gaining a sensitivity classification (e.g. PII), losing training-data
+            // provenance, or silently re-quantizing a model all warrant higher cost.
+            dataset_sensitivity_added: 22,
+            ml_training_dataset_removed: 18,
+            ml_quantization_changed: 12,
             ..Default::default()
         }
     }
@@ -171,6 +210,17 @@ mod tests {
         assert_eq!(model.supplier_changed, 4);
         assert_eq!(model.ml_model_changed, 6);
         assert_eq!(model.dataset_changed, 5);
+        assert_eq!(model.ml_approach_changed, 6);
+        assert_eq!(model.ml_architecture_changed, 6);
+        assert_eq!(model.ml_task_changed, 5);
+        assert_eq!(model.ml_quantization_changed, 8);
+        assert_eq!(model.ml_model_card_changed, 3);
+        assert_eq!(model.ml_training_dataset_added, 5);
+        assert_eq!(model.ml_training_dataset_removed, 12);
+        assert_eq!(model.dataset_type_changed, 5);
+        assert_eq!(model.dataset_governance_changed, 4);
+        assert_eq!(model.dataset_sensitivity_added, 14);
+        assert_eq!(model.dataset_sensitivity_removed, 6);
         assert_eq!(model.vulnerability_introduced, 15);
         assert_eq!(model.vulnerability_resolved, -3);
         assert_eq!(model.hash_mismatch, 8);
@@ -191,6 +241,9 @@ mod tests {
         assert!(model.vulnerability_resolved < default.vulnerability_resolved);
         assert!(model.crypto_downgrade > default.crypto_downgrade);
         assert!(model.crypto_quantum_level_changed > default.crypto_quantum_level_changed);
+        assert!(model.dataset_sensitivity_added > default.dataset_sensitivity_added);
+        assert!(model.ml_training_dataset_removed > default.ml_training_dataset_removed);
+        assert!(model.ml_quantization_changed > default.ml_quantization_changed);
     }
 
     #[test]

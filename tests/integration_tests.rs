@@ -1206,13 +1206,151 @@ mod diff_engine_tests {
             .iter()
             .find(|change| change.name == "bert-base")
             .expect("bert-base change not found");
+        // ML changes are now granular and prefixed: a quantization swap surfaces as
+        // `ml_quantization`, not an opaque `ml_model` blob.
+        assert!(
+            change.field_changes.iter().all(|f| f.field != "ml_model"),
+            "opaque ml_model blob should be gone, got {:?}",
+            change.field_changes
+        );
         assert!(
             change
                 .field_changes
                 .iter()
-                .any(|field| field.field == "ml_model"),
-            "Expected ml_model field change, got {:?}",
+                .any(|field| field.field == "ml_quantization"),
+            "Expected ml_quantization field change, got {:?}",
             change.field_changes
+        );
+    }
+
+    /// End-to-end: a security-relevant ML/dataset revision — model re-quantized,
+    /// a training dataset dropped, and a dataset's sensitivity escalated to PII —
+    /// must surface as granular, prefixed `FieldChange`s carrying high costs, and
+    /// must render through the generic markdown and JSON report paths (no
+    /// AI/ML-specific report code).
+    #[test]
+    fn test_semantic_ml_dataset_diff_end_to_end() {
+        use sbom_tools::diff::CostModel;
+        use sbom_tools::reports::{JsonReporter, MarkdownReporter, ReportConfig, ReportGenerator};
+
+        let path = fixture_path("cyclonedx/minimal-mlbom.cdx.json");
+        let old = parse_sbom(&path).expect("Failed to parse ML BOM fixture");
+        let mut new = old.clone();
+
+        // (1) Re-quantize the model fp32-ish -> int4 and (2) drop the
+        // `data-wikipedia` training dataset, keeping `bookscorpus-800M`.
+        {
+            let model = new
+                .components
+                .values_mut()
+                .find(|c| c.name == "bert-base")
+                .expect("bert-base not found");
+            let ml = model.ml_model.as_mut().expect("ML metadata missing");
+            ml.quantization = Some("int4".to_string());
+            ml.training_datasets
+                .retain(|d| d.reference.as_deref() != Some("data-wikipedia"));
+            assert!(
+                ml.training_datasets
+                    .iter()
+                    .any(|d| d.name.as_deref() == Some("bookscorpus-800M")),
+                "bookscorpus training dataset should survive"
+            );
+            model.calculate_content_hash();
+        }
+
+        // (3) Escalate the wikipedia dataset's sensitivity to include PII.
+        {
+            let data = new
+                .components
+                .values_mut()
+                .find(|c| c.name == "wikipedia-2.5B")
+                .expect("wikipedia dataset not found");
+            let ds = data.dataset.as_mut().expect("dataset metadata missing");
+            ds.sensitivity_classifications.push("pii".to_string());
+            data.calculate_content_hash();
+        }
+
+        new.calculate_content_hash();
+
+        // Use a security-focused cost model so the high-severity signals are bumped.
+        let engine = DiffEngine::new().with_cost_model(CostModel::security_focused());
+        let result = engine.diff(&old, &new).expect("diff should succeed");
+
+        let model_change = result
+            .components
+            .modified
+            .iter()
+            .find(|c| c.name == "bert-base")
+            .expect("bert-base change not found");
+
+        let quant = model_change
+            .field_changes
+            .iter()
+            .find(|f| f.field == "ml_quantization")
+            .expect("ml_quantization change missing");
+        assert_eq!(quant.new_value.as_deref(), Some("int4"));
+
+        let removed_ds = model_change
+            .field_changes
+            .iter()
+            .find(|f| f.field == "ml_training_dataset" && f.new_value.is_none())
+            .expect("ml_training_dataset removal missing");
+        assert_eq!(removed_ds.old_value.as_deref(), Some("data-wikipedia"));
+
+        let data_change = result
+            .components
+            .modified
+            .iter()
+            .find(|c| c.name == "wikipedia-2.5B")
+            .expect("wikipedia dataset change not found");
+        let sensitivity = data_change
+            .field_changes
+            .iter()
+            .find(|f| f.field == "dataset_sensitivity" && f.old_value.is_none())
+            .expect("dataset_sensitivity escalation missing");
+        assert_eq!(sensitivity.new_value.as_deref(), Some("pii"));
+
+        // High-cost assertions: under the security profile the model's per-component
+        // cost must dominate the bumped quantization + dataset-removal weights, and
+        // the dataset's cost must reflect the PII escalation.
+        let secure = CostModel::security_focused();
+        assert!(
+            model_change.cost
+                >= secure.ml_quantization_changed + secure.ml_training_dataset_removed,
+            "model cost {} should cover quantization+dataset-removal weights",
+            model_change.cost
+        );
+        assert!(
+            data_change.cost >= secure.dataset_sensitivity_added,
+            "dataset cost {} should cover the PII-escalation weight",
+            data_change.cost
+        );
+
+        // Generic rendering: the prefixed field names must appear in markdown and the
+        // values must appear in JSON, with no dedicated AI/ML report code involved.
+        let config = ReportConfig::default();
+        let markdown = MarkdownReporter::new()
+            .generate_diff_report(&result, &old, &new, &config)
+            .expect("markdown report");
+        assert!(
+            markdown.contains("ml_quantization"),
+            "markdown should surface ml_quantization via the generic path"
+        );
+        assert!(
+            markdown.contains("dataset_sensitivity"),
+            "markdown should surface dataset_sensitivity via the generic path"
+        );
+
+        let json = JsonReporter::new()
+            .generate_diff_report(&result, &old, &new, &config)
+            .expect("json report");
+        assert!(
+            json.contains("ml_training_dataset") && json.contains("data-wikipedia"),
+            "json should surface the removed training dataset via the generic path"
+        );
+        assert!(
+            json.contains("dataset_sensitivity") && json.contains("pii"),
+            "json should surface the PII escalation via the generic path"
         );
     }
 
