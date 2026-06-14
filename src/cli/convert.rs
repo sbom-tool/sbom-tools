@@ -26,9 +26,7 @@ pub fn run_convert(
     quiet: bool,
 ) -> Result<i32> {
     let Some(emit_target) = EmitTarget::parse(target) else {
-        eprintln!(
-            "error: unknown conversion target '{target}'. Supported: cyclonedx (spdx not yet implemented)."
-        );
+        eprintln!("error: unknown conversion target '{target}'. Supported: cyclonedx, spdx.");
         return Ok(exit_codes::ERROR);
     };
 
@@ -42,9 +40,7 @@ pub fn run_convert(
     let (output, report) = match emit::emit(&sbom, emit_target) {
         Ok(result) => result,
         Err(EmitError::Unsupported(fmt)) => {
-            eprintln!(
-                "error: emitting to {fmt} is not yet implemented (only --to cyclonedx is supported)."
-            );
+            eprintln!("error: emitting to {fmt} is not yet implemented.");
             return Ok(exit_codes::ERROR);
         }
         Err(e) => return Err(e.into()),

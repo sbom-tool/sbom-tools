@@ -11,7 +11,9 @@ mod enricher;
 mod merger;
 mod pruner;
 
-pub use emit::{EmitError, EmitTarget, FidelityReport, emit, emit_cyclonedx, preserve_source_json};
+pub use emit::{
+    EmitError, EmitTarget, FidelityReport, emit, emit_cyclonedx, emit_spdx, preserve_source_json,
+};
 pub use enricher::enrich_sbom_json;
 pub use merger::{DeduplicationStrategy, MergeConfig, MergeError, merge_sbom_json};
 pub use pruner::{TailorConfig, tailor_sbom_json};

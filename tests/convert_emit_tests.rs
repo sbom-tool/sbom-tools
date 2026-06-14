@@ -1,9 +1,10 @@
 //! Tests for cross-format emission (`convert` subcommand + emit library).
 //!
-//! Covers: CycloneDX round-trip fidelity (counts preserved), SPDX → CycloneDX
-//! cross-family mapping, the CLI binary producing valid output + a fidelity
-//! report, and the invariant that converting an AI-BOM does not regress the
-//! `mlModel` AI bridge / AI-readiness scoring.
+//! Covers: CycloneDX and SPDX round-trip fidelity (counts preserved), both
+//! cross-family directions (SPDX → CycloneDX and CycloneDX → SPDX), the CLI
+//! binary producing valid output + a fidelity report for each target, and the
+//! invariant that converting an AI-BOM does not regress the `mlModel` AI bridge
+//! / AI-readiness scoring.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -110,14 +111,127 @@ fn spdx_cross_family_to_cyclonedx_maps_components() {
 }
 
 #[test]
-fn spdx_target_is_not_yet_implemented() {
-    let raw = read_fixture("cyclonedx/minimal.cdx.json");
-    let sbom = parse_sbom_str(&raw).unwrap();
-    let err = emit::emit(&sbom, EmitTarget::Spdx).unwrap_err();
-    assert!(
-        err.to_string().contains("not yet implemented"),
-        "got: {err}"
+fn spdx_round_trip_preserves_counts() {
+    // Parse an SPDX fixture, emit SPDX, re-parse: package / relationship /
+    // license counts must survive the round-trip.
+    let raw = read_fixture("spdx/minimal.spdx.json");
+    let original = parse_sbom_str(&raw).unwrap();
+
+    let (emitted, report) = emit::emit(&original, EmitTarget::Spdx).unwrap();
+
+    // Output is genuine SPDX 2.3 JSON.
+    assert!(emitted.contains("\"spdxVersion\": \"SPDX-2.3\""));
+    let reparsed = parse_sbom_str(&emitted).expect("emitted SPDX must re-parse");
+    assert_eq!(reparsed.document.format.to_string(), "SPDX");
+    assert_eq!(reparsed.document.format_version, "2.3");
+
+    assert_eq!(
+        reparsed.components.len(),
+        original.components.len(),
+        "package count preserved"
     );
+    assert_eq!(
+        reparsed.edges.len(),
+        original.edges.len(),
+        "relationship/edge count preserved"
+    );
+
+    // License + purl preserved per matching component.
+    for orig in original.components.values() {
+        let Some(reparsed_comp) = reparsed.components.get(&orig.canonical_id) else {
+            panic!("component {} missing after round-trip", orig.name);
+        };
+        assert_eq!(
+            reparsed_comp.licenses.declared.len(),
+            orig.licenses.declared.len(),
+            "license count for {}",
+            orig.name
+        );
+        assert_eq!(
+            reparsed_comp.identifiers.purl, orig.identifiers.purl,
+            "purl for {}",
+            orig.name
+        );
+    }
+
+    // The minimal SPDX fixture maps cleanly into SPDX 2.3 (no AI/crypto blocks).
+    assert!(
+        !report.is_lossy(),
+        "minimal SPDX round-trip should not be lossy:\n{}",
+        report.render()
+    );
+}
+
+#[test]
+fn spdx_round_trip_preserves_hashes() {
+    let raw = read_fixture("spdx/minimal.spdx.json");
+    let original = parse_sbom_str(&raw).unwrap();
+    let total_hashes: usize = original.components.values().map(|c| c.hashes.len()).sum();
+    assert!(total_hashes > 0, "fixture has at least one checksum");
+
+    let (emitted, _report) = emit::emit(&original, EmitTarget::Spdx).unwrap();
+    let reparsed = parse_sbom_str(&emitted).unwrap();
+    let reparsed_hashes: usize = reparsed.components.values().map(|c| c.hashes.len()).sum();
+    assert_eq!(reparsed_hashes, total_hashes, "checksum count preserved");
+}
+
+#[test]
+fn cyclonedx_cross_family_to_spdx_maps_components() {
+    // Parse a CycloneDX fixture, emit SPDX, re-parse: components map to packages.
+    let raw = read_fixture("cyclonedx/minimal.cdx.json");
+    let cdx = parse_sbom_str(&raw).unwrap();
+
+    let (emitted, _report) = emit::emit(&cdx, EmitTarget::Spdx).unwrap();
+    assert!(emitted.contains("\"spdxVersion\": \"SPDX-2.3\""));
+
+    let reparsed = parse_sbom_str(&emitted).expect("CDX→SPDX output must re-parse as SPDX");
+    assert_eq!(reparsed.document.format_version, "2.3");
+
+    // Every CycloneDX component must appear as an SPDX package.
+    assert_eq!(
+        reparsed.components.len(),
+        cdx.components.len(),
+        "all components mapped to packages"
+    );
+    let reparsed_names: Vec<&str> = reparsed
+        .components
+        .values()
+        .map(|c| c.name.as_str())
+        .collect();
+    for comp in cdx.components.values() {
+        // Components map by name across families. (Canonical-id equality only
+        // holds for PURL-bearing components — the SPDX parser derives a
+        // non-PURL component's id from its SPDXID, not name@version.)
+        assert!(
+            reparsed_names.contains(&comp.name.as_str()),
+            "component {} mapped to a package: {reparsed_names:?}",
+            comp.name
+        );
+    }
+    // PURL-bearing components additionally round-trip by canonical id + purl.
+    for comp in cdx
+        .components
+        .values()
+        .filter(|c| c.identifiers.purl.is_some())
+    {
+        let reparsed_comp = reparsed
+            .components
+            .get(&comp.canonical_id)
+            .unwrap_or_else(|| panic!("purl component {} round-trips by id", comp.name));
+        assert_eq!(reparsed_comp.identifiers.purl, comp.identifiers.purl);
+    }
+
+    // Every SPDXID is schema-valid (SPDXRef-[0-9a-zA-Z.-]+).
+    let doc: serde_json::Value = serde_json::from_str(&emitted).unwrap();
+    for pkg in doc["packages"].as_array().unwrap() {
+        let id = pkg["SPDXID"].as_str().unwrap();
+        assert!(id.starts_with("SPDXRef-"), "bad SPDXID {id}");
+        assert!(
+            id.chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-'),
+            "SPDXID {id} has illegal characters"
+        );
+    }
 }
 
 #[test]
@@ -223,7 +337,7 @@ fn cli_convert_emits_valid_cyclonedx_and_fidelity_report() {
 }
 
 #[test]
-fn cli_convert_to_spdx_errors_clearly() {
+fn cli_convert_emits_valid_spdx_and_fidelity_report() {
     let output = base_command()
         .arg("convert")
         .arg(fixture_path("cyclonedx/minimal.cdx.json"))
@@ -231,12 +345,20 @@ fn cli_convert_to_spdx_errors_clearly() {
         .output()
         .expect("convert command should run");
 
-    assert_ne!(output.status.code(), Some(0), "spdx target should fail");
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+
+    // stdout is valid, re-parseable SPDX 2.3.
+    let out = stdout(&output);
+    let reparsed = parse_sbom_str(&out).expect("CLI output must be valid SPDX");
+    assert_eq!(reparsed.document.format.to_string(), "SPDX");
+    assert_eq!(reparsed.document.format_version, "2.3");
+    assert!(reparsed.component_count() >= 1);
+
+    // Fidelity report goes to stderr, not stdout.
     let err = stderr(&output);
-    assert!(
-        err.contains("not yet implemented"),
-        "expected clear error, got:\n{err}"
-    );
+    assert!(err.contains("Fidelity report"), "stderr:\n{err}");
+    assert!(err.contains("SPDX 2.3"), "report names target:\n{err}");
+    assert!(!out.contains("Fidelity report"), "report leaked to stdout");
 }
 
 #[test]

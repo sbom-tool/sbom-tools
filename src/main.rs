@@ -1258,16 +1258,17 @@ struct MergeArgs {
 #[derive(Parser)]
 #[command(after_help = "EXAMPLES:
     sbom-tools convert app.spdx.json --to cyclonedx                # SPDX → CycloneDX (stdout)
+    sbom-tools convert app.cdx.json  --to spdx                     # CycloneDX → SPDX 2.3
     sbom-tools convert app.spdx.json --to cyclonedx -o out.cdx.json
     sbom-tools convert app.cdx.json --to cyclonedx --preserve      # Keep format-specific blocks
 
-NOTE: Only --to cyclonedx is implemented; --to spdx is reserved for a follow-up.
+NOTE: Supported targets are --to cyclonedx (1.7 JSON) and --to spdx (2.3 JSON).
 A fidelity report (synthesized/dropped fields) is written to stderr.")]
 struct ConvertArgs {
     /// SBOM file to convert
     file: PathBuf,
 
-    /// Target format (currently only: cyclonedx)
+    /// Target format: cyclonedx (1.7 JSON) or spdx (2.3 JSON)
     #[arg(long = "to")]
     to: String,
 

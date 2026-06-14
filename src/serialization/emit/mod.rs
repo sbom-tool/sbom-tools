@@ -19,10 +19,12 @@
 mod cyclonedx;
 mod fidelity;
 mod preserve;
+mod spdx;
 
 pub use cyclonedx::emit_cyclonedx;
 pub use fidelity::FidelityReport;
 pub use preserve::preserve_source_json;
+pub use spdx::emit_spdx;
 
 /// Target format for [`emit`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -30,7 +32,7 @@ pub use preserve::preserve_source_json;
 pub enum EmitTarget {
     /// CycloneDX 1.7 JSON.
     CycloneDx,
-    /// SPDX (2.x / 3.0) — emitter not yet implemented.
+    /// SPDX 2.3 JSON.
     Spdx,
 }
 
@@ -52,7 +54,7 @@ impl EmitTarget {
 #[derive(Debug, thiserror::Error)]
 pub enum EmitError {
     /// The requested target format has no emitter yet.
-    #[error("emitting to {0} is not yet implemented (only --to cyclonedx is supported)")]
+    #[error("emitting to {0} is not yet implemented")]
     Unsupported(&'static str),
 
     /// Serializing the synthesized document to JSON failed.
@@ -65,14 +67,13 @@ pub enum EmitError {
 ///
 /// # Errors
 ///
-/// Returns [`EmitError::Unsupported`] for targets without an emitter (currently
-/// [`EmitTarget::Spdx`]), or [`EmitError::Serialize`] if JSON serialization fails.
+/// Returns [`EmitError::Serialize`] if JSON serialization fails.
 pub fn emit(
     sbom: &crate::model::NormalizedSbom,
     target: EmitTarget,
 ) -> Result<(String, FidelityReport), EmitError> {
     match target {
         EmitTarget::CycloneDx => emit_cyclonedx(sbom),
-        EmitTarget::Spdx => Err(EmitError::Unsupported("SPDX")),
+        EmitTarget::Spdx => emit_spdx(sbom),
     }
 }
