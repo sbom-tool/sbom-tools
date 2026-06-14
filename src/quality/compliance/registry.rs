@@ -34,6 +34,9 @@ const REMEDIATION_SSDF: &str = "Follow NIST SP 800-218 SSDF practices: include t
 /// EO 14028 §4 requirements share one remediation paragraph.
 const REMEDIATION_EO14028: &str = "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.3+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.";
 
+/// EU AI Act not-applicable remediation.
+const REMEDIATION_AIACT_NA: &str = "EU AI Act Annex IV readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components (CycloneDX 1.5+ AI/ML BOM) to enable the assessment.";
+
 /// Look up the static [`RuleMeta`] for a stable internal rule key.
 ///
 /// The key is the [`Violation::rule_id`] set at each check site. Returns
@@ -246,6 +249,61 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             default_severity: ViolationSeverity::Warning,
             refs: &[],
             remediation: REMEDIATION_GENERIC,
+        },
+        // ---- EU AI Act Annex IV technical-documentation readiness --------
+        "SBOM-AIACT-NA" => RuleMeta {
+            sarif_id: "SBOM-AIACT-NA",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::EuAiAct, "Annex IV")],
+            remediation: REMEDIATION_AIACT_NA,
+        },
+        "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION" => RuleMeta {
+            sarif_id: "SBOM-AIACT-ANNEX-IV-1",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::EuAiAct, "Annex IV §1")],
+            remediation: "Add a general description of the AI model: architecture family/name and a model-card reference. CycloneDX: set modelCard.modelParameters.architectureFamily / modelArchitecture and an external reference of type 'model-card'.",
+        },
+        "SBOM-AIACT-ANNEX-IV-1-PURPOSE" => RuleMeta {
+            sarif_id: "SBOM-AIACT-ANNEX-IV-1",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::EuAiAct, "Annex IV §1")],
+            remediation: "Document the intended purpose / use-cases of the AI model. CycloneDX: set modelCard.considerations.useCases.",
+        },
+        "SBOM-AIACT-ANNEX-IV-2D-DATASETS" => RuleMeta {
+            sarif_id: "SBOM-AIACT-ANNEX-IV-2D",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::EuAiAct, "Annex IV §2(d)")],
+            remediation: "Reference the training datasets used. CycloneDX: set modelCard.modelParameters.datasets with a {ref} to a data component.",
+        },
+        "SBOM-AIACT-ANNEX-IV-2D-SENSITIVITY" => RuleMeta {
+            sarif_id: "SBOM-AIACT-ANNEX-IV-2D",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::EuAiAct, "Annex IV §2(d)")],
+            remediation: "Declare a sensitivity classification for each dataset (e.g. 'none', 'pii', 'personal'). CycloneDX: set the data component's sensitiveData array.",
+        },
+        "SBOM-AIACT-ANNEX-IV-2D-PERSONAL-DATA" => RuleMeta {
+            sarif_id: "SBOM-AIACT-ANNEX-IV-2D",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::EuAiAct, "Annex IV §2(d)")],
+            remediation: "Where training data involves personal data, document the GDPR lawful basis and data-protection measures alongside the SBOM (AI Act and GDPR apply in parallel).",
+        },
+        "SBOM-AIACT-ANNEX-IV-2G-METRICS" => RuleMeta {
+            sarif_id: "SBOM-AIACT-ANNEX-IV-2G",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::EuAiAct, "Annex IV §2(g)")],
+            remediation: "Record validation/testing metrics (accuracy, robustness). CycloneDX: set modelCard.quantitativeAnalysis.performanceMetrics.",
+        },
+        "SBOM-AIACT-ANNEX-IV-2G-ENERGY" => RuleMeta {
+            sarif_id: "SBOM-AIACT-ANNEX-IV-2G",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::EuAiAct, "Annex IV §2(g)")],
+            remediation: "Disclose computational resources / training energy. CycloneDX: set modelCard.considerations.environmentalConsiderations.energyConsumptions.",
+        },
+        "SBOM-AIACT-ANNEX-IV-3-LIMITATIONS" => RuleMeta {
+            sarif_id: "SBOM-AIACT-ANNEX-IV-3",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::EuAiAct, "Annex IV §3")],
+            remediation: "State the foreseeable limitations and risks of the model, including ethical and fairness considerations. CycloneDX: set modelCard.considerations.technicalLimitations / ethicalConsiderations / fairnessAssessments.",
         },
         // ---- NTIA --------------------------------------------------------
         "SBOM-NTIA-VERSION" => RuleMeta {

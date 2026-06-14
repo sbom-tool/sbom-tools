@@ -111,10 +111,19 @@ pub fn run_validate(
                 }
                 checker.check(parsed.sbom())
             }
+            "ai-act" | "ai_act" | "aiact" | "eu-ai-act" => {
+                // The sidecar carries the is_high_risk_ai flag, which escalates
+                // Annex IV readiness findings — attach it when present.
+                let mut checker = ComplianceChecker::new(ComplianceLevel::EuAiAct);
+                if let Some(sc) = cra_sidecar.clone() {
+                    checker = checker.with_sidecar(sc);
+                }
+                checker.check(parsed.sbom())
+            }
             _ => {
                 bail!(
                     "Unknown validation standard: {std_name}. \
-                    Valid options: ntia, fda, cra, ssdf, eo14028, cnsa2, pqc, bsi, oss-steward, eucc"
+                    Valid options: ntia, fda, cra, ssdf, eo14028, cnsa2, pqc, bsi, oss-steward, eucc, ai-act"
                 );
             }
         };

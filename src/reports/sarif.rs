@@ -690,6 +690,8 @@ fn rule_help_uri(rule_id: &str) -> Option<&'static str> {
         Some("https://docs.oasis-open.org/csaf/csaf/v2.0/csaf-v2.0.html")
     } else if rule_id.starts_with("SBOM-AIBOM-") {
         Some("https://cyclonedx.org/capabilities/mlbom/")
+    } else if rule_id.starts_with("SBOM-AIACT-") {
+        Some("https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng")
     } else {
         None
     }
@@ -711,6 +713,7 @@ fn sarif_standard_label(kind: crate::quality::StandardKind) -> &'static str {
         StandardKind::Csaf2 => "CSAF",
         StandardKind::Cnsa2 => "CNSA-2.0",
         StandardKind::NistPqc => "NIST-PQC",
+        StandardKind::EuAiAct => "EU-AI-Act",
         StandardKind::Other => "Other",
     }
 }
@@ -1417,6 +1420,47 @@ fn get_sarif_compliance_rules() -> Vec<SarifRule> {
                 text: "BSI TR-03183-2 general SBOM requirement".to_string(),
             },
             default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        // EU AI Act Annex IV technical-documentation readiness (AI3).
+        SarifRule {
+            id: "SBOM-AIACT-NA".to_string(),
+            name: "AiActNotApplicable".to_string(),
+            short_description: SarifMessage {
+                text: "EU AI Act Annex IV readiness not applicable — SBOM has no ML-model or dataset components".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Note },
+        },
+        SarifRule {
+            id: "SBOM-AIACT-ANNEX-IV-1".to_string(),
+            name: "AiActGeneralDescription".to_string(),
+            short_description: SarifMessage {
+                text: "EU AI Act Annex IV §1: general description of the AI system (architecture, intended purpose)".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-AIACT-ANNEX-IV-2D".to_string(),
+            name: "AiActTrainingData".to_string(),
+            short_description: SarifMessage {
+                text: "EU AI Act Annex IV §2(d): training-data characteristics, provenance, and sensitivity classification".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-AIACT-ANNEX-IV-2G".to_string(),
+            name: "AiActValidationMetrics".to_string(),
+            short_description: SarifMessage {
+                text: "EU AI Act Annex IV §2(g): validation/testing metrics and computational-resources disclosure".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-AIACT-ANNEX-IV-3".to_string(),
+            name: "AiActLimitations".to_string(),
+            short_description: SarifMessage {
+                text: "EU AI Act Annex IV §3: foreseeable limitations and risks".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Note },
         },
     ]
 }

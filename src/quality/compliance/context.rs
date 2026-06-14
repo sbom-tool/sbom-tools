@@ -130,8 +130,9 @@ dedicated_checker!(
     ComplianceLevel::EuccSubstantial,
     check_eucc_substantial
 );
+dedicated_checker!(EuAiActChecker, ComplianceLevel::EuAiAct, check_eu_ai_act);
 
-/// Resolve the [`StandardChecker`] for a given level. The seven dedicated
+/// Resolve the [`StandardChecker`] for a given level. The eight dedicated
 /// profiles get their own checker; everything else takes the generic path.
 pub(crate) fn checker_for(level: ComplianceLevel) -> Box<dyn StandardChecker> {
     match level {
@@ -142,6 +143,7 @@ pub(crate) fn checker_for(level: ComplianceLevel) -> Box<dyn StandardChecker> {
         ComplianceLevel::BsiTr03183_2 => Box::new(BsiTr03183Checker),
         ComplianceLevel::CraOssSteward => Box::new(CraOssStewardChecker),
         ComplianceLevel::EuccSubstantial => Box::new(EuccSubstantialChecker),
+        ComplianceLevel::EuAiAct => Box::new(EuAiActChecker),
         other => Box::new(GenericChecker::new(other)),
     }
 }

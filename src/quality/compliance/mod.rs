@@ -15,6 +15,7 @@ mod context;
 mod cra;
 mod crypto;
 mod eo14028;
+mod eu_ai_act;
 mod eucc;
 mod generic;
 mod registry;
@@ -91,6 +92,14 @@ pub enum ComplianceLevel {
     /// reference, ITSEF identifier, and a valid-until date. Does not perform
     /// a Common-Criteria evaluation itself.
     EuccSubstantial,
+    /// EU AI Act (Regulation (EU) 2024/1689) Annex IV technical-documentation
+    /// READINESS. Maps the Annex IV documentation obligations for high-risk AI
+    /// systems onto the AI-BOM metadata sbom-tools already parses (model card,
+    /// training-data characteristics, validation/testing metrics, limitations,
+    /// energy disclosure). This is a documentation-readiness assessment, not a
+    /// legal-conformity guarantee, and does not classify a system as high-risk.
+    /// Returns N/A for SBOMs with no ML-model or dataset metadata.
+    EuAiAct,
     /// Comprehensive compliance (all recommended fields)
     Comprehensive,
 }
@@ -113,6 +122,7 @@ impl ComplianceLevel {
             Self::BsiTr03183_2 => "BSI TR-03183-2",
             Self::CraOssSteward => "CRA OSS Steward (Art. 24)",
             Self::EuccSubstantial => "EUCC Substantial (Reg. 2024/482)",
+            Self::EuAiAct => "EU AI Act Annex IV Readiness",
             Self::Comprehensive => "Comprehensive",
         }
     }
@@ -134,6 +144,7 @@ impl ComplianceLevel {
             Self::BsiTr03183_2 => "BSI",
             Self::CraOssSteward => "OSS",
             Self::EuccSubstantial => "EUCC",
+            Self::EuAiAct => "AI-Act",
             Self::Comprehensive => "Full",
         }
     }
@@ -173,6 +184,9 @@ impl ComplianceLevel {
             Self::EuccSubstantial => {
                 "EUCC Substantial (Reg. (EU) 2024/482) — reference-only check for Common-Criteria Protection Profile, Target of Evaluation, ITSEF, and certificate valid-until date"
             }
+            Self::EuAiAct => {
+                "EU AI Act (Reg. (EU) 2024/1689) Annex IV technical-documentation READINESS — model description, training-data characteristics, validation/testing metrics, limitations (readiness only, not a legal-conformity guarantee; N/A for non-AI SBOMs)"
+            }
             Self::Comprehensive => "All recommended fields and best practices",
         }
     }
@@ -194,6 +208,7 @@ impl ComplianceLevel {
             Self::BsiTr03183_2,
             Self::CraOssSteward,
             Self::EuccSubstantial,
+            Self::EuAiAct,
             Self::Comprehensive,
         ]
     }
@@ -252,6 +267,8 @@ pub enum StandardKind {
     Cnsa2,
     /// NIST Post-Quantum Cryptography (FIPS 203/204/205, SP 800-131A)
     NistPqc,
+    /// EU AI Act (Regulation (EU) 2024/1689) — Annex IV technical documentation
+    EuAiAct,
     /// Other / unrecognised standard
     Other,
 }
@@ -272,6 +289,7 @@ impl StandardKind {
             Self::Csaf2 => "CSAF v2.0",
             Self::Cnsa2 => "CNSA 2.0",
             Self::NistPqc => "NIST PQC",
+            Self::EuAiAct => "EU AI Act",
             Self::Other => "Other",
         }
     }
@@ -359,6 +377,8 @@ impl StandardKind {
             }
             // NIST PQC project landing page.
             Self::NistPqc => "https://csrc.nist.gov/projects/post-quantum-cryptography",
+            // EU AI Act Regulation (EU) 2024/1689 — EUR-Lex ELI is the canonical home.
+            Self::EuAiAct => "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
             Self::Other => return None,
         };
         Some(url.to_string())
@@ -1779,10 +1799,11 @@ mod tests {
 
     #[test]
     fn bsi_tr_03183_2_in_compliance_level_all() {
-        assert_eq!(ComplianceLevel::all().len(), 14);
+        assert_eq!(ComplianceLevel::all().len(), 15);
         assert!(ComplianceLevel::all().contains(&ComplianceLevel::BsiTr03183_2));
         assert!(ComplianceLevel::all().contains(&ComplianceLevel::CraOssSteward));
         assert!(ComplianceLevel::all().contains(&ComplianceLevel::EuccSubstantial));
+        assert!(ComplianceLevel::all().contains(&ComplianceLevel::EuAiAct));
     }
 
     #[test]

@@ -460,7 +460,7 @@ struct ValidateArgs {
     /// Path to the SBOM file
     sbom: PathBuf,
 
-    /// Compliance standard(s) to validate against (comma-separated: ntia, fda, cra, ssdf, eo14028)
+    /// Compliance standard(s) to validate against (comma-separated: ntia, fda, cra, ssdf, eo14028, ai-act)
     #[arg(long, default_value = "ntia")]
     standard: String,
 

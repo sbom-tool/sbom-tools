@@ -355,6 +355,61 @@ expression: "render(&SarifReporter::new())"
                 "level": "warning"
               },
               "helpUri": "https://www.bsi.bund.de/EN/Themen/Unternehmen-und-Organisationen/Standards-und-Zertifizierung/Technische-Richtlinien/TR-nach-Thema-sortiert/tr03183/TR-03183_node.html"
+            },
+            {
+              "id": "SBOM-AIACT-NA",
+              "name": "AiActNotApplicable",
+              "shortDescription": {
+                "text": "EU AI Act Annex IV readiness not applicable — SBOM has no ML-model or dataset components"
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
+            },
+            {
+              "id": "SBOM-AIACT-ANNEX-IV-1",
+              "name": "AiActGeneralDescription",
+              "shortDescription": {
+                "text": "EU AI Act Annex IV §1: general description of the AI system (architecture, intended purpose)"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
+            },
+            {
+              "id": "SBOM-AIACT-ANNEX-IV-2D",
+              "name": "AiActTrainingData",
+              "shortDescription": {
+                "text": "EU AI Act Annex IV §2(d): training-data characteristics, provenance, and sensitivity classification"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
+            },
+            {
+              "id": "SBOM-AIACT-ANNEX-IV-2G",
+              "name": "AiActValidationMetrics",
+              "shortDescription": {
+                "text": "EU AI Act Annex IV §2(g): validation/testing metrics and computational-resources disclosure"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
+            },
+            {
+              "id": "SBOM-AIACT-ANNEX-IV-3",
+              "name": "AiActLimitations",
+              "shortDescription": {
+                "text": "EU AI Act Annex IV §3: foreseeable limitations and risks"
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
             }
           ]
         }
