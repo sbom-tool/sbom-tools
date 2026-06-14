@@ -778,6 +778,7 @@ jobs:
 | `3` | Error |
 | `4` | VEX coverage gaps found (`--fail-on-vex-gap`) |
 | `5` | License policy violations found (`license-check`) |
+| `6` | Actively exploited (KEV) vulnerability introduced (`--fail-on-kev`) |
 
 ## Configuration
 

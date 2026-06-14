@@ -25,34 +25,15 @@ pub fn run_enrich(
     let raw_json = std::fs::read_to_string(file)?;
     let mut sbom = parse_sbom(file)?;
 
-    // Enrich with OSV vulnerability data
-    if enrichment.enabled {
-        let osv_config = crate::pipeline::build_enrichment_config(&enrichment);
-        if crate::pipeline::enrich_sbom(&mut sbom, &osv_config, quiet).is_none() && !quiet {
-            eprintln!("Warning: OSV vulnerability enrichment failed");
+    // Route through the unified orchestrator so every advertised source
+    // (OSV / KEV / EPSS / EOL / staleness / HuggingFace / VEX) and the config
+    // file's `enrichment:` block are honored. Hand-rolling individual sources
+    // here silently dropped --kev/--epss/--enrich-staleness/--huggingface.
+    let stats = crate::pipeline::enrich_sbom_full(&mut sbom, &enrichment, quiet);
+    if !quiet {
+        for warning in &stats.warnings {
+            eprintln!("Warning: {warning}");
         }
-    }
-
-    // Enrich with EOL data
-    if enrichment.enable_eol {
-        let eol_config = crate::enrichment::EolClientConfig {
-            cache_dir: enrichment
-                .cache_dir
-                .clone()
-                .unwrap_or_else(crate::pipeline::dirs::eol_cache_dir),
-            cache_ttl: std::time::Duration::from_secs(enrichment.cache_ttl_hours * 3600),
-            bypass_cache: enrichment.bypass_cache,
-            timeout: std::time::Duration::from_secs(enrichment.timeout_secs),
-            ..Default::default()
-        };
-        if crate::pipeline::enrich_eol(&mut sbom, &eol_config, quiet).is_none() && !quiet {
-            eprintln!("Warning: EOL enrichment failed");
-        }
-    }
-
-    // Apply VEX overlays
-    if !enrichment.vex_paths.is_empty() {
-        crate::pipeline::enrich_vex(&mut sbom, &enrichment.vex_paths, quiet);
     }
 
     let enriched_json = enrich_sbom_json(&raw_json, &sbom)?;

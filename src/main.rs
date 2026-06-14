@@ -1874,6 +1874,7 @@ fn main() -> Result<()> {
         }
 
         Commands::Query(args) => {
+            let sm = sub_matches;
             // Split positional args: first arg is pattern if it doesn't look like a file,
             // otherwise all args are file paths
             let (pattern, sbom_paths) = split_query_args(&args.args);
@@ -1882,7 +1883,11 @@ fn main() -> Result<()> {
                 anyhow::bail!("No SBOM files specified. Usage: sbom-tools query [PATTERN] FILE...");
             }
 
-            let enrichment = args.enrichment.to_enrichment_config();
+            // Route through the shared seeder so the config file's `enrichment:`
+            // block applies (ValueSource precedence) and the global --offline
+            // flag is carried into the config. seed_enrichment already folds
+            // `offline` in, so no double-setting is needed below.
+            let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
 
             let quantum_safe_filter = if args.quantum_safe {
                 Some(true)
@@ -1909,10 +1914,14 @@ fn main() -> Result<()> {
             let config = QueryConfig {
                 sbom_paths,
                 output: OutputConfig {
-                    format: args.output,
+                    format: resolve(
+                        args.output,
+                        arg_was_set_sub(sm, "output"),
+                        Some(app.output.format),
+                    ),
                     file: args.output_file,
                     report_types: ReportType::All,
-                    no_color: cli.no_color,
+                    no_color: resolve_bool(cli.no_color, app.output.no_color),
                     streaming: sbom_tools::config::StreamingConfig::default(),
                     export_template: None,
                 },

@@ -78,7 +78,13 @@ pub fn enrich_sbom_full(
     // gates every source's network layer and flips cache reads to
     // stale-if-offline. `main` already sets this for the CLI; setting it here
     // makes library callers (and tests) offline-correct too.
-    crate::enrichment::source::set_offline(config.offline);
+    //
+    // OR with the current process-wide flag so this can NEVER re-enable network
+    // egress that a global `--offline` (set in `main`) already disabled — a
+    // per-call `config.offline == false` must not override an air-gapped run.
+    crate::enrichment::source::set_offline(
+        crate::enrichment::source::is_offline() || config.offline,
+    );
     if config.offline && !quiet {
         stats
             .warnings

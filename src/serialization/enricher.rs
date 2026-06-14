@@ -74,6 +74,33 @@ fn inject_cyclonedx_vulns(doc: &mut Value, sbom: &NormalizedSbom) {
                 });
             }
 
+            // Surface KEV / EPSS overlays as vulnerability properties so the
+            // enriched output SBOM actually carries the data the `--kev` /
+            // `--epss` flags produced (it would otherwise be dropped on
+            // serialization).
+            let mut props = Vec::new();
+            if vuln.is_kev {
+                props.push(serde_json::json!({
+                    "name": "sbom-tools:kev",
+                    "value": "true",
+                }));
+                if let Some(kev) = &vuln.kev_info {
+                    props.push(serde_json::json!({
+                        "name": "sbom-tools:kev:ransomware",
+                        "value": kev.known_ransomware_use.to_string(),
+                    }));
+                }
+            }
+            if let Some(score) = vuln.epss_score {
+                props.push(serde_json::json!({
+                    "name": "sbom-tools:epss:score",
+                    "value": score.to_string(),
+                }));
+            }
+            if !props.is_empty() {
+                vuln_obj["properties"] = Value::Array(props);
+            }
+
             vulns.push(vuln_obj);
         }
     }

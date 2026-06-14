@@ -178,10 +178,11 @@ pub fn run_watch_loop(config: &WatchConfig) -> anyhow::Result<()> {
     }
 }
 
-/// Enrich an SBOM in place with OSV/EOL/VEX data per the watch config.
+/// Enrich an SBOM in place with OSV/KEV/EPSS/EOL/staleness/HuggingFace/VEX data
+/// per the watch config.
 ///
-/// `bypass_cache` forces fresh OSV/EOL data (used by periodic enrichment
-/// cycles); otherwise the configured cache behavior applies.
+/// `bypass_cache` forces fresh data (used by periodic enrichment cycles);
+/// otherwise the configured cache behavior applies.
 #[cfg(feature = "enrichment")]
 fn enrich_watched_sbom(sbom: &mut NormalizedSbom, config: &WatchConfig, bypass_cache: bool) {
     let mut osv_config = crate::pipeline::build_enrichment_config(&config.enrichment);
@@ -252,6 +253,24 @@ fn enrich_watched_sbom(sbom: &mut NormalizedSbom, config: &WatchConfig, bypass_c
             ..Default::default()
         };
         crate::pipeline::enrich_staleness(sbom, &staleness_config, true);
+    }
+
+    if config.enrichment.enable_huggingface {
+        let mut hf_config = crate::enrichment::HuggingFaceConfig {
+            cache_dir: config
+                .enrichment
+                .cache_dir
+                .clone()
+                .unwrap_or_else(crate::pipeline::dirs::huggingface_cache_dir),
+            cache_ttl: std::time::Duration::from_secs(config.enrichment.cache_ttl_hours * 3600),
+            bypass_cache,
+            timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
+            ..Default::default()
+        };
+        if let Some(ref url) = config.enrichment.huggingface_url {
+            hf_config.api_url = url.clone();
+        }
+        crate::pipeline::enrich_huggingface(sbom, &hf_config, true);
     }
 
     if !config.enrichment.vex_paths.is_empty() {
@@ -595,6 +614,92 @@ fn count_vulns(sbom: &NormalizedSbom) -> usize {
 
 fn count_eol(sbom: &NormalizedSbom) -> usize {
     sbom.components.values().filter(|c| c.eol.is_some()).count()
+}
+
+#[cfg(all(test, feature = "enrichment"))]
+mod tests {
+    use super::*;
+    use crate::config::{EnrichmentConfig, OutputConfig};
+    use crate::model::{Component, ComponentType, MlModelInfo};
+    use httpmock::prelude::*;
+    use std::time::Duration;
+
+    fn hf_model_body() -> serde_json::Value {
+        serde_json::json!({
+            "id": "google-bert/bert-base-uncased",
+            "pipeline_tag": "fill-mask",
+            "lastModified": "2020-02-19T11:06:12.000Z",
+            "license": "apache-2.0",
+            "siblings": [
+                { "rfilename": "model.safetensors", "lfs": { "sha256": "AAAA1111", "size": 1 } }
+            ]
+        })
+    }
+
+    fn watch_config(enrichment: EnrichmentConfig) -> WatchConfig {
+        WatchConfig {
+            watch_dirs: vec![],
+            poll_interval: Duration::from_secs(1),
+            enrich_interval: Duration::from_secs(1),
+            debounce: Duration::ZERO,
+            output: OutputConfig::default(),
+            enrichment,
+            webhook_url: None,
+            exit_on_change: false,
+            max_snapshots: 10,
+            quiet: true,
+            dry_run: false,
+            cra_standards_enabled: false,
+            cra_standards_interval: Duration::from_secs(1),
+            cra_standards_timeout: Duration::from_secs(1),
+        }
+    }
+
+    /// Regression: `watch --huggingface` (enable_huggingface) was accepted but
+    /// `enrich_watched_sbom` had no HuggingFace dispatch, so ML-model weight
+    /// hashes were never injected during watch cycles. With the HF block added,
+    /// the mocked Hub IS queried and the sha256 weight hash lands on the model.
+    #[test]
+    fn enrich_watched_sbom_runs_huggingface() {
+        let server = MockServer::start();
+        let cache_dir = tempfile::tempdir().unwrap();
+
+        let hf_mock = server.mock(|when, then| {
+            when.method(GET)
+                .path("/api/models/google-bert/bert-base-uncased");
+            then.status(200).json_body(hf_model_body());
+        });
+
+        let mut model = Component::new("bert-base-uncased".to_string(), "ml-1".to_string())
+            .with_purl("pkg:huggingface/google-bert/bert-base-uncased@1.0.0".to_string())
+            .with_version("1.0.0".to_string());
+        model.component_type = ComponentType::MachineLearningModel;
+        model.ml_model = Some(MlModelInfo::default());
+
+        let mut sbom = NormalizedSbom::default();
+        sbom.add_component(model);
+
+        let enrichment = EnrichmentConfig::default()
+            .with_huggingface()
+            .with_huggingface_url(server.base_url())
+            .with_cache_dir(cache_dir.path().to_path_buf());
+        let config = watch_config(enrichment);
+
+        // bypass_cache=true so the mock is hit deterministically.
+        enrich_watched_sbom(&mut sbom, &config, true);
+
+        hf_mock.assert();
+        let enriched = sbom
+            .components
+            .values()
+            .find(|c| c.name == "bert-base-uncased")
+            .expect("model present");
+        let hashes: Vec<&str> = enriched.hashes.iter().map(|h| h.value.as_str()).collect();
+        assert!(
+            hashes.contains(&"aaaa1111"),
+            "watch HF enrichment must inject the sha256 weight hash; got {hashes:?}"
+        );
+    }
 }
 
 /// Probe the curated CRA-standards catalogue and emit
