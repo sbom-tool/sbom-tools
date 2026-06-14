@@ -93,6 +93,17 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
         }
     }
 
+    // Enrich with FIRST EPSS exploit-probability scores
+    #[cfg(feature = "enrichment")]
+    if config.enrichment.enable_epss {
+        let epss_config = epss_client_config(&config.enrichment);
+        let epss_old = crate::pipeline::enrich_epss(old_parsed.sbom_mut(), &epss_config, quiet);
+        let epss_new = crate::pipeline::enrich_epss(new_parsed.sbom_mut(), &epss_config, quiet);
+        if epss_old.is_none() || epss_new.is_none() {
+            enrichment_warnings.push("EPSS enrichment failed");
+        }
+    }
+
     // Enrich with dependency staleness data
     #[cfg(feature = "enrichment")]
     if config.enrichment.enable_staleness {
@@ -248,6 +259,28 @@ fn kev_client_config(
     };
     if let Some(ref url) = enrichment.kev_url {
         cfg.kev_url = url.clone();
+    }
+    cfg
+}
+
+/// Build an `EpssClientConfig` from the user-facing `EnrichmentConfig`, honoring
+/// the cache directory, TTL, timeout, and optional URL override.
+#[cfg(feature = "enrichment")]
+fn epss_client_config(
+    enrichment: &crate::config::EnrichmentConfig,
+) -> crate::enrichment::EpssClientConfig {
+    let mut cfg = crate::enrichment::EpssClientConfig {
+        cache_dir: enrichment
+            .cache_dir
+            .clone()
+            .unwrap_or_else(crate::pipeline::dirs::epss_cache_dir),
+        cache_ttl: std::time::Duration::from_secs(enrichment.cache_ttl_hours * 3600),
+        bypass_cache: enrichment.bypass_cache,
+        timeout: std::time::Duration::from_secs(enrichment.timeout_secs),
+        ..Default::default()
+    };
+    if let Some(ref url) = enrichment.epss_url {
+        cfg.epss_url = url.clone();
     }
     cfg
 }

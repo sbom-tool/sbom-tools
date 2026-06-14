@@ -206,6 +206,24 @@ fn enrich_watched_sbom(sbom: &mut NormalizedSbom, config: &WatchConfig, bypass_c
         crate::pipeline::enrich_kev(sbom, &kev_config, true);
     }
 
+    if config.enrichment.enable_epss {
+        let mut epss_config = crate::enrichment::EpssClientConfig {
+            cache_dir: config
+                .enrichment
+                .cache_dir
+                .clone()
+                .unwrap_or_else(crate::pipeline::dirs::epss_cache_dir),
+            cache_ttl: std::time::Duration::from_secs(config.enrichment.cache_ttl_hours * 3600),
+            bypass_cache,
+            timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
+            ..Default::default()
+        };
+        if let Some(ref url) = config.enrichment.epss_url {
+            epss_config.epss_url = url.clone();
+        }
+        crate::pipeline::enrich_epss(sbom, &epss_config, true);
+    }
+
     if config.enrichment.enable_eol {
         let eol_config = crate::enrichment::EolClientConfig {
             cache_dir: config

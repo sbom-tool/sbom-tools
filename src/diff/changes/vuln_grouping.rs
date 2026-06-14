@@ -278,6 +278,7 @@ mod tests {
             description: None,
             remediation: None,
             is_kev: false,
+            epss_score: None,
             cwes: Vec::new(),
             component_depth: None,
             published_date: None,

@@ -154,6 +154,10 @@ struct SharedEnrichmentArgs {
     #[arg(long = "kev", alias = "enrich-kev")]
     enrich_kev: bool,
 
+    /// Annotate vulnerabilities with FIRST EPSS exploit-probability scores
+    #[arg(long = "epss", alias = "enrich-epss")]
+    enrich_epss: bool,
+
     /// Detect stale/abandoned/deprecated dependencies via package registries
     #[arg(long = "enrich-staleness", alias = "staleness")]
     enrich_staleness: bool,
@@ -161,6 +165,10 @@ struct SharedEnrichmentArgs {
     /// CISA KEV catalog URL override (test seam; defaults to the public feed)
     #[arg(long = "kev-url", env = "SBOM_TOOLS_KEV_URL", hide = true)]
     kev_url: Option<String>,
+
+    /// FIRST EPSS scores URL override (test seam; defaults to the public feed)
+    #[arg(long = "epss-url", env = "SBOM_TOOLS_EPSS_URL", hide = true)]
+    epss_url: Option<String>,
 
     /// Apply external VEX document(s) (OpenVEX format). Can be specified multiple times
     #[arg(long = "vex", value_name = "PATH")]
@@ -200,8 +208,10 @@ impl SharedEnrichmentArgs {
             timeout_secs: self.api_timeout,
             enable_eol: self.enrich_eol,
             enable_kev: self.enrich_kev,
+            enable_epss: self.enrich_epss,
             enable_staleness: self.enrich_staleness,
             kev_url: self.kev_url.clone(),
+            epss_url: self.epss_url.clone(),
             vex_paths: self.vex.clone(),
             ..Default::default()
         }
@@ -224,6 +234,7 @@ fn seed_enrichment(
     let cli_touched = cli.enabled
         || cli.enable_eol
         || cli.enable_kev
+        || cli.enable_epss
         || cli.enable_staleness
         || arg_was_set_sub(sub, "vuln_cache_dir")
         || arg_was_set_sub(sub, "vuln_cache_ttl")

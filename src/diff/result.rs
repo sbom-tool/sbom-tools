@@ -992,6 +992,9 @@ pub struct VulnerabilityDetail {
     /// Whether this vulnerability is in CISA's Known Exploited Vulnerabilities catalog
     #[serde(default)]
     pub is_kev: bool,
+    /// FIRST EPSS exploit-probability score (0.0 - 1.0), if enriched
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub epss_score: Option<f64>,
     /// Dependency depth (1 = direct, 2+ = transitive, None = unknown)
     #[serde(default)]
     pub component_depth: Option<u32>,
@@ -1073,6 +1076,7 @@ impl VulnerabilityDetail {
                 )
             }),
             is_kev: vuln.is_kev,
+            epss_score: vuln.epss_score,
             component_depth: None,
             published_date,
             kev_due_date,

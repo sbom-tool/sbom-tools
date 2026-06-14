@@ -17,7 +17,8 @@ pub use report_stage::output_report;
 
 #[cfg(feature = "enrichment")]
 pub use parse::{
-    build_enrichment_config, enrich_eol, enrich_kev, enrich_sbom, enrich_staleness, enrich_vex,
+    build_enrichment_config, enrich_eol, enrich_epss, enrich_kev, enrich_sbom, enrich_staleness,
+    enrich_vex,
 };
 
 /// Structured pipeline error types for better diagnostics.
@@ -140,6 +141,15 @@ pub mod dirs {
             .unwrap_or_else(|| PathBuf::from(".cache"))
             .join("sbom-tools")
             .join("kev")
+    }
+
+    /// Get the default FIRST EPSS cache directory
+    #[must_use]
+    pub fn epss_cache_dir() -> PathBuf {
+        cache_dir()
+            .unwrap_or_else(|| PathBuf::from(".cache"))
+            .join("sbom-tools")
+            .join("epss")
     }
 
     /// Get the default staleness (registry) cache directory

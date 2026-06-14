@@ -807,6 +807,9 @@ pub struct EnrichmentConfig {
     /// Enable CISA KEV (Known Exploited Vulnerabilities) enrichment
     #[serde(default)]
     pub enable_kev: bool,
+    /// Enable FIRST EPSS (Exploit Prediction Scoring System) enrichment
+    #[serde(default)]
+    pub enable_epss: bool,
     /// Enable dependency staleness enrichment via package registries
     #[serde(default)]
     pub enable_staleness: bool,
@@ -820,6 +823,10 @@ pub struct EnrichmentConfig {
     /// Primarily a test seam for pointing the KEV enricher at a mock server.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub kev_url: Option<String>,
+    /// FIRST EPSS scores URL override (defaults to the public FIRST feed).
+    /// Primarily a test seam for pointing the EPSS enricher at a mock server.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub epss_url: Option<String>,
 }
 
 impl Default for EnrichmentConfig {
@@ -834,10 +841,12 @@ impl Default for EnrichmentConfig {
             timeout_secs: 30,
             enable_eol: false,
             enable_kev: false,
+            enable_epss: false,
             enable_staleness: false,
             vex_paths: Vec::new(),
             api_base: None,
             kev_url: None,
+            epss_url: None,
         }
     }
 }
@@ -906,6 +915,20 @@ impl EnrichmentConfig {
     #[must_use]
     pub fn with_kev_url(mut self, kev_url: impl Into<String>) -> Self {
         self.kev_url = Some(kev_url.into());
+        self
+    }
+
+    /// Enable FIRST EPSS enrichment.
+    #[must_use]
+    pub const fn with_epss(mut self) -> Self {
+        self.enable_epss = true;
+        self
+    }
+
+    /// Override the FIRST EPSS scores URL (test seam).
+    #[must_use]
+    pub fn with_epss_url(mut self, epss_url: impl Into<String>) -> Self {
+        self.epss_url = Some(epss_url.into());
         self
     }
 

@@ -80,6 +80,7 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
         let any_enrichment = config.enrichment.enabled
             || config.enrichment.enable_eol
             || config.enrichment.enable_kev
+            || config.enrichment.enable_epss
             || config.enrichment.enable_staleness
             || !config.enrichment.vex_paths.is_empty();
         if any_enrichment {

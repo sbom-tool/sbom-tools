@@ -197,6 +197,7 @@ mod vex_exit_codes {
             description: None,
             remediation: None,
             is_kev: false,
+            epss_score: None,
             component_depth: None,
             published_date: None,
             kev_due_date: None,

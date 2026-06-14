@@ -39,6 +39,7 @@ struct VulnDetailInfo {
     remediation: Option<String>,
     fixed_version: Option<String>,
     is_kev: bool,
+    epss_score: Option<f64>,
     is_ransomware: bool,
     affected_versions: Vec<String>,
     cvss_vector: Option<String>,
@@ -713,6 +714,7 @@ fn render_detail_panel(
                     remediation: None,
                     fixed_version: None,
                     is_kev: false,
+                    epss_score: None,
                     is_ransomware: false,
                     affected_versions: Vec::new(),
                     cvss_vector: None,
@@ -767,6 +769,25 @@ fn render_detail_panel(
                 Style::default()
                     .fg(scheme.kev_badge_fg())
                     .bg(scheme.kev())
+                    .bold(),
+            ));
+        }
+        if let Some(epss) = info.epss_score {
+            // Color the badge by exploit-probability band: high (>=50%) red,
+            // moderate (>=10%) amber, low muted.
+            let epss_bg = if epss >= 0.5 {
+                scheme.critical
+            } else if epss >= 0.1 {
+                scheme.warning
+            } else {
+                scheme.text_muted
+            };
+            badge_spans.push(Span::raw(" "));
+            badge_spans.push(Span::styled(
+                format!("EPSS {:.0}%", epss * 100.0),
+                Style::default()
+                    .fg(scheme.badge_fg_light)
+                    .bg(epss_bg)
                     .bold(),
             ));
         }
@@ -1076,6 +1097,7 @@ fn get_diff_vuln_at(
             remediation: vuln.remediation.clone(),
             fixed_version: None,
             is_kev: vuln.is_kev,
+            epss_score: vuln.epss_score,
             is_ransomware: false, // Not available in diff mode
             affected_versions: Vec::new(),
             cvss_vector: None,

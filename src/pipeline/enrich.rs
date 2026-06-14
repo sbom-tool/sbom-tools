@@ -21,6 +21,9 @@ pub struct AggregatedEnrichmentStats {
     /// CISA KEV enrichment stats
     #[cfg(feature = "enrichment")]
     pub kev: Option<crate::enrichment::KevEnrichmentStats>,
+    /// FIRST EPSS enrichment stats
+    #[cfg(feature = "enrichment")]
+    pub epss: Option<crate::enrichment::EpssEnrichmentStats>,
     /// Dependency staleness enrichment stats
     #[cfg(feature = "enrichment")]
     pub staleness: Option<crate::enrichment::StalenessEnrichmentStats>,
@@ -45,6 +48,7 @@ impl AggregatedEnrichmentStats {
                 || self.eol.is_some()
                 || self.vex.is_some()
                 || self.kev.is_some()
+                || self.epss.is_some()
                 || self.staleness.is_some()
         }
         #[cfg(not(feature = "enrichment"))]
@@ -96,6 +100,28 @@ pub fn enrich_sbom_full(
         match super::enrich_kev(sbom, &kev_config, quiet) {
             Some(s) => stats.kev = Some(s),
             None => stats.warnings.push("KEV enrichment failed".into()),
+        }
+    }
+
+    // 2b. EPSS (Exploit Prediction Scoring System) overlay — like KEV, runs
+    //     after OSV so it can score the vulnerabilities OSV discovered.
+    if config.enable_epss {
+        let mut epss_config = crate::enrichment::EpssClientConfig {
+            cache_dir: config
+                .cache_dir
+                .clone()
+                .unwrap_or_else(super::dirs::epss_cache_dir),
+            cache_ttl: std::time::Duration::from_secs(config.cache_ttl_hours * 3600),
+            bypass_cache: config.bypass_cache,
+            timeout: std::time::Duration::from_secs(config.timeout_secs),
+            ..Default::default()
+        };
+        if let Some(ref url) = config.epss_url {
+            epss_config.epss_url = url.clone();
+        }
+        match super::enrich_epss(sbom, &epss_config, quiet) {
+            Some(s) => stats.epss = Some(s),
+            None => stats.warnings.push("EPSS enrichment failed".into()),
         }
     }
 

@@ -114,6 +114,80 @@ fn enrich_sbom_full_flags_kev_vulnerability() {
     );
 }
 
+/// A FIRST EPSS CSV body scoring the given CVE, plus an unrelated low-score row.
+fn epss_csv_body(cve_id: &str) -> String {
+    format!(
+        "#model_version:v2023.03.01,score_date:2026-06-01T00:00:00+0000\n\
+         cve,epss,percentile\n\
+         {cve_id},0.91234,0.99876\n\
+         CVE-2000-0001,0.00010,0.01234\n"
+    )
+}
+
+#[test]
+fn enrich_sbom_full_sets_epss_score() {
+    let server = MockServer::start();
+    let cache_dir = tempfile::tempdir().unwrap();
+
+    let epss_mock = server.mock(|when, then| {
+        when.method(GET).path("/epss.csv");
+        then.status(200)
+            .header("content-type", "text/csv")
+            .body(epss_csv_body("CVE-2021-44228"));
+    });
+
+    let mut sbom = NormalizedSbom::default();
+    sbom.add_component(component_with_vuln(
+        "log4j-core",
+        "2.14.0",
+        "CVE-2021-44228",
+    ));
+    // A CVE absent from the dataset must stay unscored.
+    sbom.add_component(component_with_vuln("lodash", "4.17.20", "CVE-2021-23337"));
+
+    let config = EnrichmentConfig::default()
+        .with_epss()
+        .with_epss_url(format!("{}/epss.csv", server.base_url()))
+        .with_cache_dir(cache_dir.path().to_path_buf())
+        .with_bypass_cache();
+
+    let stats = enrich_sbom_full(&mut sbom, &config, true);
+
+    epss_mock.assert();
+    let epss_stats = stats.epss.expect("EPSS stats should be produced");
+    assert_eq!(
+        epss_stats.epss_matches, 1,
+        "exactly one CVE is in the dataset"
+    );
+    assert_eq!(epss_stats.high_probability, 1, "the match scores >= 0.5");
+
+    let log4j = sbom
+        .components
+        .values()
+        .find(|c| c.name == "log4j-core")
+        .expect("log4j component present");
+    assert_eq!(
+        log4j.vulnerabilities[0].epss_score,
+        Some(0.91234),
+        "the dataset score must be applied"
+    );
+    assert_eq!(
+        log4j.vulnerabilities[0].epss_percentile,
+        Some(0.99876),
+        "the dataset percentile must be applied"
+    );
+
+    let lodash = sbom
+        .components
+        .values()
+        .find(|c| c.name == "lodash")
+        .expect("lodash component present");
+    assert!(
+        lodash.vulnerabilities[0].epss_score.is_none(),
+        "a CVE absent from the dataset must stay unscored"
+    );
+}
+
 #[test]
 fn staleness_enrichment_feeds_lifecycle_metric() {
     // A component carrying staleness data (as the staleness enricher would

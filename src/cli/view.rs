@@ -69,6 +69,28 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
         }
     }
 
+    // Enrich with FIRST EPSS exploit-probability scores
+    #[cfg(feature = "enrichment")]
+    if config.enrichment.enable_epss {
+        let mut epss_config = crate::enrichment::EpssClientConfig {
+            cache_dir: config
+                .enrichment
+                .cache_dir
+                .clone()
+                .unwrap_or_else(crate::pipeline::dirs::epss_cache_dir),
+            cache_ttl: std::time::Duration::from_secs(config.enrichment.cache_ttl_hours * 3600),
+            bypass_cache: config.enrichment.bypass_cache,
+            timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
+            ..Default::default()
+        };
+        if let Some(ref url) = config.enrichment.epss_url {
+            epss_config.epss_url = url.clone();
+        }
+        if crate::pipeline::enrich_epss(parsed.sbom_mut(), &epss_config, false).is_none() {
+            enrichment_warnings.push("EPSS enrichment failed");
+        }
+    }
+
     // Enrich with dependency staleness data
     #[cfg(feature = "enrichment")]
     if config.enrichment.enable_staleness {
@@ -103,6 +125,7 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
     if config.enrichment.enabled
         || config.enrichment.enable_eol
         || config.enrichment.enable_kev
+        || config.enrichment.enable_epss
         || config.enrichment.enable_staleness
     {
         eprintln!(

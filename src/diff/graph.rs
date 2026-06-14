@@ -979,6 +979,8 @@ mod tests {
             modified: None,
             is_kev: false,
             kev_info: None,
+            epss_score: None,
+            epss_percentile: None,
             vex_status: None,
         });
 

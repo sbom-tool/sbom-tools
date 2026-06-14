@@ -353,6 +353,72 @@ pub fn enrich_kev(
     }
 }
 
+/// Enrich an SBOM's vulnerabilities with FIRST EPSS (Exploit Prediction Scoring
+/// System) exploit-probability scores.
+///
+/// Sets `epss_score` / `epss_percentile` on every CVE-identified
+/// `VulnerabilityRef` that matches the dataset. Returns enrichment stats, or
+/// `None` if the dataset could not be loaded (non-fatal).
+#[cfg(feature = "enrichment")]
+pub fn enrich_epss(
+    sbom: &mut NormalizedSbom,
+    config: &crate::enrichment::EpssClientConfig,
+    quiet: bool,
+) -> Option<crate::enrichment::EpssEnrichmentStats> {
+    use crate::enrichment::EpssClient;
+
+    if !quiet {
+        eprintln!("Enriching SBOM with FIRST EPSS (exploit-probability) scores...");
+    }
+
+    let mut client = EpssClient::new(config.clone());
+
+    // Collect all vulnerability refs across components into one flat buffer so
+    // the dataset is loaded once, then scatter the enriched scores back.
+    let mut all_vulns: Vec<crate::model::VulnerabilityRef> = sbom
+        .components
+        .values()
+        .flat_map(|c| c.vulnerabilities.iter().cloned())
+        .collect();
+
+    if all_vulns.is_empty() {
+        return Some(crate::enrichment::EpssEnrichmentStats::default());
+    }
+
+    match client.enrich_vulnerabilities(&mut all_vulns) {
+        Ok(stats) => {
+            if !quiet {
+                eprintln!(
+                    "EPSS enrichment: {} matched ({} high-probability) from a {}-entry dataset",
+                    stats.epss_matches, stats.high_probability, stats.dataset_size,
+                );
+            }
+            // Index enriched refs by vulnerability id so we can re-apply the EPSS
+            // scores onto the per-component vulnerability lists.
+            let mut by_id: std::collections::HashMap<String, &crate::model::VulnerabilityRef> =
+                std::collections::HashMap::new();
+            for v in &all_vulns {
+                if v.epss_score.is_some() {
+                    by_id.insert(v.id.clone(), v);
+                }
+            }
+            for comp in sbom.components.values_mut() {
+                for vuln in &mut comp.vulnerabilities {
+                    if let Some(enriched) = by_id.get(&vuln.id) {
+                        vuln.epss_score = enriched.epss_score;
+                        vuln.epss_percentile = enriched.epss_percentile;
+                    }
+                }
+            }
+            Some(stats)
+        }
+        Err(e) => {
+            eprintln!("Warning: EPSS enrichment failed: {e}");
+            None
+        }
+    }
+}
+
 /// Enrich an SBOM's components with dependency staleness data from package
 /// registries (npm / `PyPI` / crates.io).
 ///
