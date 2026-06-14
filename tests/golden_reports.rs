@@ -70,6 +70,8 @@ fn redacted_settings() -> insta::Settings {
     settings.add_filter(r"v\d+\.\d+\.\d+", "v[VERSION]");
     // Time-relative SLA / age strings, e.g. `12d old`, `3d overdue`, `5d remaining`.
     settings.add_filter(r"\d+d (old|overdue|remaining)", "[N]d $1");
+    // Spelled-out age strings, e.g. CRA Art. 13(3) "SBOM is 880 days old".
+    settings.add_filter(r"\d+ days (old|overdue|remaining)", "[N] days $1");
 
     // ── CRA Article 14 readiness is date-relative ───────────────────────────
     // The Art. 14 reporting-channel checks flip at the hard-coded 2026-09-11

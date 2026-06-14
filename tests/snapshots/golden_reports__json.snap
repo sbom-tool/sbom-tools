@@ -509,7 +509,7 @@ expression: "render(&JsonReporter::new())"
         {
           "severity": "Warning",
           "category": "DocumentMetadata",
-          "message": "[CRA Art. 13(3)] SBOM is 880 days old; CRA requires timely updates when components change",
+          "message": "[CRA Art. 13(3)] SBOM is [N] days old; CRA requires timely updates when components change",
           "element": null,
           "requirement": "CRA Art. 13(3): SBOM update frequency",
           "standard_refs": [
@@ -1122,7 +1122,7 @@ expression: "render(&JsonReporter::new())"
         {
           "severity": "Warning",
           "category": "DocumentMetadata",
-          "message": "[CRA Art. 13(3)] SBOM is 728 days old; CRA requires timely updates when components change",
+          "message": "[CRA Art. 13(3)] SBOM is [N] days old; CRA requires timely updates when components change",
           "element": null,
           "requirement": "CRA Art. 13(3): SBOM update frequency",
           "standard_refs": [

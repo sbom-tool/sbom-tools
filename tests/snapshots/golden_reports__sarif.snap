@@ -1046,7 +1046,7 @@ expression: "render(&SarifReporter::new())"
           "ruleId": "SBOM-CRA-ART-13-3",
           "level": "warning",
           "message": {
-            "text": "Old SBOM - EU CRA Phase 2 (2029): [CRA Art. 13(3)] SBOM is 880 days old; CRA requires timely updates when components change (Requirement: CRA Art. 13(3): SBOM update frequency) [Element: unknown]"
+            "text": "Old SBOM - EU CRA Phase 2 (2029): [CRA Art. 13(3)] SBOM is [N] days old; CRA requires timely updates when components change (Requirement: CRA Art. 13(3): SBOM update frequency) [Element: unknown]"
           },
           "locations": [],
           "properties": {
@@ -1713,7 +1713,7 @@ expression: "render(&SarifReporter::new())"
           "ruleId": "SBOM-CRA-ART-13-3",
           "level": "warning",
           "message": {
-            "text": "New SBOM - EU CRA Phase 2 (2029): [CRA Art. 13(3)] SBOM is 728 days old; CRA requires timely updates when components change (Requirement: CRA Art. 13(3): SBOM update frequency) [Element: unknown]"
+            "text": "New SBOM - EU CRA Phase 2 (2029): [CRA Art. 13(3)] SBOM is [N] days old; CRA requires timely updates when components change (Requirement: CRA Art. 13(3): SBOM update frequency) [Element: unknown]"
           },
           "locations": [],
           "properties": {
