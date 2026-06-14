@@ -170,6 +170,32 @@ pub fn build_enrichment_config(
     osv_config
 }
 
+/// Run an enricher over an SBOM's components without deep-cloning the map.
+///
+/// `NormalizedSbom::components` is an `IndexMap<CanonicalId, Component>`; the
+/// enricher APIs all want a contiguous `&mut [Component]` slice, which the map's
+/// non-contiguous bucket storage cannot provide directly. Rather than the old
+/// pattern of `values().cloned().collect()` (a full deep clone of every
+/// component — doubling peak memory) followed by a reinsert, this moves the
+/// entries out (`mem::take`, no clone), splits them into a key vec plus a
+/// component slice the enricher mutates in place, then re-zips the original
+/// keys back. Keys are never cloned and component values are moved, not cloned.
+///
+/// The enricher must not change any component's `canonical_id`; the OSV/EOL/
+/// staleness enrichers only populate `vulnerabilities`/`eol`/`staleness`, so the
+/// key↔value pairing is preserved by index.
+#[cfg(feature = "enrichment")]
+fn enrich_components_in_place<S, E, F>(sbom: &mut NormalizedSbom, enrich: F) -> Result<S, E>
+where
+    F: FnOnce(&mut [crate::model::Component]) -> Result<S, E>,
+{
+    let (keys, mut comps): (Vec<_>, Vec<crate::model::Component>) =
+        std::mem::take(&mut sbom.components).into_iter().unzip();
+    let result = enrich(&mut comps);
+    sbom.components = keys.into_iter().zip(comps).collect();
+    result
+}
+
 /// Enrich an SBOM with vulnerability data from OSV
 #[cfg(feature = "enrichment")]
 pub fn enrich_sbom(
@@ -193,21 +219,13 @@ pub fn enrich_sbom(
                 return None;
             }
 
-            // Get mutable references to components
-            let components: Vec<_> = sbom.components.values().cloned().collect();
-            let mut comp_vec: Vec<_> = components;
-
-            match enricher.enrich(&mut comp_vec) {
+            match enrich_components_in_place(sbom, |comps| enricher.enrich(comps)) {
                 Ok(stats) => {
                     if !quiet {
                         eprintln!(
                             "Enriched: {} components with vulns, {} total vulns found",
                             stats.components_with_vulns, stats.total_vulns_found
                         );
-                    }
-                    // Update SBOM with enriched components
-                    for comp in comp_vec {
-                        sbom.components.insert(comp.canonical_id.clone(), comp);
                     }
                     Some(stats)
                 }
@@ -239,10 +257,7 @@ pub fn enrich_eol(
 
     match EolEnricher::new(config.clone()) {
         Ok(mut enricher) => {
-            let components: Vec<_> = sbom.components.values().cloned().collect();
-            let mut comp_vec = components;
-
-            match enricher.enrich_components(&mut comp_vec) {
+            match enrich_components_in_place(sbom, |comps| enricher.enrich_components(comps)) {
                 Ok(stats) => {
                     if !quiet {
                         eprintln!(
@@ -253,10 +268,6 @@ pub fn enrich_eol(
                             stats.supported_count,
                             stats.skipped_count,
                         );
-                    }
-                    // Update SBOM with enriched components
-                    for comp in comp_vec {
-                        sbom.components.insert(comp.canonical_id.clone(), comp);
                     }
                     Some(stats)
                 }
@@ -360,9 +371,8 @@ pub fn enrich_staleness(
     }
 
     let mut enricher = StalenessEnricher::new(config.clone());
-    let mut comp_vec: Vec<_> = sbom.components.values().cloned().collect();
 
-    match enricher.enrich_components(&mut comp_vec) {
+    match enrich_components_in_place(sbom, |comps| enricher.enrich_components(comps)) {
         Ok(stats) => {
             if !quiet {
                 eprintln!(
@@ -373,9 +383,6 @@ pub fn enrich_staleness(
                     stats.deprecated_count,
                     stats.skipped_count,
                 );
-            }
-            for comp in comp_vec {
-                sbom.components.insert(comp.canonical_id.clone(), comp);
             }
             Some(stats)
         }
@@ -430,6 +437,54 @@ pub fn enrich_vex(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "enrichment")]
+    #[test]
+    fn test_enrich_components_in_place_preserves_pairing() {
+        use crate::model::{Component, VulnerabilityRef, VulnerabilitySource};
+
+        // Three distinct components in a known insertion order.
+        let mut sbom = NormalizedSbom::default();
+        for name in ["alpha", "bravo", "charlie"] {
+            sbom.add_component(Component::new(name.to_string(), format!("pkg:test/{name}")));
+        }
+        assert_eq!(sbom.component_count(), 3);
+
+        // Enricher that only touches indices 0 and 2 — mirrors how the real
+        // enrichers mutate a subset of the `&mut [Component]` slice in place.
+        let result: Result<usize, std::convert::Infallible> =
+            enrich_components_in_place(&mut sbom, |comps| {
+                assert_eq!(comps.len(), 3);
+                comps[0].vulnerabilities.push(VulnerabilityRef::new(
+                    "CVE-A".into(),
+                    VulnerabilitySource::Cve,
+                ));
+                comps[2].vulnerabilities.push(VulnerabilityRef::new(
+                    "CVE-C".into(),
+                    VulnerabilitySource::Cve,
+                ));
+                Ok(comps.len())
+            });
+        assert_eq!(result.unwrap(), 3);
+
+        // Count, order, and key↔value pairing must survive the move-out/write-back.
+        assert_eq!(sbom.component_count(), 3);
+        let by_name: std::collections::HashMap<&str, &Component> = sbom
+            .components
+            .values()
+            .map(|c| (c.name.as_str(), c))
+            .collect();
+        assert_eq!(by_name["alpha"].vulnerabilities.len(), 1);
+        assert_eq!(by_name["alpha"].vulnerabilities[0].id, "CVE-A");
+        assert!(by_name["bravo"].vulnerabilities.is_empty());
+        assert_eq!(by_name["charlie"].vulnerabilities.len(), 1);
+        assert_eq!(by_name["charlie"].vulnerabilities[0].id, "CVE-C");
+
+        // Each component still maps to its own canonical id (no key/value swap).
+        for (id, comp) in &sbom.components {
+            assert_eq!(*id, comp.canonical_id);
+        }
+    }
 
     #[test]
     fn test_parsed_sbom_creation() {
