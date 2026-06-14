@@ -135,8 +135,11 @@ impl KevClient {
             )));
         }
 
-        let catalog_response: KevCatalogResponse = response
-            .json()
+        // Bound the body before buffering it so a hostile endpoint cannot OOM us.
+        let bytes = crate::enrichment::source::read_bounded(response)
+            .map_err(|e| EnrichmentError::ApiError(e.to_string()))?;
+
+        let catalog_response: KevCatalogResponse = serde_json::from_slice(&bytes)
             .map_err(|e| EnrichmentError::ParseError(e.to_string()))?;
 
         Ok(KevCatalog::from_response(catalog_response))

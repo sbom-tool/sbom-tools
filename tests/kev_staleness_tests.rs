@@ -188,6 +188,54 @@ fn enrich_sbom_full_sets_epss_score() {
     );
 }
 
+/// gzip the given bytes (mirrors the official `.csv.gz` EPSS endpoint).
+fn gzip(bytes: &[u8]) -> Vec<u8> {
+    use flate2::Compression;
+    use flate2::write::GzEncoder;
+    use std::io::Write;
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+    encoder.write_all(bytes).unwrap();
+    encoder.finish().unwrap()
+}
+
+#[test]
+fn epss_client_decompresses_gzipped_dataset() {
+    use sbom_tools::enrichment::epss::{EpssClient, EpssClientConfig};
+
+    let server = MockServer::start();
+    let cache_dir = tempfile::tempdir().unwrap();
+
+    let csv = epss_csv_body("CVE-2021-44228");
+    let gz = gzip(csv.as_bytes());
+
+    let mock = server.mock(|when, then| {
+        when.method(GET).path("/epss_scores-current.csv.gz");
+        then.status(200)
+            .header("content-type", "application/gzip")
+            .body(gz);
+    });
+
+    let config = EpssClientConfig {
+        cache_dir: cache_dir.path().to_path_buf(),
+        epss_url: format!("{}/epss_scores-current.csv.gz", server.base_url()),
+        bypass_cache: true,
+        ..EpssClientConfig::default()
+    };
+
+    let mut client = EpssClient::new(config);
+    client.load_scores().expect("gzipped dataset must load");
+    mock.assert();
+
+    let scores = client.scores().expect("scores populated");
+    let entry = scores
+        .get("CVE-2021-44228")
+        .expect("CVE present in decompressed dataset");
+    assert!(
+        (entry.score - 0.91234).abs() < 1e-9,
+        "decompressed score must parse"
+    );
+}
+
 #[test]
 fn staleness_enrichment_feeds_lifecycle_metric() {
     // A component carrying staleness data (as the staleness enricher would

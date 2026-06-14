@@ -21,5 +21,7 @@
 mod client;
 mod scores;
 
-pub use client::{EPSS_SCORES_URL, EpssClient, EpssClientConfig, EpssEnrichmentStats};
+pub use client::{
+    EPSS_OFFICIAL_HOST, EPSS_SCORES_URL, EpssClient, EpssClientConfig, EpssEnrichmentStats,
+};
 pub use scores::{EpssEntry, EpssScores};

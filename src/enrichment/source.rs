@@ -160,6 +160,64 @@ pub fn http_client(timeout: Duration) -> reqwest::Result<reqwest::blocking::Clie
 /// server-provided `Retry-After`.
 const MAX_BACKOFF: Duration = Duration::from_secs(30);
 
+/// Upper bound on a single enrichment response body, in bytes.
+///
+/// Enrichment responses are read fully into memory (the EPSS CSV into a
+/// `HashMap`, the KEV/HuggingFace JSON into structs). Without a cap a malicious
+/// or MITM'd endpoint advertising (or streaming) a huge body could OOM the
+/// process. The largest legitimate payload is the full daily EPSS dataset
+/// (~10-20 MB uncompressed); 256 MiB is a generous-but-finite ceiling that no
+/// real source approaches.
+pub const MAX_RESPONSE_BYTES: u64 = 256 * 1024 * 1024;
+
+/// Read a response body into memory, refusing bodies larger than
+/// [`MAX_RESPONSE_BYTES`].
+///
+/// The cap is enforced twice: first against a declared `Content-Length` (a cheap
+/// up-front reject), then against the actually-buffered length (a defense against
+/// a lying or absent header). The returned bytes are guaranteed `<= MAX`.
+#[cfg(feature = "enrichment")]
+pub fn read_bounded(response: reqwest::blocking::Response) -> Result<Vec<u8>> {
+    read_bounded_with_max(response, MAX_RESPONSE_BYTES)
+}
+
+/// [`read_bounded`] with an explicit cap.
+///
+/// Split out so the cap behavior can be exercised against a real (small)
+/// response without having to transmit a 256 MiB body in tests.
+#[cfg(feature = "enrichment")]
+pub(crate) fn read_bounded_with_max(
+    response: reqwest::blocking::Response,
+    max_bytes: u64,
+) -> Result<Vec<u8>> {
+    if let Some(len) = response.content_length()
+        && len > max_bytes
+    {
+        return Err(oversized_error(len, max_bytes));
+    }
+
+    let bytes = response
+        .bytes()
+        .map_err(|e| network_error("reading response body", &e))?;
+
+    if bytes.len() as u64 > max_bytes {
+        return Err(oversized_error(bytes.len() as u64, max_bytes));
+    }
+
+    Ok(bytes.to_vec())
+}
+
+/// Build the "response too large" enrichment error.
+#[cfg(feature = "enrichment")]
+fn oversized_error(len: u64, max_bytes: u64) -> crate::error::SbomDiffError {
+    crate::error::SbomDiffError::enrichment(
+        "response too large",
+        crate::error::EnrichmentErrorKind::NetworkError(format!(
+            "response body of {len} bytes exceeds the {max_bytes}-byte limit"
+        )),
+    )
+}
+
 /// Compute the backoff delay before retry `attempt` (1-based).
 ///
 /// Honors a server-provided `Retry-After` (seconds) when present, otherwise
@@ -687,6 +745,59 @@ mod tests {
             !cache.path_for("entry").exists(),
             "expired entry should be evicted"
         );
+    }
+
+    #[cfg(feature = "enrichment")]
+    #[test]
+    fn read_bounded_rejects_oversized_body() {
+        use httpmock::prelude::*;
+
+        let server = MockServer::start();
+        // A body that comfortably exceeds the tiny test cap below.
+        let body = "x".repeat(1024);
+        let mock = server.mock(|when, then| {
+            when.method(GET).path("/big");
+            then.status(200).body(&body);
+        });
+
+        let client = http_client(Duration::from_secs(5)).unwrap();
+        let resp = get_with_retry(&client, &format!("{}/big", server.base_url()), 0).unwrap();
+        mock.assert();
+
+        let err =
+            read_bounded_with_max(resp, 16).expect_err("a body over the cap must be rejected");
+        // The user-facing message names the size-cap; the byte-precise detail
+        // ("exceeds the N-byte limit") is carried on the error's source chain.
+        assert!(
+            err.to_string().contains("too large"),
+            "error must explain the size-cap rejection, got: {err}"
+        );
+        let detail = std::error::Error::source(&err)
+            .map(ToString::to_string)
+            .unwrap_or_default();
+        assert!(
+            detail.contains("exceeds"),
+            "source must carry the byte-precise detail, got: {detail}"
+        );
+    }
+
+    #[cfg(feature = "enrichment")]
+    #[test]
+    fn read_bounded_accepts_body_within_cap() {
+        use httpmock::prelude::*;
+
+        let server = MockServer::start();
+        let mock = server.mock(|when, then| {
+            when.method(GET).path("/ok");
+            then.status(200).body("hello");
+        });
+
+        let client = http_client(Duration::from_secs(5)).unwrap();
+        let resp = get_with_retry(&client, &format!("{}/ok", server.base_url()), 0).unwrap();
+        mock.assert();
+
+        let bytes = read_bounded_with_max(resp, MAX_RESPONSE_BYTES).unwrap();
+        assert_eq!(bytes, b"hello");
     }
 
     #[test]

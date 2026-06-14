@@ -33,7 +33,7 @@ pub enum CacheAction {
     Warm {
         /// SBOM file to warm the cache for
         sbom: PathBuf,
-        /// Warm every source (OSV, EOL, KEV, staleness), not just OSV
+        /// Warm every source (OSV, EOL, KEV, EPSS, staleness, HuggingFace), not just OSV
         #[arg(long)]
         all_sources: bool,
     },
@@ -63,7 +63,12 @@ pub fn run_cache(action: CacheAction, quiet: bool) -> Result<i32> {
 }
 
 /// The enrichment source namespaces that live under the root cache directory.
-const SOURCE_NAMESPACES: &[&str] = &["osv", "eol", "kev", "staleness"];
+///
+/// Must list every namespace any client writes under (see each
+/// `namespaced_cache_dir(...)` call) so `cache status`/`cache clear` cover them
+/// all; EPSS and HuggingFace were previously omitted, so their caches were never
+/// purged or reported.
+const SOURCE_NAMESPACES: &[&str] = &["osv", "eol", "kev", "epss", "staleness", "huggingface"];
 
 /// Aggregate counts for one source's cache directory.
 struct SourceStatus {
@@ -179,6 +184,7 @@ fn cache_warm(sbom_path: &Path, all_sources: bool, quiet: bool) -> Result<i32> {
     let mut config = EnrichmentConfig::osv();
     config.enable_eol = all_sources;
     config.enable_kev = all_sources;
+    config.enable_epss = all_sources;
     config.enable_staleness = all_sources;
     config.enable_huggingface = all_sources;
     // Force fresh fetches so every queryable component lands in the cache.
@@ -196,7 +202,7 @@ fn cache_warm(sbom_path: &Path, all_sources: bool, quiet: bool) -> Result<i32> {
             "Warmed cache for {n} component(s) from {} ({}).",
             sbom_path.display(),
             if all_sources {
-                "OSV, EOL, KEV, staleness, HuggingFace"
+                "OSV, EOL, KEV, EPSS, staleness, HuggingFace"
             } else {
                 "OSV"
             }
@@ -361,5 +367,75 @@ mod tests {
         assert_eq!(copied, 2);
         assert!(dst.path().join("osv").join("a.json").exists());
         assert!(dst.path().join("osv").join("b.json").exists());
+    }
+
+    /// Regression: `cache status`/`cache clear` enumerate a fixed namespace
+    /// list. EPSS and HuggingFace clients write under their own namespaces, so
+    /// those must appear in the list or their caches are silently never purged
+    /// or reported.
+    #[test]
+    fn source_namespaces_cover_epss_and_huggingface() {
+        assert!(
+            SOURCE_NAMESPACES.contains(&"epss"),
+            "epss namespace must be covered by cache status/clear"
+        );
+        assert!(
+            SOURCE_NAMESPACES.contains(&"huggingface"),
+            "huggingface namespace must be covered by cache status/clear"
+        );
+
+        // The default cache dirs of the EPSS/HF clients must end in exactly the
+        // namespace strings the const enumerates, tying this test to the real
+        // write locations.
+        let epss_dir = crate::enrichment::epss::EpssClientConfig::default().cache_dir;
+        assert!(
+            epss_dir.ends_with("epss"),
+            "EPSS client writes under the 'epss' namespace"
+        );
+        let hf_dir = crate::enrichment::huggingface::HuggingFaceConfig::default().cache_dir;
+        assert!(
+            hf_dir.ends_with("huggingface"),
+            "HuggingFace client writes under the 'huggingface' namespace"
+        );
+    }
+
+    /// Regression: clearing the cache root removes EPSS and HuggingFace JSON
+    /// entries, not just the original four namespaces.
+    #[test]
+    fn clear_logic_removes_all_namespaces() {
+        let root = tempfile::tempdir().unwrap();
+        let mut expected_removed = 0usize;
+        for ns in SOURCE_NAMESPACES {
+            let dir = root.path().join(ns);
+            fs::create_dir_all(&dir).unwrap();
+            fs::write(dir.join("entry.json"), "{}").unwrap();
+            expected_removed += 1;
+        }
+
+        // Mirror cache_clear's per-namespace removal against the temp root.
+        let mut removed = 0usize;
+        for ns in SOURCE_NAMESPACES {
+            let dir = root.path().join(ns);
+            if let Ok(read_dir) = fs::read_dir(&dir) {
+                for entry in read_dir.flatten() {
+                    let path = entry.path();
+                    if path.extension().is_some_and(|e| e == "json")
+                        && fs::remove_file(&path).is_ok()
+                    {
+                        removed += 1;
+                    }
+                }
+            }
+        }
+
+        assert_eq!(removed, expected_removed);
+        assert!(
+            !root.path().join("epss").join("entry.json").exists(),
+            "epss entry must be cleared"
+        );
+        assert!(
+            !root.path().join("huggingface").join("entry.json").exists(),
+            "huggingface entry must be cleared"
+        );
     }
 }

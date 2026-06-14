@@ -12,9 +12,23 @@ const EPSS_CACHE_FILE: &str = "epss_scores.json";
 
 /// Default FIRST EPSS bulk-scores URL.
 ///
-/// FIRST also serves a gzip-compressed `…/epss_scores-current.csv.gz`; the
-/// uncompressed endpoint is used here so no gzip dependency is required.
-pub const EPSS_SCORES_URL: &str = "https://epss.cybersecurity.fr/epss_scores-current.csv";
+/// This is the official FIRST-operated endpoint (run by Empirical Security, who
+/// maintain EPSS for FIRST). It 302-redirects to the dated
+/// `epss_scores-YYYY-MM-DD.csv.gz`; `reqwest` follows redirects by default. The
+/// payload is gzip-compressed, so [`EpssClient::fetch_from_api`] detects the
+/// gzip magic bytes (`0x1f 0x8b`) and decompresses before CSV parsing.
+///
+/// The previous default pointed at a non-FIRST third-party mirror
+/// (`epss.cybersecurity.fr`); fetching exploit-risk gating data from a
+/// non-official host is a supply-chain risk, so the default is pinned here and
+/// asserted by [`tests::default_url_uses_official_first_host`].
+pub const EPSS_SCORES_URL: &str = "https://epss.empiricalsecurity.com/epss_scores-current.csv.gz";
+
+/// Host the default [`EPSS_SCORES_URL`] must resolve to.
+///
+/// Pinned so the default endpoint cannot silently drift back to an unofficial
+/// mirror; see the regression test of the same name.
+pub const EPSS_OFFICIAL_HOST: &str = "epss.empiricalsecurity.com";
 
 /// EPSS client configuration.
 #[derive(Debug, Clone)]
@@ -131,9 +145,15 @@ impl EpssClient {
             )));
         }
 
-        let body = response
-            .text()
-            .map_err(|e| EnrichmentError::ParseError(e.to_string()))?;
+        // Bound the body so a malicious/MITM endpoint cannot OOM us; the full
+        // daily EPSS dataset is well under the cap.
+        let raw = crate::enrichment::source::read_bounded(response)
+            .map_err(|e| EnrichmentError::ApiError(e.to_string()))?;
+
+        // The official `…current.csv.gz` endpoint serves gzip; the test seam
+        // serves plain CSV. Decompress only when the gzip magic is present so
+        // both work without a separate code path.
+        let body = decode_maybe_gzip(&raw)?;
 
         Ok(EpssScores::from_csv(&body))
     }
@@ -144,6 +164,16 @@ impl EpssClient {
         Err(EnrichmentError::ApiError(
             "Enrichment feature not enabled".to_string(),
         ))
+    }
+
+    /// Convert the EPSS bulk dataset bytes (gzip or plain) to a CSV string.
+    ///
+    /// Exposed at the type level for the gzip round-trip test; see
+    /// [`decode_maybe_gzip`].
+    #[cfg(test)]
+    #[cfg(feature = "enrichment")]
+    fn decode_body(raw: &[u8]) -> Result<String, EnrichmentError> {
+        decode_maybe_gzip(raw)
     }
 
     /// Load the EPSS dataset (from cache or API).
@@ -214,6 +244,29 @@ impl EpssClient {
     }
 }
 
+/// Decode an EPSS body, decompressing only when it is gzip-framed.
+///
+/// The official `epss_scores-current.csv.gz` endpoint serves gzip; the
+/// `--epss-url`/`SBOM_TOOLS_EPSS_URL` test seam serves plain CSV. Detecting the
+/// gzip magic bytes (`0x1f 0x8b`) keeps a single fetch path working for both
+/// without depending on the URL extension or a `Content-Encoding` header.
+#[cfg(feature = "enrichment")]
+fn decode_maybe_gzip(raw: &[u8]) -> Result<String, EnrichmentError> {
+    use std::io::Read;
+
+    if raw.starts_with(&[0x1f, 0x8b]) {
+        let mut decoder = flate2::read::GzDecoder::new(raw);
+        let mut out = String::new();
+        decoder
+            .read_to_string(&mut out)
+            .map_err(|e| EnrichmentError::ParseError(format!("gzip decode failed: {e}")))?;
+        Ok(out)
+    } else {
+        String::from_utf8(raw.to_vec())
+            .map_err(|e| EnrichmentError::ParseError(format!("EPSS body is not valid UTF-8: {e}")))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -232,6 +285,58 @@ mod tests {
     fn test_epss_client_creation() {
         let client = EpssClient::with_defaults();
         assert!(client.scores.is_none());
+    }
+
+    /// Regression: the default EPSS endpoint must be the official FIRST host,
+    /// never an unofficial third-party mirror.
+    #[test]
+    fn default_url_uses_official_first_host() {
+        let cfg = EpssClientConfig::default();
+        let host = cfg
+            .epss_url
+            .strip_prefix("https://")
+            .and_then(|rest| rest.split('/').next())
+            .expect("default EPSS URL must be an https URL");
+        assert_eq!(
+            host, EPSS_OFFICIAL_HOST,
+            "default EPSS endpoint must point at the official FIRST host"
+        );
+        assert!(
+            EPSS_SCORES_URL.starts_with("https://"),
+            "default EPSS URL must use https"
+        );
+    }
+
+    /// Regression: a gzip-framed body (the official `.csv.gz` endpoint) round-
+    /// trips through decoding to the original CSV, while a plain body (the test
+    /// seam) is passed through unchanged.
+    #[cfg(feature = "enrichment")]
+    #[test]
+    fn decodes_gzip_and_plain_bodies() {
+        use flate2::Compression;
+        use flate2::write::GzEncoder;
+        use std::io::Write;
+
+        let csv = "#model_version:v1,score_date:2026-06-01\n\
+                   cve,epss,percentile\n\
+                   CVE-2024-9999,0.87654,0.95432\n";
+
+        // Plain body passes through unchanged.
+        let plain = EpssClient::decode_body(csv.as_bytes()).unwrap();
+        assert_eq!(plain, csv);
+
+        // Gzip body decompresses back to the original CSV, and parses.
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(csv.as_bytes()).unwrap();
+        let gz = encoder.finish().unwrap();
+        assert_eq!(&gz[..2], &[0x1f, 0x8b], "gzip magic must be present");
+
+        let decoded = EpssClient::decode_body(&gz).unwrap();
+        assert_eq!(decoded, csv);
+
+        let scores = EpssScores::from_csv(&decoded);
+        let entry = scores.get("CVE-2024-9999").expect("score parsed");
+        assert!((entry.score - 0.87654).abs() < 1e-9);
     }
 
     #[test]
