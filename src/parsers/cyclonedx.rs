@@ -588,6 +588,10 @@ impl CycloneDxParser {
                 dataset_type: data_component.data_type.clone(),
                 sensitivity_classifications: data_component.sensitivity_data.clone(),
                 governance_owners,
+                // intended_use / confidentiality_level / preprocessing /
+                // anonymization have no CycloneDX `componentData` analogue; they
+                // are SPDX-3.0-only and left unset here.
+                ..Default::default()
             });
         }
 

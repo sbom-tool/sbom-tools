@@ -29,6 +29,8 @@ pub enum PolicyPreset {
     EuccSubstantial,
     /// EU AI Act — Reg. (EU) 2024/1689 Annex IV technical-documentation readiness
     EuAiAct,
+    /// BSI/G7 SBOM-for-AI — Feb 2026 minimum-elements readiness
+    BsiSbomForAi,
 }
 
 impl PolicyPreset {
@@ -47,7 +49,8 @@ impl PolicyPreset {
             Self::BsiTr03183_2 => Self::CraOssSteward,
             Self::CraOssSteward => Self::EuccSubstantial,
             Self::EuccSubstantial => Self::EuAiAct,
-            Self::EuAiAct => Self::Enterprise,
+            Self::EuAiAct => Self::BsiSbomForAi,
+            Self::BsiSbomForAi => Self::Enterprise,
         }
     }
 
@@ -67,6 +70,7 @@ impl PolicyPreset {
             Self::CraOssSteward => "CRA OSS Steward",
             Self::EuccSubstantial => "EUCC",
             Self::EuAiAct => "EU AI Act",
+            Self::BsiSbomForAi => "BSI/G7 SBOM-for-AI",
         }
     }
 
@@ -85,6 +89,7 @@ impl PolicyPreset {
                 | Self::CraOssSteward
                 | Self::EuccSubstantial
                 | Self::EuAiAct
+                | Self::BsiSbomForAi
         )
     }
 
@@ -102,6 +107,7 @@ impl PolicyPreset {
             Self::CraOssSteward => Some(crate::quality::ComplianceLevel::CraOssSteward),
             Self::EuccSubstantial => Some(crate::quality::ComplianceLevel::EuccSubstantial),
             Self::EuAiAct => Some(crate::quality::ComplianceLevel::EuAiAct),
+            Self::BsiSbomForAi => Some(crate::quality::ComplianceLevel::BsiSbomForAi),
             _ => None,
         }
     }

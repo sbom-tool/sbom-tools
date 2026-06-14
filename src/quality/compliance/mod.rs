@@ -11,6 +11,7 @@ use crate::model::{NormalizedSbom, SbomFormat};
 use serde::{Deserialize, Serialize};
 
 mod bsi;
+mod bsi_sbom_for_ai;
 mod context;
 mod cra;
 mod crypto;
@@ -100,6 +101,16 @@ pub enum ComplianceLevel {
     /// legal-conformity guarantee, and does not classify a system as high-risk.
     /// Returns N/A for SBOMs with no ML-model or dataset metadata.
     EuAiAct,
+    /// BSI/G7 "SBOM for AI — Minimum Elements" (Feb 2026) READINESS. Scores an
+    /// AI-BOM element-by-element against the seven clusters (Metadata,
+    /// System-Level, Models, Datasets, Infrastructure, Security, plus the
+    /// document-author elements) of the BSI/G7 minimum-elements guidance, using
+    /// the AI-BOM metadata sbom-tools already parses (model card, training-data
+    /// characteristics, weight hashes with NIST-approved algorithms, dataset
+    /// provenance). This is a minimum-elements *readiness* assessment, not a
+    /// legal-conformity guarantee. Returns N/A for SBOMs with no ML-model or
+    /// dataset metadata.
+    BsiSbomForAi,
     /// Comprehensive compliance (all recommended fields)
     Comprehensive,
 }
@@ -123,6 +134,7 @@ impl ComplianceLevel {
             Self::CraOssSteward => "CRA OSS Steward (Art. 24)",
             Self::EuccSubstantial => "EUCC Substantial (Reg. 2024/482)",
             Self::EuAiAct => "EU AI Act Annex IV Readiness",
+            Self::BsiSbomForAi => "BSI/G7 SBOM-for-AI Minimum Elements Readiness",
             Self::Comprehensive => "Comprehensive",
         }
     }
@@ -145,6 +157,7 @@ impl ComplianceLevel {
             Self::CraOssSteward => "OSS",
             Self::EuccSubstantial => "EUCC",
             Self::EuAiAct => "AI-Act",
+            Self::BsiSbomForAi => "BSI-AI",
             Self::Comprehensive => "Full",
         }
     }
@@ -187,6 +200,9 @@ impl ComplianceLevel {
             Self::EuAiAct => {
                 "EU AI Act (Reg. (EU) 2024/1689) Annex IV technical-documentation READINESS — model description, training-data characteristics, validation/testing metrics, limitations (readiness only, not a legal-conformity guarantee; N/A for non-AI SBOMs)"
             }
+            Self::BsiSbomForAi => {
+                "BSI/G7 SBOM-for-AI Minimum Elements (Feb 2026) READINESS — scores an AI-BOM element-by-element across the Metadata, System-Level, Models, Datasets, Infrastructure, and Security clusters (readiness only, not a legal-conformity guarantee; N/A for non-AI SBOMs)"
+            }
             Self::Comprehensive => "All recommended fields and best practices",
         }
     }
@@ -209,6 +225,7 @@ impl ComplianceLevel {
             Self::CraOssSteward,
             Self::EuccSubstantial,
             Self::EuAiAct,
+            Self::BsiSbomForAi,
             Self::Comprehensive,
         ]
     }
@@ -269,6 +286,8 @@ pub enum StandardKind {
     NistPqc,
     /// EU AI Act (Regulation (EU) 2024/1689) — Annex IV technical documentation
     EuAiAct,
+    /// BSI/G7 "SBOM for AI — Minimum Elements" (Feb 2026)
+    BsiSbomForAi,
     /// Other / unrecognised standard
     Other,
 }
@@ -290,6 +309,7 @@ impl StandardKind {
             Self::Cnsa2 => "CNSA 2.0",
             Self::NistPqc => "NIST PQC",
             Self::EuAiAct => "EU AI Act",
+            Self::BsiSbomForAi => "BSI/G7 AI-SBOM",
             Self::Other => "Other",
         }
     }
@@ -379,6 +399,8 @@ impl StandardKind {
             Self::NistPqc => "https://csrc.nist.gov/projects/post-quantum-cryptography",
             // EU AI Act Regulation (EU) 2024/1689 — EUR-Lex ELI is the canonical home.
             Self::EuAiAct => "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
+            // BSI/G7 "SBOM for AI — Minimum Elements" — BSI is the publishing body.
+            Self::BsiSbomForAi => "https://www.bsi.bund.de",
             Self::Other => return None,
         };
         Some(url.to_string())
@@ -1799,11 +1821,12 @@ mod tests {
 
     #[test]
     fn bsi_tr_03183_2_in_compliance_level_all() {
-        assert_eq!(ComplianceLevel::all().len(), 15);
+        assert_eq!(ComplianceLevel::all().len(), 16);
         assert!(ComplianceLevel::all().contains(&ComplianceLevel::BsiTr03183_2));
         assert!(ComplianceLevel::all().contains(&ComplianceLevel::CraOssSteward));
         assert!(ComplianceLevel::all().contains(&ComplianceLevel::EuccSubstantial));
         assert!(ComplianceLevel::all().contains(&ComplianceLevel::EuAiAct));
+        assert!(ComplianceLevel::all().contains(&ComplianceLevel::BsiSbomForAi));
     }
 
     #[test]

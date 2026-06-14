@@ -410,6 +410,83 @@ expression: "render(&SarifReporter::new())"
                 "level": "note"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
+            },
+            {
+              "id": "SBOM-BSIAI-NA",
+              "name": "BsiSbomForAiNotApplicable",
+              "shortDescription": {
+                "text": "BSI/G7 SBOM-for-AI minimum-elements readiness not applicable — SBOM has no ML-model or dataset components"
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "helpUri": "https://www.bsi.bund.de"
+            },
+            {
+              "id": "SBOM-BSIAI-META",
+              "name": "BsiSbomForAiMetadata",
+              "shortDescription": {
+                "text": "BSI/G7 SBOM-for-AI Metadata cluster: author, data-format name + version, timestamp, generation tool, signature"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "helpUri": "https://www.bsi.bund.de"
+            },
+            {
+              "id": "SBOM-BSIAI-SYS",
+              "name": "BsiSbomForAiSystemLevel",
+              "shortDescription": {
+                "text": "BSI/G7 SBOM-for-AI System-Level cluster: primary AI system, producer, data flow & usage"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "helpUri": "https://www.bsi.bund.de"
+            },
+            {
+              "id": "SBOM-BSIAI-MODEL",
+              "name": "BsiSbomForAiModels",
+              "shortDescription": {
+                "text": "BSI/G7 SBOM-for-AI Models cluster: name, version, identifier, weight hash (NIST-approved algorithm), model card, architecture, datasets, limitations, license"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "helpUri": "https://www.bsi.bund.de"
+            },
+            {
+              "id": "SBOM-BSIAI-DATASET",
+              "name": "BsiSbomForAiDatasets",
+              "shortDescription": {
+                "text": "BSI/G7 SBOM-for-AI Datasets cluster: name, identifier, hash, license, sensitivity classification, provenance & intended use"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "helpUri": "https://www.bsi.bund.de"
+            },
+            {
+              "id": "SBOM-BSIAI-INFRA",
+              "name": "BsiSbomForAiInfrastructure",
+              "shortDescription": {
+                "text": "BSI/G7 SBOM-for-AI Infrastructure cluster: runtime / framework dependency links"
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "helpUri": "https://www.bsi.bund.de"
+            },
+            {
+              "id": "SBOM-BSIAI-SEC",
+              "name": "BsiSbomForAiSecurity",
+              "shortDescription": {
+                "text": "BSI/G7 SBOM-for-AI Security cluster: AI-specific security controls, exploitability references"
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "helpUri": "https://www.bsi.bund.de"
             }
           ]
         }

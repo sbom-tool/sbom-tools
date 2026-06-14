@@ -587,6 +587,8 @@ impl Spdx3Parser {
                     ethical_considerations: ethical,
                     use_cases,
                     performance_metrics,
+                    // Data-preprocessing steps (BSI/G7 SBOM-for-AI Models cluster).
+                    data_preprocessing: pkg.ai_model_data_preprocessing.clone().unwrap_or_default(),
                     // training_datasets are linked via TRAINED_ON relationships in
                     // SPDX (populated in process_relationship), not an inline field.
                     ..Default::default()
@@ -625,7 +627,14 @@ impl Spdx3Parser {
                         .and_then(|v| v.first().cloned()),
                     sensitivity_classifications: sensitivity,
                     governance_owners: owners,
-                    ..Default::default()
+                    // BSI/G7 SBOM-for-AI Datasets cluster provenance / intended-use.
+                    intended_use: pkg.dataset_intended_use.clone(),
+                    confidentiality_level: pkg.dataset_confidentiality_level.clone(),
+                    preprocessing: pkg.dataset_data_preprocessing.clone().unwrap_or_default(),
+                    anonymization: pkg
+                        .dataset_anonymization_method_used
+                        .clone()
+                        .unwrap_or_default(),
                 });
             }
             PackageKind::Software => {}
@@ -1891,6 +1900,55 @@ mod tests {
         )
         .expect("dataset_DatasetPackage should deserialize");
         assert!(matches!(ds, Spdx3Element::DatasetPackage(_)));
+    }
+
+    #[test]
+    fn test_spdx3_dataset_provenance_fields_mapped() {
+        // The Dataset profile provenance fields (intended use, confidentiality
+        // level, preprocessing, anonymization) must be carried into DatasetInfo,
+        // not dropped — they feed the BSI/G7 SBOM-for-AI Datasets cluster.
+        let pkg: Spdx3Package = serde_json::from_str(
+            r#"{
+                "type": "dataset_DatasetPackage",
+                "spdxId": "urn:x:d",
+                "name": "reviews",
+                "dataset_intendedUse": "model fine-tuning",
+                "dataset_confidentialityLevel": "amber",
+                "dataset_dataPreprocessing": ["dedup", "normalize"],
+                "dataset_anonymizationMethodUsed": ["k-anonymity"],
+                "dataset_hasSensitivePersonalInformation": "no"
+            }"#,
+        )
+        .expect("dataset package should deserialize");
+        let converter = Spdx3Parser::new();
+        let comp = converter.convert_package(&pkg, PackageKind::Dataset, &HashMap::new());
+        let ds = comp.dataset.expect("dataset info present");
+        assert_eq!(ds.intended_use.as_deref(), Some("model fine-tuning"));
+        assert_eq!(ds.confidentiality_level.as_deref(), Some("amber"));
+        assert_eq!(ds.preprocessing, vec!["dedup", "normalize"]);
+        assert_eq!(ds.anonymization, vec!["k-anonymity"]);
+        // Confidentiality level is also folded into sensitivity for AI-Act scoring.
+        assert!(
+            ds.sensitivity_classifications
+                .contains(&"amber".to_string())
+        );
+    }
+
+    #[test]
+    fn test_spdx3_model_data_preprocessing_mapped() {
+        let pkg: Spdx3Package = serde_json::from_str(
+            r#"{
+                "type": "ai_AIPackage",
+                "spdxId": "urn:x:m",
+                "name": "model",
+                "ai_modelDataPreprocessing": ["tokenize", "truncate"]
+            }"#,
+        )
+        .expect("ai package should deserialize");
+        let converter = Spdx3Parser::new();
+        let comp = converter.convert_package(&pkg, PackageKind::AiModel, &HashMap::new());
+        let ml = comp.ml_model.expect("ml model info present");
+        assert_eq!(ml.data_preprocessing, vec!["tokenize", "truncate"]);
     }
 
     #[test]

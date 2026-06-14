@@ -458,6 +458,7 @@ mod tests {
             dataset_type: Some("training".to_string()),
             sensitivity_classifications: sensitivity.iter().map(|s| (*s).to_string()).collect(),
             governance_owners: Vec::new(),
+            ..DatasetInfo::default()
         });
         c
     }

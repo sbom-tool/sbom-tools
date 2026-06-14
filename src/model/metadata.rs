@@ -571,6 +571,10 @@ pub struct MlModelInfo {
     /// Quantitative performance metrics (CycloneDX
     /// `modelCard.quantitativeAnalysis.performanceMetrics`, SPDX `ai_metric`).
     pub performance_metrics: Vec<MetricEntry>,
+    /// Data-preprocessing steps applied to the model's inputs (SPDX 3.0 AI
+    /// profile `ai_modelDataPreprocessing`). Surfaced for the BSI/G7
+    /// SBOM-for-AI "Models" cluster; CycloneDX has no direct analogue.
+    pub data_preprocessing: Vec<String>,
 }
 
 /// A fairness assessment for an ML model (CycloneDX 1.5+
@@ -639,4 +643,21 @@ pub struct DatasetInfo {
     pub sensitivity_classifications: Vec<String>,
     /// Data governance owners/custodians
     pub governance_owners: Vec<String>,
+    /// Intended use of the dataset (SPDX 3.0 Dataset profile
+    /// `dataset_intendedUse`). Part of the BSI/G7 SBOM-for-AI "Datasets"
+    /// cluster provenance / intended-use element.
+    pub intended_use: Option<String>,
+    /// Confidentiality level of the dataset (SPDX 3.0 Dataset profile
+    /// `dataset_confidentialityLevel`). Distinct from the sensitivity
+    /// classifications above, which already fold this in for AI-Act scoring;
+    /// retained verbatim here for the BSI sensitivity-classification element.
+    pub confidentiality_level: Option<String>,
+    /// Data-preprocessing steps applied to the dataset (SPDX 3.0 Dataset
+    /// profile `dataset_dataPreprocessing`). Surfaced for the BSI/G7
+    /// SBOM-for-AI "Datasets" cluster provenance element.
+    pub preprocessing: Vec<String>,
+    /// Anonymization methods applied to the dataset (SPDX 3.0 Dataset profile
+    /// `dataset_anonymizationMethodUsed`). Surfaced for the BSI/G7
+    /// SBOM-for-AI "Datasets" cluster provenance element.
+    pub anonymization: Vec<String>,
 }

@@ -120,10 +120,13 @@ pub fn run_validate(
                 }
                 checker.check(parsed.sbom())
             }
+            "bsi-ai" | "bsi_ai" | "bsiai" | "sbom-for-ai" | "ai-bom" => {
+                ComplianceChecker::new(ComplianceLevel::BsiSbomForAi).check(parsed.sbom())
+            }
             _ => {
                 bail!(
                     "Unknown validation standard: {std_name}. \
-                    Valid options: ntia, fda, cra, ssdf, eo14028, cnsa2, pqc, bsi, oss-steward, eucc, ai-act"
+                    Valid options: ntia, fda, cra, ssdf, eo14028, cnsa2, pqc, bsi, oss-steward, eucc, ai-act, bsi-ai"
                 );
             }
         };

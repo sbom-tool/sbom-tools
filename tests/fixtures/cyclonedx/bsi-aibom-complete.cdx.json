@@ -1,0 +1,133 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-06-14T00:00:00Z",
+    "tools": [
+      {
+        "vendor": "sbom-tools",
+        "name": "sbom-tools",
+        "version": "0.1.21"
+      }
+    ],
+    "component": {
+      "bom-ref": "root",
+      "type": "application",
+      "name": "bsi-aibom-complete-app",
+      "version": "1.0.0",
+      "supplier": {
+        "name": "Example AI GmbH"
+      }
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "ml-model-1",
+      "type": "machine-learning-model",
+      "name": "sentiment-classifier",
+      "version": "1.0.0",
+      "purl": "pkg:huggingface/example/sentiment-classifier@1.0.0",
+      "description": "A fully documented sentiment classification model",
+      "supplier": {
+        "name": "Example AI GmbH"
+      },
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "modelCard": {
+        "modelParameters": {
+          "approach": {
+            "type": "supervised"
+          },
+          "task": "nlp",
+          "architectureFamily": "transformer",
+          "modelArchitecture": "bert",
+          "datasets": [
+            {
+              "ref": "data-reviews"
+            }
+          ]
+        },
+        "quantitativeAnalysis": {
+          "performanceMetrics": [
+            {
+              "type": "accuracy",
+              "value": "0.97",
+              "slice": "overall"
+            }
+          ]
+        },
+        "considerations": {
+          "useCases": [
+            "Customer review sentiment analysis"
+          ],
+          "technicalLimitations": [
+            "Optimized for English text; may not generalize to other languages."
+          ]
+        }
+      },
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "model-card",
+          "url": "https://example.test/model-cards/sentiment-classifier"
+        }
+      ]
+    },
+    {
+      "bom-ref": "data-reviews",
+      "type": "data",
+      "name": "product-reviews-1M",
+      "purl": "pkg:generic/product-reviews-1M@2026.01",
+      "licenses": [
+        {
+          "license": {
+            "id": "CC-BY-4.0"
+          }
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        }
+      ],
+      "data": [
+        {
+          "type": "dataset",
+          "name": "product-reviews",
+          "sensitiveData": [
+            "none"
+          ],
+          "governance": {
+            "owners": [
+              {
+                "organization": {
+                  "name": "Data Stewardship Team"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "ml-model-1",
+      "dependsOn": [
+        "data-reviews"
+      ]
+    }
+  ]
+}

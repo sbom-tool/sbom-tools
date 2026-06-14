@@ -702,6 +702,8 @@ fn rule_help_uri(rule_id: &str) -> Option<&'static str> {
         Some("https://cyclonedx.org/capabilities/mlbom/")
     } else if rule_id.starts_with("SBOM-AIACT-") {
         Some("https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng")
+    } else if rule_id.starts_with("SBOM-BSIAI-") {
+        Some("https://www.bsi.bund.de")
     } else {
         None
     }
@@ -724,6 +726,7 @@ fn sarif_standard_label(kind: crate::quality::StandardKind) -> &'static str {
         StandardKind::Cnsa2 => "CNSA-2.0",
         StandardKind::NistPqc => "NIST-PQC",
         StandardKind::EuAiAct => "EU-AI-Act",
+        StandardKind::BsiSbomForAi => "BSI-G7-SBOM-for-AI",
         StandardKind::Other => "Other",
     }
 }
@@ -1469,6 +1472,63 @@ fn get_sarif_compliance_rules() -> Vec<SarifRule> {
             name: "AiActLimitations".to_string(),
             short_description: SarifMessage {
                 text: "EU AI Act Annex IV §3: foreseeable limitations and risks".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Note },
+        },
+        // BSI/G7 SBOM-for-AI Minimum Elements readiness (7 clusters).
+        SarifRule {
+            id: "SBOM-BSIAI-NA".to_string(),
+            name: "BsiSbomForAiNotApplicable".to_string(),
+            short_description: SarifMessage {
+                text: "BSI/G7 SBOM-for-AI minimum-elements readiness not applicable — SBOM has no ML-model or dataset components".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Note },
+        },
+        SarifRule {
+            id: "SBOM-BSIAI-META".to_string(),
+            name: "BsiSbomForAiMetadata".to_string(),
+            short_description: SarifMessage {
+                text: "BSI/G7 SBOM-for-AI Metadata cluster: author, data-format name + version, timestamp, generation tool, signature".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-BSIAI-SYS".to_string(),
+            name: "BsiSbomForAiSystemLevel".to_string(),
+            short_description: SarifMessage {
+                text: "BSI/G7 SBOM-for-AI System-Level cluster: primary AI system, producer, data flow & usage".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Warning },
+        },
+        SarifRule {
+            id: "SBOM-BSIAI-MODEL".to_string(),
+            name: "BsiSbomForAiModels".to_string(),
+            short_description: SarifMessage {
+                text: "BSI/G7 SBOM-for-AI Models cluster: name, version, identifier, weight hash (NIST-approved algorithm), model card, architecture, datasets, limitations, license".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-BSIAI-DATASET".to_string(),
+            name: "BsiSbomForAiDatasets".to_string(),
+            short_description: SarifMessage {
+                text: "BSI/G7 SBOM-for-AI Datasets cluster: name, identifier, hash, license, sensitivity classification, provenance & intended use".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Error },
+        },
+        SarifRule {
+            id: "SBOM-BSIAI-INFRA".to_string(),
+            name: "BsiSbomForAiInfrastructure".to_string(),
+            short_description: SarifMessage {
+                text: "BSI/G7 SBOM-for-AI Infrastructure cluster: runtime / framework dependency links".to_string(),
+            },
+            default_configuration: SarifConfiguration { level: SarifLevel::Note },
+        },
+        SarifRule {
+            id: "SBOM-BSIAI-SEC".to_string(),
+            name: "BsiSbomForAiSecurity".to_string(),
+            short_description: SarifMessage {
+                text: "BSI/G7 SBOM-for-AI Security cluster: AI-specific security controls, exploitability references".to_string(),
             },
             default_configuration: SarifConfiguration { level: SarifLevel::Note },
         },

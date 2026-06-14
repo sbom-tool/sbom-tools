@@ -37,6 +37,18 @@ const REMEDIATION_EO14028: &str = "Follow EO 14028 Section 4(e) requirements: us
 /// EU AI Act not-applicable remediation.
 const REMEDIATION_AIACT_NA: &str = "EU AI Act Annex IV readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components (CycloneDX 1.5+ AI/ML BOM) to enable the assessment.";
 
+/// BSI/G7 SBOM-for-AI not-applicable remediation.
+const REMEDIATION_BSIAI_NA: &str = "BSI/G7 SBOM-for-AI minimum-elements readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components (CycloneDX 1.5+ AI/ML BOM, or an SPDX 3.0 AI/Dataset profile) to enable the assessment.";
+
+/// BSI/G7 SBOM-for-AI Models-cluster remediation.
+const REMEDIATION_BSIAI_MODELS: &str = "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.";
+
+/// BSI/G7 SBOM-for-AI Datasets-cluster remediation.
+const REMEDIATION_BSIAI_DATASETS: &str = "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended-use (SPDX 3.0 dataset_intendedUse / dataPreprocessing / anonymizationMethodUsed, or governance owners).";
+
+/// BSI/G7 SBOM-for-AI document/metadata/system/infra/security remediation.
+const REMEDIATION_BSIAI_GENERAL: &str = "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.";
+
 /// Look up the static [`RuleMeta`] for a stable internal rule key.
 ///
 /// The key is the [`Violation::rule_id`] set at each check site. Returns
@@ -304,6 +316,181 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             default_severity: ViolationSeverity::Info,
             refs: &[(K::EuAiAct, "Annex IV §3")],
             remediation: "State the foreseeable limitations and risks of the model, including ethical and fairness considerations. CycloneDX: set modelCard.considerations.technicalLimitations / ethicalConsiderations / fairnessAssessments.",
+        },
+        // ---- BSI/G7 SBOM-for-AI Minimum Elements readiness ---------------
+        "SBOM-BSIAI-NA" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-NA",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::BsiSbomForAi, "Applicability")],
+            remediation: REMEDIATION_BSIAI_NA,
+        },
+        // Metadata cluster
+        "SBOM-BSIAI-META-AUTHOR" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-META",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiSbomForAi, "Metadata / Author")],
+            remediation: REMEDIATION_BSIAI_GENERAL,
+        },
+        "SBOM-BSIAI-META-FORMAT" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-META",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiSbomForAi, "Metadata / Data format name + version")],
+            remediation: REMEDIATION_BSIAI_GENERAL,
+        },
+        "SBOM-BSIAI-META-TIMESTAMP" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-META",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiSbomForAi, "Metadata / Timestamp")],
+            remediation: REMEDIATION_BSIAI_GENERAL,
+        },
+        "SBOM-BSIAI-META-TOOL" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-META",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiSbomForAi, "Metadata / Generation tool")],
+            remediation: REMEDIATION_BSIAI_GENERAL,
+        },
+        "SBOM-BSIAI-META-SIGNATURE" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-META",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::BsiSbomForAi, "Metadata / Signature")],
+            remediation: REMEDIATION_BSIAI_GENERAL,
+        },
+        // System-Level cluster
+        "SBOM-BSIAI-SYS-PRIMARY" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-SYS",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiSbomForAi, "System-Level / Primary AI system")],
+            remediation: REMEDIATION_BSIAI_GENERAL,
+        },
+        "SBOM-BSIAI-SYS-PRODUCER" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-SYS",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiSbomForAi, "System-Level / Producer")],
+            remediation: REMEDIATION_BSIAI_GENERAL,
+        },
+        "SBOM-BSIAI-SYS-DATAFLOW" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-SYS",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::BsiSbomForAi, "System-Level / Data flow & usage")],
+            remediation: REMEDIATION_BSIAI_GENERAL,
+        },
+        // Models cluster
+        "SBOM-BSIAI-MODEL-NAME" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-MODEL",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiSbomForAi, "Models / Model name")],
+            remediation: REMEDIATION_BSIAI_MODELS,
+        },
+        "SBOM-BSIAI-MODEL-VERSION" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-MODEL",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiSbomForAi, "Models / Model version")],
+            remediation: REMEDIATION_BSIAI_MODELS,
+        },
+        "SBOM-BSIAI-MODEL-IDENTIFIER" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-MODEL",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiSbomForAi, "Models / Model identifier")],
+            remediation: REMEDIATION_BSIAI_MODELS,
+        },
+        "SBOM-BSIAI-MODEL-HASH" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-MODEL",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiSbomForAi, "Models / Model hash value")],
+            remediation: REMEDIATION_BSIAI_MODELS,
+        },
+        "SBOM-BSIAI-MODEL-HASH-ALGO" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-MODEL",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiSbomForAi, "Models / Hash algorithm")],
+            remediation: REMEDIATION_BSIAI_MODELS,
+        },
+        "SBOM-BSIAI-MODEL-CARD" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-MODEL",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiSbomForAi, "Models / Model card")],
+            remediation: REMEDIATION_BSIAI_MODELS,
+        },
+        "SBOM-BSIAI-MODEL-ARCHITECTURE" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-MODEL",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiSbomForAi, "Models / Architecture")],
+            remediation: REMEDIATION_BSIAI_MODELS,
+        },
+        "SBOM-BSIAI-MODEL-DATASETS" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-MODEL",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiSbomForAi, "Models / Training datasets")],
+            remediation: REMEDIATION_BSIAI_MODELS,
+        },
+        "SBOM-BSIAI-MODEL-LIMITATIONS" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-MODEL",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiSbomForAi, "Models / Limitations")],
+            remediation: REMEDIATION_BSIAI_MODELS,
+        },
+        "SBOM-BSIAI-MODEL-LICENSE" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-MODEL",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiSbomForAi, "Models / Model license")],
+            remediation: REMEDIATION_BSIAI_MODELS,
+        },
+        // Datasets cluster
+        "SBOM-BSIAI-DATASET-NAME" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-DATASET",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiSbomForAi, "Datasets / Dataset name")],
+            remediation: REMEDIATION_BSIAI_DATASETS,
+        },
+        "SBOM-BSIAI-DATASET-IDENTIFIER" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-DATASET",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiSbomForAi, "Datasets / Dataset identifier")],
+            remediation: REMEDIATION_BSIAI_DATASETS,
+        },
+        "SBOM-BSIAI-DATASET-HASH" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-DATASET",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiSbomForAi, "Datasets / Dataset hash value")],
+            remediation: REMEDIATION_BSIAI_DATASETS,
+        },
+        "SBOM-BSIAI-DATASET-LICENSE" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-DATASET",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiSbomForAi, "Datasets / Dataset license")],
+            remediation: REMEDIATION_BSIAI_DATASETS,
+        },
+        "SBOM-BSIAI-DATASET-SENSITIVITY" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-DATASET",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiSbomForAi, "Datasets / Sensitivity classification")],
+            remediation: REMEDIATION_BSIAI_DATASETS,
+        },
+        "SBOM-BSIAI-DATASET-PROVENANCE" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-DATASET",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiSbomForAi, "Datasets / Provenance & intended use")],
+            remediation: REMEDIATION_BSIAI_DATASETS,
+        },
+        // Infrastructure cluster
+        "SBOM-BSIAI-INFRA-RUNTIME" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-INFRA",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::BsiSbomForAi, "Infrastructure / Runtime & framework")],
+            remediation: REMEDIATION_BSIAI_GENERAL,
+        },
+        // Security cluster
+        "SBOM-BSIAI-SEC-CONTROLS" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-SEC",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::BsiSbomForAi, "Security / AI security controls")],
+            remediation: REMEDIATION_BSIAI_GENERAL,
+        },
+        "SBOM-BSIAI-SEC-EXPLOITABILITY" => RuleMeta {
+            sarif_id: "SBOM-BSIAI-SEC",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::BsiSbomForAi, "Security / Exploitability reference")],
+            remediation: REMEDIATION_BSIAI_GENERAL,
         },
         // ---- NTIA --------------------------------------------------------
         "SBOM-NTIA-VERSION" => RuleMeta {
