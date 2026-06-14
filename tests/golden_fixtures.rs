@@ -94,5 +94,8 @@ fn golden_diff_demo_pair() {
     assert_eq!(diff.summary.components_added, 4);
     assert_eq!(diff.summary.components_removed, 4);
     assert_eq!(diff.summary.components_modified, 5);
-    assert_eq!(diff.summary.total_changes, 13);
+    // Document-metadata changes: created timestamp + primary-component version
+    // (1.0.0 -> 2.0.0) now count alongside the 13 component changes.
+    assert_eq!(diff.summary.metadata_changes_count, 2);
+    assert_eq!(diff.summary.total_changes, 15);
 }

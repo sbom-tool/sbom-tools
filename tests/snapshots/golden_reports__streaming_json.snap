@@ -21,7 +21,7 @@ expression: output
     }
   },
   "summary": {
-    "total_changes": 13,
+    "total_changes": 15,
     "components_added": 4,
     "components_removed": 4,
     "components_modified": 5,

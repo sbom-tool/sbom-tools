@@ -84,6 +84,16 @@ expression: "render(&SarifReporter::new())"
               }
             },
             {
+              "id": "SBOM-TOOLS-008",
+              "name": "MetadataChanged",
+              "shortDescription": {
+                "text": "A document-level metadata field was changed"
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              }
+            },
+            {
               "id": "SBOM-EOL-001",
               "name": "ComponentEndOfLife",
               "shortDescription": {
@@ -593,6 +603,22 @@ expression: "render(&SarifReporter::new())"
           "level": "note",
           "message": {
             "text": "Component modified: react 17.0.1 -> 18.2.0"
+          },
+          "locations": []
+        },
+        {
+          "ruleId": "SBOM-TOOLS-008",
+          "level": "note",
+          "message": {
+            "text": "Metadata modified: created ([TIMESTAMP] -> [TIMESTAMP])"
+          },
+          "locations": []
+        },
+        {
+          "ruleId": "SBOM-TOOLS-008",
+          "level": "note",
+          "message": {
+            "text": "Metadata modified: primary_component_version (1.0.0 -> 2.0.0)"
           },
           "locations": []
         },

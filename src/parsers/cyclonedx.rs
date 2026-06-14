@@ -261,21 +261,38 @@ impl CycloneDxParser {
             .map_or_else(Utc::now, |dt| dt.with_timezone(&Utc));
 
         let mut creators = Vec::new();
-        if let Some(meta) = &cdx.metadata
-            && let Some(tools) = &meta.tools
-        {
-            for tool in tools {
-                creators.push(Creator {
-                    creator_type: CreatorType::Tool,
-                    name: format!(
-                        "{} {}",
-                        tool.name.as_deref().unwrap_or("unknown"),
-                        tool.version.as_deref().unwrap_or("")
-                    )
-                    .trim()
-                    .to_string(),
-                    email: None,
-                });
+        if let Some(meta) = &cdx.metadata {
+            if let Some(tools) = &meta.tools {
+                for tool in tools {
+                    creators.push(Creator {
+                        creator_type: CreatorType::Tool,
+                        name: format!(
+                            "{} {}",
+                            tool.name.as_deref().unwrap_or("unknown"),
+                            tool.version.as_deref().unwrap_or("")
+                        )
+                        .trim()
+                        .to_string(),
+                        email: None,
+                    });
+                }
+            }
+            // metadata.authors are the people/orgs responsible for the document.
+            // Preserve them as Person creators so document-level author changes
+            // surface in the diff (previously these were parsed but dropped).
+            if let Some(authors) = &meta.authors {
+                for author in authors {
+                    let name = author
+                        .name
+                        .clone()
+                        .or_else(|| author.email.clone())
+                        .unwrap_or_else(|| "unknown".to_string());
+                    creators.push(Creator {
+                        creator_type: CreatorType::Person,
+                        name,
+                        email: author.email.clone(),
+                    });
+                }
             }
         }
 

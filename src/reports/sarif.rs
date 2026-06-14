@@ -180,6 +180,24 @@ impl ReportGenerator for SarifReporter {
             }
         }
 
+        // Add document-metadata change results (author/tool/timestamp/spec-version/etc.)
+        for change in &result.metadata_changes {
+            let old = change.old_value.as_deref().unwrap_or("(none)");
+            let new = change.new_value.as_deref().unwrap_or("(none)");
+            results.push(SarifResult {
+                rule_id: "SBOM-TOOLS-008".to_string(),
+                level: SarifLevel::Note,
+                message: SarifMessage {
+                    text: format!(
+                        "Metadata {}: {} ({old} -> {new})",
+                        change.kind, change.field
+                    ),
+                },
+                locations: vec![],
+                properties: None,
+            });
+        }
+
         // Add EOL results (from new SBOM)
         for comp in new_sbom.components.values() {
             if let Some(eol) = &comp.eol {
@@ -801,6 +819,16 @@ fn get_sarif_rules() -> Vec<SarifRule> {
             },
             default_configuration: SarifConfiguration {
                 level: SarifLevel::Warning,
+            },
+        },
+        SarifRule {
+            id: "SBOM-TOOLS-008".to_string(),
+            name: "MetadataChanged".to_string(),
+            short_description: SarifMessage {
+                text: "A document-level metadata field was changed".to_string(),
+            },
+            default_configuration: SarifConfiguration {
+                level: SarifLevel::Note,
             },
         },
         SarifRule {

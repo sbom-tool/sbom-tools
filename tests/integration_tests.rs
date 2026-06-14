@@ -1388,6 +1388,166 @@ mod diff_engine_tests {
             "Semantic score should be non-negative"
         );
     }
+
+    /// Two SBOMs that differ ONLY in document metadata (timestamp, author, tool
+    /// version) — identical component sets — must surface those changes as
+    /// `metadata_changes`, count as changes, and render in markdown + JSON.
+    #[test]
+    fn test_diff_surfaces_metadata_only_changes() {
+        use sbom_tools::diff::MetadataChangeKind;
+        use sbom_tools::reports::{JsonReporter, MarkdownReporter, ReportConfig, ReportGenerator};
+
+        // Same single component in both; only metadata.{timestamp,authors,tools} differ.
+        let old_content = r#"{
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.5",
+            "version": 1,
+            "metadata": {
+                "timestamp": "2024-01-15T10:00:00Z",
+                "authors": [{"name": "alice"}],
+                "tools": [{"name": "syft", "version": "0.9.0"}]
+            },
+            "components": [
+                {"type": "library", "bom-ref": "a@1.0", "name": "a", "version": "1.0.0"}
+            ]
+        }"#;
+        let new_content = r#"{
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.5",
+            "version": 1,
+            "metadata": {
+                "timestamp": "2024-06-15T10:00:00Z",
+                "authors": [{"name": "bob"}],
+                "tools": [{"name": "syft", "version": "1.0.0"}]
+            },
+            "components": [
+                {"type": "library", "bom-ref": "a@1.0", "name": "a", "version": "1.0.0"}
+            ]
+        }"#;
+
+        let old = parse_sbom_str(old_content).expect("old must parse");
+        let new = parse_sbom_str(new_content).expect("new must parse");
+
+        let engine = DiffEngine::new();
+        let result = engine.diff(&old, &new).expect("diff should succeed");
+
+        // A metadata-only diff must NOT be reported as "no changes".
+        assert!(
+            result.has_changes(),
+            "metadata-only diff must register as a change"
+        );
+        assert!(
+            !result.metadata_changes.is_empty(),
+            "metadata changes must be populated"
+        );
+        assert!(
+            result.components.is_empty(),
+            "component set is identical — no component changes expected"
+        );
+
+        let by_field = |field: &str| {
+            result
+                .metadata_changes
+                .iter()
+                .find(|c| c.field == field)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "expected a `{field}` metadata change, got {:?}",
+                        result.metadata_changes
+                    )
+                })
+                .clone()
+        };
+
+        // Timestamp modified.
+        let created = by_field("created");
+        assert_eq!(created.kind, MetadataChangeKind::Modified);
+        assert!(
+            created
+                .old_value
+                .as_deref()
+                .unwrap()
+                .starts_with("2024-01-15")
+        );
+        assert!(
+            created
+                .new_value
+                .as_deref()
+                .unwrap()
+                .starts_with("2024-06-15")
+        );
+
+        // Author churn: alice removed, bob added (persons are keyed by label).
+        let authors: Vec<_> = result
+            .metadata_changes
+            .iter()
+            .filter(|c| c.field == "creator.author")
+            .collect();
+        assert_eq!(authors.len(), 2, "expected alice removed + bob added");
+        assert!(
+            authors.iter().any(|c| c.kind == MetadataChangeKind::Removed
+                && c.old_value.as_deref() == Some("alice"))
+        );
+        assert!(
+            authors
+                .iter()
+                .any(|c| c.kind == MetadataChangeKind::Added
+                    && c.new_value.as_deref() == Some("bob"))
+        );
+
+        // Tool version bump (the parser folds the version into the tool name, so
+        // this surfaces as remove old + add new — either way the bump is visible).
+        let tools: Vec<_> = result
+            .metadata_changes
+            .iter()
+            .filter(|c| c.field == "creator.tool")
+            .collect();
+        assert!(
+            tools
+                .iter()
+                .any(|c| c.old_value.as_deref().is_some_and(|v| v.contains("0.9.0")))
+                || tools
+                    .iter()
+                    .any(|c| c.new_value.as_deref().is_some_and(|v| v.contains("1.0.0"))),
+            "tool version bump must be surfaced, got {tools:?}"
+        );
+
+        // Summary count is wired through.
+        assert_eq!(
+            result.summary.metadata_changes_count,
+            result.metadata_changes.len()
+        );
+        assert!(result.summary.total_changes >= result.metadata_changes.len());
+
+        // Renders in Markdown.
+        let config = ReportConfig::default();
+        let md = MarkdownReporter::new()
+            .generate_diff_report(&result, &old, &new, &config)
+            .expect("markdown must render");
+        assert!(
+            md.contains("## Metadata Changes"),
+            "markdown must include a Metadata Changes section"
+        );
+        assert!(
+            md.contains("creator.author"),
+            "markdown must list the author field"
+        );
+
+        // Renders in JSON (both the detailed list and the summary count).
+        let json = JsonReporter::new()
+            .generate_diff_report(&result, &old, &new, &config)
+            .expect("json must render");
+        let value: serde_json::Value =
+            serde_json::from_str(&json).expect("json output must be valid JSON");
+        assert!(
+            value["reports"]["metadata_changes"].is_array(),
+            "json reports must carry metadata_changes array"
+        );
+        assert_eq!(
+            value["summary"]["metadata_changes"].as_u64(),
+            Some(result.metadata_changes.len() as u64)
+        );
+    }
 }
 
 // ============================================================================

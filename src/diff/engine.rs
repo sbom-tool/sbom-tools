@@ -2,7 +2,7 @@
 
 use super::changes::{
     ComponentChangeComputer, DependencyChangeComputer, LicenseChangeComputer,
-    VulnerabilityChangeComputer,
+    VulnerabilityChangeComputer, compute_metadata_changes,
 };
 pub use super::engine_config::LargeSbomConfig;
 use super::engine_matching::{ComponentMatchResult, match_components};
@@ -290,6 +290,9 @@ impl DiffEngine {
         result.vulnerabilities.resolved = vuln_changes.resolved;
         result.vulnerabilities.persistent = vuln_changes.persistent;
         result.vulnerabilities.vex_changes = vuln_changes.vex_changes;
+
+        // Document-level metadata changes (author/tool/timestamp/spec-version/etc.)
+        result.metadata_changes = compute_metadata_changes(old, new);
     }
 
     /// Diff only the specified sections, reusing cached results for unchanged sections.
@@ -402,6 +405,11 @@ impl DiffEngine {
             result.vulnerabilities.persistent = vuln_changes.persistent;
             result.vulnerabilities.vex_changes = vuln_changes.vex_changes;
         }
+
+        // Document-metadata changes are cheap and not tracked by `ChangedSections`,
+        // so always recompute them rather than risk serving a stale cached vec
+        // when only the document header changed.
+        result.metadata_changes = compute_metadata_changes(&old_filtered, &new_filtered);
 
         // Always recompute summary and semantic score since they depend on all sections
         result.semantic_score = self.compute_semantic_score(&result, &old_filtered, &new_filtered);

@@ -133,6 +133,22 @@ impl ReportGenerator for SummaryReporter {
             lines.push(format!("  {}", self.color("No changes", "dim")));
         }
 
+        // Document-metadata changes (author/tool/timestamp/spec-version/etc.)
+        if !result.metadata_changes.is_empty() {
+            lines.push(String::new());
+            lines.push(self.color("Metadata:", "bold"));
+            for change in &result.metadata_changes {
+                let old = change.old_value.as_deref().unwrap_or("∅");
+                let new = change.new_value.as_deref().unwrap_or("∅");
+                lines.push(format!(
+                    "  {}: {} → {}",
+                    sanitize_terminal(&change.field),
+                    sanitize_terminal(old),
+                    sanitize_terminal(new),
+                ));
+            }
+        }
+
         // Vulnerabilities
         let vulns_intro = result.summary.vulnerabilities_introduced;
         let vulns_resolved = result.summary.vulnerabilities_resolved;

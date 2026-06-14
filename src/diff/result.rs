@@ -34,6 +34,10 @@ pub struct DiffResult {
     pub vulnerabilities: VulnerabilityChanges,
     /// Total semantic score
     pub semantic_score: f64,
+    /// Document-level metadata changes (author, tool, timestamp, spec version,
+    /// lifecycle phase, signature, document/primary-component version)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub metadata_changes: Vec<MetadataChange>,
     /// Graph structural changes (only populated if graph diffing is enabled)
     #[serde(default)]
     pub graph_changes: Vec<DependencyGraphChange>,
@@ -61,6 +65,7 @@ impl DiffResult {
             licenses: LicenseChanges::default(),
             vulnerabilities: VulnerabilityChanges::default(),
             semantic_score: 0.0,
+            metadata_changes: Vec::new(),
             graph_changes: Vec::new(),
             graph_summary: None,
             rules_applied: 0,
@@ -78,13 +83,15 @@ impl DiffResult {
         self.summary.dependencies_added = self.dependencies.added.len();
         self.summary.dependencies_removed = self.dependencies.removed.len();
         self.summary.graph_changes_count = self.graph_changes.len();
+        self.summary.metadata_changes_count = self.metadata_changes.len();
 
         self.summary.total_changes = self.summary.components_added
             + self.summary.components_removed
             + self.summary.components_modified
             + self.summary.dependencies_added
             + self.summary.dependencies_removed
-            + self.summary.graph_changes_count;
+            + self.summary.graph_changes_count
+            + self.summary.metadata_changes_count;
 
         self.summary.vulnerabilities_introduced = self.vulnerabilities.introduced.len();
         self.summary.vulnerabilities_resolved = self.vulnerabilities.resolved.len();
@@ -104,6 +111,7 @@ impl DiffResult {
             || !self.components.is_empty()
             || !self.dependencies.is_empty()
             || !self.graph_changes.is_empty()
+            || !self.metadata_changes.is_empty()
             || !self.vulnerabilities.introduced.is_empty()
             || !self.vulnerabilities.resolved.is_empty()
     }
@@ -356,6 +364,7 @@ pub struct DiffSummary {
     pub dependencies_added: usize,
     pub dependencies_removed: usize,
     pub graph_changes_count: usize,
+    pub metadata_changes_count: usize,
     pub vulnerabilities_introduced: usize,
     pub vulnerabilities_resolved: usize,
     pub vulnerabilities_persistent: usize,
@@ -711,6 +720,76 @@ pub struct FieldChange {
     pub field: String,
     pub old_value: Option<String>,
     pub new_value: Option<String>,
+}
+
+/// Whether a document-metadata field was added, removed, or modified.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MetadataChangeKind {
+    /// Field gained a value (old absent, new present).
+    Added,
+    /// Field lost a value (old present, new absent).
+    Removed,
+    /// Field's value changed (both present, different).
+    Modified,
+}
+
+impl std::fmt::Display for MetadataChangeKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Self::Added => "added",
+            Self::Removed => "removed",
+            Self::Modified => "modified",
+        };
+        f.write_str(s)
+    }
+}
+
+/// A document-level metadata change between two SBOMs.
+///
+/// Surfaces changes that are invisible in the component/dependency/vulnerability
+/// passes: author or tool churn, timestamp updates, spec-version upgrades
+/// (e.g. CycloneDX 1.5 -> 1.7), lifecycle-phase transitions, signature presence
+/// or algorithm changes, and document- or primary-component version bumps. This
+/// is the cross-cutting metadata signal the BSI gap analysis flagged as missing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MetadataChange {
+    /// Stable field key (e.g. `name`, `spec_version`, `created`, `creator.tool`,
+    /// `lifecycle_phase`, `signature.algorithm`, `primary_component_version`).
+    pub field: String,
+    /// Value in the old SBOM (`None` when the field was absent / added).
+    pub old_value: Option<String>,
+    /// Value in the new SBOM (`None` when the field was removed).
+    pub new_value: Option<String>,
+    /// Whether the field was added, removed, or modified.
+    pub kind: MetadataChangeKind,
+}
+
+impl MetadataChange {
+    /// Build a metadata change from a field key and the two optional values,
+    /// inferring the [`MetadataChangeKind`] from presence. Returns `None` when
+    /// the values are equal (no change to report).
+    #[must_use]
+    pub fn from_values(
+        field: impl Into<String>,
+        old_value: Option<String>,
+        new_value: Option<String>,
+    ) -> Option<Self> {
+        if old_value == new_value {
+            return None;
+        }
+        let kind = match (&old_value, &new_value) {
+            (None, Some(_)) => MetadataChangeKind::Added,
+            (Some(_), None) => MetadataChangeKind::Removed,
+            _ => MetadataChangeKind::Modified,
+        };
+        Some(Self {
+            field: field.into(),
+            old_value,
+            new_value,
+            kind,
+        })
+    }
 }
 
 /// Dependency change information

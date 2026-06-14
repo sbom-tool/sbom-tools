@@ -69,6 +69,9 @@ impl ReportGenerator for MarkdownReporter {
         if self.include_toc {
             writeln!(md, "## Table of Contents\n")?;
             writeln!(md, "- [Summary](#summary)")?;
+            if !result.metadata_changes.is_empty() {
+                writeln!(md, "- [Metadata Changes](#metadata-changes)")?;
+            }
             if config.includes(ReportType::Components) {
                 writeln!(md, "- [Component Changes](#component-changes)")?;
             }
@@ -152,6 +155,23 @@ impl ReportGenerator for MarkdownReporter {
         )?;
         writeln!(md, "| **Semantic Score** | {:.1} |", result.semantic_score)?;
         writeln!(md)?;
+
+        // Document-metadata changes section
+        if !result.metadata_changes.is_empty() {
+            writeln!(md, "## Metadata Changes\n")?;
+            writeln!(md, "| Field | Old | New |")?;
+            writeln!(md, "|-------|-----|-----|")?;
+            for change in &result.metadata_changes {
+                writeln!(
+                    md,
+                    "| {} | {} | {} |",
+                    escape_markdown_table(&change.field),
+                    escape_md_opt(change.old_value.as_deref()),
+                    escape_md_opt(change.new_value.as_deref()),
+                )?;
+            }
+            writeln!(md)?;
+        }
 
         // Component changes section
         if config.includes(ReportType::Components) {

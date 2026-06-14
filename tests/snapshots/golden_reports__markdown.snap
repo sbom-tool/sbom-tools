@@ -10,6 +10,7 @@ expression: "render(&MarkdownReporter::new())"
 ## Table of Contents
 
 - [Summary](#summary)
+- [Metadata Changes](#metadata-changes)
 - [Component Changes](#component-changes)
 - [Dependency Changes](#dependency-changes)
 - [CRA Compliance](#cra-compliance)
@@ -32,6 +33,13 @@ expression: "render(&MarkdownReporter::new())"
 | Vulnerabilities Introduced | 0 |
 | Vulnerabilities Resolved | 0 |
 | **Semantic Score** | 53.5 |
+
+## Metadata Changes
+
+| Field | Old | New |
+|-------|-----|-----|
+| created | [TIMESTAMP] | [TIMESTAMP] |
+| primary_component_version | 1.0.0 | 2.0.0 |
 
 ## Component Changes
 

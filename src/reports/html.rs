@@ -164,6 +164,45 @@ fn write_eol_section(html: &mut String, sbom: &NormalizedSbom) -> std::fmt::Resu
     writeln!(html, "</div>")
 }
 
+/// Write the document-metadata changes table for diff reports.
+fn write_diff_metadata_table(html: &mut String, result: &DiffResult) -> std::fmt::Result {
+    writeln!(html, "<div class=\"section\" id=\"metadata-changes\">")?;
+    writeln!(html, "    <h2>Metadata Changes</h2>")?;
+    writeln!(html, "    <table>")?;
+    writeln!(html, "        <thead>")?;
+    writeln!(html, "            <tr>")?;
+    writeln!(html, "                <th>Field</th>")?;
+    writeln!(html, "                <th>Old</th>")?;
+    writeln!(html, "                <th>New</th>")?;
+    writeln!(html, "            </tr>")?;
+    writeln!(html, "        </thead>")?;
+    writeln!(html, "        <tbody>")?;
+
+    for change in &result.metadata_changes {
+        writeln!(html, "            <tr>")?;
+        writeln!(
+            html,
+            "                <td>{}</td>",
+            escape_html(&change.field)
+        )?;
+        writeln!(
+            html,
+            "                <td>{}</td>",
+            escape_html_opt(change.old_value.as_deref())
+        )?;
+        writeln!(
+            html,
+            "                <td>{}</td>",
+            escape_html_opt(change.new_value.as_deref())
+        )?;
+        writeln!(html, "            </tr>")?;
+    }
+
+    writeln!(html, "        </tbody>")?;
+    writeln!(html, "    </table>")?;
+    writeln!(html, "</div>")
+}
+
 /// Write the component changes table for diff reports.
 fn write_diff_component_table(html: &mut String, result: &DiffResult) -> std::fmt::Result {
     writeln!(html, "<div class=\"section\" id=\"component-changes\">")?;
@@ -1050,7 +1089,11 @@ impl ReportGenerator for HtmlReporter {
             config.includes(ReportType::Components) && !result.components.is_empty();
         let has_vulns = config.includes(ReportType::Vulnerabilities)
             && !result.vulnerabilities.introduced.is_empty();
+        let has_metadata = !result.metadata_changes.is_empty();
         let mut toc_entries: Vec<(&str, &str)> = Vec::new();
+        if has_metadata {
+            toc_entries.push(("metadata-changes", "Metadata"));
+        }
         if has_components {
             toc_entries.push(("component-changes", "Components"));
         }
@@ -1093,6 +1136,11 @@ impl ReportGenerator for HtmlReporter {
             "",
         )?;
         writeln!(html, "</div>")?;
+
+        // Document-metadata changes
+        if has_metadata {
+            write_diff_metadata_table(&mut html, result)?;
+        }
 
         // Component changes
         if has_components {

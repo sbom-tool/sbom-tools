@@ -40,5 +40,5 @@ Transitive  Highlight  Cycles  │  Depth:5  Roots:50  Sort:Name
 │                                                                     │║│                                              │
 │                                                                     │║│                                              │
 └─────────────────────────────────────────────────────────────────────┘▼└──────────────────────────────────────────────┘
- Components: 13 │ Vulns: 0 │ Score: 53.5
+ Components: 15 │ Vulns: 0 │ Score: 53.5
      f filter  t transitive  h highlight  Enter expand  c component │  Tab switch  / search  e export  ? help  q quit

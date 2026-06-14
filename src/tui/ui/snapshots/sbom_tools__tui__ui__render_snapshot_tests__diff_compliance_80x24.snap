@@ -24,5 +24,5 @@ sbom-tools  DIFF  │ acme-webapp@1.0.0 ⟷ acme-webapp@2.0.0
 └──────────────────────────────────────────────────────────────────────────────┘
 f filter [All]  g group [flat]  ←/→ switch standard  v cycle view [Overview]  j/
 
- Components: 13 │ Vulns: 0 │ Score: 53.5
+ Components: 15 │ Vulns: 0 │ Score: 53.5
  ←→ standard  v view  g group  ↑↓ select │  Tab switch  / search  e export  ? he

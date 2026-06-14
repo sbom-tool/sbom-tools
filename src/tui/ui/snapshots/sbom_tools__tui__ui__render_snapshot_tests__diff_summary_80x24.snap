@@ -8,7 +8,7 @@ sbom-tools  DIFF  │ acme-webapp@1.0.0 ⟷ acme-webapp@2.0.0
 
 ────────────────────────────────────────────────────────────────────────────────
 ┌ Summary ─────────────────────────────────────────────────────────────────────┐
-│ High Risk   Score: 53.5  │  13 changes, 3 major bumps                        │
+│ High Risk   Score: 53.5  │  15 changes, 3 major bumps                        │
 └──────────────────────────────────────────────────────────────────────────────┘
 ┌ Components ──────┐┌ Dependencies ────┐┌ Vulnerabilities ─┐┌ Licenses ────────┐
 │ + ADDED      4   ││ + ADDED     0    ││ ▲ NEW       0    ││ New:      0      │
@@ -24,5 +24,5 @@ sbom-tools  DIFF  │ acme-webapp@1.0.0 ⟷ acme-webapp@2.0.0
 │ ~ react 17.0.1 → 18.2.0 MAJOR                                                │
 │ - jquery 3.5.1                                                               │
 └──────────────────────────────────────────────────────────────────────────────┘
- Components: 13 │ Vulns: 0 │ Score: 53.5
+ Components: 15 │ Vulns: 0 │ Score: 53.5
                   Tab switch  / search  e export  ? help  q quit

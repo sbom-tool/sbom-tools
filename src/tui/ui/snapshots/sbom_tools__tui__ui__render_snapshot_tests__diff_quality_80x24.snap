@@ -24,5 +24,5 @@ sbom-tools  DIFF  │ acme-webapp@1.0.0 ⟷ acme-webapp@2.0.0
 │▶ [P1] Fix 1 compliance error(s) to meet Standard requirements (+20pts)  Compl║
 │  [P2] Add SBOM creation tool information (+8pts)  Provenance                 ▼
 └──────────────────────────────────────────────────────────────────────────────┘
- Components: 13 │ Vulns: 0 │ Score: 53.5
+ Components: 15 │ Vulns: 0 │ Score: 53.5
  v view │  Tab switch  / search  e export  ? help  q quit [y] copy Fix 1 complia

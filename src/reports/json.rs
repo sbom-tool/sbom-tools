@@ -99,6 +99,7 @@ impl ReportGenerator for JsonReporter {
                     resolved: result.summary.vulnerabilities_resolved,
                     persistent: result.summary.vulnerabilities_persistent,
                 },
+                metadata_changes: result.summary.metadata_changes_count,
                 semantic_score: result.semantic_score,
             },
             cra_compliance,
@@ -106,6 +107,11 @@ impl ReportGenerator for JsonReporter {
                 None
             } else {
                 Some(JsonReports {
+                    metadata_changes: if result.metadata_changes.is_empty() {
+                        None
+                    } else {
+                        Some(&result.metadata_changes)
+                    },
                     components: if config.includes(ReportType::Components) {
                         Some(ComponentsReport {
                             added: &result.components.added,
@@ -387,6 +393,8 @@ struct JsonSummary {
     total_changes: usize,
     components: ComponentSummary,
     vulnerabilities: VulnerabilitySummary,
+    /// Count of document-level metadata changes (author/tool/timestamp/etc.).
+    metadata_changes: usize,
     semantic_score: f64,
 }
 
@@ -406,6 +414,9 @@ struct VulnerabilitySummary {
 
 #[derive(Serialize)]
 struct JsonReports<'a> {
+    /// Document-level metadata changes (omitted when none).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    metadata_changes: Option<&'a [crate::diff::MetadataChange]>,
     #[serde(skip_serializing_if = "Option::is_none")]
     components: Option<ComponentsReport<'a>>,
     #[serde(skip_serializing_if = "Option::is_none")]

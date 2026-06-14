@@ -12,4 +12,8 @@ Changes:
   -4 components removed
   ~5 components modified
 
+Metadata:
+  created: [TIMESTAMP] → [TIMESTAMP]
+  primary_component_version: 1.0.0 → 2.0.0
+
 Similarity:  53.5%

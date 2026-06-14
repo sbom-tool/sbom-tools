@@ -40,5 +40,5 @@ sbom-tools  DIFF  │ acme-webapp@1.0.0 ⟷ acme-webapp@2.0.0
 │                                                          ││                                                          │
 │                                                          ││                                                          │
 └──────────────────────────────────────────── Ln 1/8 (12%) ┘└──────────────────────────────────────────── Ln 1/8 (12%) ┘
- Components: 13 │ Vulns: 0 │ Score: 53.5
+ Components: 15 │ Vulns: 0 │ Score: 53.5
               w panel  v tree/raw  ↑↓ scroll │  Tab switch  / search  e export  ? help  q quit [y] copy root

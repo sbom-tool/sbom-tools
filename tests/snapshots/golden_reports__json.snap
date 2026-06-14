@@ -21,7 +21,7 @@ expression: "render(&JsonReporter::new())"
     }
   },
   "summary": {
-    "total_changes": 13,
+    "total_changes": 15,
     "components": {
       "added": 4,
       "removed": 4,
@@ -32,6 +32,7 @@ expression: "render(&JsonReporter::new())"
       "resolved": 0,
       "persistent": 0
     },
+    "metadata_changes": 2,
     "semantic_score": 53.48837209302326
   },
   "cra_compliance": {
@@ -1263,6 +1264,20 @@ expression: "render(&JsonReporter::new())"
     }
   },
   "reports": {
+    "metadata_changes": [
+      {
+        "field": "created",
+        "old_value": "[TIMESTAMP]",
+        "new_value": "[TIMESTAMP]",
+        "kind": "modified"
+      },
+      {
+        "field": "primary_component_version",
+        "old_value": "1.0.0",
+        "new_value": "2.0.0",
+        "kind": "modified"
+      }
+    ],
     "components": {
       "added": [
         {

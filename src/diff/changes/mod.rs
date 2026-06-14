@@ -6,12 +6,14 @@
 mod components;
 mod dependencies;
 mod licenses;
+mod metadata;
 pub mod vuln_grouping;
 mod vulnerabilities;
 
 pub use components::ComponentChangeComputer;
 pub use dependencies::DependencyChangeComputer;
 pub use licenses::LicenseChangeComputer;
+pub use metadata::compute_metadata_changes;
 pub use vuln_grouping::{
     VulnGroupStatus, VulnerabilityGroup, VulnerabilityGroupedView, group_vulnerabilities,
 };

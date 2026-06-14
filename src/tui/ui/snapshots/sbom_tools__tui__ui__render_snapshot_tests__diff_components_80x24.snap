@@ -24,5 +24,5 @@ Filter:  All   Sort: Name  │  [f] filter  [s] sort  [1/2/3/4/5/6/7/8] quick  [
 │   - REMOVED   request          2. —  n - ║│• Levenshtein 1.00 (w=0.4)        │
 │   + ADDED     typescript       —  5. n - ▼│                                  │
 └──────────────────────────────────────────┘└──────────────────────────────────┘
- Components: 13 │ Vulns: 0 │ Score: 53.5
+ Components: 15 │ Vulns: 0 │ Score: 53.5
  f filter  s sort │  Tab switch  / search  e export  ? help  q quit [y] copy day

@@ -214,7 +214,7 @@ expression: "render(&HtmlReporter::new())"
 </div>
 <nav class="toc">
     <strong>Contents:</strong>
-    <a href="#component-changes">Components</a>    <a href="#cra-compliance">CRA Compliance</a>
+    <a href="#metadata-changes">Metadata</a>    <a href="#component-changes">Components</a>    <a href="#cra-compliance">CRA Compliance</a>
 </nav>
 <div class="summary-cards">
     <div class="card">
@@ -237,6 +237,30 @@ expression: "render(&HtmlReporter::new())"
         <div class="card-title">Semantic Score</div>
         <div class="card-value ">53.5</div>
     </div>
+</div>
+<div class="section" id="metadata-changes">
+    <h2>Metadata Changes</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Field</th>
+                <th>Old</th>
+                <th>New</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>created</td>
+                <td>[TIMESTAMP]</td>
+                <td>[TIMESTAMP]</td>
+            </tr>
+            <tr>
+                <td>primary_component_version</td>
+                <td>1.0.0</td>
+                <td>2.0.0</td>
+            </tr>
+        </tbody>
+    </table>
 </div>
 <div class="section" id="component-changes">
     <h2>Component Changes</h2>

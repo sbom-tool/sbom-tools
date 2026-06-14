@@ -3,7 +3,7 @@ source: tests/golden_reports.rs
 expression: output
 ---
 {"type":"metadata","tool":"sbom-tools","version": "[VERSION]","generated_at":"[TIMESTAMP]","old_sbom_format":"CycloneDX","new_sbom_format":"CycloneDX","old_component_count":9,"new_component_count":9}
-{"type":"summary","total_changes":13,"components_added":4,"components_removed":4,"components_modified":5,"vulnerabilities_introduced":0,"vulnerabilities_resolved":0,"semantic_score":53.48837209302326}
+{"type":"summary","total_changes":15,"components_added":4,"components_removed":4,"components_modified":5,"vulnerabilities_introduced":0,"vulnerabilities_resolved":0,"semantic_score":53.48837209302326}
 {"type":"component_added","data":{"id":"pkg:npm/dayjs@1.11.7","name":"dayjs","old_version":null,"new_version":"1.11.7","ecosystem":"npm","change_type":"Added","field_changes":[],"cost":10}}
 {"type":"component_added","data":{"id":"pkg:npm/typescript@5.0.4","name":"typescript","old_version":null,"new_version":"5.0.4","ecosystem":"npm","change_type":"Added","field_changes":[],"cost":10}}
 {"type":"component_added","data":{"id":"pkg:npm/zod@3.21.4","name":"zod","old_version":null,"new_version":"3.21.4","ecosystem":"npm","change_type":"Added","field_changes":[],"cost":10}}
