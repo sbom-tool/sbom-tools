@@ -58,7 +58,7 @@ jobs:
           shared-key: msrv
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Check (no default features)
-        run: cargo check --locked
+        run: cargo check --locked --no-default-features --features ffi
       - name: Check (all features)
         run: cargo check --locked --all-features
 

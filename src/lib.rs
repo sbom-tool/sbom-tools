@@ -214,6 +214,7 @@
     clippy::similar_names
 )]
 
+#[cfg(feature = "cli")]
 pub mod cli;
 pub mod config;
 pub mod diff;
@@ -230,9 +231,13 @@ pub mod pipeline;
 pub mod quality;
 pub mod reports;
 pub mod serialization;
+#[cfg(feature = "tui")]
 pub mod tui;
 pub mod utils;
 pub mod verification;
+// `watch` is reached only through the `cli` command handlers and itself calls
+// into `crate::cli`, so it shares the `cli` gate.
+#[cfg(feature = "cli")]
 pub mod watch;
 
 // Re-export main types for convenience
@@ -274,6 +279,7 @@ pub use quality::{QualityGrade, QualityReport, QualityScorer, ScoringProfile};
 pub use reports::{ReportFormat, ReportGenerator, StreamingReporter, WriterReporter};
 
 // TUI shared ViewModel exports for building custom TUI components
+#[cfg(feature = "tui")]
 pub use tui::{
     CycleFilter, FilterState, ListNavigation, ListState, OverlayState, SearchState,
     SearchStateCore, StatusMessage, ViewModelOverlayKind,

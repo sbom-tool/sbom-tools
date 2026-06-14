@@ -11,4 +11,7 @@ name = "sbom_tools_ffi"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
-sbom-tools = { path = "../..", features = ["ffi"] }
+# The C ABI only touches model/parsers/diff/quality (see ../../src/ffi.rs), so
+# opt out of the default cli/tui/enrichment stack to keep the static/cdylib lean
+# (no ratatui, crossterm, clap_complete, or reqwest/rustls linked in).
+sbom-tools = { path = "../..", default-features = false, features = ["ffi"] }

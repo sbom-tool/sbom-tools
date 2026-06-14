@@ -48,6 +48,8 @@ mod types;
 mod validation;
 
 // Re-export main types
+// `WatchConfig` lives in the `watch` module, which is gated behind `cli`.
+#[cfg(feature = "cli")]
 pub use crate::watch::WatchConfig;
 pub use defaults::{
     ConfigPreset, DEFAULT_CLUSTER_THRESHOLD, DEFAULT_ENRICHMENT_CACHE_TTL,

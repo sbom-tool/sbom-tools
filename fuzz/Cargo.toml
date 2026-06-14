@@ -10,8 +10,11 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 
+# Fuzz targets only exercise the parsers and the quality scorer, so drop the
+# default cli/tui/enrichment features to keep the fuzz build dependency-lean.
 [dependencies.sbom-tools]
 path = ".."
+default-features = false
 
 # Prevent this from interfering with workspaces
 [workspace]
