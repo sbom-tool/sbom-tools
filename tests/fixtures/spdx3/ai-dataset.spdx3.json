@@ -78,6 +78,13 @@
       "relationshipType": "dependsOn",
       "from": "urn:spdx:pkg:bert-base",
       "to": ["urn:spdx:pkg:libtokenizer"]
+    },
+    {
+      "type": "Relationship",
+      "spdxId": "urn:spdx:rel:2",
+      "relationshipType": "trainedOn",
+      "from": "urn:spdx:pkg:bert-base",
+      "to": ["urn:spdx:pkg:training-dataset-v1"]
     }
   ]
 }

@@ -1,0 +1,112 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-06-14T00:00:00Z",
+    "tools": [
+      {
+        "vendor": "sbom-tools",
+        "name": "sbom-tools",
+        "version": "0.1.21"
+      }
+    ],
+    "component": {
+      "bom-ref": "root",
+      "type": "application",
+      "name": "aibom-complete-app",
+      "version": "1.0.0"
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "ml-model-1",
+      "type": "machine-learning-model",
+      "name": "sentiment-classifier",
+      "version": "1.0.0",
+      "description": "A fully documented sentiment classification model",
+      "modelCard": {
+        "modelParameters": {
+          "approach": {
+            "type": "supervised"
+          },
+          "task": "nlp",
+          "architectureFamily": "transformer",
+          "modelArchitecture": "bert",
+          "datasets": [
+            {
+              "ref": "data-reviews"
+            }
+          ]
+        },
+        "quantitativeAnalysis": {
+          "performanceMetrics": [
+            {
+              "type": "accuracy",
+              "value": "0.97",
+              "slice": "overall"
+            },
+            {
+              "type": "F1",
+              "value": "0.95"
+            }
+          ]
+        },
+        "considerations": {
+          "useCases": [
+            "Customer review sentiment analysis",
+            "Support-ticket triage"
+          ],
+          "technicalLimitations": [
+            "Optimized for English text; may not generalize to other languages."
+          ],
+          "ethicalConsiderations": [
+            {
+              "name": "May reflect biases present in product-review training data",
+              "mitigationStrategy": "Human review required for moderation decisions"
+            }
+          ],
+          "fairnessAssessments": [
+            {
+              "groupAtRisk": "Non-native English speakers",
+              "benefits": "Faster triage of feedback",
+              "harms": "Potential misclassification of dialectal phrasing",
+              "mitigationStrategy": "Augmented training set with dialectal samples"
+            }
+          ],
+          "environmentalConsiderations": {
+            "energyConsumptions": [
+              {
+                "activity": "training",
+                "activityEnergyCost": {
+                  "value": 1500.0,
+                  "unit": "kWh"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "externalReferences": [
+        {
+          "type": "model-card",
+          "url": "https://example.test/model-cards/sentiment-classifier"
+        }
+      ]
+    },
+    {
+      "bom-ref": "data-reviews",
+      "type": "data",
+      "name": "product-reviews-1M",
+      "data": [
+        {
+          "type": "dataset",
+          "name": "product-reviews",
+          "sensitiveData": [
+            "none"
+          ]
+        }
+      ]
+    }
+  ]
+}

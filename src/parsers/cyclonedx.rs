@@ -534,6 +534,26 @@ impl CycloneDxParser {
                         ml_info.energy_kwh_training = Some(total_training_energy);
                     }
                 }
+
+                ml_info.fairness = considerations
+                    .fairness_assessments
+                    .iter()
+                    .map(CdxFairnessAssessment::to_model)
+                    .collect();
+                ml_info.ethical_considerations = considerations
+                    .ethical_considerations
+                    .iter()
+                    .map(CdxEthicalConsideration::to_model)
+                    .collect();
+                ml_info.use_cases.clone_from(&considerations.use_cases);
+            }
+
+            if let Some(quant) = &model_card.quantitative_analysis {
+                ml_info.performance_metrics = quant
+                    .performance_metrics
+                    .iter()
+                    .map(CdxPerformanceMetric::to_model)
+                    .collect();
             }
 
             // Extract model card URL from external references
@@ -1500,6 +1520,8 @@ struct CdxProperty {
 struct CdxMlModelCard {
     model_parameters: Option<CdxModelParameters>,
     considerations: Option<CdxConsiderations>,
+    /// Spec: `modelCard.quantitativeAnalysis` (performance metrics, graphics).
+    quantitative_analysis: Option<CdxQuantitativeAnalysis>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1572,6 +1594,142 @@ struct CdxConsiderations {
     #[serde(default)]
     technical_limitations: Vec<String>,
     environmental_considerations: Option<CdxEnvironmentalConsiderations>,
+    /// Spec (CDX 1.5+): `considerations.fairnessAssessments` is an array of objects.
+    /// The non-spec `fairnessConsiderations` (a string array used by some emitters)
+    /// is accepted via alias and coerced into the structured form.
+    #[serde(
+        rename = "fairnessAssessments",
+        alias = "fairnessConsiderations",
+        default,
+        deserialize_with = "deserialize_fairness"
+    )]
+    fairness_assessments: Vec<CdxFairnessAssessment>,
+    /// Spec: `considerations.ethicalConsiderations` is an array of objects
+    /// `{ name, mitigationStrategy }`; a bare string is accepted for non-spec emitters.
+    #[serde(default)]
+    ethical_considerations: Vec<CdxEthicalConsideration>,
+    /// Spec: `considerations.useCases` is a string array.
+    #[serde(default)]
+    use_cases: Vec<String>,
+}
+
+/// One `considerations.fairnessAssessments` entry. Per spec these are objects;
+/// a bare string (non-spec `fairnessConsiderations`) is accepted and lands in
+/// `group_at_risk` so it is still surfaced.
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum CdxFairnessAssessment {
+    Text(String),
+    Structured(CdxFairnessObj),
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct CdxFairnessObj {
+    group_at_risk: Option<String>,
+    benefits: Option<String>,
+    harms: Option<String>,
+    mitigation_strategy: Option<String>,
+}
+
+impl CdxFairnessAssessment {
+    fn to_model(&self) -> crate::model::FairnessAssessment {
+        match self {
+            Self::Text(text) => crate::model::FairnessAssessment {
+                group_at_risk: Some(text.clone()),
+                ..Default::default()
+            },
+            Self::Structured(obj) => crate::model::FairnessAssessment {
+                group_at_risk: obj.group_at_risk.clone(),
+                benefits: obj.benefits.clone(),
+                harms: obj.harms.clone(),
+                mitigation_strategy: obj.mitigation_strategy.clone(),
+            },
+        }
+    }
+}
+
+/// Accept `fairnessAssessments` as either the spec object array or a non-spec string array.
+fn deserialize_fairness<'de, D>(deserializer: D) -> Result<Vec<CdxFairnessAssessment>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(Option::<Vec<CdxFairnessAssessment>>::deserialize(deserializer)?.unwrap_or_default())
+}
+
+/// One `considerations.ethicalConsiderations` entry: the spec object
+/// `{ name, mitigationStrategy }`, or a bare string for non-spec emitters.
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum CdxEthicalConsideration {
+    Text(String),
+    Structured(CdxEthicalObj),
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct CdxEthicalObj {
+    name: Option<String>,
+    mitigation_strategy: Option<String>,
+}
+
+impl CdxEthicalConsideration {
+    fn to_model(&self) -> crate::model::EthicalConsideration {
+        match self {
+            Self::Text(text) => crate::model::EthicalConsideration {
+                name: Some(text.clone()),
+                mitigation_strategy: None,
+            },
+            Self::Structured(obj) => crate::model::EthicalConsideration {
+                name: obj.name.clone(),
+                mitigation_strategy: obj.mitigation_strategy.clone(),
+            },
+        }
+    }
+}
+
+/// `modelCard.quantitativeAnalysis` — performance metrics for the model.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CdxQuantitativeAnalysis {
+    #[serde(default)]
+    performance_metrics: Vec<CdxPerformanceMetric>,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct CdxPerformanceMetric {
+    #[serde(rename = "type")]
+    metric_type: Option<String>,
+    /// Spec `value` is a string; a JSON number is also accepted and stringified.
+    #[serde(default, deserialize_with = "de_metric_value")]
+    value: Option<String>,
+    slice: Option<String>,
+}
+
+impl CdxPerformanceMetric {
+    fn to_model(&self) -> crate::model::MetricEntry {
+        crate::model::MetricEntry {
+            metric_type: self.metric_type.clone(),
+            value: self.value.clone(),
+            slice: self.slice.clone(),
+        }
+    }
+}
+
+/// A performance-metric `value` per spec is a string, but numbers appear in the
+/// wild; accept both and normalize to the string form.
+fn de_metric_value<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    match Option::<serde_json::Value>::deserialize(deserializer)? {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(serde_json::Value::String(text)) => Ok(Some(text)),
+        Some(serde_json::Value::Number(number)) => Ok(Some(number.to_string())),
+        Some(serde_json::Value::Bool(flag)) => Ok(Some(flag.to_string())),
+        Some(other) => Ok(Some(other.to_string())),
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -2517,5 +2675,102 @@ mod tests {
         assert_eq!(vuln.severity, Some(Severity::Critical));
         assert_eq!(vuln.affected_versions, vec!["2.14.1".to_string()]);
         assert_eq!(sbom.vulnerability_counts().critical, 1);
+    }
+
+    fn parse_json(json: &str) -> NormalizedSbom {
+        CycloneDxParser::new()
+            .parse_str(json)
+            .expect("JSON should parse")
+    }
+
+    #[test]
+    fn test_json_ml_model_card_typed_fields() {
+        // Uses the SPEC field names: considerations.fairnessAssessments (objects),
+        // ethicalConsiderations (objects), useCases, and
+        // modelCard.quantitativeAnalysis.performanceMetrics.
+        let sbom = parse_json(
+            r#"{
+              "bomFormat": "CycloneDX",
+              "specVersion": "1.6",
+              "version": 1,
+              "components": [{
+                "bom-ref": "m1",
+                "type": "machine-learning-model",
+                "name": "m1",
+                "modelCard": {
+                  "quantitativeAnalysis": {
+                    "performanceMetrics": [
+                      { "type": "accuracy", "value": "0.97", "slice": "overall" },
+                      { "type": "F1", "value": 0.95 }
+                    ]
+                  },
+                  "considerations": {
+                    "useCases": ["triage", "moderation"],
+                    "ethicalConsiderations": [
+                      { "name": "bias risk", "mitigationStrategy": "human review" }
+                    ],
+                    "fairnessAssessments": [
+                      { "groupAtRisk": "minors", "mitigationStrategy": "age gating" }
+                    ]
+                  }
+                }
+              }]
+            }"#,
+        );
+
+        let ml = component(&sbom, "m1")
+            .ml_model
+            .as_ref()
+            .expect("ml_model missing");
+        assert_eq!(ml.performance_metrics.len(), 2);
+        assert_eq!(
+            ml.performance_metrics[0].metric_type.as_deref(),
+            Some("accuracy")
+        );
+        assert_eq!(ml.performance_metrics[0].value.as_deref(), Some("0.97"));
+        assert_eq!(ml.performance_metrics[0].slice.as_deref(), Some("overall"));
+        // Numeric `value` is normalized to its string form.
+        assert_eq!(ml.performance_metrics[1].value.as_deref(), Some("0.95"));
+        assert_eq!(ml.use_cases, vec!["triage", "moderation"]);
+        assert_eq!(ml.ethical_considerations.len(), 1);
+        assert_eq!(
+            ml.ethical_considerations[0].mitigation_strategy.as_deref(),
+            Some("human review")
+        );
+        assert_eq!(ml.fairness.len(), 1);
+        assert_eq!(ml.fairness[0].group_at_risk.as_deref(), Some("minors"));
+    }
+
+    #[test]
+    fn test_json_ml_fairness_non_spec_string_alias() {
+        // The non-spec `fairnessConsiderations` string-array variant is accepted
+        // via serde alias and coerced into the structured form.
+        let sbom = parse_json(
+            r#"{
+              "bomFormat": "CycloneDX",
+              "specVersion": "1.5",
+              "version": 1,
+              "components": [{
+                "bom-ref": "m1",
+                "type": "machine-learning-model",
+                "name": "m1",
+                "modelCard": {
+                  "considerations": {
+                    "fairnessConsiderations": ["assessed for demographic parity"]
+                  }
+                }
+              }]
+            }"#,
+        );
+
+        let ml = component(&sbom, "m1")
+            .ml_model
+            .as_ref()
+            .expect("ml_model missing");
+        assert_eq!(ml.fairness.len(), 1);
+        assert_eq!(
+            ml.fairness[0].group_at_risk.as_deref(),
+            Some("assessed for demographic parity")
+        );
     }
 }

@@ -519,6 +519,57 @@ impl Spdx3Parser {
                     .iter()
                     .find(|r| r.ref_type == ExternalRefType::Documentation)
                     .map(|r| r.url.clone());
+                // Map the closest SPDX 3.0 AI-profile signals into the SAME typed
+                // MlModelInfo fields the CycloneDX parser populates, so AI scoring
+                // is symmetric across formats. Each is an approximation of the
+                // nearest SPDX field; only non-empty values are emitted.
+
+                // AI-005 fairness: explainability + safety-risk assessment narratives.
+                let fairness: Vec<crate::model::FairnessAssessment> = pkg
+                    .ai_model_explainability
+                    .clone()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .chain(pkg.ai_safety_risk_assessment.clone())
+                    .map(|text| crate::model::FairnessAssessment {
+                        group_at_risk: Some(text),
+                        ..Default::default()
+                    })
+                    .collect();
+
+                // AI-007 use-cases: application info + declared domains.
+                let use_cases: Vec<String> = pkg
+                    .ai_information_about_application
+                    .clone()
+                    .into_iter()
+                    .chain(pkg.ai_domain.clone().unwrap_or_default())
+                    .collect();
+
+                // AI-009 ethical: standards compliance + sensitive-PII disclosure.
+                let ethical: Vec<crate::model::EthicalConsideration> = pkg
+                    .ai_standard_compliance
+                    .clone()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .chain(pkg.ai_use_sensitive_personal_information.clone())
+                    .map(|text| crate::model::EthicalConsideration {
+                        name: Some(text),
+                        mitigation_strategy: None,
+                    })
+                    .collect();
+
+                // AI-004 quantitative: ai_metric / ai_metricDecisionThreshold entries.
+                // SPDX `ai_metric` items are objects (often `{ ai_name, ai_value }`);
+                // map name→type and stringify the value, preserving precision.
+                let performance_metrics: Vec<crate::model::MetricEntry> = pkg
+                    .ai_metric
+                    .clone()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .chain(pkg.ai_metric_decision_threshold.clone().unwrap_or_default())
+                    .map(spdx3_metric_to_entry)
+                    .collect();
+
                 comp.ml_model = Some(crate::model::MlModelInfo {
                     // ai_typeOfModel is a free-string list; treat the first as the
                     // family (cross-format approximation — see metadata.rs docs).
@@ -532,76 +583,14 @@ impl Spdx3Parser {
                         .as_ref()
                         .and_then(Spdx3EnergyConsumption::training_energy_kwh),
                     model_card_url,
-                    // training_datasets are linked via Relationships in SPDX, not
-                    // an inline field; relationship-derivation is future work.
+                    fairness,
+                    ethical_considerations: ethical,
+                    use_cases,
+                    performance_metrics,
+                    // training_datasets are linked via TRAINED_ON relationships in
+                    // SPDX (populated in process_relationship), not an inline field.
                     ..Default::default()
                 });
-
-                // Bridge non-typed AI signals into extensions.raw (CycloneDX
-                // modelCard layout) so the AI-readiness raw-pointer checks
-                // (AI-004/005/007/009) can see them. Each is an approximation of
-                // the closest SPDX AI field; only non-empty values are emitted.
-                let quant: Vec<serde_json::Value> = pkg
-                    .ai_metric
-                    .clone()
-                    .unwrap_or_default()
-                    .into_iter()
-                    .chain(pkg.ai_metric_decision_threshold.clone().unwrap_or_default())
-                    .collect();
-                let fairness: Vec<String> = pkg
-                    .ai_model_explainability
-                    .clone()
-                    .unwrap_or_default()
-                    .into_iter()
-                    .chain(pkg.ai_safety_risk_assessment.clone())
-                    .collect();
-                let use_cases: Vec<String> = pkg
-                    .ai_information_about_application
-                    .clone()
-                    .into_iter()
-                    .chain(pkg.ai_domain.clone().unwrap_or_default())
-                    .collect();
-                let ethical: Vec<String> = pkg
-                    .ai_standard_compliance
-                    .clone()
-                    .unwrap_or_default()
-                    .into_iter()
-                    .chain(pkg.ai_use_sensitive_personal_information.clone())
-                    .collect();
-
-                let mut model_card = serde_json::Map::new();
-                if !quant.is_empty() {
-                    model_card.insert(
-                        "quantitativeAnalysis".to_string(),
-                        serde_json::json!({ "performanceMetrics": quant }),
-                    );
-                }
-                let mut considerations = serde_json::Map::new();
-                if !fairness.is_empty() {
-                    considerations.insert(
-                        "fairnessConsiderations".to_string(),
-                        serde_json::json!(fairness),
-                    );
-                }
-                if !use_cases.is_empty() {
-                    considerations.insert("useCases".to_string(), serde_json::json!(use_cases));
-                }
-                if !ethical.is_empty() {
-                    considerations.insert(
-                        "ethicalConsiderations".to_string(),
-                        serde_json::json!(ethical),
-                    );
-                }
-                if !considerations.is_empty() {
-                    model_card.insert(
-                        "considerations".to_string(),
-                        serde_json::Value::Object(considerations),
-                    );
-                }
-                if !model_card.is_empty() {
-                    comp.extensions.raw =
-                        Some(serde_json::json!({ "mlModel": { "modelCard": model_card } }));
-                }
             }
             PackageKind::Dataset => {
                 comp.component_type = ComponentType::Data;
@@ -1026,6 +1015,36 @@ impl Spdx3Parser {
             // VEX assessment relationships — handled via VulnAssessment elements
             "HAS_ASSESSMENT_FOR" => {
                 // These are processed in process_vuln_assessment()
+            }
+
+            // AI profile: an ai_AIPackage TRAINED_ON a dataset. SPDX 3.0 JSON-LD
+            // uppercases the relationship type WITHOUT an underscore ("trainedOn"
+            // → "TRAINEDON"), so the canonical key has no separator. This is the
+            // SPDX equivalent of CycloneDX `modelParameters.datasets`; populate the
+            // model's typed `training_datasets` so AI-003 passes for SPDX too.
+            // `testedOn` is intentionally not treated as a training dataset.
+            "TRAINEDON" | "TRAINED_ON" => {
+                if let Some(from_ref) = &rel.from
+                    && let Some(from_id) = id_map.get(from_ref)
+                    && let Some(to_refs) = &rel.to
+                {
+                    for to_ref in to_refs {
+                        // Prefer the resolved component's name; fall back to the raw ref.
+                        let name = id_map
+                            .get(to_ref)
+                            .and_then(|cid| sbom.components.get(cid))
+                            .map(|c| c.name.clone())
+                            .filter(|n| !n.is_empty());
+                        if let Some(comp) = sbom.components.get_mut(from_id) {
+                            let ml = comp.ml_model.get_or_insert_with(Default::default);
+                            ml.training_datasets.push(crate::model::DatasetRef {
+                                reference: Some(to_ref.clone()),
+                                name,
+                                purl: None,
+                            });
+                        }
+                    }
+                }
             }
 
             _ => {
@@ -1538,6 +1557,41 @@ where
         Some(StrOrNum::Num(n)) => Some(n),
         Some(StrOrNum::Str(s)) => s.trim().parse::<f64>().ok(),
     })
+}
+
+/// Normalize one SPDX 3.0 `ai_metric` value into the typed `MetricEntry`.
+///
+/// SPDX metric entries are commonly objects such as `{ "ai_name": "accuracy",
+/// "ai_value": "0.97" }`, but the property is loosely typed, so plain strings
+/// and numbers are also accepted. `type`/`name`/`key` map to the metric type and
+/// `value` is stringified to preserve precision and non-numeric values.
+fn spdx3_metric_to_entry(value: serde_json::Value) -> crate::model::MetricEntry {
+    let stringify = |v: &serde_json::Value| -> Option<String> {
+        match v {
+            serde_json::Value::Null => None,
+            serde_json::Value::String(text) => Some(text.clone()),
+            other => Some(other.to_string()),
+        }
+    };
+    match value {
+        serde_json::Value::Object(map) => {
+            let pick = |keys: &[&str]| keys.iter().find_map(|k| map.get(*k).and_then(stringify));
+            crate::model::MetricEntry {
+                metric_type: pick(&["ai_name", "name", "type", "ai_type", "key"]),
+                value: pick(&["ai_value", "value", "ai_decisionThreshold"]),
+                slice: pick(&["ai_slice", "slice"]),
+            }
+        }
+        serde_json::Value::String(text) => crate::model::MetricEntry {
+            value: Some(text),
+            ..Default::default()
+        },
+        serde_json::Value::Null => crate::model::MetricEntry::default(),
+        other => crate::model::MetricEntry {
+            value: Some(other.to_string()),
+            ..Default::default()
+        },
+    }
 }
 
 /// SPDX 3.0 File (Software profile)

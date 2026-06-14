@@ -542,6 +542,60 @@ pub struct MlModelInfo {
     pub energy_kwh_training: Option<f64>,
     /// URL to detailed model card (from ExternalRefType::ModelCard)
     pub model_card_url: Option<String>,
+    /// Fairness assessments (CycloneDX 1.5+ `considerations.fairnessAssessments`).
+    /// SPDX 3.0 has no direct analogue; the nearest AI-profile signals are
+    /// normalized into this shape so cross-format scoring is symmetric.
+    pub fairness: Vec<FairnessAssessment>,
+    /// Ethical considerations. CycloneDX emits structured objects
+    /// (`considerations.ethicalConsiderations[]`); SPDX emits free strings.
+    /// Both are normalized into this single shape.
+    pub ethical_considerations: Vec<EthicalConsideration>,
+    /// Intended use-cases (CycloneDX `considerations.useCases`, SPDX `ai_domain` /
+    /// `ai_informationAboutApplication`).
+    pub use_cases: Vec<String>,
+    /// Quantitative performance metrics (CycloneDX
+    /// `modelCard.quantitativeAnalysis.performanceMetrics`, SPDX `ai_metric`).
+    pub performance_metrics: Vec<MetricEntry>,
+}
+
+/// A fairness assessment for an ML model (CycloneDX 1.5+
+/// `considerations.fairnessAssessments[]`).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct FairnessAssessment {
+    /// The group(s) potentially at risk for the identified fairness concern.
+    pub group_at_risk: Option<String>,
+    /// Expected benefits to the group at risk.
+    pub benefits: Option<String>,
+    /// Potential harms to the group at risk.
+    pub harms: Option<String>,
+    /// Strategy used to mitigate the identified harms.
+    pub mitigation_strategy: Option<String>,
+}
+
+/// An ethical consideration for an ML model. Normalized from CycloneDX structured
+/// objects (`{ name, mitigationStrategy }`) and SPDX free-text strings alike.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct EthicalConsideration {
+    /// Name / description of the ethical risk.
+    pub name: Option<String>,
+    /// Strategy used to mitigate the ethical risk (CycloneDX only).
+    pub mitigation_strategy: Option<String>,
+}
+
+/// A single quantitative performance metric (CycloneDX
+/// `quantitativeAnalysis.performanceMetrics[]`).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct MetricEntry {
+    /// Metric type (e.g. "accuracy", "F1", "precision").
+    pub metric_type: Option<String>,
+    /// Metric value, retained verbatim (string form is spec-conformant and
+    /// preserves precision / non-numeric values such as confidence intervals).
+    pub value: Option<String>,
+    /// Data slice the metric was computed over (CycloneDX `slice`).
+    pub slice: Option<String>,
 }
 
 /// Reference to a dataset used for training or evaluation

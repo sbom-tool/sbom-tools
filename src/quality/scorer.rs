@@ -755,45 +755,55 @@ impl QualityScorer {
                 ml.and_then(|m| m.architecture_family.as_ref()).is_some(),
                 // AI-003: training datasets
                 ml.is_some_and(|m| !m.training_datasets.is_empty()),
-                // AI-004: quantitative analysis (preserved in raw extensions)
-                has_non_empty_pointer(
-                    raw,
-                    &[
-                        "/modelCard/quantitativeAnalysis",
-                        "/mlModel/modelCard/quantitativeAnalysis",
-                    ],
-                ),
-                // AI-005: fairness assessments
-                has_non_empty_pointer(
-                    raw,
-                    &[
-                        "/modelCard/considerations/fairnessConsiderations",
-                        "/mlModel/modelCard/considerations/fairnessConsiderations",
-                        "/mlModel/considerations/fairnessConsiderations",
-                    ],
-                ),
+                // AI-004: quantitative analysis — typed performance metrics, with
+                // a raw-pointer fallback for SBOMs parsed before typed extraction.
+                ml.is_some_and(|m| !m.performance_metrics.is_empty())
+                    || has_non_empty_pointer(
+                        raw,
+                        &[
+                            "/modelCard/quantitativeAnalysis",
+                            "/mlModel/modelCard/quantitativeAnalysis",
+                        ],
+                    ),
+                // AI-005: fairness assessments. Fallback pointer corrected to the
+                // spec path `fairnessAssessments` (was the non-spec ...Considerations).
+                ml.is_some_and(|m| !m.fairness.is_empty())
+                    || has_non_empty_pointer(
+                        raw,
+                        &[
+                            "/modelCard/considerations/fairnessAssessments",
+                            "/mlModel/modelCard/considerations/fairnessAssessments",
+                            "/mlModel/considerations/fairnessAssessments",
+                            // Legacy non-spec key, retained for back-compat.
+                            "/modelCard/considerations/fairnessConsiderations",
+                            "/mlModel/modelCard/considerations/fairnessConsiderations",
+                            "/mlModel/considerations/fairnessConsiderations",
+                        ],
+                    ),
                 // AI-006: energy consumption
                 ml.and_then(|m| m.energy_kwh_training).is_some(),
                 // AI-007: use-cases
-                has_non_empty_pointer(
-                    raw,
-                    &[
-                        "/modelCard/considerations/useCases",
-                        "/mlModel/modelCard/considerations/useCases",
-                        "/mlModel/considerations/useCases",
-                    ],
-                ),
+                ml.is_some_and(|m| !m.use_cases.is_empty())
+                    || has_non_empty_pointer(
+                        raw,
+                        &[
+                            "/modelCard/considerations/useCases",
+                            "/mlModel/modelCard/considerations/useCases",
+                            "/mlModel/considerations/useCases",
+                        ],
+                    ),
                 // AI-008: limitations
                 ml.and_then(|m| m.limitations.as_ref()).is_some(),
                 // AI-009: ethical considerations
-                has_non_empty_pointer(
-                    raw,
-                    &[
-                        "/modelCard/considerations/ethicalConsiderations",
-                        "/mlModel/modelCard/considerations/ethicalConsiderations",
-                        "/mlModel/considerations/ethicalConsiderations",
-                    ],
-                ),
+                ml.is_some_and(|m| !m.ethical_considerations.is_empty())
+                    || has_non_empty_pointer(
+                        raw,
+                        &[
+                            "/modelCard/considerations/ethicalConsiderations",
+                            "/mlModel/modelCard/considerations/ethicalConsiderations",
+                            "/mlModel/considerations/ethicalConsiderations",
+                        ],
+                    ),
             ];
 
             if results.iter().all(|&p| p) {

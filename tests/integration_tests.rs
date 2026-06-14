@@ -817,15 +817,118 @@ mod parser_tests {
                 .unwrap_or_else(|| panic!("check {id} missing"))
                 .passed
         };
-        // Typed checks (minus AI-003 training datasets, linked via relationships
-        // in SPDX and not derived in v1).
-        for id in ["AI-001", "AI-002", "AI-006", "AI-008"] {
+        // Typed checks. AI-003 (training datasets) is now derived from the
+        // `trainedOn` relationship in the fixture.
+        for id in ["AI-001", "AI-002", "AI-003", "AI-006", "AI-008"] {
             assert!(passed(id), "expected typed check {id} to pass");
         }
-        // Raw-pointer checks satisfied via the extensions.raw bridge.
+        // AI-004/005/007/009 are now satisfied via the typed MlModelInfo fields
+        // (fairness/use_cases/ethical/performance_metrics), not the raw bridge.
         for id in ["AI-004", "AI-005", "AI-007", "AI-009"] {
-            assert!(passed(id), "expected raw-bridge check {id} to pass");
+            assert!(passed(id), "expected typed AI check {id} to pass");
         }
+
+        // The training dataset is linked via the SPDX `trainedOn` relationship.
+        let bert = sbom
+            .components
+            .values()
+            .find(|c| c.name == "bert-base")
+            .expect("bert-base not found");
+        let ml = bert.ml_model.as_ref().expect("ML metadata missing");
+        assert_eq!(ml.training_datasets.len(), 1);
+        assert_eq!(
+            ml.training_datasets[0].name.as_deref(),
+            Some("training-dataset-v1")
+        );
+    }
+
+    /// Regression: a fully-documented CycloneDX 1.6 ML-BOM, scored THROUGH the
+    /// parser (not via hand-built extensions.raw), must pass AI-004/005/007/009.
+    /// Before the typed-field extraction these checks only ever saw SPDX raw data,
+    /// so a complete CycloneDX ML-BOM scored grade F regardless of content.
+    #[test]
+    fn test_cyclonedx_aibom_typed_ai_checks_pass() {
+        use sbom_tools::quality::{QualityGrade, QualityScorer, ScoringProfile};
+
+        let path = fixture_path("cyclonedx/aibom-complete.cdx.json");
+        let sbom = parse_sbom(&path).expect("Failed to parse CycloneDX ML-BOM");
+
+        // The typed fields must be populated directly by the parser.
+        let model = sbom
+            .components
+            .values()
+            .find(|c| c.name == "sentiment-classifier")
+            .expect("ml model not found");
+        let ml = model.ml_model.as_ref().expect("ml_model missing");
+        assert!(!ml.performance_metrics.is_empty(), "AI-004 source");
+        assert!(!ml.fairness.is_empty(), "AI-005 source");
+        assert!(!ml.use_cases.is_empty(), "AI-007 source");
+        assert!(!ml.ethical_considerations.is_empty(), "AI-009 source");
+
+        let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
+        let metrics = report
+            .ai_readiness_metrics
+            .as_ref()
+            .expect("AI readiness metrics");
+        assert_eq!(metrics.ml_component_count, 1);
+        let passed = |id: &str| {
+            metrics
+                .checks
+                .iter()
+                .find(|c| c.id == id)
+                .unwrap_or_else(|| panic!("check {id} missing"))
+                .passed
+        };
+        // The previously-broken checks now pass off typed fields.
+        for id in ["AI-004", "AI-005", "AI-007", "AI-009"] {
+            assert!(passed(id), "expected {id} to pass for CycloneDX ML-BOM");
+        }
+        // Fully documented → all nine pass, grade A.
+        for check in &metrics.checks {
+            assert!(check.passed, "expected {} to pass", check.id);
+        }
+        assert!((report.overall_score - 100.0).abs() < 0.01);
+        assert_eq!(report.grade, QualityGrade::A);
+    }
+
+    /// Cross-format parity: equivalent AI content in CycloneDX and SPDX 3.0 must
+    /// yield IDENTICAL AI-readiness scores and per-check pass/fail patterns.
+    #[test]
+    fn test_aibom_cross_format_score_parity() {
+        use sbom_tools::quality::{QualityScorer, ScoringProfile};
+
+        let cdx = parse_sbom(&fixture_path("cyclonedx/aibom-complete.cdx.json"))
+            .expect("Failed to parse CycloneDX ML-BOM");
+        let spdx = parse_sbom(&fixture_path("spdx3/ai-dataset.spdx3.json"))
+            .expect("Failed to parse SPDX 3.0 AI BOM");
+
+        let score = |sbom: &_| {
+            let report = QualityScorer::new(ScoringProfile::AiReadiness).score(sbom);
+            let metrics = report
+                .ai_readiness_metrics
+                .clone()
+                .expect("AI readiness metrics");
+            let mut pattern: Vec<(String, bool)> = metrics
+                .checks
+                .iter()
+                .map(|c| (c.id.clone(), c.passed))
+                .collect();
+            pattern.sort();
+            (report.overall_score, report.grade, pattern)
+        };
+
+        let (cdx_score, cdx_grade, cdx_pattern) = score(&cdx);
+        let (spdx_score, spdx_grade, spdx_pattern) = score(&spdx);
+
+        assert!(
+            (cdx_score - spdx_score).abs() < 0.01,
+            "scores differ: CDX={cdx_score} SPDX={spdx_score}"
+        );
+        assert_eq!(cdx_grade, spdx_grade, "grades differ");
+        assert_eq!(
+            cdx_pattern, spdx_pattern,
+            "per-check pass/fail patterns differ across formats"
+        );
     }
 
     #[test]
