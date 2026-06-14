@@ -562,12 +562,14 @@ mod tests {
     #[test]
     fn ttl_expiry_evicts_entry() {
         let tmp = tempfile::tempdir().unwrap();
+        // TTL margin must comfortably exceed the set+get round-trip (atomic
+        // write + read + deserialize), which can spike on a loaded CI runner.
         let cache: JsonCache<Payload> =
-            JsonCache::new(tmp.path().to_path_buf(), Duration::from_millis(20)).unwrap();
+            JsonCache::new(tmp.path().to_path_buf(), Duration::from_millis(200)).unwrap();
         cache.set_named("entry", &sample()).unwrap();
         assert!(cache.get_named("entry").is_some());
 
-        std::thread::sleep(Duration::from_millis(60));
+        std::thread::sleep(Duration::from_millis(400));
         assert!(
             cache.get_named("entry").is_none(),
             "entry past TTL must be a miss"
