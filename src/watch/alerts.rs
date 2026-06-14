@@ -89,6 +89,13 @@ impl AlertSink for StdoutAlertSink {
                 snapshot.new_vulns.join(", ")
             ));
         }
+        if !snapshot.new_kev.is_empty() {
+            parts.push(format!(
+                "\u{26a0} {} KEV / actively exploited ({})",
+                snapshot.new_kev.len(),
+                snapshot.new_kev.join(", ")
+            ));
+        }
         if !snapshot.resolved_vulns.is_empty() {
             parts.push(format!("-{} vulns resolved", snapshot.resolved_vulns.len()));
         }
@@ -210,6 +217,7 @@ impl AlertSink for NdjsonAlertSink {
             "modified": snapshot.components_modified,
             "new_vulns": snapshot.new_vulns,
             "resolved_vulns": snapshot.resolved_vulns,
+            "new_kev": snapshot.new_kev,
             "new_eol": snapshot.new_eol,
             "crypto_changes": snapshot.crypto_changes,
             "crypto_downgrades": snapshot.crypto_downgrades,
@@ -325,6 +333,7 @@ impl AlertSink for WebhookAlertSink {
             "modified": snapshot.components_modified,
             "new_vulns": snapshot.new_vulns,
             "resolved_vulns": snapshot.resolved_vulns,
+            "new_kev": snapshot.new_kev,
             "new_eol": snapshot.new_eol,
             "crypto_changes": snapshot.crypto_changes,
             "crypto_downgrades": snapshot.crypto_downgrades,
@@ -425,6 +434,7 @@ mod tests {
             components_modified: 2,
             new_vulns: vec!["CVE-2026-1234".to_string()],
             resolved_vulns: vec![],
+            new_kev: vec!["CVE-2021-44228".to_string()],
             new_eol: vec![],
             crypto_changes: vec![],
             crypto_downgrades: vec![],
@@ -439,6 +449,7 @@ mod tests {
         assert_eq!(parsed["type"], "change");
         assert_eq!(parsed["added"], 3);
         assert_eq!(parsed["new_vulns"][0], "CVE-2026-1234");
+        assert_eq!(parsed["new_kev"][0], "CVE-2021-44228");
     }
 
     #[test]
@@ -529,6 +540,7 @@ mod tests {
             components_modified: 0,
             new_vulns: vec![],
             resolved_vulns: vec![],
+            new_kev: vec![],
             new_eol: vec![],
             crypto_changes: vec![],
             crypto_downgrades: vec![],

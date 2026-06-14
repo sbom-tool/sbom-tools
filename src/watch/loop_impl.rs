@@ -188,6 +188,24 @@ fn enrich_watched_sbom(sbom: &mut NormalizedSbom, config: &WatchConfig, bypass_c
     osv_config.bypass_cache = osv_config.bypass_cache || bypass_cache;
     crate::pipeline::enrich_sbom(sbom, &osv_config, true);
 
+    if config.enrichment.enable_kev {
+        let mut kev_config = crate::enrichment::KevClientConfig {
+            cache_dir: config
+                .enrichment
+                .cache_dir
+                .clone()
+                .unwrap_or_else(crate::pipeline::dirs::kev_cache_dir),
+            cache_ttl: std::time::Duration::from_secs(config.enrichment.cache_ttl_hours * 3600),
+            bypass_cache,
+            timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
+            ..Default::default()
+        };
+        if let Some(ref url) = config.enrichment.kev_url {
+            kev_config.kev_url = url.clone();
+        }
+        crate::pipeline::enrich_kev(sbom, &kev_config, true);
+    }
+
     if config.enrichment.enable_eol {
         let eol_config = crate::enrichment::EolClientConfig {
             cache_dir: config
@@ -201,6 +219,21 @@ fn enrich_watched_sbom(sbom: &mut NormalizedSbom, config: &WatchConfig, bypass_c
             ..Default::default()
         };
         crate::pipeline::enrich_eol(sbom, &eol_config, true);
+    }
+
+    if config.enrichment.enable_staleness {
+        let staleness_config = crate::enrichment::RegistryConfig {
+            cache_dir: config
+                .enrichment
+                .cache_dir
+                .clone()
+                .unwrap_or_else(crate::pipeline::dirs::staleness_cache_dir),
+            cache_ttl: std::time::Duration::from_secs(config.enrichment.cache_ttl_hours * 3600),
+            bypass_cache,
+            timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
+            ..Default::default()
+        };
+        crate::pipeline::enrich_staleness(sbom, &staleness_config, true);
     }
 
     if !config.enrichment.vex_paths.is_empty() {
@@ -295,6 +328,16 @@ fn process_sbom_change(
                         .flat_map(|c| c.vulnerabilities.iter().map(|v| v.id.clone()))
                         .collect(),
                     resolved_vulns: vec![],
+                    new_kev: new_sbom
+                        .components
+                        .values()
+                        .flat_map(|c| {
+                            c.vulnerabilities
+                                .iter()
+                                .filter(|v| v.is_kev)
+                                .map(|v| v.id.clone())
+                        })
+                        .collect(),
                     new_eol: new_sbom
                         .components
                         .values()
@@ -351,6 +394,15 @@ fn build_diff_snapshot(
                 .iter()
                 .map(|v| v.id.clone())
                 .collect();
+            // KEV-transition signal: introduced vulnerabilities flagged as
+            // actively exploited in CISA's KEV catalog.
+            let new_kev: Vec<String> = result
+                .vulnerabilities
+                .introduced
+                .iter()
+                .filter(|v| v.is_kev)
+                .map(|v| v.id.clone())
+                .collect();
 
             // Detect newly EOL components (in new but not old)
             let old_eol: std::collections::HashSet<&str> = old
@@ -391,6 +443,7 @@ fn build_diff_snapshot(
                 components_modified: result.components.modified.len(),
                 new_vulns,
                 resolved_vulns,
+                new_kev,
                 new_eol,
                 crypto_changes,
                 crypto_downgrades,
@@ -405,6 +458,7 @@ fn build_diff_snapshot(
                 components_modified: 0,
                 new_vulns: vec![],
                 resolved_vulns: vec![],
+                new_kev: vec![],
                 new_eol: vec![],
                 crypto_changes: vec![],
                 crypto_downgrades: vec![],

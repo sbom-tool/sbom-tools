@@ -18,6 +18,12 @@ pub struct AggregatedEnrichmentStats {
     /// VEX enrichment stats
     #[cfg(feature = "enrichment")]
     pub vex: Option<crate::enrichment::VexEnrichmentStats>,
+    /// CISA KEV enrichment stats
+    #[cfg(feature = "enrichment")]
+    pub kev: Option<crate::enrichment::KevEnrichmentStats>,
+    /// Dependency staleness enrichment stats
+    #[cfg(feature = "enrichment")]
+    pub staleness: Option<crate::enrichment::StalenessEnrichmentStats>,
     /// Warnings for display (non-fatal enrichment failures)
     pub warnings: Vec<String>,
 }
@@ -35,7 +41,11 @@ impl AggregatedEnrichmentStats {
     pub fn any_enrichment(&self) -> bool {
         #[cfg(feature = "enrichment")]
         {
-            self.osv.is_some() || self.eol.is_some() || self.vex.is_some()
+            self.osv.is_some()
+                || self.eol.is_some()
+                || self.vex.is_some()
+                || self.kev.is_some()
+                || self.staleness.is_some()
         }
         #[cfg(not(feature = "enrichment"))]
         {
@@ -67,7 +77,29 @@ pub fn enrich_sbom_full(
         }
     }
 
-    // 2. EOL detection
+    // 2. KEV (Known Exploited Vulnerabilities) overlay — must run after OSV so
+    //    it can flag the vulnerabilities OSV discovered.
+    if config.enable_kev {
+        let mut kev_config = crate::enrichment::KevClientConfig {
+            cache_dir: config
+                .cache_dir
+                .clone()
+                .unwrap_or_else(super::dirs::kev_cache_dir),
+            cache_ttl: std::time::Duration::from_secs(config.cache_ttl_hours * 3600),
+            bypass_cache: config.bypass_cache,
+            timeout: std::time::Duration::from_secs(config.timeout_secs),
+            ..Default::default()
+        };
+        if let Some(ref url) = config.kev_url {
+            kev_config.kev_url = url.clone();
+        }
+        match super::enrich_kev(sbom, &kev_config, quiet) {
+            Some(s) => stats.kev = Some(s),
+            None => stats.warnings.push("KEV enrichment failed".into()),
+        }
+    }
+
+    // 3. EOL detection
     if config.enable_eol {
         let eol_config = crate::enrichment::EolClientConfig {
             cache_dir: config
@@ -85,7 +117,25 @@ pub fn enrich_sbom_full(
         }
     }
 
-    // 3. VEX overlay
+    // 4. Dependency staleness — feeds the Lifecycle quality metric.
+    if config.enable_staleness {
+        let staleness_config = crate::enrichment::RegistryConfig {
+            cache_dir: config
+                .cache_dir
+                .clone()
+                .unwrap_or_else(super::dirs::staleness_cache_dir),
+            cache_ttl: std::time::Duration::from_secs(config.cache_ttl_hours * 3600),
+            bypass_cache: config.bypass_cache,
+            timeout: std::time::Duration::from_secs(config.timeout_secs),
+            ..Default::default()
+        };
+        match super::enrich_staleness(sbom, &staleness_config, quiet) {
+            Some(s) => stats.staleness = Some(s),
+            None => stats.warnings.push("Staleness enrichment failed".into()),
+        }
+    }
+
+    // 5. VEX overlay
     if !config.vex_paths.is_empty() {
         match super::enrich_vex(sbom, &config.vex_paths, quiet) {
             Some(s) => stats.vex = Some(s),

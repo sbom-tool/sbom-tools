@@ -47,6 +47,48 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
         }
     }
 
+    // Enrich with CISA KEV catalog (flags actively exploited vulnerabilities)
+    #[cfg(feature = "enrichment")]
+    if config.enrichment.enable_kev {
+        let mut kev_config = crate::enrichment::KevClientConfig {
+            cache_dir: config
+                .enrichment
+                .cache_dir
+                .clone()
+                .unwrap_or_else(crate::pipeline::dirs::kev_cache_dir),
+            cache_ttl: std::time::Duration::from_secs(config.enrichment.cache_ttl_hours * 3600),
+            bypass_cache: config.enrichment.bypass_cache,
+            timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
+            ..Default::default()
+        };
+        if let Some(ref url) = config.enrichment.kev_url {
+            kev_config.kev_url = url.clone();
+        }
+        if crate::pipeline::enrich_kev(parsed.sbom_mut(), &kev_config, false).is_none() {
+            enrichment_warnings.push("KEV enrichment failed");
+        }
+    }
+
+    // Enrich with dependency staleness data
+    #[cfg(feature = "enrichment")]
+    if config.enrichment.enable_staleness {
+        let staleness_config = crate::enrichment::RegistryConfig {
+            cache_dir: config
+                .enrichment
+                .cache_dir
+                .clone()
+                .unwrap_or_else(crate::pipeline::dirs::staleness_cache_dir),
+            cache_ttl: std::time::Duration::from_secs(config.enrichment.cache_ttl_hours * 3600),
+            bypass_cache: config.enrichment.bypass_cache,
+            timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
+            ..Default::default()
+        };
+        if crate::pipeline::enrich_staleness(parsed.sbom_mut(), &staleness_config, false).is_none()
+        {
+            enrichment_warnings.push("Staleness enrichment failed");
+        }
+    }
+
     // Enrich with VEX data if VEX documents provided
     #[cfg(feature = "enrichment")]
     if !config.enrichment.vex_paths.is_empty()
@@ -58,7 +100,11 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
 
     // Warn if enrichment requested but feature not enabled
     #[cfg(not(feature = "enrichment"))]
-    if config.enrichment.enabled || config.enrichment.enable_eol {
+    if config.enrichment.enabled
+        || config.enrichment.enable_eol
+        || config.enrichment.enable_kev
+        || config.enrichment.enable_staleness
+    {
         eprintln!(
             "Warning: enrichment requested but the 'enrichment' feature is not enabled. \
              Rebuild with: cargo build --features enrichment"

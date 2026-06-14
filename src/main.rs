@@ -56,6 +56,7 @@ const fn build_long_version() -> &'static str {
     3  Error occurred
     4  VEX gaps found (--fail-on-vex-gap)
     5  License policy violations found
+    6  Actively exploited (KEV) vulnerability introduced (--fail-on-kev)
 
 EXAMPLES:
   Comparing SBOMs:
@@ -64,12 +65,14 @@ EXAMPLES:
     sbom-tools diff old.cdx.json new.cdx.json -o json > diff.json  # JSON export
     sbom-tools diff old.cdx.json new.cdx.json -o sarif             # CI/CD SARIF
 
-  Enrichment (add vulnerability + EOL data before diffing):
+  Enrichment (add vulnerability + EOL + KEV data before diffing):
     sbom-tools diff old.json new.json --enrich-vulns --enrich-eol
+    sbom-tools diff old.json new.json --enrich-vulns --kev
     sbom-tools view app.cdx.json --enrich-vulns --fail-on-vuln
 
   CI/CD pipeline gates:
     sbom-tools diff old.json new.json --fail-on-vuln --fail-on-change
+    sbom-tools diff old.json new.json --enrich-vulns --kev --fail-on-kev
     sbom-tools diff old.json new.json --fail-on-vex-gap --vex vex.json
     sbom-tools quality app.cdx.json --min-score 70
 
@@ -147,6 +150,18 @@ struct SharedEnrichmentArgs {
     #[arg(long)]
     enrich_eol: bool,
 
+    /// Flag vulnerabilities in CISA's Known Exploited Vulnerabilities catalog
+    #[arg(long = "kev", alias = "enrich-kev")]
+    enrich_kev: bool,
+
+    /// Detect stale/abandoned/deprecated dependencies via package registries
+    #[arg(long = "enrich-staleness", alias = "staleness")]
+    enrich_staleness: bool,
+
+    /// CISA KEV catalog URL override (test seam; defaults to the public feed)
+    #[arg(long = "kev-url", env = "SBOM_TOOLS_KEV_URL", hide = true)]
+    kev_url: Option<String>,
+
     /// Apply external VEX document(s) (OpenVEX format). Can be specified multiple times
     #[arg(long = "vex", value_name = "PATH")]
     vex: Vec<PathBuf>,
@@ -184,6 +199,9 @@ impl SharedEnrichmentArgs {
             bypass_cache: self.refresh_vulns,
             timeout_secs: self.api_timeout,
             enable_eol: self.enrich_eol,
+            enable_kev: self.enrich_kev,
+            enable_staleness: self.enrich_staleness,
+            kev_url: self.kev_url.clone(),
             vex_paths: self.vex.clone(),
             ..Default::default()
         }
@@ -205,6 +223,8 @@ fn seed_enrichment(
     let cli = args.to_enrichment_config();
     let cli_touched = cli.enabled
         || cli.enable_eol
+        || cli.enable_kev
+        || cli.enable_staleness
         || arg_was_set_sub(sub, "vuln_cache_dir")
         || arg_was_set_sub(sub, "vuln_cache_ttl")
         || arg_was_set_sub(sub, "api_timeout")
@@ -225,12 +245,14 @@ fn seed_enrichment(
     2  Vulnerabilities introduced (--fail-on-vuln)
     3  Error occurred
     4  VEX gaps found (--fail-on-vex-gap)
+    6  Actively exploited (KEV) vulnerability introduced (--fail-on-kev)
 
 EXAMPLES:
     sbom-tools diff old.cdx.json new.cdx.json                    # Interactive TUI
     sbom-tools diff old.json new.json -o summary --fail-on-vuln   # CI gate
     sbom-tools diff old.json new.json --enrich-vulns -o sarif     # Enriched SARIF
     sbom-tools diff old.json new.json --graph-diff --graph-max-depth 3
+    sbom-tools diff old.json new.json --enrich-vulns --kev --fail-on-kev
     sbom-tools diff old.json new.json --vex vex.json --fail-on-vex-gap")]
 struct DiffArgs {
     /// Path to the old/baseline SBOM
@@ -262,6 +284,11 @@ struct DiffArgs {
     /// Exit with code 2 if new vulnerabilities are introduced
     #[arg(long)]
     fail_on_vuln: bool,
+
+    /// Exit with code 6 if any introduced vulnerability is in CISA's KEV catalog
+    /// (implies --kev enrichment)
+    #[arg(long)]
+    fail_on_kev: bool,
 
     /// Exit with code 1 if any changes detected (default for non-zero changes)
     #[arg(long)]
@@ -696,6 +723,9 @@ struct QualityArgs {
     /// Sidecar `productClass` wins over this flag.
     #[arg(long, value_name = "CLASS")]
     cra_product_class: Option<String>,
+
+    #[command(flatten)]
+    enrichment: SharedEnrichmentArgs,
 }
 
 /// Arguments for the `query` subcommand
@@ -1315,7 +1345,12 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Diff(args) => {
             let sm = sub_matches;
-            let enrichment = seed_enrichment(&args.enrichment, sm, &app);
+            let fail_on_kev = resolve_bool(args.fail_on_kev, app.behavior.fail_on_kev);
+            let mut enrichment = seed_enrichment(&args.enrichment, sm, &app);
+            // --fail-on-kev is meaningless without KEV data, so it implies --kev.
+            if fail_on_kev {
+                enrichment.enable_kev = true;
+            }
 
             let config = DiffConfig {
                 paths: DiffPaths {
@@ -1365,6 +1400,7 @@ fn main() -> Result<()> {
                 },
                 behavior: BehaviorConfig {
                     fail_on_vuln: resolve_bool(args.fail_on_vuln, app.behavior.fail_on_vuln),
+                    fail_on_kev,
                     fail_on_change: resolve_bool(args.fail_on_change, app.behavior.fail_on_change),
                     quiet: resolve_bool(cli.quiet, app.behavior.quiet),
                     explain_matches: resolve_bool(
@@ -1706,6 +1742,7 @@ fn main() -> Result<()> {
                 arg_was_set_sub(sm, "output"),
                 Some(app.output.format),
             );
+            let enrichment = seed_enrichment(&args.enrichment, sm, &app);
             let exit_code = cli::run_quality(
                 args.sbom,
                 args.profile,
@@ -1717,6 +1754,7 @@ fn main() -> Result<()> {
                 resolve_bool(cli.no_color, app.output.no_color),
                 args.cra_sidecar,
                 args.cra_product_class,
+                enrichment,
             )?;
             if exit_code != 0 {
                 std::process::exit(exit_code);

@@ -72,7 +72,7 @@ pub struct PackageMetadata {
 }
 
 /// Staleness enrichment statistics
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StalenessEnrichmentStats {
     /// Components checked
     pub components_checked: usize,

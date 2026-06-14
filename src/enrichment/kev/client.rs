@@ -47,7 +47,7 @@ fn default_cache_dir() -> PathBuf {
 }
 
 /// KEV enrichment statistics
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct KevEnrichmentStats {
     /// Number of vulnerabilities checked
     pub vulns_checked: usize,

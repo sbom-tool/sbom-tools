@@ -707,6 +707,9 @@ pub struct FilterConfig {
 pub struct BehaviorConfig {
     /// Exit with code 2 if new vulnerabilities are introduced
     pub fail_on_vuln: bool,
+    /// Exit with code 6 if any introduced vulnerability is in CISA's KEV catalog
+    #[serde(default)]
+    pub fail_on_kev: bool,
     /// Exit with code 1 if any changes detected
     pub fail_on_change: bool,
     /// Suppress non-essential output
@@ -801,12 +804,22 @@ pub struct EnrichmentConfig {
     pub timeout_secs: u64,
     /// Enable end-of-life detection via endoflife.date API
     pub enable_eol: bool,
+    /// Enable CISA KEV (Known Exploited Vulnerabilities) enrichment
+    #[serde(default)]
+    pub enable_kev: bool,
+    /// Enable dependency staleness enrichment via package registries
+    #[serde(default)]
+    pub enable_staleness: bool,
     /// Paths to external VEX documents (OpenVEX format)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub vex_paths: Vec<std::path::PathBuf>,
     /// OSV API base URL override (defaults to the public OSV API)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub api_base: Option<String>,
+    /// CISA KEV catalog URL override (defaults to the public CISA feed).
+    /// Primarily a test seam for pointing the KEV enricher at a mock server.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kev_url: Option<String>,
 }
 
 impl Default for EnrichmentConfig {
@@ -820,8 +833,11 @@ impl Default for EnrichmentConfig {
             bypass_cache: false,
             timeout_secs: 30,
             enable_eol: false,
+            enable_kev: false,
+            enable_staleness: false,
             vex_paths: Vec::new(),
             api_base: None,
+            kev_url: None,
         }
     }
 }
@@ -876,6 +892,27 @@ impl EnrichmentConfig {
     #[must_use]
     pub fn with_api_base(mut self, api_base: impl Into<String>) -> Self {
         self.api_base = Some(api_base.into());
+        self
+    }
+
+    /// Enable CISA KEV enrichment.
+    #[must_use]
+    pub const fn with_kev(mut self) -> Self {
+        self.enable_kev = true;
+        self
+    }
+
+    /// Override the CISA KEV catalog URL (test seam).
+    #[must_use]
+    pub fn with_kev_url(mut self, kev_url: impl Into<String>) -> Self {
+        self.kev_url = Some(kev_url.into());
+        self
+    }
+
+    /// Enable dependency staleness enrichment.
+    #[must_use]
+    pub const fn with_staleness(mut self) -> Self {
+        self.enable_staleness = true;
         self
     }
 }
@@ -974,6 +1011,12 @@ impl DiffConfigBuilder {
     #[must_use]
     pub const fn fail_on_vuln(mut self, fail: bool) -> Self {
         self.behavior.fail_on_vuln = fail;
+        self
+    }
+
+    #[must_use]
+    pub const fn fail_on_kev(mut self, fail: bool) -> Self {
+        self.behavior.fail_on_kev = fail;
         self
     }
 

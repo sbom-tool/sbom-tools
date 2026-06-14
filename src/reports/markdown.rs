@@ -322,11 +322,11 @@ impl ReportGenerator for MarkdownReporter {
                 writeln!(md, "### Introduced Vulnerabilities\n")?;
                 writeln!(
                     md,
-                    "| ID | Severity | CVSS | SLA | Type | Component | Version | VEX |"
+                    "| ID | Severity | CVSS | KEV | SLA | Type | Component | Version | VEX |"
                 )?;
                 writeln!(
                     md,
-                    "|----|----------|------|-----|------|-----------|---------|-----|"
+                    "|----|----------|------|-----|-----|------|-----------|---------|-----|"
                 )?;
                 for vuln in &result.vulnerabilities.introduced {
                     let depth_label = match vuln.component_depth {
@@ -336,15 +336,17 @@ impl ReportGenerator for MarkdownReporter {
                     };
                     let sla_display = format_sla_display(vuln);
                     let vex_display = format_vex_display(vuln.vex_state.as_ref());
+                    let kev_display = if vuln.is_kev { "⚠ KEV" } else { "-" };
                     writeln!(
                         md,
-                        "| {} | {} | {} | {} | {} | {} | {} | {} |",
+                        "| {} | {} | {} | {} | {} | {} | {} | {} | {} |",
                         escape_markdown_table(&vuln.id),
                         escape_markdown_table(&vuln.severity),
                         vuln.cvss_score
                             .map(|s| format!("{s:.1}"))
                             .as_deref()
                             .unwrap_or("-"),
+                        kev_display,
                         escape_markdown_table(&sla_display),
                         depth_label,
                         escape_markdown_table(&vuln.component_name),

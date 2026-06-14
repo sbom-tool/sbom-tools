@@ -2,6 +2,7 @@
 //!
 //! Implements the `quality` subcommand for assessing SBOM quality.
 
+use crate::config::EnrichmentConfig;
 use crate::pipeline::{OutputTarget, exit_codes, parse_sbom_with_context, write_output};
 use crate::quality::{
     QualityGrade, QualityReport, QualityScorer, ScoringProfile, ViolationSeverity,
@@ -27,6 +28,10 @@ pub struct QualityConfig {
     pub cra_sidecar_path: Option<PathBuf>,
     /// CRA Annex III/IV product class (CLI string form). Sidecar value wins.
     pub cra_product_class: Option<String>,
+    /// Enrichment configuration (OSV / KEV / EOL / staleness / VEX). When any
+    /// source is enabled the SBOM is enriched before scoring so the
+    /// Lifecycle / `VulnDocs` categories reflect live data.
+    pub enrichment: EnrichmentConfig,
 }
 
 /// Run the quality command, returning the desired exit code.
@@ -45,6 +50,7 @@ pub fn run_quality(
     no_color: bool,
     cra_sidecar_path: Option<PathBuf>,
     cra_product_class: Option<String>,
+    enrichment: EnrichmentConfig,
 ) -> Result<i32> {
     let config = QualityConfig {
         sbom_path,
@@ -57,13 +63,33 @@ pub fn run_quality(
         no_color,
         cra_sidecar_path,
         cra_product_class,
+        enrichment,
     };
 
     run_quality_impl(config)
 }
 
 fn run_quality_impl(config: QualityConfig) -> Result<i32> {
-    let parsed = parse_sbom_with_context(&config.sbom_path, false)?;
+    #[cfg_attr(not(feature = "enrichment"), allow(unused_mut))]
+    let mut parsed = parse_sbom_with_context(&config.sbom_path, false)?;
+
+    // Enrich before scoring so Lifecycle (staleness/EOL) and VulnDocs (OSV/KEV)
+    // categories reflect live data rather than only the static SBOM contents.
+    #[cfg(feature = "enrichment")]
+    {
+        let any_enrichment = config.enrichment.enabled
+            || config.enrichment.enable_eol
+            || config.enrichment.enable_kev
+            || config.enrichment.enable_staleness
+            || !config.enrichment.vex_paths.is_empty();
+        if any_enrichment {
+            let stats =
+                crate::pipeline::enrich_sbom_full(parsed.sbom_mut(), &config.enrichment, false);
+            for warning in &stats.warnings {
+                tracing::warn!("{warning}");
+            }
+        }
+    }
 
     // Parse scoring profile
     let profile = parse_scoring_profile(&config.profile)?;
@@ -659,6 +685,7 @@ mod tests {
             no_color: true,
             cra_sidecar_path: None,
             cra_product_class: None,
+            enrichment: EnrichmentConfig::default(),
         }
     }
 

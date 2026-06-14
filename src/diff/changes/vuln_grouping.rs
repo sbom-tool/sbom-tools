@@ -96,6 +96,11 @@ impl VulnerabilityGroup {
             self.component_version.clone_from(&vuln.version);
         }
 
+        // Propagate the KEV (actively exploited) flag to the group.
+        if vuln.is_kev {
+            self.has_kev = true;
+        }
+
         self.vulnerabilities.push(vuln);
     }
 
@@ -308,6 +313,30 @@ mod tests {
         // express should be second
         assert_eq!(groups[1].component_id, "express");
         assert_eq!(groups[1].vuln_count(), 1);
+    }
+
+    #[test]
+    fn test_group_propagates_kev_flag() {
+        let mut kev_vuln = make_vuln("CVE-2021-44228", "log4j", "Critical");
+        kev_vuln.is_kev = true;
+        let vulns = vec![kev_vuln, make_vuln("CVE-2024-0009", "lodash", "High")];
+
+        let groups = group_vulnerabilities(&vulns, VulnGroupStatus::Introduced);
+
+        let log4j = groups
+            .iter()
+            .find(|g| g.component_id == "log4j")
+            .expect("log4j group present");
+        assert!(log4j.has_kev, "group with a KEV vuln must report has_kev");
+
+        let lodash = groups
+            .iter()
+            .find(|g| g.component_id == "lodash")
+            .expect("lodash group present");
+        assert!(
+            !lodash.has_kev,
+            "group without KEV vulns must not report has_kev"
+        );
     }
 
     #[test]

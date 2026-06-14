@@ -128,6 +128,9 @@ pub(crate) struct DiffSnapshot {
     pub components_modified: usize,
     pub new_vulns: Vec<String>,
     pub resolved_vulns: Vec<String>,
+    /// Vulnerability IDs that newly entered CISA's KEV catalog this cycle
+    /// (actively exploited — highest-priority alert signal).
+    pub new_kev: Vec<String>,
     pub new_eol: Vec<String>,
     /// Crypto algorithms added or changed
     pub crypto_changes: Vec<String>,
@@ -143,6 +146,7 @@ impl DiffSnapshot {
             || self.components_modified > 0
             || !self.new_vulns.is_empty()
             || !self.resolved_vulns.is_empty()
+            || !self.new_kev.is_empty()
             || !self.new_eol.is_empty()
             || !self.crypto_changes.is_empty()
             || !self.crypto_downgrades.is_empty()
@@ -229,6 +233,7 @@ mod tests {
                     components_modified: 0,
                     new_vulns: vec![],
                     resolved_vulns: vec![],
+                    new_kev: vec![],
                     new_eol: vec![],
                     crypto_changes: vec![],
                     crypto_downgrades: vec![],
@@ -276,6 +281,7 @@ mod tests {
             components_modified: 0,
             new_vulns: vec![],
             resolved_vulns: vec![],
+            new_kev: vec![],
             new_eol: vec![],
             crypto_changes: vec![],
             crypto_downgrades: vec![],

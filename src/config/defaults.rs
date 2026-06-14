@@ -117,6 +117,7 @@ impl AppConfig {
             filtering: FilterConfig::default(),
             behavior: BehaviorConfig {
                 fail_on_vuln: true,
+                fail_on_kev: false,
                 fail_on_change: false,
                 quiet: false,
                 explain_matches: false,
@@ -165,6 +166,7 @@ impl AppConfig {
             },
             behavior: BehaviorConfig {
                 fail_on_vuln: true,
+                fail_on_kev: false,
                 fail_on_change: true,
                 quiet: true,
                 explain_matches: false,
@@ -219,6 +221,7 @@ impl AppConfig {
             filtering: FilterConfig::default(),
             behavior: BehaviorConfig {
                 fail_on_vuln: false,
+                fail_on_kev: false,
                 fail_on_change: false,
                 quiet: false,
                 explain_matches: false,

@@ -16,7 +16,9 @@ pub use parse::{ParsedSbom, STDIN_PATH, is_stdin_path, parse_sbom_with_context, 
 pub use report_stage::output_report;
 
 #[cfg(feature = "enrichment")]
-pub use parse::{build_enrichment_config, enrich_eol, enrich_sbom, enrich_vex};
+pub use parse::{
+    build_enrichment_config, enrich_eol, enrich_kev, enrich_sbom, enrich_staleness, enrich_vex,
+};
 
 /// Structured pipeline error types for better diagnostics.
 #[derive(Debug, thiserror::Error)]
@@ -58,6 +60,8 @@ pub mod exit_codes {
     pub const VEX_GAPS_FOUND: i32 = 4;
     /// License policy violations found
     pub const LICENSE_VIOLATIONS: i32 = 5;
+    /// Introduced vulnerabilities are in CISA's KEV catalog (--fail-on-kev)
+    pub const KEV_INTRODUCED: i32 = 6;
 
     // --- Per-command meanings (aliases preserving the numeric values above) ---
 
@@ -128,6 +132,24 @@ pub mod dirs {
             .join("sbom-tools")
             .join("eol")
     }
+
+    /// Get the default CISA KEV cache directory
+    #[must_use]
+    pub fn kev_cache_dir() -> PathBuf {
+        cache_dir()
+            .unwrap_or_else(|| PathBuf::from(".cache"))
+            .join("sbom-tools")
+            .join("kev")
+    }
+
+    /// Get the default staleness (registry) cache directory
+    #[must_use]
+    pub fn staleness_cache_dir() -> PathBuf {
+        cache_dir()
+            .unwrap_or_else(|| PathBuf::from(".cache"))
+            .join("sbom-tools")
+            .join("staleness")
+    }
 }
 
 #[cfg(test)]
@@ -142,6 +164,7 @@ mod tests {
         assert_eq!(exit_codes::ERROR, 3);
         assert_eq!(exit_codes::VEX_GAPS_FOUND, 4);
         assert_eq!(exit_codes::LICENSE_VIOLATIONS, 5);
+        assert_eq!(exit_codes::KEV_INTRODUCED, 6);
     }
 
     #[test]

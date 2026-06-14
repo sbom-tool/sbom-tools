@@ -273,6 +273,119 @@ pub fn enrich_eol(
     }
 }
 
+/// Enrich an SBOM's vulnerabilities with CISA KEV (Known Exploited
+/// Vulnerabilities) catalog data.
+///
+/// Sets `is_kev` / `kev_info` on every CVE-identified `VulnerabilityRef` that
+/// matches the catalog. Returns enrichment stats, or `None` if the catalog
+/// could not be loaded (non-fatal).
+#[cfg(feature = "enrichment")]
+pub fn enrich_kev(
+    sbom: &mut NormalizedSbom,
+    config: &crate::enrichment::KevClientConfig,
+    quiet: bool,
+) -> Option<crate::enrichment::KevEnrichmentStats> {
+    use crate::enrichment::KevClient;
+
+    if !quiet {
+        eprintln!("Enriching SBOM with CISA KEV (actively exploited) catalog...");
+    }
+
+    let mut client = KevClient::new(config.clone());
+
+    // Collect all vulnerability refs across components into one flat buffer so
+    // the catalog is loaded once, then scatter the enriched refs back.
+    let mut all_vulns: Vec<crate::model::VulnerabilityRef> = sbom
+        .components
+        .values()
+        .flat_map(|c| c.vulnerabilities.iter().cloned())
+        .collect();
+
+    if all_vulns.is_empty() {
+        return Some(crate::enrichment::KevEnrichmentStats::default());
+    }
+
+    match client.enrich_vulnerabilities(&mut all_vulns) {
+        Ok(stats) => {
+            if !quiet {
+                eprintln!(
+                    "KEV enrichment: {} matched ({} ransomware, {} overdue) from a {}-entry catalog",
+                    stats.kev_matches,
+                    stats.ransomware_related,
+                    stats.overdue_count,
+                    stats.catalog_size,
+                );
+            }
+            // Index enriched refs by vulnerability id so we can re-apply the KEV
+            // flags onto the per-component vulnerability lists.
+            let mut by_id: std::collections::HashMap<String, &crate::model::VulnerabilityRef> =
+                std::collections::HashMap::new();
+            for v in &all_vulns {
+                if v.is_kev {
+                    by_id.insert(v.id.clone(), v);
+                }
+            }
+            for comp in sbom.components.values_mut() {
+                for vuln in &mut comp.vulnerabilities {
+                    if let Some(enriched) = by_id.get(&vuln.id) {
+                        vuln.is_kev = true;
+                        vuln.kev_info = enriched.kev_info.clone();
+                    }
+                }
+            }
+            Some(stats)
+        }
+        Err(e) => {
+            eprintln!("Warning: KEV enrichment failed: {e}");
+            None
+        }
+    }
+}
+
+/// Enrich an SBOM's components with dependency staleness data from package
+/// registries (npm / `PyPI` / crates.io).
+///
+/// Populates `Component::staleness`, which feeds the Lifecycle quality metric.
+/// Returns enrichment stats, or `None` on initialization failure (non-fatal).
+#[cfg(feature = "enrichment")]
+pub fn enrich_staleness(
+    sbom: &mut NormalizedSbom,
+    config: &crate::enrichment::RegistryConfig,
+    quiet: bool,
+) -> Option<crate::enrichment::StalenessEnrichmentStats> {
+    use crate::enrichment::StalenessEnricher;
+
+    if !quiet {
+        eprintln!("Enriching SBOM with dependency staleness data from package registries...");
+    }
+
+    let mut enricher = StalenessEnricher::new(config.clone());
+    let mut comp_vec: Vec<_> = sbom.components.values().cloned().collect();
+
+    match enricher.enrich_components(&mut comp_vec) {
+        Ok(stats) => {
+            if !quiet {
+                eprintln!(
+                    "Staleness enrichment: {} enriched, {} stale, {} abandoned, {} deprecated, {} skipped",
+                    stats.components_enriched,
+                    stats.stale_count,
+                    stats.abandoned_count,
+                    stats.deprecated_count,
+                    stats.skipped_count,
+                );
+            }
+            for comp in comp_vec {
+                sbom.components.insert(comp.canonical_id.clone(), comp);
+            }
+            Some(stats)
+        }
+        Err(e) => {
+            eprintln!("Warning: staleness enrichment failed: {e}");
+            None
+        }
+    }
+}
+
 /// Enrich an SBOM with VEX data from external OpenVEX documents.
 ///
 /// Returns enrichment statistics if any VEX documents were successfully loaded.

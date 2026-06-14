@@ -82,6 +82,40 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
         }
     }
 
+    // Enrich with CISA KEV catalog (flags actively exploited vulnerabilities)
+    #[cfg(feature = "enrichment")]
+    if config.enrichment.enable_kev {
+        let kev_config = kev_client_config(&config.enrichment);
+        let kev_old = crate::pipeline::enrich_kev(old_parsed.sbom_mut(), &kev_config, quiet);
+        let kev_new = crate::pipeline::enrich_kev(new_parsed.sbom_mut(), &kev_config, quiet);
+        if kev_old.is_none() || kev_new.is_none() {
+            enrichment_warnings.push("KEV enrichment failed");
+        }
+    }
+
+    // Enrich with dependency staleness data
+    #[cfg(feature = "enrichment")]
+    if config.enrichment.enable_staleness {
+        let staleness_config = crate::enrichment::RegistryConfig {
+            cache_dir: config
+                .enrichment
+                .cache_dir
+                .clone()
+                .unwrap_or_else(crate::pipeline::dirs::staleness_cache_dir),
+            cache_ttl: std::time::Duration::from_secs(config.enrichment.cache_ttl_hours * 3600),
+            bypass_cache: config.enrichment.bypass_cache,
+            timeout: std::time::Duration::from_secs(config.enrichment.timeout_secs),
+            ..Default::default()
+        };
+        let stale_old =
+            crate::pipeline::enrich_staleness(old_parsed.sbom_mut(), &staleness_config, quiet);
+        let stale_new =
+            crate::pipeline::enrich_staleness(new_parsed.sbom_mut(), &staleness_config, quiet);
+        if stale_old.is_none() || stale_new.is_none() {
+            enrichment_warnings.push("Staleness enrichment failed");
+        }
+    }
+
     // Enrich with VEX data if VEX documents provided
     #[cfg(feature = "enrichment")]
     if !config.enrichment.vex_paths.is_empty() {
@@ -170,6 +204,23 @@ fn determine_exit_code(config: &DiffConfig, result: &crate::diff::DiffResult) ->
             return exit_codes::VEX_GAPS_FOUND;
         }
     }
+    // KEV gate is more specific than the generic vuln gate: an actively
+    // exploited (KEV) finding is the highest-priority signal for CRA Art.14
+    // reporting, so it outranks --fail-on-vuln.
+    if config.behavior.fail_on_kev {
+        let kev_count = result
+            .vulnerabilities
+            .introduced
+            .iter()
+            .filter(|v| v.is_kev)
+            .count();
+        if kev_count > 0 {
+            eprintln!(
+                "KEV gate: {kev_count} introduced vulnerability(ies) are in CISA's Known Exploited Vulnerabilities catalog",
+            );
+            return exit_codes::KEV_INTRODUCED;
+        }
+    }
     if config.behavior.fail_on_vuln && result.summary.vulnerabilities_introduced > 0 {
         return exit_codes::VULNS_INTRODUCED;
     }
@@ -177,6 +228,28 @@ fn determine_exit_code(config: &DiffConfig, result: &crate::diff::DiffResult) ->
         return exit_codes::CHANGES_DETECTED;
     }
     exit_codes::SUCCESS
+}
+
+/// Build a `KevClientConfig` from the user-facing `EnrichmentConfig`, honoring
+/// the cache directory, TTL, timeout, and optional URL override.
+#[cfg(feature = "enrichment")]
+fn kev_client_config(
+    enrichment: &crate::config::EnrichmentConfig,
+) -> crate::enrichment::KevClientConfig {
+    let mut cfg = crate::enrichment::KevClientConfig {
+        cache_dir: enrichment
+            .cache_dir
+            .clone()
+            .unwrap_or_else(crate::pipeline::dirs::kev_cache_dir),
+        cache_ttl: std::time::Duration::from_secs(enrichment.cache_ttl_hours * 3600),
+        bypass_cache: enrichment.bypass_cache,
+        timeout: std::time::Duration::from_secs(enrichment.timeout_secs),
+        ..Default::default()
+    };
+    if let Some(ref url) = enrichment.kev_url {
+        cfg.kev_url = url.clone();
+    }
+    cfg
 }
 
 #[cfg(test)]

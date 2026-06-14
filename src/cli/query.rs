@@ -556,32 +556,10 @@ fn enrich_if_needed(
     mut sboms: Vec<NormalizedSbom>,
     config: &crate::config::EnrichmentConfig,
 ) -> Result<Vec<NormalizedSbom>> {
-    // VEX enrichment
-    if !config.vex_paths.is_empty() {
-        for sbom in &mut sboms {
-            crate::pipeline::enrich_vex(sbom, &config.vex_paths, false);
-        }
-    }
-    if config.enabled {
-        let osv_config = crate::pipeline::build_enrichment_config(config);
-        for sbom in &mut sboms {
-            crate::pipeline::enrich_sbom(sbom, &osv_config, false);
-        }
-    }
-    if config.enable_eol {
-        let eol_config = crate::enrichment::EolClientConfig {
-            cache_dir: config
-                .cache_dir
-                .clone()
-                .unwrap_or_else(crate::pipeline::dirs::eol_cache_dir),
-            cache_ttl: std::time::Duration::from_secs(config.cache_ttl_hours * 3600),
-            bypass_cache: config.bypass_cache,
-            timeout: std::time::Duration::from_secs(config.timeout_secs),
-            ..Default::default()
-        };
-        for sbom in &mut sboms {
-            crate::pipeline::enrich_eol(sbom, &eol_config, false);
-        }
+    // Delegate to the central pipeline so OSV / KEV / EOL / staleness / VEX are
+    // all sequenced consistently with the other commands.
+    for sbom in &mut sboms {
+        crate::pipeline::enrich_sbom_full(sbom, config, false);
     }
     Ok(sboms)
 }
