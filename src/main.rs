@@ -1425,7 +1425,13 @@ fn main() -> Result<()> {
         .with(tracing_subscriber::EnvFilter::new(
             std::env::var("RUST_LOG").unwrap_or_else(|_| log_level.to_string()),
         ))
-        .with(tracing_subscriber::fmt::layer().with_target(false))
+        // Logs go to stderr so machine-readable report output on stdout
+        // (`-o json`/`sarif`/`ndjson`) stays parseable when piped or redirected.
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_target(false)
+                .with_writer(std::io::stderr),
+        )
         .init();
 
     // Load the file-based config once, up front, so every command can use it
