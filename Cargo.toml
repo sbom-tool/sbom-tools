@@ -105,6 +105,10 @@ harness = false
 name = "large_sbom"
 harness = false
 
+[[bench]]
+name = "hot_paths"
+harness = false
+
 [[test]]
 name = "ffi_bindings"
 required-features = ["ffi"]

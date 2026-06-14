@@ -5,62 +5,19 @@
 //! These benchmarks test the performance improvements from:
 //! 1. Incremental diffing with caching
 //! 2. BatchCandidateGenerator with LSH for large SBOMs
+//!
+//! Fixtures are GRAPH-SHAPED and deterministic, sourced from the shared
+//! `benches/support` module (replacing the per-file `generate_sbom` helper).
+
+mod support;
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use sbom_tools::diff::{DiffEngine, IncrementalDiffEngine, LargeSbomConfig};
-use sbom_tools::model::{Component, DocumentMetadata, Ecosystem, NormalizedSbom};
 use std::hint::black_box;
-
-/// Generate a test SBOM with the specified number of components.
-fn generate_sbom(prefix: &str, count: usize, ecosystem: Ecosystem) -> NormalizedSbom {
-    let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
-
-    for i in 0..count {
-        let name = format!("{}-component-{}", prefix, i);
-        let mut comp = Component::new(name.clone(), format!("{}-{}", prefix, name));
-        comp.version = Some(format!("1.{}.{}", i % 10, i % 100));
-        comp.ecosystem = Some(ecosystem.clone());
-        comp.identifiers.purl = Some(format!(
-            "pkg:npm/{}/{}@{}",
-            prefix,
-            name.replace("-", ""),
-            comp.version.as_ref().unwrap()
-        ));
-        sbom.add_component(comp);
-    }
-
-    sbom
-}
-
-/// Generate two related SBOMs with some components changed.
-fn generate_sbom_pair(size: usize, change_percent: f64) -> (NormalizedSbom, NormalizedSbom) {
-    let old = generate_sbom("old", size, Ecosystem::Npm);
-
-    let mut new = NormalizedSbom::new(DocumentMetadata::default());
-    let changes = (size as f64 * change_percent / 100.0) as usize;
-
-    // Copy most components unchanged
-    for (i, (_, comp)) in old.components.iter().enumerate() {
-        if i < size - changes {
-            // Keep unchanged
-            new.add_component(comp.clone());
-        }
-    }
-
-    // Add some new components
-    for i in 0..changes {
-        let name = format!("new-component-{}", i);
-        let mut comp = Component::new(name.clone(), format!("new-{}", name));
-        comp.version = Some(format!("2.0.{}", i));
-        comp.ecosystem = Some(Ecosystem::Npm);
-        new.add_component(comp);
-    }
-
-    (old, new)
-}
+use support::{Topology, generate_graph_pair};
 
 fn bench_diff_small(c: &mut Criterion) {
-    let (old, new) = generate_sbom_pair(100, 10.0);
+    let (old, new) = generate_graph_pair(100, 10.0, Topology::Mixed);
     let engine = DiffEngine::new();
 
     c.bench_function("diff_100_components", |b| {
@@ -71,7 +28,7 @@ fn bench_diff_small(c: &mut Criterion) {
 }
 
 fn bench_diff_medium(c: &mut Criterion) {
-    let (old, new) = generate_sbom_pair(500, 10.0);
+    let (old, new) = generate_graph_pair(500, 10.0, Topology::Mixed);
     let engine = DiffEngine::new();
 
     c.bench_function("diff_500_components", |b| {
@@ -82,7 +39,7 @@ fn bench_diff_medium(c: &mut Criterion) {
 }
 
 fn bench_diff_large(c: &mut Criterion) {
-    let (old, new) = generate_sbom_pair(1000, 10.0);
+    let (old, new) = generate_graph_pair(1000, 10.0, Topology::Mixed);
     let engine = DiffEngine::new();
 
     c.bench_function("diff_1000_components", |b| {
@@ -96,7 +53,7 @@ fn bench_diff_scaling(c: &mut Criterion) {
     let mut group = c.benchmark_group("diff_scaling");
 
     for size in [100, 250, 500, 750, 1000].iter() {
-        let (old, new) = generate_sbom_pair(*size, 10.0);
+        let (old, new) = generate_graph_pair(*size, 10.0, Topology::Mixed);
         let engine = DiffEngine::new();
 
         group.bench_with_input(BenchmarkId::new("standard", size), size, |b, _| {
@@ -112,7 +69,7 @@ fn bench_diff_scaling(c: &mut Criterion) {
 fn bench_lsh_threshold(c: &mut Criterion) {
     let mut group = c.benchmark_group("lsh_threshold");
 
-    let (old, new) = generate_sbom_pair(600, 10.0);
+    let (old, new) = generate_graph_pair(600, 10.0, Topology::Mixed);
 
     // Without LSH (high threshold)
     let engine_no_lsh = DiffEngine::new().with_large_sbom_config(LargeSbomConfig {
@@ -142,7 +99,7 @@ fn bench_lsh_threshold(c: &mut Criterion) {
 fn bench_incremental_cache(c: &mut Criterion) {
     let mut group = c.benchmark_group("incremental_cache");
 
-    let (old, new) = generate_sbom_pair(500, 10.0);
+    let (old, new) = generate_graph_pair(500, 10.0, Topology::Mixed);
     let engine = DiffEngine::new();
     let incremental = IncrementalDiffEngine::new(engine);
 
@@ -151,7 +108,7 @@ fn bench_incremental_cache(c: &mut Criterion) {
         b.iter(|| {
             incremental.clear_cache();
             let result = incremental.diff(black_box(&old), black_box(&new));
-            black_box(result);
+            let _ = black_box(result);
         })
     });
 
@@ -162,7 +119,7 @@ fn bench_incremental_cache(c: &mut Criterion) {
     group.bench_function("cached_diff", |b| {
         b.iter(|| {
             let result = incremental.diff(black_box(&old), black_box(&new));
-            black_box(result);
+            let _ = black_box(result);
         })
     });
 
@@ -172,7 +129,7 @@ fn bench_incremental_cache(c: &mut Criterion) {
 fn bench_repeated_diffs(c: &mut Criterion) {
     let mut group = c.benchmark_group("repeated_diffs");
 
-    let (old, new) = generate_sbom_pair(500, 10.0);
+    let (old, new) = generate_graph_pair(500, 10.0, Topology::Mixed);
 
     // Standard engine - repeated diffs
     let standard_engine = DiffEngine::new();

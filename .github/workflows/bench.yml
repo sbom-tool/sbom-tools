@@ -1,0 +1,99 @@
+name: Benchmarks
+
+# Approach (see PR bench/hot-path-suite):
+#
+# Criterion measures wall-clock time, which flaps on shared GitHub runners, so it
+# is NOT used as a hard PR gate (a %-regression gate would produce false failures
+# from runner noise). The deterministic instruction-count alternative
+# (iai-callgrind) would add a dev-dependency + valgrind install that must clear
+# cargo-deny's all-features scan; that risk was not worth taking here.
+#
+# Instead:
+#   * On PRs/pushes that touch benchable code, we run `cargo bench --no-run` as a
+#     fast SMOKE GATE — it guarantees the bench suite keeps compiling without
+#     spending minutes measuring.
+#   * On a weekly SCHEDULE (and manual dispatch) we run the full criterion suite
+#     with `--save-baseline`, uploading the saved baseline as an artifact for
+#     out-of-band trend tracking. This is informational, never a gate.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "benches/**"
+      - "src/**"
+      - "Cargo.toml"
+      - ".github/workflows/bench.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "benches/**"
+      - "src/**"
+      - "Cargo.toml"
+      - ".github/workflows/bench.yml"
+  schedule:
+    - cron: "0 4 * * 1" # Monday 04:00 UTC
+  workflow_dispatch:
+
+permissions: read-all
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # ── PR smoke gate: benches must keep compiling (no measurement) ─────────────
+  bench-smoke:
+    name: Bench compile smoke
+    # Skip on the schedule — the full run below covers compilation there.
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Install Rust 1.88
+        # toolchain "1.88" matches rust-toolchain.toml; action pinned to master (no releases)
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
+        with:
+          toolchain: "1.88"
+      - name: Cache
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          shared-key: bench
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Compile benches (no run)
+        run: cargo bench --locked --no-run
+
+  # ── Scheduled full run with saved baseline (informational, not a gate) ──────
+  bench-run:
+    name: Bench run (baseline)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Install Rust 1.88
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
+        with:
+          toolchain: "1.88"
+      - name: Cache
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          shared-key: bench
+      - name: Run benches and save baseline
+        run: cargo bench --locked -- --save-baseline ci
+      - name: Upload criterion baseline
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: criterion-baseline-${{ github.sha }}
+          path: target/criterion/
+          retention-days: 30
+          if-no-files-found: warn

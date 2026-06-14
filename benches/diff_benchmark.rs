@@ -1,88 +1,18 @@
 //! Benchmarks for the diff engine (small/medium) and cost model.
+//!
+//! Graph-shaped, deterministic fixtures come from the shared `benches/support`
+//! module (which replaces the two duplicated `generate_sbom` helpers that used
+//! to live here and in `large_sbom.rs`).
+
+mod support;
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use sbom_tools::diff::{CostModel, DiffEngine, LargeSbomConfig};
-use sbom_tools::model::{Component, DocumentMetadata, Ecosystem, NormalizedSbom};
 use std::hint::black_box;
-
-/// Generate a test SBOM with specified component count.
-fn generate_sbom(prefix: &str, count: usize) -> NormalizedSbom {
-    let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
-    for i in 0..count {
-        let name = format!("{prefix}-component-{i}");
-        let mut comp = Component::new(name.clone(), format!("{prefix}-{name}"));
-        comp.version = Some(format!("1.{}.{}", i % 10, i % 100));
-        comp.ecosystem = Some(Ecosystem::Npm);
-        comp.identifiers.purl = Some(format!(
-            "pkg:npm/{prefix}/{}@{}",
-            name.replace('-', ""),
-            comp.version.as_ref().unwrap()
-        ));
-        sbom.add_component(comp);
-    }
-    sbom
-}
-
-/// Generate two related SBOMs with a percentage of components changed.
-fn generate_pair(size: usize, change_pct: f64) -> (NormalizedSbom, NormalizedSbom) {
-    let old = generate_sbom("old", size);
-    let mut new_sbom = NormalizedSbom::new(DocumentMetadata::default());
-    let changes = (size as f64 * change_pct / 100.0) as usize;
-
-    for (i, (_, comp)) in old.components.iter().enumerate() {
-        if i < size - changes {
-            new_sbom.add_component(comp.clone());
-        }
-    }
-    for i in 0..changes {
-        let name = format!("new-component-{i}");
-        let mut comp = Component::new(name.clone(), format!("new-{name}"));
-        comp.version = Some(format!("2.0.{i}"));
-        comp.ecosystem = Some(Ecosystem::Npm);
-        new_sbom.add_component(comp);
-    }
-
-    (old, new_sbom)
-}
-
-/// Generate two SBOMs with the same packages but DISJOINT canonical IDs.
-///
-/// Each component's canonical ID comes only from its (unstable) format id, so
-/// using different format ids between the two documents shares zero canonical
-/// IDs — every component is forced through the full fuzzy assignment path. This
-/// is the cross-format / regenerated-bom-ref worst case the sparse solver
-/// targets. Names are distinct but version-bumped, so each old component has
-/// exactly one strong fuzzy match in the new SBOM. Generation is deterministic.
-fn generate_disjoint_pair(size: usize) -> (NormalizedSbom, NormalizedSbom) {
-    let mut old = NormalizedSbom::new(DocumentMetadata::default());
-    let mut new = NormalizedSbom::new(DocumentMetadata::default());
-
-    for i in 0..size {
-        // Distinct, fuzzy-matchable name (numeric token framed by letters).
-        let name = format!("comp{i:06}lib");
-        let eco = if i % 2 == 0 {
-            Ecosystem::Npm
-        } else {
-            Ecosystem::PyPi
-        };
-
-        let mut old_comp = Component::new(name.clone(), format!("old-ref-{i}"));
-        old_comp.version = Some("1.0.0".to_string());
-        old_comp.ecosystem = Some(eco.clone());
-        old.add_component(old_comp);
-
-        // Same name + ecosystem, bumped version, fresh ref → disjoint ID.
-        let mut new_comp = Component::new(name, format!("new-ref-{i}"));
-        new_comp.version = Some("2.0.0".to_string());
-        new_comp.ecosystem = Some(eco);
-        new.add_component(new_comp);
-    }
-
-    (old, new)
-}
+use support::{Topology, generate_disjoint_pair, generate_graph_pair};
 
 fn benchmark_diff_small(c: &mut Criterion) {
-    let (old, new) = generate_pair(50, 10.0);
+    let (old, new) = generate_graph_pair(50, 10.0, Topology::Mixed);
     let engine = DiffEngine::new();
 
     c.bench_function("diff_50_components_10pct", |b| {
@@ -93,7 +23,7 @@ fn benchmark_diff_small(c: &mut Criterion) {
 }
 
 fn benchmark_diff_medium(c: &mut Criterion) {
-    let (old, new) = generate_pair(200, 20.0);
+    let (old, new) = generate_graph_pair(200, 20.0, Topology::Mixed);
     let engine = DiffEngine::new();
 
     c.bench_function("diff_200_components_20pct", |b| {
