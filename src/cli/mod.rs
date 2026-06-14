@@ -5,6 +5,7 @@
 
 #[cfg(feature = "enrichment")]
 mod cache;
+mod convert;
 mod cra_docs;
 mod cra_standards_watch;
 mod diff;
@@ -24,6 +25,7 @@ mod watch;
 
 #[cfg(feature = "enrichment")]
 pub use cache::{CacheAction, run_cache};
+pub use convert::run_convert;
 pub use cra_docs::run_cra_docs;
 pub use cra_standards_watch::{
     OnlineProbe, TrackedStandard, WatchOutputFormat, cra_catalogue, probe_cra_standards,

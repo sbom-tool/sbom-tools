@@ -497,8 +497,23 @@ pub struct ComponentExtensions {
     pub properties: Vec<Property>,
     /// Annotations from SPDX
     pub annotations: Vec<Annotation>,
-    /// Raw extension data
+    /// Raw extension data.
+    ///
+    /// Occupied by the SPDX-3 AI-profile bridge (`parsers::spdx3`), which mirrors
+    /// non-typed AI signals here in CycloneDX `mlModel.modelCard` layout so the
+    /// AI-readiness scorer can read them. Do NOT repurpose this for round-trip
+    /// preservation — use [`source_json`](Self::source_json) instead.
     pub raw: Option<serde_json::Value>,
+    /// Verbatim source JSON object for this component, captured for cross-format
+    /// conversion fidelity.
+    ///
+    /// Opt-in and convert-only: populated solely when the `convert`/`--preserve`
+    /// path is active (see [`crate::serialization::emit`]), keeping it out of the
+    /// normal parse hot path so memory stays bounded. Boxed to keep
+    /// [`ComponentExtensions`] small when the slot is empty (the common case),
+    /// and skipped on serialization when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_json: Option<Box<serde_json::Value>>,
 }
 
 /// Key-value property

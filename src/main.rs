@@ -980,6 +980,9 @@ enum Commands {
     /// Merge two SBOMs into one
     Merge(MergeArgs),
 
+    /// Convert an SBOM to another format (e.g. SPDX → CycloneDX)
+    Convert(ConvertArgs),
+
     /// Generate CRA technical-documentation dossier (Annex V templates)
     CraDocs(CraDocsArgs),
 
@@ -1249,6 +1252,33 @@ struct MergeArgs {
     /// Deduplication strategy
     #[arg(long, value_enum, default_value = "name")]
     dedup: sbom_tools::serialization::DeduplicationStrategy,
+}
+
+/// Arguments for the `convert` subcommand
+#[derive(Parser)]
+#[command(after_help = "EXAMPLES:
+    sbom-tools convert app.spdx.json --to cyclonedx                # SPDX → CycloneDX (stdout)
+    sbom-tools convert app.spdx.json --to cyclonedx -o out.cdx.json
+    sbom-tools convert app.cdx.json --to cyclonedx --preserve      # Keep format-specific blocks
+
+NOTE: Only --to cyclonedx is implemented; --to spdx is reserved for a follow-up.
+A fidelity report (synthesized/dropped fields) is written to stderr.")]
+struct ConvertArgs {
+    /// SBOM file to convert
+    file: PathBuf,
+
+    /// Target format (currently only: cyclonedx)
+    #[arg(long = "to")]
+    to: String,
+
+    /// Output file (stdout if not specified)
+    #[arg(short = 'o', long)]
+    output_file: Option<PathBuf>,
+
+    /// Capture verbatim source JSON before conversion so format-specific blocks
+    /// (cryptoProperties, evidence) are spliced back where present
+    #[arg(long)]
+    preserve: bool,
 }
 
 /// Arguments for the `cra-standards-watch` subcommand. Curated, offline-first
@@ -2154,6 +2184,20 @@ fn main() -> Result<()> {
                 &args.secondary,
                 args.output_file.as_ref(),
                 config,
+                cli.quiet,
+            )?;
+            if exit_code != 0 {
+                std::process::exit(exit_code);
+            }
+            Ok(())
+        }
+
+        Commands::Convert(args) => {
+            let exit_code = cli::run_convert(
+                &args.file,
+                &args.to,
+                args.output_file.as_ref(),
+                args.preserve,
                 cli.quiet,
             )?;
             if exit_code != 0 {

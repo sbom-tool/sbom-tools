@@ -1,12 +1,17 @@
 //! SBOM serialization and transformation.
 //!
-//! Operates on raw JSON (`serde_json::Value`) to inject enrichment data,
-//! filter components, or merge SBOMs — preserving the original format structure.
+//! Two complementary strategies live here:
+//! - [`enricher`]/[`merger`]/[`pruner`] patch the *original* raw JSON in place,
+//!   preserving the source format's structure exactly.
+//! - [`emit`] *synthesizes* a fresh document from the canonical model, enabling
+//!   cross-format conversion (e.g. SPDX → CycloneDX).
 
+pub mod emit;
 mod enricher;
 mod merger;
 mod pruner;
 
+pub use emit::{EmitError, EmitTarget, FidelityReport, emit, emit_cyclonedx, preserve_source_json};
 pub use enricher::enrich_sbom_json;
 pub use merger::{DeduplicationStrategy, MergeConfig, MergeError, merge_sbom_json};
 pub use pruner::{TailorConfig, tailor_sbom_json};
