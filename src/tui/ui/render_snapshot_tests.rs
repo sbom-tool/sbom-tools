@@ -69,6 +69,7 @@ fn snapshot_all_diff_tabs() {
     // this is defensive: it keeps snapshots stable if a fixture later gains them.
     let mut settings = insta::Settings::clone_current();
     settings.add_filter(r"\d+d ago", "Nd ago");
+    settings.add_filter(r"Age: \d+d", "Age: [N]d");
     settings.add_filter(
         r"\((?:today|in the future|(?:\d+|1) (?:days?|months?|years?) ago)\)",
         "(AGE)",

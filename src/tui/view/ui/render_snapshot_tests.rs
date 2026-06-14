@@ -60,6 +60,8 @@ fn snapshot_all_view_tabs() {
         r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+\([^│\n]*",
         "$1 (AGE)",
     );
+    // Lifecycle "Age: 728d" drifts daily; redact the day count.
+    settings.add_filter(r"Age: \d+d", "Age: [N]d");
     settings.bind(|| {
         for (name, tab) in VIEW_TABS {
             for (w, h) in SIZES {
