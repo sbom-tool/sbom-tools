@@ -7,6 +7,7 @@
 
 use proptest::prelude::*;
 use sbom_tools::diff::DiffEngine;
+use sbom_tools::matching::FuzzyMatchConfig;
 use sbom_tools::model::{Component, DocumentMetadata, NormalizedSbom};
 use std::collections::HashSet;
 
@@ -113,7 +114,14 @@ proptest! {
     ) {
         let a = build_sbom(a_comps);
         let b = build_sbom(b_comps);
-        let engine = DiffEngine::new();
+        // Added/removed set-duality is a property of EXACT matching. Fuzzy
+        // matching's directional assignment can legitimately pair similar
+        // components asymmetrically between the two diff directions, so the
+        // duality is tested with fuzzy acceptance disabled (threshold above the
+        // max fuzzy score of 1.0 leaves only exact canonical-id matches, which
+        // are symmetric). The fuzzy path is covered by proptest_matching.
+        let engine =
+            DiffEngine::new().with_fuzzy_config(FuzzyMatchConfig::balanced().with_threshold(1.01));
 
         let forward = engine.diff(&a, &b).expect("diff should succeed");
         let reverse = engine.diff(&b, &a).expect("diff should succeed");
