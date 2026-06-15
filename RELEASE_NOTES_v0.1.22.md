@@ -1,3 +1,5 @@
+# sbom-tools v0.1.22
+
 ## Highlights
 
 The **AI BOM release.** sbom-tools now treats AI systems as a first-class
@@ -19,7 +21,7 @@ air-gapped mode, and broad CLI/TUI alignment.
 > changes several user-visible behaviors (scoring engine 2.1, stricter
 > license-policy gating, logs moved to stderr, official EPSS endpoint).
 
-## New Features
+## What's New
 
 ### AI / ML Bill of Materials
 
@@ -179,6 +181,8 @@ air-gapped mode, and broad CLI/TUI alignment.
   2.0.20, `actions/checkout` → 6.0.3; SHA-pin hygiene + expanded Dependabot
   coverage; fuzz CI now installs `cargo-fuzz` with the nightly toolchain.
   (#193, #194, #199, #200, #202)
+- **Total tests: 1560** (1014 lib + 546 integration), up from 1214 in v0.1.21.
+- **0 clippy warnings** (default + all-features) on Rust 1.88; **0 production `unwrap()`**.
 
 ## Upgrade notes
 
@@ -219,6 +223,7 @@ KEV**, and **FIRST EPSS**.
 
 ---
 
-Install: `cargo install sbom-tools` · `brew install sbom-tool/tap/sbom-tools`
+Install: `cargo install sbom-tools`
+Homebrew: `brew install sbom-tool/tap/sbom-tools`
 Crate: https://crates.io/crates/sbom-tools
 Full changelog: https://github.com/sbom-tool/sbom-tools/compare/v0.1.21...v0.1.22

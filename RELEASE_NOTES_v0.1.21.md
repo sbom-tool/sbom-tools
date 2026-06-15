@@ -1,3 +1,5 @@
+# sbom-tools v0.1.21
+
 ## Highlights
 
 Focused bug-fix release. `view -o json` now emits the full enriched
@@ -35,6 +37,8 @@ components.
   `tokio` 1.52.2 → 1.52.3 (dagger SDK only).
 - GitHub Actions bumps: `codeql-action` 4.35.3 → 4.35.5,
   `cargo-deny-action` 2.0.17 → 2.0.18, `crates-io-auth-action` SHA-pin refresh.
+- **Total tests: 1214** (787 lib + 427 integration), up from 1196 in v0.1.20.
+- **0 clippy warnings** (default + all-features) on Rust 1.88; **0 production `unwrap()`**.
 
 ## Acknowledgments
 
@@ -44,6 +48,7 @@ to **@cmyank0** and **@VincentR-OCD** for the bug reports that drove them.
 
 ---
 
-Install: `cargo install sbom-tools` · `brew install sbom-tool/tap/sbom-tools`
+Install: `cargo install sbom-tools`
+Homebrew: `brew install sbom-tool/tap/sbom-tools`
 Crate: https://crates.io/crates/sbom-tools
 Full changelog: https://github.com/sbom-tool/sbom-tools/compare/v0.1.20...v0.1.21
