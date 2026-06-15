@@ -331,6 +331,12 @@ pub fn render_ml_dataset_lines(
                 Span::styled(task.clone(), Style::default().fg(scheme.text)),
             ]));
         }
+        if let Some(quantization) = &ml.quantization {
+            lines.push(Line::from(vec![
+                Span::styled("  Quantization: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(quantization.clone(), Style::default().fg(scheme.text)),
+            ]));
+        }
         if let Some(energy) = ml.energy_kwh_training {
             lines.push(Line::from(vec![
                 Span::styled(
@@ -389,6 +395,103 @@ pub fn render_ml_dataset_lines(
                 ));
             }
         }
+
+        // --- Model-card considerations (drive the AI-readiness score) ---
+        // Surfaced so the detail panel can explain a low AI grade: a model with
+        // no fairness/use-cases/metrics scores poorly, and that is now visible.
+        if !ml.use_cases.is_empty() {
+            lines.push(Line::from(vec![
+                Span::styled("  Use Cases: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(
+                    crate::tui::widgets::truncate_str(
+                        &ml.use_cases.join(", "),
+                        width.saturating_sub(13),
+                    ),
+                    Style::default().fg(scheme.text),
+                ),
+            ]));
+        }
+        if !ml.performance_metrics.is_empty() {
+            // "type=value" pairs, e.g. "accuracy=0.94, F1=0.91".
+            let metrics: Vec<String> = ml
+                .performance_metrics
+                .iter()
+                .take(4)
+                .map(|m| match (m.metric_type.as_deref(), m.value.as_deref()) {
+                    (Some(t), Some(v)) => format!("{t}={v}"),
+                    (Some(t), None) => t.to_string(),
+                    (None, Some(v)) => v.to_string(),
+                    (None, None) => "(unnamed)".to_string(),
+                })
+                .collect();
+            lines.push(Line::from(vec![
+                Span::styled(
+                    format!("  Metrics ({}): ", ml.performance_metrics.len()),
+                    Style::default().fg(scheme.text_muted),
+                ),
+                Span::styled(
+                    crate::tui::widgets::truncate_str(
+                        &metrics.join(", "),
+                        width.saturating_sub(16),
+                    ),
+                    Style::default().fg(scheme.text),
+                ),
+            ]));
+        }
+        if !ml.fairness.is_empty() {
+            let groups: Vec<&str> = ml
+                .fairness
+                .iter()
+                .filter_map(|f| f.group_at_risk.as_deref())
+                .take(3)
+                .collect();
+            let mut spans = vec![Span::styled(
+                format!("  Fairness ({}): ", ml.fairness.len()),
+                Style::default().fg(scheme.text_muted),
+            )];
+            if groups.is_empty() {
+                spans.push(Span::styled("assessed", Style::default().fg(scheme.text)));
+            } else {
+                spans.push(Span::styled(
+                    crate::tui::widgets::truncate_str(&groups.join(", "), width.saturating_sub(18)),
+                    Style::default().fg(scheme.text),
+                ));
+            }
+            lines.push(Line::from(spans));
+        }
+        if !ml.ethical_considerations.is_empty() {
+            let names: Vec<&str> = ml
+                .ethical_considerations
+                .iter()
+                .filter_map(|e| e.name.as_deref())
+                .take(3)
+                .collect();
+            let mut spans = vec![Span::styled(
+                format!("  Ethics ({}): ", ml.ethical_considerations.len()),
+                Style::default().fg(scheme.text_muted),
+            )];
+            if names.is_empty() {
+                spans.push(Span::styled("documented", Style::default().fg(scheme.text)));
+            } else {
+                spans.push(Span::styled(
+                    crate::tui::widgets::truncate_str(&names.join(", "), width.saturating_sub(16)),
+                    Style::default().fg(scheme.text),
+                ));
+            }
+            lines.push(Line::from(spans));
+        }
+        if !ml.data_preprocessing.is_empty() {
+            lines.push(Line::from(vec![
+                Span::styled("  Preprocessing: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(
+                    crate::tui::widgets::truncate_str(
+                        &ml.data_preprocessing.join(", "),
+                        width.saturating_sub(17),
+                    ),
+                    Style::default().fg(scheme.text),
+                ),
+            ]));
+        }
     }
 
     if let Some(dataset) = dataset {
@@ -417,6 +520,28 @@ pub fn render_ml_dataset_lines(
                         width.saturating_sub(14),
                     ),
                     Style::default().fg(scheme.text),
+                ),
+            ]));
+        }
+        if let Some(intended_use) = &dataset.intended_use {
+            lines.push(Line::from(vec![
+                Span::styled("  Intended Use: ", Style::default().fg(scheme.text_muted)),
+                Span::styled(
+                    crate::tui::widgets::truncate_str(intended_use, width.saturating_sub(16)),
+                    Style::default().fg(scheme.text),
+                ),
+            ]));
+        }
+        if let Some(confidentiality) = &dataset.confidentiality_level {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    "  Confidentiality: ",
+                    Style::default().fg(scheme.text_muted),
+                ),
+                // Confidentiality classification is high-attention, like sensitivity.
+                Span::styled(
+                    confidentiality.clone(),
+                    Style::default().fg(scheme.critical),
                 ),
             ]));
         }
@@ -555,6 +680,37 @@ pub fn render_component_info_lines(
         ]));
     }
 
+    // --- EOL / staleness badges (populated by enrichment in diff mode) ---
+    // Surfaced here so diff-mode component detail matches view-mode + CLI reports.
+    if let Some(ref eol) = component.eol {
+        lines.push(Line::from(vec![
+            Span::styled("EOL: ", Style::default().fg(scheme.text_muted)),
+            Span::styled(
+                format!("{} {}", eol.status.icon(), eol.status.label()),
+                // Past/approaching EOL is high-attention; otherwise neutral.
+                Style::default().fg(if eol.needs_attention() {
+                    scheme.critical
+                } else {
+                    scheme.text
+                }),
+            ),
+        ]));
+    }
+    if let Some(ref staleness) = component.staleness {
+        lines.push(Line::from(vec![
+            Span::styled("Staleness: ", Style::default().fg(scheme.text_muted)),
+            Span::styled(
+                format!("{} {}", staleness.level.icon(), staleness.level.label()),
+                // Stale-or-worse warrants attention.
+                Style::default().fg(if staleness.level.severity() >= 2 {
+                    scheme.warning
+                } else {
+                    scheme.text
+                }),
+            ),
+        ]));
+    }
+
     // --- Vulnerabilities ---
     if !component.vulnerabilities.is_empty() {
         let count = component.vulnerabilities.len();
@@ -565,6 +721,30 @@ pub fn render_component_info_lines(
                 Style::default().fg(scheme.critical).bold(),
             ),
         ];
+        // KEV badge: any actively-exploited CVE makes this component urgent, and
+        // it should not look identical to a low-risk one in the detail panel.
+        let any_kev = component.vulnerabilities.iter().any(|v| v.is_kev);
+        if any_kev {
+            vuln_spans.push(Span::raw(" "));
+            vuln_spans.extend(crate::tui::shared::vulnerabilities::render_kev_badge_spans(
+                true, &scheme,
+            ));
+        }
+        // EPSS hint: highest exploit-probability across this component's CVEs.
+        let max_epss = component
+            .vulnerabilities
+            .iter()
+            .filter_map(|v| v.epss_score)
+            .fold(None, |acc: Option<f64>, s| {
+                Some(acc.map_or(s, |a| a.max(s)))
+            });
+        if let Some(epss) = max_epss {
+            vuln_spans.push(Span::styled(
+                // `{:.0}` already rounds; render as a whole-percent hint.
+                format!("EPSS {:.0}% ", epss * 100.0),
+                Style::default().fg(scheme.warning),
+            ));
+        }
         let ids: Vec<String> = component
             .vulnerabilities
             .iter()
@@ -573,7 +753,7 @@ pub fn render_component_info_lines(
             .collect();
         if !ids.is_empty() {
             vuln_spans.push(Span::styled(
-                format!(" ({})", ids.join(", ")),
+                format!("({})", ids.join(", ")),
                 Style::default().fg(scheme.text_muted),
             ));
         }
@@ -741,6 +921,126 @@ mod tests {
         assert!(text.contains("Dataset Type: dataset"));
         assert!(text.contains("Sensitivity: pii, phi"));
         assert!(text.contains("Governance: Data Team"));
+    }
+
+    #[test]
+    fn ml_dataset_lines_render_model_card_considerations() {
+        use crate::model::{EthicalConsideration, FairnessAssessment, MetricEntry};
+        let ml = MlModelInfo {
+            quantization: Some("int8".to_string()),
+            use_cases: vec!["chat".to_string(), "summarization".to_string()],
+            performance_metrics: vec![
+                MetricEntry {
+                    metric_type: Some("accuracy".to_string()),
+                    value: Some("0.94".to_string()),
+                    slice: None,
+                },
+                MetricEntry {
+                    metric_type: Some("F1".to_string()),
+                    value: Some("0.91".to_string()),
+                    slice: None,
+                },
+            ],
+            fairness: vec![FairnessAssessment {
+                group_at_risk: Some("non-native speakers".to_string()),
+                ..FairnessAssessment::default()
+            }],
+            ethical_considerations: vec![EthicalConsideration {
+                name: Some("bias amplification".to_string()),
+                ..EthicalConsideration::default()
+            }],
+            data_preprocessing: vec!["tokenization".to_string()],
+            ..MlModelInfo::default()
+        };
+        let text = plain_text(&render_ml_dataset_lines(Some(&ml), None, 80));
+        assert!(text.contains("Quantization: int8"), "got:\n{text}");
+        assert!(
+            text.contains("Use Cases: chat, summarization"),
+            "got:\n{text}"
+        );
+        assert!(
+            text.contains("Metrics (2): accuracy=0.94, F1=0.91"),
+            "got:\n{text}"
+        );
+        assert!(
+            text.contains("Fairness (1): non-native speakers"),
+            "got:\n{text}"
+        );
+        assert!(
+            text.contains("Ethics (1): bias amplification"),
+            "got:\n{text}"
+        );
+        assert!(text.contains("Preprocessing: tokenization"), "got:\n{text}");
+    }
+
+    #[test]
+    fn ml_dataset_lines_render_dataset_intended_use_and_confidentiality() {
+        let dataset = DatasetInfo {
+            intended_use: Some("research only".to_string()),
+            confidentiality_level: Some("restricted".to_string()),
+            ..DatasetInfo::default()
+        };
+        let text = plain_text(&render_ml_dataset_lines(None, Some(&dataset), 80));
+        assert!(text.contains("Intended Use: research only"), "got:\n{text}");
+        assert!(text.contains("Confidentiality: restricted"), "got:\n{text}");
+    }
+
+    #[test]
+    fn ml_dataset_lines_render_considerations_without_names() {
+        use crate::model::FairnessAssessment;
+        // Fairness present but no group label still counts as "assessed".
+        let ml = MlModelInfo {
+            fairness: vec![FairnessAssessment::default()],
+            ..MlModelInfo::default()
+        };
+        let text = plain_text(&render_ml_dataset_lines(Some(&ml), None, 80));
+        assert!(text.contains("Fairness (1): assessed"), "got:\n{text}");
+    }
+
+    #[test]
+    fn component_info_shows_eol_staleness_kev_and_epss() {
+        use crate::model::{Component, EolInfo, EolStatus, StalenessInfo, StalenessLevel};
+        use crate::model::{VulnerabilityRef, VulnerabilitySource};
+
+        let mut component = Component::new("openssl".to_string(), "openssl@1.0".to_string());
+        component.eol = Some(EolInfo {
+            status: EolStatus::EndOfLife,
+            product: "openssl".to_string(),
+            cycle: "1.0".to_string(),
+            eol_date: None,
+            support_end_date: None,
+            is_lts: false,
+            latest_in_cycle: None,
+            latest_release_date: None,
+            days_until_eol: Some(-100),
+        });
+        component.staleness = Some(StalenessInfo::new(StalenessLevel::Abandoned));
+
+        let mut vuln = VulnerabilityRef::new("CVE-2024-0001".to_string(), VulnerabilitySource::Cve);
+        vuln.is_kev = true;
+        vuln.epss_score = Some(0.873);
+        component.vulnerabilities.push(vuln);
+
+        let text = plain_text(&render_component_info_lines(&component, None, 0, 0));
+        assert!(text.contains("EOL:"), "got:\n{text}");
+        assert!(text.contains("End of Life"), "got:\n{text}");
+        assert!(text.contains("Staleness:"), "got:\n{text}");
+        assert!(text.contains("Abandoned"), "got:\n{text}");
+        // KEV badge text + EPSS hint sit next to the vuln IDs.
+        assert!(text.contains("KEV"), "got:\n{text}");
+        assert!(text.contains("EPSS 87%"), "got:\n{text}");
+        assert!(text.contains("CVE-2024-0001"), "got:\n{text}");
+    }
+
+    #[test]
+    fn component_info_omits_badges_without_enrichment() {
+        use crate::model::Component;
+        let component = Component::new("plain".to_string(), "plain@1.0".to_string());
+        let text = plain_text(&render_component_info_lines(&component, None, 0, 0));
+        assert!(!text.contains("EOL:"));
+        assert!(!text.contains("Staleness:"));
+        assert!(!text.contains("KEV"));
+        assert!(!text.contains("EPSS"));
     }
 
     #[test]

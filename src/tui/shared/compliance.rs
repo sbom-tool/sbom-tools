@@ -66,6 +66,39 @@ pub fn render_violation_detail_overlay(
         ]));
     }
 
+    // Rule ID — the stable, externally-visible key (matches the SARIF rule ID and
+    // the registry-driven references below). The CLI surfaces this; the overlay
+    // dropped it previously.
+    lines.push(Line::from(vec![
+        Span::styled("Rule: ", Style::default().fg(scheme.muted)),
+        Span::styled(violation.rule_id, Style::default().fg(scheme.accent)),
+    ]));
+
+    // Harmonised-standard / regulation references, e.g. "EU AI Act: Annex IV §2(d)".
+    // Mirrors the markdown "Standard refs" column and the SARIF help_uri.
+    if !violation.standard_refs.is_empty() {
+        lines.push(Line::from(Span::styled(
+            "References:",
+            Style::default().fg(scheme.muted),
+        )));
+        for r in &violation.standard_refs {
+            let mut spans = vec![
+                Span::styled("  • ", Style::default().fg(scheme.muted)),
+                Span::styled(
+                    format!("{}: {}", r.standard.label(), r.id),
+                    Style::default().fg(scheme.text),
+                ),
+            ];
+            if let Some(ref uri) = r.help_uri {
+                spans.push(Span::styled(
+                    format!("  {uri}"),
+                    Style::default().fg(scheme.text_muted),
+                ));
+            }
+            lines.push(Line::from(spans));
+        }
+    }
+
     lines.push(Line::from(""));
     lines.push(Line::from(Span::styled(
         "Remediation:",
@@ -123,4 +156,57 @@ pub fn textwrap_simple(text: &str, max_width: usize) -> Vec<String> {
         lines.push(current);
     }
     lines
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::quality::{
+        StandardKind, StandardRef, Violation, ViolationCategory, ViolationSeverity,
+    };
+    use crate::tui::test_support::render_to_text;
+
+    fn ai_act_violation() -> Violation {
+        Violation {
+            severity: ViolationSeverity::Error,
+            category: ViolationCategory::DocumentMetadata,
+            message: "Missing AI documentation".to_string(),
+            element: Some("model-1".to_string()),
+            requirement: "EU AI Act Annex IV".to_string(),
+            rule_id: "SBOM-AIACT-ANNEX-IV-2D",
+            standard_refs: vec![StandardRef::new(StandardKind::EuAiAct, "Annex IV §2(d)")],
+        }
+    }
+
+    #[test]
+    fn overlay_shows_rule_id_and_reference() {
+        let violation = ai_act_violation();
+        let text = render_to_text(100, 24, |frame| {
+            super::render_violation_detail_overlay(frame, frame.area(), &violation);
+        });
+        assert!(text.contains("Rule:"), "overlay must label the rule id");
+        assert!(
+            text.contains("SBOM-AIACT-ANNEX-IV-2D"),
+            "overlay must surface the rule id; got:\n{text}"
+        );
+        assert!(
+            text.contains("References:"),
+            "overlay must label references"
+        );
+        assert!(
+            text.contains("EU AI Act: Annex IV"),
+            "overlay must render 'label: id' refs; got:\n{text}"
+        );
+    }
+
+    #[test]
+    fn overlay_omits_references_when_empty() {
+        let mut violation = ai_act_violation();
+        violation.standard_refs.clear();
+        let text = render_to_text(100, 24, |frame| {
+            super::render_violation_detail_overlay(frame, frame.area(), &violation);
+        });
+        // Rule line is always shown; References header only when refs exist.
+        assert!(text.contains("Rule:"));
+        assert!(!text.contains("References:"));
+    }
 }
