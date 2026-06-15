@@ -118,6 +118,21 @@ pub fn cvss_score_color(score: f32, scheme: &crate::tui::theme::ColorScheme) -> 
     }
 }
 
+/// Background color for an EPSS exploit-probability badge.
+///
+/// Bands mirror the CLI markdown / diff-mode TUI: high (>=50%) red,
+/// moderate (>=10%) amber, low muted — so EPSS formatting stays consistent
+/// across the whole TUI and the CLI report.
+pub fn epss_band_color(epss: f64, scheme: &crate::tui::theme::ColorScheme) -> Color {
+    if epss >= 0.5 {
+        scheme.critical
+    } else if epss >= 0.1 {
+        scheme.warning
+    } else {
+        scheme.text_muted
+    }
+}
+
 /// Map vulnerability source name to a theme color.
 pub fn source_color(source: &str, scheme: &crate::tui::theme::ColorScheme) -> Color {
     match source.to_uppercase().as_str() {

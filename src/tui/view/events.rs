@@ -465,6 +465,11 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
     }
 
     match key.code {
+        // KEV-only filter toggle (Vulnerabilities tab) — mirrors diff-mode VulnFilter::Kev.
+        // Must precede the generic `k` navigation arm below.
+        KeyCode::Char('k') if app.active_tab == ViewTab::Vulnerabilities => {
+            app.vuln_state.toggle_kev_filter();
+        }
         // Navigation
         KeyCode::Up | KeyCode::Char('k') => {
             app.navigate_up();

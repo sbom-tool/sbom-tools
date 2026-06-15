@@ -773,15 +773,7 @@ fn render_detail_panel(
             ));
         }
         if let Some(epss) = info.epss_score {
-            // Color the badge by exploit-probability band: high (>=50%) red,
-            // moderate (>=10%) amber, low muted.
-            let epss_bg = if epss >= 0.5 {
-                scheme.critical
-            } else if epss >= 0.1 {
-                scheme.warning
-            } else {
-                scheme.text_muted
-            };
+            let epss_bg = crate::tui::shared::vulnerabilities::epss_band_color(epss, &scheme);
             badge_spans.push(Span::raw(" "));
             badge_spans.push(Span::styled(
                 format!("EPSS {:.0}%", epss * 100.0),

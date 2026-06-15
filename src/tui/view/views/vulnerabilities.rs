@@ -334,6 +334,26 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
                 .bold(),
         ),
         Span::raw("  "),
+        Span::styled("KEV: ", Style::default().fg(scheme.muted)),
+        Span::styled(
+            format!(
+                " {} ",
+                if app.vuln_state.filter_kev {
+                    "On"
+                } else {
+                    "Off"
+                }
+            ),
+            Style::default()
+                .fg(scheme.kev_badge_fg())
+                .bg(if app.vuln_state.filter_kev {
+                    scheme.kev()
+                } else {
+                    scheme.muted
+                })
+                .bold(),
+        ),
+        Span::raw("  "),
         Span::styled("Sort: ", Style::default().fg(scheme.muted)),
         Span::styled(
             format!(" {} ", app.vuln_state.sort_by.label()),
@@ -367,6 +387,8 @@ fn render_filter_bar(frame: &mut Frame, area: Rect, app: &ViewApp) {
         Span::raw("  │  "),
         Span::styled("[f]", Style::default().fg(scheme.accent)),
         Span::raw(" filter  "),
+        Span::styled("[k]", Style::default().fg(scheme.accent)),
+        Span::raw(" kev  "),
         Span::styled("[s]", Style::default().fg(scheme.accent)),
         Span::raw(" sort  "),
         Span::styled("[d]", Style::default().fg(scheme.accent)),
@@ -428,6 +450,8 @@ fn render_vuln_content(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
                 Some("Great news! No known vulnerabilities were found"),
                 None,
             );
+        } else if app.vuln_state.filter_kev && app.vuln_state.filter_severity.is_none() {
+            crate::tui::widgets::render_no_results_state(frame, area, "KEV Filter", "KEV only");
         } else {
             let filter_label = app
                 .vuln_state
@@ -591,6 +615,11 @@ pub(crate) fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                     continue;
                 }
 
+                // Apply KEV filter — isolate KEV-flagged vulns (mirrors diff-mode)
+                if app.vuln_state.filter_kev && !vuln.is_kev {
+                    continue;
+                }
+
                 // Apply search filter
                 if has_search {
                     let matches = vuln.id.to_lowercase().contains(&search_query)
@@ -622,6 +651,12 @@ pub(crate) fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                             && existing.cvss.is_none_or(|c| new_cvss > c)
                         {
                             existing.cvss = Some(new_cvss);
+                        }
+                        // Keep the highest EPSS score across affected components
+                        if let Some(new_epss) = vuln.epss_score
+                            && existing.epss_score.is_none_or(|e| new_epss > e)
+                        {
+                            existing.epss_score = Some(new_epss);
                         }
                         // Merge affected versions
                         for v in &vuln.affected_versions {
@@ -681,6 +716,7 @@ pub(crate) fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                             cvss_vector: best_cvss.and_then(|c| c.vector.clone()),
                             exploitability_score: best_cvss.and_then(|c| c.exploitability_score),
                             impact_score: best_cvss.and_then(|c| c.impact_score),
+                            epss_score: vuln.epss_score,
                         }
                     });
             }
@@ -721,6 +757,11 @@ pub(crate) fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                 if let Some(ref filter) = app.vuln_state.filter_severity
                     && sev.to_lowercase() != *filter
                 {
+                    continue;
+                }
+
+                // Apply KEV filter — isolate KEV-flagged vulns (mirrors diff-mode)
+                if app.vuln_state.filter_kev && !vuln.is_kev {
                     continue;
                 }
 
@@ -798,6 +839,7 @@ pub(crate) fn build_vuln_cache(app: &ViewApp) -> VulnCache {
                     cvss_vector: best_cvss.and_then(|c| c.vector.clone()),
                     exploitability_score: best_cvss.and_then(|c| c.exploitability_score),
                     impact_score: best_cvss.and_then(|c| c.impact_score),
+                    epss_score: vuln.epss_score,
                 });
             }
         }
@@ -1367,6 +1409,22 @@ fn render_vuln_table_panel(
                         Style::default()
                             .fg(scheme.kev_badge_fg())
                             .bg(scheme.kev())
+                            .bold(),
+                    ));
+                    id_spans.push(Span::raw(" "));
+                }
+                // EPSS badge — only for higher-probability vulns to keep the ID column
+                // readable; band colors shared with diff-mode + CLI markdown.
+                if let Some(epss) = v.epss_score
+                    && epss >= 0.1
+                {
+                    id_spans.push(Span::styled(
+                        format!("EPSS {:.0}%", epss * 100.0),
+                        Style::default()
+                            .fg(scheme.badge_fg_light)
+                            .bg(crate::tui::shared::vulnerabilities::epss_band_color(
+                                epss, &scheme,
+                            ))
                             .bold(),
                     ));
                     id_spans.push(Span::raw(" "));
@@ -2073,6 +2131,19 @@ fn render_vuln_detail_panel(
                 Style::default()
                     .fg(scheme.kev_badge_fg())
                     .bg(scheme.kev())
+                    .bold(),
+            ));
+        }
+        // EPSS exploit-probability badge (shared band colors with diff-mode + CLI markdown)
+        if let Some(epss) = v.epss_score {
+            id_line_spans.push(Span::raw(" "));
+            id_line_spans.push(Span::styled(
+                format!("EPSS {:.0}%", epss * 100.0),
+                Style::default()
+                    .fg(scheme.badge_fg_light)
+                    .bg(crate::tui::shared::vulnerabilities::epss_band_color(
+                        epss, &scheme,
+                    ))
                     .bold(),
             ));
         }
@@ -3184,6 +3255,8 @@ pub struct VulnRow {
     pub exploitability_score: Option<f32>,
     /// Impact sub-score
     pub impact_score: Option<f32>,
+    /// EPSS exploit-probability score (0.0–1.0), if enriched.
+    pub epss_score: Option<f64>,
 }
 
 use std::collections::HashSet;
@@ -3738,5 +3811,83 @@ mod tests {
         // Hash-like names get prefixed with "file:" and truncated
         let result = clean_component_name("./abc123-def456.squashfs");
         assert!(result.starts_with("file:"));
+    }
+
+    // ---------------------------------------------------------------------
+    // EPSS + KEV-filter parity tests
+    // ---------------------------------------------------------------------
+
+    use crate::model::{
+        CanonicalId, Component, NormalizedSbom, Severity, VulnerabilityRef, VulnerabilitySource,
+    };
+
+    /// Build a `ViewApp` over a small SBOM with two components: one carrying a
+    /// KEV-flagged vuln (with EPSS), the other a plain vuln (no EPSS).
+    fn epss_kev_app() -> ViewApp {
+        let mut sbom = NormalizedSbom::default();
+
+        let mut kev_comp = Component::new("kev-lib".to_string(), "kev-ref".to_string())
+            .with_version("1.0.0".to_string());
+        let mut kev_vuln =
+            VulnerabilityRef::new("CVE-2024-0001".to_string(), VulnerabilitySource::Nvd);
+        kev_vuln.severity = Some(Severity::Critical);
+        kev_vuln.is_kev = true;
+        kev_vuln.epss_score = Some(0.73);
+        kev_comp.vulnerabilities.push(kev_vuln);
+        sbom.components
+            .insert(CanonicalId::from_name_version("kev-lib", None), kev_comp);
+
+        let mut plain_comp = Component::new("plain-lib".to_string(), "plain-ref".to_string())
+            .with_version("2.0.0".to_string());
+        let mut plain_vuln =
+            VulnerabilityRef::new("CVE-2024-0002".to_string(), VulnerabilitySource::Nvd);
+        plain_vuln.severity = Some(Severity::High);
+        plain_comp.vulnerabilities.push(plain_vuln);
+        sbom.components.insert(
+            CanonicalId::from_name_version("plain-lib", None),
+            plain_comp,
+        );
+
+        ViewApp::new(sbom, "", crate::model::BomProfile::Sbom)
+    }
+
+    #[test]
+    fn build_vuln_cache_populates_epss_score() {
+        let app = epss_kev_app();
+        let cache = build_vuln_cache(&app);
+        let kev_row = cache
+            .vulns
+            .iter()
+            .find(|v| v.vuln_id == "CVE-2024-0001")
+            .expect("KEV vuln present");
+        assert_eq!(kev_row.epss_score, Some(0.73));
+        let plain_row = cache
+            .vulns
+            .iter()
+            .find(|v| v.vuln_id == "CVE-2024-0002")
+            .expect("plain vuln present");
+        assert_eq!(plain_row.epss_score, None);
+    }
+
+    #[test]
+    fn kev_filter_isolates_kev_vulns() {
+        let mut app = epss_kev_app();
+        // Without the filter both vulns are present.
+        let cache = build_vuln_cache(&app);
+        assert_eq!(cache.vulns.len(), 2);
+        assert!(cache.has_any_kev);
+
+        // Enabling the KEV-only filter drops the non-KEV vuln.
+        app.vuln_state.toggle_kev_filter();
+        assert!(app.vuln_state.filter_kev);
+        let filtered = build_vuln_cache(&app);
+        assert_eq!(filtered.vulns.len(), 1);
+        assert_eq!(filtered.vulns[0].vuln_id, "CVE-2024-0001");
+        assert!(filtered.vulns[0].is_kev);
+
+        // Toggling off restores the full set.
+        app.vuln_state.toggle_kev_filter();
+        assert!(!app.vuln_state.filter_kev);
+        assert_eq!(build_vuln_cache(&app).vulns.len(), 2);
     }
 }

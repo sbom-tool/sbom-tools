@@ -12,7 +12,7 @@ sbom-tools  VIEW  │ acme-webapp │ CycloneDX 1.5 │ [SBOM]
 │                  ││                  ││                  ││                  │
 │         0        ││         0        ││         0        ││         0        │
 └──────────────────┘└──────────────────┘└──────────────────┘└──────────────────┘
-Filter:  All   Sort:  Severity   Dedupe:  On   Group:  Component   │  [f] filter
+Filter:  All   KEV:  Off   Sort:  Severity   Dedupe:  On   Group:  Component   │
 
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                                                                              │

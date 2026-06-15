@@ -13,7 +13,7 @@ use ratatui::{
     prelude::*,
     widgets::{
         Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, ScrollbarState,
-        Table, Tabs,
+        Table,
     },
 };
 
@@ -221,21 +221,30 @@ pub fn render_compliance(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
 // Standard selector with violation counts
 // ---------------------------------------------------------------------------
 
+/// One tab segment: short label + optional violation count, pre-measured.
+struct StandardTab {
+    label: String,
+    count: String,
+    /// Display width of " {status} {label}{count} " including padding.
+    width: usize,
+    status_icon: &'static str,
+    status_color: Color,
+}
+
 fn render_standard_selector(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let scheme = colors();
     let Some(compliance_results) = app.compliance_results.as_ref() else {
         return;
     };
 
-    let standards: Vec<Line> = ComplianceLevel::all()
+    // Build short-labelled segments. Short labels (e.g. "AI-Act", "BSI-AI")
+    // keep each tab compact so all ~16 standards stay reachable.
+    let tabs: Vec<StandardTab> = ComplianceLevel::all()
         .iter()
         .enumerate()
         .map(|(i, level)| {
-            let is_selected = i == app.compliance_state.selected_standard;
             let result = &compliance_results[i];
-
-            // Status indicator
-            let status = if result.is_compliant {
+            let (status_icon, status_color) = if result.is_compliant {
                 if result.warning_count > 0 {
                     ("\u{26a0}", scheme.warning)
                 } else {
@@ -244,41 +253,95 @@ fn render_standard_selector(frame: &mut Frame, area: Rect, app: &ViewApp) {
             } else {
                 ("\u{2717}", scheme.error)
             };
-
-            let style = if is_selected {
-                Style::default().fg(scheme.text).bold().bg(scheme.selection)
-            } else {
-                Style::default().fg(scheme.muted)
-            };
-
-            // Include violation count in the tab label
+            let label = level.short_name().to_string();
             let total = result.violations.len();
-            let count_str = if total > 0 {
+            let count = if total > 0 {
                 format!("({total})")
             } else {
                 String::new()
             };
-
-            Line::from(vec![
-                Span::styled(format!(" {} ", status.0), Style::default().fg(status.1)),
-                Span::styled(level.name(), style),
-                Span::styled(count_str, Style::default().fg(scheme.muted)),
-                Span::styled(" ", style),
-            ])
+            // " {icon} {label}{count} " — icon + label + count + 3 spaces.
+            let width = 3 + label.chars().count() + count.chars().count() + 1;
+            StandardTab {
+                label,
+                count,
+                width,
+                status_icon,
+                status_color,
+            }
         })
         .collect();
 
-    let tabs = Tabs::new(standards)
-        .block(
-            Block::default()
-                .title(" Compliance Standards (\u{2190}/\u{2192} to switch) ")
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(scheme.primary)),
-        )
-        .highlight_style(Style::default().fg(scheme.text).bold())
-        .select(app.compliance_state.selected_standard);
+    let block = Block::default()
+        .title(" Compliance Standards (\u{2190}/\u{2192} to switch) ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(scheme.primary));
+    let inner_width = block.inner(area).width as usize;
+    frame.render_widget(&block, area);
 
-    frame.render_widget(tabs, area);
+    let selected = app
+        .compliance_state
+        .selected_standard
+        .min(tabs.len().saturating_sub(1));
+
+    // Compute a contiguous window of tabs around the selection that fits the
+    // inner width. Reserve 1 col on each side for the `‹`/`›` overflow markers
+    // so the selected standard is ALWAYS visible regardless of terminal width.
+    let budget = inner_width.saturating_sub(2);
+    let mut start = selected;
+    let mut end = selected; // inclusive
+    let mut used = tabs.get(selected).map_or(0, |t| t.width);
+    loop {
+        let grew_left = start > 0 && used + tabs[start - 1].width <= budget;
+        if grew_left {
+            start -= 1;
+            used += tabs[start].width;
+        }
+        let grew_right = end + 1 < tabs.len() && used + tabs[end + 1].width <= budget;
+        if grew_right {
+            end += 1;
+            used += tabs[end].width;
+        }
+        if !grew_left && !grew_right {
+            break;
+        }
+    }
+
+    let mut spans: Vec<Span<'static>> = Vec::new();
+    // Left overflow indicator.
+    spans.push(Span::styled(
+        if start > 0 { "\u{2039}" } else { " " }.to_string(),
+        Style::default().fg(scheme.muted),
+    ));
+    for (i, tab) in tabs.iter().enumerate().take(end + 1).skip(start) {
+        let is_selected = i == selected;
+        let style = if is_selected {
+            Style::default().fg(scheme.text).bold().bg(scheme.selection)
+        } else {
+            Style::default().fg(scheme.muted)
+        };
+        spans.push(Span::styled(
+            format!(" {} ", tab.status_icon),
+            Style::default().fg(tab.status_color),
+        ));
+        spans.push(Span::styled(tab.label.clone(), style));
+        if !tab.count.is_empty() {
+            spans.push(Span::styled(
+                tab.count.clone(),
+                Style::default().fg(scheme.muted),
+            ));
+        }
+        spans.push(Span::styled(" ", style));
+    }
+    // Right overflow indicator.
+    if end + 1 < tabs.len() {
+        spans.push(Span::styled(
+            "\u{203a}".to_string(),
+            Style::default().fg(scheme.muted),
+        ));
+    }
+
+    frame.render_widget(Paragraph::new(Line::from(spans)), block.inner(area));
 }
 
 // ---------------------------------------------------------------------------

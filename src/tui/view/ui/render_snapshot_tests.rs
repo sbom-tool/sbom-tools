@@ -182,3 +182,97 @@ fn snapshot_aibom_tabs() {
         }
     });
 }
+
+// ============================================================================
+// View-mode vuln explorer parity (EPSS + KEV filter) and compliance selector
+// ============================================================================
+
+use crate::model::{
+    CanonicalId, Component, NormalizedSbom, Severity, VulnerabilityRef, VulnerabilitySource,
+};
+
+/// Build a `ViewApp` whose single component carries a KEV vuln with a high
+/// EPSS score, parked on the Vulnerabilities tab.
+fn epss_kev_view_app() -> ViewApp {
+    pin_theme();
+    let mut sbom = NormalizedSbom::default();
+    let mut comp = Component::new("openssl".to_string(), "openssl-ref".to_string())
+        .with_version("3.0.0".to_string());
+    let mut vuln = VulnerabilityRef::new("CVE-2024-9999".to_string(), VulnerabilitySource::Nvd);
+    vuln.severity = Some(Severity::Critical);
+    vuln.is_kev = true;
+    vuln.epss_score = Some(0.84);
+    comp.vulnerabilities.push(vuln);
+    sbom.components
+        .insert(CanonicalId::from_name_version("openssl", None), comp);
+
+    let mut app = ViewApp::new(sbom, "", crate::model::BomProfile::Sbom);
+    app.active_tab = ViewTab::Vulnerabilities;
+    app
+}
+
+#[test]
+fn vuln_explorer_renders_epss_badge() {
+    let mut app = epss_kev_view_app();
+    let text = render_to_text(120, 40, |frame| {
+        render(frame, &mut app);
+    });
+    // EPSS 84% appears in the detail panel / row badge.
+    assert!(
+        text.contains("EPSS 84%"),
+        "EPSS badge should render in the view-mode vuln explorer:\n{text}"
+    );
+}
+
+#[test]
+fn kev_filter_key_toggles_and_renders_state() {
+    let mut app = epss_kev_view_app();
+    assert!(!app.vuln_state.filter_kev);
+    // 'k' on the Vulnerabilities tab toggles the KEV-only filter.
+    handle_key_event(&mut app, key(KeyCode::Char('k')));
+    assert!(app.vuln_state.filter_kev, "'k' enables the KEV-only filter");
+
+    let text = render_to_text(120, 40, |frame| {
+        render(frame, &mut app);
+    });
+    // The KEV row survives the filter and the filter bar advertises the toggle.
+    assert!(text.contains("CVE-2024-9999"), "KEV vuln survives filter");
+    assert!(text.contains("KEV:"), "filter bar shows KEV state");
+    assert!(
+        text.contains("[k]"),
+        "footer hint advertises the [k] toggle"
+    );
+
+    handle_key_event(&mut app, key(KeyCode::Char('k')));
+    assert!(
+        !app.vuln_state.filter_kev,
+        "'k' toggles the filter back off"
+    );
+}
+
+#[test]
+fn compliance_selector_exposes_every_standard() {
+    use crate::quality::ComplianceLevel;
+
+    // Every standard — including the high-index EU AI Act + BSI SBOM-for-AI
+    // tabs that previously overflowed off-screen — must be reachable: the
+    // selector scrolls a window so the selected standard is always rendered.
+    let levels = ComplianceLevel::all();
+    for (idx, level) in levels.iter().enumerate() {
+        let mut app = aibom_view_app(ViewTab::Compliance);
+        app.ensure_compliance_results();
+        app.compliance_state.selected_standard = idx;
+        let text = render_to_text(120, 40, |frame| {
+            render(frame, &mut app);
+        });
+        let label = level.short_name();
+        assert!(
+            text.contains(label),
+            "compliance standard `{label}` (index {idx}) must scroll into view:\n{text}"
+        );
+    }
+
+    // Spot-check the two previously-hidden AI standards by name.
+    assert!(levels.iter().any(|l| l.short_name() == "AI-Act"));
+    assert!(levels.iter().any(|l| l.short_name() == "BSI-AI"));
+}

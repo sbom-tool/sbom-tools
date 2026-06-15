@@ -2106,6 +2106,8 @@ pub(crate) struct VulnExplorerState {
     pub group_by: VulnGroupBy,
     pub sort_by: VulnSortBy,
     pub filter_severity: Option<String>,
+    /// When true, isolate KEV-flagged vulnerabilities (mirrors diff-mode `VulnFilter::Kev`)
+    pub filter_kev: bool,
     /// When true, deduplicate vulnerabilities by CVE ID and show affected component count
     pub deduplicate: bool,
     /// Local search/filter query for vulnerability list
@@ -2143,6 +2145,7 @@ struct TreeCacheKey {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct VulnCacheKey {
     filter_severity: Option<String>,
+    filter_kev: bool,
     deduplicate: bool,
     sort_by: VulnSortBy,
     search_query: String,
@@ -2157,6 +2160,7 @@ impl VulnExplorerState {
             group_by: VulnGroupBy::Component,
             sort_by: VulnSortBy::Severity,
             filter_severity: None,
+            filter_kev: false,
             deduplicate: true,
             search_query: String::new(),
             search_active: false,
@@ -2175,6 +2179,7 @@ impl VulnExplorerState {
     fn current_cache_key(&self) -> VulnCacheKey {
         VulnCacheKey {
             filter_severity: self.filter_severity.clone(),
+            filter_kev: self.filter_kev,
             deduplicate: self.deduplicate,
             sort_by: self.sort_by,
             search_query: self.search_query.clone(),
@@ -2186,6 +2191,7 @@ impl VulnExplorerState {
         if let Some(key) = &self.cache_key {
             self.cached_data.is_some()
                 && key.filter_severity == self.filter_severity
+                && key.filter_kev == self.filter_kev
                 && key.deduplicate == self.deduplicate
                 && key.sort_by == self.sort_by
                 && key.search_query == self.search_query
@@ -2380,6 +2386,14 @@ impl VulnExplorerState {
             Some(s) if s == "unknown" => None,
             _ => None,
         };
+        self.selected = 0;
+        self.invalidate_cache();
+    }
+
+    /// Toggle the KEV-only filter (isolates KEV-flagged vulns), mirroring
+    /// diff-mode `VulnFilter::Kev`.
+    pub fn toggle_kev_filter(&mut self) {
+        self.filter_kev = !self.filter_kev;
         self.selected = 0;
         self.invalidate_cache();
     }
