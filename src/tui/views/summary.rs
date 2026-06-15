@@ -1579,6 +1579,63 @@ enum ChangePriority {
     Other,
 }
 
+/// Map a [`MetadataChangeKind`] to a short badge label and the scheme color
+/// used for both the badge background and the field name.
+fn metadata_badge(
+    kind: crate::diff::MetadataChangeKind,
+    scheme: &crate::tui::theme::ColorScheme,
+) -> (&'static str, Color) {
+    match kind {
+        crate::diff::MetadataChangeKind::Added => (" + META ", scheme.added),
+        crate::diff::MetadataChangeKind::Removed => (" - META ", scheme.removed),
+        crate::diff::MetadataChangeKind::Modified => (" ~ META ", scheme.modified),
+    }
+}
+
+/// Build the document-metadata change lines for the All Changes panel.
+///
+/// These mirror the `field: old -> new` rows the CLI summary report renders
+/// (`reports/summary.rs`) but were previously invisible in the diff TUI even
+/// though `summary.total_changes` already counts them — so the "N changes"
+/// header was inflated by rows the user could not see. Rendered as a labeled
+/// block at the top of the panel (rather than appended to the priority-sorted
+/// list, where they would be clipped) so metadata changes stay visible. Each
+/// row is colored by add/removed/modified kind.
+fn metadata_change_lines<'a>(
+    result: &'a crate::diff::DiffResult,
+    scheme: &crate::tui::theme::ColorScheme,
+) -> Vec<Line<'a>> {
+    if result.metadata_changes.is_empty() {
+        return Vec::new();
+    }
+
+    let mut lines = vec![Line::from(vec![
+        Span::styled("\u{2500}\u{2500} ", Style::default().fg(scheme.border)),
+        Span::styled(
+            "Metadata Changes",
+            Style::default().fg(scheme.accent).bold(),
+        ),
+        Span::styled(" \u{2500}\u{2500}", Style::default().fg(scheme.border)),
+    ])];
+
+    for change in &result.metadata_changes {
+        let (badge, color) = metadata_badge(change.kind, scheme);
+        let old = change.old_value.as_deref().unwrap_or("\u{2205}");
+        let new = change.new_value.as_deref().unwrap_or("\u{2205}");
+        lines.push(Line::from(vec![
+            Span::styled(badge, Style::default().fg(Color::Black).bg(color).bold()),
+            Span::raw(" "),
+            Span::styled(change.field.clone(), Style::default().fg(color)),
+            Span::styled(": ", Style::default().fg(scheme.muted)),
+            Span::styled(old.to_string(), Style::default().fg(scheme.removed)),
+            Span::styled(" \u{2192} ", Style::default().fg(scheme.muted)),
+            Span::styled(new.to_string(), Style::default().fg(scheme.added)),
+        ]));
+    }
+
+    lines
+}
+
 /// A single change entry with priority and rendered line.
 struct ChangeEntry<'a> {
     priority: ChangePriority,
@@ -1854,16 +1911,27 @@ fn render_all_changes(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     // Sort by priority
     entries.sort_by_key(|e| e.priority);
 
-    let lines: Vec<Line> = if entries.is_empty() {
-        vec![Line::styled(
-            "No significant changes to highlight",
-            Style::default().fg(scheme.muted),
-        )]
-    } else {
-        entries.into_iter().map(|e| e.line).collect()
-    };
+    // Count of real change rows (component/vuln entries + metadata changes),
+    // excluding the metadata section header, for the panel title.
+    let total = entries.len() + result.metadata_changes.len();
 
-    let total = lines.len();
+    // Document-metadata changes (author/tool/timestamp/spec-version/lifecycle/
+    // signature/version) are counted in summary.total_changes but were
+    // otherwise unrepresented in the diff TUI. Render them as a labeled block at
+    // the top so they reconcile the "N changes" header and stay visible above
+    // the priority-sorted component/vuln entries.
+    let mut lines: Vec<Line> = metadata_change_lines(result, &scheme);
+
+    if entries.is_empty() {
+        if lines.is_empty() {
+            lines.push(Line::styled(
+                "No significant changes to highlight",
+                Style::default().fg(scheme.muted),
+            ));
+        }
+    } else {
+        lines.extend(entries.into_iter().map(|e| e.line));
+    }
     let major = result
         .components
         .modified
@@ -1899,8 +1967,14 @@ fn render_all_changes(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
         .count();
     let added = result.components.added.len();
     let removed = result.components.removed.len();
+    let meta = result.metadata_changes.len();
+    let meta_suffix = if meta > 0 {
+        format!("meta:{meta} ")
+    } else {
+        String::new()
+    };
     let title = format!(
-        " All Changes ({total}) \u{2014} MAJOR:{major} minor:{minor} patch:{patch} +{added} -{removed} "
+        " All Changes ({total}) \u{2014} MAJOR:{major} minor:{minor} patch:{patch} +{added} -{removed} {meta_suffix}"
     );
 
     let paragraph = Paragraph::new(lines)

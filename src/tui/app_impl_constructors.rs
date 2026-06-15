@@ -37,6 +37,7 @@ impl App {
                 new_cra_compliance: None,
                 old_compliance_results: None,
                 new_compliance_results: None,
+                cra_sidecar: None,
                 matching_threshold: 0.85,
                 #[cfg(feature = "enrichment")]
                 enrichment_stats_old: None,
@@ -114,6 +115,18 @@ impl App {
         app.data.old_sbom_index = old_sbom_index;
         app.data.new_sbom_index = new_sbom_index;
         app
+    }
+
+    /// Attach CRA sidecar metadata so the compliance tab renders sidecar-driven
+    /// verdicts (EU AI Act high-risk escalation, OSS-Steward, EUCC, Article 14)
+    /// identically to the CLI. Invalidates any cached compliance results so the
+    /// sidecar takes effect on the next `ensure_compliance_results`.
+    #[must_use]
+    pub fn with_cra_sidecar(mut self, sidecar: crate::model::CraSidecarMetadata) -> Self {
+        self.data.old_compliance_results = None;
+        self.data.new_compliance_results = None;
+        self.data.cra_sidecar = Some(sidecar);
+        self
     }
 
     /// Set enrichment statistics for the diff mode

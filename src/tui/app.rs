@@ -177,6 +177,11 @@ pub struct DataContext {
     pub(crate) new_cra_compliance: Option<ComplianceResult>,
     pub(crate) old_compliance_results: Option<Vec<ComplianceResult>>,
     pub(crate) new_compliance_results: Option<Vec<ComplianceResult>>,
+    /// Optional CRA sidecar metadata. When set, `ensure_compliance_results`
+    /// passes it to `ComplianceChecker::with_sidecar()` so high-risk AI
+    /// escalation (EU AI Act), OSS-Steward, EUCC, and Article 14 checks render
+    /// the same COMPLIANT/NON-COMPLIANT verdict the CLI produces.
+    pub(crate) cra_sidecar: Option<crate::model::CraSidecarMetadata>,
     pub(crate) matching_threshold: f64,
     #[cfg(feature = "enrichment")]
     pub(crate) enrichment_stats_old: Option<EnrichmentStats>,
@@ -232,27 +237,43 @@ pub struct App {
 
 impl App {
     /// Lazily compute compliance results for all standards when first needed.
+    ///
+    /// The optional CRA sidecar is threaded into every checker so sidecar-driven
+    /// verdicts — most importantly EU AI Act high-risk escalation — match the
+    /// CLI. Without it a high-risk AI SBOM the CLI marks NON-COMPLIANT would
+    /// render COMPLIANT in the diff compliance tab.
     pub fn ensure_compliance_results(&mut self) {
+        let sidecar = self.data.cra_sidecar.as_ref();
         if self.data.old_compliance_results.is_none()
             && let Some(old_sbom) = &self.data.old_sbom
         {
-            self.data.old_compliance_results = Some(
-                crate::quality::ComplianceLevel::all()
-                    .iter()
-                    .map(|level| crate::quality::ComplianceChecker::new(*level).check(old_sbom))
-                    .collect(),
-            );
+            self.data.old_compliance_results =
+                Some(Self::compliance_results_for(old_sbom, sidecar));
         }
         if self.data.new_compliance_results.is_none()
             && let Some(new_sbom) = &self.data.new_sbom
         {
-            self.data.new_compliance_results = Some(
-                crate::quality::ComplianceLevel::all()
-                    .iter()
-                    .map(|level| crate::quality::ComplianceChecker::new(*level).check(new_sbom))
-                    .collect(),
-            );
+            self.data.new_compliance_results =
+                Some(Self::compliance_results_for(new_sbom, sidecar));
         }
+    }
+
+    /// Run every compliance standard against `sbom`, threading the optional
+    /// CRA sidecar into each [`ComplianceChecker`].
+    fn compliance_results_for(
+        sbom: &crate::model::NormalizedSbom,
+        sidecar: Option<&crate::model::CraSidecarMetadata>,
+    ) -> Vec<crate::quality::ComplianceResult> {
+        crate::quality::ComplianceLevel::all()
+            .iter()
+            .map(|level| {
+                let mut checker = crate::quality::ComplianceChecker::new(*level);
+                if let Some(sc) = sidecar {
+                    checker = checker.with_sidecar(sc.clone());
+                }
+                checker.check(sbom)
+            })
+            .collect()
     }
 
     /// Toggle help overlay

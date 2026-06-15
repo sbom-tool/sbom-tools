@@ -194,3 +194,220 @@ fn help_overlay_toggles() {
     handle_key_event(&mut app, key(KeyCode::Char('?')));
     assert!(!app.overlays.show_help);
 }
+
+// ============================================================================
+// Diff-side alignment regression tests (PR-B): surface metadata changes,
+// the CRA sidecar compliance verdict, component license changes, and ML-risk
+// styling that the diff TUI previously dropped.
+// ============================================================================
+
+mod diff_alignment {
+    use super::{App, TabKind, render};
+    use crate::diff::{
+        ComponentLicenseChange, DiffResult, FieldChange, MetadataChange, MetadataChangeKind,
+    };
+    use crate::model::{
+        Component, ComponentType, CraSidecarMetadata, DatasetRef, MlModelInfo, NormalizedSbom,
+    };
+    use crate::quality::ComplianceLevel;
+    use crate::tui::test_support::{pin_theme, render_to_text};
+
+    /// Build a minimal diff-mode `App` from two empty SBOMs, then let the caller
+    /// install a synthetic [`DiffResult`] so each test exercises exactly one
+    /// diff signal. Raw source strings are placeholders (the Source tab is not
+    /// under test here).
+    fn app_with_result(result: DiffResult, tab: TabKind) -> App {
+        pin_theme();
+        let old = NormalizedSbom::default();
+        let new = NormalizedSbom::default();
+        let mut app = App::new_diff(result, old, new, "{}", "{}");
+        app.active_tab = tab;
+        app
+    }
+
+    fn render_tab_text(app: &mut App, w: u16, h: u16) -> String {
+        render_to_text(w, h, |frame| {
+            app.prepare_render();
+            render(frame, app);
+        })
+    }
+
+    #[test]
+    fn summary_renders_metadata_changes_section() {
+        let mut result = DiffResult::new();
+        result.metadata_changes = vec![
+            MetadataChange {
+                field: "spec_version".to_string(),
+                old_value: Some("1.5".to_string()),
+                new_value: Some("1.7".to_string()),
+                kind: MetadataChangeKind::Modified,
+            },
+            MetadataChange {
+                field: "signature.algorithm".to_string(),
+                old_value: None,
+                new_value: Some("Ed25519".to_string()),
+                kind: MetadataChangeKind::Added,
+            },
+        ];
+        result.calculate_summary();
+        // The bug: total_changes counts metadata changes, so the header must not
+        // claim changes the body never shows.
+        assert_eq!(result.summary.total_changes, 2);
+
+        let mut app = app_with_result(result, TabKind::Summary);
+        let text = render_tab_text(&mut app, 120, 40);
+
+        assert!(
+            text.contains("spec_version"),
+            "metadata field must be listed in the diff summary:\n{text}"
+        );
+        assert!(
+            text.contains("META"),
+            "metadata changes must carry a META badge:\n{text}"
+        );
+        assert!(
+            text.contains("1.5") && text.contains("1.7"),
+            "old -> new metadata values must render:\n{text}"
+        );
+    }
+
+    fn high_risk_ml_sbom() -> NormalizedSbom {
+        let mut sbom = NormalizedSbom::default();
+        let mut model = Component::new("model-a".to_string(), "model-a".to_string())
+            .with_version("1.0.0".to_string());
+        model.component_type = ComponentType::MachineLearningModel;
+        // Bare ML metadata: Annex IV documentation gaps are present.
+        model.ml_model = Some(MlModelInfo::default());
+        sbom.components.insert(model.canonical_id.clone(), model);
+        sbom
+    }
+
+    #[test]
+    fn high_risk_ai_sidecar_marks_ai_act_non_compliant() {
+        // Without a high-risk sidecar the bare ML SBOM passes AI-Act (gaps are
+        // advisory). The diff App must apply the sidecar so the verdict flips,
+        // matching the CLI.
+        let new = high_risk_ml_sbom();
+        let old = high_risk_ml_sbom();
+        let mut app = App::new_diff(DiffResult::new(), old, new, "{}", "{}");
+        app = app.with_cra_sidecar(CraSidecarMetadata {
+            is_high_risk_ai: true,
+            ..Default::default()
+        });
+
+        app.ensure_compliance_results();
+
+        let results = app
+            .data
+            .new_compliance_results
+            .as_ref()
+            .expect("compliance results computed");
+        let ai_act = results
+            .iter()
+            .find(|r| r.level == ComplianceLevel::EuAiAct)
+            .expect("AI-Act standard present");
+        assert!(
+            !ai_act.is_compliant,
+            "high-risk AI SBOM with Annex IV gaps must be NON-COMPLIANT in the diff TUI"
+        );
+        assert!(ai_act.error_count > 0, "gaps must escalate to errors");
+    }
+
+    #[test]
+    fn without_sidecar_ai_act_stays_compliant() {
+        // Guards the inverse: the escalation must be sidecar-driven, not a
+        // blanket failure for any ML SBOM.
+        let new = high_risk_ml_sbom();
+        let old = high_risk_ml_sbom();
+        let mut app = App::new_diff(DiffResult::new(), old, new, "{}", "{}");
+        app.ensure_compliance_results();
+
+        let results = app.data.new_compliance_results.as_ref().unwrap();
+        let ai_act = results
+            .iter()
+            .find(|r| r.level == ComplianceLevel::EuAiAct)
+            .unwrap();
+        assert!(
+            ai_act.is_compliant,
+            "non-high-risk ML SBOM gaps are advisory, not blocking"
+        );
+    }
+
+    #[test]
+    fn licenses_tab_lists_component_changes_without_aggregates() {
+        // Only per-component churn (no net new/removed license across the SBOM):
+        // previously the tab early-returned "No license changes detected".
+        let mut result = DiffResult::new();
+        result.licenses.component_changes = vec![ComponentLicenseChange {
+            component_id: "pkg:cargo/libfoo@1.0.0".to_string(),
+            component_name: "libfoo".to_string(),
+            old_licenses: vec!["MIT".to_string()],
+            new_licenses: vec!["GPL-3.0-only".to_string()],
+        }];
+
+        let mut app = app_with_result(result, TabKind::Licenses);
+        let text = render_tab_text(&mut app, 120, 40);
+
+        assert!(
+            !text.contains("No license changes detected"),
+            "component license churn must not be reported as no changes:\n{text}"
+        );
+        assert!(
+            text.contains("Component License Changes"),
+            "the component license-change panel must render:\n{text}"
+        );
+        assert!(
+            text.contains("libfoo") && text.contains("GPL-3.0-only"),
+            "the changed component and its new license must be listed:\n{text}"
+        );
+    }
+
+    /// Build a modified-component change carrying an `ml_training_dataset`
+    /// removal field change (old value present, new absent), as the diff engine
+    /// emits for provenance loss.
+    fn training_dataset_removal_change() -> DiffResult {
+        let mut old = Component::new("model-a".to_string(), "model-a".to_string())
+            .with_version("1.0.0".to_string());
+        old.component_type = ComponentType::MachineLearningModel;
+        old.ml_model = Some(MlModelInfo {
+            training_datasets: vec![DatasetRef {
+                reference: Some("dataset-1".to_string()),
+                name: Some("reviews".to_string()),
+                purl: None,
+            }],
+            ..MlModelInfo::default()
+        });
+
+        let mut new = old.clone();
+        new.ml_model = Some(MlModelInfo::default());
+
+        let mut change = crate::diff::ComponentChange::modified(&old, &new, Vec::new(), 0);
+        change.field_changes = vec![FieldChange {
+            field: "ml_training_dataset".to_string(),
+            old_value: Some("dataset-1".to_string()),
+            new_value: None,
+        }];
+
+        let mut result = DiffResult::new();
+        result.components.modified.push(change);
+        result.calculate_summary();
+        result
+    }
+
+    #[test]
+    fn component_detail_flags_training_dataset_removal() {
+        let mut app = app_with_result(training_dataset_removal_change(), TabKind::Components);
+        // Selection clamping + master/detail totals are computed in prepare_render.
+        app.prepare_render();
+        let text = render_tab_text(&mut app, 120, 40);
+
+        assert!(
+            text.contains("ml_training_dataset"),
+            "the field key must still render:\n{text}"
+        );
+        assert!(
+            text.contains("PROVENANCE LOSS"),
+            "training-dataset removal must carry a provenance-loss risk badge:\n{text}"
+        );
+    }
+}

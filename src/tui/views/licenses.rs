@@ -188,7 +188,11 @@ fn render_diff_licenses(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
         return;
     };
 
-    if result.licenses.new_licenses.is_empty() && result.licenses.removed_licenses.is_empty() {
+    let has_aggregate_changes =
+        !result.licenses.new_licenses.is_empty() || !result.licenses.removed_licenses.is_empty();
+    let has_component_changes = !result.licenses.component_changes.is_empty();
+
+    if !has_aggregate_changes && !has_component_changes {
         crate::tui::widgets::render_empty_state_enhanced(
             frame,
             area,
@@ -197,6 +201,17 @@ fn render_diff_licenses(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
             Some("All licenses remain the same between both SBOMs"),
             None,
         );
+        return;
+    }
+
+    // Per-component license churn can exist without any net new/removed license
+    // across the whole SBOM (e.g. a component swaps MIT for GPL while another
+    // adds MIT). Previously this view early-returned "No license changes" in
+    // that case, contradicting the Summary card's non-zero "Changed" count.
+    // When there are no aggregate changes to populate the new/removed tables,
+    // render the component-change panel full-area instead.
+    if !has_aggregate_changes {
+        render_component_license_changes(frame, area, result, true);
         return;
     }
 
@@ -283,14 +298,89 @@ fn render_diff_licenses(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
             removed_licenses.get(ctx.licenses.selected)
         };
 
-        render_license_details(
-            frame,
-            main_chunks[1],
-            selected_license,
-            ctx.licenses.focus_left,
-            ctx.diff_result,
-        );
+        // When per-component license changes also exist, split the detail column
+        // so they remain visible alongside the selected-license detail.
+        if has_component_changes {
+            let detail_chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Percentage(55), Constraint::Percentage(45)])
+                .split(main_chunks[1]);
+            render_license_details(
+                frame,
+                detail_chunks[0],
+                selected_license,
+                ctx.licenses.focus_left,
+                ctx.diff_result,
+            );
+            render_component_license_changes(frame, detail_chunks[1], result, false);
+        } else {
+            render_license_details(
+                frame,
+                main_chunks[1],
+                selected_license,
+                ctx.licenses.focus_left,
+                ctx.diff_result,
+            );
+        }
     }
+}
+
+/// Render the per-component license-change panel: one row per component whose
+/// declared license set changed, as `name: old -> new`. Surfaces churn that the
+/// aggregate new/removed tables miss (a swap that nets to zero across the SBOM).
+fn render_component_license_changes(
+    frame: &mut Frame,
+    area: Rect,
+    result: &crate::diff::DiffResult,
+    full_area: bool,
+) {
+    let scheme = colors();
+    let changes = &result.licenses.component_changes;
+
+    let mut lines: Vec<Line> = Vec::with_capacity(changes.len());
+    for change in changes {
+        let old = if change.old_licenses.is_empty() {
+            "(none)".to_string()
+        } else {
+            change.old_licenses.join(", ")
+        };
+        let new = if change.new_licenses.is_empty() {
+            "(none)".to_string()
+        } else {
+            change.new_licenses.join(", ")
+        };
+        lines.push(Line::from(vec![
+            Span::styled(
+                widgets::truncate_str(&change.component_name, 28),
+                Style::default().fg(scheme.text).bold(),
+            ),
+            Span::styled(": ", Style::default().fg(scheme.text_muted)),
+            Span::styled(old, Style::default().fg(scheme.removed)),
+            Span::styled(" \u{2192} ", Style::default().fg(scheme.text_muted)),
+            Span::styled(new, Style::default().fg(scheme.added)),
+        ]));
+    }
+
+    if lines.is_empty() {
+        lines.push(Line::from(Span::styled(
+            "No component license changes",
+            Style::default().fg(scheme.text_muted),
+        )));
+    }
+
+    let title = format!(" Component License Changes ({}) ", changes.len());
+    let border_color = if full_area {
+        scheme.warning
+    } else {
+        scheme.border
+    };
+    let paragraph = Paragraph::new(lines).block(
+        Block::default()
+            .title(title)
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(border_color)),
+    );
+    frame.render_widget(paragraph, area);
 }
 
 /// Render compatibility analysis panel

@@ -17,6 +17,40 @@ pub enum ComponentListData<'a> {
     Empty,
 }
 
+/// Classify an AI/dataset/crypto field-change key into a severity badge label
+/// and color, or `None` for fields that should render generically.
+///
+/// `old_is_none` distinguishes additions (no old value) from removals for the
+/// per-classification keys the diff engine emits one row per value for
+/// (`ml_training_dataset`, `dataset_sensitivity`). The keys mirror the field
+/// strings produced in `diff/changes/components.rs` (#244):
+/// - `ml_training_dataset` removal = provenance loss (red)
+/// - `dataset_sensitivity` addition = new PII/sensitive tag (warning)
+/// - `crypto_downgrade` / `ml_quantization` = security/precision downgrade
+fn field_change_severity(field: &str, old_is_none: bool) -> Option<(&'static str, Color)> {
+    let scheme = colors();
+    match field {
+        // Training-data removal drops model provenance — the highest-cost ML
+        // signal. An addition is benign and renders generically.
+        "ml_training_dataset" if !old_is_none => Some(("PROVENANCE LOSS", scheme.error)),
+        // A dataset newly gaining a sensitivity classification (e.g. `pii`) is a
+        // data-governance escalation; losing one renders generically.
+        "dataset_sensitivity" if old_is_none => Some(("PII", scheme.warning)),
+        // Explicit classical-security-bit downgrade detected by the diff engine.
+        "crypto_downgrade" => Some(("DOWNGRADE", scheme.error)),
+        // Quantization changes can reduce model precision; quantum-level changes
+        // alter post-quantum posture. Flag both as downgrades to draw the eye.
+        "ml_quantization" | "crypto_quantum_level" => Some(("DOWNGRADE", scheme.warning)),
+        // Algorithm / protocol / key-state churn is security-relevant.
+        "crypto_algorithm"
+        | "crypto_protocol_version"
+        | "crypto_key_state"
+        | "crypto_cert_expiry"
+        | "crypto_asset_type" => Some(("CRYPTO", scheme.warning)),
+        _ => None,
+    }
+}
+
 pub fn render_components(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -587,10 +621,32 @@ fn render_diff_detail(
             for change in &non_version_changes {
                 let old_val = change.old_value.as_deref().unwrap_or("(none)");
                 let new_val = change.new_value.as_deref().unwrap_or("(none)");
-                lines.push(Line::from(vec![
-                    Span::styled("  • ", Style::default().fg(colors().text_muted)),
-                    Span::styled(&change.field, Style::default().fg(colors().accent)),
-                ]));
+
+                // ML/dataset/crypto field changes (#244) carry security and
+                // governance weight a flat "field: old -> new" row hides. Give
+                // the high-signal ones a colored severity badge so a PII
+                // escalation or training-data removal stands out from a benign
+                // model-card URL change.
+                let scheme = colors();
+                let mut field_line =
+                    vec![Span::styled("  • ", Style::default().fg(scheme.text_muted))];
+                let field_color = if let Some((badge, color)) =
+                    field_change_severity(&change.field, change.old_value.is_none())
+                {
+                    field_line.push(Span::styled(
+                        format!(" {badge} "),
+                        Style::default().fg(Color::Black).bg(color).bold(),
+                    ));
+                    field_line.push(Span::raw(" "));
+                    color
+                } else {
+                    scheme.accent
+                };
+                field_line.push(Span::styled(
+                    &change.field,
+                    Style::default().fg(field_color),
+                ));
+                lines.push(Line::from(field_line));
                 lines.push(Line::from(vec![
                     Span::styled("    - ", Style::default().fg(colors().removed)),
                     Span::styled(
