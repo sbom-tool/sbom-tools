@@ -3106,7 +3106,7 @@ dependencies = [
 
 [[package]]
 name = "sbom-tools"
-version = "0.1.21"
+version = "0.1.22"
 dependencies = [
  "anyhow",
  "chrono",
@@ -3145,7 +3145,7 @@ dependencies = [
 
 [[package]]
 name = "sbom-tools-ffi"
-version = "0.1.21"
+version = "0.1.22"
 dependencies = [
  "sbom-tools",
 ]
