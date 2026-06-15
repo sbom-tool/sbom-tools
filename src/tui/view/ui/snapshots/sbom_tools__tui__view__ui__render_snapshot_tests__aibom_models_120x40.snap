@@ -20,8 +20,8 @@ sbom-tools  VIEW  │ bsi-aibom-complete-app │ CycloneDX 1.6 │ [AI-BOM]
 │                                              ││Model Card: https://example.test/model-cards/sentiment-classifier     │
 │                                              ││Datasets (1):                                                         │
 │                                              ││• data-reviews                                                        │
-│                                              ││                                                                      │
-│                                              ││                                                                      │
+│                                              ││Use Cases: Customer review sentiment analysis                         │
+│                                              ││Metrics (1): accuracy=0.97                                            │
 │                                              ││                                                                      │
 │                                              ││                                                                      │
 │                                              ││                                                                      │
