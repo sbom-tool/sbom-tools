@@ -134,6 +134,7 @@ fn render(frame: &mut Frame, app: &mut ViewApp) {
         let shortcuts_state = crate::tui::app::ShortcutsOverlayState {
             visible: true,
             context: crate::tui::app::ShortcutsContext::View,
+            profile: Some(app.bom_profile),
         };
         crate::tui::views::render_shortcuts_overlay(frame, &shortcuts_state);
     }

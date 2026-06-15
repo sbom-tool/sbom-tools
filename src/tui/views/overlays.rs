@@ -119,7 +119,7 @@ pub fn render_shortcuts_overlay(f: &mut Frame, state: &ShortcutsOverlayState) {
     f.render_widget(block, overlay_area);
 
     // Get shortcuts for the current context
-    let shortcuts = get_shortcuts_for_context(state.context);
+    let shortcuts = get_shortcuts_for_context(state.context, state.profile);
 
     let mut lines: Vec<Line> = Vec::new();
 
@@ -458,54 +458,94 @@ const fn context_name(context: ShortcutsContext) -> &'static str {
 
 struct ShortcutSection {
     title: &'static str,
-    items: Vec<(&'static str, &'static str)>,
+    items: Vec<(String, String)>,
 }
 
-fn get_shortcuts_for_context(context: ShortcutsContext) -> Vec<ShortcutSection> {
+/// Owned `(key, description)` pair for a shortcut row.
+fn item(key: &str, desc: &str) -> (String, String) {
+    (key.to_string(), desc.to_string())
+}
+
+fn get_shortcuts_for_context(
+    context: ShortcutsContext,
+    profile: Option<crate::model::BomProfile>,
+) -> Vec<ShortcutSection> {
+    // When the active profile is known (view mode), the number keys map
+    // positionally to that profile's tab set, so derive the "Jump to tab"
+    // range from the real tab count instead of a hard-coded "1-8".
+    let jump_hint = profile.map_or_else(
+        || "1-8".to_string(),
+        |p| {
+            let n = crate::tui::view::ViewTab::tabs_for_profile(p).len();
+            if n <= 1 {
+                "1".to_string()
+            } else {
+                format!("1-{n}")
+            }
+        },
+    );
+
     let mut sections = vec![
         ShortcutSection {
             title: "Global",
             items: vec![
-                ("q", "Quit application"),
-                ("?", "Toggle help"),
-                ("e", "Export dialog"),
-                ("l", "Color legend"),
-                ("T", "Toggle theme"),
-                ("/", "Search"),
-                ("K", "Keyboard shortcuts"),
-                ("V", "View switcher (multi-views)"),
-                ("D", "Component deep dive"),
-                ("y/Ctrl+C", "Copy selected to clipboard"),
-                ("Shift+drag", "Select text with mouse"),
-                ("b/Backspace", "Navigate back"),
+                item("q", "Quit application"),
+                item("?", "Toggle help"),
+                item("e", "Export dialog"),
+                item("l", "Color legend"),
+                item("T", "Toggle theme"),
+                item("/", "Search"),
+                item("K", "Keyboard shortcuts"),
+                item("V", "View switcher (multi-views)"),
+                item("D", "Component deep dive"),
+                item("y/Ctrl+C", "Copy selected to clipboard"),
+                item("Shift+drag", "Select text with mouse"),
+                item("b/Backspace", "Navigate back"),
             ],
         },
         ShortcutSection {
             title: "Navigation",
             items: vec![
-                ("j/k", "Up/Down"),
-                ("h/l", "Left/Right"),
-                ("g/G", "First/Last"),
-                ("PgUp/PgDn", "Page up/down"),
-                ("Tab", "Next panel/tab"),
-                ("1-8", "Jump to tab"),
+                item("j/k", "Up/Down"),
+                item("h/l", "Left/Right"),
+                item("g/G", "First/Last"),
+                item("PgUp/PgDn", "Page up/down"),
+                item("Tab", "Next panel/tab"),
+                (jump_hint, "Jump to tab".to_string()),
             ],
         },
     ];
+
+    // Profile-accurate tab listing (view mode only): show exactly the tabs
+    // available for the active BOM profile so the overlay never advertises a
+    // tab the user cannot reach (e.g. AI-BOM shows Models/Datasets/AI-Readiness,
+    // not the SBOM-specific tabs).
+    if let Some(p) = profile {
+        let tabs = crate::tui::view::ViewTab::tabs_for_profile(p);
+        let items = tabs
+            .iter()
+            .enumerate()
+            .map(|(i, tab)| item(&(i + 1).to_string(), tab.title()))
+            .collect();
+        sections.push(ShortcutSection {
+            title: "Tabs (this profile)",
+            items,
+        });
+    }
 
     match context {
         ShortcutsContext::MultiDiff => {
             sections.push(ShortcutSection {
                 title: "Multi-Diff View",
                 items: vec![
-                    ("p/Tab", "Switch panel"),
-                    ("Enter", "View details"),
-                    ("f", "Cycle filter preset"),
-                    ("s", "Cycle sort field"),
-                    ("S", "Toggle sort direction"),
-                    ("v", "Variable components drill-down"),
-                    ("x", "Toggle cross-target analysis"),
-                    ("h", "Toggle heat map mode"),
+                    item("p/Tab", "Switch panel"),
+                    item("Enter", "View details"),
+                    item("f", "Cycle filter preset"),
+                    item("s", "Cycle sort field"),
+                    item("S", "Toggle sort direction"),
+                    item("v", "Variable components drill-down"),
+                    item("x", "Toggle cross-target analysis"),
+                    item("h", "Toggle heat map mode"),
                 ],
             });
         }
@@ -513,14 +553,14 @@ fn get_shortcuts_for_context(context: ShortcutsContext) -> Vec<ShortcutSection> 
             sections.push(ShortcutSection {
                 title: "Timeline View",
                 items: vec![
-                    ("p/Tab", "Switch panel"),
-                    ("d", "Compare versions"),
-                    ("t", "Toggle statistics"),
-                    ("g", "Jump to version"),
-                    ("+/-", "Zoom chart"),
-                    ("h/l", "Scroll chart"),
-                    ("f", "Filter components"),
-                    ("s", "Sort components"),
+                    item("p/Tab", "Switch panel"),
+                    item("d", "Compare versions"),
+                    item("t", "Toggle statistics"),
+                    item("g", "Jump to version"),
+                    item("+/-", "Zoom chart"),
+                    item("h/l", "Scroll chart"),
+                    item("f", "Filter components"),
+                    item("s", "Sort components"),
                 ],
             });
         }
@@ -528,13 +568,13 @@ fn get_shortcuts_for_context(context: ShortcutsContext) -> Vec<ShortcutSection> 
             sections.push(ShortcutSection {
                 title: "Matrix View",
                 items: vec![
-                    ("p/Tab", "Switch panel"),
-                    ("Enter", "View pair diff"),
-                    ("t", "Cycle threshold"),
-                    ("z", "Toggle focus mode"),
-                    ("H", "Toggle row/col highlight"),
-                    ("C", "Show cluster details"),
-                    ("x", "Export options"),
+                    item("p/Tab", "Switch panel"),
+                    item("Enter", "View pair diff"),
+                    item("t", "Cycle threshold"),
+                    item("z", "Toggle focus mode"),
+                    item("H", "Toggle row/col highlight"),
+                    item("C", "Show cluster details"),
+                    item("x", "Export options"),
                 ],
             });
         }
@@ -542,16 +582,16 @@ fn get_shortcuts_for_context(context: ShortcutsContext) -> Vec<ShortcutSection> 
             sections.push(ShortcutSection {
                 title: "Diff View",
                 items: vec![
-                    ("f", "Filter/toggle options"),
-                    ("s", "Sort/cycle options"),
-                    ("d", "Toggle deduplication"),
-                    ("t", "Toggle transitive deps"),
-                    ("v", "Multi-select mode"),
-                    ("Enter", "View details"),
-                    ("n/N", "Navigate to next/prev match"),
-                    ("p", "Toggle panel focus"),
-                    ("h/l", "Collapse/expand (tree tabs)"),
-                    ("E", "Export compliance (compliance tab)"),
+                    item("f", "Filter/toggle options"),
+                    item("s", "Sort/cycle options"),
+                    item("d", "Toggle deduplication"),
+                    item("t", "Toggle transitive deps"),
+                    item("v", "Multi-select mode"),
+                    item("Enter", "View details"),
+                    item("n/N", "Navigate to next/prev match"),
+                    item("p", "Toggle panel focus"),
+                    item("h/l", "Collapse/expand (tree tabs)"),
+                    item("E", "Export compliance (compliance tab)"),
                 ],
             });
         }
@@ -559,22 +599,22 @@ fn get_shortcuts_for_context(context: ShortcutsContext) -> Vec<ShortcutSection> 
             sections.push(ShortcutSection {
                 title: "View Mode",
                 items: vec![
-                    ("f", "Filter (tree/vulns/compliance)"),
-                    ("s", "Sort (vulnerabilities)"),
-                    ("d", "Toggle deduplication (vulns)"),
-                    ("g", "Toggle grouping (tree/vulns/licenses)"),
-                    ("v", "Toggle view mode (quality/source)"),
-                    ("p", "Toggle panel focus"),
-                    ("m", "Bookmark component (tree)"),
-                    ("y/Ctrl+C", "Copy selected to clipboard"),
-                    ("Shift+drag", "Select text with mouse"),
-                    ("h/l", "Collapse/expand, prev/next standard"),
-                    ("Enter", "Select / expand node"),
-                    ("[/]", "Prev/next detail tab"),
-                    ("E", "Export compliance"),
-                    ("n/N", "Next/prev search match (source)"),
-                    ("H/L", "Collapse/expand all (source)"),
-                    ("w", "Toggle focus (source)"),
+                    item("f", "Filter (tree/vulns/compliance)"),
+                    item("s", "Sort (vulnerabilities)"),
+                    item("d", "Toggle deduplication (vulns)"),
+                    item("g", "Toggle grouping (tree/vulns/licenses)"),
+                    item("v", "Toggle view mode (quality/source)"),
+                    item("p", "Toggle panel focus"),
+                    item("m", "Bookmark component (tree)"),
+                    item("y/Ctrl+C", "Copy selected to clipboard"),
+                    item("Shift+drag", "Select text with mouse"),
+                    item("h/l", "Collapse/expand, prev/next standard"),
+                    item("Enter", "Select / expand node"),
+                    item("[/]", "Prev/next detail tab"),
+                    item("E", "Export compliance"),
+                    item("n/N", "Next/prev search match (source)"),
+                    item("H/L", "Collapse/expand all (source)"),
+                    item("w", "Toggle focus (source)"),
                 ],
             });
         }
@@ -785,4 +825,95 @@ pub fn render_threshold_tuning(f: &mut Frame, state: &ThresholdTuningState) {
         .alignment(Alignment::Left)
         .wrap(Wrap { trim: true });
     f.render_widget(paragraph, inner_area);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ShortcutsContext, get_shortcuts_for_context};
+    use crate::model::BomProfile;
+
+    /// Collect every `(key, description)` pair across all sections.
+    fn flatten(context: ShortcutsContext, profile: Option<BomProfile>) -> Vec<(String, String)> {
+        get_shortcuts_for_context(context, profile)
+            .into_iter()
+            .flat_map(|s| s.items)
+            .collect()
+    }
+
+    fn descriptions(items: &[(String, String)]) -> Vec<String> {
+        items.iter().map(|(_, d)| d.clone()).collect()
+    }
+
+    fn jump_range(items: &[(String, String)]) -> String {
+        items
+            .iter()
+            .find(|(_, d)| d == "Jump to tab")
+            .map(|(k, _)| k.clone())
+            .expect("a Jump to tab hint should always be present")
+    }
+
+    #[test]
+    fn aibom_overlay_lists_ai_tabs_not_sbom_tabs() {
+        let items = flatten(ShortcutsContext::View, Some(BomProfile::AiBom));
+        let descs = descriptions(&items);
+
+        // AI-BOM profile tabs (ViewTab::tabs_for_profile): Overview, Models,
+        // Datasets, AI-Readiness, Compliance, Source.
+        for expected in ["Overview", "Models", "Datasets", "AI-Readiness"] {
+            assert!(
+                descs.iter().any(|d| d == expected),
+                "AI-BOM overlay should list the {expected} tab; got {descs:?}"
+            );
+        }
+
+        // It must NOT advertise SBOM-only tabs the user cannot reach.
+        for sbom_only in ["Components", "Vulns", "Licenses", "Deps"] {
+            assert!(
+                !descs.iter().any(|d| d == sbom_only),
+                "AI-BOM overlay must not list the SBOM-only {sbom_only} tab"
+            );
+        }
+
+        // 6 AI-BOM tabs -> "1-6", never the generic "1-8".
+        assert_eq!(jump_range(&items), "1-6");
+    }
+
+    #[test]
+    fn sbom_overlay_lists_sbom_tabs_and_full_range() {
+        let items = flatten(ShortcutsContext::View, Some(BomProfile::Sbom));
+        let descs = descriptions(&items);
+        for expected in ["Components", "Vulns", "Licenses", "Deps", "Compliance"] {
+            assert!(
+                descs.iter().any(|d| d == expected),
+                "SBOM overlay should list the {expected} tab; got {descs:?}"
+            );
+        }
+        assert_eq!(jump_range(&items), "1-8");
+    }
+
+    #[test]
+    fn cbom_overlay_lists_crypto_tabs() {
+        let items = flatten(ShortcutsContext::View, Some(BomProfile::Cbom));
+        let descs = descriptions(&items);
+        for expected in ["Algorithms", "Certs", "Keys", "Protocols"] {
+            assert!(
+                descs.iter().any(|d| d == expected),
+                "CBOM overlay should list the {expected} tab; got {descs:?}"
+            );
+        }
+        assert_eq!(jump_range(&items), "1-8");
+    }
+
+    #[test]
+    fn no_profile_falls_back_to_generic_hint_without_tab_section() {
+        // Diff-mode passes None: keep the existing generic "1-8" hint and no
+        // profile-specific tab listing.
+        let sections = get_shortcuts_for_context(ShortcutsContext::Diff, None);
+        assert!(
+            sections.iter().all(|s| s.title != "Tabs (this profile)"),
+            "no profile -> no profile-tab section"
+        );
+        let items: Vec<_> = sections.into_iter().flat_map(|s| s.items).collect();
+        assert_eq!(jump_range(&items), "1-8");
+    }
 }

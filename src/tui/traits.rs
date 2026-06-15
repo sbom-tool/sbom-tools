@@ -293,7 +293,12 @@ pub trait ViewState: Send {
 
     /// Get keyboard shortcuts for this view.
     ///
-    /// These are displayed in the help overlay and footer hints.
+    /// NOTE: currently UNUSED by any render path. The help overlay
+    /// (`tui::views::overlays::render_shortcuts_overlay`) and footer hints
+    /// (`tui::theme::FooterHints`) are hand-maintained per profile/tab rather
+    /// than driven from this method. Wiring those to `shortcuts()` as the
+    /// single source of truth is a deliberate future refactor; until then this
+    /// is exercised only by unit tests.
     fn shortcuts(&self) -> Vec<Shortcut>;
 
     /// Called when this view becomes active.

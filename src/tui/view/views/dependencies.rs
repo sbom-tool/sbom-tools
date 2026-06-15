@@ -591,7 +591,9 @@ fn component_type_badge(ct: &crate::model::ComponentType) -> (&'static str, Colo
         ComponentType::Container => ("CTR", scheme.secondary),
         ComponentType::OperatingSystem => ("OS", scheme.warning),
         ComponentType::Device => ("DEV", scheme.text_muted),
-        ComponentType::Firmware => ("FW", scheme.warning),
+        // Distinct from Framework's "FW" so the two are unambiguous when the
+        // badge color is hard to read.
+        ComponentType::Firmware => ("FRMW", scheme.warning),
         ComponentType::File => ("FILE", scheme.text_muted),
         ComponentType::Data => ("DATA", scheme.text_muted),
         ComponentType::MachineLearningModel => ("ML", scheme.info),
@@ -1425,6 +1427,21 @@ mod tests {
     fn max_depth_single_node() {
         let graph = graph_from_edges(1, &[]);
         assert_eq!(calculate_max_depth(&graph), 1);
+    }
+
+    #[test]
+    fn firmware_and_framework_have_distinct_badge_labels() {
+        use crate::model::ComponentType;
+        let (framework_label, _) = component_type_badge(&ComponentType::Framework);
+        let (firmware_label, _) = component_type_badge(&ComponentType::Firmware);
+        // The two used to collapse to the same "FW" label; they must now be
+        // unambiguous even when badge color is hard to read.
+        assert_ne!(
+            framework_label, firmware_label,
+            "Framework and Firmware must not share a badge label"
+        );
+        assert_eq!(framework_label, "FW");
+        assert_eq!(firmware_label, "FRMW");
     }
 
     #[test]

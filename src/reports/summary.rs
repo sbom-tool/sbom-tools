@@ -14,6 +14,7 @@ fn ansi_color(text: &str, color: &str, colored: bool) -> String {
             "red" => format!("\x1b[31m{text}\x1b[0m"),
             "green" => format!("\x1b[32m{text}\x1b[0m"),
             "yellow" => format!("\x1b[33m{text}\x1b[0m"),
+            "magenta" => format!("\x1b[35m{text}\x1b[0m"),
             "cyan" => format!("\x1b[36m{text}\x1b[0m"),
             "bold" => format!("\x1b[1m{text}\x1b[0m"),
             "dim" => format!("\x1b[2m{text}\x1b[0m"),
@@ -21,6 +22,19 @@ fn ansi_color(text: &str, color: &str, colored: bool) -> String {
         }
     } else {
         text.to_string()
+    }
+}
+
+/// Map a severity label to the shared 4-color scheme used by the TUI
+/// (`src/tui/theme.rs`) and the side-by-side report: Critical=magenta,
+/// High=red, Medium=yellow, Low=cyan. Unknown severities are left uncolored.
+fn severity_color_name(severity: &str) -> &'static str {
+    match severity.to_lowercase().as_str() {
+        "critical" => "magenta",
+        "high" => "red",
+        "medium" => "yellow",
+        "low" => "cyan",
+        _ => "",
     }
 }
 
@@ -323,25 +337,34 @@ impl ReportGenerator for SummaryReporter {
             if counts.critical > 0 {
                 lines.push(format!(
                     "  {}",
-                    self.color(&format!("Critical: {}", counts.critical), "red")
+                    self.color(
+                        &format!("Critical: {}", counts.critical),
+                        severity_color_name("critical")
+                    )
                 ));
             }
             if counts.high > 0 {
                 lines.push(format!(
                     "  {}",
-                    self.color(&format!("High: {}", counts.high), "red")
+                    self.color(
+                        &format!("High: {}", counts.high),
+                        severity_color_name("high")
+                    )
                 ));
             }
             if counts.medium > 0 {
                 lines.push(format!(
                     "  {}",
-                    self.color(&format!("Medium: {}", counts.medium), "yellow")
+                    self.color(
+                        &format!("Medium: {}", counts.medium),
+                        severity_color_name("medium")
+                    )
                 ));
             }
             if counts.low > 0 {
                 lines.push(format!(
                     "  {}",
-                    self.color(&format!("Low: {}", counts.low), "dim")
+                    self.color(&format!("Low: {}", counts.low), severity_color_name("low"))
                 ));
             }
         }
@@ -517,10 +540,9 @@ impl ReportGenerator for TableReporter {
 
             for vuln in &result.vulnerabilities.introduced {
                 let severity = sanitize_terminal(&vuln.severity);
-                let severity_colored = match vuln.severity.to_lowercase().as_str() {
-                    "critical" | "high" => self.color(&severity, "red"),
-                    "medium" => self.color(&severity, "yellow"),
-                    _ => severity.into_owned(),
+                let severity_colored = match severity_color_name(&vuln.severity) {
+                    "" => severity.into_owned(),
+                    name => self.color(&severity, name),
                 };
                 lines.push(format!(
                     "{:<12} {:<20} {:<10} {:<40}",
@@ -687,5 +709,52 @@ const fn floor_char_boundary(s: &str, index: usize) -> usize {
             i -= 1;
         }
         i
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ansi_color, severity_color_name};
+
+    #[test]
+    fn severity_colors_match_shared_four_color_scheme() {
+        // The shared scheme (src/tui/theme.rs, src/reports/sidebyside.rs):
+        // Critical=magenta, High=red, Medium=yellow, Low=cyan.
+        assert_eq!(severity_color_name("critical"), "magenta");
+        assert_eq!(severity_color_name("high"), "red");
+        assert_eq!(severity_color_name("medium"), "yellow");
+        assert_eq!(severity_color_name("low"), "cyan");
+
+        // Case-insensitive.
+        assert_eq!(severity_color_name("CRITICAL"), "magenta");
+        assert_eq!(severity_color_name("High"), "red");
+
+        // Unknown severities are left uncolored.
+        assert_eq!(severity_color_name("none"), "");
+        assert_eq!(severity_color_name(""), "");
+    }
+
+    #[test]
+    fn four_severities_render_distinct_ansi_colors() {
+        let critical = ansi_color("x", severity_color_name("critical"), true);
+        let high = ansi_color("x", severity_color_name("high"), true);
+        let medium = ansi_color("x", severity_color_name("medium"), true);
+        let low = ansi_color("x", severity_color_name("low"), true);
+
+        // Each severity maps to its own ANSI SGR code: 35/31/33/36.
+        assert_eq!(critical, "\x1b[35mx\x1b[0m");
+        assert_eq!(high, "\x1b[31mx\x1b[0m");
+        assert_eq!(medium, "\x1b[33mx\x1b[0m");
+        assert_eq!(low, "\x1b[36mx\x1b[0m");
+
+        // All four are distinct from one another.
+        let all = [&critical, &high, &medium, &low];
+        for (i, a) in all.iter().enumerate() {
+            for (j, b) in all.iter().enumerate() {
+                if i != j {
+                    assert_ne!(a, b, "severities {i} and {j} share a color");
+                }
+            }
+        }
     }
 }

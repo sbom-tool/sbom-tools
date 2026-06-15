@@ -196,6 +196,10 @@ pub struct ShortcutsOverlayState {
     pub visible: bool,
     /// Current view context for showing relevant shortcuts
     pub context: ShortcutsContext,
+    /// Active BOM profile, when known. Drives a profile-accurate "Tabs"
+    /// section and "Jump to tab" range in the overlay (view mode only —
+    /// `None` falls back to the generic hint).
+    pub profile: Option<crate::model::BomProfile>,
 }
 
 /// Context for showing relevant shortcuts

@@ -178,7 +178,7 @@ fn render(frame: &mut Frame, app: &mut App) {
 
     // Render overlays
     if app.overlays.show_help {
-        render_help_overlay(frame, area);
+        render_help_overlay(frame, area, diff_tab_count(app));
     }
 
     if app.overlays.search.active {
@@ -388,6 +388,32 @@ fn render_tabs(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(tabs, area);
 }
 
+/// Number of number-key-addressable tabs currently shown in the diff-mode tab
+/// bar. Mirrors the tab set assembled in [`render_tabs`] so the help overlay's
+/// "Jump to tab" hint never advertises a number the user cannot reach.
+fn diff_tab_count(app: &App) -> usize {
+    // Base tabs: Summary, Components, Dependencies, Licenses, Vulnerabilities,
+    // Quality (always present).
+    let mut count = 6;
+    if matches!(app.mode, AppMode::Diff | AppMode::View) {
+        // Compliance + Side-by-side.
+        count += 2;
+    }
+    if app
+        .data
+        .diff_result
+        .as_ref()
+        .is_some_and(|r| !r.graph_changes.is_empty())
+    {
+        count += 1;
+    }
+    if matches!(app.mode, AppMode::Diff | AppMode::View) {
+        // Source.
+        count += 1;
+    }
+    count
+}
+
 fn render_status_bar(frame: &mut Frame, area: Rect, app: &App) {
     let (comp_count, vuln_count, score) = match app.mode {
         AppMode::Diff => {
@@ -540,9 +566,18 @@ fn render_footer(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(footer, area);
 }
 
-fn render_help_overlay(frame: &mut Frame, area: Rect) {
+fn render_help_overlay(frame: &mut Frame, area: Rect, tab_count: usize) {
     let popup_area = centered_rect(65, 80, area);
     frame.render_widget(Clear, popup_area);
+
+    // Pad to the fixed-width key column used elsewhere in this overlay so the
+    // descriptions stay aligned regardless of the digit count.
+    let jump_key = if tab_count <= 1 {
+        "1".to_string()
+    } else {
+        format!("1-{tab_count}")
+    };
+    let jump_key = format!("  {jump_key:<15}");
 
     let help_text = vec![
         Line::styled(
@@ -559,7 +594,7 @@ fn render_help_overlay(frame: &mut Frame, area: Rect) {
             Span::styled("Switch between views", Style::default().fg(colors().text)),
         ]),
         Line::from(vec![
-            Span::styled("  1-8            ", Style::default().fg(colors().accent)),
+            Span::styled(jump_key, Style::default().fg(colors().accent)),
             Span::styled("Jump to specific tab", Style::default().fg(colors().text)),
         ]),
         Line::from(vec![
