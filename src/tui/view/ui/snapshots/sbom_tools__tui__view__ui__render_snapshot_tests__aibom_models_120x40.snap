@@ -1,0 +1,44 @@
+---
+source: src/tui/view/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  VIEW  │ bsi-aibom-complete-app │ CycloneDX 1.6 │ [AI-BOM]
+
+ [1] Overview   │  [2] Models   │  [3] Datasets   │  [4] AI-Readiness   │  [5] Compliance   │  [6] Source
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+┌ Models (1) ──────────────────────────────────┐┌ Model Detail ────────────────────────────────────────────────────────┐
+│sentiment-classifier  1.0.0                   ││Name: sentiment-classifier                                            │
+│                                              ││Version: 1.0.0                                                        │
+│                                              ││PURL: pkg:huggingface/example/sentiment-classifier@1.0.0              │
+│                                              ││                                                                      │
+│                                              ││━━━ ML / Dataset ━━━                                                  │
+│                                              ││Architecture: transformer / bert                                      │
+│                                              ││Approach: supervised                                                  │
+│                                              ││Task: nlp                                                             │
+│                                              ││Limitations: Optimized for English text; may not generalize to othe...│
+│                                              ││Model Card: https://example.test/model-cards/sentiment-classifier     │
+│                                              ││Datasets (1):                                                         │
+│                                              ││• data-reviews                                                        │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+└──────────────────────────────────────────────┘└──────────────────────────────────────────────────────────────────────┘
+ Components: 3 │ Vulns: 0 │ Licenses: 3
+           ↑↓ select │  Tab switch  / search  e export  ? help  q quit [y] copy pkg:huggingface/example/sen...

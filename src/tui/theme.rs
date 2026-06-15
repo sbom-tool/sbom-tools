@@ -912,6 +912,12 @@ impl FooterHints {
             "pqc-compliance" => {
                 hints.insert(0, ("↑↓", "scroll"));
             }
+            "models" | "datasets" => {
+                hints.insert(0, ("↑↓", "select"));
+            }
+            "ai-readiness" => {
+                hints.insert(0, ("↑↓", "scroll"));
+            }
             _ => {}
         }
 

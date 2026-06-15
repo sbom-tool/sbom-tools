@@ -68,3 +68,23 @@ pub use ui::run_tui;
 
 // New View TUI exports
 pub use view::{ViewApp, ViewTab, run_view_tui};
+
+/// Map a detected [`BomProfile`](crate::model::BomProfile) to the
+/// [`ScoringProfile`](crate::quality::ScoringProfile) the TUI scores it with.
+///
+/// This is the single source of truth for the profile mapping. All TUI scoring
+/// sites (the `ViewApp` constructor, the `'P'` re-score handler, and the diff
+/// constructors) route through it so the mapping cannot drift — in particular,
+/// `AiBom` always activates the dedicated AI-readiness scoring/rendering path.
+#[must_use]
+pub(crate) const fn scoring_profile_for(
+    profile: crate::model::BomProfile,
+) -> crate::quality::ScoringProfile {
+    use crate::model::BomProfile;
+    use crate::quality::ScoringProfile;
+    match profile {
+        BomProfile::Cbom => ScoringProfile::Cbom,
+        BomProfile::AiBom => ScoringProfile::AiReadiness,
+        BomProfile::Sbom => ScoringProfile::Standard,
+    }
+}

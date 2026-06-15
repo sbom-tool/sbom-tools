@@ -4,7 +4,7 @@
 //! with hierarchical navigation, search, and deep inspection.
 
 use crate::model::{Component, NormalizedSbom, NormalizedSbomIndex, VulnerabilityRef};
-use crate::quality::{ComplianceResult, QualityReport, QualityScorer, ScoringProfile};
+use crate::quality::{ComplianceResult, QualityReport, QualityScorer};
 use crate::tui::app_states::SourcePanelState;
 use crate::tui::state::ListNavigation;
 use crate::tui::widgets::TreeState;
@@ -126,6 +126,11 @@ pub struct ViewApp {
     /// CBOM Algorithms tab: sort order
     pub(crate) algorithm_sort_by: AlgorithmSortBy,
 
+    /// AI-BOM Models tab: selected index
+    pub(crate) models_selected: usize,
+    /// AI-BOM Datasets tab: selected index
+    pub(crate) datasets_selected: usize,
+
     /// Bookmarked component canonical IDs (in-memory, no persistence)
     pub(crate) bookmarked: HashSet<String>,
 
@@ -150,10 +155,7 @@ impl ViewApp {
         let stats = SbomStats::from_sbom(&sbom);
 
         // Calculate quality score
-        let scoring_profile = match bom_profile {
-            crate::model::BomProfile::Cbom => ScoringProfile::Cbom,
-            crate::model::BomProfile::Sbom => ScoringProfile::Standard,
-        };
+        let scoring_profile = crate::tui::scoring_profile_for(bom_profile);
         let scorer = QualityScorer::new(scoring_profile);
         let quality_report = scorer.score(&sbom);
         let quality_state = QualityViewState::new(quality_report.recommendations.len());
@@ -221,6 +223,8 @@ impl ViewApp {
             keys_selected: 0,
             protocols_selected: 0,
             algorithm_sort_by: AlgorithmSortBy::default(),
+            models_selected: 0,
+            datasets_selected: 0,
             bookmarked: HashSet::new(),
             export_template: None,
             cra_sidecar: None,
@@ -322,6 +326,32 @@ impl ViewApp {
                             .is_some_and(|cp| &cp.asset_type == f)
                     })
             })
+            .count()
+    }
+
+    // ========================================================================
+    // AI-BOM per-tab selection helpers
+    // ========================================================================
+
+    /// Count `MachineLearningModel` components (Models tab).
+    #[must_use]
+    pub fn ml_model_count(&self) -> usize {
+        use crate::model::ComponentType;
+        self.sbom
+            .components
+            .values()
+            .filter(|c| c.component_type == ComponentType::MachineLearningModel)
+            .count()
+    }
+
+    /// Count `Data` components (Datasets tab).
+    #[must_use]
+    pub fn dataset_count(&self) -> usize {
+        use crate::model::ComponentType;
+        self.sbom
+            .components
+            .values()
+            .filter(|c| c.component_type == ComponentType::Data)
             .count()
     }
 
@@ -851,7 +881,13 @@ impl ViewApp {
                 let sel = self.active_crypto_selected_mut();
                 *sel = sel.saturating_sub(1);
             }
-            ViewTab::Overview | ViewTab::PqcCompliance => {}
+            ViewTab::Models => {
+                self.models_selected = self.models_selected.saturating_sub(1);
+            }
+            ViewTab::Datasets => {
+                self.datasets_selected = self.datasets_selected.saturating_sub(1);
+            }
+            ViewTab::Overview | ViewTab::PqcCompliance | ViewTab::AiReadiness => {}
         }
     }
 
@@ -878,7 +914,15 @@ impl ViewApp {
                 let sel = self.active_crypto_selected_mut();
                 *sel = sel.saturating_add(1).min(max);
             }
-            ViewTab::Overview | ViewTab::PqcCompliance => {}
+            ViewTab::Models => {
+                let max = self.ml_model_count().saturating_sub(1);
+                self.models_selected = self.models_selected.saturating_add(1).min(max);
+            }
+            ViewTab::Datasets => {
+                let max = self.dataset_count().saturating_sub(1);
+                self.datasets_selected = self.datasets_selected.saturating_add(1).min(max);
+            }
+            ViewTab::Overview | ViewTab::PqcCompliance | ViewTab::AiReadiness => {}
         }
     }
 
@@ -939,7 +983,9 @@ impl ViewApp {
             | ViewTab::Certificates
             | ViewTab::Keys
             | ViewTab::Protocols => *self.active_crypto_selected_mut() = 0,
-            ViewTab::Overview | ViewTab::PqcCompliance => {}
+            ViewTab::Models => self.models_selected = 0,
+            ViewTab::Datasets => self.datasets_selected = 0,
+            ViewTab::Overview | ViewTab::PqcCompliance | ViewTab::AiReadiness => {}
         }
     }
 
@@ -974,7 +1020,9 @@ impl ViewApp {
                 let max = self.crypto_count_for_tab();
                 *self.active_crypto_selected_mut() = max.saturating_sub(1);
             }
-            ViewTab::Overview | ViewTab::PqcCompliance => {}
+            ViewTab::Models => self.models_selected = self.ml_model_count().saturating_sub(1),
+            ViewTab::Datasets => self.datasets_selected = self.dataset_count().saturating_sub(1),
+            ViewTab::Overview | ViewTab::PqcCompliance | ViewTab::AiReadiness => {}
         }
     }
 
@@ -1148,7 +1196,10 @@ impl ViewApp {
             | ViewTab::Certificates
             | ViewTab::Keys
             | ViewTab::Protocols
-            | ViewTab::PqcCompliance => {}
+            | ViewTab::PqcCompliance
+            | ViewTab::Models
+            | ViewTab::Datasets
+            | ViewTab::AiReadiness => {}
         }
     }
 
@@ -1821,6 +1872,14 @@ pub enum ViewTab {
     /// PQC compliance (CNSA 2.0 + NIST PQC dedicated view)
     PqcCompliance,
 
+    // ── AI-BOM-specific ──
+    /// Machine-learning model inventory with model-card metadata
+    Models,
+    /// Training/evaluation dataset inventory with governance metadata
+    Datasets,
+    /// AI-readiness scoring dashboard (model-card completeness)
+    AiReadiness,
+
     // ── Legacy ──
     /// Single crypto tab (kept for preference migration)
     Crypto,
@@ -1844,6 +1903,9 @@ impl ViewTab {
             Self::Keys => "Keys",
             Self::Protocols => "Protocols",
             Self::PqcCompliance => "PQC Compliance",
+            Self::Models => "Models",
+            Self::Datasets => "Datasets",
+            Self::AiReadiness => "AI-Readiness",
             Self::Crypto => "Crypto",
         }
     }
@@ -1874,6 +1936,9 @@ impl ViewTab {
             Self::Keys => "keys",
             Self::Protocols => "protocols",
             Self::PqcCompliance => "pqc-compliance",
+            Self::Models => "models",
+            Self::Datasets => "datasets",
+            Self::AiReadiness => "ai-readiness",
             Self::Crypto => "crypto",
         }
     }
@@ -1905,6 +1970,14 @@ impl ViewTab {
                 Self::PqcCompliance,
                 Self::Source,
             ],
+            crate::model::BomProfile::AiBom => &[
+                Self::Overview,
+                Self::Models,
+                Self::Datasets,
+                Self::AiReadiness,
+                Self::Compliance,
+                Self::Source,
+            ],
         }
     }
 
@@ -1925,6 +1998,9 @@ impl ViewTab {
             "keys" => Some(Self::Keys),
             "protocols" => Some(Self::Protocols),
             "pqc-compliance" => Some(Self::PqcCompliance),
+            "models" => Some(Self::Models),
+            "datasets" => Some(Self::Datasets),
+            "ai-readiness" => Some(Self::AiReadiness),
             "crypto" => Some(Self::Crypto),
             _ => None,
         }

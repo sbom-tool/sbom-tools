@@ -118,6 +118,9 @@ fn render(frame: &mut Frame, app: &mut ViewApp) {
         ViewTab::Certificates => views::render_certificates(frame, chunks[2], app),
         ViewTab::Keys => views::render_keys(frame, chunks[2], app),
         ViewTab::Protocols => views::render_protocols(frame, chunks[2], app),
+        ViewTab::Models => views::render_models(frame, chunks[2], app),
+        ViewTab::Datasets => views::render_datasets(frame, chunks[2], app),
+        ViewTab::AiReadiness => views::render_ai_readiness(frame, chunks[2], app),
     }
 
     // Render status bar

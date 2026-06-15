@@ -18,6 +18,12 @@ pub(crate) const DEMO_OLD: &str = include_str!("../../tests/fixtures/demo-old.cd
 /// New demo SBOM (CycloneDX 1.5) used as the diff "after" side.
 pub(crate) const DEMO_NEW: &str = include_str!("../../tests/fixtures/demo-new.cdx.json");
 
+/// A complete BSI-aligned AI-BOM fixture (ML model + dataset components).
+/// Used by AI-BOM `ViewApp` tab tests; `BomProfile::detect` classifies it as
+/// `BomProfile::AiBom`.
+pub(crate) const AIBOM_BSI: &str =
+    include_str!("../../tests/fixtures/cyclonedx/bsi-aibom-complete.cdx.json");
+
 /// Snapshot terminal sizes: a standard 80x24 and a wide 120x40.
 pub(crate) const SIZES: [(u16, u16); 2] = [(80, 24), (120, 40)];
 
@@ -43,6 +49,13 @@ pub(crate) fn demo_diff() -> (DiffResult, NormalizedSbom, NormalizedSbom) {
 /// Parse the new demo fixture as a single SBOM for `ViewApp` tests.
 pub(crate) fn demo_single() -> (NormalizedSbom, BomProfile) {
     let sbom = parse_sbom_str(DEMO_NEW).expect("demo-new fixture must parse");
+    let profile = BomProfile::detect(&sbom);
+    (sbom, profile)
+}
+
+/// Parse the BSI AI-BOM fixture as a single SBOM for AI-BOM `ViewApp` tests.
+pub(crate) fn aibom_single() -> (NormalizedSbom, BomProfile) {
+    let sbom = parse_sbom_str(AIBOM_BSI).expect("bsi-aibom fixture must parse");
     let profile = BomProfile::detect(&sbom);
     (sbom, profile)
 }

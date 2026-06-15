@@ -1,0 +1,44 @@
+---
+source: src/tui/view/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  VIEW  │ bsi-aibom-complete-app │ CycloneDX 1.6 │ [AI-BOM]
+
+ [1] Overview   │  [2] Models   │  [3] Datasets   │  [4] AI-Readiness   │  [5] Compliance   │  [6] Source
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+┌ Datasets (1) ────────────────────────────────┐┌ Dataset Detail ──────────────────────────────────────────────────────┐
+│product-reviews-1M                            ││Name: product-reviews-1M                                              │
+│                                              ││PURL: pkg:generic/product-reviews-1M@2026.01                          │
+│                                              ││License: CC-BY-4.0                                                    │
+│                                              ││                                                                      │
+│                                              ││━━━ ML / Dataset ━━━                                                  │
+│                                              ││Dataset Type: dataset                                                 │
+│                                              ││Sensitivity: none                                                     │
+│                                              ││Governance: Data Stewardship Team                                     │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+│                                              ││                                                                      │
+└──────────────────────────────────────────────┘└──────────────────────────────────────────────────────────────────────┘
+ Components: 3 │ Vulns: 0 │ Licenses: 3
+           ↑↓ select │  Tab switch  / search  e export  ? help  q quit [y] copy pkg:generic/product-reviews...

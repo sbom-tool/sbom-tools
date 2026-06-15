@@ -11,7 +11,11 @@ use ratatui::{
 pub fn render_overview(frame: &mut Frame, area: Rect, app: &ViewApp) {
     match app.bom_profile {
         crate::model::BomProfile::Cbom => render_cbom_overview(frame, area, app),
-        crate::model::BomProfile::Sbom => render_sbom_overview(frame, area, app),
+        // AI-BOMs use the standard SBOM overview; AI-specific detail lives in
+        // the dedicated Models / Datasets / AI-Readiness tabs.
+        crate::model::BomProfile::Sbom | crate::model::BomProfile::AiBom => {
+            render_sbom_overview(frame, area, app);
+        }
     }
 }
 

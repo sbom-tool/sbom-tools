@@ -6,7 +6,7 @@ use super::app_states::{
 };
 use crate::diff::{DiffResult, MatrixResult, MultiDiffResult, TimelineResult};
 use crate::model::NormalizedSbom;
-use crate::quality::{ComplianceChecker, ComplianceLevel, QualityScorer, ScoringProfile};
+use crate::quality::{ComplianceChecker, ComplianceLevel, QualityScorer};
 
 impl App {
     /// Shared default initialization for all mode-independent fields.
@@ -80,17 +80,13 @@ impl App {
         new_raw: &str,
     ) -> Self {
         // Calculate quality reports for both SBOMs using profile-aware scoring
-        let old_profile = match crate::model::BomProfile::detect(&old_sbom) {
-            crate::model::BomProfile::Cbom => ScoringProfile::Cbom,
-            crate::model::BomProfile::Sbom => ScoringProfile::Standard,
-        };
+        let old_profile =
+            crate::tui::scoring_profile_for(crate::model::BomProfile::detect(&old_sbom));
         let old_scorer = QualityScorer::new(old_profile);
         let old_quality = Some(old_scorer.score(&old_sbom));
 
-        let new_profile = match crate::model::BomProfile::detect(&new_sbom) {
-            crate::model::BomProfile::Cbom => ScoringProfile::Cbom,
-            crate::model::BomProfile::Sbom => ScoringProfile::Standard,
-        };
+        let new_profile =
+            crate::tui::scoring_profile_for(crate::model::BomProfile::detect(&new_sbom));
         let new_scorer = QualityScorer::new(new_profile);
         let new_quality = Some(new_scorer.score(&new_sbom));
 
@@ -157,8 +153,9 @@ impl App {
     /// for exploring a single SBOM interactively.
     #[must_use]
     pub fn new_view(sbom: NormalizedSbom, raw_content: &str) -> Self {
-        // Quality scoring
-        let scorer = QualityScorer::new(ScoringProfile::Standard);
+        // Quality scoring — profile-aware so AI-BOMs / CBOMs score correctly.
+        let profile = crate::tui::scoring_profile_for(crate::model::BomProfile::detect(&sbom));
+        let scorer = QualityScorer::new(profile);
         let quality_report = Some(scorer.score(&sbom));
 
         // Build index for O(1) lookups

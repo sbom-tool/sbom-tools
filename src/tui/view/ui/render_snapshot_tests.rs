@@ -10,7 +10,9 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use super::{ViewApp, ViewTab, render};
-use crate::tui::test_support::{DEMO_NEW, SIZES, demo_single, pin_theme, render_to_text};
+use crate::tui::test_support::{
+    AIBOM_BSI, DEMO_NEW, SIZES, aibom_single, demo_single, pin_theme, render_to_text,
+};
 use crate::tui::view::events::handle_key_event;
 
 /// Build a `ViewApp` from the demo fixture with a deterministic tab.
@@ -117,4 +119,66 @@ fn tree_search_entry_activates_filter() {
         app.tree_search_active,
         "'/' on the Tree tab starts the inline tree filter"
     );
+}
+
+// ============================================================================
+// AI-BOM (first-class profile) tests
+// ============================================================================
+
+/// Build a `ViewApp` from the BSI AI-BOM fixture with a deterministic tab.
+fn aibom_view_app(active_tab: ViewTab) -> ViewApp {
+    pin_theme();
+    let (sbom, profile) = aibom_single();
+    let mut app = ViewApp::new(sbom, AIBOM_BSI, profile);
+    app.active_tab = active_tab;
+    app
+}
+
+#[test]
+fn aibom_fixture_detected_as_aibom_profile() {
+    let (_sbom, profile) = aibom_single();
+    assert_eq!(profile, crate::model::BomProfile::AiBom);
+}
+
+#[test]
+fn aibom_view_app_uses_ai_readiness_scoring() {
+    // The single shared `scoring_profile_for` must route AI-BOMs to the
+    // dedicated AI-readiness scoring path (which activates the AI renderer).
+    let app = aibom_view_app(ViewTab::AiReadiness);
+    assert_eq!(
+        app.quality_report.profile,
+        crate::quality::ScoringProfile::AiReadiness
+    );
+}
+
+#[test]
+fn aibom_profile_exposes_ai_tab_suite() {
+    let tabs = ViewTab::tabs_for_profile(crate::model::BomProfile::AiBom);
+    assert!(tabs.contains(&ViewTab::Models));
+    assert!(tabs.contains(&ViewTab::Datasets));
+    assert!(tabs.contains(&ViewTab::AiReadiness));
+}
+
+/// The AI-BOM-profile view tabs (rendered from the BSI AI-BOM fixture).
+const AIBOM_TABS: [(&str, ViewTab); 3] = [
+    ("models", ViewTab::Models),
+    ("datasets", ViewTab::Datasets),
+    ("ai_readiness", ViewTab::AiReadiness),
+];
+
+#[test]
+fn snapshot_aibom_tabs() {
+    let mut settings = insta::Settings::clone_current();
+    // Lifecycle/age content can drift; redact day counts defensively.
+    settings.add_filter(r"Age: \d+d", "Age: [N]d");
+    settings.bind(|| {
+        for (name, tab) in AIBOM_TABS {
+            let mut app = aibom_view_app(tab);
+            // Render at the wide size where AI panels have room to breathe.
+            let text = render_to_text(120, 40, |frame| {
+                render(frame, &mut app);
+            });
+            insta::assert_snapshot!(format!("aibom_{name}_120x40"), text);
+        }
+    });
 }

@@ -379,17 +379,16 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
             let _ = prefs.save();
         }
         KeyCode::Char('P') => {
-            // Toggle BOM profile (SBOM <-> CBOM) and re-score
+            // Cycle BOM profile (SBOM → CBOM → AI-BOM → SBOM) and re-score.
             app.bom_profile = match app.bom_profile {
                 crate::model::BomProfile::Sbom => crate::model::BomProfile::Cbom,
-                crate::model::BomProfile::Cbom => crate::model::BomProfile::Sbom,
+                crate::model::BomProfile::Cbom => crate::model::BomProfile::AiBom,
+                crate::model::BomProfile::AiBom => crate::model::BomProfile::Sbom,
             };
-            let scoring_profile = match app.bom_profile {
-                crate::model::BomProfile::Cbom => crate::quality::ScoringProfile::Cbom,
-                crate::model::BomProfile::Sbom => crate::quality::ScoringProfile::Standard,
-            };
+            let scoring_profile = crate::tui::scoring_profile_for(app.bom_profile);
             let scorer = crate::quality::QualityScorer::new(scoring_profile);
             app.quality_report = scorer.score(&app.sbom);
+            // The active tab may not exist in the new profile's tab set; reset.
             app.active_tab = ViewTab::Overview;
             app.status_message = Some(format!("Switched to {} mode", app.bom_profile.label()));
         }
@@ -1236,7 +1235,7 @@ fn handle_list_click(app: &mut ViewApp, clicked_index: usize, _x: u16) {
                 app.source_state.selected = idx;
             }
         }
-        ViewTab::Overview | ViewTab::PqcCompliance => {
+        ViewTab::Overview | ViewTab::PqcCompliance | ViewTab::AiReadiness => {
             // No list navigation
         }
         ViewTab::Crypto
@@ -1247,6 +1246,16 @@ fn handle_list_click(app: &mut ViewApp, clicked_index: usize, _x: u16) {
             let max = app.crypto_count_for_tab();
             if clicked_index < max {
                 *app.active_crypto_selected_mut() = clicked_index;
+            }
+        }
+        ViewTab::Models => {
+            if clicked_index < app.ml_model_count() {
+                app.models_selected = clicked_index;
+            }
+        }
+        ViewTab::Datasets => {
+            if clicked_index < app.dataset_count() {
+                app.datasets_selected = clicked_index;
             }
         }
     }
@@ -1360,7 +1369,33 @@ pub fn get_yank_text(app: &ViewApp) -> Option<String> {
                 .min(crypto_components.len().saturating_sub(1));
             crypto_components.get(selected).map(|c| c.name.clone())
         }
-        ViewTab::PqcCompliance => None,
+        ViewTab::Models => {
+            let mut models: Vec<_> = app
+                .sbom
+                .components
+                .values()
+                .filter(|c| c.component_type == crate::model::ComponentType::MachineLearningModel)
+                .collect();
+            models.sort_by(|a, b| a.name.cmp(&b.name));
+            let selected = app.models_selected.min(models.len().saturating_sub(1));
+            models
+                .get(selected)
+                .map(|c| c.identifiers.purl.clone().unwrap_or_else(|| c.name.clone()))
+        }
+        ViewTab::Datasets => {
+            let mut datasets: Vec<_> = app
+                .sbom
+                .components
+                .values()
+                .filter(|c| c.component_type == crate::model::ComponentType::Data)
+                .collect();
+            datasets.sort_by(|a, b| a.name.cmp(&b.name));
+            let selected = app.datasets_selected.min(datasets.len().saturating_sub(1));
+            datasets
+                .get(selected)
+                .map(|c| c.identifiers.purl.clone().unwrap_or_else(|| c.name.clone()))
+        }
+        ViewTab::PqcCompliance | ViewTab::AiReadiness => None,
     }
 }
 

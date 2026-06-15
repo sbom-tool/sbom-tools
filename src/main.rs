@@ -440,7 +440,7 @@ struct ViewArgs {
     #[arg(long)]
     fail_on_vuln: bool,
 
-    /// BOM type override (sbom, cbom). Auto-detected from content if omitted
+    /// BOM type override (sbom, cbom, aibom). Auto-detected from content if omitted
     #[arg(long, value_name = "TYPE")]
     bom_type: Option<String>,
 

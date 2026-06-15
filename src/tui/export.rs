@@ -92,7 +92,10 @@ pub const fn view_tab_to_report_type(tab: ViewTab) -> ReportType {
         | ViewTab::Certificates
         | ViewTab::Keys
         | ViewTab::Protocols
-        | ViewTab::PqcCompliance => ReportType::All,
+        | ViewTab::PqcCompliance
+        | ViewTab::Models
+        | ViewTab::Datasets
+        | ViewTab::AiReadiness => ReportType::All,
     }
 }
 
