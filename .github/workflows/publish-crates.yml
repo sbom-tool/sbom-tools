@@ -113,7 +113,12 @@ jobs:
       actions: read
       id-token: write
       contents: write
-    # Must reference by tag, not SHA — generator requirement
+    # Must be referenced by a version TAG, not a SHA. The SLSA generator
+    # verifies its own tag at runtime to mint trustworthy provenance and
+    # refuses to run when called by commit SHA, so SHA-pinning here would
+    # break SLSA L3 provenance. This is a known OpenSSF Scorecard
+    # Pinned-Dependencies false-positive (do NOT "secure" it by pinning).
+    # Ref: https://github.com/slsa-framework/slsa-github-generator#referencing-slsa-builders-and-generators
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
     with:
       base64-subjects: "${{ needs.publish.outputs.hashes }}"
