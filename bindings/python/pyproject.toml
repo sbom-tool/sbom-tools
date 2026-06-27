@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sbomtools"
+version = "0.0.0.dev0"
+description = "Python ctypes bindings for the sbom-tools C ABI"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["sbomtools"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

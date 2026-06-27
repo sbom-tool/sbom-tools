@@ -87,6 +87,44 @@ jobs:
       - name: Test Go dedup helpers
         run: ./scripts/test-bindings-dedup.sh go
 
+  python-bindings:
+    name: Python Bindings (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
+        with:
+          toolchain: stable
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - name: Build Rust library
+        run: cargo build -p sbom-tools-ffi --release
+      - name: Create Python environment
+        working-directory: bindings/python
+        run: python -m venv .venv
+      - name: Install Python binding
+        working-directory: bindings/python
+        run: >-
+          python -c "import os, pathlib, subprocess;
+          executable = pathlib.Path('.venv') / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python');
+          subprocess.check_call([str(executable), '-m', 'pip', 'install', '-e', '.[test]'])"
+      - name: Test Python wrapper
+        working-directory: bindings/python
+        run: >-
+          python -c "import os, pathlib, subprocess;
+          executable = pathlib.Path('.venv') / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python');
+          subprocess.check_call([str(executable), '-m', 'pytest', '-q'])"
+
   swift-bindings:
     name: Swift Bindings
     runs-on: macos-latest

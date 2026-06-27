@@ -7,6 +7,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 header="$repo_root/bindings/swift/Sources/CSbomTools/include/sbom_tools.h"
 go_wrapper="$repo_root/bindings/go/sbomtools.go"
 swift_wrapper="$repo_root/bindings/swift/Sources/SbomTools/SbomTools.swift"
+python_wrapper="$repo_root/bindings/python/sbomtools/types.py"
 
 failures=0
 
@@ -28,6 +29,11 @@ to_swift_case() {
     fi
   done
   echo "$out"
+}
+
+python_enum_block() {
+  local enum_name="$1"
+  sed -n "/^class ${enum_name}(IntEnum):/,/^class /p" "$python_wrapper" | sed '$d'
 }
 
 constants="$(grep -Eo 'SBOM_TOOLS_(PROFILE|ERROR)_[A-Z0-9_]+ = [0-9]+' "$header")"
@@ -65,6 +71,32 @@ if [ "$swift_case_count" != "$header_profile_count" ]; then
   fail "Swift SbomToolsScoring has $swift_case_count cases but the header declares $header_profile_count profiles; remove stale cases"
 fi
 
+# Python mirrors both profile and error constants as IntEnum values.
+while read -r name _ value; do
+  if [[ "$name" == SBOM_TOOLS_PROFILE_* ]]; then
+    enum_name="ScoringProfile"
+    case_name="${name#SBOM_TOOLS_PROFILE_}"
+  else
+    enum_name="ErrorCode"
+    case_name="${name#SBOM_TOOLS_ERROR_}"
+  fi
+
+  enum_block="$(python_enum_block "$enum_name")"
+  if ! echo "$enum_block" | grep -Eq "^[[:space:]]+${case_name}[[:space:]]*=[[:space:]]*${value}[[:space:]]*(#.*)?$"; then
+    fail "Python $enum_name missing '$case_name = $value' (from $name) in ${python_wrapper#"$repo_root"/}"
+  fi
+done <<<"$constants"
+
+header_error_count="$(echo "$constants" | grep -c '^SBOM_TOOLS_ERROR_')"
+python_profile_count="$(python_enum_block ScoringProfile | grep -Ec '^[[:space:]]+[A-Z0-9_]+[[:space:]]*=' || true)"
+python_error_count="$(python_enum_block ErrorCode | grep -Ec '^[[:space:]]+[A-Z0-9_]+[[:space:]]*=' || true)"
+if [ "$python_profile_count" != "$header_profile_count" ]; then
+  fail "Python ScoringProfile has $python_profile_count cases but the header declares $header_profile_count profiles; remove stale cases"
+fi
+if [ "$python_error_count" != "$header_error_count" ]; then
+  fail "Python ErrorCode has $python_error_count cases but the header declares $header_error_count errors; remove stale cases"
+fi
+
 if [ "$failures" -gt 0 ]; then
   echo "" >&2
   echo "Binding constants are out of sync with sbom_tools.h ($failures issue(s))." >&2
@@ -74,3 +106,4 @@ fi
 
 echo "[go] OK: all header constants are referenced in ${go_wrapper#"$repo_root"/}"
 echo "[swift] OK: SbomToolsScoring matches the $header_profile_count header profiles"
+echo "[python] OK: ScoringProfile and ErrorCode match the C ABI header"
