@@ -1,6 +1,12 @@
 # SBOM Tools Swift Bindings
 
-Swift bindings for [sbom-tools](https://github.com/sbom-tool/sbom-tools) — a comprehensive library for parsing, validating, scoring, and diffing Software Bill of Materials (SBOMs) in multiple formats.
+Swift bindings for [sbom-tools](https://github.com/sbom-tool/sbom-tools), a
+library for parsing, validating, scoring, and diffing bills of materials in
+multiple formats.
+
+Start with the [project overview](../../docs/PROJECT_OVERVIEW.md) and
+[user journeys](../../docs/USER_JOURNEYS.md) to understand where the binding
+fits in the end-to-end workflow.
 
 ## Features
 
