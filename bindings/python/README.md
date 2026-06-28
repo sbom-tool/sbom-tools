@@ -3,6 +3,15 @@
 Pure-Python `ctypes` bindings for the existing
 [`sbom-tools`](https://github.com/sbom-tool/sbom-tools) C ABI.
 
+> **Developer preview:** this binding requires a native library built from the
+> same source tree. Binary wheels and publishing automation are not available.
+
+Start with the [project overview](../../docs/PROJECT_OVERVIEW.md) and
+[user journeys](../../docs/USER_JOURNEYS.md) to understand where Python fits in
+the scientist and developer workflows. Those documents are introduced by
+[PR #276](https://github.com/sbom-tool/sbom-tools/pull/276) and must land before
+these relative links resolve on the upstream default branch.
+
 The package does not change Rust behavior or implement its own SBOM logic.
 
 ## Requirements
