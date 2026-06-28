@@ -13,6 +13,9 @@ in the end-to-end workflow. Those documents are introduced by
 [PR #276](https://github.com/sbom-tool/sbom-tools/pull/276) and must land before
 these relative links resolve on the upstream default branch.
 
+When troubleshooting, include the output of `version()` in bug reports so the
+loaded ABI and Rust crate versions are explicit.
+
 ## Build and test
 
 From the repository root:
