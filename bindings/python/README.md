@@ -13,6 +13,8 @@ the scientist and developer workflows. Those documents are introduced by
 these relative links resolve on the upstream default branch.
 
 The package does not change Rust behavior or implement its own SBOM logic.
+When troubleshooting, include the output of `version()` in bug reports so the
+loaded ABI and Rust crate versions are explicit.
 
 ## Requirements
 
