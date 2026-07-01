@@ -8,6 +8,7 @@ header="$repo_root/bindings/swift/Sources/CSbomTools/include/sbom_tools.h"
 go_wrapper="$repo_root/bindings/go/sbomtools.go"
 swift_wrapper="$repo_root/bindings/swift/Sources/SbomTools/SbomTools.swift"
 python_wrapper="$repo_root/bindings/python/sbomtools/types.py"
+node_wrapper="$repo_root/bindings/nodejs/src/types.ts"
 
 failures=0
 
@@ -34,6 +35,16 @@ to_swift_case() {
 python_enum_block() {
   local enum_name="$1"
   sed -n "/^class ${enum_name}(IntEnum):/,/^class /p" "$python_wrapper" | sed '$d'
+}
+
+# SBOM_TOOLS_PROFILE_AI_READINESS -> AiReadiness
+to_typescript_case() {
+  local raw="$1" out="" part lower
+  for part in $(echo "$raw" | tr '_' ' '); do
+    lower="$(echo "$part" | tr '[:upper:]' '[:lower:]')"
+    out="${out}$(echo "${lower:0:1}" | tr '[:lower:]' '[:upper:]')${lower:1}"
+  done
+  echo "$out"
 }
 
 constants="$(grep -Eo 'SBOM_TOOLS_(PROFILE|ERROR)_[A-Z0-9_]+ = [0-9]+' "$header")"
@@ -97,6 +108,35 @@ if [ "$python_error_count" != "$header_error_count" ]; then
   fail "Python ErrorCode has $python_error_count cases but the header declares $header_error_count errors; remove stale cases"
 fi
 
+# TypeScript mirrors both enum families because Koffi does not consume the C
+# header at compile time.
+typescript_profiles="$(sed -n '/export enum ScoringProfile/,/^}/p' "$node_wrapper")"
+typescript_errors="$(sed -n '/export enum ErrorCode/,/^}/p' "$node_wrapper")"
+
+while read -r name _ value; do
+  if [[ "$name" == SBOM_TOOLS_PROFILE_* ]]; then
+    case_name="$(to_typescript_case "${name#SBOM_TOOLS_PROFILE_}")"
+    enum_block="$typescript_profiles"
+    enum_name="ScoringProfile"
+  else
+    case_name="$(to_typescript_case "${name#SBOM_TOOLS_ERROR_}")"
+    enum_block="$typescript_errors"
+    enum_name="ErrorCode"
+  fi
+  if ! echo "$enum_block" | grep -Eq "${case_name}[[:space:]]*=[[:space:]]*${value}([,[:space:]]|\$)"; then
+    fail "TypeScript $enum_name missing '$case_name = $value' (from $name) in ${node_wrapper#"$repo_root"/}"
+  fi
+done <<<"$constants"
+
+typescript_profile_count="$(echo "$typescript_profiles" | grep -Ec '^[[:space:]]+[A-Za-z]+[[:space:]]*=' || true)"
+typescript_error_count="$(echo "$typescript_errors" | grep -Ec '^[[:space:]]+[A-Za-z]+[[:space:]]*=' || true)"
+if [ "$typescript_profile_count" != "$header_profile_count" ]; then
+  fail "TypeScript ScoringProfile has $typescript_profile_count cases but the header declares $header_profile_count profiles"
+fi
+if [ "$typescript_error_count" != "$header_error_count" ]; then
+  fail "TypeScript ErrorCode has $typescript_error_count cases but the header declares $header_error_count errors"
+fi
+
 if [ "$failures" -gt 0 ]; then
   echo "" >&2
   echo "Binding constants are out of sync with sbom_tools.h ($failures issue(s))." >&2
@@ -107,3 +147,4 @@ fi
 echo "[go] OK: all header constants are referenced in ${go_wrapper#"$repo_root"/}"
 echo "[swift] OK: SbomToolsScoring matches the $header_profile_count header profiles"
 echo "[python] OK: ScoringProfile and ErrorCode match the C ABI header"
+echo "[nodejs] OK: TypeScript enums match all header constants"

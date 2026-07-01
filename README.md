@@ -110,14 +110,15 @@ cargo build --release --no-default-features
 
 The binary is placed at `target/release/sbom-tools`.
 
-### Go, Swift, and Python bindings MVP
+### Go, Swift, Python, and Node.js bindings MVP
 
-The repository includes a shared C ABI plus thin Go, Swift, and Python wrappers for the MVP binding surface.
+The repository includes a shared C ABI plus thin Go, Swift, Python, and Node.js wrappers for the MVP binding surface.
 
 - Shared ABI header: [bindings/swift/Sources/CSbomTools/include/sbom_tools.h](bindings/swift/Sources/CSbomTools/include/sbom_tools.h)
 - Go wrapper package: [bindings/go](bindings/go)
 - Swift package: [bindings/swift](bindings/swift)
 - Python package: [bindings/python](bindings/python)
+- Node.js package: [bindings/nodejs](bindings/nodejs)
 
 Current ABI scope:
 
@@ -214,11 +215,31 @@ report = score_json(json.dumps(parsed), ScoringProfile.STANDARD)
 print(report)
 ```
 
+#### Node.js wrapper
+
+```sh
+cd bindings/nodejs
+npm ci
+npm test
+```
+
+Example:
+
+```ts
+import { parsePathJson, version } from "@sbom-tools/node";
+
+const abi = version();
+const parsed = parsePathJson("../../tests/fixtures/cyclonedx/minimal.cdx.json");
+
+console.log(abi.abi_version);
+console.log(parsed);
+```
+
 Memory and compatibility rules:
 
 - The Rust ABI owns returned memory and wrappers must call `sbom_tools_string_result_free` exactly once.
 - JSON payload shape is the compatibility contract for normalized SBOMs, diff results, and quality reports.
-- Error codes are stable across Go, Swift, and Python wrappers.
+- Error codes are stable across Go, Swift, Python, and Node.js wrappers.
 
 Typed helper APIs are available in each wrapper:
 
