@@ -60,9 +60,8 @@ changes from a model registry or training platform.
 
 ### 3. Use Python for programmatic inspection
 
-The Python binding is a developer preview in
-[PR #274](https://github.com/sbom-tool/sbom-tools/pull/274). It requires Python
-3.10 or later and a native library built from the same source tree:
+The Python binding requires Python 3.10 or later and a native library built
+from the same source tree:
 
 ```sh
 cargo build -p sbom-tools-ffi --release

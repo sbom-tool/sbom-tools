@@ -46,8 +46,7 @@ behavior rather than implement independent parsing or analysis rules.
 - Quality profiles, standards validation, and documented CI exit gates.
 - Optional vulnerability, lifecycle, and model-registry enrichment.
 - TUI and JSON, SARIF, HTML, Markdown, CSV, table, summary, and NDJSON output.
-- C ABI with Go and Swift bindings.
-- Python and Node.js bindings under upstream review as developer previews.
+- C ABI with Go, Swift, Python, and Node.js bindings.
 
 ## Interface contract
 
@@ -81,13 +80,9 @@ this repository.
 
 ## Current contribution sequence
 
-1. Python binding:
-   [PR #274](https://github.com/sbom-tool/sbom-tools/pull/274).
-2. Node.js binding:
-   [PR #275](https://github.com/sbom-tool/sbom-tools/pull/275).
-3. Installation packaging for preview bindings, proposed separately.
-4. BOM-visible ML-regression CI gate.
-5. OSCAL assessment-results export for existing validation findings.
+1. Installation packaging for the Python and Node.js bindings, proposed separately.
+2. BOM-visible ML-regression CI gate.
+3. OSCAL assessment-results export for existing validation findings.
 
 The sequence is a roadmap, not a claim that unmerged or proposed work is
 available in a release.

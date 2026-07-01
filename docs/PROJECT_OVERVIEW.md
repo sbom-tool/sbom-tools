@@ -21,15 +21,15 @@ validation, scoring, and report logic. Every interface delegates to that engine.
 
 | Audience | Start with | Typical use |
 | --- | --- | --- |
-| Scientist or ML engineer | CLI, then Python preview | Inspect model and dataset metadata, compare model releases, measure AI-BOM readiness |
+| Scientist or ML engineer | CLI, then Python binding | Inspect model and dataset metadata, compare model releases, measure AI-BOM readiness |
 | Application developer | CLI or language binding | Parse and normalize BOMs inside an application |
 | Security or compliance engineer | CLI | Validate requirements, enrich vulnerabilities, produce SARIF or JSON |
 | CI/CD system | CLI | Apply documented exit-code gates and archive machine-readable reports |
-| Tool integrator | C ABI, Go, Swift, Python preview, or Node.js preview | Reuse the engine without duplicating BOM semantics |
+| Tool integrator | C ABI, Go, Swift, Python, or Node.js binding | Reuse the engine without duplicating BOM semantics |
 
-Python and Node.js are developer-preview bindings under upstream review. They
-currently require a separately built native library; no wheel, npm native
-package, or publishing automation is available yet.
+Python and Node.js bindings currently require a separately built native
+library; no wheel, npm native package, or publishing automation is available
+yet.
 
 ## End-to-end data flow
 
