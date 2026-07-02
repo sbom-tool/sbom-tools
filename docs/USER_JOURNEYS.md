@@ -120,6 +120,25 @@ jq '.summary' /tmp/release-diff.json
 ```
 
 Use `-o sarif` when the result will be uploaded to a code-scanning system.
+Use `-o oscal-json` when assessment tooling needs the same validation findings
+as an OSCAL 1.1.2 `assessment-results` document:
+
+```sh
+cargo run --release -- validate \
+  tests/fixtures/cyclonedx/minimal.cdx.json \
+  --standard ntia \
+  -o oscal-json \
+  -O /tmp/validation-results.oscal.json
+
+jq '."assessment-results" | {
+  oscal_version: .metadata."oscal-version",
+  result_count: (.results | length),
+  finding_count: (.results[0].findings | length)
+}' /tmp/validation-results.oscal.json
+```
+
+The export maps existing findings; it does not generate an assessment plan,
+SSP, authorization package, attestation, or evidence absent from the BOM.
 
 ### 3. Apply explicit CI gates
 

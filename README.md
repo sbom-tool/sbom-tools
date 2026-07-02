@@ -688,6 +688,7 @@ Select with `-o` / `--output`:
 | TUI | `tui` | Interactive exploration |
 | JSON | `json` | Programmatic integration |
 | SARIF | `sarif` | CI/CD security dashboards (SARIF 2.1.0) |
+| OSCAL assessment results | `oscal-json` | OSCAL 1.1.2 validation findings for assessment tooling |
 | Markdown | `markdown` | Documentation, PR comments |
 | HTML | `html` | Stakeholder reports |
 | CSV | `csv` | Spreadsheet analysis |
@@ -714,6 +715,10 @@ sbom-tools quality sbom.json --profile security --min-score 80 -o json
 
 # Validate CRA compliance
 sbom-tools validate sbom.json --standard cra -o sarif -O compliance.sarif
+
+# Export existing validation findings as OSCAL assessment results
+sbom-tools validate sbom.json --standard ntia \
+  -o oscal-json -O validation-results.oscal.json
 
 # Check for vulnerable Log4j versions across all SBOMs (exits 1 if found)
 sbom-tools query "log4j" --version "<2.17.0" fleet/*.json -o json

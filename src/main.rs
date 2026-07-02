@@ -471,6 +471,7 @@ EXAMPLES:
     sbom-tools validate app.cdx.json                              # NTIA minimum
     sbom-tools validate app.cdx.json --standard cra,eo14028       # Multi-standard
     sbom-tools validate app.cdx.json --standard ntia -o sarif     # SARIF for CI
+    sbom-tools validate app.cdx.json --standard ntia -o oscal-json # OSCAL assessment results
     sbom-tools validate app.cdx.json --fail-on-warning            # Strict CI gate")]
 struct ValidateArgs {
     /// Path to the SBOM file
