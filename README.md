@@ -710,6 +710,10 @@ sbom-tools diff old.json new.json --fail-on-vuln --enrich-vulns -o sarif -O resu
 # Fail if introduced vulnerabilities lack VEX statements
 sbom-tools diff old.json new.json --fail-on-vex-gap --vex vex.json --enrich-vulns
 
+# Fail if a supported ML performance metric regresses
+sbom-tools diff baseline-ai-bom.json candidate-ai-bom.json \
+  --fail-on-ml-regression -o json -O ml-diff.json
+
 # Fail if quality score drops below 80
 sbom-tools quality sbom.json --profile security --min-score 80 -o json
 
@@ -840,6 +844,8 @@ jobs:
 | `2` | New vulnerabilities introduced (`--fail-on-vuln`) |
 | `3` | Error |
 | `4` | VEX coverage gaps found (`--fail-on-vex-gap`) |
+| `5` | License policy violations found (`license-check`) |
+| `6` | Actively exploited (KEV) vulnerability introduced (`--fail-on-kev`) |
 | `7` | Supported ML performance metric regressed (`--fail-on-ml-regression`) |
 
 ML regression directions are explicit. Higher is better for `accuracy`, `f1`,
@@ -848,8 +854,6 @@ Lower is better for `loss`, `error`, `error_rate`, `perplexity`, `latency`, and
 `latency_ms`. Missing, non-numeric, and unrecognized metrics do not trigger the
 gate. JSON output includes each trigger in `ml_regressions` with the component,
 metric, previous value, and new value.
-| `5` | License policy violations found (`license-check`) |
-| `6` | Actively exploited (KEV) vulnerability introduced (`--fail-on-kev`) |
 
 ## Configuration
 

@@ -147,6 +147,40 @@ flag and exit code, then retain the JSON or SARIF output for diagnosis. See
 `sbom-tools --help` and the relevant subcommand help for the complete exit-code
 table.
 
+### 4. Gate on BOM-declared ML metric regressions
+
+Create a candidate AI-BOM whose declared overall accuracy is lower than the
+baseline:
+
+```sh
+jq '
+  walk(
+    if type == "object" and .type? == "accuracy"
+    then .value = "0.80"
+    else .
+    end
+  )
+' tests/fixtures/cyclonedx/aibom-complete.cdx.json \
+  > /tmp/candidate-ai-bom.cdx.json
+
+cargo run --release -- diff \
+  tests/fixtures/cyclonedx/aibom-complete.cdx.json \
+  /tmp/candidate-ai-bom.cdx.json \
+  --fail-on-ml-regression \
+  -o json \
+  -O /tmp/ml-regression.json
+```
+
+The command exits with code 7. The retained JSON identifies why:
+
+```sh
+jq '.ml_regressions' /tmp/ml-regression.json
+```
+
+The gate uses an explicit metric-direction allowlist. It ignores missing,
+non-numeric, and unrecognized metrics. It evaluates only values declared in the
+two BOMs; it does not run a model or independently verify the measurements.
+
 ## Choosing an interface
 
 | Need | Recommended interface | Status |
