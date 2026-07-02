@@ -816,8 +816,14 @@ impl Component {
             Self::extend_with_optional_f64(hasher_input, ml_model.energy_kwh_training);
 
             for dataset in &ml_model.training_datasets {
+                Self::extend_with_optional_str(hasher_input, &dataset.reference);
                 Self::extend_with_optional_str(hasher_input, &dataset.name);
                 Self::extend_with_optional_str(hasher_input, &dataset.purl);
+            }
+            for metric in &ml_model.performance_metrics {
+                Self::extend_with_optional_str(hasher_input, &metric.metric_type);
+                Self::extend_with_optional_str(hasher_input, &metric.value);
+                Self::extend_with_optional_str(hasher_input, &metric.slice);
             }
         }
     }

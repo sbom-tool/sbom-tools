@@ -405,6 +405,7 @@ Compares two SBOMs and reports added, removed, and modified components with vers
 | `--fail-on-change` | Exit with code 1 if changes are detected |
 | `--fail-on-vuln` | Exit with code 2 if new vulnerabilities are introduced |
 | `--fail-on-vex-gap` | Exit with code 4 if introduced vulnerabilities lack VEX statements |
+| `--fail-on-ml-regression` | Exit with code 7 if a supported numeric ML metric regresses |
 | `--graph-diff` | Enable dependency graph structure diffing |
 | `--ecosystem-rules <path>` | Load custom per-ecosystem normalization rules |
 | `--fuzzy-preset <preset>` | Matching preset: `strict`, `balanced` (default), `permissive` |
@@ -839,6 +840,14 @@ jobs:
 | `2` | New vulnerabilities introduced (`--fail-on-vuln`) |
 | `3` | Error |
 | `4` | VEX coverage gaps found (`--fail-on-vex-gap`) |
+| `7` | Supported ML performance metric regressed (`--fail-on-ml-regression`) |
+
+ML regression directions are explicit. Higher is better for `accuracy`, `f1`,
+`f1_score`, `precision`, `recall`, `auc`, `roc_auc`, `bleu`, and `rouge`.
+Lower is better for `loss`, `error`, `error_rate`, `perplexity`, `latency`, and
+`latency_ms`. Missing, non-numeric, and unrecognized metrics do not trigger the
+gate. JSON output includes each trigger in `ml_regressions` with the component,
+metric, previous value, and new value.
 | `5` | License policy violations found (`license-check`) |
 | `6` | Actively exploited (KEV) vulnerability introduced (`--fail-on-kev`) |
 

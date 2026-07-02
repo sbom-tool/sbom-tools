@@ -699,6 +699,8 @@ pub struct FilterConfig {
     pub exclude_vex_resolved: bool,
     /// Exit with error if introduced vulnerabilities lack VEX statements
     pub fail_on_vex_gap: bool,
+    /// Exit with code 7 when a supported ML performance metric regresses.
+    pub fail_on_ml_regression: bool,
 }
 
 /// Behavior flags for diff operations
@@ -1058,6 +1060,12 @@ impl DiffConfigBuilder {
     #[must_use]
     pub const fn only_changes(mut self, only: bool) -> Self {
         self.filtering.only_changes = only;
+        self
+    }
+
+    #[must_use]
+    pub const fn fail_on_ml_regression(mut self, fail: bool) -> Self {
+        self.filtering.fail_on_ml_regression = fail;
         self
     }
 
