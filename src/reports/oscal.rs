@@ -102,10 +102,12 @@ fn finding(violation: &Violation, observation_uuid: Uuid, uuid: Uuid) -> Value {
             "type": "objective-id",
             "target-id": violation.rule_id.to_ascii_lowercase(),
             "status": {
-                "state": match violation.severity {
-                    ViolationSeverity::Info => "other-than-satisfied",
-                    ViolationSeverity::Warning | ViolationSeverity::Error => "not-satisfied"
-                }
+                // OSCAL 1.1.2 finding-target status `state` is a closed enum
+                // (satisfied | not-satisfied, no allow-other). Any violation —
+                // regardless of severity — is a non-satisfied objective; the
+                // severity detail is carried separately in the observation's
+                // custom `severity` property.
+                "state": "not-satisfied"
             }
         },
         "related-observations": [{ "observation-uuid": observation_uuid }]
@@ -198,5 +200,34 @@ mod tests {
             document["assessment-results"]["metadata"]["last-modified"],
             "2026-07-01T12:00:00Z"
         );
+    }
+
+    #[test]
+    fn finding_status_state_is_valid_oscal_token_for_every_severity() {
+        // OSCAL 1.1.2 finding-target status `state` is a CLOSED enum:
+        // only "satisfied" / "not-satisfied" (no allow-other). Every violation
+        // is a non-satisfied objective regardless of severity. This guards the
+        // Info/Warning branches that the other tests (Error-only) never reach.
+        let with_severity = |message: &str, severity: ViolationSeverity| Violation {
+            severity,
+            category: ViolationCategory::DocumentMetadata,
+            message: message.to_string(),
+            element: Some("metadata".to_string()),
+            requirement: "NTIA minimum elements".to_string(),
+            rule_id: "SBOM-NTIA-METADATA",
+            standard_refs: Vec::new(),
+        };
+        let document = build(&[result(vec![
+            with_severity("info finding", ViolationSeverity::Info),
+            with_severity("warning finding", ViolationSeverity::Warning),
+            with_severity("error finding", ViolationSeverity::Error),
+        ])]);
+        let findings = document["assessment-results"]["results"][0]["findings"]
+            .as_array()
+            .expect("findings array");
+        assert_eq!(findings.len(), 3);
+        for finding in findings {
+            assert_eq!(finding["target"]["status"]["state"], "not-satisfied");
+        }
     }
 }
