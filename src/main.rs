@@ -1521,7 +1521,10 @@ fn main() -> Result<()> {
                         args.fail_on_vex_gap,
                         app.filtering.fail_on_vex_gap,
                     ),
-                    fail_on_ml_regression: args.fail_on_ml_regression,
+                    fail_on_ml_regression: resolve_bool(
+                        args.fail_on_ml_regression,
+                        app.filtering.fail_on_ml_regression,
+                    ),
                 },
                 behavior: BehaviorConfig {
                     fail_on_vuln: resolve_bool(args.fail_on_vuln, app.behavior.fail_on_vuln),
