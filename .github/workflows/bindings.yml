@@ -31,7 +31,7 @@ jobs:
       - name: Cache Rust
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - name: Run Dagger Rust SDK pipeline
-        run: cargo run --manifest-path dagger/rust-sdk/Cargo.toml -- ci-all
+        run: ./scripts/run-dagger-ci.sh
 
   rust-ffi:
     name: Rust FFI
