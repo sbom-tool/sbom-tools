@@ -32,22 +32,18 @@ pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent) {
                 return;
             }
 
-            // Tab bar is typically in the first 2 rows
+            // Tab bar is in the first rows. Derive the clicked tab from the real
+            // rendered tab set + geometry so every profile/mode tab is reachable
+            // (the old fixed-13-col estimate mis-selected once Compliance/Graph/
+            // Source were present).
             if y <= 2 {
-                // Estimate tab positions based on typical widths
-                let tab_width = 13;
-                let tab_index = (x as usize) / tab_width;
-                match tab_index {
-                    0 => app.select_tab(crate::tui::TabKind::Summary),
-                    1 => app.select_tab(crate::tui::TabKind::Components),
-                    2 => app.select_tab(crate::tui::TabKind::Dependencies),
-                    3 => app.select_tab(crate::tui::TabKind::Licenses),
-                    4 => app.select_tab(crate::tui::TabKind::Vulnerabilities),
-                    5 => app.select_tab(crate::tui::TabKind::Quality),
-                    6 if app.mode == AppMode::Diff => {
-                        app.select_tab(crate::tui::TabKind::SideBySide);
-                    }
-                    _ => {}
+                let entries = crate::tui::ui::diff_tab_entries(app);
+                let labels: Vec<String> = entries
+                    .iter()
+                    .map(|(_, key, title)| crate::tui::ui::diff_tab_label(key, title))
+                    .collect();
+                if let Some(idx) = crate::tui::shared::tab_bar_hit(&labels, 0, 3, x) {
+                    app.select_tab(entries[idx].0);
                 }
                 return;
             }

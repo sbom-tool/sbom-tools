@@ -257,7 +257,12 @@ pub(crate) fn ordered_comparison_indices(
                 .diff
                 .summary
                 .vulnerabilities_introduced
-                .cmp(&result.comparisons[*a].diff.summary.vulnerabilities_introduced)
+                .cmp(
+                    &result.comparisons[*a]
+                        .diff
+                        .summary
+                        .vulnerabilities_introduced,
+                )
         }),
     }
 
@@ -1112,7 +1117,13 @@ mod ordering_tests {
         );
         assert!(order.len() <= result.comparisons.len());
         for &i in &order {
-            assert!(result.comparisons[i].diff.summary.vulnerabilities_introduced > 0);
+            assert!(
+                result.comparisons[i]
+                    .diff
+                    .summary
+                    .vulnerabilities_introduced
+                    > 0
+            );
         }
     }
 }

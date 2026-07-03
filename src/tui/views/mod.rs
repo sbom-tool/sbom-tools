@@ -24,8 +24,8 @@ pub use diff_compliance::{
 pub use graph_changes::render_graph_changes;
 pub use licenses::render_licenses;
 pub use matrix::{MatrixPanel, render_matrix};
-pub use multi_dashboard::{MultiDashboardPanel, render_multi_dashboard};
 pub(crate) use multi_dashboard::ordered_comparison_indices;
+pub use multi_dashboard::{MultiDashboardPanel, render_multi_dashboard};
 pub use overlays::{
     ThresholdTuningState, render_component_deep_dive, render_shortcuts_overlay,
     render_threshold_tuning, render_view_switcher,

@@ -179,6 +179,9 @@ fn write_compliance_output(
         ReportFormat::Json => serde_json::to_string_pretty(result)
             .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
         ReportFormat::Sarif => generate_compliance_sarif(result)?,
+        ReportFormat::OscalJson => {
+            crate::reports::oscal::generate_assessment_results(std::slice::from_ref(result))?
+        }
         _ => format_compliance_text(result),
     };
 
@@ -233,6 +236,7 @@ fn write_multi_compliance_output(
         ReportFormat::Json => serde_json::to_string_pretty(results)
             .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
         ReportFormat::Sarif => crate::reports::generate_multi_compliance_sarif(results)?,
+        ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results(results)?,
         _ => {
             let mut parts = Vec::new();
             for result in results {

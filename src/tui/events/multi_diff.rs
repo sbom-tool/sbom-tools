@@ -55,11 +55,9 @@ pub(super) fn handle_multi_diff_keys(app: &mut App, key: KeyEvent) {
             // The filter changes how many comparisons are visible; keep the navigation
             // bound (`total_targets`) and the selection in sync with the filtered list.
             if let Some(result) = app.data.multi_diff_result.as_ref() {
-                let visible = crate::tui::views::ordered_comparison_indices(
-                    result,
-                    &app.tabs.multi_diff,
-                )
-                .len();
+                let visible =
+                    crate::tui::views::ordered_comparison_indices(result, &app.tabs.multi_diff)
+                        .len();
                 app.tabs.multi_diff.total_targets = visible;
                 if visible > 0 && app.tabs.multi_diff.selected_target >= visible {
                     app.tabs.multi_diff.selected_target = visible - 1;
@@ -167,21 +165,18 @@ pub(super) fn update_multi_diff_search_matches(app: &mut App) {
         .multi_diff_result
         .as_ref()
         .map_or_else(Vec::new, |result| {
-            crate::tui::views::ordered_comparison_indices(
-                result,
-                &app.tabs.multi_diff,
-            )
-            .into_iter()
-            .enumerate()
-            .filter(|(_, raw)| {
-                result.comparisons[*raw]
-                    .target
-                    .name
-                    .to_lowercase()
-                    .contains(&query)
-            })
-            .map(|(display, _)| display)
-            .collect()
+            crate::tui::views::ordered_comparison_indices(result, &app.tabs.multi_diff)
+                .into_iter()
+                .enumerate()
+                .filter(|(_, raw)| {
+                    result.comparisons[*raw]
+                        .target
+                        .name
+                        .to_lowercase()
+                        .contains(&query)
+                })
+                .map(|(display, _)| display)
+                .collect()
         });
 
     app.tabs.multi_diff.search.update_matches(matches);

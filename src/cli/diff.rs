@@ -161,7 +161,8 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
     }
 
     // Compute the diff
-    let result = compute_diff(&config, &old_parsed.sbom, &new_parsed.sbom)?;
+    let mut result = compute_diff(&config, &old_parsed.sbom, &new_parsed.sbom)?;
+    result.ml_regressions = find_ml_regressions(&result);
 
     // Determine exit code before potentially moving result into TUI
     let exit_code = determine_exit_code(&config, &result);
@@ -228,6 +229,18 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
 /// `--fail-on-vex-gap` wants to know about missing VEX statements, not just
 /// that vulns were introduced.
 fn determine_exit_code(config: &DiffConfig, result: &crate::diff::DiffResult) -> i32 {
+    if config.filtering.fail_on_ml_regression && !result.ml_regressions.is_empty() {
+        for regression in &result.ml_regressions {
+            eprintln!(
+                "ML regression: component={} metric={} previous={} new={}",
+                regression.component,
+                regression.metric,
+                regression.previous_value,
+                regression.new_value
+            );
+        }
+        return exit_codes::ML_REGRESSION;
+    }
     // Check for VEX gaps first (most specific gate)
     if config.filtering.fail_on_vex_gap {
         let vex_summary = result.vulnerabilities.vex_summary();
@@ -264,6 +277,45 @@ fn determine_exit_code(config: &DiffConfig, result: &crate::diff::DiffResult) ->
         return exit_codes::CHANGES_DETECTED;
     }
     exit_codes::SUCCESS
+}
+
+fn find_ml_regressions(result: &crate::diff::DiffResult) -> Vec<crate::diff::MlRegression> {
+    fn direction(metric: &str) -> Option<bool> {
+        let metric = metric.split('@').next().unwrap_or(metric);
+        match metric {
+            "accuracy" | "f1" | "f1_score" | "precision" | "recall" | "auc" | "roc_auc"
+            | "bleu" | "rouge" => Some(true),
+            "loss" | "error" | "error_rate" | "perplexity" | "latency" | "latency_ms" => {
+                Some(false)
+            }
+            _ => None,
+        }
+    }
+
+    result
+        .components
+        .modified
+        .iter()
+        .flat_map(|component| {
+            component.field_changes.iter().filter_map(move |change| {
+                let metric = change.field.strip_prefix("ml_metric:")?;
+                let higher_is_better = direction(metric)?;
+                let previous_value = change.old_value.as_deref()?.parse::<f64>().ok()?;
+                let new_value = change.new_value.as_deref()?.parse::<f64>().ok()?;
+                let regressed = if higher_is_better {
+                    new_value < previous_value
+                } else {
+                    new_value > previous_value
+                };
+                regressed.then(|| crate::diff::MlRegression {
+                    component: component.name.clone(),
+                    metric: metric.to_string(),
+                    previous_value,
+                    new_value,
+                })
+            })
+        })
+        .collect()
 }
 
 /// Build a `KevClientConfig` from the user-facing `EnrichmentConfig`, honoring
@@ -334,6 +386,8 @@ fn huggingface_client_config(
 
 #[cfg(test)]
 mod tests {
+    use super::find_ml_regressions;
+    use crate::diff::{ChangeType, ComponentChange, DiffResult, FieldChange};
     use crate::pipeline::OutputTarget;
     use std::path::PathBuf;
 
@@ -344,5 +398,48 @@ mod tests {
 
         let some_target = OutputTarget::from_option(Some(PathBuf::from("/tmp/test.json")));
         assert!(matches!(some_target, OutputTarget::File(_)));
+    }
+
+    fn result_with_metric(metric: &str, old: &str, new: &str) -> DiffResult {
+        let mut result = DiffResult::new();
+        result.components.modified.push(ComponentChange {
+            id: "model".to_string(),
+            canonical_id: None,
+            component_ref: None,
+            old_canonical_id: None,
+            name: "classifier".to_string(),
+            old_version: None,
+            new_version: None,
+            ecosystem: None,
+            change_type: ChangeType::Modified,
+            field_changes: vec![FieldChange {
+                field: format!("ml_metric:{metric}"),
+                old_value: Some(old.to_string()),
+                new_value: Some(new.to_string()),
+            }],
+            cost: 1,
+            match_info: None,
+        });
+        result
+    }
+
+    #[test]
+    fn ml_regression_respects_metric_direction() {
+        assert_eq!(
+            find_ml_regressions(&result_with_metric("accuracy", "0.9", "0.8")).len(),
+            1
+        );
+        assert_eq!(
+            find_ml_regressions(&result_with_metric("loss", "0.2", "0.3")).len(),
+            1
+        );
+        assert!(find_ml_regressions(&result_with_metric("accuracy", "0.8", "0.9")).is_empty());
+        assert!(find_ml_regressions(&result_with_metric("loss", "0.3", "0.2")).is_empty());
+    }
+
+    #[test]
+    fn ml_regression_ignores_unknown_or_non_numeric_metrics() {
+        assert!(find_ml_regressions(&result_with_metric("custom", "1", "0")).is_empty());
+        assert!(find_ml_regressions(&result_with_metric("accuracy", "high", "low")).is_empty());
     }
 }
