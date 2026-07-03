@@ -73,7 +73,12 @@ pub(crate) const fn floor_char_boundary(s: &str, index: usize) -> usize {
 /// last — so callers derive hit regions from the real tab set instead of guessing a
 /// fixed width.
 #[must_use]
-pub fn tab_bar_hit(labels: &[String], left: u16, divider_width: u16, click_x: u16) -> Option<usize> {
+pub fn tab_bar_hit(
+    labels: &[String],
+    left: u16,
+    divider_width: u16,
+    click_x: u16,
+) -> Option<usize> {
     use unicode_width::UnicodeWidthStr;
 
     if click_x < left {
