@@ -7,6 +7,7 @@
 
 use crate::diff::{ChangeType, DiffResult};
 use crate::tui::app::{AlignmentMode, AppMode};
+use crate::tui::app_states::{AlignedRow, ChangeTypeFilter, UnifiedChangeType, UnifiedEntry};
 use crate::tui::render_context::RenderContext;
 use crate::tui::security::{VersionChange, detect_version_downgrade};
 use crate::tui::theme::colors;
@@ -14,21 +15,6 @@ use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Clear, Paragraph, Wrap},
 };
-
-/// An aligned row for side-by-side comparison
-#[derive(Debug, Clone)]
-pub struct AlignedRow {
-    /// Left side component (old SBOM)
-    pub left_name: Option<String>,
-    pub left_version: Option<String>,
-    /// Right side component (new SBOM)
-    pub right_name: Option<String>,
-    pub right_version: Option<String>,
-    /// Type of change
-    pub change_type: ChangeType,
-    /// Component ID for detail lookup
-    pub component_id: Option<String>,
-}
 
 /// Inline diff span for character-level highlighting
 #[derive(Debug, Clone)]
@@ -42,25 +28,6 @@ pub enum DiffSpanStyle {
     Unchanged,
     Removed,
     Added,
-}
-
-/// Entry in the unified upgrade view
-#[derive(Debug, Clone)]
-struct UnifiedEntry {
-    name: String,
-    old_version: Option<String>,
-    new_version: Option<String>,
-    change_type: UnifiedChangeType,
-}
-
-/// Classification for unified view entries
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum UnifiedChangeType {
-    Upgrade,
-    Downgrade,
-    Modified,
-    Added,
-    Removed,
 }
 
 /// Semver bump level for sorting upgrades
@@ -190,8 +157,8 @@ fn render_aligned_mode(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     let divider_area = chunks[1];
     let right_area = chunks[2];
 
-    // Build aligned rows from diff result (local computation, not cached in state)
-    let rows = build_aligned_rows(ctx);
+    // Aligned rows are built once per frame in `App::prepare_render` and cached.
+    let rows = &ctx.side_by_side.aligned_rows;
 
     // Calculate visible range based on scroll
     let scroll = ctx.side_by_side.left_scroll;
@@ -251,7 +218,7 @@ fn render_aligned_mode(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     frame.render_widget(left_panel, left_area);
 
     // Render divider
-    render_aligned_divider(frame, divider_area, &rows, scroll, visible_height, &scheme);
+    render_aligned_divider(frame, divider_area, rows, scroll, visible_height, &scheme);
 
     // Render right panel
     let right_border_style = if focus_right {
@@ -270,51 +237,51 @@ fn render_aligned_mode(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     frame.render_widget(right_panel, right_area);
 }
 
-fn build_aligned_rows(ctx: &RenderContext) -> Vec<AlignedRow> {
+pub(crate) fn build_aligned_rows(
+    result: &DiffResult,
+    filter: &ChangeTypeFilter,
+) -> Vec<AlignedRow> {
     let mut rows = Vec::new();
-    let filter = &ctx.side_by_side.filter;
 
-    if let Some(result) = ctx.diff_result {
-        // Add removed components
-        if filter.show_removed {
-            for comp in &result.components.removed {
-                rows.push(AlignedRow {
-                    left_name: Some(comp.name.clone()),
-                    left_version: comp.old_version.clone(),
-                    right_name: None,
-                    right_version: None,
-                    change_type: ChangeType::Removed,
-                    component_id: Some(comp.id.clone()), // Use ID, not name
-                });
-            }
+    // Add removed components
+    if filter.show_removed {
+        for comp in &result.components.removed {
+            rows.push(AlignedRow {
+                left_name: Some(comp.name.clone()),
+                left_version: comp.old_version.clone(),
+                right_name: None,
+                right_version: None,
+                change_type: ChangeType::Removed,
+                component_id: Some(comp.id.clone()), // Use ID, not name
+            });
         }
+    }
 
-        // Add modified components (aligned on same row)
-        if filter.show_modified {
-            for comp in &result.components.modified {
-                rows.push(AlignedRow {
-                    left_name: Some(comp.name.clone()),
-                    left_version: comp.old_version.clone(),
-                    right_name: Some(comp.name.clone()),
-                    right_version: comp.new_version.clone(),
-                    change_type: ChangeType::Modified,
-                    component_id: Some(comp.id.clone()), // Use ID, not name
-                });
-            }
+    // Add modified components (aligned on same row)
+    if filter.show_modified {
+        for comp in &result.components.modified {
+            rows.push(AlignedRow {
+                left_name: Some(comp.name.clone()),
+                left_version: comp.old_version.clone(),
+                right_name: Some(comp.name.clone()),
+                right_version: comp.new_version.clone(),
+                change_type: ChangeType::Modified,
+                component_id: Some(comp.id.clone()), // Use ID, not name
+            });
         }
+    }
 
-        // Add added components
-        if filter.show_added {
-            for comp in &result.components.added {
-                rows.push(AlignedRow {
-                    left_name: None,
-                    left_version: None,
-                    right_name: Some(comp.name.clone()),
-                    right_version: comp.new_version.clone(),
-                    change_type: ChangeType::Added,
-                    component_id: Some(comp.id.clone()), // Use ID, not name
-                });
-            }
+    // Add added components
+    if filter.show_added {
+        for comp in &result.components.added {
+            rows.push(AlignedRow {
+                left_name: None,
+                left_version: None,
+                right_name: Some(comp.name.clone()),
+                right_version: comp.new_version.clone(),
+                change_type: ChangeType::Added,
+                component_id: Some(comp.id.clone()), // Use ID, not name
+            });
         }
     }
 
@@ -322,7 +289,7 @@ fn build_aligned_rows(ctx: &RenderContext) -> Vec<AlignedRow> {
 }
 
 /// Build unified entries that match removed+added by name to show version upgrades.
-fn build_unified_entries(result: &DiffResult) -> Vec<UnifiedEntry> {
+pub(crate) fn build_unified_entries(result: &DiffResult) -> Vec<UnifiedEntry> {
     let mut entries = Vec::new();
 
     // 1. All modified components are Modified entries
@@ -509,7 +476,7 @@ fn render_unified_mode(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
 
     let content_area = main_chunks[1];
 
-    let Some(result) = ctx.diff_result else {
+    if ctx.diff_result.is_none() {
         let empty = Paragraph::new("No diff result available")
             .style(Style::default().fg(scheme.muted))
             .block(
@@ -520,9 +487,10 @@ fn render_unified_mode(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
             );
         frame.render_widget(empty, content_area);
         return;
-    };
+    }
 
-    let entries = build_unified_entries(result);
+    // Unified entries are built once per frame in `App::prepare_render` and cached.
+    let entries = &ctx.side_by_side.unified_entries;
 
     // Render border block first
     let block = Block::default()
@@ -1423,8 +1391,8 @@ fn render_with_detail_modal(frame: &mut Frame, area: Rect, ctx: &RenderContext) 
     // Get component details
     let mut content_lines: Vec<Line> = vec![];
 
-    // Build aligned rows to find the selected component
-    let rows = build_aligned_rows(ctx);
+    // Aligned rows are built once per frame in `App::prepare_render` and cached.
+    let rows = &ctx.side_by_side.aligned_rows;
     if let Some(row) = rows.get(ctx.side_by_side.selected_row) {
         // Extract owned data from row
         let component_name = row

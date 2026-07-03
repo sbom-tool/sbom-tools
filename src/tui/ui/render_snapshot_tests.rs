@@ -195,6 +195,66 @@ fn help_overlay_toggles() {
     assert!(!app.overlays.show_help);
 }
 
+#[test]
+fn sidebyside_aligned_navigation_wired_via_prepare_render() {
+    use crate::tui::app_states::AlignmentMode;
+
+    let mut app = demo_app(TabKind::SideBySide);
+    app.side_by_side_state_mut().alignment_mode = AlignmentMode::Aligned;
+    // prepare_render must build the aligned-row cache AND populate the
+    // navigation model (total_rows / change_indices) it drives.
+    app.prepare_render();
+
+    {
+        let st = app.side_by_side_state();
+        assert!(st.total_rows > 0, "aligned mode must populate total_rows");
+        assert_eq!(
+            st.total_rows,
+            st.aligned_rows.len(),
+            "total_rows must track the cached row list"
+        );
+        assert_eq!(
+            st.change_indices.len(),
+            st.total_rows,
+            "every aligned row is a change row"
+        );
+    }
+
+    app.side_by_side_state_mut().next_change();
+    let st = app.side_by_side_state();
+    assert_eq!(st.current_change_idx, Some(0));
+    assert_eq!(
+        st.selected_row, st.change_indices[0],
+        "next_change must move the selected row onto the first change"
+    );
+}
+
+#[test]
+fn sidebyside_grouped_scroll_totals_unchanged() {
+    use crate::tui::app_states::AlignmentMode;
+
+    // demo_app leaves the side-by-side view in its default Grouped mode.
+    let mut app = demo_app(TabKind::SideBySide);
+    app.prepare_render();
+
+    let (diff, _, _) = demo_diff();
+    let expected_left = diff.components.removed.len() + diff.components.modified.len();
+    let expected_right = diff.components.added.len() + diff.components.modified.len();
+
+    let st = app.side_by_side_state();
+    assert_eq!(st.alignment_mode, AlignmentMode::Grouped);
+    assert_eq!(st.total_rows, 0, "grouped mode uses panel scrolling, not rows");
+    assert!(st.change_indices.is_empty());
+    assert_eq!(
+        st.left_total, expected_left,
+        "grouped left panel keeps removed+modified count"
+    );
+    assert_eq!(
+        st.right_total, expected_right,
+        "grouped right panel keeps added+modified count"
+    );
+}
+
 // ============================================================================
 // Diff-side alignment regression tests (PR-B): surface metadata changes,
 // the CRA sidecar compliance verdict, component license changes, and ML-risk

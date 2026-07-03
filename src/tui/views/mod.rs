@@ -31,6 +31,7 @@ pub use overlays::{
 };
 pub use quality::render_quality;
 pub use sidebyside::render_sidebyside;
+pub(crate) use sidebyside::{build_aligned_rows, build_unified_entries};
 pub use source::render_source;
 pub use summary::render_summary;
 pub use timeline::{TimelinePanel, render_timeline};
