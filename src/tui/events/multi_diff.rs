@@ -52,6 +52,19 @@ pub(super) fn handle_multi_diff_keys(app: &mut App, key: KeyEvent) {
         // Filter and sort
         KeyCode::Char('f') => {
             app.tabs.multi_diff.toggle_filter();
+            // The filter changes how many comparisons are visible; keep the navigation
+            // bound (`total_targets`) and the selection in sync with the filtered list.
+            if let Some(result) = app.data.multi_diff_result.as_ref() {
+                let visible = crate::tui::views::ordered_comparison_indices(
+                    result,
+                    &app.tabs.multi_diff,
+                )
+                .len();
+                app.tabs.multi_diff.total_targets = visible;
+                if visible > 0 && app.tabs.multi_diff.selected_target >= visible {
+                    app.tabs.multi_diff.selected_target = visible - 1;
+                }
+            }
             app.set_status_message(format!(
                 "Filter: {}",
                 app.tabs.multi_diff.filter_preset.label()
@@ -146,18 +159,29 @@ pub(super) fn update_multi_diff_search_matches(app: &mut App) {
         return;
     }
 
+    // Store matches as *display* indices (positions in the visible order) so they line
+    // up with how the list highlights matches and how `selected_target` is interpreted
+    // — jumping to a match then selects the right row.
     let matches: Vec<usize> = app
         .data
         .multi_diff_result
         .as_ref()
         .map_or_else(Vec::new, |result| {
-            result
-                .comparisons
-                .iter()
-                .enumerate()
-                .filter(|(_, comp)| comp.target.name.to_lowercase().contains(&query))
-                .map(|(i, _)| i)
-                .collect()
+            crate::tui::views::ordered_comparison_indices(
+                result,
+                &app.tabs.multi_diff,
+            )
+            .into_iter()
+            .enumerate()
+            .filter(|(_, raw)| {
+                result.comparisons[*raw]
+                    .target
+                    .name
+                    .to_lowercase()
+                    .contains(&query)
+            })
+            .map(|(display, _)| display)
+            .collect()
         });
 
     app.tabs.multi_diff.search.update_matches(matches);
