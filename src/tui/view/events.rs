@@ -1135,12 +1135,16 @@ pub fn handle_mouse_event(app: &mut ViewApp, mouse: event::MouseEvent) {
                 return;
             }
 
-            // Calculate which list item was clicked
-            // Assuming list content starts around row 4 (after header + tabs + list header)
-            let list_start_row = 4;
-            if y >= list_start_row {
-                let clicked_index = (y - list_start_row) as usize;
-                handle_list_click(app, clicked_index, x);
+            // Map the click to a list-item selection using the tab's *actual* list
+            // origin. Tabs with a variable origin or non-render-exact scroll offset
+            // return None and are left as no-ops — a no-op is safer than selecting the
+            // wrong row (which is what the old fixed `list_start_row = 4` did on every
+            // tab, since content starts at row 5 and each list body is lower still).
+            if let Some(body_start) = view_list_body_start(app.active_tab) {
+                if y >= body_start {
+                    let row = (y - body_start) as usize;
+                    handle_list_click(app, row, x);
+                }
             }
         }
         MouseEventKind::ScrollDown => {
@@ -1187,82 +1191,67 @@ fn handle_tab_click(app: &mut ViewApp, x: u16) {
     }
 }
 
-/// Handle click on list items
-fn handle_list_click(app: &mut ViewApp, clicked_index: usize, _x: u16) {
+/// Absolute frame row of the first selectable list item, for tabs whose list origin
+/// is fixed *and* whose scroll offset is persisted render-exact. Returns `None` for
+/// tabs where mouse selection is intentionally gated as a no-op.
+///
+/// Content starts at row 5 (header `Length(2)` + tabs `Length(3)`, see `view/ui.rs`);
+/// each value below adds that tab's fixed chrome (verified against the `view_*`
+/// render snapshots). Gated tabs: Source (origin varies with the breadcrumb row),
+/// Quality (line-scrolled `Paragraph`, no 1:1 row→item), Vulnerabilities/Compliance
+/// and the crypto/AI list tabs (offset not persisted render-exact / flat-filter index
+/// mismatch) — tracked as follow-ups; a no-op beats selecting the wrong row.
+fn view_list_body_start(tab: ViewTab) -> Option<u16> {
+    match tab {
+        ViewTab::Tree => Some(8),         // + filter bar (2) + block top border (1)
+        ViewTab::Licenses => Some(10),    // + filter/stats (3) + border (1) + table header (1)
+        ViewTab::Dependencies => Some(8), // + toolbar (2) + block top border (1)
+        ViewTab::Overview
+        | ViewTab::Vulnerabilities
+        | ViewTab::Quality
+        | ViewTab::Compliance
+        | ViewTab::Source
+        | ViewTab::Crypto
+        | ViewTab::Algorithms
+        | ViewTab::Certificates
+        | ViewTab::Keys
+        | ViewTab::Protocols
+        | ViewTab::Models
+        | ViewTab::Datasets
+        | ViewTab::PqcCompliance
+        | ViewTab::AiReadiness => None,
+    }
+}
+
+/// Select the list item under a click. `row` is the click's row within the list body;
+/// the tab's scroll offset is added to get the absolute item index. Only the tabs
+/// whitelisted by [`view_list_body_start`] reach here.
+fn handle_list_click(app: &mut ViewApp, row: usize, _x: u16) {
     match app.active_tab {
         ViewTab::Tree => {
-            // For tree view, just select the item
             let nodes = app.build_tree_nodes();
             let mut flat_count = 0;
             count_visible_tree_nodes(nodes, &app.tree_state, &mut flat_count);
-            if clicked_index < flat_count {
-                app.tree_state.selected = clicked_index;
-            }
-        }
-        ViewTab::Vulnerabilities => {
-            if clicked_index < app.vuln_state.total {
-                app.vuln_state.selected = clicked_index;
+            let idx = app.tree_state.offset + row;
+            if idx < flat_count {
+                app.tree_state.selected = idx;
             }
         }
         ViewTab::Licenses => {
-            if clicked_index < app.license_state.total {
-                app.license_state.selected = clicked_index;
+            let idx = app.license_state.scroll_offset + row;
+            if idx < app.license_state.total {
+                app.license_state.selected = idx;
                 app.license_state.reset_component_scroll();
             }
         }
         ViewTab::Dependencies => {
-            if clicked_index < app.dependency_state.total {
-                app.dependency_state.selected = clicked_index;
+            let idx = app.dependency_state.scroll_offset + row;
+            if idx < app.dependency_state.total {
+                app.dependency_state.selected = idx;
             }
         }
-        ViewTab::Quality => {
-            if clicked_index < app.quality_state.total_recommendations {
-                app.quality_state.selected_recommendation = clicked_index;
-            }
-        }
-        ViewTab::Compliance => {
-            app.ensure_compliance_results();
-            let max = app.filtered_compliance_violation_count();
-            if clicked_index < max {
-                app.compliance_state.selected_violation = clicked_index;
-            }
-        }
-        ViewTab::Source => {
-            let max = match app.source_state.view_mode {
-                SourceViewMode::Tree => {
-                    app.source_state.ensure_flat_cache();
-                    app.source_state.cached_flat_items.len()
-                }
-                SourceViewMode::Raw => app.source_state.raw_lines.len(),
-            };
-            let idx = app.source_state.scroll_offset + clicked_index;
-            if idx < max {
-                app.source_state.selected = idx;
-            }
-        }
-        ViewTab::Overview | ViewTab::PqcCompliance | ViewTab::AiReadiness => {
-            // No list navigation
-        }
-        ViewTab::Crypto
-        | ViewTab::Algorithms
-        | ViewTab::Certificates
-        | ViewTab::Keys
-        | ViewTab::Protocols => {
-            let max = app.crypto_count_for_tab();
-            if clicked_index < max {
-                *app.active_crypto_selected_mut() = clicked_index;
-            }
-        }
-        ViewTab::Models => {
-            if clicked_index < app.ml_model_count() {
-                app.models_selected = clicked_index;
-            }
-        }
-        ViewTab::Datasets => {
-            if clicked_index < app.dataset_count() {
-                app.datasets_selected = clicked_index;
-            }
-        }
+        // All other tabs are gated at `view_list_body_start` (unreachable here).
+        _ => {}
     }
 }
 

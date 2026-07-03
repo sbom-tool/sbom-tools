@@ -276,3 +276,46 @@ fn compliance_selector_exposes_every_standard() {
     assert!(levels.iter().any(|l| l.short_name() == "AI-Act"));
     assert!(levels.iter().any(|l| l.short_name() == "BSI-AI"));
 }
+
+#[test]
+fn view_list_click_selects_the_item_under_the_cursor() {
+    use crate::tui::view::events::handle_mouse_event;
+    use crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+
+    // (tab, a distinctive item in the LEFT list, its selected index by the demo
+    // fixture's rendered order — see the view_{tree,licenses,dependencies} snapshots).
+    let cases = [
+        (ViewTab::Tree, "axios@1.4.0", 1usize), // "npm (8)" group is flat index 0
+        (ViewTab::Licenses, "Apache-2.0", 1usize), // MIT(0), Apache-2.0(1), Unknown(2)
+        (ViewTab::Dependencies, "axios@1.4.0", 1usize), // acme-webapp(0), axios(1)
+    ];
+    for (tab, needle, expected) in cases {
+        let mut app = demo_view_app(tab);
+        // Render first so the list totals are populated, then find the item's real
+        // row from the buffer and click it — a wrong body_start would select a
+        // different (or no) item and fail the assertion.
+        let text = render_to_text(80, 24, |frame| {
+            render(frame, &mut app);
+        });
+        let row = text
+            .lines()
+            .position(|line| line.contains(needle))
+            .unwrap_or_else(|| panic!("{needle} not rendered on {tab:?}")) as u16;
+        handle_mouse_event(
+            &mut app,
+            MouseEvent {
+                kind: MouseEventKind::Down(MouseButton::Left),
+                column: 5,
+                row,
+                modifiers: KeyModifiers::empty(),
+            },
+        );
+        let selected = match tab {
+            ViewTab::Tree => app.tree_state.selected,
+            ViewTab::Licenses => app.license_state.selected,
+            ViewTab::Dependencies => app.dependency_state.selected,
+            _ => unreachable!(),
+        };
+        assert_eq!(selected, expected, "click {needle:?} on {tab:?} @row {row}");
+    }
+}
