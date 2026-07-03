@@ -276,3 +276,25 @@ fn compliance_selector_exposes_every_standard() {
     assert!(levels.iter().any(|l| l.short_name() == "AI-Act"));
     assert!(levels.iter().any(|l| l.short_name() == "BSI-AI"));
 }
+
+#[test]
+fn crypto_list_scrolls_the_selection_into_view() {
+    let (sbom, profile) = crate::tui::test_support::cbom_single();
+    let mut app = ViewApp::new(sbom, crate::tui::test_support::CBOM, profile);
+    // The Crypto tab lists every cryptographic asset (16 here), which overflows the
+    // list panel at the minimum 80x24 terminal size.
+    app.active_tab = ViewTab::Crypto;
+
+    app.crypto_list_selected = 0;
+    let top = render_to_text(80, 24, |frame| render(frame, &mut app));
+    app.crypto_list_selected = usize::MAX; // clamps to the last asset
+    let scrolled = render_to_text(80, 24, |frame| render(frame, &mut app));
+
+    // render_to_text strips styling, so any difference must come from the list
+    // window scrolling to reveal the selected (last) row — which the previous
+    // stateless render_widget never did (it always showed the top of the list).
+    assert_ne!(
+        top, scrolled,
+        "selecting the last algorithm in a short panel must scroll it into view"
+    );
+}

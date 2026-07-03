@@ -87,3 +87,14 @@ fn buffer_to_text(buffer: &ratatui::buffer::Buffer) -> String {
     }
     out
 }
+
+/// A CycloneDX CBOM fixture with many cryptographic assets (11 algorithms),
+/// used to exercise crypto/AI list scrolling.
+pub(crate) const CBOM: &str = include_str!("../../tests/fixtures/cyclonedx/cbom-1.7.cdx.json");
+
+/// Parse the CBOM fixture as a single SBOM for crypto-tab `ViewApp` tests.
+pub(crate) fn cbom_single() -> (NormalizedSbom, BomProfile) {
+    let sbom = parse_sbom_str(CBOM).expect("cbom fixture must parse");
+    let profile = BomProfile::detect(&sbom);
+    (sbom, profile)
+}

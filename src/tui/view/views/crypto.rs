@@ -170,7 +170,13 @@ fn render_list(
             .borders(Borders::ALL)
             .title(format!(" Assets ({}) ", crypto_components.len())),
     );
-    frame.render_widget(list, area);
+    // Stateful render so the selected asset scrolls into view on large CBOMs
+    // (a plain render_widget always shows the top of the list).
+    let mut list_state = ratatui::widgets::ListState::default();
+    if !crypto_components.is_empty() {
+        list_state.select(Some(app.crypto_list_selected.min(crypto_components.len() - 1)));
+    }
+    frame.render_stateful_widget(list, area, &mut list_state);
 }
 
 fn render_detail(
