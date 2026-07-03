@@ -87,3 +87,30 @@ fn buffer_to_text(buffer: &ratatui::buffer::Buffer) -> String {
     }
     out
 }
+
+/// A CycloneDX CBOM fixture with many cryptographic assets (11 algorithms),
+/// used to exercise crypto/AI list scrolling.
+pub(crate) const CBOM: &str = include_str!("../../tests/fixtures/cyclonedx/cbom-1.7.cdx.json");
+
+/// Parse the CBOM fixture as a single SBOM for crypto-tab `ViewApp` tests.
+pub(crate) fn cbom_single() -> (NormalizedSbom, BomProfile) {
+    let sbom = parse_sbom_str(CBOM).expect("cbom fixture must parse");
+    let profile = BomProfile::detect(&sbom);
+    (sbom, profile)
+}
+
+/// Build a multi-diff result — baseline vs. two distinctly-named targets — for
+/// dashboard tests. Uses the real `MultiDiffEngine` so every summary field is valid.
+pub(crate) fn demo_multi_diff() -> crate::diff::MultiDiffResult {
+    let baseline = parse_sbom_str(DEMO_OLD).expect("baseline fixture must parse");
+    let webapp = parse_sbom_str(DEMO_NEW).expect("webapp fixture must parse");
+    let ai = parse_sbom_str(AIBOM_BSI).expect("aibom fixture must parse");
+    let targets: [(&NormalizedSbom, &str, &str); 2] = [
+        (&webapp, "webapp", "demo-new.cdx.json"),
+        (&ai, "ai-service", "aibom.cdx.json"),
+    ];
+    let mut engine = crate::diff::MultiDiffEngine::new();
+    engine
+        .diff_multi(&baseline, "baseline", "demo-old.cdx.json", &targets)
+        .expect("multi diff must succeed")
+}

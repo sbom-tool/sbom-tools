@@ -56,11 +56,19 @@ pub fn render_multi_dashboard(
 
     render_targets_list(f, main_chunks[0], result, state);
 
+    // Resolve the selected *display* index to a raw comparison index so the details
+    // panel shows the same comparison the Targets list highlights. `usize::MAX` (when
+    // the selection is past the filtered set) resolves to no comparison.
+    let selected_raw = ordered_comparison_indices(result, state)
+        .get(state.selected_target)
+        .copied()
+        .unwrap_or(usize::MAX);
+
     if state.show_cross_target && main_chunks.len() > 2 {
         render_cross_target_analysis(f, main_chunks[1], result, state);
-        render_details_panel(f, main_chunks[2], result, state.selected_target, state);
+        render_details_panel(f, main_chunks[2], result, selected_raw, state);
     } else if main_chunks.len() > 1 {
-        render_details_panel(f, main_chunks[1], result, state.selected_target, state);
+        render_details_panel(f, main_chunks[1], result, selected_raw, state);
     }
 
     // Status bar
@@ -176,6 +184,94 @@ fn render_baseline_info(f: &mut Frame, area: Rect, result: &MultiDiffResult) {
     f.render_widget(paragraph, area);
 }
 
+/// Raw `result.comparisons` indices in the order shown in the Targets list, after the
+/// active filter preset + sort key + direction. Display index `N` (what
+/// `selected_target` refers to, what the list highlights) maps to the returned vec's
+/// `N`th entry.
+///
+/// Single source of truth for the visible ordering: the list highlight, the details
+/// panel, the detail modal, and search all resolve the *same* comparison through this.
+/// Previously the highlight used `selected_target` as a display index while the details
+/// panel/modal used it as a raw `comparisons` index, so under any sort or filter they
+/// referred to different comparisons.
+pub(crate) fn ordered_comparison_indices(
+    result: &MultiDiffResult,
+    state: &MultiDiffState,
+) -> Vec<usize> {
+    let deviation = |name: &str| {
+        result
+            .summary
+            .deviation_scores
+            .get(name)
+            .copied()
+            .unwrap_or(0.0)
+    };
+
+    let mut idx: Vec<usize> = result
+        .comparisons
+        .iter()
+        .enumerate()
+        .filter(|(_, comp)| match state.filter_preset {
+            MultiViewFilterPreset::All => true,
+            MultiViewFilterPreset::HighDeviation => deviation(&comp.target.name) > 0.3,
+            MultiViewFilterPreset::ChangesOnly => comp.diff.summary.total_changes > 0,
+            MultiViewFilterPreset::WithVulnerabilities => {
+                comp.diff.summary.vulnerabilities_introduced > 0
+            }
+            MultiViewFilterPreset::AddedOnly => comp.diff.summary.components_added > 0,
+            MultiViewFilterPreset::RemovedOnly => comp.diff.summary.components_removed > 0,
+        })
+        .map(|(i, _)| i)
+        .collect();
+
+    // Every key uses a *descending* base order so the shared `Ascending` reverse below
+    // flips it to ascending. Name previously used an ascending base, which the reverse
+    // then inverted (Ascending showed Z→A); using a descending base fixes it.
+    match state.sort_by {
+        MultiViewSortBy::Name => idx.sort_by(|a, b| {
+            result.comparisons[*b]
+                .target
+                .name
+                .cmp(&result.comparisons[*a].target.name)
+        }),
+        MultiViewSortBy::Deviation => idx.sort_by(|a, b| {
+            deviation(&result.comparisons[*b].target.name)
+                .partial_cmp(&deviation(&result.comparisons[*a].target.name))
+                .unwrap_or(std::cmp::Ordering::Equal)
+        }),
+        MultiViewSortBy::Changes => idx.sort_by(|a, b| {
+            result.comparisons[*b]
+                .diff
+                .summary
+                .total_changes
+                .cmp(&result.comparisons[*a].diff.summary.total_changes)
+        }),
+        MultiViewSortBy::Components => idx.sort_by(|a, b| {
+            result.comparisons[*b]
+                .target
+                .component_count
+                .cmp(&result.comparisons[*a].target.component_count)
+        }),
+        MultiViewSortBy::Vulnerabilities => idx.sort_by(|a, b| {
+            result.comparisons[*b]
+                .diff
+                .summary
+                .vulnerabilities_introduced
+                .cmp(
+                    &result.comparisons[*a]
+                        .diff
+                        .summary
+                        .vulnerabilities_introduced,
+                )
+        }),
+    }
+
+    if matches!(state.sort_direction, SortDirection::Ascending) {
+        idx.reverse();
+    }
+    idx
+}
+
 fn render_targets_list(
     f: &mut Frame,
     area: Rect,
@@ -186,82 +282,15 @@ fn render_targets_list(
     let is_active = matches!(state.active_panel, MultiDashboardPanel::Targets);
     let selected = state.selected_target;
 
-    // Filter and sort comparisons
-    let mut filtered_comparisons: Vec<(usize, &crate::diff::ComparisonResult)> = result
-        .comparisons
-        .iter()
-        .enumerate()
-        .filter(|(_, comp)| {
-            let deviation = result
-                .summary
-                .deviation_scores
-                .get(&comp.target.name)
-                .copied()
-                .unwrap_or(0.0);
-            let has_changes = comp.diff.summary.total_changes > 0;
-            let has_vulns = comp.diff.summary.vulnerabilities_introduced > 0;
-
-            match state.filter_preset {
-                MultiViewFilterPreset::All => true,
-                MultiViewFilterPreset::HighDeviation => deviation > 0.3,
-                MultiViewFilterPreset::ChangesOnly => has_changes,
-                MultiViewFilterPreset::WithVulnerabilities => has_vulns,
-                MultiViewFilterPreset::AddedOnly => comp.diff.summary.components_added > 0,
-                MultiViewFilterPreset::RemovedOnly => comp.diff.summary.components_removed > 0,
-            }
-        })
-        .collect();
-
-    // Sort
-    match state.sort_by {
-        MultiViewSortBy::Name => {
-            filtered_comparisons.sort_by(|a, b| a.1.target.name.cmp(&b.1.target.name));
-        }
-        MultiViewSortBy::Deviation => {
-            filtered_comparisons.sort_by(|a, b| {
-                let dev_a = result
-                    .summary
-                    .deviation_scores
-                    .get(&a.1.target.name)
-                    .copied()
-                    .unwrap_or(0.0);
-                let dev_b = result
-                    .summary
-                    .deviation_scores
-                    .get(&b.1.target.name)
-                    .copied()
-                    .unwrap_or(0.0);
-                dev_b
-                    .partial_cmp(&dev_a)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            });
-        }
-        MultiViewSortBy::Changes => {
-            filtered_comparisons.sort_by(|a, b| {
-                b.1.diff
-                    .summary
-                    .total_changes
-                    .cmp(&a.1.diff.summary.total_changes)
-            });
-        }
-        MultiViewSortBy::Components => {
-            filtered_comparisons
-                .sort_by(|a, b| b.1.target.component_count.cmp(&a.1.target.component_count));
-        }
-        MultiViewSortBy::Vulnerabilities => {
-            filtered_comparisons.sort_by(|a, b| {
-                b.1.diff
-                    .summary
-                    .vulnerabilities_introduced
-                    .cmp(&a.1.diff.summary.vulnerabilities_introduced)
-            });
-        }
-    }
-
-    // Reverse for ascending order
-    if matches!(state.sort_direction, SortDirection::Ascending) {
-        filtered_comparisons.reverse();
-    }
+    // Comparisons in display order (filter + sort + direction), paired with their raw
+    // index. Shared with the details panel, modal, and search via
+    // `ordered_comparison_indices` so the highlighted row and the details always
+    // resolve the same comparison.
+    let filtered_comparisons: Vec<(usize, &crate::diff::ComparisonResult)> =
+        ordered_comparison_indices(result, state)
+            .into_iter()
+            .map(|raw| (raw, &result.comparisons[raw]))
+            .collect();
 
     let rows: Vec<Row> = filtered_comparisons
         .iter()
@@ -737,7 +766,10 @@ fn render_detail_modal(
     // Clear the area
     f.render_widget(Clear, modal_area);
 
-    let Some(comp) = result.comparisons.get(state.selected_target) else {
+    let Some(comp) = ordered_comparison_indices(result, state)
+        .get(state.selected_target)
+        .and_then(|&raw| result.comparisons.get(raw))
+    else {
         return;
     };
 
@@ -1001,4 +1033,97 @@ fn render_search_overlay(f: &mut Frame, area: Rect, state: &MultiDiffState) {
 pub enum MultiDashboardPanel {
     Targets,
     Details,
+}
+
+#[cfg(test)]
+mod ordering_tests {
+    use super::*;
+    use crate::tui::test_support::demo_multi_diff;
+
+    fn state(
+        sort: MultiViewSortBy,
+        dir: SortDirection,
+        filter: MultiViewFilterPreset,
+    ) -> MultiDiffState {
+        let mut s = MultiDiffState::new();
+        s.sort_by = sort;
+        s.sort_direction = dir;
+        s.filter_preset = filter;
+        s
+    }
+
+    #[test]
+    fn name_ascending_is_a_to_z_and_reorders_raw_indices() {
+        let result = demo_multi_diff();
+        let order = ordered_comparison_indices(
+            &result,
+            &state(
+                MultiViewSortBy::Name,
+                SortDirection::Ascending,
+                MultiViewFilterPreset::All,
+            ),
+        );
+        // A→Z by name (the bug rendered Ascending as Z→A).
+        let names: Vec<&str> = order
+            .iter()
+            .map(|&i| result.comparisons[i].target.name.as_str())
+            .collect();
+        let mut sorted = names.clone();
+        sorted.sort_unstable();
+        assert_eq!(names, sorted, "Ascending Name sort should be A→Z");
+        // Display order differs from raw order, so resolving details by the raw
+        // `selected_target` (the old bug) would show a different comparison than the
+        // highlighted row. Guards that this fixture actually exercises the defect.
+        assert_ne!(order, (0..result.comparisons.len()).collect::<Vec<_>>());
+        // Still a permutation of every comparison (filter = All).
+        let mut perm = order.clone();
+        perm.sort_unstable();
+        assert_eq!(perm, (0..result.comparisons.len()).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn descending_name_is_the_reverse_of_ascending() {
+        let result = demo_multi_diff();
+        let asc = ordered_comparison_indices(
+            &result,
+            &state(
+                MultiViewSortBy::Name,
+                SortDirection::Ascending,
+                MultiViewFilterPreset::All,
+            ),
+        );
+        let mut desc = ordered_comparison_indices(
+            &result,
+            &state(
+                MultiViewSortBy::Name,
+                SortDirection::Descending,
+                MultiViewFilterPreset::All,
+            ),
+        );
+        desc.reverse();
+        assert_eq!(asc, desc);
+    }
+
+    #[test]
+    fn with_vulnerabilities_filter_keeps_only_matching() {
+        let result = demo_multi_diff();
+        let order = ordered_comparison_indices(
+            &result,
+            &state(
+                MultiViewSortBy::Name,
+                SortDirection::Ascending,
+                MultiViewFilterPreset::WithVulnerabilities,
+            ),
+        );
+        assert!(order.len() <= result.comparisons.len());
+        for &i in &order {
+            assert!(
+                result.comparisons[i]
+                    .diff
+                    .summary
+                    .vulnerabilities_introduced
+                    > 0
+            );
+        }
+    }
 }

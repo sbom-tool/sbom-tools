@@ -22,6 +22,8 @@ pub enum ReportFormat {
     Json,
     /// SARIF 2.1.0 for CI/CD
     Sarif,
+    /// OSCAL 1.1.2 assessment-results JSON
+    OscalJson,
     /// Human-readable Markdown
     Markdown,
     /// Interactive HTML report
@@ -44,6 +46,7 @@ impl std::fmt::Display for ReportFormat {
             Self::SideBySide => write!(f, "side-by-side"),
             Self::Json => write!(f, "json"),
             Self::Sarif => write!(f, "sarif"),
+            Self::OscalJson => write!(f, "oscal-json"),
             Self::Markdown => write!(f, "markdown"),
             Self::Html => write!(f, "html"),
             Self::Summary => write!(f, "summary"),

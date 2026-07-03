@@ -85,7 +85,11 @@ pub fn render_keys(frame: &mut Frame, area: Rect, app: &ViewApp) {
             .borders(Borders::ALL)
             .title(format!(" Key Material ({}) ", keys.len())),
     );
-    frame.render_widget(list, panels[0]);
+    let mut list_state = ratatui::widgets::ListState::default();
+    if !keys.is_empty() {
+        list_state.select(Some(app.keys_selected.min(keys.len() - 1)));
+    }
+    frame.render_stateful_widget(list, panels[0], &mut list_state);
 
     // ── Right: detail panel ──
     let selected = app

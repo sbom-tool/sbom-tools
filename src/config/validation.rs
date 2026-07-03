@@ -381,6 +381,7 @@ mod tests {
             min_severity: Some("high".to_string()),
             exclude_vex_resolved: false,
             fail_on_vex_gap: false,
+            fail_on_ml_regression: false,
         };
         assert!(config.is_valid());
 
@@ -389,6 +390,7 @@ mod tests {
             min_severity: Some("invalid".to_string()),
             exclude_vex_resolved: false,
             fail_on_vex_gap: false,
+            fail_on_ml_regression: false,
         };
         assert!(!invalid.is_valid());
     }

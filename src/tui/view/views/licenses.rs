@@ -244,8 +244,7 @@ fn render_license_details(
         // wrapping* at the panel width (the paragraph renders with Wrap) so a wrapped
         // header doesn't cause the component list to over-fill and overflow the panel.
         let inner_width = area.width.saturating_sub(2); // borders
-        let header_lines =
-            crate::tui::shared::text::wrapped_line_count(&lines, inner_width) + 2; // +2 for block borders
+        let header_lines = crate::tui::shared::text::wrapped_line_count(&lines, inner_width) + 2; // +2 for block borders
         let available = (area.height as usize)
             .saturating_sub(header_lines + 2)
             .max(3);

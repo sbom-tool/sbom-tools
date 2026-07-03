@@ -75,7 +75,11 @@ pub fn render_protocols(frame: &mut Frame, area: Rect, app: &ViewApp) {
             .borders(Borders::ALL)
             .title(format!(" Protocols ({}) ", protos.len())),
     );
-    frame.render_widget(list, panels[0]);
+    let mut list_state = ratatui::widgets::ListState::default();
+    if !protos.is_empty() {
+        list_state.select(Some(app.protocols_selected.min(protos.len() - 1)));
+    }
+    frame.render_stateful_widget(list, panels[0], &mut list_state);
 
     // ── Right: detail panel ──
     let selected = app

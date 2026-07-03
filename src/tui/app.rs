@@ -922,15 +922,33 @@ impl App {
         // 8. License totals (was inline in render_licenses)
         self.prepare_license_totals();
 
-        // 9. Side-by-side totals (was inline in render_sidebyside)
-        // Totals are set by set_totals in the render function, which is now
-        // hoisted here using cached aligned rows or diff data.
-        if matches!(self.mode, AppMode::Diff | AppMode::View)
-            && let Some(ref result) = self.data.diff_result
-        {
-            let left = result.components.removed.len() + result.components.modified.len();
-            let right = result.components.added.len() + result.components.modified.len();
-            self.side_by_side_state_mut().set_totals(left, right);
+        // 9. Side-by-side row model + panel totals (was inline in render_sidebyside).
+        // Build the aligned-rows / unified-entries lists and grouped panel counts
+        // into owned locals BEFORE taking a &mut on the side-by-side state, so the
+        // immutable `self.data.diff_result` borrow does not overlap the &mut borrow.
+        if matches!(self.mode, AppMode::Diff | AppMode::View) {
+            let filter = self.side_by_side_state().filter.clone();
+            let (aligned, unified, grouped_left, grouped_right) =
+                self.data.diff_result.as_ref().map_or_else(
+                    || (Vec::new(), Vec::new(), 0, 0),
+                    |result| {
+                        let grouped_left =
+                            result.components.removed.len() + result.components.modified.len();
+                        let grouped_right =
+                            result.components.added.len() + result.components.modified.len();
+                        (
+                            crate::tui::views::build_aligned_rows(result, &filter),
+                            crate::tui::views::build_unified_entries(result),
+                            grouped_left,
+                            grouped_right,
+                        )
+                    },
+                );
+            let st = self.side_by_side_state_mut();
+            st.aligned_rows = aligned;
+            st.unified_entries = unified;
+            st.set_totals(grouped_left, grouped_right);
+            st.recompute_row_model();
         }
 
         // 10. Quality recommendation totals

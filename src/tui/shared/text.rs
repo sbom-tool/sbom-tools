@@ -91,6 +91,9 @@ mod tests {
 
     #[test]
     fn zero_width_falls_back_to_logical_count() {
-        assert_eq!(wrapped_line_count(&[Line::from("a"), Line::from("b")], 0), 2);
+        assert_eq!(
+            wrapped_line_count(&[Line::from("a"), Line::from("b")], 0),
+            2
+        );
     }
 }
