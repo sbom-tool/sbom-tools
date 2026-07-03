@@ -1989,7 +1989,6 @@ fn render_all_changes(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     frame.render_widget(paragraph, area);
 }
 
-
 enum VersionLevel {
     Patch,
     Minor,
