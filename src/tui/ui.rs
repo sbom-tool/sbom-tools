@@ -11,11 +11,6 @@ use super::widgets::{
     MIN_HEIGHT, MIN_WIDTH, check_terminal_size, render_mode_indicator, render_size_warning,
 };
 use crate::config::TuiPreferences;
-use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
-    execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
-};
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Clear, Paragraph, Tabs},
@@ -31,12 +26,12 @@ pub fn run_tui(app: &mut App) -> io::Result<()> {
     let prefs = TuiPreferences::load();
     set_theme(Theme::from_name(prefs.theme.as_str()));
 
-    // Setup terminal
+    // Setup terminal. The guard restores it on drop — covering normal exit, the
+    // `?` early-return from the render loop, and panic unwinding. Declared before
+    // `terminal` so it is dropped last (after the backend releases stdout).
     super::shared::install_panic_hook();
-    enable_raw_mode()?;
-    let mut stdout = stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
+    let _terminal_guard = super::shared::TerminalGuard::enter()?;
+    let backend = CrosstermBackend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
 
     // Event handler
@@ -66,15 +61,7 @@ pub fn run_tui(app: &mut App) -> io::Result<()> {
         }
     }
 
-    // Restore terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
-
+    // Terminal is restored by `_terminal_guard` on drop.
     Ok(())
 }
 

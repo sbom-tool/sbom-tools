@@ -61,3 +61,41 @@ pub(crate) const fn floor_char_boundary(s: &str, index: usize) -> usize {
         i
     }
 }
+
+/// RAII guard that switches the terminal into raw + alternate-screen mode on
+/// construction and restores it on drop.
+///
+/// The run loop returns `io::Error` via `?` from `terminal.draw` / `events.next`,
+/// which previously skipped the manual teardown and left the shell in raw mode (the
+/// panic hook only covers unwinds). Because `Drop` runs on normal return, on the `?`
+/// early-return, and during panic unwinding, this restores the terminal on every exit
+/// path — and de-duplicates the enter/leave sequence shared by `run_tui` and
+/// `run_view_tui`.
+pub(crate) struct TerminalGuard;
+
+impl TerminalGuard {
+    /// Enter raw + alternate-screen mode with mouse capture.
+    pub(crate) fn enter() -> std::io::Result<Self> {
+        crossterm::terminal::enable_raw_mode()?;
+        crossterm::execute!(
+            std::io::stdout(),
+            crossterm::terminal::EnterAlternateScreen,
+            crossterm::event::EnableMouseCapture
+        )?;
+        Ok(Self)
+    }
+}
+
+impl Drop for TerminalGuard {
+    fn drop(&mut self) {
+        // Best-effort restore; ignore errors (nothing useful to do on failure, and
+        // Drop must not panic).
+        let _ = crossterm::terminal::disable_raw_mode();
+        let _ = crossterm::execute!(
+            std::io::stdout(),
+            crossterm::terminal::LeaveAlternateScreen,
+            crossterm::event::DisableMouseCapture,
+            crossterm::cursor::Show
+        );
+    }
+}
