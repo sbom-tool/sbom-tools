@@ -278,9 +278,6 @@ pub use quality::{QualityGrade, QualityReport, QualityScorer, ScoringProfile};
 #[allow(deprecated)]
 pub use reports::{ReportFormat, ReportGenerator, StreamingReporter, WriterReporter};
 
-// TUI shared ViewModel exports for building custom TUI components
+// TUI shared list-navigation exports for building custom TUI components
 #[cfg(feature = "tui")]
-pub use tui::{
-    CycleFilter, FilterState, ListNavigation, ListState, OverlayState, SearchState,
-    SearchStateCore, StatusMessage, ViewModelOverlayKind,
-};
+pub use tui::{ListNavigation, ListState};

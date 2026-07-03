@@ -163,6 +163,7 @@ impl AppConfig {
                 min_severity: None,
                 exclude_vex_resolved: false,
                 fail_on_vex_gap: false,
+                fail_on_ml_regression: false,
             },
             behavior: BehaviorConfig {
                 fail_on_vuln: true,

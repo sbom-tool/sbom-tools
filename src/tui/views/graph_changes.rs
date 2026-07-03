@@ -234,8 +234,11 @@ fn render_changes_table(
         .map(|change| {
             let impact_cell = impact_cell(change.impact);
             let type_cell = change_type_cell(&change.change);
-            let component_cell = Cell::from(truncate(&change.component_name, 30))
-                .style(Style::default().fg(colors().text));
+            let component_cell = Cell::from(crate::tui::widgets::truncate_str(
+                &change.component_name,
+                30,
+            ))
+            .style(Style::default().fg(colors().text));
             let details_cell = details_cell(&change.change);
 
             Row::new(vec![impact_cell, type_cell, component_cell, details_cell])
@@ -464,12 +467,18 @@ fn details_cell(change: &DependencyChangeType) -> Cell<'static> {
         DependencyChangeType::DependencyAdded {
             dependency_name, ..
         } => {
-            format!("Added dependency: {}", truncate(dependency_name, 40))
+            format!(
+                "Added dependency: {}",
+                crate::tui::widgets::truncate_str(dependency_name, 40)
+            )
         }
         DependencyChangeType::DependencyRemoved {
             dependency_name, ..
         } => {
-            format!("Removed dependency: {}", truncate(dependency_name, 40))
+            format!(
+                "Removed dependency: {}",
+                crate::tui::widgets::truncate_str(dependency_name, 40)
+            )
         }
         DependencyChangeType::RelationshipChanged {
             dependency_name,
@@ -479,9 +488,9 @@ fn details_cell(change: &DependencyChangeType) -> Cell<'static> {
         } => {
             format!(
                 "{}: {} \u{2192} {}",
-                truncate(dependency_name, 20),
-                truncate(old_relationship, 15),
-                truncate(new_relationship, 15)
+                crate::tui::widgets::truncate_str(dependency_name, 20),
+                crate::tui::widgets::truncate_str(old_relationship, 15),
+                crate::tui::widgets::truncate_str(new_relationship, 15)
             )
         }
         DependencyChangeType::Reparented {
@@ -491,8 +500,8 @@ fn details_cell(change: &DependencyChangeType) -> Cell<'static> {
         } => {
             format!(
                 "{} \u{2192} {}",
-                truncate(old_parent_name, 20),
-                truncate(new_parent_name, 20)
+                crate::tui::widgets::truncate_str(old_parent_name, 20),
+                crate::tui::widgets::truncate_str(new_parent_name, 20)
             )
         }
         DependencyChangeType::DepthChanged {
@@ -523,14 +532,4 @@ fn details_cell(change: &DependencyChangeType) -> Cell<'static> {
         }
     };
     Cell::from(text).style(Style::default().fg(colors().text))
-}
-
-fn truncate(s: &str, max_len: usize) -> String {
-    if s.chars().count() <= max_len {
-        s.to_string()
-    } else if max_len > 3 {
-        format!("{}...", s.chars().take(max_len - 3).collect::<String>())
-    } else {
-        s.chars().take(max_len).collect()
-    }
 }

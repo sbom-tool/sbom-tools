@@ -64,7 +64,11 @@ pub fn render_datasets(frame: &mut Frame, area: Rect, app: &ViewApp) {
             .borders(Borders::ALL)
             .title(format!(" Datasets ({}) ", datasets.len())),
     );
-    frame.render_widget(list, panels[0]);
+    let mut list_state = ratatui::widgets::ListState::default();
+    if !datasets.is_empty() {
+        list_state.select(Some(selected));
+    }
+    frame.render_stateful_widget(list, panels[0], &mut list_state);
 
     // ── Right: detail panel ──
     let Some(comp) = datasets.get(selected) else {

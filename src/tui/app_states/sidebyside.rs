@@ -1,5 +1,41 @@
 //! Sidebyside state types.
 
+use crate::diff::ChangeType;
+
+/// An aligned row for side-by-side comparison
+#[derive(Debug, Clone)]
+pub struct AlignedRow {
+    /// Left side component (old SBOM)
+    pub left_name: Option<String>,
+    pub left_version: Option<String>,
+    /// Right side component (new SBOM)
+    pub right_name: Option<String>,
+    pub right_version: Option<String>,
+    /// Type of change
+    pub change_type: crate::diff::ChangeType,
+    /// Component ID for detail lookup
+    pub component_id: Option<String>,
+}
+
+/// Entry in the unified upgrade view
+#[derive(Debug, Clone)]
+pub struct UnifiedEntry {
+    pub name: String,
+    pub old_version: Option<String>,
+    pub new_version: Option<String>,
+    pub change_type: UnifiedChangeType,
+}
+
+/// Classification for unified view entries
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnifiedChangeType {
+    Upgrade,
+    Downgrade,
+    Modified,
+    Added,
+    Removed,
+}
+
 /// Alignment mode for side-by-side view
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AlignmentMode {
@@ -170,6 +206,10 @@ pub struct SideBySideState {
     pub detail_component_left: Option<String>,
     /// Selected component for detail modal (right side)
     pub detail_component_right: Option<String>,
+    /// Cached aligned rows (rebuilt each frame in `App::prepare_render`)
+    pub aligned_rows: Vec<AlignedRow>,
+    /// Cached unified entries (rebuilt each frame in `App::prepare_render`)
+    pub unified_entries: Vec<UnifiedEntry>,
 }
 
 impl SideBySideState {
@@ -194,6 +234,59 @@ impl SideBySideState {
             show_detail_modal: false,
             detail_component_left: None,
             detail_component_right: None,
+            aligned_rows: Vec::new(),
+            unified_entries: Vec::new(),
+        }
+    }
+
+    /// Recompute the row-navigation model (`total_rows`, `change_indices`) from
+    /// the cached row list for the active alignment mode, clamping any stale
+    /// selection/navigation indices. For row-selection modes, `left_total` /
+    /// `right_total` are synced to `total_rows` so panel scrolling can follow
+    /// the selected row across every row; Grouped keeps the counts set by
+    /// [`set_totals`](Self::set_totals).
+    pub fn recompute_row_model(&mut self) {
+        let (total, change_indices) = match self.alignment_mode {
+            AlignmentMode::Aligned => {
+                let indices = self
+                    .aligned_rows
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, row)| row.change_type != ChangeType::Unchanged)
+                    .map(|(i, _)| i)
+                    .collect();
+                (self.aligned_rows.len(), indices)
+            }
+            AlignmentMode::Unified => {
+                let total = self.unified_entries.len();
+                (total, (0..total).collect())
+            }
+            AlignmentMode::Grouped => (0, Vec::new()),
+        };
+
+        self.total_rows = total;
+        self.change_indices = change_indices;
+
+        // Clamp selection so it never points past the current row set.
+        if total == 0 {
+            self.selected_row = 0;
+        } else {
+            self.selected_row = self.selected_row.min(total - 1);
+        }
+
+        // Clamp the change cursor so next/prev_change can never index OOB.
+        if self.change_indices.is_empty() {
+            self.current_change_idx = None;
+        } else if let Some(i) = self.current_change_idx
+            && i >= self.change_indices.len()
+        {
+            self.current_change_idx = Some(self.change_indices.len() - 1);
+        }
+
+        // Row-selection modes drive both panels off the single row list.
+        if self.alignment_mode.uses_row_selection() {
+            self.left_total = total;
+            self.right_total = total;
         }
     }
 
@@ -512,5 +605,152 @@ impl SideBySideState {
 impl Default for SideBySideState {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn aligned_row(change_type: ChangeType) -> AlignedRow {
+        AlignedRow {
+            left_name: Some("pkg".to_string()),
+            left_version: Some("1.0".to_string()),
+            right_name: Some("pkg".to_string()),
+            right_version: Some("2.0".to_string()),
+            change_type,
+            component_id: Some("pkg".to_string()),
+        }
+    }
+
+    fn unified_entry() -> UnifiedEntry {
+        UnifiedEntry {
+            name: "pkg".to_string(),
+            old_version: Some("1.0".to_string()),
+            new_version: Some("2.0".to_string()),
+            change_type: UnifiedChangeType::Upgrade,
+        }
+    }
+
+    #[test]
+    fn recompute_row_model_aligned_populates_totals() {
+        let mut s = SideBySideState::new();
+        s.alignment_mode = AlignmentMode::Aligned;
+        s.aligned_rows = vec![
+            aligned_row(ChangeType::Removed),
+            aligned_row(ChangeType::Modified),
+            aligned_row(ChangeType::Added),
+        ];
+        s.recompute_row_model();
+        assert_eq!(s.total_rows, 3);
+        assert_eq!(s.change_indices, vec![0, 1, 2]);
+        assert_eq!(s.left_total, 3);
+        assert_eq!(s.right_total, 3);
+    }
+
+    #[test]
+    fn recompute_row_model_unified_populates_totals() {
+        let mut s = SideBySideState::new();
+        s.alignment_mode = AlignmentMode::Unified;
+        s.unified_entries = vec![
+            unified_entry(),
+            unified_entry(),
+            unified_entry(),
+            unified_entry(),
+        ];
+        s.recompute_row_model();
+        assert_eq!(s.total_rows, 4);
+        assert_eq!(s.change_indices, vec![0, 1, 2, 3]);
+        assert_eq!(s.left_total, 4);
+        assert_eq!(s.right_total, 4);
+    }
+
+    #[test]
+    fn recompute_row_model_grouped_preserves_grouped_totals() {
+        let mut s = SideBySideState::new();
+        assert_eq!(s.alignment_mode, AlignmentMode::Grouped);
+        s.set_totals(5, 7);
+        s.recompute_row_model();
+        assert_eq!(s.total_rows, 0);
+        assert!(s.change_indices.is_empty());
+        assert_eq!(s.left_total, 5);
+        assert_eq!(s.right_total, 7);
+    }
+
+    #[test]
+    fn scroll_down_advances_selected_in_aligned_after_recompute() {
+        let mut s = SideBySideState::new();
+        s.alignment_mode = AlignmentMode::Aligned;
+        s.aligned_rows = vec![
+            aligned_row(ChangeType::Removed),
+            aligned_row(ChangeType::Modified),
+            aligned_row(ChangeType::Added),
+        ];
+        s.recompute_row_model();
+        assert_eq!(s.selected_row, 0);
+        s.scroll_down();
+        s.scroll_down();
+        s.scroll_down();
+        assert_eq!(s.selected_row, 2);
+    }
+
+    #[test]
+    fn next_change_cycles_and_wraps() {
+        let mut s = SideBySideState::new();
+        s.alignment_mode = AlignmentMode::Aligned;
+        s.aligned_rows = vec![
+            aligned_row(ChangeType::Removed),
+            aligned_row(ChangeType::Modified),
+            aligned_row(ChangeType::Added),
+        ];
+        s.recompute_row_model();
+        s.next_change();
+        assert_eq!(s.current_change_idx, Some(0));
+        assert_eq!(s.selected_row, 0);
+        assert_eq!(s.change_position(), "1/3");
+        s.next_change();
+        assert_eq!(s.current_change_idx, Some(1));
+        s.next_change();
+        assert_eq!(s.current_change_idx, Some(2));
+        s.next_change();
+        assert_eq!(s.current_change_idx, Some(0));
+    }
+
+    #[test]
+    fn recompute_clamps_stale_current_change_idx_no_panic() {
+        let mut s = SideBySideState::new();
+        s.alignment_mode = AlignmentMode::Aligned;
+        s.aligned_rows = (0..5).map(|_| aligned_row(ChangeType::Modified)).collect();
+        s.recompute_row_model();
+        s.current_change_idx = Some(4);
+        s.aligned_rows.truncate(2);
+        s.recompute_row_model();
+        assert_eq!(s.current_change_idx, Some(1));
+        // Must not panic indexing change_indices out of bounds.
+        s.prev_change();
+        assert_eq!(s.current_change_idx, Some(0));
+    }
+
+    #[test]
+    fn recompute_clamps_selected_row_when_rows_shrink() {
+        let mut s = SideBySideState::new();
+        s.alignment_mode = AlignmentMode::Aligned;
+        s.aligned_rows = (0..5).map(|_| aligned_row(ChangeType::Modified)).collect();
+        s.recompute_row_model();
+        s.selected_row = 4;
+        s.aligned_rows.truncate(2);
+        s.recompute_row_model();
+        assert_eq!(s.selected_row, 1);
+    }
+
+    #[test]
+    fn next_prev_change_noop_when_grouped_or_empty() {
+        let mut s = SideBySideState::new();
+        s.recompute_row_model();
+        s.next_change();
+        assert_eq!(s.current_change_idx, None);
+        s.prev_change();
+        assert_eq!(s.current_change_idx, None);
+        assert_eq!(s.change_position(), "0/0");
     }
 }

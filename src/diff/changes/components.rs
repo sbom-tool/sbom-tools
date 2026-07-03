@@ -244,8 +244,58 @@ impl ComponentChangeComputer {
         );
 
         cost += Self::compute_training_dataset_changes(cost_model, old, new, changes);
+        cost += Self::compute_performance_metric_changes(old, new, changes);
 
         cost
+    }
+
+    fn compute_performance_metric_changes(
+        old: &MlModelInfo,
+        new: &MlModelInfo,
+        changes: &mut Vec<FieldChange>,
+    ) -> u32 {
+        let key = |metric: &crate::model::MetricEntry| {
+            metric.metric_type.as_ref().map(|kind| {
+                format!(
+                    "{}{}",
+                    kind.to_ascii_lowercase(),
+                    metric
+                        .slice
+                        .as_ref()
+                        .map(|slice| format!("@{slice}"))
+                        .unwrap_or_default()
+                )
+            })
+        };
+        let old_metrics: std::collections::HashMap<_, _> = old
+            .performance_metrics
+            .iter()
+            .filter_map(|metric| key(metric).map(|key| (key, metric.value.clone())))
+            .collect();
+        let new_metrics: std::collections::HashMap<_, _> = new
+            .performance_metrics
+            .iter()
+            .filter_map(|metric| key(metric).map(|key| (key, metric.value.clone())))
+            .collect();
+
+        let mut keys: Vec<_> = old_metrics
+            .keys()
+            .filter(|key| new_metrics.contains_key(*key))
+            .cloned()
+            .collect();
+        keys.sort();
+        let mut changed = 0;
+        for key in keys {
+            if old_metrics[&key] != new_metrics[&key] {
+                changes.push(FieldChange {
+                    field: format!("ml_metric:{key}"),
+                    old_value: old_metrics[&key].clone(),
+                    new_value: new_metrics[&key].clone(),
+                });
+                changed += 1;
+            }
+        }
+        changed
     }
 
     /// Combine architecture family and name into a single display value.

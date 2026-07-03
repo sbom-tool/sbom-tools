@@ -277,7 +277,10 @@ impl ColorScheme {
             background_alt: Color::Rgb(20, 20, 20),
             text: Color::White,
             text_muted: Color::Gray,
-            selection: Color::White,
+            // `selection` is used as a row *background* (with `.fg(text)`), and text is
+            // White here — so a White selection made selected rows invisible. Use a
+            // distinct dark blue-grey that stays readable under White text.
+            selection: Color::Rgb(80, 80, 120),
             highlight: Color::LightYellow,
 
             // Status
@@ -1054,5 +1057,33 @@ mod a11y_tests {
         assert_eq!(startup_theme_for(true, "light").name, "high-contrast");
         assert_eq!(startup_theme_for(false, "light").name, "light");
         assert_eq!(startup_theme_for(false, "dark").name, "dark");
+    }
+}
+
+#[cfg(test)]
+mod selection_contrast_tests {
+    use super::ColorScheme;
+
+    /// `selection` is always applied as a row *background* (paired with `.fg(text)`),
+    /// so in every theme it must differ from both `text` (else the selected row's text
+    /// is invisible) and `background` (else the selection bar itself is invisible).
+    /// Regression guard for the high-contrast White-on-White selection bug.
+    fn assert_selection_visible(name: &str, s: &ColorScheme) {
+        assert_ne!(
+            s.selection, s.text,
+            "{name}: selection == text — selected rows would be invisible"
+        );
+        assert_ne!(
+            s.selection, s.background,
+            "{name}: selection == background — the selection bar would be invisible"
+        );
+    }
+
+    #[test]
+    fn selection_is_visible_in_every_theme() {
+        assert_selection_visible("default", &ColorScheme::default());
+        assert_selection_visible("dark", &ColorScheme::dark());
+        assert_selection_visible("light", &ColorScheme::light());
+        assert_selection_visible("high_contrast", &ColorScheme::high_contrast());
     }
 }
