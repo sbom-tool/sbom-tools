@@ -652,7 +652,12 @@ mod tests {
     fn recompute_row_model_unified_populates_totals() {
         let mut s = SideBySideState::new();
         s.alignment_mode = AlignmentMode::Unified;
-        s.unified_entries = vec![unified_entry(), unified_entry(), unified_entry(), unified_entry()];
+        s.unified_entries = vec![
+            unified_entry(),
+            unified_entry(),
+            unified_entry(),
+            unified_entry(),
+        ];
         s.recompute_row_model();
         assert_eq!(s.total_rows, 4);
         assert_eq!(s.change_indices, vec![0, 1, 2, 3]);

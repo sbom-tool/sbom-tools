@@ -243,7 +243,10 @@ fn sidebyside_grouped_scroll_totals_unchanged() {
 
     let st = app.side_by_side_state();
     assert_eq!(st.alignment_mode, AlignmentMode::Grouped);
-    assert_eq!(st.total_rows, 0, "grouped mode uses panel scrolling, not rows");
+    assert_eq!(
+        st.total_rows, 0,
+        "grouped mode uses panel scrolling, not rows"
+    );
     assert!(st.change_indices.is_empty());
     assert_eq!(
         st.left_total, expected_left,
