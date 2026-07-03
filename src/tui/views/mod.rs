@@ -24,6 +24,7 @@ pub use diff_compliance::{
 pub use graph_changes::render_graph_changes;
 pub use licenses::render_licenses;
 pub use matrix::{MatrixPanel, render_matrix};
+pub(crate) use multi_dashboard::ordered_comparison_indices;
 pub use multi_dashboard::{MultiDashboardPanel, render_multi_dashboard};
 pub use overlays::{
     ThresholdTuningState, render_component_deep_dive, render_shortcuts_overlay,
@@ -31,6 +32,7 @@ pub use overlays::{
 };
 pub use quality::render_quality;
 pub use sidebyside::render_sidebyside;
+pub(crate) use sidebyside::{build_aligned_rows, build_unified_entries};
 pub use source::render_source;
 pub use summary::render_summary;
 pub use timeline::{TimelinePanel, render_timeline};

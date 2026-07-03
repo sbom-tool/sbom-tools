@@ -11,11 +11,6 @@ use super::widgets::{
     MIN_HEIGHT, MIN_WIDTH, check_terminal_size, render_mode_indicator, render_size_warning,
 };
 use crate::config::TuiPreferences;
-use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
-    execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
-};
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Clear, Paragraph, Tabs},
@@ -31,12 +26,12 @@ pub fn run_tui(app: &mut App) -> io::Result<()> {
     let prefs = TuiPreferences::load();
     set_theme(Theme::from_name(prefs.theme.as_str()));
 
-    // Setup terminal
+    // Setup terminal. The guard restores it on drop — covering normal exit, the
+    // `?` early-return from the render loop, and panic unwinding. Declared before
+    // `terminal` so it is dropped last (after the backend releases stdout).
     super::shared::install_panic_hook();
-    enable_raw_mode()?;
-    let mut stdout = stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
+    let _terminal_guard = super::shared::TerminalGuard::enter()?;
+    let backend = CrosstermBackend::new(stdout());
     let mut terminal = Terminal::new(backend)?;
 
     // Event handler
@@ -66,15 +61,7 @@ pub fn run_tui(app: &mut App) -> io::Result<()> {
         }
     }
 
-    // Restore terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
-
+    // Terminal is restored by `_terminal_guard` on drop.
     Ok(())
 }
 
@@ -296,9 +283,13 @@ fn render_header(frame: &mut Frame, area: Rect, app: &App) {
     frame.render_widget(header, area);
 }
 
-fn render_tabs(frame: &mut Frame, area: Rect, app: &App) {
-    // Build tabs dynamically based on mode
-    let mut tabs_data: Vec<(TabKind, &str, &str)> = vec![
+/// The ordered `(kind, key, title)` entries shown in the diff-mode tab bar.
+///
+/// Single source of truth for the tab set so rendering ([`render_tabs`]) and mouse
+/// hit-testing (`events::mouse`) cannot drift — the previous hit-test hardcoded a
+/// separate 8-label list and mis-selected in modes with Compliance/Graph/Source.
+pub(crate) fn diff_tab_entries(app: &App) -> Vec<(TabKind, &'static str, &'static str)> {
+    let mut tabs_data: Vec<(TabKind, &'static str, &'static str)> = vec![
         (TabKind::Summary, "1", "Summary"),
         (TabKind::Components, "2", "Components"),
         (TabKind::Dependencies, "3", "Dependencies"),
@@ -307,13 +298,13 @@ fn render_tabs(frame: &mut Frame, area: Rect, app: &App) {
         (TabKind::Quality, "6", "Quality"),
     ];
 
-    // Add compliance and side-by-side tabs only in diff/view mode
+    // Compliance and side-by-side tabs only in diff/view mode
     if matches!(app.mode, AppMode::Diff | AppMode::View) {
         tabs_data.push((TabKind::Compliance, "7", "Compliance"));
         tabs_data.push((TabKind::SideBySide, "8", "Diff"));
     }
 
-    // Add graph changes tab if graph diff data is available
+    // Graph changes tab only when graph diff data is available
     let has_graph_changes = app
         .data
         .diff_result
@@ -323,12 +314,24 @@ fn render_tabs(frame: &mut Frame, area: Rect, app: &App) {
         tabs_data.push((TabKind::GraphChanges, "9", "Graph"));
     }
 
-    // Source tab always available in diff/view mode
-    // Use [9] when it's the 9th tab (no graph changes), [0] when it's the 10th
+    // Source tab always available in diff/view mode.
+    // Uses [9] when it's the 9th tab (no graph changes), [0] when it's the 10th.
     if matches!(app.mode, AppMode::Diff | AppMode::View) {
         let source_key = if has_graph_changes { "0" } else { "9" };
         tabs_data.push((TabKind::Source, source_key, "Source"));
     }
+
+    tabs_data
+}
+
+/// The tab-title string as rendered in the bar (`"[key] title "`), used for mouse
+/// hit-testing. Must match the `Line` built in [`render_tabs`].
+pub(crate) fn diff_tab_label(key: &str, title: &str) -> String {
+    format!("[{key}] {title} ")
+}
+
+fn render_tabs(frame: &mut Frame, area: Rect, app: &App) {
+    let tabs_data = diff_tab_entries(app);
 
     let titles: Vec<Line> = tabs_data
         .iter()
@@ -352,28 +355,12 @@ fn render_tabs(frame: &mut Frame, area: Rect, app: &App) {
         })
         .collect();
 
-    let selected_idx = match app.active_tab {
-        TabKind::Summary => 0,
-        TabKind::Overview | TabKind::Tree => 0, // Not shown in tab bar yet
-        TabKind::Components => 1,
-        TabKind::Dependencies => 2,
-        TabKind::Licenses => 3,
-        TabKind::Vulnerabilities => 4,
-        TabKind::Quality => 5,
-        TabKind::Compliance => 6,
-        TabKind::SideBySide => 7,
-        TabKind::GraphChanges => {
-            if has_graph_changes {
-                8
-            } else {
-                0
-            }
-        }
-        TabKind::Source => {
-            // Source is after GraphChanges (if present) or SideBySide
-            if has_graph_changes { 9 } else { 8 }
-        }
-    };
+    // Derive selection from the actual entry order (handles the variable
+    // GraphChanges/Source positions without a parallel index table).
+    let selected_idx = tabs_data
+        .iter()
+        .position(|(kind, _, _)| *kind == app.active_tab)
+        .unwrap_or(0);
 
     let tabs = Tabs::new(titles)
         .block(

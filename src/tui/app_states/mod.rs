@@ -42,7 +42,10 @@ pub use overlays::{
 };
 pub use quality::{QualityState, QualityViewMode};
 pub use search::{ChangeType, DiffSearchResult, DiffSearchState, SearchMode, VulnChangeType};
-pub use sidebyside::{AlignmentMode, ChangeTypeFilter, ScrollSyncMode, SideBySideState};
+pub use sidebyside::{
+    AlignedRow, AlignmentMode, ChangeTypeFilter, ScrollSyncMode, SideBySideState,
+    UnifiedChangeType, UnifiedEntry,
+};
 pub use source::{SourceDiffState, SourcePanelState, SourceSide, SourceViewMode};
 pub use timeline::{TimelineComponentFilter, TimelineSortBy, TimelineState};
 pub use vulnerabilities::{
