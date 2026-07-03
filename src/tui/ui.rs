@@ -5,7 +5,7 @@ use super::app::{
     VulnChangeType,
 };
 use super::events::{Event, EventHandler, handle_key_event, handle_mouse_event};
-use super::theme::{FooterHints, Theme, colors, render_footer_hints, set_theme};
+use super::theme::{FooterHints, colors, render_footer_hints, set_theme};
 use super::views;
 use super::widgets::{
     MIN_HEIGHT, MIN_WIDTH, check_terminal_size, render_mode_indicator, render_size_warning,
@@ -29,7 +29,7 @@ mod render_snapshot_tests;
 pub fn run_tui(app: &mut App) -> io::Result<()> {
     // Load saved theme preference
     let prefs = TuiPreferences::load();
-    set_theme(Theme::from_name(prefs.theme.as_str()));
+    set_theme(super::theme::startup_theme(prefs.theme.as_str()));
 
     // Setup terminal
     super::shared::install_panic_hook();

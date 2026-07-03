@@ -315,14 +315,39 @@ impl ColorScheme {
 
     /// Get a subtle background tint for severity (used for row highlighting)
     #[must_use]
+    /// Subtle row-background tint for a severity, adapted to the active theme.
+    ///
+    /// Dark themes use dark tints; light themes use pale tints so the dark row text
+    /// stays readable (the previous hardcoded dark tints made light-theme rows
+    /// unreadable — dark-on-dark).
     pub fn severity_bg_tint(&self, severity: &str) -> Color {
-        match severity.to_lowercase().as_str() {
-            "critical" => Color::Rgb(50, 15, 50),
-            "high" => Color::Rgb(50, 15, 15),
-            "medium" => Color::Rgb(45, 40, 10),
-            "low" => Color::Rgb(15, 35, 40),
-            _ => Color::Reset,
+        if self.is_light() {
+            match severity.to_lowercase().as_str() {
+                "critical" => Color::Rgb(250, 228, 250),
+                "high" => Color::Rgb(255, 226, 226),
+                "medium" => Color::Rgb(255, 247, 214),
+                "low" => Color::Rgb(222, 244, 248),
+                _ => Color::Reset,
+            }
+        } else {
+            match severity.to_lowercase().as_str() {
+                "critical" => Color::Rgb(50, 15, 50),
+                "high" => Color::Rgb(50, 15, 15),
+                "medium" => Color::Rgb(45, 40, 10),
+                "low" => Color::Rgb(15, 35, 40),
+                _ => Color::Reset,
+            }
         }
+    }
+
+    /// Whether the theme has a light background (implying dark text), so tints should
+    /// be light rather than dark. Dark themes use `Color::Reset`/`Black` backgrounds
+    /// (not matched here); the light theme uses a bright RGB background.
+    fn is_light(&self) -> bool {
+        matches!(
+            self.background,
+            Color::Rgb(r, g, b) if u16::from(r) + u16::from(g) + u16::from(b) > 480
+        )
     }
 
     /// Get color for change status
@@ -489,6 +514,23 @@ pub fn current_theme_name() -> &'static str {
 /// Set the current theme
 pub fn set_theme(theme: Theme) {
     *THEME.write().expect("THEME lock not poisoned") = theme;
+}
+
+/// Resolve the theme to use at TUI startup, honoring the `NO_COLOR` convention that
+/// the rest of the CLI respects: when `NO_COLOR` is set in the environment, force the
+/// high-contrast theme (highest contrast, least reliant on hue) regardless of the
+/// saved preference. Otherwise use the saved theme name.
+#[must_use]
+pub fn startup_theme(prefs_name: &str) -> Theme {
+    startup_theme_for(std::env::var_os("NO_COLOR").is_some(), prefs_name)
+}
+
+fn startup_theme_for(no_color: bool, prefs_name: &str) -> Theme {
+    if no_color {
+        Theme::high_contrast()
+    } else {
+        Theme::from_name(prefs_name)
+    }
 }
 
 /// Toggle to the next theme in rotation (dark -> light -> high-contrast -> dark)
@@ -972,4 +1014,45 @@ pub fn render_footer_hints(hints: &[(&str, &str)]) -> Vec<Span<'static>> {
     }
 
     spans
+}
+
+#[cfg(test)]
+mod a11y_tests {
+    use super::{ColorScheme, startup_theme_for};
+    use ratatui::style::Color;
+
+    #[test]
+    fn severity_tint_unchanged_for_dark_and_high_contrast() {
+        // Snapshot-safe: dark/high-contrast tints are the original dark values.
+        assert_eq!(
+            ColorScheme::dark().severity_bg_tint("critical"),
+            Color::Rgb(50, 15, 50)
+        );
+        assert_eq!(
+            ColorScheme::high_contrast().severity_bg_tint("high"),
+            Color::Rgb(50, 15, 15)
+        );
+    }
+
+    #[test]
+    fn severity_tint_is_pale_for_light_theme() {
+        // Light theme must use pale tints so the dark row text stays readable.
+        for sev in ["critical", "high", "medium", "low"] {
+            match ColorScheme::light().severity_bg_tint(sev) {
+                Color::Rgb(r, g, b) => assert!(
+                    u16::from(r) + u16::from(g) + u16::from(b) > 480,
+                    "light {sev} tint must be pale, got {r},{g},{b}"
+                ),
+                other => panic!("expected an RGB tint for {sev}, got {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn no_color_forces_high_contrast_theme() {
+        assert_eq!(startup_theme_for(true, "dark").name, "high-contrast");
+        assert_eq!(startup_theme_for(true, "light").name, "high-contrast");
+        assert_eq!(startup_theme_for(false, "light").name, "light");
+        assert_eq!(startup_theme_for(false, "dark").name, "dark");
+    }
 }

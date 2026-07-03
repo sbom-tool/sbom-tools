@@ -3,7 +3,7 @@
 use super::app::{ViewApp, ViewTab};
 use super::views;
 use crate::config::TuiPreferences;
-use crate::tui::theme::{FooterHints, Theme, colors, render_footer_hints, set_theme};
+use crate::tui::theme::{FooterHints, colors, render_footer_hints, set_theme};
 use crate::tui::widgets::{
     self, MIN_HEIGHT, MIN_WIDTH, check_terminal_size, render_mode_indicator, render_size_warning,
 };
@@ -27,7 +27,7 @@ mod render_snapshot_tests;
 pub fn run_view_tui(app: &mut ViewApp) -> io::Result<()> {
     // Load theme preference
     let prefs = TuiPreferences::load();
-    set_theme(Theme::from_name(prefs.theme.as_str()));
+    set_theme(crate::tui::theme::startup_theme(prefs.theme.as_str()));
 
     // Setup terminal
     crate::tui::shared::install_panic_hook();
