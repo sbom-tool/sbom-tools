@@ -54,11 +54,9 @@ pub use traits::{
 // Shared state exports
 pub use state::{ListNavigation, ListState, TreeNavigation};
 
-// ViewModel exports for shared TUI state management
+// ViewModel exports (security / quick-filter state shared by both TUIs)
 pub use viewmodel::{
-    CycleFilter, FilterState, LicenseCategory, OverlayState, QualityViewMode, QualityViewState,
-    QuickFilter, RiskLevel, SearchState, SearchStateCore, SecurityFilterCriteria,
-    SecurityFilterState, StatusMessage, ViewModelOverlayKind,
+    LicenseCategory, QuickFilter, RiskLevel, SecurityFilterCriteria, SecurityFilterState,
 };
 
 // Legacy/Diff TUI exports
