@@ -276,3 +276,36 @@ fn compliance_selector_exposes_every_standard() {
     assert!(levels.iter().any(|l| l.short_name() == "AI-Act"));
     assert!(levels.iter().any(|l| l.short_name() == "BSI-AI"));
 }
+
+#[test]
+fn aibom_tab_click_selects_a_profile_specific_tab() {
+    use crate::tui::view::events::handle_mouse_event;
+    use crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+    use unicode_width::UnicodeWidthStr;
+
+    let tabs = ViewTab::tabs_for_profile(crate::model::BomProfile::AiBom);
+    let target = *tabs.last().expect("AI-BOM has tabs"); // rightmost: most drift-sensitive
+    let first = tabs[0];
+    let mut app = aibom_view_app(first);
+
+    let text = render_to_text(240, 40, |frame| {
+        render(frame, &mut app);
+    });
+    let tab_row = text.lines().nth(2).expect("tab bar row").to_string();
+    let needle = target.title();
+    let byte = tab_row
+        .rfind(needle)
+        .unwrap_or_else(|| panic!("{needle} not in tab row: {tab_row:?}"));
+    let col = UnicodeWidthStr::width(&tab_row[..byte]) as u16;
+
+    handle_mouse_event(
+        &mut app,
+        MouseEvent {
+            kind: MouseEventKind::Down(MouseButton::Left),
+            column: col,
+            row: 2,
+            modifiers: KeyModifiers::empty(),
+        },
+    );
+    assert_eq!(app.active_tab, target, "click on {needle} @col {col}");
+}
