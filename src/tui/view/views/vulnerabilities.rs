@@ -2046,12 +2046,17 @@ fn render_group_detail_panel(
     }
 
     // Phase 2: Scrollable paragraph with scrollbar
-    let content_height = lines.len().min(u16::MAX as usize) as u16;
     let block = Block::default()
         .title(" Group Details ")
         .borders(Borders::ALL)
         .border_style(Style::default().fg(border_color));
-    let inner_height = block.inner(area).height;
+    let inner = block.inner(area);
+    let inner_height = inner.height;
+    // Count wrapped rows (the paragraph renders with Wrap) so scroll can reach
+    // wrapped overflow and the scrollbar is sized right — logical lines.len()
+    // undercounts.
+    let content_height = crate::tui::shared::text::wrapped_line_count(&lines, inner.width)
+        .min(u16::MAX as usize) as u16;
 
     // Clamp scroll
     let max_scroll = content_height.saturating_sub(inner_height);
@@ -2597,9 +2602,13 @@ fn render_vuln_detail_panel(
     }
     lines.push(Line::from(nav_spans));
 
-    // Clamp scroll offset so it doesn't exceed content
+    // Clamp scroll offset so it doesn't exceed content. Count *wrapped* rows (the
+    // panel renders with Wrap) so wrapped overflow is reachable and the scrollbar is
+    // sized correctly — logical lines.len() undercounts wrapped CVE text/URLs.
     let content_height = area.height.saturating_sub(2); // borders
-    let total_lines = lines.len().min(u16::MAX as usize) as u16;
+    let inner_width = area.width.saturating_sub(2); // borders
+    let total_lines = crate::tui::shared::text::wrapped_line_count(&lines, inner_width)
+        .min(u16::MAX as usize) as u16;
     let max_scroll = total_lines.saturating_sub(content_height);
     if *detail_scroll > max_scroll {
         *detail_scroll = max_scroll;

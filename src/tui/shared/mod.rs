@@ -10,6 +10,7 @@ pub mod export;
 pub mod licenses;
 pub mod quality;
 pub mod source;
+pub mod text;
 pub mod vulnerabilities;
 
 use crossterm::{
