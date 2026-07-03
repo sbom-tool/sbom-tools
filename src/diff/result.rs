@@ -53,6 +53,17 @@ pub struct DiffResult {
     /// Matching quality metrics (populated during diff)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub match_metrics: Option<MatchMetrics>,
+    /// Supported numeric ML performance metrics that moved in the adverse direction.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ml_regressions: Vec<MlRegression>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MlRegression {
+    pub component: String,
+    pub metric: String,
+    pub previous_value: f64,
+    pub new_value: f64,
 }
 
 impl DiffResult {
@@ -71,6 +82,7 @@ impl DiffResult {
             rules_applied: 0,
             quality_delta: None,
             match_metrics: None,
+            ml_regressions: Vec::new(),
         }
     }
 
