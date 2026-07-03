@@ -507,22 +507,12 @@ impl StatefulWidget for Tree<'_> {
             };
             let remaining = (area.x + area.width).saturating_sub(x + vuln_badge_width) as usize;
 
-            let display_label = if item.label.len() > remaining && remaining > 3 {
-                let max_chars = remaining.saturating_sub(3);
-                let truncated: String = item.label.chars().take(max_chars).collect();
-                format!("{truncated}...")
-            } else {
-                item.label.clone()
-            };
-
-            for ch in display_label.chars() {
-                if x < area.x + area.width {
-                    if let Some(cell) = buf.cell_mut((x, y)) {
-                        cell.set_char(ch).set_style(label_style);
-                    }
-                    x += 1;
-                }
-            }
+            // Width-aware truncation + placement: set_stringn caps at `remaining`
+            // display cells and correctly advances past double-width glyphs, so the
+            // vuln badge can no longer be overrun by CJK/emoji labels.
+            let display_label = super::truncate_str(&item.label, remaining);
+            let (new_x, _) = buf.set_stringn(x, y, &display_label, remaining, label_style);
+            x = new_x;
 
             // Vulnerability indicator with severity badge
             if item.vuln_count > 0 {

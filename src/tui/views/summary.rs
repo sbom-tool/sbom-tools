@@ -1344,7 +1344,7 @@ fn render_policy_compact(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
                 Style::default().fg(scheme.border),
             ));
             spans.push(Span::styled(
-                truncate(&violation.description, 50),
+                crate::tui::widgets::truncate_str(&violation.description, 50),
                 Style::default().fg(scheme.text_muted).italic(),
             ));
         }
@@ -1500,7 +1500,7 @@ fn render_ecosystem_breakdown_chart(
         .map(|(i, (name, count))| {
             Bar::default()
                 .value(*count)
-                .label(Line::from(truncate(name, 8).to_string()))
+                .label(Line::from(crate::tui::widgets::truncate_str(name, 8)))
                 .style(Style::default().fg(palette[i % palette.len()]))
         })
         .collect();
@@ -1767,7 +1767,7 @@ fn render_all_changes(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
                 Span::styled(
                     vuln.description
                         .as_ref()
-                        .map(|d| format!(" - {}", truncate(d, 40)))
+                        .map(|d| format!(" - {}", crate::tui::widgets::truncate_str(d, 40)))
                         .unwrap_or_default(),
                     Style::default().fg(scheme.muted),
                 ),
@@ -1989,13 +1989,6 @@ fn render_all_changes(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
     frame.render_widget(paragraph, area);
 }
 
-fn truncate(s: &str, max_len: usize) -> &str {
-    if s.len() <= max_len {
-        s
-    } else {
-        &s[..max_len.saturating_sub(3)]
-    }
-}
 
 enum VersionLevel {
     Patch,
