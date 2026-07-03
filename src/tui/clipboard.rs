@@ -70,8 +70,7 @@ fn osc52_sequence(text: &str, in_tmux: bool) -> String {
 
 /// Minimal standard-alphabet base64 encoder (avoids pulling in a dependency).
 fn base64_encode(input: &[u8]) -> String {
-    const ALPHABET: &[u8; 64] =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(input.len().div_ceil(3) * 4);
     for chunk in input.chunks(3) {
         let b0 = u32::from(chunk[0]);
@@ -117,7 +116,10 @@ mod tests {
     #[test]
     fn osc52_tmux_wraps_and_doubles_esc() {
         let s = osc52_sequence("foo", true);
-        assert!(s.starts_with("\x1bPtmux;"), "must open a tmux DCS passthrough");
+        assert!(
+            s.starts_with("\x1bPtmux;"),
+            "must open a tmux DCS passthrough"
+        );
         assert!(s.ends_with("\x1b\\"), "must terminate the DCS with ST");
         // Inner ESC (0x1b) doubled for tmux.
         assert!(s.contains("\x1b\x1b]52;c;Zm9v"));

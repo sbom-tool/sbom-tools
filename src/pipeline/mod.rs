@@ -63,6 +63,8 @@ pub mod exit_codes {
     pub const LICENSE_VIOLATIONS: i32 = 5;
     /// Introduced vulnerabilities are in CISA's KEV catalog (--fail-on-kev)
     pub const KEV_INTRODUCED: i32 = 6;
+    /// A supported ML performance metric regressed (--fail-on-ml-regression)
+    pub const ML_REGRESSION: i32 = 7;
 
     // --- Per-command meanings (aliases preserving the numeric values above) ---
 

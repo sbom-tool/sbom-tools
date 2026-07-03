@@ -99,3 +99,80 @@ impl Drop for TerminalGuard {
         );
     }
 }
+
+/// Map a click column to a tab index for a `ratatui` `Tabs` bar.
+///
+/// `Tabs` renders each tab as `left_pad(1) + title + right_pad(1)` starting at column
+/// `left`, joining consecutive tabs with a `divider_width`-column divider (the default
+/// padding is a single space on each side — see `ratatui`'s `Tabs`). `labels` are the
+/// tab-title strings exactly as rendered, with brackets and inner spaces baked in
+/// (e.g. `"[1] Summary "`). Returns the index of the tab whose rendered span contains
+/// `click_x`, or `None` for a click on a divider, before the first tab, or past the
+/// last — so callers derive hit regions from the real tab set instead of guessing a
+/// fixed width.
+#[must_use]
+pub fn tab_bar_hit(
+    labels: &[String],
+    left: u16,
+    divider_width: u16,
+    click_x: u16,
+) -> Option<usize> {
+    use unicode_width::UnicodeWidthStr;
+
+    if click_x < left {
+        return None;
+    }
+    let last = labels.len().saturating_sub(1);
+    let mut cursor = left;
+    for (i, label) in labels.iter().enumerate() {
+        // 1-column left pad + title + 1-column right pad.
+        let span = (UnicodeWidthStr::width(label.as_str()) as u16).saturating_add(2);
+        if click_x >= cursor && click_x < cursor.saturating_add(span) {
+            return Some(i);
+        }
+        cursor = cursor.saturating_add(span);
+        if i != last {
+            cursor = cursor.saturating_add(divider_width);
+        }
+    }
+    None
+}
+
+#[cfg(test)]
+mod tab_bar_hit_tests {
+    use super::tab_bar_hit;
+
+    #[test]
+    fn maps_clicks_to_tabs_and_rejects_dividers() {
+        // "[1] Summary " => width 12 => span 14 ([0,14)); divider [14,17);
+        // "[2] Components " => width 15 => span 17 ([17,34)).
+        let labels = vec!["[1] Summary ".to_string(), "[2] Components ".to_string()];
+        assert_eq!(tab_bar_hit(&labels, 0, 3, 0), Some(0));
+        assert_eq!(tab_bar_hit(&labels, 0, 3, 13), Some(0));
+        assert_eq!(tab_bar_hit(&labels, 0, 3, 14), None); // divider
+        assert_eq!(tab_bar_hit(&labels, 0, 3, 16), None);
+        assert_eq!(tab_bar_hit(&labels, 0, 3, 17), Some(1));
+        assert_eq!(tab_bar_hit(&labels, 0, 3, 33), Some(1));
+        assert_eq!(tab_bar_hit(&labels, 0, 3, 34), None); // past end
+        assert_eq!(tab_bar_hit(&labels, 0, 3, 200), None);
+    }
+
+    #[test]
+    fn respects_left_offset() {
+        let labels = vec!["[1] A ".to_string()]; // width 6 => span 8
+        assert_eq!(tab_bar_hit(&labels, 5, 3, 4), None); // before left
+        assert_eq!(tab_bar_hit(&labels, 5, 3, 5), Some(0));
+        assert_eq!(tab_bar_hit(&labels, 5, 3, 12), Some(0));
+        assert_eq!(tab_bar_hit(&labels, 5, 3, 13), None);
+    }
+
+    #[test]
+    fn counts_double_width_glyphs() {
+        // "[1] 字 " => width 7 (字 is 2 cells) => span 9 ([0,9)); divider [9,12);
+        // "[2] B " => span 8 ([12,20)).
+        let labels = vec!["[1] 字 ".to_string(), "[2] B ".to_string()];
+        assert_eq!(tab_bar_hit(&labels, 0, 3, 8), Some(0));
+        assert_eq!(tab_bar_hit(&labels, 0, 3, 9), None); // divider
+        assert_eq!(tab_bar_hit(&labels, 0, 3, 12), Some(1));
+    }
+}

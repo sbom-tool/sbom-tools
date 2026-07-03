@@ -1,5 +1,6 @@
 ---
 source: src/tui/view/ui/render_snapshot_tests.rs
+assertion_line: 71
 expression: text
 ---
 sbom-tools  VIEW  │ acme-webapp │ CycloneDX 1.5 │ [SBOM]
@@ -12,7 +13,7 @@ sbom-tools  VIEW  │ acme-webapp │ CycloneDX 1.5 │ [SBOM]
 ┌ NTIA Minimum Elements ───────────────────────────────┐┌ Summary ─────────────┐
 └──────────────────────────────────────────────────────┘└──────────────────────┘
 ┌ Violations (grouped: 4 patterns, 20 total┐┌ Affected (9) K/J scroll ─────────┐
-│Severi Catego Issue Pattern        Count  ││  Component  missing supplier/ma… █
+│Severi Catego Issue Pattern        Count  ││  Component  missing supplier/... █
 │                                          ││  9 named                         █
 │ERROR  Suppli Component  missing s 9      ││  ──────────────────────────────  █
 │ERROR  Doc Me SBOM must have creat 1      ││  zod                             █

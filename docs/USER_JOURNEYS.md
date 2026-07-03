@@ -120,6 +120,25 @@ jq '.summary' /tmp/release-diff.json
 ```
 
 Use `-o sarif` when the result will be uploaded to a code-scanning system.
+Use `-o oscal-json` when assessment tooling needs the same validation findings
+as an OSCAL 1.1.2 `assessment-results` document:
+
+```sh
+cargo run --release -- validate \
+  tests/fixtures/cyclonedx/minimal.cdx.json \
+  --standard ntia \
+  -o oscal-json \
+  -O /tmp/validation-results.oscal.json
+
+jq '."assessment-results" | {
+  oscal_version: .metadata."oscal-version",
+  result_count: (.results | length),
+  finding_count: (.results[0].findings | length)
+}' /tmp/validation-results.oscal.json
+```
+
+The export maps existing findings; it does not generate an assessment plan,
+SSP, authorization package, attestation, or evidence absent from the BOM.
 
 ### 3. Apply explicit CI gates
 
@@ -146,6 +165,40 @@ Exit codes are part of the CLI contract. A pipeline should gate on the selected
 flag and exit code, then retain the JSON or SARIF output for diagnosis. See
 `sbom-tools --help` and the relevant subcommand help for the complete exit-code
 table.
+
+### 4. Gate on BOM-declared ML metric regressions
+
+Create a candidate AI-BOM whose declared overall accuracy is lower than the
+baseline:
+
+```sh
+jq '
+  walk(
+    if type == "object" and .type? == "accuracy"
+    then .value = "0.80"
+    else .
+    end
+  )
+' tests/fixtures/cyclonedx/aibom-complete.cdx.json \
+  > /tmp/candidate-ai-bom.cdx.json
+
+cargo run --release -- diff \
+  tests/fixtures/cyclonedx/aibom-complete.cdx.json \
+  /tmp/candidate-ai-bom.cdx.json \
+  --fail-on-ml-regression \
+  -o json \
+  -O /tmp/ml-regression.json
+```
+
+The command exits with code 7. The retained JSON identifies why:
+
+```sh
+jq '.ml_regressions' /tmp/ml-regression.json
+```
+
+The gate uses an explicit metric-direction allowlist. It ignores missing,
+non-numeric, and unrecognized metrics. It evaluates only values declared in the
+two BOMs; it does not run a model or independently verify the measurements.
 
 ## Choosing an interface
 
