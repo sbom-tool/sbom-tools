@@ -5,7 +5,7 @@ use crate::tui::state::ListNavigation;
 use crate::tui::traits::{EventResult, ViewContext, ViewMode, ViewState};
 use crossterm::event::{KeyCode, KeyEvent};
 
-pub(super) fn handle_dependencies_keys(app: &mut App, key: KeyEvent) {
+pub(super) fn handle_dependencies_keys(app: &mut App, key: KeyEvent) -> bool {
     let view = &mut app.dependencies_view;
 
     let mut ctx = ViewContext {
@@ -35,17 +35,17 @@ pub(super) fn handle_dependencies_keys(app: &mut App, key: KeyEvent) {
     match result {
         EventResult::StatusMessage(msg) => {
             app.status_message = Some(msg);
+            true
         }
-        EventResult::Ignored => {
-            // Handle data-dependent keys
-            handle_data_dependent_keys(app, key);
-        }
-        _ => {}
+        EventResult::Ignored => handle_data_dependent_keys(app, key),
+        _ => true,
     }
 }
 
 /// Handle keys that need access to App data.
-fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
+///
+/// Returns `true` if the key is a data-dependent Dependencies binding.
+fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) -> bool {
     if key.code == KeyCode::Char('c') {
         // Navigate to component (cross-tab)
         if let Some(node_id) = app
@@ -55,6 +55,9 @@ fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
         {
             app.navigate_dep_to_component(&node_id);
         }
+        true
+    } else {
+        false
     }
 }
 

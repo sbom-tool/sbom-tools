@@ -5,7 +5,7 @@ use crate::tui::App;
 use crate::tui::traits::{EventResult, TabTarget, ViewContext, ViewMode, ViewState};
 use crossterm::event::KeyEvent;
 
-pub(super) fn handle_quality_keys(app: &mut App, key: KeyEvent) {
+pub(super) fn handle_quality_keys(app: &mut App, key: KeyEvent) -> bool {
     let quality_view = &mut app.quality_view;
 
     let mut ctx = ViewContext {
@@ -18,6 +18,7 @@ pub(super) fn handle_quality_keys(app: &mut App, key: KeyEvent) {
     };
 
     let result = quality_view.handle_key(key, &mut ctx);
+    let consumed = !matches!(result, EventResult::Ignored);
 
     // Handle Enter on recommendation → navigate to related tab
     if quality_view.enter_requested {
@@ -49,11 +50,12 @@ pub(super) fn handle_quality_keys(app: &mut App, key: KeyEvent) {
                 target.to_tab_kind().map_or("tab", |k| k.title())
             ));
             app.handle_event_result(EventResult::NavigateTo(target));
-            return;
+            return true;
         }
     }
 
     if let EventResult::StatusMessage(msg) = result {
         app.status_message = Some(msg);
     }
+    consumed
 }

@@ -4,7 +4,7 @@ use crate::tui::App;
 use crate::tui::traits::{EventResult, ViewContext, ViewMode, ViewState};
 use crossterm::event::KeyEvent;
 
-pub(super) fn handle_graph_changes_keys(app: &mut App, key: KeyEvent) {
+pub(super) fn handle_graph_changes_keys(app: &mut App, key: KeyEvent) -> bool {
     let view = &mut app.graph_changes_view;
 
     let mut ctx = ViewContext {
@@ -17,8 +17,10 @@ pub(super) fn handle_graph_changes_keys(app: &mut App, key: KeyEvent) {
     };
 
     let result = view.handle_key(key, &mut ctx);
+    let consumed = !matches!(result, EventResult::Ignored);
 
     if let EventResult::StatusMessage(msg) = result {
         app.status_message = Some(msg);
     }
+    consumed
 }

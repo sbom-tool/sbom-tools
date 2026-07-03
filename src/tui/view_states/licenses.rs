@@ -55,7 +55,8 @@ impl ViewState for LicensesView {
                 self.inner.toggle_compatibility();
                 EventResult::Consumed
             }
-            KeyCode::Tab | KeyCode::Char('p') => {
+            // `p` toggles panel focus; `Tab` is reserved for global tab switching.
+            KeyCode::Char('p') => {
                 if ctx.mode == ViewMode::Diff {
                     self.inner.toggle_focus();
                 }

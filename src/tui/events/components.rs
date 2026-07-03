@@ -4,7 +4,7 @@ use crate::tui::traits::{EventResult, ViewContext, ViewMode, ViewState};
 use crate::tui::{App, AppMode};
 use crossterm::event::{KeyCode, KeyEvent};
 
-pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
+pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) -> bool {
     let view = &mut app.components_view;
 
     let mut ctx = ViewContext {
@@ -19,10 +19,9 @@ pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
     let result = view.handle_key(key, &mut ctx);
 
     match result {
-        EventResult::Ignored => {
-            // Handle data-dependent keys that the ViewState can't process
-            handle_data_dependent_keys(app, key);
-        }
+        // The view ignored the key: give the data-dependent handler a chance.
+        // Its return value is the final "consumed" verdict for this tab.
+        EventResult::Ignored => handle_data_dependent_keys(app, key),
         EventResult::NavigateTo(ref target) => {
             // For Dependencies navigation, set a status message
             if matches!(target, crate::tui::traits::TabTarget::Dependencies) {
@@ -32,15 +31,19 @@ pub(super) fn handle_components_keys(app: &mut App, key: KeyEvent) {
                 }
             }
             app.handle_event_result(result);
+            true
         }
         _ => {
             app.handle_event_result(result);
+            true
         }
     }
 }
 
 /// Handle keys that need access to App data (clipboard, browser, security cache).
-fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
+///
+/// Returns `true` if the key matched one of the data-dependent actions.
+fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) -> bool {
     match key.code {
         KeyCode::Char('y') => {
             if let Some(comp_name) = get_components_tab_selected_name(app) {
@@ -96,7 +99,7 @@ fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
                                 _ => {
                                     app.security_cache.add_note(&comp_name, "");
                                     app.status_message = Some("Note cleared".to_string());
-                                    return;
+                                    return true;
                                 }
                             }
                         }
@@ -108,8 +111,9 @@ fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
                 }
             }
         }
-        _ => {}
+        _ => return false,
     }
+    true
 }
 
 /// Get the name of the currently selected component (for Components tab quick actions)

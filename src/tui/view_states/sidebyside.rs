@@ -56,8 +56,9 @@ impl ViewState for SideBySideView {
         }
 
         match key.code {
-            // Toggle focus between panels
-            KeyCode::Tab | KeyCode::Char('p') | KeyCode::Left | KeyCode::Right => {
+            // Toggle focus between panels. `Tab` is reserved for global tab
+            // switching; `p`/arrows toggle panel focus here.
+            KeyCode::Char('p') | KeyCode::Left | KeyCode::Right => {
                 self.inner.toggle_focus();
                 EventResult::Consumed
             }
@@ -260,9 +261,19 @@ mod tests {
         let mut view = SideBySideView::new();
         let mut ctx = make_ctx();
 
+        // `p` toggles panel focus. `Tab` is intentionally NOT handled here — it
+        // is reserved for global tab switching in the diff dispatcher.
         assert!(!view.inner().focus_right);
-        view.handle_key(make_key(KeyCode::Tab), &mut ctx);
+        view.handle_key(make_key(KeyCode::Char('p')), &mut ctx);
         assert!(view.inner().focus_right);
+
+        // `Tab` must be ignored by the view so it falls through to the global
+        // fallback (next-tab) instead of toggling focus.
+        assert_eq!(
+            view.handle_key(make_key(KeyCode::Tab), &mut ctx),
+            EventResult::Ignored
+        );
+        assert!(view.inner().focus_right, "Tab must not toggle panel focus");
     }
 
     #[test]

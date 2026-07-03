@@ -5,7 +5,7 @@ use crate::tui::render_context::RenderContext;
 use crate::tui::traits::{EventResult, TabTarget, ViewContext, ViewMode, ViewState};
 use crossterm::event::KeyEvent;
 
-pub(super) fn handle_diff_compliance_keys(app: &mut App, key: KeyEvent) {
+pub(super) fn handle_diff_compliance_keys(app: &mut App, key: KeyEvent) -> bool {
     // Compute max violations before borrowing view mutably
     let max_violations = {
         let ctx = RenderContext::from_app(app);
@@ -40,6 +40,7 @@ pub(super) fn handle_diff_compliance_keys(app: &mut App, key: KeyEvent) {
         )
     };
     // `view` borrow is now dropped — safe to use `app` freely
+    let consumed = !matches!(result, EventResult::Ignored);
 
     if wants_export {
         app.export_compliance(crate::tui::export::ExportFormat::Json);
@@ -47,7 +48,7 @@ pub(super) fn handle_diff_compliance_keys(app: &mut App, key: KeyEvent) {
 
     if wants_toggle_group {
         toggle_selected_group(app);
-        return;
+        return true;
     }
 
     if wants_go_to_component {
@@ -58,10 +59,11 @@ pub(super) fn handle_diff_compliance_keys(app: &mut App, key: KeyEvent) {
         } else {
             app.set_status_message("No component associated with this violation");
         }
-        return;
+        return true;
     }
 
     app.handle_event_result(result);
+    consumed
 }
 
 /// Toggle the expand/collapse state of the group at the currently selected position.

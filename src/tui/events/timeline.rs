@@ -3,17 +3,17 @@
 use crate::tui::App;
 use crossterm::event::{KeyCode, KeyEvent};
 
-pub(super) fn handle_timeline_keys(app: &mut App, key: KeyEvent) {
+pub(super) fn handle_timeline_keys(app: &mut App, key: KeyEvent) -> bool {
     // Handle search input mode
     if app.tabs.timeline.search.active {
         handle_timeline_search(app, key);
-        return;
+        return true;
     }
 
     // Handle jump mode
     if app.tabs.timeline.jump_mode {
         handle_timeline_jump(app, key);
-        return;
+        return true;
     }
 
     // Handle version diff modal
@@ -42,7 +42,8 @@ pub(super) fn handle_timeline_keys(app: &mut App, key: KeyEvent) {
             }
             _ => {}
         }
-        return;
+        // Modal swallows all keys so none leak to the global fallback.
+        return true;
     }
 
     // Handle component history modal
@@ -53,7 +54,7 @@ pub(super) fn handle_timeline_keys(app: &mut App, key: KeyEvent) {
             }
             _ => {}
         }
-        return;
+        return true;
     }
 
     match key.code {
@@ -131,8 +132,9 @@ pub(super) fn handle_timeline_keys(app: &mut App, key: KeyEvent) {
             app.tabs.timeline.scroll_chart_right();
         }
 
-        _ => {}
+        _ => return false,
     }
+    true
 }
 
 pub(super) fn handle_timeline_search(app: &mut App, key: KeyEvent) {

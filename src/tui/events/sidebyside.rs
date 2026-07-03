@@ -4,7 +4,7 @@ use crate::tui::App;
 use crate::tui::traits::{EventResult, ViewContext, ViewMode, ViewState};
 use crossterm::event::{KeyCode, KeyEvent};
 
-pub(super) fn handle_sidebyside_keys(app: &mut App, key: KeyEvent) {
+pub(super) fn handle_sidebyside_keys(app: &mut App, key: KeyEvent) -> bool {
     let view = &mut app.sidebyside_view;
 
     let mut ctx = ViewContext {
@@ -28,17 +28,17 @@ pub(super) fn handle_sidebyside_keys(app: &mut App, key: KeyEvent) {
     match result {
         EventResult::StatusMessage(msg) => {
             app.status_message = Some(msg);
+            true
         }
-        EventResult::Ignored => {
-            // Handle data-dependent keys
-            handle_data_dependent_keys(app, key);
-        }
-        _ => {}
+        EventResult::Ignored => handle_data_dependent_keys(app, key),
+        _ => true,
     }
 }
 
 /// Handle keys that need access to App data.
-fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
+///
+/// Returns `true` if the key is a data-dependent side-by-side binding.
+fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) -> bool {
     if key.code == KeyCode::Char('y') {
         let info = get_current_row_info(app);
         if let Some(text) = info {
@@ -47,6 +47,9 @@ fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
                 text.chars().take(50).collect::<String>()
             ));
         }
+        true
+    } else {
+        false
     }
 }
 

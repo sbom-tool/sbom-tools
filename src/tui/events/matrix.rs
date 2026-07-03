@@ -3,11 +3,11 @@
 use crate::tui::App;
 use crossterm::event::{KeyCode, KeyEvent};
 
-pub(super) fn handle_matrix_keys(app: &mut App, key: KeyEvent) {
+pub(super) fn handle_matrix_keys(app: &mut App, key: KeyEvent) -> bool {
     // Handle search input mode
     if app.tabs.matrix.search.active {
         handle_matrix_search(app, key);
-        return;
+        return true;
     }
 
     // Handle pair diff modal
@@ -18,7 +18,8 @@ pub(super) fn handle_matrix_keys(app: &mut App, key: KeyEvent) {
             }
             _ => {}
         }
-        return;
+        // Modal swallows all keys so none leak to the global fallback.
+        return true;
     }
 
     // Handle export options
@@ -41,7 +42,7 @@ pub(super) fn handle_matrix_keys(app: &mut App, key: KeyEvent) {
             }
             _ => {}
         }
-        return;
+        return true;
     }
 
     // Handle clustering details
@@ -58,7 +59,7 @@ pub(super) fn handle_matrix_keys(app: &mut App, key: KeyEvent) {
             }
             _ => {}
         }
-        return;
+        return true;
     }
 
     match key.code {
@@ -160,8 +161,9 @@ pub(super) fn handle_matrix_keys(app: &mut App, key: KeyEvent) {
             app.tabs.matrix.toggle_clustering_details();
         }
 
-        _ => {}
+        _ => return false,
     }
+    true
 }
 
 pub(super) fn handle_matrix_search(app: &mut App, key: KeyEvent) {

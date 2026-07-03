@@ -4,8 +4,8 @@ use crate::tui::App;
 use crate::tui::traits::{EventResult, ViewContext, ViewMode, ViewState};
 use crossterm::event::{KeyCode, KeyEvent};
 
-/// Handle source-tab-specific key events.
-pub fn handle_source_keys(app: &mut App, key: KeyEvent) {
+/// Handle source-tab-specific key events. Returns whether the key was consumed.
+pub fn handle_source_keys(app: &mut App, key: KeyEvent) -> bool {
     let view = &mut app.source_view;
 
     let mut ctx = ViewContext {
@@ -22,17 +22,17 @@ pub fn handle_source_keys(app: &mut App, key: KeyEvent) {
     match result {
         EventResult::StatusMessage(msg) => {
             app.status_message = Some(msg);
+            true
         }
-        EventResult::Ignored => {
-            // Handle data-dependent keys
-            handle_data_dependent_keys(app, key);
-        }
-        _ => {}
+        EventResult::Ignored => handle_data_dependent_keys(app, key),
+        _ => true,
     }
 }
 
 /// Handle keys that need access to App data (clipboard, export).
-fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
+///
+/// Returns `true` if the key is a data-dependent Source binding.
+fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) -> bool {
     match key.code {
         KeyCode::Char('c') => {
             // Copy JSON path
@@ -56,6 +56,7 @@ fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
             let result = crate::tui::export::export_source_content(&content, label);
             app.set_status_message(result.message);
         }
-        _ => {}
+        _ => return false,
     }
+    true
 }

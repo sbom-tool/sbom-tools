@@ -3,11 +3,11 @@
 use crate::tui::App;
 use crossterm::event::{KeyCode, KeyEvent};
 
-pub(super) fn handle_multi_diff_keys(app: &mut App, key: KeyEvent) {
+pub(super) fn handle_multi_diff_keys(app: &mut App, key: KeyEvent) -> bool {
     // Handle search input mode
     if app.tabs.multi_diff.search.active {
         handle_multi_diff_search(app, key);
-        return;
+        return true;
     }
 
     // Handle detail modal
@@ -18,7 +18,8 @@ pub(super) fn handle_multi_diff_keys(app: &mut App, key: KeyEvent) {
             }
             _ => {}
         }
-        return;
+        // Modal swallows all keys so none leak to the global fallback.
+        return true;
     }
 
     // Handle variable component drill-down
@@ -35,7 +36,8 @@ pub(super) fn handle_multi_diff_keys(app: &mut App, key: KeyEvent) {
             }
             _ => {}
         }
-        return;
+        // Drill-down overlay swallows all keys.
+        return true;
     }
 
     match key.code {
@@ -117,8 +119,9 @@ pub(super) fn handle_multi_diff_keys(app: &mut App, key: KeyEvent) {
             app.set_status_message(status.to_string());
         }
 
-        _ => {}
+        _ => return false,
     }
+    true
 }
 
 pub(super) fn handle_multi_diff_search(app: &mut App, key: KeyEvent) {

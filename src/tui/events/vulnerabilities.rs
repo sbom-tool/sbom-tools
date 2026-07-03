@@ -5,7 +5,7 @@ use crate::tui::app::AppMode;
 use crate::tui::traits::{EventResult, ViewContext, ViewMode, ViewState};
 use crossterm::event::{KeyCode, KeyEvent};
 
-pub(super) fn handle_vulnerabilities_keys(app: &mut App, key: KeyEvent) {
+pub(super) fn handle_vulnerabilities_keys(app: &mut App, key: KeyEvent) -> bool {
     let view = &mut app.vulnerabilities_view;
 
     let mut ctx = ViewContext {
@@ -22,17 +22,17 @@ pub(super) fn handle_vulnerabilities_keys(app: &mut App, key: KeyEvent) {
     match result {
         EventResult::StatusMessage(msg) => {
             app.status_message = Some(msg);
+            true
         }
-        EventResult::Ignored => {
-            // Handle data-dependent keys
-            handle_data_dependent_keys(app, key);
-        }
-        _ => {}
+        EventResult::Ignored => handle_data_dependent_keys(app, key),
+        _ => true,
     }
 }
 
 /// Handle keys that need access to App data.
-fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
+///
+/// Returns `true` if the key is a data-dependent Vulnerabilities binding.
+fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) -> bool {
     match key.code {
         KeyCode::Char('E') => {
             if app.vulnerabilities_state().group_by_component {
@@ -55,8 +55,9 @@ fn handle_data_dependent_keys(app: &mut App, key: KeyEvent) {
                 handle_flat_enter(app);
             }
         }
-        _ => {}
+        _ => return false,
     }
+    true
 }
 
 /// Handle Enter key in flat (non-grouped) mode: navigate to affected component.

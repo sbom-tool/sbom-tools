@@ -245,7 +245,57 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
         return;
     }
 
-    // Global key bindings
+    // Tab- and mode-specific handlers get first crack at the key. Whatever they
+    // consume never reaches the global fallback below, so a tab-local binding
+    // (Components' `1`-`8` quick filters, SideBySide's `/` search, `p` panel
+    // focus, …) wins over a colliding global binding instead of both firing.
+    let consumed_by_tab = dispatch_tab_key(app, key);
+    let consumed_by_mode = dispatch_mode_key(app, key);
+
+    if !consumed_by_tab && !consumed_by_mode {
+        handle_global_fallback(app, key);
+    }
+}
+
+/// Dispatch a key to the active tab's handler.
+///
+/// Returns `true` if the tab consumed the key, meaning it must not fall through
+/// to [`handle_global_fallback`]. Tabs without a dedicated handler
+/// (Summary/Overview/Tree) never consume, so global bindings and list
+/// navigation still apply on them.
+fn dispatch_tab_key(app: &mut super::App, key: KeyEvent) -> bool {
+    match app.active_tab {
+        super::TabKind::Components => components::handle_components_keys(app, key),
+        super::TabKind::Dependencies => dependencies::handle_dependencies_keys(app, key),
+        super::TabKind::Licenses => licenses::handle_licenses_keys(app, key),
+        super::TabKind::Vulnerabilities => vulnerabilities::handle_vulnerabilities_keys(app, key),
+        super::TabKind::Quality => quality::handle_quality_keys(app, key),
+        super::TabKind::Compliance => compliance::handle_diff_compliance_keys(app, key),
+        super::TabKind::GraphChanges => graph_changes::handle_graph_changes_keys(app, key),
+        super::TabKind::SideBySide => sidebyside::handle_sidebyside_keys(app, key),
+        super::TabKind::Source => source::handle_source_keys(app, key),
+        super::TabKind::Summary | super::TabKind::Overview | super::TabKind::Tree => false,
+    }
+}
+
+/// Dispatch a key to the active multi-comparison mode handler.
+///
+/// Returns `true` if the mode consumed the key. Single-pair modes (Diff/View)
+/// have no mode handler and never consume here.
+fn dispatch_mode_key(app: &mut super::App, key: KeyEvent) -> bool {
+    match app.mode {
+        super::AppMode::MultiDiff => multi_diff::handle_multi_diff_keys(app, key),
+        super::AppMode::Timeline => timeline::handle_timeline_keys(app, key),
+        super::AppMode::Matrix => matrix::handle_matrix_keys(app, key),
+        super::AppMode::Diff | super::AppMode::View => false,
+    }
+}
+
+/// Global key bindings — the fallback layer.
+///
+/// Invoked only for keys that no active tab or mode handler consumed, so a
+/// tab-local binding always takes precedence over a colliding global one.
+fn handle_global_fallback(app: &mut super::App, key: KeyEvent) {
     match key.code {
         KeyCode::Char('q') => {
             // Save last active tab before quitting
@@ -374,28 +424,6 @@ pub fn handle_key_event(app: &mut super::App, key: KeyEvent) {
         KeyCode::End | KeyCode::Char('G') => app.select_last(),
         _ => {}
     }
-
-    // Tab-specific key bindings
-    match app.active_tab {
-        super::TabKind::Components => components::handle_components_keys(app, key),
-        super::TabKind::Dependencies => dependencies::handle_dependencies_keys(app, key),
-        super::TabKind::Licenses => licenses::handle_licenses_keys(app, key),
-        super::TabKind::Vulnerabilities => vulnerabilities::handle_vulnerabilities_keys(app, key),
-        super::TabKind::Quality => quality::handle_quality_keys(app, key),
-        super::TabKind::Compliance => compliance::handle_diff_compliance_keys(app, key),
-        super::TabKind::GraphChanges => graph_changes::handle_graph_changes_keys(app, key),
-        super::TabKind::SideBySide => sidebyside::handle_sidebyside_keys(app, key),
-        super::TabKind::Source => source::handle_source_keys(app, key),
-        super::TabKind::Summary | super::TabKind::Overview | super::TabKind::Tree => {}
-    }
-
-    // Mode-specific key bindings for multi-diff, timeline, and matrix
-    match app.mode {
-        super::AppMode::MultiDiff => multi_diff::handle_multi_diff_keys(app, key),
-        super::AppMode::Timeline => timeline::handle_timeline_keys(app, key),
-        super::AppMode::Matrix => matrix::handle_matrix_keys(app, key),
-        _ => {}
-    }
 }
 
 /// Get the text that would be copied for the current selection in diff mode.
@@ -521,5 +549,181 @@ fn dispatch_export(app: &mut super::App, format: crate::tui::export::ExportForma
         app.export_compliance(format);
     } else {
         app.export(format);
+    }
+}
+
+#[cfg(test)]
+mod dispatch_precedence_tests {
+    //! Single-dispatch precedence contract for the diff key handler.
+    //!
+    //! The dispatcher gives the active tab (and multi-comparison mode) first
+    //! crack at every key via [`dispatch_tab_key`]/[`dispatch_mode_key`]; only
+    //! keys they *don't* consume reach [`handle_global_fallback`]. These tests
+    //! lock that contract per-tab: a tab-local binding always wins over a
+    //! colliding global one, universal chrome keys are never shadowed, and
+    //! navigation is never starved on the tabs whose global `select_*` is a
+    //! no-op.
+    //!
+    //! Routing is asserted directly on the `bool` returned by `dispatch_tab_key`
+    //! (data-independent — it does not depend on how many rows the demo fixture
+    //! happens to have); the individual views' navigation *effects* are covered
+    //! by each view's own unit tests.
+
+    use super::{dispatch_tab_key, handle_key_event};
+    use crate::tui::test_support::{DEMO_NEW, DEMO_OLD, demo_diff, pin_theme};
+    use crate::tui::{App, TabKind};
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+
+    fn diff_app(active_tab: TabKind) -> App {
+        pin_theme();
+        let (diff, old, new) = demo_diff();
+        let mut app = App::new_diff(diff, old, new, DEMO_OLD, DEMO_NEW);
+        app.active_tab = active_tab;
+        app
+    }
+
+    fn k(code: KeyCode) -> KeyEvent {
+        KeyEvent::new(code, KeyModifiers::NONE)
+    }
+
+    /// Navigation must reach every list-bearing tab. Tabs whose global
+    /// `select_*` is a no-op (SideBySide/Quality/Compliance/GraphChanges) — plus
+    /// Licenses/Dependencies, whose views own navigation — MUST consume `j`/`k`
+    /// locally. Tabs that navigate through the global list handler
+    /// (Components/Vulnerabilities/Source) MUST let `j`/`k` fall through. Either
+    /// way navigation is never starved.
+    #[test]
+    fn nav_keys_route_to_the_correct_layer() {
+        for tab in [
+            TabKind::SideBySide,
+            TabKind::Quality,
+            TabKind::Compliance,
+            TabKind::GraphChanges,
+            TabKind::Licenses,
+            TabKind::Dependencies,
+        ] {
+            let mut app = diff_app(tab);
+            assert!(
+                dispatch_tab_key(&mut app, k(KeyCode::Char('j'))),
+                "{tab:?} must consume 'j' locally (global select_down is a no-op there)"
+            );
+            assert!(
+                dispatch_tab_key(&mut app, k(KeyCode::Char('k'))),
+                "{tab:?} must consume 'k' locally"
+            );
+        }
+
+        for tab in [
+            TabKind::Components,
+            TabKind::Vulnerabilities,
+            TabKind::Source,
+        ] {
+            let mut app = diff_app(tab);
+            assert!(
+                !dispatch_tab_key(&mut app, k(KeyCode::Char('j'))),
+                "{tab:?} must defer 'j' to the global list navigation"
+            );
+            assert!(
+                !dispatch_tab_key(&mut app, k(KeyCode::Char('k'))),
+                "{tab:?} must defer 'k' to the global list navigation"
+            );
+        }
+    }
+
+    /// The confirmed global/tab key collisions resolve tab-first: the tab owns
+    /// the key and the colliding global binding never fires.
+    #[test]
+    fn tab_bindings_win_over_colliding_global_bindings() {
+        // '/': SideBySide has its own search; Components has none and defers to
+        // the global search overlay.
+        assert!(
+            dispatch_tab_key(&mut diff_app(TabKind::SideBySide), k(KeyCode::Char('/'))),
+            "SideBySide consumes '/' for its own search"
+        );
+        assert!(
+            !dispatch_tab_key(&mut diff_app(TabKind::Components), k(KeyCode::Char('/'))),
+            "Components has no '/'; it falls through to the global search overlay"
+        );
+
+        // '1'-'8': Components quick filters vs. the global tab-select.
+        assert!(
+            dispatch_tab_key(&mut diff_app(TabKind::Components), k(KeyCode::Char('1'))),
+            "Components consumes '1' as a quick filter"
+        );
+        assert!(
+            !dispatch_tab_key(&mut diff_app(TabKind::Summary), k(KeyCode::Char('1'))),
+            "Summary has no handler; '1' falls through to the global tab-select"
+        );
+
+        // 'p': panel focus toggle vs. the global next-policy binding.
+        for tab in [TabKind::Components, TabKind::SideBySide] {
+            assert!(
+                dispatch_tab_key(&mut diff_app(tab), k(KeyCode::Char('p'))),
+                "{tab:?} consumes 'p' for panel focus, not global next-policy"
+            );
+        }
+    }
+
+    /// Universal chrome keys must never be shadowed by a tab: `Tab` (tab
+    /// switching) and `q` (quit) fall through on *every* tab — including the
+    /// tabs that used to bind `Tab` to panel focus.
+    #[test]
+    fn universal_keys_are_never_consumed_by_a_tab() {
+        for tab in [
+            TabKind::Components,
+            TabKind::Licenses,
+            TabKind::SideBySide,
+            TabKind::Vulnerabilities,
+            TabKind::Dependencies,
+            TabKind::Source,
+            TabKind::Quality,
+            TabKind::Compliance,
+            TabKind::GraphChanges,
+        ] {
+            assert!(
+                !dispatch_tab_key(&mut diff_app(tab), k(KeyCode::Tab)),
+                "'Tab' must fall through to global tab-switching on {tab:?}"
+            );
+            assert!(
+                !dispatch_tab_key(&mut diff_app(tab), k(KeyCode::Char('q'))),
+                "'q' (quit) must fall through to the global fallback on {tab:?}"
+            );
+        }
+    }
+
+    /// End-to-end through the real dispatcher: the global fallback applies only
+    /// to keys the active tab did not consume.
+    #[test]
+    fn global_fallback_only_fires_for_unconsumed_keys() {
+        // '1' on Components toggles a filter, so the global tab-select must NOT
+        // fire and the tab stays put.
+        let mut app = diff_app(TabKind::Components);
+        handle_key_event(&mut app, k(KeyCode::Char('1')));
+        assert_eq!(
+            app.active_tab,
+            TabKind::Components,
+            "'1' on Components toggles a filter; the global tab-select must not fire"
+        );
+
+        // '/' on SideBySide opens the tab-local search, not the global overlay.
+        let mut app = diff_app(TabKind::SideBySide);
+        handle_key_event(&mut app, k(KeyCode::Char('/')));
+        assert!(
+            !app.overlays.search.active,
+            "SideBySide '/' must not open the global search overlay"
+        );
+        assert!(
+            app.side_by_side_state().search_active,
+            "SideBySide '/' activates the tab-local search"
+        );
+
+        // 'Tab' switches tabs from Components (the view no longer steals it).
+        let mut app = diff_app(TabKind::Components);
+        handle_key_event(&mut app, k(KeyCode::Tab));
+        assert_ne!(
+            app.active_tab,
+            TabKind::Components,
+            "Tab must switch tabs from Components, not toggle panel focus"
+        );
     }
 }

@@ -52,7 +52,8 @@ impl ViewState for ComponentsView {
                 self.inner.toggle_multi_select_mode();
                 EventResult::Consumed
             }
-            KeyCode::Char('p') | KeyCode::Tab => {
+            // `p` toggles panel focus; `Tab` is reserved for global tab switching.
+            KeyCode::Char('p') => {
                 self.inner.toggle_focus();
                 EventResult::Consumed
             }

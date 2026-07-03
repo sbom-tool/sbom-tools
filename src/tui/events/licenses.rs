@@ -4,7 +4,7 @@ use crate::tui::App;
 use crate::tui::traits::{EventResult, TabTarget, ViewContext, ViewMode, ViewState};
 use crossterm::event::KeyEvent;
 
-pub(super) fn handle_licenses_keys(app: &mut App, key: KeyEvent) {
+pub(super) fn handle_licenses_keys(app: &mut App, key: KeyEvent) -> bool {
     let view = &mut app.licenses_view;
 
     let mut ctx = ViewContext {
@@ -19,6 +19,7 @@ pub(super) fn handle_licenses_keys(app: &mut App, key: KeyEvent) {
     let result = view.handle_key(key, &mut ctx);
 
     match result {
+        EventResult::Ignored => false,
         EventResult::NavigateTo(TabTarget::Components) => {
             // Enrich the navigation with the selected license name
             let license_name = get_selected_license_name(app);
@@ -28,8 +29,12 @@ pub(super) fn handle_licenses_keys(app: &mut App, key: KeyEvent) {
                 TabTarget::Components
             };
             app.handle_event_result(EventResult::NavigateTo(target));
+            true
         }
-        _ => app.handle_event_result(result),
+        _ => {
+            app.handle_event_result(result);
+            true
+        }
     }
 }
 
