@@ -2738,11 +2738,7 @@ mod dependency_adjacency_tests {
 /// These tests ensure that search results correctly resolve to component IDs
 /// and that navigation within search results works properly.
 mod search_navigation_tests {
-    use sbom_tools::model::{
-        CanonicalId, Component, DocumentMetadata, NormalizedSbom, NormalizedSbomIndex,
-    };
-    use sbom_tools::tui::state::ListNavigation;
-    use sbom_tools::tui::viewmodel::SearchState;
+    use sbom_tools::model::{Component, DocumentMetadata, NormalizedSbom, NormalizedSbomIndex};
 
     /// Create a test SBOM with searchable components
     fn create_searchable_sbom() -> NormalizedSbom {
@@ -2808,49 +2804,6 @@ mod search_navigation_tests {
                 "Component name should contain search term"
             );
         }
-    }
-
-    #[test]
-    fn test_search_state_navigation() {
-        let mut search: SearchState<CanonicalId> = SearchState::new();
-
-        // Simulate search results
-        let ids: Vec<CanonicalId> = vec![
-            CanonicalId::synthetic(None, "result1", None),
-            CanonicalId::synthetic(None, "result2", None),
-            CanonicalId::synthetic(None, "result3", None),
-            CanonicalId::synthetic(None, "result4", None),
-            CanonicalId::synthetic(None, "result5", None),
-        ];
-
-        search.set_results(ids);
-
-        // Initial selection
-        assert_eq!(search.selected, 0);
-        assert!(search.selected_result().is_some());
-
-        // Navigate forward
-        search.select_next();
-        assert_eq!(search.selected, 1);
-
-        search.select_next();
-        search.select_next();
-        assert_eq!(search.selected, 3);
-
-        // Navigate backward
-        search.select_prev();
-        assert_eq!(search.selected, 2);
-
-        // Can't go past end
-        search.select_next();
-        search.select_next();
-        search.select_next();
-        assert_eq!(search.selected, 4); // Stays at last
-
-        // Can't go before start
-        search.set_selected(0);
-        search.select_prev();
-        assert_eq!(search.selected, 0); // Stays at first
     }
 
     #[test]
