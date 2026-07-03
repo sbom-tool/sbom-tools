@@ -22,6 +22,7 @@ pub mod escape;
 mod html;
 mod json;
 mod markdown;
+pub mod oscal;
 mod sarif;
 mod sidebyside;
 pub mod streaming;
@@ -219,6 +220,7 @@ pub fn create_reporter_with_options(
         }
         ReportFormat::Json | ReportFormat::Tui => Box::new(JsonReporter::new()), // TUI uses JSON internally
         ReportFormat::Sarif => Box::new(SarifReporter::new()),
+        ReportFormat::OscalJson => Box::new(JsonReporter::new()),
         ReportFormat::Markdown => Box::new(MarkdownReporter::new()),
         ReportFormat::Html => Box::new(HtmlReporter::new()),
         ReportFormat::SideBySide => Box::new(SideBySideReporter::new()),

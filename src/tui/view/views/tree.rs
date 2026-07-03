@@ -624,11 +624,7 @@ fn render_identifiers_tab(
             Style::default().fg(scheme.accent).bold(),
         ));
         // Wrap long PURLs across multiple lines
-        let purl_display = if purl.len() > width - 6 {
-            format!("{}...", &purl[..width.saturating_sub(9)])
-        } else {
-            purl.clone()
-        };
+        let purl_display = crate::tui::widgets::truncate_str(purl, width.saturating_sub(6));
         lines.push(Line::from(vec![
             Span::styled("  ", Style::default()),
             Span::raw(purl_display),

@@ -303,3 +303,49 @@ pub fn render_size_warning(
 
     frame.render_widget(paragraph, area);
 }
+
+#[cfg(test)]
+mod truncate_str_tests {
+    use super::truncate_str;
+    use unicode_width::UnicodeWidthStr;
+
+    #[test]
+    fn shorter_than_max_is_unchanged() {
+        assert_eq!(truncate_str("hello", 10), "hello");
+        assert_eq!(truncate_str("hello", 5), "hello");
+    }
+
+    #[test]
+    fn longer_ascii_gets_ellipsis_at_exact_width() {
+        assert_eq!(truncate_str("abcdefghij", 8), "abcde..."); // 5 + "..." == 8
+    }
+
+    #[test]
+    fn multibyte_never_panics_and_stays_within_width() {
+        // Accented Latin: each char is 1 display col but 2 bytes — byte-slicing
+        // at a non-char boundary used to panic here.
+        let out = truncate_str("café-latté-münchen", 6);
+        assert!(UnicodeWidthStr::width(out.as_str()) <= 6);
+        assert!(out.ends_with("..."));
+    }
+
+    #[test]
+    fn cjk_double_width_is_counted_as_two_cells() {
+        let out = truncate_str("字符串截断测试", 7);
+        assert!(UnicodeWidthStr::width(out.as_str()) <= 7);
+    }
+
+    #[test]
+    fn emoji_stays_within_width() {
+        let out = truncate_str("🚀🚀🚀🚀🚀", 5);
+        assert!(UnicodeWidthStr::width(out.as_str()) <= 5);
+    }
+
+    #[test]
+    fn tiny_and_zero_max_width_do_not_panic_or_ellipsize() {
+        assert_eq!(truncate_str("hello", 0), "");
+        let out = truncate_str("hello", 2);
+        assert!(UnicodeWidthStr::width(out.as_str()) <= 2);
+        assert!(!out.contains("...")); // max_width <= 3 => no ellipsis
+    }
+}

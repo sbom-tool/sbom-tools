@@ -1167,27 +1167,17 @@ pub fn handle_mouse_event(app: &mut ViewApp, mouse: event::MouseEvent) {
 
 /// Handle click on tab bar
 fn handle_tab_click(app: &mut ViewApp, x: u16) {
-    // Tab labels matching view/ui.rs render_tabs (format: "[N] Title " + " | " separator)
-    let tab_labels: &[(&str, ViewTab)] = &[
-        ("Overview", ViewTab::Overview),
-        ("Components", ViewTab::Tree),
-        ("Vulnerabilities", ViewTab::Vulnerabilities),
-        ("Licenses", ViewTab::Licenses),
-        ("Dependencies", ViewTab::Dependencies),
-        ("Quality", ViewTab::Quality),
-        ("Compliance", ViewTab::Compliance),
-        ("Source", ViewTab::Source),
-    ];
-
-    // Compute cumulative positions: each tab is "[N] Title " (4 + title.len + 1) + 3 for separator
-    let mut pos: u16 = 0;
-    for (label, tab) in tab_labels {
-        let width = 4 + label.len() as u16 + 1; // "[N] " + title + " "
-        if x >= pos && x < pos + width {
-            app.select_tab(*tab);
-            return;
-        }
-        pos += width + 3; // " | " separator
+    // Derive hit regions from the profile's actual rendered tabs (matches
+    // view/ui.rs render_tabs), rather than a hardcoded SBOM label list that
+    // mis-selected under the CBOM/AI-BOM profiles.
+    let tabs = ViewTab::tabs_for_profile(app.bom_profile);
+    let labels: Vec<String> = tabs
+        .iter()
+        .enumerate()
+        .map(|(i, tab)| format!("[{}] {} ", i + 1, tab.title()))
+        .collect();
+    if let Some(idx) = crate::tui::shared::tab_bar_hit(&labels, 0, 3, x) {
+        app.select_tab(tabs[idx]);
     }
 }
 

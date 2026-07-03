@@ -657,11 +657,7 @@ fn render_affected_elements(
     let mut content_lines: Vec<Line> = Vec::new();
 
     // --- Line 1: pattern header ---
-    let pattern_display = if group.pattern.len() > max_width {
-        format!("{}\u{2026}", &group.pattern[..max_width.saturating_sub(1)])
-    } else {
-        group.pattern.clone()
-    };
+    let pattern_display = crate::tui::widgets::truncate_str(&group.pattern, max_width);
     content_lines.push(Line::from(vec![Span::styled(
         format!("  {pattern_display}"),
         Style::default().fg(scheme.warning).italic(),
@@ -780,11 +776,7 @@ fn render_affected_elements(
         dir_sorted.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
 
         for (dir, file_count) in &dir_sorted {
-            let dir_display = if dir.len() > max_width.saturating_sub(12) {
-                format!("{}\u{2026}", &dir[..max_width.saturating_sub(13)])
-            } else {
-                dir.clone()
-            };
+            let dir_display = crate::tui::widgets::truncate_str(dir, max_width.saturating_sub(12));
             content_lines.push(Line::from(vec![
                 Span::styled(
                     format!("    {dir_display}"),
