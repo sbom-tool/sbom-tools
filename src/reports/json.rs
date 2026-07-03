@@ -103,6 +103,11 @@ impl ReportGenerator for JsonReporter {
                 semantic_score: result.semantic_score,
             },
             cra_compliance,
+            ml_regressions: if result.ml_regressions.is_empty() {
+                None
+            } else {
+                Some(&result.ml_regressions)
+            },
             reports: if self.summary_only {
                 None
             } else {
@@ -272,6 +277,8 @@ struct JsonDiffReport<'a> {
     metadata: JsonReportMetadata,
     summary: JsonSummary,
     cra_compliance: CraCompliance,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ml_regressions: Option<&'a [crate::diff::MlRegression]>,
     #[serde(skip_serializing_if = "Option::is_none")]
     reports: Option<JsonReports<'a>>,
 }

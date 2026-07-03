@@ -405,6 +405,7 @@ Compares two SBOMs and reports added, removed, and modified components with vers
 | `--fail-on-change` | Exit with code 1 if changes are detected |
 | `--fail-on-vuln` | Exit with code 2 if new vulnerabilities are introduced |
 | `--fail-on-vex-gap` | Exit with code 4 if introduced vulnerabilities lack VEX statements |
+| `--fail-on-ml-regression` | Exit with code 7 if a supported numeric ML metric regresses |
 | `--graph-diff` | Enable dependency graph structure diffing |
 | `--ecosystem-rules <path>` | Load custom per-ecosystem normalization rules |
 | `--fuzzy-preset <preset>` | Matching preset: `strict`, `balanced` (default), `permissive` |
@@ -688,6 +689,7 @@ Select with `-o` / `--output`:
 | TUI | `tui` | Interactive exploration |
 | JSON | `json` | Programmatic integration |
 | SARIF | `sarif` | CI/CD security dashboards (SARIF 2.1.0) |
+| OSCAL assessment results | `oscal-json` | OSCAL 1.1.2 validation findings for assessment tooling |
 | Markdown | `markdown` | Documentation, PR comments |
 | HTML | `html` | Stakeholder reports |
 | CSV | `csv` | Spreadsheet analysis |
@@ -709,11 +711,19 @@ sbom-tools diff old.json new.json --fail-on-vuln --enrich-vulns -o sarif -O resu
 # Fail if introduced vulnerabilities lack VEX statements
 sbom-tools diff old.json new.json --fail-on-vex-gap --vex vex.json --enrich-vulns
 
+# Fail if a supported ML performance metric regresses
+sbom-tools diff baseline-ai-bom.json candidate-ai-bom.json \
+  --fail-on-ml-regression -o json -O ml-diff.json
+
 # Fail if quality score drops below 80
 sbom-tools quality sbom.json --profile security --min-score 80 -o json
 
 # Validate CRA compliance
 sbom-tools validate sbom.json --standard cra -o sarif -O compliance.sarif
+
+# Export existing validation findings as OSCAL assessment results
+sbom-tools validate sbom.json --standard ntia \
+  -o oscal-json -O validation-results.oscal.json
 
 # Check for vulnerable Log4j versions across all SBOMs (exits 1 if found)
 sbom-tools query "log4j" --version "<2.17.0" fleet/*.json -o json
@@ -841,6 +851,14 @@ jobs:
 | `4` | VEX coverage gaps found (`--fail-on-vex-gap`) |
 | `5` | License policy violations found (`license-check`) |
 | `6` | Actively exploited (KEV) vulnerability introduced (`--fail-on-kev`) |
+| `7` | Supported ML performance metric regressed (`--fail-on-ml-regression`) |
+
+ML regression directions are explicit. Higher is better for `accuracy`, `f1`,
+`f1_score`, `precision`, `recall`, `auc`, `roc_auc`, `bleu`, and `rouge`.
+Lower is better for `loss`, `error`, `error_rate`, `perplexity`, `latency`, and
+`latency_ms`. Missing, non-numeric, and unrecognized metrics do not trigger the
+gate. JSON output includes each trigger in `ml_regressions` with the component,
+metric, previous value, and new value.
 
 ## Configuration
 

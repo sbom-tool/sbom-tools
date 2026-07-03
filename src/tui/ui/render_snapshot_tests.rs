@@ -471,3 +471,42 @@ mod diff_alignment {
         );
     }
 }
+
+#[test]
+fn diff_tab_click_selects_the_rendered_tab_including_source() {
+    use crate::tui::events::mouse::handle_mouse_event;
+    use crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+    use unicode_width::UnicodeWidthStr;
+
+    let mut app = demo_app(TabKind::Summary);
+    // Wide enough that every tab (incl. the rightmost Source) is on-screen.
+    // Tab titles render on row 2 (header Length(2) + Tabs' top row).
+    let text = render_to_text(240, 40, |frame| {
+        app.prepare_render();
+        render(frame, &mut app);
+    });
+    let tab_row = text.lines().nth(2).expect("tab bar row").to_string();
+
+    // Both sit past where the old fixed-13-col estimate placed them; "Source"
+    // (rightmost) was entirely unreachable before this fix.
+    for (needle, expected) in [
+        ("Vulnerabilities", TabKind::Vulnerabilities),
+        ("Source", TabKind::Source),
+    ] {
+        let byte = tab_row
+            .find(needle)
+            .unwrap_or_else(|| panic!("{needle} not in tab row: {tab_row:?}"));
+        let col = UnicodeWidthStr::width(&tab_row[..byte]) as u16; // display col, not byte
+        app.active_tab = TabKind::Summary;
+        handle_mouse_event(
+            &mut app,
+            MouseEvent {
+                kind: MouseEventKind::Down(MouseButton::Left),
+                column: col,
+                row: 2,
+                modifiers: KeyModifiers::empty(),
+            },
+        );
+        assert_eq!(app.active_tab, expected, "click on {needle} @col {col}");
+    }
+}

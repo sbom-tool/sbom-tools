@@ -573,12 +573,8 @@ fn render_unified_mode(frame: &mut Frame, area: Rect, ctx: &RenderContext) {
         let name_style = Style::default().fg(row_color);
         let version_style = Style::default().fg(scheme.text);
 
-        // Component name (truncated)
-        let name_display = if entry.name.len() > name_width as usize {
-            format!("{}..", &entry.name[..name_width as usize - 2])
-        } else {
-            format!("{:<width$}", entry.name, width = name_width as usize)
-        };
+        // Component name (truncated — width-aware, char-boundary-safe)
+        let name_display = crate::tui::widgets::truncate_str(&entry.name, name_width as usize);
         buf.set_string(x + col_name, y, &name_display, name_style);
 
         // Old version
