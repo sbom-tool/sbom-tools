@@ -708,6 +708,10 @@ th { background: #313244; color: #89b4fa; font-weight: 600; }
 /// the original was renamed to avoid overwriting).
 fn write_to_file(path: &Path, content: &str) -> std::io::Result<PathBuf> {
     let actual_path = find_available_path(path);
+    // Create the parent directory so exports can target a new subdirectory.
+    if let Some(parent) = actual_path.parent().filter(|p| !p.as_os_str().is_empty()) {
+        std::fs::create_dir_all(parent)?;
+    }
     let mut file = File::create(&actual_path)?;
     file.write_all(content.as_bytes())?;
     Ok(actual_path)
@@ -759,5 +763,24 @@ fn display_path(path: &PathBuf) -> String {
             .unwrap_or_else(|_| path.to_path_buf())
             .display()
             .to_string()
+    }
+}
+
+#[cfg(test)]
+mod write_tests {
+    use super::write_to_file;
+
+    #[test]
+    fn creates_missing_parent_directories() {
+        let base = std::env::temp_dir().join(format!("sbom-tools-export-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base); // clean slate
+        let path = base.join("nested").join("sub").join("report.txt");
+        assert!(!path.parent().unwrap().exists());
+
+        let written = write_to_file(&path, "hello").expect("should create parents and write");
+
+        assert!(written.exists());
+        assert_eq!(std::fs::read_to_string(&written).unwrap(), "hello");
+        let _ = std::fs::remove_dir_all(&base);
     }
 }

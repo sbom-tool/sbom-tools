@@ -67,7 +67,7 @@ pub use result::{
     ConfidenceInterval, DependencyChange, DependencyChangeType, DependencyGraphChange, DiffResult,
     DiffSummary, FieldChange, GraphChangeImpact, GraphChangeSummary, GraphChangesByImpact,
     LicenseChange, LicenseChanges, LicenseConflict, MatchInfo, MatchMetrics, MatchScoreComponent,
-    MetadataChange, MetadataChangeKind, QualityDelta, SlaStatus, VexCoverageSummary,
+    MetadataChange, MetadataChangeKind, MlRegression, QualityDelta, SlaStatus, VexCoverageSummary,
     VexStatusChange, VulnerabilityChanges, VulnerabilityDetail,
 };
 pub use traits::{

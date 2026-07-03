@@ -298,3 +298,79 @@ fn crypto_list_scrolls_the_selection_into_view() {
         "selecting the last algorithm in a short panel must scroll it into view"
     );
 }
+
+#[test]
+fn view_list_click_selects_the_item_under_the_cursor() {
+    use crate::tui::view::events::handle_mouse_event;
+    use crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+
+    // (tab, a distinctive item in the LEFT list, its selected index by the demo
+    // fixture's rendered order — see the view_{tree,licenses,dependencies} snapshots).
+    let cases = [
+        (ViewTab::Tree, "axios@1.4.0", 1usize), // "npm (8)" group is flat index 0
+        (ViewTab::Licenses, "Apache-2.0", 1usize), // MIT(0), Apache-2.0(1), Unknown(2)
+        (ViewTab::Dependencies, "axios@1.4.0", 1usize), // acme-webapp(0), axios(1)
+    ];
+    for (tab, needle, expected) in cases {
+        let mut app = demo_view_app(tab);
+        // Render first so the list totals are populated, then find the item's real
+        // row from the buffer and click it — a wrong body_start would select a
+        // different (or no) item and fail the assertion.
+        let text = render_to_text(80, 24, |frame| {
+            render(frame, &mut app);
+        });
+        let row = text
+            .lines()
+            .position(|line| line.contains(needle))
+            .unwrap_or_else(|| panic!("{needle} not rendered on {tab:?}")) as u16;
+        handle_mouse_event(
+            &mut app,
+            MouseEvent {
+                kind: MouseEventKind::Down(MouseButton::Left),
+                column: 5,
+                row,
+                modifiers: KeyModifiers::empty(),
+            },
+        );
+        let selected = match tab {
+            ViewTab::Tree => app.tree_state.selected,
+            ViewTab::Licenses => app.license_state.selected,
+            ViewTab::Dependencies => app.dependency_state.selected,
+            _ => unreachable!(),
+        };
+        assert_eq!(selected, expected, "click {needle:?} on {tab:?} @row {row}");
+    }
+}
+
+#[test]
+fn aibom_tab_click_selects_a_profile_specific_tab() {
+    use crate::tui::view::events::handle_mouse_event;
+    use crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+    use unicode_width::UnicodeWidthStr;
+
+    let tabs = ViewTab::tabs_for_profile(crate::model::BomProfile::AiBom);
+    let target = *tabs.last().expect("AI-BOM has tabs"); // rightmost: most drift-sensitive
+    let first = tabs[0];
+    let mut app = aibom_view_app(first);
+
+    let text = render_to_text(240, 40, |frame| {
+        render(frame, &mut app);
+    });
+    let tab_row = text.lines().nth(2).expect("tab bar row").to_string();
+    let needle = target.title();
+    let byte = tab_row
+        .rfind(needle)
+        .unwrap_or_else(|| panic!("{needle} not in tab row: {tab_row:?}"));
+    let col = UnicodeWidthStr::width(&tab_row[..byte]) as u16;
+
+    handle_mouse_event(
+        &mut app,
+        MouseEvent {
+            kind: MouseEventKind::Down(MouseButton::Left),
+            column: col,
+            row: 2,
+            modifiers: KeyModifiers::empty(),
+        },
+    );
+    assert_eq!(app.active_tab, target, "click on {needle} @col {col}");
+}
