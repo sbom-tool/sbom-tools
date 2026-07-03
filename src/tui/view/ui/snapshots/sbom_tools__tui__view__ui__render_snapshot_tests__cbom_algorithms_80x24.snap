@@ -1,0 +1,28 @@
+---
+source: src/tui/view/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  VIEW  │ quantum-ready-app │ CycloneDX 1.7 │ [CBOM]
+
+ [1] Overview   │  [2] Algorithms   │  [3] Certs   │  [4] Keys   │  [5] Protocol
+
+────────────────────────────────────────────────────────────────────────────────
+┌ Algorithms (11) [Name] ──────────┐┌ Algorithm Detail ────────────────────────┐
+│Q AES-256-GCM  [AES]              ││Name: AES-256-GCM                         │
+│V ECDSA-P521  [ECDSA]             ││OID:  2.16.840.1.101.3.4.1.46             │
+│Q ML-DSA-65  [ML-DSA]             ││                                          │
+│Q ML-DSA-87  [ML-DSA]             ││Primitive: ae                             │
+│Q ML-KEM-1024  [ML-KEM]           ││Family:    AES                            │
+│Q ML-KEM-768  [ML-KEM]            ││Params:    256                            │
+│Q SHA-384  [SHA-2]                ││Mode:      gcm                            │
+│Q SLH-DSA-SHAKE-256s  [SLH-DSA]   ││Security:  256 bits                       │
+│V X25519  [ECDH]                  ││Quantum:   Level 1 SAFE                   │
+│Q X25519-ML-KEM-768  [Hybrid-KEM] ││Functions: keygen, encrypt, decrypt, tag  │
+│Q XMSS  [XMSS]                    ││Certified: fips140-3-l1                   │
+│                                  ││Exec Env:  software-plain-ram             │
+│                                  ││Platform:  x86_64                         │
+│                                  ││                                          │
+│                                  ││                                          │
+└──────────────────────────────────┘└──────────────────────────────────────────┘
+ Algo: 11 │ Certs: 1 │ Keys: 2 │ Quantum: 82%
+ s sort  ↑↓ select  Enter detail │  Tab switch  / search  e export  ? help  q qu

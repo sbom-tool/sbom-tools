@@ -1,0 +1,44 @@
+---
+source: src/tui/view/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  VIEW  │ quantum-ready-app │ CycloneDX 1.7 │ [CBOM]
+
+ [1] Overview   │  [2] Algorithms   │  [3] Certs   │  [4] Keys   │  [5] Protocols   │  [6] Quality   │  [7] PQC Complian
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+┌ Protocols (2) ─────────────────────────────────────┐┌ Protocol Detail ───────────────────────────────────────────────┐
+│TLS 1.3 (PQC Hybrid)  v1.3  [2 suites]              ││Name: TLS 1.3 (PQC Hybrid)                                      │
+│IPsec IKEv2 (PQC)  v2  [0 suites]                   ││                                                                │
+│                                                    ││Protocol: tls                                                   │
+│                                                    ││Version:  1.3                                                   │
+│                                                    ││                                                                │
+│                                                    ││-- Cipher Suites (2) --                                         │
+│                                                    ││TLS_AES_256_GCM_SHA384_ML_KEM_768                               │
+│                                                    ││Algorithms: crypto/algorithm/hybrid-kem,                        │
+│                                                    ││crypto/algorithm/aes-256-gcm, crypto/algorithm/sha-384          │
+│                                                    ││TLS_AES_256_GCM_SHA384                                          │
+│                                                    ││Algorithms: crypto/algorithm/x25519,                            │
+│                                                    ││crypto/algorithm/aes-256-gcm, crypto/algorithm/sha-384          │
+│                                                    ││                                                                │
+│                                                    ││-- Referenced Algorithms --                                     │
+│                                                    ││crypto/certificate/pqc-cert                                     │
+│                                                    ││                                                                │
+│                                                    ││                                                                │
+│                                                    ││                                                                │
+│                                                    ││                                                                │
+│                                                    ││                                                                │
+│                                                    ││                                                                │
+│                                                    ││                                                                │
+│                                                    ││                                                                │
+│                                                    ││                                                                │
+│                                                    ││                                                                │
+│                                                    ││                                                                │
+│                                                    ││                                                                │
+│                                                    ││                                                                │
+│                                                    ││                                                                │
+│                                                    ││                                                                │
+│                                                    ││                                                                │
+└────────────────────────────────────────────────────┘└────────────────────────────────────────────────────────────────┘
+ Algo: 11 │ Certs: 1 │ Keys: 2 │ Quantum: 82%
+              ↑↓ select  Enter detail │  Tab switch  / search  e export  ? help  q quit [y] copy ML-KEM-1024

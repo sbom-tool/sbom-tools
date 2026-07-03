@@ -1,0 +1,28 @@
+---
+source: src/tui/view/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  VIEW  │ quantum-ready-app │ CycloneDX 1.7 │ [CBOM]
+
+ [1] Overview   │  [2] Algorithms   │  [3] Certs   │  [4] Keys   │  [5] Protocol
+
+────────────────────────────────────────────────────────────────────────────────
+┌ PQC Compliance ──────────────────────────────────────────────────────────────┐
+│ CNSA 2.0: NON-COMPLIANT (9 errors)   │   NIST PQC: NON-COMPLIANT (2 errors)  │
+│                                                                              │
+│ Algorithm-by-Algorithm Assessment                                            │
+└──────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│Algorithm        Family          Level    CNSA 2.0         NIST PQC           │
+│                                                                              │
+│ML-KEM-1024      ML-KEM          5        PASS             OK                 │
+│ML-KEM-768       ML-KEM          3        FAIL             OK                 │
+│ML-DSA-87        ML-DSA          5        PASS             OK                 │
+│ML-DSA-65        ML-DSA          3        FAIL             OK                 │
+│SLH-DSA-SHAKE-25 SLH-DSA         5        PASS             OK                 │
+│AES-256-GCM      AES             1        PASS             PASS               │
+│SHA-384          SHA-2           2        PASS             PASS               │
+│X25519           ECDH            0        FAIL             FAIL               │
+└──────────────────────────────────────────────────────────────────────────────┘
+ Algo: 11 │ Certs: 1 │ Keys: 2 │ Quantum: 82%
+           ↑↓ scroll │  Tab switch  / search  e export  ? help  q quit

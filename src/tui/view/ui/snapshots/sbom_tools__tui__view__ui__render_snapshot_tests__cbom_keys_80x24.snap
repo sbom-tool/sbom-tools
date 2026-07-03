@@ -1,0 +1,28 @@
+---
+source: src/tui/view/ui/render_snapshot_tests.rs
+expression: text
+---
+sbom-tools  VIEW  │ quantum-ready-app │ CycloneDX 1.7 │ [CBOM]
+
+ [1] Overview   │  [2] Algorithms   │  [3] Certs   │  [4] Keys   │  [5] Protocol
+
+────────────────────────────────────────────────────────────────────────────────
+┌ Key Material (2) ────────────────┐┌ Key Detail ──────────────────────────────┐
+│● ml-kem-1024-public-key  (public-││Name: ml-kem-1024-public-key              │
+│● ml-dsa-87-signing-keypair  (key-││                                          │
+│                                  ││Type:   public-key                        │
+│                                  ││State:  active                            │
+│                                  ││Size:   1568 bits                         │
+│                                  ││Format: DER                               │
+│                                  ││Algo:   crypto/algorithm/ml-kem-1024      │
+│                                  ││                                          │
+│                                  ││-- Secured By --                          │
+│                                  ││Mechanism: HSM                            │
+│                                  ││Algorithm: crypto/algorithm/aes-256-gcm   │
+│                                  ││                                          │
+│                                  ││Created:   2026-01-01                     │
+│                                  ││Activated: 2026-01-01                     │
+│                                  ││                                          │
+└──────────────────────────────────┘└──────────────────────────────────────────┘
+ Algo: 11 │ Certs: 1 │ Keys: 2 │ Quantum: 82%
+ ↑↓ select  Enter detail │  Tab switch  / search  e export  ? help  q quit [y] c

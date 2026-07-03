@@ -298,3 +298,69 @@ fn crypto_list_scrolls_the_selection_into_view() {
         "selecting the last algorithm in a short panel must scroll it into view"
     );
 }
+
+// ============================================================================
+// CBOM (cryptographic BOM) tab snapshots
+// ============================================================================
+
+/// Build a `ViewApp` from the CBOM fixture with a deterministic tab.
+fn cbom_view_app(active_tab: ViewTab) -> ViewApp {
+    pin_theme();
+    let (sbom, profile) = crate::tui::test_support::cbom_single();
+    let mut app = ViewApp::new(sbom, crate::tui::test_support::CBOM, profile);
+    app.active_tab = active_tab;
+    app
+}
+
+#[test]
+fn cbom_fixture_detected_as_cbom_profile() {
+    let (_sbom, profile) = crate::tui::test_support::cbom_single();
+    assert_eq!(profile, crate::model::BomProfile::Cbom);
+}
+
+#[test]
+fn cbom_profile_exposes_crypto_tab_suite() {
+    let tabs = ViewTab::tabs_for_profile(crate::model::BomProfile::Cbom);
+    assert!(tabs.contains(&ViewTab::Algorithms));
+    assert!(tabs.contains(&ViewTab::Certificates));
+    assert!(tabs.contains(&ViewTab::Keys));
+    assert!(tabs.contains(&ViewTab::Protocols));
+    assert!(tabs.contains(&ViewTab::PqcCompliance));
+}
+
+/// CBOM-profile crypto-detail tabs rendered from the CBOM fixture.
+///
+/// - `Certificates` is omitted: its per-row status icon (✓/!/X) is derived from the
+///   current date (`is_expired`/`is_expiring_soon`), so its rendered *text* drifts
+///   over time (deterministic snapshotting needs an injectable clock — follow-up).
+/// - `Crypto` is omitted: `ViewTab::Crypto` is in no profile's `tabs_for_profile`
+///   set, i.e. `render_crypto` is currently unreachable; snapshotting it would lock
+///   in dead-code output (dead-code cleanup is a separate follow-up).
+const CBOM_TABS: [(&str, ViewTab); 4] = [
+    ("algorithms", ViewTab::Algorithms),
+    ("keys", ViewTab::Keys),
+    ("protocols", ViewTab::Protocols),
+    ("pqc", ViewTab::PqcCompliance),
+];
+
+#[test]
+fn snapshot_cbom_tabs() {
+    let mut settings = insta::Settings::clone_current();
+    // Defensive redactions for any lifecycle/age content that drifts over time.
+    settings.add_filter(
+        r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+\([^│\n]*",
+        "$1 (AGE)",
+    );
+    settings.add_filter(r"Age: \d+d", "Age: [N]d");
+    settings.bind(|| {
+        for (name, tab) in CBOM_TABS {
+            for (w, h) in SIZES {
+                let mut app = cbom_view_app(tab);
+                let text = render_to_text(w, h, |frame| {
+                    render(frame, &mut app);
+                });
+                insta::assert_snapshot!(format!("cbom_{name}_{w}x{h}"), text);
+            }
+        }
+    });
+}
