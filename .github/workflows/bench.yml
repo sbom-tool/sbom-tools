@@ -59,7 +59,7 @@ jobs:
           persist-credentials: false
       - name: Install Rust 1.88
         # toolchain "1.88" matches rust-toolchain.toml; action pinned to master (no releases)
-        uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
         with:
           toolchain: "1.88"
       - name: Cache
@@ -81,7 +81,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install Rust 1.88
-        uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
         with:
           toolchain: "1.88"
       - name: Cache
