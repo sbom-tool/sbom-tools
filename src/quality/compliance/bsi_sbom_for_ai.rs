@@ -89,7 +89,7 @@ impl ComplianceChecker {
 
         self.check_bsiai_metadata_cluster(sbom, violations);
         self.check_bsiai_system_level_cluster(sbom, &ml_components, violations);
-        self.check_bsiai_models_cluster(&ml_components, violations);
+        self.check_bsiai_models_cluster(sbom, &ml_components, violations);
         self.check_bsiai_datasets_cluster(&dataset_components, violations);
         self.check_bsiai_infrastructure_cluster(sbom, &ml_components, violations);
         self.check_bsiai_security_cluster(violations);
@@ -282,6 +282,7 @@ impl ComplianceChecker {
     /// card, architecture, training datasets, limitations, and license.
     fn check_bsiai_models_cluster(
         &self,
+        sbom: &NormalizedSbom,
         ml_components: &[&crate::model::Component],
         violations: &mut Vec<Violation>,
     ) {
@@ -331,8 +332,9 @@ impl ComplianceChecker {
             if !has_architecture {
                 without_architecture.push(c.name.clone());
             }
-            // Training datasets referenced (AI-003).
-            if ml.is_none_or(|m| m.training_datasets.is_empty()) {
+            // Training datasets referenced (AI-003): modelParameters.datasets or
+            // dataset-evidenced components nested under the model.
+            if !super::ai_shared::declares_training_datasets(sbom, c) {
                 without_datasets.push(c.name.clone());
             }
             // Limitations stated (AI-008).
