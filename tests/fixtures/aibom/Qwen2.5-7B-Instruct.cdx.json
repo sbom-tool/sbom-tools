@@ -1,0 +1,2075 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:d2b4acaa-dc30-4f0a-80e7-abec9cff4ccf",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2025-10-24T16:43:02Z",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "author": "Manifest Cyber",
+          "publisher": "Manifest Cyber",
+          "name": "aibom-gen",
+          "version": "0.1.0-alpha.10",
+          "description": "Email info@manifestcyber.com for more information about this tool."
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "qwen-qwen2.5-7b-instruct-66e81cbcd683a3f4e5291bbf",
+      "type": "machine-learning-model",
+      "supplier": {
+        "name": "Qwen"
+      },
+      "name": "Qwen/Qwen2.5-7B-Instruct",
+      "version": "a09a35458c702b33eeacc393d103063234e8bc28",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "pedigree": {
+        "ancestors": [
+          {
+            "bom-ref": "qwen-qwen2.5-7b-25-10-24_16:41:48",
+            "type": "machine-learning-model",
+            "author": "Qwen",
+            "name": "Qwen2.5-7B",
+            "externalReferences": [
+              {
+                "url": "https://huggingface.co/Qwen/Qwen2.5-7B",
+                "type": "model-card"
+              },
+              {
+                "url": "https://huggingface.co/Qwen/Qwen2.5-7B",
+                "type": "website"
+              }
+            ]
+          }
+        ]
+      },
+      "externalReferences": [
+        {
+          "url": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct",
+          "type": "model-card"
+        },
+        {
+          "url": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct",
+          "type": "website"
+        },
+        {
+          "url": "https://arxiv.org/pdf/2309.00071",
+          "type": "documentation"
+        },
+        {
+          "url": "https://arxiv.org/pdf/2407.10671",
+          "type": "documentation"
+        },
+        {
+          "url": "https://qwenlm.github.io/blog/qwen2.5/",
+          "type": "documentation"
+        },
+        {
+          "url": "https://github.com/QwenLM/Qwen2.5",
+          "type": "vcs"
+        },
+        {
+          "url": "https://qwen.readthedocs.io/",
+          "type": "documentation"
+        }
+      ],
+      "properties": [
+        {
+          "name": "createdAt",
+          "value": "2024-09-16T11:55:40.000Z"
+        },
+        {
+          "name": "lastModified",
+          "value": "2025-01-12T02:10:10.000Z"
+        },
+        {
+          "name": "downloads",
+          "value": "7464491"
+        },
+        {
+          "name": "likes",
+          "value": "828"
+        },
+        {
+          "name": "libraryName",
+          "value": "transformers"
+        },
+        {
+          "name": "tags",
+          "value": "transformers, safetensors, qwen2, text-generation, chat, conversational, en, arxiv:2309.00071, arxiv:2407.10671, base_model:Qwen/Qwen2.5-7B, base_model:finetune:Qwen/Qwen2.5-7B, license:apache-2.0, autotrain_compatible, text-generation-inference, endpoints_compatible, region:us"
+        },
+        {
+          "name": "softwareRequiredForExecution",
+          "value": "true"
+        },
+        {
+          "name": "intendedUse",
+          "value": "General-purpose instruction-following conversational AI and text generation, supporting more than 29 languages."
+        }
+      ],
+      "components": [
+        {
+          "bom-ref": ".gitattributes-25-10-24_16:41:48",
+          "type": "file",
+          "name": ".gitattributes"
+        },
+        {
+          "bom-ref": "license-25-10-24_16:41:48",
+          "type": "file",
+          "name": "LICENSE"
+        },
+        {
+          "bom-ref": "readme.md-25-10-24_16:41:48",
+          "type": "file",
+          "name": "README.md"
+        },
+        {
+          "bom-ref": "config.json-25-10-24_16:41:48",
+          "type": "file",
+          "name": "config.json"
+        },
+        {
+          "bom-ref": "generation_config.json-25-10-24_16:41:48",
+          "type": "file",
+          "name": "generation_config.json"
+        },
+        {
+          "bom-ref": "merges.txt-25-10-24_16:41:48",
+          "type": "file",
+          "name": "merges.txt"
+        },
+        {
+          "bom-ref": "model-00001-of-00004.safetensors-25-10-24_16:41:48",
+          "type": "file",
+          "name": "model-00001-of-00004.safetensors"
+        },
+        {
+          "bom-ref": "model-00002-of-00004.safetensors-25-10-24_16:41:48",
+          "type": "file",
+          "name": "model-00002-of-00004.safetensors"
+        },
+        {
+          "bom-ref": "model-00003-of-00004.safetensors-25-10-24_16:41:48",
+          "type": "file",
+          "name": "model-00003-of-00004.safetensors"
+        },
+        {
+          "bom-ref": "model-00004-of-00004.safetensors-25-10-24_16:41:48",
+          "type": "file",
+          "name": "model-00004-of-00004.safetensors"
+        },
+        {
+          "bom-ref": "model.safetensors.index.json-25-10-24_16:41:48",
+          "type": "file",
+          "name": "model.safetensors.index.json"
+        },
+        {
+          "bom-ref": "tokenizer.json-25-10-24_16:41:48",
+          "type": "file",
+          "name": "tokenizer.json"
+        },
+        {
+          "bom-ref": "tokenizer_config.json-25-10-24_16:41:48",
+          "type": "file",
+          "name": "tokenizer_config.json"
+        },
+        {
+          "bom-ref": "vocab.json-25-10-24_16:41:48",
+          "type": "file",
+          "name": "vocab.json"
+        },
+        {
+          "type": "data",
+          "name": "PG19",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2309.00071",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            },
+            {
+              "name": "usage",
+              "value": "training"
+            },
+            {
+              "name": "description",
+              "value": "Fine-tuning dataset for extending the context window of Llama 2 models using YaRN method, chunked into 64k token segments."
+            },
+            {
+              "name": "owner",
+              "value": "Colin Raffel et al., Google Research"
+            },
+            {
+              "name": "full_name",
+              "value": "PG-19"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/google-research/google-research/tree/master/pg19"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "Proof-pile",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2309.00071",
+          "licenses": [
+            {
+              "license": {
+                "id": "CC-BY-SA-4.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation"
+            },
+            {
+              "name": "description",
+              "value": "Dataset with long documents used for evaluating the sliding window perplexity of models with extended context windows."
+            },
+            {
+              "name": "owner",
+              "value": "EleutherAI"
+            },
+            {
+              "name": "full_name",
+              "value": "Proof-pile"
+            },
+            {
+              "name": "source_url",
+              "value": "https://huggingface.co/datasets/EleutherAI/proof-pile"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "GovReport",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2309.00071",
+          "licenses": [
+            {
+              "license": {
+                "id": "CC-BY-4.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation"
+            },
+            {
+              "name": "description",
+              "value": "Dataset of long documents used to evaluate long sequence language modeling perplexity for models fine-tuned with extended context."
+            },
+            {
+              "name": "owner",
+              "value": "Bingjie Xu, Satoshi Okazaki, Jinho D. Choi"
+            },
+            {
+              "name": "full_name",
+              "value": "GovReport: Efficient Long Document Summarization by Selective Contextual Encoding"
+            },
+            {
+              "name": "source_url",
+              "value": "https://aclanthology.org/2021.emnlp-main.90/"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "Hugging Face Open LLM Leaderboard benchmarks",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2309.00071",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            },
+            {
+              "name": "usage",
+              "value": "benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Set of standardized benchmarks (including ARC-Challenge, HellaSwag, MMLU, and TruthfulQA) used for benchmarking and comparing model performance under extended context windows."
+            },
+            {
+              "name": "owner",
+              "value": "Hugging Face and contributing dataset authors"
+            },
+            {
+              "name": "full_name",
+              "value": "Hugging Face Open LLM Leaderboard Public Benchmark Suite"
+            },
+            {
+              "name": "source_url",
+              "value": "https://huggingface.co/spaces/HuggingFaceH4/open_llm_leaderboard"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "ARC-Challenge",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2309.00071",
+          "licenses": [
+            {
+              "license": {
+                "id": "CC-BY-4.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            },
+            {
+              "name": "usage",
+              "value": "benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "25-shot ARC-Challenge dataset used as part of the Open LLM Leaderboard benchmarks to assess model reasoning capabilities."
+            },
+            {
+              "name": "owner",
+              "value": "AI2 (Allen Institute for AI)"
+            },
+            {
+              "name": "full_name",
+              "value": "AI2 Reasoning Challenge (ARC) - Challenge Set"
+            },
+            {
+              "name": "source_url",
+              "value": "https://allenai.org/data/arc"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "HellaSwag",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2309.00071",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            },
+            {
+              "name": "usage",
+              "value": "benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "10-shot HellaSwag used for commonsense reasoning evaluation as part of benchmark suite."
+            },
+            {
+              "name": "owner",
+              "value": "Allen Institute for AI"
+            },
+            {
+              "name": "full_name",
+              "value": "HellaSwag: Can a Machine Really Finish Your Sentence?"
+            },
+            {
+              "name": "source_url",
+              "value": "https://rowanzellers.com/hellaswag/"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "MMLU",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2309.00071",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            },
+            {
+              "name": "usage",
+              "value": "benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "5-shot MMLU dataset used to evaluate multi-domain knowledge and reasoning abilities of the model."
+            },
+            {
+              "name": "owner",
+              "value": "Dan Hendrycks et al."
+            },
+            {
+              "name": "full_name",
+              "value": "Massive Multitask Language Understanding (MMLU)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/hendrycks/test"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "TruthfulQA",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2309.00071",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            },
+            {
+              "name": "usage",
+              "value": "benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "0-shot TruthfulQA dataset evaluating models on truthful question answering abilities as part of benchmarking."
+            },
+            {
+              "name": "owner",
+              "value": "Lin et al."
+            },
+            {
+              "name": "full_name",
+              "value": "TruthfulQA: Measuring How Models Mimic Human Falsehoods"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/sylinrl/TruthfulQA"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "RedPajama",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2309.00071",
+          "licenses": [
+            {
+              "license": {
+                "id": "CC-BY-SA-4.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            },
+            {
+              "name": "usage",
+              "value": "perplexity evaluation data analysis"
+            },
+            {
+              "name": "description",
+              "value": "Dataset used to select documents for studying the impact of scaling the softmax temperature in YaRN on perplexity. It is used to analyze token-level perplexity variation under different scaling factors."
+            },
+            {
+              "name": "owner",
+              "value": "Together.ai"
+            },
+            {
+              "name": "full_name",
+              "value": "RedPajama-Data"
+            },
+            {
+              "name": "source_url",
+              "value": "https://redpajama.org/"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "Together Computer's Long-Data Collections",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2309.00071",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            },
+            {
+              "name": "usage",
+              "value": "training"
+            },
+            {
+              "name": "description",
+              "value": "Used as training data (a mix of pre-train and fine-tune splits) for extending context windows of Mistral 7B models with YaRN."
+            },
+            {
+              "name": "owner",
+              "value": "Together Computer"
+            },
+            {
+              "name": "full_name",
+              "value": "Together Computer's Long-Data Collections"
+            },
+            {
+              "name": "source_url",
+              "value": "https://www.together.xyz/long-data"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2309.00071"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "MMLU",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "English knowledge and general question answering evaluated with few-shot prompting for base models and instruction-tuned models."
+            },
+            {
+              "name": "owner",
+              "value": "Hendrycks et al., University of California, Berkeley"
+            },
+            {
+              "name": "full_name",
+              "value": "Massive Multitask Language Understanding"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/hendrycks/test"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "MMLU-Pro",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Pro version of MMLU dataset focusing on professional knowledge; used for evaluation of general knowledge performance."
+            },
+            {
+              "name": "owner",
+              "value": "Authors of MMLU-Pro (extension of MMLU)"
+            },
+            {
+              "name": "full_name",
+              "value": "MMLU Professional Knowledge Benchmark"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/hendrycks/test"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "GPQA",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Benchmark for factual and knowledge-based question answering evaluated in a few-shot setting."
+            },
+            {
+              "name": "owner",
+              "value": "Google or original GPQA authors"
+            },
+            {
+              "name": "full_name",
+              "value": "Google Prompted Question Answering"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/microsoft/GPQA"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "Theorem QA",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Dataset for evaluating scientific and theorem-related question answering capabilities with few-shot prompts."
+            },
+            {
+              "name": "owner",
+              "value": "Original authors of Theorem QA dataset"
+            },
+            {
+              "name": "full_name",
+              "value": "Theorem Question Answering Dataset"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/allenai/theoremqa"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "BBH",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Big Bench Hard benchmark including difficult reasoning and commonsense challenges, evaluated in few-shot mode."
+            },
+            {
+              "name": "owner",
+              "value": "Google Brain/BIG-Bench contributors"
+            },
+            {
+              "name": "full_name",
+              "value": "BIG-Bench Hard"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/google/BIG-bench"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "HellaSwag",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "licenses": [
+            {
+              "license": {
+                "id": "CC-BY-SA-4.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Commonsense reasoning task using multiple-choice questions to assess natural language understanding."
+            },
+            {
+              "name": "owner",
+              "value": "Allen Institute for AI (AI2)"
+            },
+            {
+              "name": "full_name",
+              "value": "HellaSwag: Can a Machine Really Finish Your Sentence?"
+            },
+            {
+              "name": "source_url",
+              "value": "https://rowanzellers.com/hellaswag/"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "Winogrande",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "licenses": [
+            {
+              "license": {
+                "id": "CC-BY-4.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Commonsense reasoning benchmark built on Winograd Schema format, tested with few-shot prompting."
+            },
+            {
+              "name": "owner",
+              "value": "Allen Institute for AI (AI2)"
+            },
+            {
+              "name": "full_name",
+              "value": "Winogrande"
+            },
+            {
+              "name": "source_url",
+              "value": "https://leaderboard.allenai.org/winogrande"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "ARC-C",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "licenses": [
+            {
+              "license": {
+                "id": "CC-BY-4.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "ARC Challenge dataset testing advanced question-answering in science; evaluated with multiple shots."
+            },
+            {
+              "name": "owner",
+              "value": "Allen Institute for AI (AI2)"
+            },
+            {
+              "name": "full_name",
+              "value": "AI2 Reasoning Challenge - Challenge Set"
+            },
+            {
+              "name": "source_url",
+              "value": "https://allenai.org/data/arc"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "TruthfulQA",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "licenses": [
+            {
+              "license": {
+                "id": "CC-BY-4.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Benchmark designed to test model truthfulness and hallucination resistance, evaluated zero-shot."
+            },
+            {
+              "name": "owner",
+              "value": "Stanford University"
+            },
+            {
+              "name": "full_name",
+              "value": "TruthfulQA"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/sylvain-gugger/truthfulqa"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "HumanEval",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "licenses": [
+            {
+              "license": {
+                "id": "MIT"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Coding benchmark consisting of Python programming problems used to evaluate code generation capabilities."
+            },
+            {
+              "name": "owner",
+              "value": "OpenAI"
+            },
+            {
+              "name": "full_name",
+              "value": "HumanEval: Evaluating Code Generation Models"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/openai/human-eval"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "MBPP",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "licenses": [
+            {
+              "license": {
+                "id": "Apache-2.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Multi-lingual benchmark for code generation problems, focusing on Python programming tasks evaluated zero-shot."
+            },
+            {
+              "name": "owner",
+              "value": "Google Brain"
+            },
+            {
+              "name": "full_name",
+              "value": "Multi-lingual Programming by Prompting"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/google-research/google-research/tree/master/mbpp"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "EvalPlus",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Evaluation benchmark for code generation across multiple programming languages, conducted at zero-shot."
+            },
+            {
+              "name": "owner",
+              "value": "Authors of EvalPlus dataset"
+            },
+            {
+              "name": "full_name",
+              "value": "EvalPlus Code Generation Benchmark"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/code-evalplus/code-evalplus"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "MultiPL-E",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Multilingual Programming Language Evaluation for multiple languages (Python, C++, Java, etc.), zero-shot tested."
+            },
+            {
+              "name": "owner",
+              "value": "Authors of MultiPL-E dataset"
+            },
+            {
+              "name": "full_name",
+              "value": "MultiPL-E: Multilingual Programming Language Evaluation"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/eth-sri/multiple"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "GSM8K",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Grade School Math dataset to evaluate multi-step mathematical reasoning with few-shot prompting."
+            },
+            {
+              "name": "owner",
+              "value": "DeepMind"
+            },
+            {
+              "name": "full_name",
+              "value": "Grade School Math 8K"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/openai/grade-school-math"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "MATH",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Mathematics competition problems dataset used to evaluate advanced math problem-solving capabilities."
+            },
+            {
+              "name": "owner",
+              "value": "MIT"
+            },
+            {
+              "name": "full_name",
+              "value": "MATH Dataset: Mathematics Dataset from High School Contests"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/hendrycks/math"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "C-Eval",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Chinese evaluation dataset for knowledge and multi-domain assessment, evaluated with few-shot prompting."
+            },
+            {
+              "name": "owner",
+              "value": "Authors of C-Eval dataset"
+            },
+            {
+              "name": "full_name",
+              "value": "C-Eval: A Comprehensive Chinese Evaluation Benchmark"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/PhoebusSi/CEval"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "CMMLU",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Chinese Multi-domain Multi-level Understanding benchmark evaluating complex Chinese language comprehension."
+            },
+            {
+              "name": "owner",
+              "value": "Authors of CMMLU dataset"
+            },
+            {
+              "name": "full_name",
+              "value": "Chinese Multi-domain Multi-level Understanding (CMMLU)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/ymcui/cmmlu"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "M3Exam",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Multilingual multiple-choice exam dataset focusing on educational tests in multiple languages, excluding images."
+            },
+            {
+              "name": "owner",
+              "value": "Authors of M3Exam dataset"
+            },
+            {
+              "name": "full_name",
+              "value": "Multilingual Million Multiple Choice Exams"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/kevinrobinson/m3exam"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "IndoMMLU",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Multilingual language understanding benchmark in Indonesian language, used for multilingual evaluation."
+            },
+            {
+              "name": "owner",
+              "value": "Koto et al."
+            },
+            {
+              "name": "full_name",
+              "value": "Indonesian MMLU (IndoMMLU)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/facebookresearch/IndoNLG"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "ruMMLU",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Russian version of MMLU for multilingual language understanding evaluation in Russian."
+            },
+            {
+              "name": "owner",
+              "value": "Mera et al."
+            },
+            {
+              "name": "full_name",
+              "value": "Russian MMLU (ruMMLU)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/ai-forever/RuOpenAI"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "PAWS-X",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "licenses": [
+            {
+              "license": {
+                "id": "CC-BY-4.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Paraphrase Adversaries from Word Scrambling cross-lingual dataset, assessing paraphrase identification capability in multiple languages."
+            },
+            {
+              "name": "owner",
+              "value": "Google Research"
+            },
+            {
+              "name": "full_name",
+              "value": "PAWS-X: Cross-lingual Adversarial Paraphrase Identification"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/google-research-datasets/paws"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "BELEBELE",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Multilingual benchmark assessing natural language understanding across several low-resource languages."
+            },
+            {
+              "name": "owner",
+              "value": "Authors of BELEBELE dataset"
+            },
+            {
+              "name": "full_name",
+              "value": "BELEBELE Multilingual Benchmark"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/allenai/belebele"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "XCOPA",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Cross-lingual Choice of Plausible Alternatives dataset for causal reasoning across languages."
+            },
+            {
+              "name": "owner",
+              "value": "Allen Institute for AI"
+            },
+            {
+              "name": "full_name",
+              "value": "Cross-lingual Choice of Plausible Alternatives (XCOPA)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://allenai.org/data/xling_copa"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "XWinograd",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Multilingual Winograd Schema Challenge, assessing commonsense reasoning across multiple languages."
+            },
+            {
+              "name": "owner",
+              "value": "Authors of XWinograd dataset"
+            },
+            {
+              "name": "full_name",
+              "value": "Cross-lingual Winograd Schema Challenge"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/yahoo/xwinograd"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "XStoryCloze",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Multilingual story completion dataset, zero-shot evaluated for narrative understanding."
+            },
+            {
+              "name": "owner",
+              "value": "Original StoryCloze authors"
+            },
+            {
+              "name": "full_name",
+              "value": "Cross-lingual Story Cloze Test"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/AllenAI/rocstories"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "Flores-101",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "licenses": [
+            {
+              "license": {
+                "id": "CC-BY-SA-4.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Multilingual dataset for machine translation evaluation across 101 languages, used for translation benchmarking."
+            },
+            {
+              "name": "owner",
+              "value": "Facebook AI"
+            },
+            {
+              "name": "full_name",
+              "value": "Flores-101 Multilingual Translation Benchmark"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/facebookresearch/flores"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "MT-Bench",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Multi-turn human preference benchmark to assess instruction-following and preference alignment in instruction-tuned models."
+            },
+            {
+              "name": "owner",
+              "value": "Authors of MT-Bench"
+            },
+            {
+              "name": "full_name",
+              "value": "MT-Bench Multi-turn Instruction Following Benchmark"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/liuhaolun/mt-bench"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "Arena-Hard",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Difficult evaluation set from Chatbot Arena to test human preference alignment and instruction-following."
+            },
+            {
+              "name": "owner",
+              "value": "Chatbot Arena contributors"
+            },
+            {
+              "name": "full_name",
+              "value": "Arena-Hard Benchmark from Chatbot Arena"
+            },
+            {
+              "name": "source_url",
+              "value": "https://chatbotarena.com"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "AlignBench",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Benchmark designed to assess alignment and instruction-following quality for LLMs."
+            },
+            {
+              "name": "owner",
+              "value": "AlignBench authors"
+            },
+            {
+              "name": "full_name",
+              "value": "Alignment Benchmark for Instruction-Following"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/alignmentbench/alignbench"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "MixEval",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Aggregate benchmark approximating Chatbot Arena results, assessing human preference and instruction adherence."
+            },
+            {
+              "name": "owner",
+              "value": "MixEval authors"
+            },
+            {
+              "name": "full_name",
+              "value": "MixEval Human Preference Benchmark"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/mixeval/mixeval"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "IFEval",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Instruction-following evaluation benchmark, results reported on strict-prompt subset."
+            },
+            {
+              "name": "owner",
+              "value": "IFEval authors"
+            },
+            {
+              "name": "full_name",
+              "value": "Instruction-Following Evaluation"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/IFEval/IFEval"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "LiveCodeBench v1",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Benchmark for evaluating coding capabilities of instruction-tuned models."
+            },
+            {
+              "name": "owner",
+              "value": "LiveCodeBench authors"
+            },
+            {
+              "name": "full_name",
+              "value": "LiveCodeBench Version 1"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/livecodebench/livecodebench"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "Needle in a Haystack (NIAH)",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Long context understanding test that evaluates the ability to locate facts buried in long text streams of varying lengths."
+            },
+            {
+              "name": "owner",
+              "value": "Authors of NIAH"
+            },
+            {
+              "name": "full_name",
+              "value": "Needle in a Haystack Test"
+            },
+            {
+              "name": "source_url",
+              "value": "https://arxiv.org/abs/2305.17188"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "NeedleBench",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Enhanced NIAH benchmark with multiple facts requiring multi-hop reasoning in passages up to 256k tokens."
+            },
+            {
+              "name": "owner",
+              "value": "OpenCompass Authors"
+            },
+            {
+              "name": "full_name",
+              "value": "NeedleBench Long-Context Benchmark"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/OpenCompass/Evaluation/tree/main/needlebench"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "LV-Eval",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2407.10671",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Long-context evaluation with 11 diverse QA datasets demanding comprehension of multiple evidences simultaneously."
+            },
+            {
+              "name": "owner",
+              "value": "Authors of LV-Eval"
+            },
+            {
+              "name": "full_name",
+              "value": "LV-Eval: Long-View Evaluation suite for Long Context QA"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/lv-eval/lv-eval"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2407.10671"
+            }
+          ]
+        }
+      ],
+      "modelCard": {
+        "modelParameters": {
+          "task": "text-generation",
+          "architectureFamily": "qwen2",
+          "modelArchitecture": "Qwen2ForCausalLM",
+          "inputs": [
+            {
+              "format": "text"
+            }
+          ],
+          "outputs": [
+            {
+              "format": "text"
+            }
+          ]
+        },
+        "considerations": {
+          "technicalLimitations": [
+            "Static YARN scaling in vLLM deployment may impact performance on shorter texts when configured for long contexts."
+          ]
+        }
+      }
+    },
+    {
+      "bom-ref": "transformers-lib",
+      "type": "library",
+      "name": "transformers"
+    },
+    {
+      "bom-ref": "pytorch-lib",
+      "type": "library",
+      "name": "PyTorch"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "qwen-qwen2.5-7b-instruct-66e81cbcd683a3f4e5291bbf",
+      "dependsOn": [
+        "transformers-lib",
+        "pytorch-lib"
+      ]
+    }
+  ]
+}
