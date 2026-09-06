@@ -296,7 +296,7 @@ impl ConflictDetector {
         }
 
         // Sort by severity (errors first)
-        conflicts.sort_by(|a, b| b.rule.severity.cmp(&a.rule.severity));
+        conflicts.sort_by_key(|a| std::cmp::Reverse(a.rule.severity));
 
         conflicts
     }

@@ -164,10 +164,10 @@ impl CycloneDxParser {
                     ExternalRefType::SecurityContact => {
                         sbom.document.security_contact = Some(ext_ref.url.clone());
                     }
-                    ExternalRefType::Advisories | ExternalRefType::Support => {
-                        if sbom.document.vulnerability_disclosure_url.is_none() {
-                            sbom.document.vulnerability_disclosure_url = Some(ext_ref.url.clone());
-                        }
+                    ExternalRefType::Advisories | ExternalRefType::Support
+                        if sbom.document.vulnerability_disclosure_url.is_none() =>
+                    {
+                        sbom.document.vulnerability_disclosure_url = Some(ext_ref.url.clone());
                     }
                     _ => {}
                 }

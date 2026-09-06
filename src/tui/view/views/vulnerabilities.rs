@@ -351,11 +351,9 @@ fn render_severity_card(
     };
 
     let bar_width = (area.width.saturating_sub(4)) as usize;
-    let filled = if total > 0 {
-        (count * bar_width / total).max(usize::from(count > 0))
-    } else {
-        0
-    };
+    let filled = (count * bar_width)
+        .checked_div(total)
+        .map_or(0, |v| v.max(usize::from(count > 0)));
 
     let mut lines = vec![Line::from(vec![Span::styled(
         format!(" {label} "),
@@ -681,7 +679,7 @@ fn group_affected_components(
     }
 
     let mut sorted: Vec<_> = groups.into_iter().collect();
-    sorted.sort_by(|a, b| b.1.cmp(&a.1)); // Most frequent first
+    sorted.sort_by_key(|a| std::cmp::Reverse(a.1)); // Most frequent first
     sorted
 }
 
@@ -1016,7 +1014,7 @@ pub(crate) fn build_vuln_cache(app: &ViewApp) -> VulnCache {
             *comp_counts.entry(v.display_name.clone()).or_insert(0) += 1;
         }
         let mut sorted: Vec<_> = comp_counts.into_iter().collect();
-        sorted.sort_by(|a, b| b.1.cmp(&a.1));
+        sorted.sort_by_key(|a| std::cmp::Reverse(a.1));
         sorted
     };
 
@@ -2071,7 +2069,7 @@ fn render_group_detail_panel(
         }
         if !cwe_counts.is_empty() {
             let mut cwe_sorted: Vec<_> = cwe_counts.into_iter().collect();
-            cwe_sorted.sort_by(|a, b| b.1.cmp(&a.1));
+            cwe_sorted.sort_by_key(|a| std::cmp::Reverse(a.1));
             lines.push(Line::from(""));
             lines.push(Line::styled("Top CWEs:", Style::default().fg(scheme.muted)));
             for (cwe, cnt) in cwe_sorted.iter().take(5) {

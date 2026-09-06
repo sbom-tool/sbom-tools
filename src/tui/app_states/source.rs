@@ -2472,7 +2472,7 @@ fn insert_gap_items(
 ) {
     // Process insertions from the highest position to lowest
     let mut sorted: Vec<(usize, usize)> = insertions.to_vec();
-    sorted.sort_by(|a, b| b.0.cmp(&a.0));
+    sorted.sort_by_key(|a| std::cmp::Reverse(a.0));
 
     for (pos, count) in sorted {
         let insert_pos = pos.min(items.len());

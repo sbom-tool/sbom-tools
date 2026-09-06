@@ -597,7 +597,7 @@ pub fn find_attack_paths(
 
                         if paths.len() >= max_paths {
                             // Sort by risk score before returning
-                            paths.sort_by(|a, b| b.risk_score.cmp(&a.risk_score));
+                            paths.sort_by_key(|a| std::cmp::Reverse(a.risk_score));
                             return paths;
                         }
                     } else if !visited.contains(dep) {

@@ -316,7 +316,7 @@ impl AnalystReport {
             md.push_str("## Recommendations\n\n");
 
             let mut sorted_recs = self.recommendations.clone();
-            sorted_recs.sort_by(|a, b| a.priority.cmp(&b.priority));
+            sorted_recs.sort_by_key(|a| a.priority);
 
             for rec in &sorted_recs {
                 let _ = writeln!(

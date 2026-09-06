@@ -83,10 +83,7 @@ pub(super) fn update_dependencies_search_matches(app: &mut App) {
 }
 
 pub(super) fn skip_dependency_placeholders(app: &mut App, forward: bool) {
-    loop {
-        let Some(node_id) = app.dependencies_state().get_selected_node_id() else {
-            break;
-        };
+    while let Some(node_id) = app.dependencies_state().get_selected_node_id() {
         if !node_id.starts_with("__") {
             break;
         }

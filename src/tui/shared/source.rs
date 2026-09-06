@@ -193,11 +193,9 @@ fn render_source_tree(
     // Pre-compute item count for status bar
     state.ensure_flat_cache();
     let pre_item_count = state.cached_flat_items.len();
-    let percent = if pre_item_count > 0 {
-        (state.selected + 1) * 100 / pre_item_count
-    } else {
-        0
-    };
+    let percent = ((state.selected + 1) * 100)
+        .checked_div(pre_item_count)
+        .unwrap_or(0);
     let status_bar = format!(
         " Ln {}/{} ({}%) ",
         state.selected + 1,
@@ -800,11 +798,9 @@ fn render_source_raw(
 
     // Status bar
     let total_lines = state.raw_lines.len();
-    let percent = if total_lines > 0 {
-        (state.selected + 1) * 100 / total_lines
-    } else {
-        0
-    };
+    let percent = ((state.selected + 1) * 100)
+        .checked_div(total_lines)
+        .unwrap_or(0);
     let col_info = if !state.word_wrap && state.h_scroll_offset > 0 {
         format!(" Col {}", state.h_scroll_offset)
     } else {

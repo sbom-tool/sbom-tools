@@ -684,11 +684,7 @@ fn render_dependency_stats(
 
             for (label, count) in &rel_entries {
                 let count = **count;
-                let bar_len = if max_rel_count > 0 {
-                    (count * bar_width) / max_rel_count
-                } else {
-                    0
-                };
+                let bar_len = (count * bar_width).checked_div(max_rel_count).unwrap_or(0);
                 let bar = "█".repeat(bar_len);
                 lines.push(Line::from(vec![
                     Span::styled(format!("  {label:12}"), Style::default().fg(scheme.info)),
@@ -767,12 +763,10 @@ fn render_dependency_stats(
             if count == 0 && *key != "clean" {
                 continue;
             }
-            let bar_len = if max_vuln_count > 0 {
-                (count * bar_width) / max_vuln_count
-            } else {
-                0
-            }
-            .max(if count > 0 { 1 } else { 0 }); // at least 1 char if non-zero
+            let bar_len = (count * bar_width)
+                .checked_div(max_vuln_count)
+                .unwrap_or(0)
+                .max(usize::from(count > 0)); // at least 1 char if non-zero
             let bar = "█".repeat(bar_len);
 
             let badge_style = Style::default().fg(scheme.badge_fg_dark).bg(*color).bold();

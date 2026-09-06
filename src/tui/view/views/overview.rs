@@ -1431,7 +1431,7 @@ fn render_top_vulnerable(frame: &mut Frame, area: Rect, app: &ViewApp) {
         .map(|c| (c.name.clone(), c.vulnerabilities.len(), c.max_severity()))
         .collect();
 
-    vuln_comps.sort_by(|a, b| b.1.cmp(&a.1));
+    vuln_comps.sort_by_key(|a| std::cmp::Reverse(a.1));
 
     // Dynamic row count based on available area height
     let max_rows = area.height.saturating_sub(3) as usize; // subtract header + borders
