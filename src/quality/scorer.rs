@@ -920,8 +920,9 @@ impl QualityScorer {
                 ml.and_then(|m| m.model_card_url.as_ref()).is_some(),
                 // AI-002: architecture family
                 ml.and_then(|m| m.architecture_family.as_ref()).is_some(),
-                // AI-003: training datasets
-                ml.is_some_and(|m| !m.training_datasets.is_empty()),
+                // AI-003: training datasets — modelParameters.datasets, or
+                // dataset-evidenced components nested under the model.
+                super::compliance::ai_shared::declares_training_datasets(sbom, component),
                 // AI-004: quantitative analysis — typed performance metrics, with
                 // a raw-pointer fallback for SBOMs parsed before typed extraction.
                 ml.is_some_and(|m| !m.performance_metrics.is_empty())

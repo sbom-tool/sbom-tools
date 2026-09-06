@@ -1,0 +1,1053 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:879dd526-2afe-458f-bbac-92e3bc5e9374",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2025-10-24T16:42:35Z",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "author": "Manifest Cyber",
+          "publisher": "Manifest Cyber",
+          "name": "aibom-gen",
+          "version": "0.1.0-alpha.10",
+          "description": "Email info@manifestcyber.com for more information about this tool."
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "meta-llama-llama-3.2-1b-instruct-66eaedefece5ee215637cc82",
+      "type": "machine-learning-model",
+      "supplier": {
+        "name": "meta-llama"
+      },
+      "name": "meta-llama/Llama-3.2-1B-Instruct",
+      "version": "9213176726f574b556790deb65791e0c5aa438b6",
+      "licenses": [
+        {
+          "license": {
+            "name": "Llama 3.2 Community License"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "url": "https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct",
+          "type": "model-card"
+        },
+        {
+          "url": "https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct",
+          "type": "website"
+        },
+        {
+          "url": "https://arxiv.org/pdf/2204.05149",
+          "type": "documentation"
+        },
+        {
+          "url": "https://arxiv.org/pdf/2405.16406",
+          "type": "documentation"
+        },
+        {
+          "url": "https://github.com/meta-llama/llama-models",
+          "type": "vcs"
+        },
+        {
+          "url": "https://llama.meta.com/responsible-use-guide/",
+          "type": "documentation"
+        }
+      ],
+      "properties": [
+        {
+          "name": "createdAt",
+          "value": "2024-09-18T15:12:47.000Z"
+        },
+        {
+          "name": "lastModified",
+          "value": "2024-10-24T15:07:51.000Z"
+        },
+        {
+          "name": "downloads",
+          "value": "4127952"
+        },
+        {
+          "name": "likes",
+          "value": "1131"
+        },
+        {
+          "name": "libraryName",
+          "value": "transformers"
+        },
+        {
+          "name": "tags",
+          "value": "transformers, safetensors, llama, text-generation, facebook, meta, pytorch, llama-3, conversational, en, de, fr, it, pt, hi, es, th, arxiv:2204.05149, arxiv:2405.16406, license:llama3.2, autotrain_compatible, text-generation-inference, endpoints_compatible, region:us"
+        },
+        {
+          "name": "softwareRequiredForExecution",
+          "value": "true"
+        },
+        {
+          "name": "intendedUse",
+          "value": "Commercial and research use in multiple languages. Instruction tuned text only models are intended for assistant-like chat and agentic applications like knowledge retrieval and summarization, mobile AI powered writing assistants and query and prompt rewriting."
+        },
+        {
+          "name": "outOfScopeUse",
+          "value": "Use in violation of applicable laws, regulations, or the Acceptable Use Policy; use in languages not officially supported by the model; deployment without adequate safeguards for the specific use case."
+        }
+      ],
+      "components": [
+        {
+          "bom-ref": ".gitattributes-25-10-24_16:41:59",
+          "type": "file",
+          "name": ".gitattributes"
+        },
+        {
+          "bom-ref": "license.txt-25-10-24_16:41:59",
+          "type": "file",
+          "name": "LICENSE.txt"
+        },
+        {
+          "bom-ref": "readme.md-25-10-24_16:41:59",
+          "type": "file",
+          "name": "README.md"
+        },
+        {
+          "bom-ref": "use_policy.md-25-10-24_16:41:59",
+          "type": "file",
+          "name": "USE_POLICY.md"
+        },
+        {
+          "bom-ref": "config.json-25-10-24_16:41:59",
+          "type": "file",
+          "name": "config.json"
+        },
+        {
+          "bom-ref": "generation_config.json-25-10-24_16:41:59",
+          "type": "file",
+          "name": "generation_config.json"
+        },
+        {
+          "bom-ref": "model.safetensors-25-10-24_16:41:59",
+          "type": "file",
+          "name": "model.safetensors"
+        },
+        {
+          "bom-ref": "original-consolidated.00.pth-25-10-24_16:41:59",
+          "type": "file",
+          "name": "original/consolidated.00.pth"
+        },
+        {
+          "bom-ref": "original-params.json-25-10-24_16:41:59",
+          "type": "file",
+          "name": "original/params.json"
+        },
+        {
+          "bom-ref": "original-tokenizer.model-25-10-24_16:41:59",
+          "type": "file",
+          "name": "original/tokenizer.model"
+        },
+        {
+          "bom-ref": "special_tokens_map.json-25-10-24_16:41:59",
+          "type": "file",
+          "name": "special_tokens_map.json"
+        },
+        {
+          "bom-ref": "tokenizer.json-25-10-24_16:41:59",
+          "type": "file",
+          "name": "tokenizer.json"
+        },
+        {
+          "bom-ref": "tokenizer_config.json-25-10-24_16:41:59",
+          "type": "file",
+          "name": "tokenizer_config.json"
+        },
+        {
+          "type": "data",
+          "name": "Alpaca",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2204.05149",
+          "licenses": [
+            {
+              "license": {
+                "id": "CC-BY-SA-4.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            },
+            {
+              "name": "usage",
+              "value": "training"
+            },
+            {
+              "name": "description",
+              "value": "Used as an instruction-following dataset to fine-tune the Llama-3.2-1B-Instruct model."
+            },
+            {
+              "name": "owner",
+              "value": "Stanford University"
+            },
+            {
+              "name": "full_name",
+              "value": "Alpaca: An Instruction-Following Model"
+            },
+            {
+              "name": "source_url",
+              "value": "https://crfm.stanford.edu/2023/03/13/alpaca.html"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "ShareGPT",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2204.05149",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            },
+            {
+              "name": "usage",
+              "value": "training"
+            },
+            {
+              "name": "description",
+              "value": "Used to provide high-quality conversational data collected from interactions with GPT models to improve instruction tuning."
+            },
+            {
+              "name": "owner",
+              "value": "ShareGPT community"
+            },
+            {
+              "name": "full_name",
+              "value": "ShareGPT Conversation Dataset"
+            },
+            {
+              "name": "source_url",
+              "value": "https://shareg.pt/"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "Code Alpaca",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2204.05149",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            },
+            {
+              "name": "usage",
+              "value": "training"
+            },
+            {
+              "name": "description",
+              "value": "A code-related instruction dataset used to enhance the programming capabilities of the model during fine-tuning."
+            },
+            {
+              "name": "owner",
+              "value": "meta-llama (Meta AI)"
+            },
+            {
+              "name": "full_name",
+              "value": "Code Alpaca Instruction Dataset"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/facebookresearch/CodeAlpaca"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "Open Assistant Conversations",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2204.05149",
+          "licenses": [
+            {
+              "license": {
+                "id": "CC-BY-SA-4.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            },
+            {
+              "name": "usage",
+              "value": "training"
+            },
+            {
+              "name": "description",
+              "value": "Conversations dataset used to fine-tune the model for better instruction-following in dialogues."
+            },
+            {
+              "name": "owner",
+              "value": "LAION community"
+            },
+            {
+              "name": "full_name",
+              "value": "Open Assistant Conversations Dataset"
+            },
+            {
+              "name": "source_url",
+              "value": "https://open-assistant.io/"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "HumanEval",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2204.05149",
+          "licenses": [
+            {
+              "license": {
+                "id": "MIT"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation"
+            },
+            {
+              "name": "description",
+              "value": "Benchmark dataset for evaluating the model's code generation capabilities."
+            },
+            {
+              "name": "owner",
+              "value": "OpenAI"
+            },
+            {
+              "name": "full_name",
+              "value": "HumanEval: A Code Generation Evaluation Dataset"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/openai/human-eval"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "MMLU",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2204.05149",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            },
+            {
+              "name": "usage",
+              "value": "benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Used for evaluating the model's general knowledge and multi-task capabilities across various subjects."
+            },
+            {
+              "name": "owner",
+              "value": "Stanford CRFM"
+            },
+            {
+              "name": "full_name",
+              "value": "Massive Multitask Language Understanding (MMLU)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/hendrycks/test"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "SQuAD",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2204.05149",
+          "licenses": [
+            {
+              "license": {
+                "id": "CC-BY-SA-3.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation"
+            },
+            {
+              "name": "description",
+              "value": "Used to evaluate the question answering abilities of the model."
+            },
+            {
+              "name": "owner",
+              "value": "Stanford University"
+            },
+            {
+              "name": "full_name",
+              "value": "Stanford Question Answering Dataset (SQuAD)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://rajpurkar.github.io/SQuAD-explorer/"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "GSM8K",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2204.05149",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            },
+            {
+              "name": "usage",
+              "value": "benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Used to assess the model's mathematical reasoning capabilities."
+            },
+            {
+              "name": "owner",
+              "value": "University of Washington and AI2"
+            },
+            {
+              "name": "full_name",
+              "value": "Grade School Math 8K (GSM8K)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/openai/grade-school-math"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "BBH",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2204.05149",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            },
+            {
+              "name": "usage",
+              "value": "benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Benchmark for a broad range of complex reasoning tasks used to evaluate model performance."
+            },
+            {
+              "name": "owner",
+              "value": "Stanford CRFM"
+            },
+            {
+              "name": "full_name",
+              "value": "Big-Bench Hard (BBH)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/google/BIG-bench"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2204.05149"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "WikiText2",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2405.16406",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            },
+            {
+              "name": "usage",
+              "value": "calibration|evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Used as calibration data for optimizing rotation matrices with Cayley SGD (800 samples), for calibrating GPTQ quantization (128 samples), and for evaluating perplexity score on the test set."
+            },
+            {
+              "name": "owner",
+              "value": "Stephen Merity, Caiming Xiong, James Bradbury, Richard Socher"
+            },
+            {
+              "name": "full_name",
+              "value": "WikiText-2"
+            },
+            {
+              "name": "source_url",
+              "value": "https://blog.einstein.ai/the-wikitext-long-term-dependency-language-modeling-dataset/"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "C4",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2405.16406",
+          "licenses": [
+            {
+              "license": {
+                "id": "Apache-2.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            },
+            {
+              "name": "usage",
+              "value": "calibration"
+            },
+            {
+              "name": "description",
+              "value": "Used as an alternative calibration dataset to assess robustness of SpinQuant rotation optimization; experiments showed consistent results with WikiText2 calibration."
+            },
+            {
+              "name": "owner",
+              "value": "Google Research"
+            },
+            {
+              "name": "full_name",
+              "value": "Colossal Clean Crawled Corpus (C4)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://commoncrawl.org/2020/10/the-colossal-cleaned-crawl-ccnet/"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "ARC-easy",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2405.16406",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "One of eight zero-shot commonsense reasoning tasks used to evaluate the quantized models' accuracy."
+            },
+            {
+              "name": "owner",
+              "value": "Peter Clark et al."
+            },
+            {
+              "name": "full_name",
+              "value": "AI2 Reasoning Challenge Easy (ARC-Easy)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://allenai.org/data/arc"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "ARC-challenge",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2405.16406",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "One of eight zero-shot commonsense reasoning tasks used to evaluate the quantized models' accuracy."
+            },
+            {
+              "name": "owner",
+              "value": "Peter Clark et al."
+            },
+            {
+              "name": "full_name",
+              "value": "AI2 Reasoning Challenge Challenge (ARC-Challenge)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://allenai.org/data/arc"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "BoolQ",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2405.16406",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "One of eight zero-shot commonsense reasoning tasks used to evaluate the quantized models' accuracy."
+            },
+            {
+              "name": "owner",
+              "value": "Google Research"
+            },
+            {
+              "name": "full_name",
+              "value": "Boolean Questions (BoolQ)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/google-research-datasets/boolean-questions"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "PIQA",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2405.16406",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "One of eight zero-shot commonsense reasoning tasks used to evaluate the quantized models' accuracy."
+            },
+            {
+              "name": "owner",
+              "value": "Mohit Bisk et al."
+            },
+            {
+              "name": "full_name",
+              "value": "Physical Interaction QA (PIQA)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://leaderboard.allenai.org/piqa/submissions/get-started"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "SIQA",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2405.16406",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "One of eight zero-shot commonsense reasoning tasks used to evaluate the quantized models' accuracy."
+            },
+            {
+              "name": "owner",
+              "value": "Swabha Swayamdipta, Yejin Choi et al."
+            },
+            {
+              "name": "full_name",
+              "value": "Social IQa (SIQA)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://worksheets.codalab.org/worksheets/0xa789a2b76ce34518b46d8d141de8a4d6/"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "HellaSwag",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2405.16406",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "One of eight zero-shot commonsense reasoning tasks used to evaluate the quantized models' accuracy."
+            },
+            {
+              "name": "owner",
+              "value": "Rowan Zellers et al."
+            },
+            {
+              "name": "full_name",
+              "value": "HellaSwag: Can a Machine Really Finish Your Sentence?"
+            },
+            {
+              "name": "source_url",
+              "value": "https://rowanzellers.com/hellaswag/"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "OBQA",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2405.16406",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "One of eight zero-shot commonsense reasoning tasks used to evaluate the quantized models' accuracy."
+            },
+            {
+              "name": "owner",
+              "value": "Mitchell Holtzman, Eric Wallace et al."
+            },
+            {
+              "name": "full_name",
+              "value": "OpenBookQA (OBQA)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://leaderboard.allenai.org/open_book_qa/submissions/get-started"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "WinoGrande",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2405.16406",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "One of eight zero-shot commonsense reasoning tasks used to evaluate the quantized models' accuracy."
+            },
+            {
+              "name": "owner",
+              "value": "Sakaguchi et al."
+            },
+            {
+              "name": "full_name",
+              "value": "WinoGrande"
+            },
+            {
+              "name": "source_url",
+              "value": "https://leaderboard.allenai.org/winogrande/submissions/get-started"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "MMLU",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2405.16406",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Used in few-shot evaluation (5-shot) of instruction-finetuned LLaMA 3.2 1B and 3B models to assess SpinQuant quantization improvements."
+            },
+            {
+              "name": "owner",
+              "value": "Dan Hendrycks et al."
+            },
+            {
+              "name": "full_name",
+              "value": "Massive Multitask Language Understanding (MMLU)"
+            },
+            {
+              "name": "source_url",
+              "value": "https://github.com/hendrycks/test"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            }
+          ]
+        },
+        {
+          "type": "data",
+          "name": "TLDR9",
+          "description": "Dataset extracted from arXiv paper: https://arxiv.org/pdf/2405.16406",
+          "properties": [
+            {
+              "name": "source",
+              "value": "arXiv paper analysis"
+            },
+            {
+              "name": "paper_url",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            },
+            {
+              "name": "usage",
+              "value": "evaluation|benchmarking"
+            },
+            {
+              "name": "description",
+              "value": "Used for 1-shot rouge score evaluation on summarization tasks for instruction-finetuned models quantized with SpinQuant."
+            },
+            {
+              "name": "full_name",
+              "value": "TLDR9 Summarization Benchmark"
+            },
+            {
+              "name": "arxiv_paper",
+              "value": "https://arxiv.org/pdf/2405.16406"
+            }
+          ]
+        }
+      ],
+      "modelCard": {
+        "modelParameters": {
+          "task": "text-generation",
+          "architectureFamily": "llama",
+          "modelArchitecture": "LlamaForCausalLM",
+          "inputs": [
+            {
+              "format": "text"
+            }
+          ],
+          "outputs": [
+            {
+              "format": "text"
+            }
+          ]
+        },
+        "considerations": {}
+      }
+    },
+    {
+      "bom-ref": "transformers-lib",
+      "type": "library",
+      "name": "transformers"
+    },
+    {
+      "bom-ref": "pytorch-lib",
+      "type": "library",
+      "name": "PyTorch"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "meta-llama-llama-3.2-1b-instruct-66eaedefece5ee215637cc82",
+      "dependsOn": [
+        "transformers-lib",
+        "pytorch-lib"
+      ]
+    }
+  ]
+}
