@@ -517,14 +517,9 @@ impl SideBySideState {
         }
 
         let next_idx = match self.current_change_idx {
-            Some(idx) => {
-                if idx + 1 < self.change_indices.len() {
-                    idx + 1
-                } else {
-                    0 // Wrap around
-                }
-            }
-            None => 0,
+            Some(idx) if idx + 1 < self.change_indices.len() => idx + 1,
+            // Wrap around (or start from the top when nothing is selected).
+            _ => 0,
         };
 
         self.current_change_idx = Some(next_idx);

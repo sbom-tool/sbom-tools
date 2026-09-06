@@ -244,10 +244,10 @@ pub(crate) struct CsafVexResult {
 // ============================================================================
 
 fn pick_vuln_id(vuln: &CsafVulnerability) -> Option<String> {
-    if let Some(cve) = vuln.cve.as_deref() {
-        if !cve.is_empty() {
-            return Some(cve.to_string());
-        }
+    if let Some(cve) = vuln.cve.as_deref()
+        && !cve.is_empty()
+    {
+        return Some(cve.to_string());
     }
     vuln.ids
         .iter()

@@ -702,7 +702,7 @@ fn render_compatibility_panel(frame: &mut Frame, area: Rect, ctx: &RenderContext
     ));
 
     let mut families: Vec<_> = report.families.iter().collect();
-    families.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+    families.sort_by_key(|a| std::cmp::Reverse(a.1.len()));
 
     for (family, licenses) in families.iter().take(6) {
         lines.push(Line::from(vec![
@@ -775,7 +775,7 @@ fn build_license_list(
     // Apply sorting
     match sort {
         LicenseSort::License => entries.sort_by(|a, b| a.license.cmp(&b.license)),
-        LicenseSort::Count => entries.sort_by(|a, b| b.components.len().cmp(&a.components.len())),
+        LicenseSort::Count => entries.sort_by_key(|a| std::cmp::Reverse(a.components.len())),
         LicenseSort::Permissiveness => {
             entries.sort_by(|a, b| {
                 a.category
@@ -784,7 +784,7 @@ fn build_license_list(
             });
         }
         LicenseSort::Risk => {
-            entries.sort_by(|a, b| b.risk_level.cmp(&a.risk_level));
+            entries.sort_by_key(|a| std::cmp::Reverse(a.risk_level));
         }
     }
 
@@ -801,7 +801,7 @@ fn build_license_list(
             });
         }
         LicenseGroupBy::Risk => {
-            entries.sort_by(|a, b| b.risk_level.cmp(&a.risk_level));
+            entries.sort_by_key(|a| std::cmp::Reverse(a.risk_level));
         }
         _ => {} // License and Component grouping use default sort
     }

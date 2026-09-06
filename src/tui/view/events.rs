@@ -92,10 +92,10 @@ impl Default for EventHandler {
                                 break;
                             }
                         }
-                        Ok(CrosstermEvent::Resize(w, h)) => {
-                            if event_tx.send(Event::Resize(w, h)).is_err() {
-                                break;
-                            }
+                        Ok(CrosstermEvent::Resize(w, h))
+                            if event_tx.send(Event::Resize(w, h)).is_err() =>
+                        {
+                            break;
                         }
                         _ => {}
                     }
@@ -672,10 +672,8 @@ fn handle_view_key(app: &mut ViewApp, key: KeyEvent) {
                 app.compliance_state.selected_violation = 0;
                 app.compliance_state.scroll_offset = 0;
             }
-            ViewTab::Source => {
-                if app.source_state.view_mode == SourceViewMode::Tree {
-                    app.source_state.cycle_filter_type();
-                }
+            ViewTab::Source if app.source_state.view_mode == SourceViewMode::Tree => {
+                app.source_state.cycle_filter_type();
             }
             _ => {}
         },
@@ -1122,7 +1120,6 @@ fn handle_search_key(app: &mut ViewApp, key: KeyEvent) {
                     super::app::SearchResult::Vulnerability {
                         id: _,
                         component_id,
-                        component_name: _,
                         ..
                     } => {
                         // Navigate directly by ID - no name lookup needed
@@ -1208,11 +1205,11 @@ pub fn handle_mouse_event(app: &mut ViewApp, mouse: event::MouseEvent) {
             // return None and are left as no-ops — a no-op is safer than selecting the
             // wrong row (which is what the old fixed `list_start_row = 4` did on every
             // tab, since content starts at row 5 and each list body is lower still).
-            if let Some(body_start) = view_list_body_start(app.active_tab) {
-                if y >= body_start {
-                    let row = (y - body_start) as usize;
-                    handle_list_click(app, row, x);
-                }
+            if let Some(body_start) = view_list_body_start(app.active_tab)
+                && y >= body_start
+            {
+                let row = (y - body_start) as usize;
+                handle_list_click(app, row, x);
             }
         }
         MouseEventKind::ScrollDown => {

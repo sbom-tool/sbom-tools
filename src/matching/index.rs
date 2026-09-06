@@ -516,33 +516,27 @@ impl ComponentIndex {
         let ecosystems = self.by_ecosystem.len();
         let prefixes = self.by_prefix.len();
         let trigrams = self.by_trigram.len();
-        let avg_per_ecosystem = if ecosystems > 0 {
-            self.by_ecosystem
-                .values()
-                .map(std::vec::Vec::len)
-                .sum::<usize>()
-                / ecosystems
-        } else {
-            0
-        };
-        let avg_per_prefix = if prefixes > 0 {
-            self.by_prefix
-                .values()
-                .map(std::vec::Vec::len)
-                .sum::<usize>()
-                / prefixes
-        } else {
-            0
-        };
-        let avg_per_trigram = if trigrams > 0 {
-            self.by_trigram
-                .values()
-                .map(std::vec::Vec::len)
-                .sum::<usize>()
-                / trigrams
-        } else {
-            0
-        };
+        let avg_per_ecosystem = self
+            .by_ecosystem
+            .values()
+            .map(std::vec::Vec::len)
+            .sum::<usize>()
+            .checked_div(ecosystems)
+            .unwrap_or(0);
+        let avg_per_prefix = self
+            .by_prefix
+            .values()
+            .map(std::vec::Vec::len)
+            .sum::<usize>()
+            .checked_div(prefixes)
+            .unwrap_or(0);
+        let avg_per_trigram = self
+            .by_trigram
+            .values()
+            .map(std::vec::Vec::len)
+            .sum::<usize>()
+            .checked_div(trigrams)
+            .unwrap_or(0);
 
         IndexStats {
             total_components: self.entries.len(),
