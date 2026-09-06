@@ -780,6 +780,39 @@ operational error (exit `3`), before any SBOM is read, naming the formats they
 do accept (`validate --summary` is the exception — it overrides `-o` outright,
 so no format is gated).
 
+### JSON output contract
+
+Which JSON payloads are a compatibility contract, and how firm it is
+(pre-1.0):
+
+- **Contractual payloads.** The normalized SBOM, diff results, and quality
+  reports, as emitted by the C ABI (`sbom_tools_parse_sbom_*_json`,
+  `sbom_tools_diff_*`, `sbom_tools_score_*`) and by the language bindings, and
+  the `-o json` output of `diff`, `diff-multi`, `matrix`, `timeline`,
+  `validate`, and `quality`. Field names are `snake_case` with no serde
+  renames; `Option` fields serialize as `null`, except a few additive blocks
+  (e.g. `crypto_properties`, `ml_model`-adjacent extensions) that are omitted
+  when absent.
+- **`view -o json` is a projection, not the normalized model.** It emits a
+  `summary` block plus, per component, `name`, `version`, `ecosystem`,
+  `licenses`, `supplier`, `dependency_kind`, `vulnerability_count`,
+  `vulnerabilities[]`, and optional EOL fields. Domain detail such as
+  `crypto_properties`, `ml_model`, or `dataset` is **not** included; the full
+  normalized document is available only through the ABI and bindings.
+- **What is test-pinned.** The ABI snapshot tests pin the top-level keys of
+  each payload (`tests/fixtures/abi/contract_required_keys.json`) and the
+  numeric scales (`semantic_score` 0–100, similarity and deviation 0–1).
+  Nested shape is covered by behaviour tests but is not frozen by a schema.
+- **No separate schema version.** The payload shape follows the crate version.
+  Until 1.0 a breaking change may land in a minor release and is always listed
+  under **Upgrade notes** in `CHANGELOG.md`; consumers should pin the crate
+  version and read those notes on each bump.
+- **Known conflation.** In the CycloneDX parser an absent
+  `cryptoProperties.algorithmProperties.primitive` and an explicit
+  `"unknown"` both normalize to `primitive: "Unknown"`. A consumer that must
+  tell "omitted" from "declared unknown" should read the raw CycloneDX
+  document, which is the stable contract for that distinction.
+
 ## CI/CD Integration
 
 Use sbom-tools in CI pipelines to gate deployments on SBOM changes, new vulnerabilities, or quality regressions.
