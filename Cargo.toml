@@ -79,7 +79,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 indexmap = { version = "2.14", features = ["serde"] }
 xxhash-rust = { version = "0.8", features = ["xxh3"] }
-dirs = "6.0.0"
+dirs = "7.0.0"
 unicode-width = "0.2"
 schemars = "1.2"
 
