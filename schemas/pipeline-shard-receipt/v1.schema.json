@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pipeline-shard-receipt/v1",
+  "title": "PipelineShardReceipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "repository", "workflow", "run_id", "commit_sha", "source_fingerprint", "trust_context", "promotable", "target", "lock_digest", "versions", "checks", "artifacts", "dagger_trace", "started_at", "completed_at", "failure_classification"],
+  "properties": {
+    "schema": {"const": "pipeline-shard-receipt/v1"}, "repository": {"type":"string","minLength":1}, "workflow": {"type":"string","minLength":1}, "run_id": {"type":["string","null"]}, "commit_sha": {"type":"string","pattern":"^[0-9a-f]{40,64}$"},
+    "source_fingerprint": {"$ref":"#/$defs/digest"}, "lock_digest": {"$ref":"#/$defs/digest"}, "trust_context": {"enum":["pull-request","protected-main","release","local"]}, "promotable": {"const":false},
+    "target": {"$ref":"#/$defs/target"}, "versions": {"type":"object","additionalProperties":{"type":"string"}}, "checks": {"type":"array","items":{"$ref":"#/$defs/check"},"minItems":1}, "artifacts": {"type":"array","items":{"$ref":"#/$defs/artifact"}}, "dagger_trace": {"type":["string","null"]}, "started_at": {"type":"string","format":"date-time"}, "completed_at": {"type":"string","format":"date-time"}, "failure_classification": {"type":["string","null"]}
+  },
+  "$defs": {
+    "digest": {"type":"string","pattern":"^sha256:[0-9a-f]{64}$"},
+    "target": {"type":"object","additionalProperties":false,"required":["verification_scope","os","architecture","toolchain","profile","features","binding_runtime"],"properties":{"verification_scope":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)*$","minLength":1},"os":{"type":"string","minLength":1},"architecture":{"type":"string","minLength":1},"toolchain":{"type":"string","minLength":1},"profile":{"type":"string","minLength":1},"features":{"type":"array","items":{"type":"string"}},"binding_runtime":{"type":["string","null"]}}},
+    "check": {"type":"object","additionalProperties":false,"required":["name","outcome","passed","failed","ignored"],"properties":{"name":{"type":"string","minLength":1},"outcome":{"enum":["passed","failed","cancelled","skipped"]},"passed":{"type":"integer","minimum":0},"failed":{"type":"integer","minimum":0},"ignored":{"type":"integer","minimum":0}}},
+    "artifact": {"type":"object","additionalProperties":false,"required":["name","path","size","sha256"],"properties":{"name":{"type":"string","minLength":1},"path":{"type":"string","minLength":1},"size":{"type":"integer","minimum":0},"sha256":{"$ref":"#/$defs/digest"}}}
+  }
+}

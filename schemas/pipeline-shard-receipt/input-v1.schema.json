@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pipeline-shard-receipt-input/v1",
+  "title": "PipelineShardReceiptGenerationInput",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "repository", "workflow", "commit_sha", "source_root", "lock_paths", "artifact_root", "artifacts", "target", "versions", "checks", "started_at", "completed_at", "run_id", "dagger_trace", "failure_classification", "hosted", "local"],
+  "properties": {
+    "schema": {"const": "pipeline-shard-receipt-input/v1"},
+    "repository": {"type":"string","minLength":1}, "workflow": {"type":"string","minLength":1},
+    "commit_sha": {"type":"string","pattern":"^[0-9a-f]{40,64}$"}, "source_root": {"type":"string","minLength":1},
+    "lock_paths": {"type":"array","minItems":1,"items":{"type":"string","minLength":1}},
+    "artifact_root": {"type":"string","minLength":1},
+    "artifacts": {"type":"array","items":{"type":"object","additionalProperties":false,"required":["name","path"],"properties":{"name":{"type":"string","minLength":1},"path":{"type":"string","minLength":1}}}},
+    "target": {"$ref":"#/$defs/target"}, "versions":{"type":"object","additionalProperties":{"type":"string"}}, "checks":{"type":"array","items":{"$ref":"#/$defs/check"},"minItems":1},
+    "started_at":{"type":"string","format":"date-time"}, "completed_at":{"type":"string","format":"date-time"},
+    "run_id":{"type":["string","null"]}, "dagger_trace":{"type":["string","null"]}, "failure_classification":{"type":["string","null"]},
+    "hosted":{"type":["object","null"],"additionalProperties":false,"required":["event_name","ref_name","repository","default_branch","sha","head_repository"],"properties":{"event_name":{"type":"string","minLength":1},"ref_name":{"type":"string","minLength":1},"repository":{"type":"string","minLength":1},"default_branch":{"type":"string","minLength":1},"sha":{"type":"string","pattern":"^[0-9a-f]{40,64}$"},"head_repository":{"type":["string","null"]}}},
+    "local":{"type":"boolean"}
+  },
+  "$defs": {
+    "target": {"type":"object","additionalProperties":false,"required":["verification_scope","os","architecture","toolchain","profile","features","binding_runtime"],"properties":{"verification_scope":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)*$","minLength":1},"os":{"type":"string","minLength":1},"architecture":{"type":"string","minLength":1},"toolchain":{"type":"string","minLength":1},"profile":{"type":"string","minLength":1},"features":{"type":"array","items":{"type":"string"}},"binding_runtime":{"type":["string","null"]}}},
+    "check": {"type":"object","additionalProperties":false,"required":["name","outcome","passed","failed","ignored"],"properties":{"name":{"type":"string","minLength":1},"outcome":{"enum":["passed","failed","cancelled","skipped"]},"passed":{"type":"integer","minimum":0},"failed":{"type":"integer","minimum":0},"ignored":{"type":"integer","minimum":0}}}
+  }
+}
