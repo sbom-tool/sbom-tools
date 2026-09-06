@@ -1,0 +1,7 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"aggregate-policy-context/v1",
+  "type":"object","additionalProperties":false,
+  "required":["schema","repository","commit_sha","hosted","local"],
+  "properties":{"schema":{"const":"aggregate-policy-context/v1"},"repository":{"type":"string","minLength":1},"commit_sha":{"type":"string","pattern":"^[0-9a-f]{40,64}$"},"local":{"type":"boolean"},"hosted":{"type":["object","null"],"additionalProperties":false,"required":["event_name","ref_name","repository","default_branch","sha","head_repository"],"properties":{"event_name":{"type":"string","minLength":1},"ref_name":{"type":"string","minLength":1,"description":"Canonical full github.ref form (refs/pull/N/merge, refs/heads/<branch>, refs/tags/<tag>); the unambiguous github.ref_name short forms N/merge and the default branch name are also accepted. Bare tag names are rejected as ambiguous."},"repository":{"type":"string","minLength":1},"default_branch":{"type":"string","minLength":1},"sha":{"type":"string","pattern":"^[0-9a-f]{40,64}$"},"head_repository":{"type":["string","null"]}}}}
+}

@@ -1,0 +1,19 @@
+{
+  "schema": "pipeline-shard-receipt/v1",
+  "repository": "sbom-tool/sbom-tools",
+  "workflow": "CI",
+  "run_id": "local-fixture",
+  "commit_sha": "0000000000000000000000000000000000000000",
+  "source_fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "trust_context": "local",
+  "promotable": false,
+  "target": {"verification_scope":"linux-x86_64","os":"linux","architecture":"x86_64","toolchain":"1.88","profile":"debug","features":[],"binding_runtime":null},
+  "lock_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "versions": {"rust":"1.88"},
+  "checks": [{"name":"cargo-test","outcome":"passed","passed":1,"failed":0,"ignored":0}],
+  "artifacts": [],
+  "dagger_trace": null,
+  "started_at": "2026-01-01T00:00:00Z",
+  "completed_at": "2026-01-01T00:01:00Z",
+  "failure_classification": null
+}

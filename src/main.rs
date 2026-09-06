@@ -1343,6 +1343,62 @@ enum VerifyAction {
         )]
         format: TableJsonFormat,
     },
+    /// Validate a versioned pipeline shard receipt
+    Receipt { file: PathBuf },
+    /// Aggregate receipts from a JSON file or directory using a strict policy JSON file.
+    ReceiptAggregate {
+        receipts: PathBuf,
+        #[arg(long)]
+        policy: PathBuf,
+    },
+    /// Generate an unsigned receipt from a strict, digest-free JSON descriptor.
+    ReceiptGenerate {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Generate an unsigned aggregate policy from strict manifest and context JSON.
+    ReceiptPolicyGenerate {
+        #[arg(long)]
+        manifest: PathBuf,
+        #[arg(long)]
+        context: PathBuf,
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Generate a target-scoped receipt from a checked-in job manifest and CI outcomes.
+    ReceiptJob {
+        #[arg(long)]
+        manifest: PathBuf,
+        #[arg(long)]
+        context: PathBuf,
+        #[arg(long)]
+        outcome: Vec<String>,
+        #[arg(long)]
+        runner_os: Option<String>,
+        #[arg(long)]
+        runner_arch: Option<String>,
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Write a strict hosted receipt context from CI-provided values.
+    ReceiptContext {
+        #[arg(long)]
+        repository: String,
+        #[arg(long)]
+        commit_sha: String,
+        #[arg(long)]
+        event_name: String,
+        #[arg(long)]
+        ref_name: String,
+        #[arg(long)]
+        default_branch: String,
+        #[arg(long)]
+        head_repository: Option<String>,
+        #[arg(long)]
+        output: PathBuf,
+    },
 }
 
 /// Arguments for the `license-check` subcommand
@@ -2609,6 +2665,54 @@ fn run() -> Result<()> {
                     file,
                     model_dir,
                     format: format.as_str().to_string(),
+                },
+                VerifyAction::Receipt { file } => cli::VerifyAction::Receipt { file },
+                VerifyAction::ReceiptAggregate { receipts, policy } => {
+                    cli::VerifyAction::ReceiptAggregate { receipts, policy }
+                }
+                VerifyAction::ReceiptGenerate { input, output } => {
+                    cli::VerifyAction::ReceiptGenerate { input, output }
+                }
+                VerifyAction::ReceiptPolicyGenerate {
+                    manifest,
+                    context,
+                    output,
+                } => cli::VerifyAction::ReceiptPolicyGenerate {
+                    manifest,
+                    context,
+                    output,
+                },
+                VerifyAction::ReceiptJob {
+                    manifest,
+                    context,
+                    outcome,
+                    runner_os,
+                    runner_arch,
+                    output,
+                } => cli::VerifyAction::ReceiptJob {
+                    manifest,
+                    context,
+                    outcome,
+                    runner_os,
+                    runner_arch,
+                    output,
+                },
+                VerifyAction::ReceiptContext {
+                    repository,
+                    commit_sha,
+                    event_name,
+                    ref_name,
+                    default_branch,
+                    head_repository,
+                    output,
+                } => cli::VerifyAction::ReceiptContext {
+                    repository,
+                    commit_sha,
+                    event_name,
+                    ref_name,
+                    default_branch,
+                    head_repository,
+                    output,
                 },
             };
 

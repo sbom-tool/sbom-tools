@@ -1,0 +1,131 @@
+{
+  "schema": "aggregate-policy-manifest/v1",
+  "workflow": "Bindings",
+  "source_root": "$RUNNER_TEMP/sbom-receipt-source",
+  "lock_paths": [
+    "Cargo.lock",
+    "rust-toolchain.toml",
+    "dagger/rust-sdk/Cargo.lock",
+    "bindings/go/go.mod",
+    "bindings/python/pyproject.toml",
+    "bindings/nodejs/package-lock.json",
+    "bindings/swift/Package.swift"
+  ],
+  "artifact_root": "$RUNNER_TEMP/sbom-receipt-source",
+  "expected_targets": [
+    {
+      "verification_scope": "constant-parity",
+      "os": "linux",
+      "architecture": "x86_64",
+      "toolchain": "stable",
+      "profile": "debug",
+      "features": [],
+      "binding_runtime": null
+    },
+    {
+      "verification_scope": "dagger-rust-sdk",
+      "os": "linux",
+      "architecture": "x86_64",
+      "toolchain": "stable",
+      "profile": "debug",
+      "features": [],
+      "binding_runtime": "dagger-rust-sdk"
+    },
+    {
+      "verification_scope": "rust-ffi",
+      "os": "linux",
+      "architecture": "x86_64",
+      "toolchain": "stable",
+      "profile": "debug",
+      "features": [
+        "ffi"
+      ],
+      "binding_runtime": null
+    },
+    {
+      "verification_scope": "go-bindings-ubuntu",
+      "os": "linux",
+      "architecture": "x86_64",
+      "toolchain": "stable",
+      "profile": "debug",
+      "features": [],
+      "binding_runtime": "go"
+    },
+    {
+      "verification_scope": "go-bindings-macos",
+      "os": "macos",
+      "architecture": "arm64",
+      "toolchain": "stable",
+      "profile": "debug",
+      "features": [],
+      "binding_runtime": "go"
+    },
+    {
+      "verification_scope": "python-bindings-ubuntu",
+      "os": "linux",
+      "architecture": "x86_64",
+      "toolchain": "stable",
+      "profile": "debug",
+      "features": [],
+      "binding_runtime": "python"
+    },
+    {
+      "verification_scope": "python-bindings-macos",
+      "os": "macos",
+      "architecture": "arm64",
+      "toolchain": "stable",
+      "profile": "debug",
+      "features": [],
+      "binding_runtime": "python"
+    },
+    {
+      "verification_scope": "python-bindings-windows",
+      "os": "windows",
+      "architecture": "x86_64",
+      "toolchain": "stable",
+      "profile": "debug",
+      "features": [],
+      "binding_runtime": "python"
+    },
+    {
+      "verification_scope": "swift-bindings",
+      "os": "macos",
+      "architecture": "arm64",
+      "toolchain": "stable",
+      "profile": "debug",
+      "features": [],
+      "binding_runtime": "swift"
+    },
+    {
+      "verification_scope": "nodejs-bindings-ubuntu",
+      "os": "linux",
+      "architecture": "x86_64",
+      "toolchain": "stable",
+      "profile": "debug",
+      "features": [],
+      "binding_runtime": "nodejs"
+    },
+    {
+      "verification_scope": "nodejs-bindings-macos",
+      "os": "macos",
+      "architecture": "arm64",
+      "toolchain": "stable",
+      "profile": "debug",
+      "features": [],
+      "binding_runtime": "nodejs"
+    },
+    {
+      "verification_scope": "nodejs-bindings-windows",
+      "os": "windows",
+      "architecture": "x86_64",
+      "toolchain": "stable",
+      "profile": "debug",
+      "features": [],
+      "binding_runtime": "nodejs"
+    }
+  ],
+  "required_checks": [
+    "producer"
+  ],
+  "artifacts": []
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pipeline-shard-job-manifest/v1",
+  "title": "ReceiptJobManifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "workflow", "source_root", "lock_paths", "artifact_root", "artifacts", "target", "checks"],
+  "properties": {
+    "schema": {"const": "pipeline-shard-job-manifest/v1"},
+    "workflow": {"type": "string", "minLength": 1},
+    "source_root": {"type": "string", "minLength": 1},
+    "lock_paths": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+    "artifact_root": {"type": "string", "minLength": 1},
+    "artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifact_input"}},
+    "target": {"$ref": "#/$defs/target"},
+    "checks": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1}
+  },
+  "$defs": {
+    "target": {"type":"object","additionalProperties":false,"required":["verification_scope","os","architecture","toolchain","profile","features","binding_runtime"],"properties":{"verification_scope":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)*$","minLength":1},"os":{"type":"string","minLength":1},"architecture":{"type":"string","minLength":1},"toolchain":{"type":"string","minLength":1},"profile":{"type":"string","minLength":1},"features":{"type":"array","items":{"type":"string","minLength":1},"uniqueItems":true},"binding_runtime":{"type":["string","null"]}}},
+    "artifact_input": {"type":"object","additionalProperties":false,"required":["name","path"],"properties":{"name":{"type":"string","minLength":1},"path":{"type":"string","minLength":1}}}
+  }
+}

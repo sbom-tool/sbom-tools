@@ -1,0 +1,58 @@
+name: Emit pipeline receipt
+description: Generate one target-scoped unsigned receipt and upload it for fan-in.
+inputs:
+  manifest:
+    required: true
+  artifact-name:
+    required: true
+  outcome:
+    required: true
+  receipt-id:
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Generate receipt
+      if: always()
+      shell: bash
+      env:
+        RECEIPT_STATUS: ${{ inputs.outcome }}
+        RECEIPT_REPOSITORY: ${{ github.repository }}
+        RECEIPT_SHA: ${{ github.sha }}
+        RECEIPT_EVENT: ${{ github.event_name }}
+        RECEIPT_REF: ${{ github.ref }}
+        RECEIPT_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        RECEIPT_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        RECEIPT_RUN_ID: ${{ github.run_id }}
+        RECEIPT_RUNNER_OS: ${{ runner.os }}
+        RECEIPT_RUNNER_ARCH: ${{ runner.arch }}
+        RECEIPT_MANIFEST: ${{ inputs.manifest }}
+        RECEIPT_ID: ${{ inputs.receipt-id }}
+      run: |
+        set -euo pipefail
+        [[ "$RECEIPT_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "invalid receipt-id" >&2; exit 2; }
+        runner_temp="$RUNNER_TEMP"
+        if command -v cygpath >/dev/null 2>&1; then
+          runner_temp=$(cygpath -u "$RUNNER_TEMP")
+        fi
+        target="$runner_temp/sbom-receipt-source"
+        test ! -e "$target"
+        mkdir -p "$target"
+        # Keep the source snapshot identical on GitHub-hosted Windows and Unix
+        # runners; checkout autocrlf settings must not alter receipt digests.
+        git -c core.autocrlf=false -c core.eol=lf archive "$RECEIPT_SHA" | tar -x -C "$target"
+        mkdir -p "$runner_temp/sbom-receipts"
+        target="$runner_temp/sbom-receipts/$RECEIPT_ID.json"
+        bin=target/debug/sbom-tools; [[ -x "$bin.exe" ]] && bin="$bin.exe"
+        context="$runner_temp/sbom-receipt-context.json"
+        "$bin" verify receipt-context --repository "$RECEIPT_REPOSITORY" --commit-sha "$RECEIPT_SHA" --event-name "$RECEIPT_EVENT" --ref-name "$RECEIPT_REF" --default-branch "$RECEIPT_DEFAULT_BRANCH" --head-repository "${RECEIPT_HEAD_REPOSITORY:-}" --output "$context"
+        args=(verify receipt-job --manifest "$RECEIPT_MANIFEST" --context "$context" --output "$target" --outcome "producer=$RECEIPT_STATUS" --runner-os "$RECEIPT_RUNNER_OS" --runner-arch "$RECEIPT_RUNNER_ARCH")
+        "$bin" "${args[@]}"
+    - name: Upload receipt
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ runner.temp }}/sbom-receipts/
+        if-no-files-found: error
+        retention-days: 7

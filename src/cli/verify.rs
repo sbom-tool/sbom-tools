@@ -56,6 +56,62 @@ pub enum VerifyAction {
         )]
         format: String,
     },
+    /// Validate a versioned pipeline shard receipt
+    Receipt { file: PathBuf },
+    /// Aggregate receipts from a JSON file or directory using a strict policy JSON file.
+    ReceiptAggregate {
+        receipts: PathBuf,
+        #[arg(long)]
+        policy: PathBuf,
+    },
+    /// Generate an unsigned receipt from a strict, digest-free JSON descriptor.
+    ReceiptGenerate {
+        #[arg(long)]
+        input: PathBuf,
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Generate an unsigned aggregate policy from static and runtime contracts.
+    ReceiptPolicyGenerate {
+        #[arg(long)]
+        manifest: PathBuf,
+        #[arg(long)]
+        context: PathBuf,
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Generate a target-scoped receipt from a checked-in job manifest and CI outcomes.
+    ReceiptJob {
+        #[arg(long)]
+        manifest: PathBuf,
+        #[arg(long)]
+        context: PathBuf,
+        #[arg(long)]
+        outcome: Vec<String>,
+        #[arg(long)]
+        runner_os: Option<String>,
+        #[arg(long)]
+        runner_arch: Option<String>,
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Write a strict hosted receipt context from CI-provided values.
+    ReceiptContext {
+        #[arg(long)]
+        repository: String,
+        #[arg(long)]
+        commit_sha: String,
+        #[arg(long)]
+        event_name: String,
+        #[arg(long)]
+        ref_name: String,
+        #[arg(long)]
+        default_branch: String,
+        #[arg(long)]
+        head_repository: Option<String>,
+        #[arg(long)]
+        output: PathBuf,
+    },
 }
 
 /// Run the verify command.
@@ -219,5 +275,273 @@ pub fn run_verify(action: VerifyAction, quiet: bool) -> Result<i32> {
                 Ok(exit_codes::SUCCESS)
             }
         }
+        VerifyAction::Receipt { file } => {
+            match crate::verification::check_receipt(&file) {
+                Ok(()) => {}
+                Err(crate::verification::ReceiptError::Contract(message)) => {
+                    eprintln!("receipt verification failed: {message}");
+                    return Ok(exit_codes::CHANGES_DETECTED);
+                }
+                Err(error) => return Err(error.into()),
+            }
+            if !quiet {
+                println!("Receipt valid: {}", file.display());
+            }
+            Ok(exit_codes::SUCCESS)
+        }
+        VerifyAction::ReceiptAggregate { receipts, policy } => {
+            // Same exit contract as receipts: unreadable/malformed policy is
+            // operational (3), readable-but-violating policy is a verdict (1).
+            let policy = match read_json_contract::<crate::verification::AggregatePolicy>(&policy) {
+                Ok(value) => value,
+                Err(crate::verification::ReceiptError::Contract(message)) => {
+                    eprintln!("receipt aggregation failed: {message}");
+                    return Ok(exit_codes::CHANGES_DETECTED);
+                }
+                Err(error) => return Err(error.into()),
+            };
+            let receipt_paths = receipt_paths(&receipts)?;
+            let mut loaded = Vec::with_capacity(receipt_paths.len());
+            for path in receipt_paths {
+                match crate::verification::read_receipt(&path) {
+                    Ok(receipt) => loaded.push(receipt),
+                    Err(crate::verification::ReceiptError::Contract(message)) => {
+                        eprintln!("receipt aggregation failed: {message}");
+                        return Ok(exit_codes::CHANGES_DETECTED);
+                    }
+                    Err(error) => return Err(error.into()),
+                }
+            }
+            match crate::verification::aggregate_receipts(&loaded, &policy) {
+                Ok(_) => {
+                    if !quiet {
+                        println!("Receipts valid");
+                    }
+                    Ok(exit_codes::SUCCESS)
+                }
+                Err(crate::verification::ReceiptError::Contract(message)) => {
+                    eprintln!("receipt aggregation failed: {message}");
+                    Ok(exit_codes::CHANGES_DETECTED)
+                }
+                Err(error) => Err(error.into()),
+            }
+        }
+        VerifyAction::ReceiptGenerate { input, output } => {
+            let bytes = std::fs::read(&input)?;
+            let value: serde_json::Value = serde_json::from_slice(&bytes)?;
+            let descriptor: crate::verification::ReceiptGenerationInput =
+                match serde_json::from_value(value) {
+                    Ok(descriptor) => descriptor,
+                    Err(error) => {
+                        eprintln!("receipt generation failed: {error}");
+                        return Ok(exit_codes::CHANGES_DETECTED);
+                    }
+                };
+            let receipt = match crate::verification::generate_receipt_from_descriptor(descriptor) {
+                Ok(receipt) => receipt,
+                Err(crate::verification::ReceiptError::Contract(message)) => {
+                    eprintln!("receipt generation failed: {message}");
+                    return Ok(exit_codes::CHANGES_DETECTED);
+                }
+                Err(error) => return Err(error.into()),
+            };
+            match crate::verification::write_receipt(&output, &receipt) {
+                Ok(()) => {}
+                Err(crate::verification::ReceiptError::Contract(message)) => {
+                    eprintln!("receipt generation failed: {message}");
+                    return Ok(exit_codes::CHANGES_DETECTED);
+                }
+                Err(error) => return Err(error.into()),
+            }
+            if !quiet {
+                println!("Receipt generated: {}", output.display());
+            }
+            Ok(exit_codes::SUCCESS)
+        }
+        VerifyAction::ReceiptPolicyGenerate {
+            manifest,
+            context,
+            output,
+        } => {
+            let manifest =
+                match read_json_contract::<crate::verification::AggregatePolicyManifest>(&manifest)
+                {
+                    Ok(value) => value,
+                    Err(crate::verification::ReceiptError::Contract(message)) => {
+                        eprintln!("receipt policy generation failed: {message}");
+                        return Ok(exit_codes::CHANGES_DETECTED);
+                    }
+                    Err(error) => return Err(error.into()),
+                };
+            let context = match read_json_contract::<crate::verification::AggregatePolicyContextInput>(
+                &context,
+            ) {
+                Ok(value) => value,
+                Err(crate::verification::ReceiptError::Contract(message)) => {
+                    eprintln!("receipt policy generation failed: {message}");
+                    return Ok(exit_codes::CHANGES_DETECTED);
+                }
+                Err(error) => return Err(error.into()),
+            };
+            let policy = match crate::verification::generate_policy(manifest, context) {
+                Ok(value) => value,
+                Err(crate::verification::ReceiptError::Contract(message)) => {
+                    eprintln!("receipt policy generation failed: {message}");
+                    return Ok(exit_codes::CHANGES_DETECTED);
+                }
+                Err(error) => return Err(error.into()),
+            };
+            match crate::verification::write_policy(&output, &policy) {
+                Ok(()) => {}
+                Err(crate::verification::ReceiptError::Contract(message)) => {
+                    eprintln!("receipt policy generation failed: {message}");
+                    return Ok(exit_codes::CHANGES_DETECTED);
+                }
+                Err(error) => return Err(error.into()),
+            }
+            if !quiet {
+                println!("Receipt policy generated: {}", output.display());
+            }
+            Ok(exit_codes::SUCCESS)
+        }
+        VerifyAction::ReceiptJob {
+            manifest,
+            context,
+            outcome,
+            runner_os,
+            runner_arch,
+            output,
+        } => {
+            let manifest =
+                match read_json_contract::<crate::verification::ReceiptJobManifest>(&manifest) {
+                    Ok(value) => value,
+                    Err(crate::verification::ReceiptError::Contract(message)) => {
+                        eprintln!("receipt job generation failed: {message}");
+                        return Ok(exit_codes::CHANGES_DETECTED);
+                    }
+                    Err(error) => return Err(error.into()),
+                };
+            let context = match read_json_contract::<crate::verification::AggregatePolicyContextInput>(
+                &context,
+            ) {
+                Ok(value) => value,
+                Err(crate::verification::ReceiptError::Contract(message)) => {
+                    eprintln!("receipt job generation failed: {message}");
+                    return Ok(exit_codes::CHANGES_DETECTED);
+                }
+                Err(error) => return Err(error.into()),
+            };
+            let outcomes = outcome
+                .iter()
+                .map(|value| {
+                    value
+                        .split_once('=')
+                        .map(|(name, state)| (name.to_owned(), state.to_owned()))
+                })
+                .collect::<Option<Vec<_>>>()
+                .ok_or_else(|| anyhow::anyhow!("outcomes must use check=outcome"))?;
+            let receipt = match crate::verification::generate_job_receipt(
+                manifest,
+                context,
+                &outcomes
+                    .iter()
+                    .map(|(n, s)| (n.clone(), s.clone()))
+                    .collect::<Vec<_>>(),
+                runner_os.as_deref(),
+                runner_arch.as_deref(),
+            ) {
+                Ok(value) => value,
+                Err(crate::verification::ReceiptError::Contract(message)) => {
+                    eprintln!("receipt job generation failed: {message}");
+                    return Ok(exit_codes::CHANGES_DETECTED);
+                }
+                Err(error) => return Err(error.into()),
+            };
+            match crate::verification::write_receipt(&output, &receipt) {
+                Ok(()) => Ok(exit_codes::SUCCESS),
+                Err(crate::verification::ReceiptError::Contract(message)) => {
+                    eprintln!("receipt job generation failed: {message}");
+                    Ok(exit_codes::CHANGES_DETECTED)
+                }
+                Err(error) => Err(error.into()),
+            }
+        }
+        VerifyAction::ReceiptContext {
+            repository,
+            commit_sha,
+            event_name,
+            ref_name,
+            default_branch,
+            head_repository,
+            output,
+        } => {
+            let context = crate::verification::AggregatePolicyContextInput {
+                schema: crate::verification::AGGREGATE_POLICY_CONTEXT_SCHEMA.into(),
+                repository: repository.clone(),
+                commit_sha: commit_sha.clone(),
+                local: false,
+                hosted: Some(crate::verification::HostedReceiptMetadata {
+                    event_name,
+                    ref_name,
+                    repository,
+                    default_branch,
+                    sha: commit_sha,
+                    head_repository,
+                }),
+            };
+            match crate::verification::write_context(&output, &context) {
+                Ok(()) => Ok(exit_codes::SUCCESS),
+                Err(crate::verification::ReceiptError::Contract(message)) => {
+                    eprintln!("receipt context failed: {message}");
+                    Ok(exit_codes::CHANGES_DETECTED)
+                }
+                Err(error) => Err(error.into()),
+            }
+        }
     }
+}
+
+fn read_json_contract<T: serde::de::DeserializeOwned>(
+    path: &std::path::Path,
+) -> Result<T, crate::verification::ReceiptError> {
+    let bytes = std::fs::read(path).map_err(|source| crate::verification::ReceiptError::Io {
+        path: path.into(),
+        source,
+    })?;
+    let value: serde_json::Value = serde_json::from_slice(&bytes).map_err(|source| {
+        crate::verification::ReceiptError::Json {
+            path: path.into(),
+            source,
+        }
+    })?;
+    serde_json::from_value(value)
+        .map_err(|source| crate::verification::ReceiptError::Contract(source.to_string()))
+}
+
+fn receipt_paths(path: &std::path::Path) -> Result<Vec<PathBuf>> {
+    if path.is_file() {
+        return Ok(vec![path.to_path_buf()]);
+    }
+    if !path.is_dir() {
+        anyhow::bail!(
+            "receipt input is not a file or directory: {}",
+            path.display()
+        );
+    }
+    let mut paths = Vec::new();
+    for entry in std::fs::read_dir(path)? {
+        let entry = entry?;
+        if entry.file_type()?.is_file() && entry.path().extension().is_some_and(|ext| ext == "json")
+        {
+            paths.push(entry.path());
+        }
+    }
+    paths.sort();
+    if paths.is_empty() {
+        anyhow::bail!(
+            "receipt directory contains no JSON files: {}",
+            path.display()
+        );
+    }
+    Ok(paths)
 }

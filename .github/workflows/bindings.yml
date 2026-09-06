@@ -15,8 +15,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+        with:
+          toolchain: stable
+      - name: Cache
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: receipt-cli
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build receipt CLI
+        run: cargo build --locked --bin sbom-tools
       - name: Check wrapper constants match sbom_tools.h
         run: ./scripts/check-binding-constants.sh
+      - name: Emit receipt
+        if: always()
+        uses: ./.github/actions/emit-receipt
+        with:
+          manifest: .github/receipts/jobs/constant-parity.json
+          artifact-name: receipts-${{ github.run_id }}-${{ github.job }}
+          receipt-id: constant-parity
+          outcome: ${{ job.status }}
 
   dagger-rust-sdk:
     name: Dagger CI (workspace check + staticlib + FFI tests + Go bindings)
@@ -30,8 +49,20 @@ jobs:
           toolchain: stable
       - name: Cache Rust
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build receipt CLI
+        run: cargo build --locked --bin sbom-tools
       - name: Run Dagger Rust SDK pipeline
         run: ./scripts/run-dagger-ci.sh
+      - name: Emit receipt
+        if: always()
+        uses: ./.github/actions/emit-receipt
+        with:
+          manifest: .github/receipts/jobs/dagger-rust-sdk.json
+          artifact-name: receipts-${{ github.run_id }}-${{ github.job }}
+          receipt-id: dagger-rust-sdk
+          outcome: ${{ job.status }}
 
   rust-ffi:
     name: Rust FFI
@@ -45,6 +76,10 @@ jobs:
           toolchain: stable
       - name: Cache
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build receipt CLI
+        run: cargo build --locked --bin sbom-tools
       - name: Build FFI library
         run: bash ./scripts/build-bindings-mvp.sh
       - name: Test FFI ABI
@@ -58,6 +93,14 @@ jobs:
 
       - name: Test FFI regression (PR #113 + multi-format)
         run: cargo test --locked --features ffi --test ffi_regression
+      - name: Emit receipt
+        if: always()
+        uses: ./.github/actions/emit-receipt
+        with:
+          manifest: .github/receipts/jobs/rust-ffi.json
+          artifact-name: receipts-${{ github.run_id }}-${{ github.job }}
+          receipt-id: rust-ffi
+          outcome: ${{ job.status }}
 
   go-bindings:
     name: Go Bindings (${{ matrix.os }})
@@ -79,6 +122,10 @@ jobs:
           go-version: '1.22'
       - name: Cache Rust
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build receipt CLI
+        run: cargo build --locked --bin sbom-tools
       - name: Build Rust library
         run: bash ./scripts/build-bindings-mvp.sh
       - name: Test Go wrapper
@@ -86,6 +133,14 @@ jobs:
         run: go test ./...
       - name: Test Go dedup helpers
         run: ./scripts/test-bindings-dedup.sh go
+      - name: Emit receipt
+        if: always()
+        uses: ./.github/actions/emit-receipt
+        with:
+          manifest: .github/receipts/jobs/go-bindings-${{ matrix.os == 'ubuntu-latest' && 'ubuntu' || 'macos' }}.json
+          artifact-name: receipts-${{ github.run_id }}-${{ github.job }}-${{ matrix.os }}
+          receipt-id: go-bindings-${{ matrix.os == 'ubuntu-latest' && 'ubuntu' || 'macos' }}
+          outcome: ${{ job.status }}
 
   python-bindings:
     name: Python Bindings (${{ matrix.os }})
@@ -107,6 +162,10 @@ jobs:
           python-version: '3.12'
       - name: Cache Rust
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build receipt CLI
+        run: cargo build --locked --bin sbom-tools
       - name: Build Rust library
         run: cargo build -p sbom-tools-ffi --release
       - name: Create Python environment
@@ -124,6 +183,14 @@ jobs:
           python -c "import os, pathlib, subprocess;
           executable = pathlib.Path('.venv') / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python');
           subprocess.check_call([str(executable), '-m', 'pytest', '-q'])"
+      - name: Emit receipt
+        if: always()
+        uses: ./.github/actions/emit-receipt
+        with:
+          manifest: .github/receipts/jobs/python-bindings-${{ matrix.os == 'ubuntu-latest' && 'ubuntu' || matrix.os == 'macos-latest' && 'macos' || 'windows' }}.json
+          artifact-name: receipts-${{ github.run_id }}-${{ github.job }}-${{ matrix.os }}
+          receipt-id: python-bindings-${{ matrix.os == 'ubuntu-latest' && 'ubuntu' || matrix.os == 'macos-latest' && 'macos' || 'windows' }}
+          outcome: ${{ job.status }}
 
   swift-bindings:
     name: Swift Bindings
@@ -135,6 +202,8 @@ jobs:
         uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
         with:
           toolchain: stable
+      - name: Build receipt CLI
+        run: cargo build --locked --bin sbom-tools
       - name: Build Rust library
         run: bash ./scripts/build-bindings-mvp.sh
       - name: Build and test Swift wrapper
@@ -142,6 +211,14 @@ jobs:
         run: swift test
       - name: Test Swift dedup helpers
         run: ./scripts/test-bindings-dedup.sh swift
+      - name: Emit receipt
+        if: always()
+        uses: ./.github/actions/emit-receipt
+        with:
+          manifest: .github/receipts/jobs/swift-bindings.json
+          artifact-name: receipts-${{ github.run_id }}-${{ github.job }}
+          receipt-id: swift-bindings
+          outcome: ${{ job.status }}
 
   nodejs-bindings:
     name: Node.js Bindings (${{ matrix.os }})
@@ -165,6 +242,10 @@ jobs:
           cache-dependency-path: bindings/nodejs/package-lock.json
       - name: Cache Rust
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build receipt CLI
+        run: cargo build --locked --bin sbom-tools
       - name: Install Node.js dependencies
         working-directory: bindings/nodejs
         run: npm ci
@@ -173,3 +254,62 @@ jobs:
       - name: Build and test Node.js wrapper
         working-directory: bindings/nodejs
         run: npm test
+      - name: Emit receipt
+        if: always()
+        uses: ./.github/actions/emit-receipt
+        with:
+          manifest: .github/receipts/jobs/nodejs-bindings-${{ matrix.os == 'ubuntu-latest' && 'ubuntu' || matrix.os == 'macos-latest' && 'macos' || 'windows' }}.json
+          artifact-name: receipts-${{ github.run_id }}-${{ github.job }}-${{ matrix.os }}
+          receipt-id: nodejs-bindings-${{ matrix.os == 'ubuntu-latest' && 'ubuntu' || matrix.os == 'macos-latest' && 'macos' || 'windows' }}
+          outcome: ${{ job.status }}
+
+  bindings-aggregate:
+    name: Bindings aggregate
+    if: always()
+    needs: [constant-parity, dagger-rust-sdk, rust-ffi, go-bindings, python-bindings, swift-bindings, nodejs-bindings]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        if: always()
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Rust
+        if: always()
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+        with:
+          toolchain: stable
+      - name: Cache
+        if: always()
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: receipt-cli
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Download producer receipts
+        if: always()
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: receipts-${{ github.run_id }}-*
+          path: .ci-receipts/receipts
+          merge-multiple: true
+      - name: Build receipt CLI
+        if: always()
+        run: |
+          cargo build --locked --bin sbom-tools
+          test ! -e "$RUNNER_TEMP/sbom-receipt-source"; mkdir -p "$RUNNER_TEMP/sbom-receipt-source"
+          # Must match emit-receipt's snapshot byte-for-byte: the policy's
+          # source fingerprint is compared against every producer receipt.
+          git -c core.autocrlf=false -c core.eol=lf archive "${{ github.sha }}" | tar -x -C "$RUNNER_TEMP/sbom-receipt-source"
+      - name: Generate aggregate policy
+        if: always()
+        env:
+          RECEIPT_REPOSITORY: ${{ github.repository }}
+          RECEIPT_SHA: ${{ github.sha }}
+          RECEIPT_EVENT: ${{ github.event_name }}
+          RECEIPT_REF: ${{ github.ref }}
+          RECEIPT_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RECEIPT_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          target/debug/sbom-tools verify receipt-context --repository "$RECEIPT_REPOSITORY" --commit-sha "$RECEIPT_SHA" --event-name "$RECEIPT_EVENT" --ref-name "$RECEIPT_REF" --default-branch "$RECEIPT_DEFAULT_BRANCH" --head-repository "${RECEIPT_HEAD_REPOSITORY:-}" --output "$RUNNER_TEMP/sbom-receipt-context.json"
+          target/debug/sbom-tools verify receipt-policy-generate --manifest .github/receipts/bindings-policy-manifest.json --context "$RUNNER_TEMP/sbom-receipt-context.json" --output "$RUNNER_TEMP/bindings-policy.json"
+      - name: Aggregate producer receipts
+        if: always()
+        run: target/debug/sbom-tools verify receipt-aggregate .ci-receipts/receipts --policy "$RUNNER_TEMP/bindings-policy.json"

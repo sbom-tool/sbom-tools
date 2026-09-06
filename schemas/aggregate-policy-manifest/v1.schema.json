@@ -1,0 +1,15 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"aggregate-policy-manifest/v1",
+  "type":"object","additionalProperties":false,
+  "required":["schema","workflow","source_root","lock_paths","artifact_root","expected_targets","required_checks","artifacts"],
+  "properties":{
+    "schema":{"const":"aggregate-policy-manifest/v1"},"workflow":{"type":"string","minLength":1},
+    "source_root":{"type":"string","minLength":1},"artifact_root":{"type":"string","minLength":1},
+    "lock_paths":{"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"string","minLength":1}},
+    "expected_targets":{"type":"array","minItems":1,"uniqueItems":true,"items":{"$ref":"#/$defs/target"}},
+    "required_checks":{"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"string","minLength":1}},
+    "artifacts":{"type":"array","uniqueItems":true,"items":{"type":"object","additionalProperties":false,"required":["name","path"],"properties":{"name":{"type":"string","minLength":1},"path":{"type":"string","minLength":1}}}}
+  },
+  "$defs":{"target":{"type":"object","additionalProperties":false,"required":["verification_scope","os","architecture","toolchain","profile","features","binding_runtime"],"properties":{"verification_scope":{"type":"string","minLength":1,"pattern":"^[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)*$"},"os":{"type":"string","minLength":1},"architecture":{"type":"string","minLength":1},"toolchain":{"type":"string","minLength":1},"profile":{"type":"string","minLength":1},"features":{"type":"array","uniqueItems":true,"items":{"type":"string","minLength":1}},"binding_runtime":{"type":["string","null"]}}}}
+}

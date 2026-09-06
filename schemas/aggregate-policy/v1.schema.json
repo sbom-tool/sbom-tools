@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aggregate-policy/v1",
+  "title": "AggregatePolicy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "expected_targets", "context", "required_checks", "artifacts"],
+  "properties": {
+    "schema": {"const": "aggregate-policy/v1"},
+    "expected_targets": {"type": "array", "items": {"$ref": "#/$defs/target"}, "minItems": 1},
+    "context": {"$ref": "#/$defs/context"},
+    "required_checks": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+    "artifacts": {"type": "array", "items": {"$ref": "#/$defs/artifact"}}
+  },
+  "$defs": {
+    "digest": {"type":"string","pattern":"^sha256:[0-9a-f]{64}$"},
+    "target": {"type":"object","additionalProperties":false,"required":["verification_scope","os","architecture","toolchain","profile","features","binding_runtime"],"properties":{"verification_scope":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)*$","minLength":1},"os":{"type":"string","minLength":1},"architecture":{"type":"string","minLength":1},"toolchain":{"type":"string","minLength":1},"profile":{"type":"string","minLength":1},"features":{"type":"array","items":{"type":"string","minLength":1},"uniqueItems":true},"binding_runtime":{"type":["string","null"]}}},
+    "context": {"type":"object","additionalProperties":false,"required":["repository","workflow","commit_sha","trust_context","promotable","source_fingerprint","lock_digest"],"properties":{"repository":{"type":"string","minLength":1},"workflow":{"type":"string","minLength":1},"commit_sha":{"type":"string","pattern":"^[0-9a-f]{40,64}$"},"trust_context":{"enum":["pull-request","protected-main","release","local"]},"promotable":{"const":false},"source_fingerprint":{"$ref":"#/$defs/digest"},"lock_digest":{"$ref":"#/$defs/digest"}}},
+    "artifact": {"type":"object","additionalProperties":false,"required":["name","path","size","sha256"],"properties":{"name":{"type":"string","minLength":1},"path":{"type":"string","minLength":1},"size":{"type":"integer","minimum":0},"sha256":{"$ref":"#/$defs/digest"}}}
+  }
+}

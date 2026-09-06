@@ -34,12 +34,22 @@ jobs:
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build receipt CLI
+        run: cargo build --locked --bin sbom-tools
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Clippy (default features)
         run: cargo clippy -- -D warnings
       - name: Clippy (all features)
         run: cargo clippy --all-features -- -D warnings
+      - name: Emit receipt
+        if: always()
+        uses: ./.github/actions/emit-receipt
+        with:
+          manifest: .github/receipts/jobs/rust-lint.json
+          artifact-name: receipts-${{ github.run_id }}-${{ github.job }}
+          receipt-id: rust-lint
+          outcome: ${{ job.status }}
 
   # ── MSRV check ─────────────────────────────────────────────────
   msrv:
@@ -57,10 +67,20 @@ jobs:
         with:
           shared-key: msrv
           save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build receipt CLI
+        run: cargo build --locked --bin sbom-tools
       - name: Check (no default features)
         run: cargo check --locked --no-default-features --features ffi
       - name: Check (all features)
         run: cargo check --locked --all-features
+      - name: Emit receipt
+        if: always()
+        uses: ./.github/actions/emit-receipt
+        with:
+          manifest: .github/receipts/jobs/rust-msrv.json
+          artifact-name: receipts-${{ github.run_id }}-${{ github.job }}
+          receipt-id: rust-msrv
+          outcome: ${{ job.status }}
 
   # ── Test matrix ────────────────────────────────────────────────
   test:
@@ -86,10 +106,20 @@ jobs:
         with:
           shared-key: ${{ matrix.toolchain }}
           save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build receipt CLI
+        run: cargo build --locked --bin sbom-tools
       - name: Test (default features)
         run: cargo test --locked --verbose
       - name: Test (all features)
         run: cargo test --locked --all-features --verbose
+      - name: Emit receipt
+        if: always()
+        uses: ./.github/actions/emit-receipt
+        with:
+          manifest: .github/receipts/jobs/rust-test-${{ matrix.toolchain == 'beta' && 'ubuntu-beta' || matrix.os == 'ubuntu-latest' && 'ubuntu-stable' || matrix.os == 'macos-latest' && 'macos-stable' || 'windows-stable' }}.json
+          artifact-name: receipts-${{ github.run_id }}-${{ github.job }}-${{ matrix.os }}-${{ matrix.toolchain }}
+          receipt-id: rust-test-${{ matrix.os }}-${{ matrix.toolchain }}
+          outcome: ${{ job.status }}
 
   # ── Dependency audit ───────────────────────────────────────────
   deny:
@@ -100,16 +130,42 @@ jobs:
         checks:
           - advisories
           - bans licenses sources
-    # Advisory failures are informational — don't block PRs on surprise CVEs
+    # Advisory failures are informational — don't block PRs on surprise CVEs.
+    # The advisories leg therefore emits no receipt and is not part of the
+    # aggregate evidence set; a failed receipt would fail the gate closed and
+    # reintroduce the blocking behavior through the back door.
     continue-on-error: ${{ matrix.checks == 'advisories' }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Rust
+        if: matrix.checks != 'advisories'
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+        with:
+          toolchain: stable
+      - name: Cache
+        if: matrix.checks != 'advisories'
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: receipt-cli
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build receipt CLI
+        if: matrix.checks != 'advisories'
+        run: cargo build --locked --bin sbom-tools
       - name: cargo-deny
+        id: cargo_deny
         uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
         with:
           command: check ${{ matrix.checks }}
           arguments: --all-features
+      - name: Emit receipt
+        if: always() && matrix.checks != 'advisories'
+        uses: ./.github/actions/emit-receipt
+        with:
+          manifest: .github/receipts/jobs/rust-deny-licenses-sources.json
+          artifact-name: receipts-${{ github.run_id }}-${{ github.job }}-${{ matrix.checks }}
+          receipt-id: rust-deny-licenses-sources
+          outcome: ${{ steps.cargo_deny.outcome }}
 
   # ── Security audit ────────────────────────────────────────────
   audit:
@@ -118,10 +174,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+        with:
+          toolchain: stable
+      - name: Cache
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: receipt-cli
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Build receipt CLI
+        run: cargo build --locked --bin sbom-tools
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked
       - name: Run cargo-audit
+        id: cargo_audit
         run: cargo audit
+      - name: Emit receipt
+        if: always()
+        uses: ./.github/actions/emit-receipt
+        with:
+          manifest: .github/receipts/jobs/rust-audit.json
+          artifact-name: receipts-${{ github.run_id }}-${{ github.job }}
+          receipt-id: rust-audit
+          outcome: ${{ steps.cargo_audit.outcome }}
 
   # ── Status gate (single required check) ────────────────────────
   ci:
@@ -130,6 +206,50 @@ jobs:
     needs: [lint, msrv, test, deny, audit]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        if: always()
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Rust
+        if: always()
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
+        with:
+          toolchain: stable
+      - name: Cache
+        if: always()
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: receipt-cli
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Download producer receipts
+        if: always()
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: receipts-${{ github.run_id }}-*
+          path: .ci-receipts/receipts
+          merge-multiple: true
+      - name: Build receipt CLI
+        if: always()
+        run: |
+          cargo build --locked --bin sbom-tools
+          test ! -e "$RUNNER_TEMP/sbom-receipt-source"; mkdir -p "$RUNNER_TEMP/sbom-receipt-source"
+          # Must match emit-receipt's snapshot byte-for-byte: the policy's
+          # source fingerprint is compared against every producer receipt.
+          git -c core.autocrlf=false -c core.eol=lf archive "${{ github.sha }}" | tar -x -C "$RUNNER_TEMP/sbom-receipt-source"
+      - name: Generate aggregate policy
+        if: always()
+        env:
+          RECEIPT_REPOSITORY: ${{ github.repository }}
+          RECEIPT_SHA: ${{ github.sha }}
+          RECEIPT_EVENT: ${{ github.event_name }}
+          RECEIPT_REF: ${{ github.ref }}
+          RECEIPT_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RECEIPT_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          target/debug/sbom-tools verify receipt-context --repository "$RECEIPT_REPOSITORY" --commit-sha "$RECEIPT_SHA" --event-name "$RECEIPT_EVENT" --ref-name "$RECEIPT_REF" --default-branch "$RECEIPT_DEFAULT_BRANCH" --head-repository "${RECEIPT_HEAD_REPOSITORY:-}" --output "$RUNNER_TEMP/sbom-receipt-context.json"
+          target/debug/sbom-tools verify receipt-policy-generate --manifest .github/receipts/rust-policy-manifest.json --context "$RUNNER_TEMP/sbom-receipt-context.json" --output "$RUNNER_TEMP/rust-policy.json"
+      - name: Aggregate producer receipts
+        if: always()
+        run: target/debug/sbom-tools verify receipt-aggregate .ci-receipts/receipts --policy "$RUNNER_TEMP/rust-policy.json"
       - name: Evaluate results
         run: |
           result="${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}"
