@@ -67,6 +67,15 @@ behavior rather than implement independent parsing or analysis rules.
   `DiffResult.semantic_score` is 0-100, `MatrixResult` similarity is 0-1
   (`semantic_score / 100`), and `diff-multi` deviation is 0-1
   (`1 - similarity`).
+- The contract is pinned at the top-level keys of each payload and the
+  numeric scales; nested shape follows the crate version, and pre-1.0 a
+  breaking change may land in a minor release with an entry under **Upgrade
+  notes** in `CHANGELOG.md`. There is no separate JSON schema version.
+- `view -o json` is a curated projection (summary + per-component identity,
+  licenses, supplier, dependency kind, vulnerabilities, EOL). The full
+  normalized model, including `crypto_properties`, `ml_model`, and `dataset`,
+  is exposed only through the ABI parse functions and the bindings. See
+  "JSON output contract" in the README.
 
 ## Non-goals and ownership boundary
 
