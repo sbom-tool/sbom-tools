@@ -42,7 +42,7 @@ Alongside the CBOM work: **`convert --to normalized`** exposes the full normaliz
 - **Components that named a `manufacturer` or `authors` failed supplier rules** as though they were anonymous. (#380)
 - **Yocto SPDX 3 documents failed to parse** because `suppliedBy` was given as a single string rather than an array. (#349, #348)
 - **The TUI Violation Detail overlay clipped its content** at common terminal heights, cutting off remediation text and the close hint, and the CRA supply-chain rule's remediation gave dependency advice instead of naming the supplier fields. (#355, #347)
-- **Security.** RUSTSEC-2026-0258 (`h2`), RUSTSEC-2026-0221 (`event-listener`), RUSTSEC-2026-0253 (`lru`, use-after-free) and RUSTSEC-2026-0285 (`rustls`) are cleared, with no advisory suppressions. (#352, #369)
+- **Security.** RUSTSEC-2026-0258 (`h2`), RUSTSEC-2026-0221 (`event-listener`), RUSTSEC-2026-0253 (`lru`, use-after-free), RUSTSEC-2026-0285 (`rustls`) and RUSTSEC-2026-0338 through -0342 (`quinn-proto`) are cleared, with no advisory suppressions. (#352, #369, #388)
 
 ## Upgrade notes
 

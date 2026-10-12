@@ -82,7 +82,7 @@ first, unsigned **pipeline receipt** contract lands under `sbom-tools verify`.
 - **SPDX 3 `suppliedBy` given as a single string** — as Yocto emits it — failed to parse with `expected a sequence`. The property has cardinality 0..1 and now accepts both forms. (#349, #348)
 - **The TUI Violation Detail overlay clipped its content.** A fixed 60% of terminal height silently cut off remediation text and the close hint; the overlay now sizes to its content and, when even the full height is too small, shows a `… +N more lines` marker. (#355, #347)
 - **The CRA supply-chain rule gave dependency advice.** `SBOM-CRA-ANNEX-I-SUPPLY-CHAIN` told users to add `DEPENDS_ON` relationships; its remediation now names the supplier fields. (#355)
-- **Security.** Lockfile updates clear RUSTSEC-2026-0258 (`h2` 0.4.19), RUSTSEC-2026-0221 (`event-listener` 5.4.2), RUSTSEC-2026-0253 (`lru` 0.18.3, use-after-free) and RUSTSEC-2026-0285 (`rustls` 0.23.45), with no advisory suppressions added. (#352, #369)
+- **Security.** Lockfile updates clear RUSTSEC-2026-0258 (`h2` 0.4.19), RUSTSEC-2026-0221 (`event-listener` 5.4.2), RUSTSEC-2026-0253 (`lru` 0.18.3, use-after-free), RUSTSEC-2026-0285 (`rustls` 0.23.45) and RUSTSEC-2026-0338 through -0342 (`quinn-proto` 0.11.19, via `reqwest`), with no advisory suppressions added. (#352, #369, #388)
 
 ### Upgrade notes
 
