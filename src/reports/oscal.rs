@@ -548,7 +548,7 @@ mod tests {
             .expect("document uuid");
         let parsed = Uuid::parse_str(uuid).expect("valid UUID");
         // OSCAL's uuid datatype accepts only RFC 4122 version 4 or 5.
-        assert_eq!(parsed.get_version_num(), 5, "{uuid}");
+        assert_eq!(parsed.get_version_num(), 5, "document UUID version");
 
         let other_sbom = generate_assessment_results_at(&results, "def456", Some(as_of))
             .expect("OSCAL serialization");
