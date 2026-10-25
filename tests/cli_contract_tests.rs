@@ -941,6 +941,168 @@ fn validate_text_output_cannot_forge_ci_annotations() {
     );
 }
 
+/// Two SBOMs whose names, versions, suppliers, licenses and vulnerability IDs
+/// try every way SBOM text can break out of its field: a line break followed
+/// by a workflow command, a value that starts with one (a field printed first
+/// on a line needs no line break, since the runner trims blanks), ANSI, BEL
+/// and bidi controls, and a multi-byte name long enough to be truncated.
+fn write_hostile_pair(dir: &Path) -> (PathBuf, PathBuf) {
+    use serde_json::json;
+    let nl = "lib\n::error file=src/main.rs,line=1::FORGED";
+    let ls = "::warning::FORGED at line start";
+    let cc = "\u{1b}[31mred\u{1b}[0m\u{7}\u{202E}rlo";
+    let long = "é".repeat(80);
+    let doc = |suffix: &str, added: bool| {
+        let mut components = vec![
+            json!({"type": "library", "bom-ref": "c-nl", "name": nl,
+                   "version": format!("1.0{suffix}"), "purl": format!("pkg:npm/nl@1.0{suffix}"),
+                   "supplier": {"name": nl}, "licenses": [{"expression": "MIT"}],
+                   "description": nl}),
+            json!({"type": "library", "bom-ref": "c-ls", "name": ls, "version": ls,
+                   "supplier": {"name": ls}, "licenses": [{"license": {"name": ls}}]}),
+            json!({"type": "library", "bom-ref": "c-cc", "name": cc,
+                   "version": format!("2.0{suffix}"), "supplier": {"name": cc},
+                   "licenses": [{"license": {"name": cc}}]}),
+            json!({"type": "library", "bom-ref": "c-long", "name": long,
+                   "version": format!("3.0{suffix}")}),
+        ];
+        if added {
+            components.push(json!({"type": "library", "bom-ref": "c-new",
+                                   "name": format!("{ls} added"), "version": nl}));
+        }
+        json!({"bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
+               "metadata": {"timestamp": "2026-01-01T00:00:00Z",
+                            "component": {"type": "application", "bom-ref": "root",
+                                          "name": ls, "version": nl},
+                            "authors": [{"name": nl}]},
+               "components": components,
+               "dependencies": [{"ref": "root", "dependsOn": ["c-nl", "c-ls", "c-cc", "c-long"]}],
+               "vulnerabilities": [
+                   {"id": format!("CVE-2026-0001{suffix}"), "bom-ref": "v1", "description": nl,
+                    "ratings": [{"severity": "high"}], "affects": [{"ref": "c-nl"}],
+                    "analysis": {"state": "not_affected", "justification": "code_not_reachable",
+                                 "detail": nl}},
+                   {"id": ls, "bom-ref": "v2", "ratings": [{"severity": "low"}],
+                    "affects": [{"ref": "c-ls"}]}]})
+    };
+    let write = |file: &str, value: serde_json::Value| {
+        let path = dir.join(file);
+        std::fs::write(&path, value.to_string()).expect("write fixture");
+        path
+    };
+    (
+        write("old.cdx.json", doc("", false)),
+        write("new.cdx.json", doc(".1", true)),
+    )
+}
+
+/// No line of `text` may start a workflow command built from the fixture's
+/// text, and no control or bidi character may survive (a CRLF line ending is
+/// allowed).
+fn assert_neutralized(label: &str, stream: &str, text: &str) {
+    for line in text.split(['\n', '\r']) {
+        assert!(
+            !(line.trim_start().starts_with("::") && line.contains("FORGED")),
+            "{label} ({stream}): a line starts a workflow command: {line:?}"
+        );
+    }
+    let bad: Vec<String> = text
+        .replace("\r\n", "\n")
+        .chars()
+        .filter(|&c| {
+            (c.is_control() && c != '\n' && c != '\t')
+                || matches!(c, '\u{061C}' | '\u{200E}' | '\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}')
+        })
+        .map(|c| format!("U+{:04X}", c as u32))
+        .collect();
+    assert!(
+        bad.is_empty(),
+        "{label} ({stream}): {bad:?} reached the output"
+    );
+}
+
+/// Every human-readable output neutralizes SBOM text: summary, table,
+/// side-by-side, Markdown, CSV and HTML reports, every `validate` standard,
+/// `quality`, `query`, `license-check` and `vex`. JSON-family formats are
+/// exempt: serde escapes control characters, and a JSON line cannot start
+/// with `::`. `RUST_LOG=info` (the default level) also covers stderr logs.
+#[test]
+fn every_text_output_neutralizes_sbom_text() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let (old, new) = write_hostile_pair(dir.path());
+    let (old, new) = (old.to_str().expect("utf-8"), new.to_str().expect("utf-8"));
+
+    let mut runs: Vec<Vec<&str>> = Vec::new();
+    for standard in [
+        "ntia",
+        "fda",
+        "cra",
+        "cra-phase1",
+        "ssdf",
+        "eo14028",
+        "cnsa2",
+        "pqc",
+        "bsi",
+        "oss-steward",
+        "eucc",
+        "ai-act",
+        "bsi-ai",
+        "cisa-2026",
+        "pci-dss",
+        "fsct",
+    ] {
+        runs.push(vec!["validate", new, "--standard", standard]);
+    }
+    for format in [
+        "summary",
+        "table",
+        "side-by-side",
+        "markdown",
+        "csv",
+        "html",
+    ] {
+        runs.push(vec!["diff", old, new, "-o", format]);
+        runs.push(vec!["view", new, "-o", format]);
+    }
+    runs.push(vec!["quality", new]);
+    runs.push(vec!["quality", new, "--profile", "cbom"]);
+    for format in ["summary", "table", "csv"] {
+        runs.push(vec!["query", "FORGED", old, new, "-o", format]);
+    }
+    runs.push(vec!["license-check", new]);
+    runs.push(vec!["vex", "status", new]);
+    runs.push(vec!["vex", "filter", new]);
+
+    for args in &runs {
+        let label = args
+            .iter()
+            .map(|a| {
+                if a.ends_with(".cdx.json") {
+                    "<sbom>"
+                } else {
+                    a
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
+        let output = base_command()
+            .env("RUST_LOG", "info")
+            .args(args)
+            .output()
+            .expect("command should run");
+        let code = output.status.code();
+        assert!(
+            !matches!(code, None | Some(3 | 101)),
+            "{label}: exit {code:?}\n{}",
+            stderr(&output)
+        );
+        let out = stdout(&output);
+        assert!(!out.trim().is_empty(), "{label}: printed nothing");
+        assert_neutralized(&label, "stdout", &out);
+        assert_neutralized(&label, "stderr", &stderr(&output));
+    }
+}
+
 /// The `diff` table report sanitized names but kept their newlines.
 #[test]
 fn diff_table_output_cannot_forge_ci_annotations() {

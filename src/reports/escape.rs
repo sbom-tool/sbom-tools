@@ -15,6 +15,48 @@
 
 use std::borrow::Cow;
 
+/// Line breaks a terminal, log viewer or CI runner may honour.
+const fn is_line_break(c: char) -> bool {
+    matches!(c, '\n' | '\r' | '\u{85}' | '\u{2028}' | '\u{2029}')
+}
+
+/// Unicode bidi controls and direction marks (U+061C, U+200E, U+200F,
+/// U+202A–U+202E, U+2066–U+2069). `char::is_control` does not cover them, and
+/// they make a terminal or browser display text in a different order than it
+/// is stored.
+const fn is_bidi_control(c: char) -> bool {
+    matches!(
+        c,
+        '\u{061C}' | '\u{200E}' | '\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}'
+    )
+}
+
+/// Characters no report may copy from SBOM text: control characters other
+/// than line breaks and tab — C0, DEL and C1, including ESC (0x1B), which
+/// starts ANSI escape sequences (cursor movement, screen clearing, title
+/// changes) — and bidi controls. Each escaper decides how line breaks and tabs
+/// are written.
+fn is_stripped(c: char) -> bool {
+    (c.is_control() && !is_line_break(c) && c != '\t') || is_bidi_control(c)
+}
+
+/// Whether `s`, printed at the start of a line, would make the line start
+/// with `:`. GitHub Actions runs a line whose first non-blank characters are
+/// `::` as a workflow command (`::error`, `::add-mask`, `::stop-commands`, …),
+/// and output layouts can put SBOM text first on a line (the first table
+/// column, or a row whose earlier columns are blank), so escapers neutralize
+/// a leading `:`.
+fn starts_with_colon(s: &str) -> bool {
+    s.trim_start().starts_with(':')
+}
+
+/// Replace the `:` that [`starts_with_colon`] found with `escaped`, the
+/// format's own spelling of it.
+fn escape_leading_colon(s: &mut String, escaped: &str) {
+    let at = s.len() - s.trim_start().len();
+    s.replace_range(at..=at, escaped);
+}
+
 /// Sanitize untrusted text printed as (part of) one line of terminal or
 /// CI-log output.
 ///
@@ -22,29 +64,18 @@ use std::borrow::Cow;
 /// its own, and GitHub Actions turns a line that starts with `::error` into an
 /// annotation, so a component name such as `lib\n::error::forged` could forge
 /// one. Line breaks (`\n`, `\r`, NEL, U+2028, U+2029) are therefore rendered as
-/// a visible `\n` and a tab becomes a space. Every other control character is
-/// removed — C0, DEL and C1, including ESC (0x1B), which neutralizes ANSI
-/// escape sequences (cursor movement, screen clearing, title changes) — and
-/// so are the Unicode bidi controls and direction marks (U+061C, U+200E,
-/// U+200F, U+202A–U+202E, U+2066–U+2069), which `char::is_control` does not
-/// cover and which make a terminal display text in a different order than it
-/// is stored. Returns the input unchanged when nothing needs changing.
+/// a visible `\n` and a tab becomes a space. Every other control character and
+/// every bidi control is removed (see [`is_stripped`]). A field that would
+/// start a line with `:` gets a backslash in front (`\::warning::…`), since a
+/// field can also be the first thing on a line. Returns the input unchanged
+/// when nothing needs changing.
 #[must_use]
 pub(crate) fn sanitize_line(s: &str) -> Cow<'_, str> {
-    fn is_line_break(c: char) -> bool {
-        matches!(c, '\n' | '\r' | '\u{85}' | '\u{2028}' | '\u{2029}')
-    }
-    fn is_bidi_control(c: char) -> bool {
-        matches!(
-            c,
-            '\u{061C}' | '\u{200E}' | '\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}'
-        )
-    }
     fn needs_change(c: char) -> bool {
         c.is_control() || is_line_break(c) || is_bidi_control(c)
     }
 
-    if !s.contains(needs_change) {
+    if !s.contains(needs_change) && !starts_with_colon(s) {
         return Cow::Borrowed(s);
     }
     let mut out = String::with_capacity(s.len() + 2);
@@ -57,7 +88,33 @@ pub(crate) fn sanitize_line(s: &str) -> Cow<'_, str> {
             out.push(c);
         }
     }
+    if starts_with_colon(&out) {
+        escape_leading_colon(&mut out, "\\:");
+    }
     Cow::Owned(out)
+}
+
+/// Sanitize untrusted text for one CSV field, before quote doubling.
+///
+/// Line breaks become spaces, so a field cannot start a new line of a CSV
+/// printed to a terminal or CI log; other control characters and bidi
+/// controls are removed. A value starting with a spreadsheet formula trigger
+/// (`=`, `+`, `-`, `@`, tab, CR) or with `:` (see [`starts_with_colon`]) is
+/// prefixed with a single quote, so spreadsheet applications treat it as text
+/// (OWASP CSV injection guidance) and the line cannot start with `::`.
+#[must_use]
+pub(crate) fn sanitize_csv_field(s: &str) -> String {
+    let mut out: String = s
+        .chars()
+        .filter(|&c| !is_stripped(c))
+        .map(|c| if is_line_break(c) { ' ' } else { c })
+        .collect();
+    if s.starts_with(['=', '+', '-', '@', '\t', '\r'])
+        || out.trim_start().starts_with(['=', '+', '-', '@', ':'])
+    {
+        out.insert(0, '\'');
+    }
+    out
 }
 
 /// Escape a string for safe inclusion in HTML content.
@@ -68,6 +125,12 @@ pub(crate) fn sanitize_line(s: &str) -> Cow<'_, str> {
 /// - `>` -> `&gt;`
 /// - `"` -> `&quot;`
 /// - `'` -> `&#x27;`
+/// - `\n` -> `&#10;` and `\r` -> `&#13;` (other line breaks become spaces),
+///   so SBOM text cannot start a new line of an HTML report printed to a log
+///
+/// Control characters and bidi controls are removed, and a leading `:` is
+/// written `&#58;`, because GitHub Actions runs a log line that starts with
+/// `::` as a workflow command.
 ///
 /// # Examples
 ///
@@ -89,8 +152,15 @@ pub fn escape_html(s: &str) -> String {
             '>' => result.push_str("&gt;"),
             '"' => result.push_str("&quot;"),
             '\'' => result.push_str("&#x27;"),
+            '\n' => result.push_str("&#10;"),
+            '\r' => result.push_str("&#13;"),
+            c if is_line_break(c) => result.push(' '),
+            c if is_stripped(c) => {}
             _ => result.push(c),
         }
+    }
+    if starts_with_colon(&result) {
+        escape_leading_colon(&mut result, "&#58;");
     }
     result
 }
@@ -121,6 +191,8 @@ pub fn escape_html_attr(s: &str) -> String {
             '\n' => result.push_str("&#10;"),
             '\r' => result.push_str("&#13;"),
             '\t' => result.push_str("&#9;"),
+            c if is_line_break(c) => result.push(' '),
+            c if is_stripped(c) => {}
             _ => result.push(c),
         }
     }
@@ -131,7 +203,9 @@ pub fn escape_html_attr(s: &str) -> String {
 ///
 /// Markdown tables use `|` as column separators and can be broken
 /// by unescaped pipe characters. This function also handles newlines
-/// and backticks that could break formatting.
+/// and backticks that could break formatting, removes control characters and
+/// bidi controls, and escapes a leading `:` so a line of the report printed
+/// to a CI log cannot start a workflow command.
 ///
 /// # Examples
 ///
@@ -153,15 +227,22 @@ pub fn escape_markdown_table(s: &str) -> String {
             '`' => result.push_str("\\`"),
             '[' => result.push_str("\\["),
             ']' => result.push_str("\\]"),
+            c if is_line_break(c) => result.push(' '),
+            c if is_stripped(c) => {}
             _ => result.push(c),
         }
+    }
+    if starts_with_colon(&result) {
+        escape_leading_colon(&mut result, "\\:");
     }
     result
 }
 
 /// Escape a string for safe inclusion in Markdown inline content.
 ///
-/// Escapes characters that have special meaning in Markdown.
+/// Escapes characters that have special meaning in Markdown, removes control
+/// characters and bidi controls, and escapes a leading `:` so a line of the
+/// report printed to a CI log cannot start a workflow command.
 ///
 /// # Examples
 ///
@@ -189,15 +270,22 @@ pub fn escape_markdown_inline(s: &str) -> String {
             '>' => result.push_str("\\>"),
             '\n' => result.push(' '),
             '\r' => {}
+            c if is_line_break(c) => result.push(' '),
+            c if is_stripped(c) => {}
             _ => result.push(c),
         }
+    }
+    if starts_with_colon(&result) {
+        escape_leading_colon(&mut result, "\\:");
     }
     result
 }
 
 /// Escape a string for use in Markdown list items.
 ///
-/// Similar to inline escaping but preserves some formatting.
+/// Similar to inline escaping but preserves some formatting. Control
+/// characters and bidi controls are removed, and a leading `:` is escaped so a
+/// line of the report printed to a CI log cannot start a workflow command.
 #[must_use]
 pub fn escape_markdown_list(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
@@ -211,8 +299,13 @@ pub fn escape_markdown_list(s: &str) -> String {
             '>' => result.push_str("\\>"),
             '\n' => result.push_str("; "),
             '\r' => {}
+            c if is_line_break(c) => result.push_str("; "),
+            c if is_stripped(c) => {}
             _ => result.push(c),
         }
+    }
+    if starts_with_colon(&result) {
+        escape_leading_colon(&mut result, "\\:");
     }
     result
 }
@@ -390,6 +483,53 @@ mod tests {
         ] {
             assert_eq!(sanitize_line(&format!("a{c}b")), "ab", "U+{:04X}", c as u32);
         }
+    }
+
+    #[test]
+    fn test_sanitize_line_escapes_a_leading_colon() {
+        // A field printed first on a line (a table's first column) needs no
+        // line break to start a workflow command; the runner trims blanks.
+        assert_eq!(sanitize_line("::warning::forged"), "\\::warning::forged");
+        assert_eq!(sanitize_line("  ::error::x"), "  \\::error::x");
+        assert_eq!(sanitize_line(":"), "\\:");
+        // NBSP is trimmed by the runner too
+        assert_eq!(sanitize_line("\u{a0}::x"), "\u{a0}\\::x");
+        // A tab becomes a space before the check, so it cannot hide the colon
+        assert_eq!(sanitize_line("\t::x"), " \\::x");
+        // Colons elsewhere are untouched
+        assert!(matches!(sanitize_line("std::vector"), Cow::Borrowed(_)));
+        assert!(matches!(
+            sanitize_line("pkg:npm/a@1"),
+            Cow::Borrowed("pkg:npm/a@1")
+        ));
+    }
+
+    #[test]
+    fn test_sanitize_csv_field() {
+        assert_eq!(
+            sanitize_csv_field("x\n::error::forged"),
+            "x ::error::forged"
+        );
+        assert_eq!(sanitize_csv_field("a\r\u{85}\u{2028}b"), "a   b");
+        assert_eq!(sanitize_csv_field("::warning::x"), "'::warning::x");
+        assert_eq!(sanitize_csv_field(" :x"), "' :x");
+        assert_eq!(sanitize_csv_field("=1+2"), "'=1+2");
+        assert_eq!(sanitize_csv_field("\x1b[1mbold\u{202E}"), "[1mbold");
+        assert_eq!(sanitize_csv_field("std::vector"), "std::vector");
+    }
+
+    #[test]
+    fn test_document_escapers_strip_controls_and_a_leading_colon() {
+        let hostile = "::warning::x\x1b[31m\x07\u{202E}\u{2028}y";
+        assert_eq!(escape_markdown_table(hostile), "\\::warning::x\\[31m y");
+        assert_eq!(escape_markdown_inline(hostile), "\\::warning::x\\[31m y");
+        assert_eq!(escape_markdown_list(hostile), "\\::warning::x\\[31m; y");
+        assert_eq!(escape_html(hostile), "&#58;:warning::x[31m y");
+        assert_eq!(escape_html_attr("a\x1b\u{202E}b"), "ab");
+        // HTML keeps a line break, as an entity, so SBOM text cannot start a
+        // new line of the report's source
+        assert_eq!(escape_html("a\nb\rc"), "a&#10;b&#13;c");
+        assert_eq!(escape_html("std::vector"), "std::vector");
     }
 
     #[test]

@@ -16,6 +16,7 @@ use crate::license::{
     check_license_propagation, evaluate_license_policy,
 };
 use crate::pipeline::exit_codes;
+use crate::reports::escape::sanitize_line;
 
 /// Run the license-check command.
 pub fn run_license_check(
@@ -78,11 +79,13 @@ pub fn run_license_check(
                     PolicyDecision::Undeclared => "UNDECLARED",
                     _ => "INFO",
                 };
+                // SBOM text is sanitized: a line break or a leading `:` must
+                // not let a component name start an output line.
                 println!(
                     "  {label:>10}  {} {} — {}",
-                    v.component,
-                    v.version.as_deref().unwrap_or(""),
-                    v.license,
+                    sanitize_line(&v.component),
+                    sanitize_line(v.version.as_deref().unwrap_or("")),
+                    sanitize_line(&v.license),
                 );
             }
         }
@@ -92,9 +95,15 @@ pub fn run_license_check(
         {
             println!("\nLicense Propagation Risks:");
             for c in conflicts {
-                println!("  {} → {} : {}", c.component, c.dependency, c.reason);
+                println!(
+                    "  {} → {} : {}",
+                    sanitize_line(&c.component),
+                    sanitize_line(&c.dependency),
+                    sanitize_line(&c.reason)
+                );
                 if !c.path.is_empty() {
-                    println!("    path: {}", c.path.join(" → "));
+                    let path: Vec<_> = c.path.iter().map(|p| sanitize_line(p)).collect();
+                    println!("    path: {}", path.join(" → "));
                 }
             }
         }

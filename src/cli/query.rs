@@ -9,8 +9,10 @@ use crate::model::{
 };
 use crate::pipeline::{OutputTarget, auto_detect_format, exit_codes, write_output};
 use crate::reports::ReportFormat;
+use crate::reports::escape::{sanitize_csv_field, sanitize_line};
 use anyhow::{Result, bail};
 use serde::Serialize;
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 /// Output formats `query` has a real renderer for.
@@ -666,36 +668,35 @@ fn format_table_output(result: &QueryResult) -> String {
         return out;
     }
 
+    // SBOM text is sanitized before anything is measured: a line break or
+    // a leading `:` must not let a component name start an output line.
+    let cells: Vec<[Cow<'_, str>; 4]> = result
+        .matches
+        .iter()
+        .map(|m| {
+            [
+                sanitize_line(&m.name),
+                sanitize_line(&m.version),
+                sanitize_line(&m.ecosystem),
+                sanitize_line(&m.license),
+            ]
+        })
+        .collect();
+
     // Calculate column widths (in characters, not bytes, so multi-byte
     // UTF-8 names don't inflate the column or break truncation)
-    let name_w = result
-        .matches
-        .iter()
-        .map(|m| m.name.chars().count())
-        .max()
-        .unwrap_or(9)
-        .clamp(9, 40);
-    let ver_w = result
-        .matches
-        .iter()
-        .map(|m| m.version.chars().count())
-        .max()
-        .unwrap_or(7)
-        .clamp(7, 20);
-    let eco_w = result
-        .matches
-        .iter()
-        .map(|m| m.ecosystem.chars().count())
-        .max()
-        .unwrap_or(9)
-        .clamp(9, 15);
-    let lic_w = result
-        .matches
-        .iter()
-        .map(|m| m.license.chars().count())
-        .max()
-        .unwrap_or(7)
-        .clamp(7, 20);
+    let width = |col: usize, min: usize, max: usize| {
+        cells
+            .iter()
+            .map(|row| row[col].chars().count())
+            .max()
+            .unwrap_or(min)
+            .clamp(min, max)
+    };
+    let name_w = width(0, 9, 40);
+    let ver_w = width(1, 7, 20);
+    let eco_w = width(2, 9, 15);
+    let lic_w = width(3, 7, 20);
 
     // Header
     out.push_str(&format!(
@@ -704,12 +705,13 @@ fn format_table_output(result: &QueryResult) -> String {
     ));
 
     // Rows
-    for m in &result.matches {
-        let name = truncate(&m.name, name_w);
-        let ver = truncate(&m.version, ver_w);
-        let eco = truncate(&m.ecosystem, eco_w);
-        let lic = truncate(&m.license, lic_w);
-        let found_in: Vec<&str> = m.found_in.iter().map(|s| s.name.as_str()).collect();
+    for (m, [name, ver, eco, lic]) in result.matches.iter().zip(&cells) {
+        let name = truncate(name, name_w);
+        let ver = truncate(ver, ver_w);
+        let eco = truncate(eco, eco_w);
+        let lic = truncate(lic, lic_w);
+        let found_in: Vec<Cow<'_, str>> =
+            m.found_in.iter().map(|s| sanitize_line(&s.name)).collect();
 
         out.push_str(&format!(
             "{name:<name_w$}  {ver:<ver_w$}  {eco:<eco_w$}  {lic:<lic_w$}  {:>5}  {}\n",
@@ -749,7 +751,9 @@ fn format_table_grouped(result: &QueryResult) -> String {
 
         out.push_str(&format!(
             "── {} ({} matches / {} components) ──\n",
-            summary.name, summary.matches, summary.component_count
+            sanitize_line(&summary.name),
+            summary.matches,
+            summary.component_count
         ));
 
         for m in &result.matches {
@@ -761,7 +765,10 @@ fn format_table_grouped(result: &QueryResult) -> String {
                 };
                 out.push_str(&format!(
                     "  {} {} ({}){}\n",
-                    m.name, m.version, m.ecosystem, vuln_str
+                    sanitize_line(&m.name),
+                    sanitize_line(&m.version),
+                    sanitize_line(&m.ecosystem),
+                    vuln_str
                 ));
             }
         }
@@ -802,12 +809,15 @@ fn format_csv_output(result: &QueryResult) -> String {
     out
 }
 
-/// Escape a CSV field value (quote if contains comma, quote, or newline).
+/// Escape a CSV field value: [`sanitize_csv_field`] flattens line breaks,
+/// removes control and bidi characters, and guards formula triggers and a
+/// leading `:`; the result is quoted if it contains a comma or quote.
 fn csv_escape(s: &str) -> String {
-    if s.contains(',') || s.contains('"') || s.contains('\n') {
+    let s = sanitize_csv_field(s);
+    if s.contains(',') || s.contains('"') {
         format!("\"{}\"", s.replace('"', "\"\""))
     } else {
-        s.to_string()
+        s
     }
 }
 
@@ -1059,6 +1069,10 @@ mod tests {
         assert_eq!(csv_escape("hello"), "hello");
         assert_eq!(csv_escape("hello,world"), "\"hello,world\"");
         assert_eq!(csv_escape("say \"hi\""), "\"say \"\"hi\"\"\"");
+        // SBOM text cannot start a CSV line printed to a CI log
+        assert_eq!(csv_escape("x\n::error::forged"), "x ::error::forged");
+        assert_eq!(csv_escape("::warning::forged"), "'::warning::forged");
+        assert_eq!(csv_escape("=HYPERLINK(1)"), "'=HYPERLINK(1)");
     }
 
     #[test]

@@ -3,6 +3,7 @@
 //! Generates comma-separated reports for diff and view modes,
 //! suitable for spreadsheet import and data analysis pipelines.
 
+use super::escape::sanitize_csv_field;
 use super::{ReportConfig, ReportError, ReportFormat, ReportGenerator};
 use crate::diff::{DiffResult, SlaStatus, VulnerabilityDetail};
 use crate::model::NormalizedSbom;
@@ -213,19 +214,14 @@ fn write_vuln_line(content: &mut String, status: &str, vuln: &VulnerabilityDetai
     );
 }
 
-/// Escape a string for CSV embedding: double-quote escaping per RFC 4180,
-/// plus newline flattening since fields are already wrapped in double quotes.
-///
-/// Values starting with a formula trigger (`=`, `+`, `-`, `@`, tab, CR) are
-/// prefixed with a single quote so spreadsheet applications treat them as
-/// text rather than executable formulas (OWASP CSV injection guidance).
+/// Escape a string for CSV embedding: double-quote escaping per RFC 4180
+/// after [`sanitize_csv_field`], which flattens line breaks (fields are
+/// already wrapped in double quotes), removes control characters and bidi
+/// controls, and prefixes a single quote to values starting with a formula
+/// trigger (`=`, `+`, `-`, `@`, tab, CR) or `:` so spreadsheet applications
+/// treat them as text (OWASP CSV injection guidance).
 fn escape_csv(s: &str) -> String {
-    let escaped = s.replace('"', "\"\"").replace('\n', " ");
-    if s.starts_with(['=', '+', '-', '@', '\t', '\r']) {
-        format!("'{escaped}")
-    } else {
-        escaped
-    }
+    sanitize_csv_field(s).replace('"', "\"\"")
 }
 
 /// Escape an optional string for CSV embedding, returning "-" for `None`.
@@ -254,7 +250,8 @@ mod tests {
         assert_eq!(escape_csv("-2+3"), "'-2+3");
         assert_eq!(escape_csv("@cmd"), "'@cmd");
         assert_eq!(escape_csv("\tpayload"), "'\tpayload");
-        assert_eq!(escape_csv("\rpayload"), "'\rpayload");
+        // A leading CR is still guarded; it is flattened like every line break
+        assert_eq!(escape_csv("\rpayload"), "' payload");
         // Scoped npm names share the '@' trigger; the quote prefix keeps them
         // readable while staying inert in spreadsheets
         assert_eq!(escape_csv("@types/node"), "'@types/node");
@@ -278,6 +275,16 @@ mod tests {
         assert_eq!(escape_csv("name \"quoted\""), "name \"\"quoted\"\"");
         assert_eq!(escape_csv("line1\nline2"), "line1 line2");
         assert_eq!(escape_csv(""), "");
+    }
+
+    #[test]
+    fn escape_csv_strips_controls_and_guards_a_leading_colon() {
+        // No field can start a CSV line printed to a CI log with `::`
+        assert_eq!(escape_csv("x\n::error::forged"), "x ::error::forged");
+        assert_eq!(escape_csv("::warning::forged"), "'::warning::forged");
+        assert_eq!(escape_csv("a\u{2028}b\u{85}c"), "a b c");
+        assert_eq!(escape_csv("\x1b[31mred\x07\u{202E}"), "[31mred");
+        assert_eq!(escape_csv("std::vector"), "std::vector");
     }
 
     #[test]

@@ -1,5 +1,6 @@
 //! Side-by-side diff output similar to difftastic.
 
+use super::escape::sanitize_line;
 use super::{ReportConfig, ReportError, ReportFormat, ReportGenerator};
 use crate::diff::{ChangeType, DiffResult};
 use crate::model::NormalizedSbom;
@@ -66,10 +67,10 @@ impl SideBySideReporter {
         format!(
             "{}{:<half_width$}{} │ {}{:<half_width$}{}\n",
             self.col(colors::BOLD),
-            truncate(old_name, half_width),
+            truncate(&sanitize_line(old_name), half_width),
             self.col(colors::RESET),
             self.col(colors::BOLD),
-            truncate(new_name, half_width),
+            truncate(&sanitize_line(new_name), half_width),
             self.col(colors::RESET),
         )
     }
@@ -94,6 +95,12 @@ impl SideBySideReporter {
     ) -> String {
         let half_width = (self.width - 7) / 2; // Account for " │ " and line numbers
         let num_width = 3;
+        // Row text carries SBOM names, versions and IDs: sanitize it so it
+        // cannot start an output line or reach the terminal as escapes.
+        let old_text = old_text.map(sanitize_line);
+        let new_text = new_text.map(sanitize_line);
+        let old_text = old_text.as_deref();
+        let new_text = new_text.as_deref();
 
         let (left_num, left_text, right_num, right_text) = match change_type {
             ChangeType::Removed => (
@@ -195,8 +202,8 @@ impl SideBySideReporter {
         // Calculate visible width (excluding ANSI codes)
         let left_visible = strip_ansi(&left_text);
         let right_visible = strip_ansi(&right_text);
-        let left_padding = half_width.saturating_sub(left_visible.len());
-        let right_padding = half_width.saturating_sub(right_visible.len());
+        let left_padding = half_width.saturating_sub(left_visible.chars().count());
+        let right_padding = half_width.saturating_sub(right_visible.chars().count());
 
         format!(
             "{} {}{} │ {} {}{}\n",
@@ -236,12 +243,12 @@ impl SideBySideReporter {
             icon,
             self.col(colors::RESET),
             self.col(colors::BOLD),
-            vuln_id,
+            sanitize_line(vuln_id),
             self.col(colors::RESET),
             self.col(severity_color),
-            severity,
+            sanitize_line(severity),
             self.col(colors::RESET),
-            component,
+            sanitize_line(component),
         )
     }
 }
@@ -467,7 +474,7 @@ impl ReportGenerator for SideBySideReporter {
             out,
             "{}{}{}\n",
             self.col(colors::BOLD),
-            name,
+            sanitize_line(name),
             self.col(colors::RESET),
         )?;
 
@@ -492,9 +499,9 @@ impl ReportGenerator for SideBySideReporter {
                 self.col(colors::LINE_NUM),
                 i + 1,
                 self.col(colors::RESET),
-                comp.name,
+                sanitize_line(&comp.name),
                 self.col(colors::DIM),
-                comp.version.as_deref().unwrap_or(""),
+                sanitize_line(comp.version.as_deref().unwrap_or("")),
                 self.col(colors::RESET),
                 vuln_text,
             )?;
@@ -529,14 +536,18 @@ const fn terminal_width() -> Option<usize> {
     None
 }
 
-/// Truncate string to fit width
+/// Truncate a string to fit `max_width` characters.
+///
+/// Counts and cuts on `char` boundaries: slicing at a byte offset panicked
+/// when it landed inside a multi-byte UTF-8 character of a component name.
 fn truncate(s: &str, max_width: usize) -> String {
-    if s.len() <= max_width {
+    if s.chars().count() <= max_width {
         s.to_string()
     } else if max_width > 3 {
-        format!("{}...", &s[..max_width - 3])
+        let kept: String = s.chars().take(max_width - 3).collect();
+        format!("{kept}...")
     } else {
-        s[..max_width].to_string()
+        s.chars().take(max_width).collect()
     }
 }
 
@@ -572,4 +583,39 @@ fn short_id(id: &str) -> String {
         }
     }
     id.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn truncate_cuts_on_char_boundaries() {
+        // 60 two-byte characters: a byte cut at 53 used to panic
+        let name = "é".repeat(60);
+        let cut = truncate(&name, 56);
+        assert_eq!(cut.chars().count(), 56);
+        assert!(cut.ends_with("..."));
+        assert_eq!(truncate("short", 10), "short");
+        assert_eq!(truncate("abcdef", 2), "ab");
+    }
+
+    #[test]
+    fn rows_cannot_start_a_line_or_carry_escapes() {
+        let reporter = SideBySideReporter::new().no_colors();
+        let row = reporter.format_component_row(
+            1,
+            Some("x\n::error::forged \x1b[31mred\u{202E}"),
+            None,
+            ChangeType::Removed,
+        );
+        assert_eq!(row.lines().count(), 1, "{row:?}");
+        assert!(!row.contains(['\x1b', '\u{202E}']), "{row:?}");
+        let vuln =
+            reporter.format_vulnerability_row("CVE-1\n::error::x", "high", "::warning::y", true);
+        assert!(
+            vuln.lines().all(|l| !l.trim_start().starts_with("::")),
+            "{vuln:?}"
+        );
+    }
 }

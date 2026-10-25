@@ -8,6 +8,7 @@
 use crate::config::VexConfig;
 use crate::model::{NormalizedSbom, VexState};
 use crate::pipeline::{OutputTarget, exit_codes, write_output};
+use crate::reports::escape::sanitize_line;
 use anyhow::Result;
 
 /// VEX action to perform.
@@ -247,14 +248,16 @@ fn run_vex_status(sbom: &NormalizedSbom, config: &VexConfig) -> Result<i32> {
 
         if without_vex > 0 {
             writeln!(out, "Gaps (vulnerabilities without VEX):")?;
+            // SBOM text is sanitized: a line break or a leading `:` must
+            // not let a vulnerability ID start an output line.
             for v in vulns.iter().filter(|v| v.vex_state.is_none()) {
                 writeln!(
                     out,
                     "  {} [{}] — {} {}",
-                    v.id,
-                    v.severity,
-                    v.component_name,
-                    v.version.as_deref().unwrap_or("")
+                    sanitize_line(&v.id),
+                    sanitize_line(&v.severity),
+                    sanitize_line(&v.component_name),
+                    sanitize_line(v.version.as_deref().unwrap_or(""))
                 )?;
             }
         }
