@@ -7,6 +7,7 @@ use crate::pipeline::{OutputTarget, exit_codes, parse_sbom_with_context, write_o
 use crate::quality::{
     ComplianceChecker, ComplianceLevel, ComplianceResult, StandardSelector, ViolationSeverity,
 };
+use crate::reports::escape::sanitize_line;
 use crate::reports::{ReportFormat, generate_compliance_sarif};
 use anyhow::Result;
 use std::path::PathBuf;
@@ -292,11 +293,21 @@ fn write_multi_compliance_summary(
     Ok(())
 }
 
+/// Render a compliance result as plain text, one finding per two lines.
+///
+/// Requirement, element, message and the N/A reason can carry SBOM-supplied
+/// text (component names, versions, purls), so each passes through
+/// [`sanitize_line`]: a crafted name must not be able to start a new line
+/// (CI runners such as GitHub Actions parse a line beginning with `::error`
+/// as a workflow command) or smuggle terminal escape or bidi sequences.
 fn format_compliance_text(result: &ComplianceResult) -> String {
     let mut lines = Vec::new();
     lines.push(format!("Compliance ({})", result.level.name()));
     if let crate::quality::Applicability::NotApplicable(reason) = &result.applicability {
-        lines.push(format!("Status: NOT APPLICABLE — {reason}"));
+        lines.push(format!(
+            "Status: NOT APPLICABLE — {}",
+            sanitize_line(reason)
+        ));
     } else {
         lines.push(format!(
             "Status: {} ({} errors, {} warnings, {} info)",
@@ -328,10 +339,10 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
             "[{}] {} | {} | {}",
             severity,
             v.category.name(),
-            v.requirement,
-            element
+            sanitize_line(&v.requirement),
+            sanitize_line(element)
         ));
-        lines.push(format!("  {}", v.message));
+        lines.push(format!("  {}", sanitize_line(&v.message)));
     }
 
     lines.join("\n")
@@ -352,7 +363,7 @@ pub fn print_ntia_validation(sbom: &NormalizedSbom) {
         tracing::warn!("SBOM has {} NTIA validation errors", result.error_count);
         println!("NTIA Validation: FAILED");
         for v in result.violations_by_severity(ViolationSeverity::Error) {
-            println!("  - {}", v.message);
+            println!("  - {}", sanitize_line(&v.message));
         }
     }
 }

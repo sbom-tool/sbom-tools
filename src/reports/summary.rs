@@ -2,7 +2,7 @@
 //!
 //! Provides a compact, human-readable summary for terminal usage.
 
-use super::escape::sanitize_terminal;
+use super::escape::sanitize_line;
 use super::{ReportConfig, ReportError, ReportFormat, ReportGenerator};
 use crate::diff::DiffResult;
 use crate::model::NormalizedSbom;
@@ -84,8 +84,8 @@ impl ReportGenerator for SummaryReporter {
         lines.push(self.color("─".repeat(40).as_str(), "dim"));
 
         // File info
-        let old_name = sanitize_terminal(old_sbom.document.name.as_deref().unwrap_or("old"));
-        let new_name = sanitize_terminal(new_sbom.document.name.as_deref().unwrap_or("new"));
+        let old_name = sanitize_line(old_sbom.document.name.as_deref().unwrap_or("old"));
+        let new_name = sanitize_line(new_sbom.document.name.as_deref().unwrap_or("new"));
         lines.push(format!(
             "{}  {} → {}",
             self.color("Files:", "cyan"),
@@ -156,9 +156,9 @@ impl ReportGenerator for SummaryReporter {
                 let new = change.new_value.as_deref().unwrap_or("∅");
                 lines.push(format!(
                     "  {}: {} → {}",
-                    sanitize_terminal(&change.field),
-                    sanitize_terminal(old),
-                    sanitize_terminal(new),
+                    sanitize_line(&change.field),
+                    sanitize_line(old),
+                    sanitize_line(new),
                 ));
             }
         }
@@ -294,7 +294,7 @@ impl ReportGenerator for SummaryReporter {
             lines.push(format!(
                 "{}  {}",
                 self.color("Name:", "cyan"),
-                sanitize_terminal(name)
+                sanitize_line(name)
             ));
         }
         lines.push(format!(
@@ -324,7 +324,7 @@ impl ReportGenerator for SummaryReporter {
             lines.push(format!(
                 "{}  {}",
                 self.color("Ecosystems:", "cyan"),
-                sanitize_terminal(&joined)
+                sanitize_line(&joined)
             ));
         }
 
@@ -492,11 +492,11 @@ impl ReportGenerator for TableReporter {
 
         // Added components
         for comp in &result.components.added {
-            let version = sanitize_terminal(comp.new_version.as_deref().unwrap_or("-"));
+            let version = sanitize_line(comp.new_version.as_deref().unwrap_or("-"));
             lines.push(format!(
                 "{:<12} {:<40} {:<15} {:<15}",
                 self.color("+ Added", "green"),
-                truncate(&sanitize_terminal(&comp.name), 40),
+                truncate(&sanitize_line(&comp.name), 40),
                 "-",
                 version
             ));
@@ -504,11 +504,11 @@ impl ReportGenerator for TableReporter {
 
         // Removed components
         for comp in &result.components.removed {
-            let version = sanitize_terminal(comp.old_version.as_deref().unwrap_or("-"));
+            let version = sanitize_line(comp.old_version.as_deref().unwrap_or("-"));
             lines.push(format!(
                 "{:<12} {:<40} {:<15} {:<15}",
                 self.color("- Removed", "red"),
-                truncate(&sanitize_terminal(&comp.name), 40),
+                truncate(&sanitize_line(&comp.name), 40),
                 version,
                 "-"
             ));
@@ -516,8 +516,8 @@ impl ReportGenerator for TableReporter {
 
         // Modified components
         for comp in &result.components.modified {
-            let old_ver = sanitize_terminal(comp.old_version.as_deref().unwrap_or("-"));
-            let new_ver = sanitize_terminal(comp.new_version.as_deref().unwrap_or("-"));
+            let old_ver = sanitize_line(comp.old_version.as_deref().unwrap_or("-"));
+            let new_ver = sanitize_line(comp.new_version.as_deref().unwrap_or("-"));
             let (label, color) = if comp.change_type == crate::diff::ChangeType::Unchanged {
                 ("= Unchanged", "white")
             } else {
@@ -526,7 +526,7 @@ impl ReportGenerator for TableReporter {
             lines.push(format!(
                 "{:<12} {:<40} {:<15} {:<15}",
                 self.color(label, color),
-                truncate(&sanitize_terminal(&comp.name), 40),
+                truncate(&sanitize_line(&comp.name), 40),
                 old_ver,
                 new_ver
             ));
@@ -545,7 +545,7 @@ impl ReportGenerator for TableReporter {
             lines.push("─".repeat(85));
 
             for vuln in &result.vulnerabilities.introduced {
-                let severity = sanitize_terminal(&vuln.severity);
+                let severity = sanitize_line(&vuln.severity);
                 let severity_colored = match severity_color_name(&vuln.severity) {
                     "" => severity.into_owned(),
                     name => self.color(&severity, name),
@@ -553,9 +553,9 @@ impl ReportGenerator for TableReporter {
                 lines.push(format!(
                     "{:<12} {:<20} {:<10} {:<40}",
                     self.color("! NEW", "red"),
-                    truncate(&sanitize_terminal(&vuln.id), 20),
+                    truncate(&sanitize_line(&vuln.id), 20),
                     severity_colored,
-                    truncate(&sanitize_terminal(&vuln.component_name), 40)
+                    truncate(&sanitize_line(&vuln.component_name), 40)
                 ));
             }
         }
@@ -612,9 +612,9 @@ impl ReportGenerator for TableReporter {
 
             lines.push(format!(
                 "{:<40} {:<15} {:<20} {:<10}",
-                truncate(&sanitize_terminal(&comp.name), 40),
-                truncate(&sanitize_terminal(version), 15),
-                truncate(&sanitize_terminal(license), 20),
+                truncate(&sanitize_line(&comp.name), 40),
+                truncate(&sanitize_line(version), 15),
+                truncate(&sanitize_line(license), 20),
                 vuln_display
             ));
         }

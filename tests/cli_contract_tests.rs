@@ -865,3 +865,101 @@ fn empty_no_color_env_is_treated_as_unset() {
     );
     assert!(!set, "a non-empty NO_COLOR must disable colour");
 }
+
+// ---------------------------------------------------------------------------
+// Untrusted SBOM text in line-oriented output (review S1)
+// ---------------------------------------------------------------------------
+
+/// A component name built to forge a GitHub Actions annotation, plus an ANSI
+/// colour sequence, a bell and a right-to-left override.
+const HOSTILE_NAME: &str =
+    "lib\\n::error file=src/main.rs,line=1::FORGED\\u001b[31m\\u0007\\u202ered";
+
+fn write_hostile_sbom(dir: &Path, file: &str, with_hostile: bool) -> PathBuf {
+    let extra = if with_hostile {
+        format!(r#",{{"type":"library","name":"{HOSTILE_NAME}"}}"#)
+    } else {
+        String::new()
+    };
+    let json = format!(
+        r#"{{"bomFormat":"CycloneDX","specVersion":"1.5","version":1,
+        "metadata":{{"timestamp":"2026-01-01T00:00:00Z","authors":[{{"name":"Example"}}]}},
+        "components":[{{"type":"library","name":"base","version":"1.0.0",
+        "purl":"pkg:npm/base@1.0.0","supplier":{{"name":"Example"}}}}{extra}]}}"#
+    );
+    let path = dir.join(file);
+    std::fs::write(&path, json).expect("write fixture");
+    path
+}
+
+fn assert_no_injected_lines(text: &str) {
+    for line in text.lines() {
+        assert!(
+            !line.trim_start().starts_with("::"),
+            "a line starts a workflow command: {line:?}\n---\n{text}"
+        );
+    }
+    for (needle, what) in [('\u{1b}', "ESC"), ('\u{7}', "BEL"), ('\u{202E}', "RLO")] {
+        assert!(!text.contains(needle), "{what} reached the output:\n{text}");
+    }
+}
+
+/// The default `validate` text output used to print element and message
+/// verbatim, so a newline in a component name produced a line that GitHub
+/// Actions renders as an `::error` annotation.
+#[test]
+fn validate_text_output_cannot_forge_ci_annotations() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let sbom = write_hostile_sbom(dir.path(), "hostile.cdx.json", true);
+
+    let output = base_command()
+        .arg("validate")
+        .arg(&sbom)
+        .args(["--standard", "ntia"])
+        .output()
+        .expect("validate should run");
+    let text = stdout(&output);
+
+    assert!(
+        text.contains("lib\\n::error"),
+        "the hostile name must still be visible, escaped:\n{text}"
+    );
+    assert_no_injected_lines(&text);
+
+    // JSON output keeps the exact value (serde escapes it).
+    let json_out = base_command()
+        .arg("validate")
+        .arg(&sbom)
+        .args(["--standard", "ntia", "-o", "json"])
+        .output()
+        .expect("validate -o json should run");
+    let value: serde_json::Value =
+        serde_json::from_str(&stdout(&json_out)).expect("validate -o json is JSON");
+    assert!(
+        value.to_string().contains("::error file=src/main.rs"),
+        "JSON must carry the original text: {value}"
+    );
+}
+
+/// The `diff` table report sanitized names but kept their newlines.
+#[test]
+fn diff_table_output_cannot_forge_ci_annotations() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let old = write_hostile_sbom(dir.path(), "old.cdx.json", false);
+    let new = write_hostile_sbom(dir.path(), "new.cdx.json", true);
+
+    let output = base_command()
+        .arg("diff")
+        .arg(&old)
+        .arg(&new)
+        .args(["-o", "table"])
+        .output()
+        .expect("diff should run");
+    let text = stdout(&output);
+
+    assert!(
+        text.contains("lib\\n::error"),
+        "the added component must be listed, escaped:\n{text}"
+    );
+    assert_no_injected_lines(&text);
+}

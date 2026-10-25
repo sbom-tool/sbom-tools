@@ -15,23 +15,49 @@
 
 use std::borrow::Cow;
 
-/// Sanitize a string for safe terminal (TTY) output.
+/// Sanitize untrusted text printed as (part of) one line of terminal or
+/// CI-log output.
 ///
-/// Strips control characters — C0 controls except `\n` and `\t`, DEL, and C1
-/// controls — including ESC (0x1B), which neutralizes ANSI escape sequences
-/// embedded in untrusted SBOM data (cursor movement, screen clearing, title
-/// changes, etc.). Returns the input unchanged when nothing needs stripping.
+/// A field must never start a new output line: CI runners parse each line on
+/// its own, and GitHub Actions turns a line that starts with `::error` into an
+/// annotation, so a component name such as `lib\n::error::forged` could forge
+/// one. Line breaks (`\n`, `\r`, NEL, U+2028, U+2029) are therefore rendered as
+/// a visible `\n` and a tab becomes a space. Every other control character is
+/// removed — C0, DEL and C1, including ESC (0x1B), which neutralizes ANSI
+/// escape sequences (cursor movement, screen clearing, title changes) — and
+/// so are the Unicode bidi controls and direction marks (U+061C, U+200E,
+/// U+200F, U+202A–U+202E, U+2066–U+2069), which `char::is_control` does not
+/// cover and which make a terminal display text in a different order than it
+/// is stored. Returns the input unchanged when nothing needs changing.
 #[must_use]
-pub(crate) fn sanitize_terminal(s: &str) -> Cow<'_, str> {
-    fn is_disallowed(c: char) -> bool {
-        c.is_control() && c != '\n' && c != '\t'
+pub(crate) fn sanitize_line(s: &str) -> Cow<'_, str> {
+    fn is_line_break(c: char) -> bool {
+        matches!(c, '\n' | '\r' | '\u{85}' | '\u{2028}' | '\u{2029}')
+    }
+    fn is_bidi_control(c: char) -> bool {
+        matches!(
+            c,
+            '\u{061C}' | '\u{200E}' | '\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}'
+        )
+    }
+    fn needs_change(c: char) -> bool {
+        c.is_control() || is_line_break(c) || is_bidi_control(c)
     }
 
-    if s.contains(is_disallowed) {
-        Cow::Owned(s.chars().filter(|&c| !is_disallowed(c)).collect())
-    } else {
-        Cow::Borrowed(s)
+    if !s.contains(needs_change) {
+        return Cow::Borrowed(s);
     }
+    let mut out = String::with_capacity(s.len() + 2);
+    for c in s.chars() {
+        if is_line_break(c) {
+            out.push_str("\\n");
+        } else if c == '\t' {
+            out.push(' ');
+        } else if !needs_change(c) {
+            out.push(c);
+        }
+    }
+    Cow::Owned(out)
 }
 
 /// Escape a string for safe inclusion in HTML content.
@@ -321,40 +347,61 @@ mod tests {
     }
 
     #[test]
-    fn test_sanitize_terminal_ansi_neutralized() {
+    fn test_sanitize_line_ansi_neutralized() {
         // ESC is stripped, so the CSI sequence loses its meaning
         assert_eq!(
-            sanitize_terminal("\x1b[31mevil\x1b[0m"),
+            sanitize_line("\x1b[31mevil\x1b[0m"),
             Cow::<str>::Owned("[31mevil[0m".to_string())
         );
         // OSC title change
-        assert_eq!(sanitize_terminal("\x1b]0;pwned\x07name"), "]0;pwnedname");
+        assert_eq!(sanitize_line("\x1b]0;pwned\x07name"), "]0;pwnedname");
     }
 
     #[test]
-    fn test_sanitize_terminal_control_chars_stripped() {
-        assert_eq!(sanitize_terminal("a\x07b\x08c"), "abc");
-        assert_eq!(sanitize_terminal("over\rwrite"), "overwrite");
-        assert_eq!(sanitize_terminal("\x00null\x7f"), "null");
+    fn test_sanitize_line_control_chars_stripped() {
+        assert_eq!(sanitize_line("a\x07b\x08c"), "abc");
+        assert_eq!(sanitize_line("\x00null\x7f"), "null");
         // C1 controls
-        assert_eq!(sanitize_terminal("a\u{9b}31mb"), "a31mb");
+        assert_eq!(sanitize_line("a\u{9b}31mb"), "a31mb");
     }
 
     #[test]
-    fn test_sanitize_terminal_preserves_safe_input() {
+    fn test_sanitize_line_never_starts_a_new_line() {
+        // A CI workflow command smuggled into a component name stays on the
+        // line it was printed on, visibly escaped.
+        let forged = "lib\n::error file=src/main.rs,line=1::FORGED";
+        let clean = sanitize_line(forged);
+        assert_eq!(clean, "lib\\n::error file=src/main.rs,line=1::FORGED");
+        assert!(!clean.contains('\n'));
+        assert_eq!(sanitize_line("over\rwrite"), "over\\nwrite");
+        assert_eq!(sanitize_line("a\r\nb"), "a\\n\\nb");
+        // NEL and the Unicode line and paragraph separators break lines too
+        assert_eq!(sanitize_line("a\u{85}b\u{2028}c\u{2029}d"), "a\\nb\\nc\\nd");
+        assert_eq!(sanitize_line("col1\tcol2"), "col1 col2");
+    }
+
+    #[test]
+    fn test_sanitize_line_bidi_controls_stripped() {
+        // Right-to-left override (U+202E) would display "exe.txt" as "txt.exe"
+        assert_eq!(sanitize_line("invoice\u{202E}txt.exe"), "invoicetxt.exe");
+        for c in [
+            '\u{061C}', '\u{200E}', '\u{200F}', '\u{202A}', '\u{202B}', '\u{202C}', '\u{202D}',
+            '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
+        ] {
+            assert_eq!(sanitize_line(&format!("a{c}b")), "ab", "U+{:04X}", c as u32);
+        }
+    }
+
+    #[test]
+    fn test_sanitize_line_preserves_safe_input() {
         assert!(matches!(
-            sanitize_terminal("lodash@4.17.21"),
+            sanitize_line("lodash@4.17.21"),
             Cow::Borrowed("lodash@4.17.21")
         ));
-        assert!(matches!(
-            sanitize_terminal("日本語 émoji 🎉"),
-            Cow::Borrowed(_)
-        ));
-        assert!(matches!(
-            sanitize_terminal("line1\nline2\ttabbed"),
-            Cow::Borrowed(_)
-        ));
-        assert!(matches!(sanitize_terminal(""), Cow::Borrowed("")));
+        assert!(matches!(sanitize_line("日本語 émoji 🎉"), Cow::Borrowed(_)));
+        // Arabic and Hebrew letters are text, not controls
+        assert!(matches!(sanitize_line("مرحبا שלום"), Cow::Borrowed(_)));
+        assert!(matches!(sanitize_line(""), Cow::Borrowed("")));
     }
 
     #[test]
