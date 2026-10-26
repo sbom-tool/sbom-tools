@@ -658,7 +658,9 @@ pub struct CipherSuite {
 /// The per-type string lists hold one identifier per transform: its
 /// algorithm bom-ref (the CycloneDX 1.6 string form, or the 1.7 object's
 /// `algorithm`), else its IANA transform name, else its key-exchange group
-/// label. [`transforms`](Self::transforms) keeps every transform as declared.
+/// label. [`transforms`](Self::transforms) keeps every transform as declared,
+/// including the RFC 9370 additional key exchanges (ADDKE1–ADDKE7), which
+/// have no identifier list.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Ikev2TransformTypes {
     /// Encryption algorithm identifiers (Transform Type 1).
@@ -722,6 +724,40 @@ pub enum Ikev2TransformKind {
     Ke,
     /// Authentication method.
     Auth,
+    /// Additional Key Exchange 1 (Transform Type 6, RFC 9370 §2.2.2). The
+    /// seven ADDKE types share the Transform Type 4 IDs. CycloneDX 1.7 has
+    /// no field for them; they are read from `addke1`…`addke7`.
+    Addke1,
+    /// Additional Key Exchange 2 (Transform Type 7).
+    Addke2,
+    /// Additional Key Exchange 3 (Transform Type 8).
+    Addke3,
+    /// Additional Key Exchange 4 (Transform Type 9).
+    Addke4,
+    /// Additional Key Exchange 5 (Transform Type 10).
+    Addke5,
+    /// Additional Key Exchange 6 (Transform Type 11).
+    Addke6,
+    /// Additional Key Exchange 7 (Transform Type 12).
+    Addke7,
+}
+
+impl Ikev2TransformKind {
+    /// The round (1–7) of an RFC 9370 additional key exchange, or `None`
+    /// for any other transform type.
+    #[must_use]
+    pub const fn additional_key_exchange(self) -> Option<u8> {
+        match self {
+            Self::Addke1 => Some(1),
+            Self::Addke2 => Some(2),
+            Self::Addke3 => Some(3),
+            Self::Addke4 => Some(4),
+            Self::Addke5 => Some(5),
+            Self::Addke6 => Some(6),
+            Self::Addke7 => Some(7),
+            Self::Encr | Self::Prf | Self::Integ | Self::Ke | Self::Auth => None,
+        }
+    }
 }
 
 /// One IKEv2 transform. CycloneDX 1.6 declares only a bom-ref; 1.7 declares
