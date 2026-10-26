@@ -503,6 +503,7 @@ fn compliance_overview_marks_na_standards_muted_not_green() {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             }],
         )
     }
@@ -1650,6 +1651,7 @@ fn pqc_cnsa_cell_ignores_non_error_violations() {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 }],
             ),
             ComplianceResult::new(ComplianceLevel::NistPqc, vec![]),

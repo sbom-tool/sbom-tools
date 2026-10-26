@@ -5,27 +5,29 @@ fixture: compliance/regressions/v4-noassertion-supplier.cdx.json
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I2
-  I SBOM-QUALITY-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-QUALITY-GENERAL  pkg:npm/libfoo@2.1.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/libfoo@2.1.0
 [Standard] compliant · E0 W1 I2
-  I SBOM-QUALITY-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-QUALITY-GENERAL  pkg:npm/libfoo@2.1.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/libfoo@2.1.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/app@1.0.0
 [NtiaMinimum] NON-COMPLIANT · E1 W0 I2
   E SBOM-NTIA-SUPPLIER  pkg:npm/libfoo@2.1.0
-  I SBOM-NTIA-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-NTIA-GENERAL  pkg:npm/libfoo@2.1.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
 [CraPhase1] compliant · E0 W7 I7
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/app@1.0.0
   I SBOM-CRA-ART-13-5  - (1/2)
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
-  I SBOM-CRA-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-CRA-GENERAL  pkg:npm/libfoo@2.1.0
+  I SBOM-CRA-ART-14-ENISA  -
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
   W SBOM-CRA-ART-13-17-CONTACT  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/libfoo@2.1.0
   W SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
 [CraPhase2] NON-COMPLIANT · E2 W7 I9
@@ -35,21 +37,23 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-5  - (1/2)
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
-  I SBOM-CRA-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-CRA-GENERAL  pkg:npm/libfoo@2.1.0
+  I SBOM-CRA-ART-14-ENISA  -
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/libfoo@2.1.0
   W SBOM-CRA-CVD-POLICY  -
 [FdaMedicalDevice] NON-COMPLIANT · E2 W1 I2
   E SBOM-FDA-HASH  pkg:generic/app@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:npm/libfoo@2.1.0
-  I SBOM-FDA-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-FDA-GENERAL  pkg:npm/libfoo@2.1.0
+  I SBOM-FDA-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] compliant · E0 W3 I2
   I SBOM-SSDF-PO3  -
@@ -74,8 +78,8 @@ as_of: 2026-10-12T00:00:00Z
 [CraOssSteward] NON-COMPLIANT · E1 W2 I3
   E SBOM-CRA-ART-24  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/app@1.0.0
-  I SBOM-CRA-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-CRA-GENERAL  pkg:npm/libfoo@2.1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
   W SBOM-CRA-ART-24-SUPPLIER  pkg:npm/libfoo@2.1.0
   W SBOM-CRA-CVD-POLICY  -
 [EuccSubstantial] NON-COMPLIANT · E4 W1 I0
@@ -111,6 +115,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-IDENTIFIER-MULTI  - (2/2)
 [Comprehensive] NON-COMPLIANT · E1 W2 I2
   E SBOM-NTIA-SUPPLIER  pkg:npm/libfoo@2.1.0
-  I SBOM-QUALITY-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-QUALITY-GENERAL  pkg:npm/libfoo@2.1.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/app@1.0.0 ×2
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/libfoo@2.1.0
+  W SBOM-QUALITY-HASH  pkg:generic/app@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/app@1.0.0

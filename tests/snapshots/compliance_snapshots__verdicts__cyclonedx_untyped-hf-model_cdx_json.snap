@@ -6,9 +6,10 @@ as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I0
 [Standard] compliant · E0 W4 I0
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
-  W SBOM-QUALITY-GENERAL  root ×2
+  W SBOM-QUALITY-IDENTIFIER  root
+  W SBOM-QUALITY-LICENSE  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
+  W SBOM-QUALITY-LICENSE  root
+  W SBOM-QUALITY-SERIAL  -
 [NtiaMinimum] NON-COMPLIANT · E4 W0 I0
   E SBOM-NTIA-DEPENDENCY  -
   E SBOM-NTIA-IDENTIFIER  root
@@ -20,18 +21,20 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  root
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-TRACEABILITY  root
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (2/2)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  root
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [CraPhase2] NON-COMPLIANT · E2 W13 I8
   E SBOM-CRA-ANNEX-I-DEPENDENCY  -
   E SBOM-CRA-ANNEX-I-IDENTIFIER  root
@@ -39,7 +42,7 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  root
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
@@ -48,12 +51,14 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-13-5  - (2/2)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  root
   W SBOM-CRA-CVD-POLICY  -
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [FdaMedicalDevice] NON-COMPLIANT · E6 W4 I0
   E SBOM-FDA-DEPENDENCY  -
   E SBOM-FDA-HASH  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
@@ -61,9 +66,10 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-IDENTIFIER  root
   E SBOM-FDA-SUPPLIER  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
   E SBOM-FDA-SUPPLIER  root
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-NAMESPACE  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E2 W3 I2
   E SBOM-SSDF-PS2  - (2/2)
   E SBOM-SSDF-PW4  -
@@ -153,6 +159,9 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-DEPENDENCY  -
   E SBOM-NTIA-SUPPLIER  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
   E SBOM-NTIA-SUPPLIER  root
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  pkg:huggingface/google-bert/bert-base-uncased@1.0.0 ×2
-  W SBOM-QUALITY-GENERAL  root ×3
+  W SBOM-QUALITY-HASH  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
+  W SBOM-QUALITY-HASH  root
+  W SBOM-QUALITY-IDENTIFIER  root
+  W SBOM-QUALITY-LICENSE  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
+  W SBOM-QUALITY-LICENSE  root
+  W SBOM-QUALITY-SERIAL  -

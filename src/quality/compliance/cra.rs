@@ -230,6 +230,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         } else if let Some(future) = future_timestamp_violation(
             sbom,
@@ -255,6 +256,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             } else if age_days > 30 {
                 violations.push(Violation {
@@ -270,6 +272,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
         }
@@ -308,6 +311,7 @@ impl ComplianceChecker {
                 }),
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -344,6 +348,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -413,6 +418,7 @@ impl ComplianceChecker {
                     }),
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -435,7 +441,7 @@ impl ComplianceChecker {
                     element: None,
                     requirement: "CRA Annex I Part II / prEN 40000-1-3 [PRE-7-RQ-03]: Transitive dependency supplier (recommended)"
                         .to_string(),
-                    rule_id: "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
+                    rule_id: "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
                     component_id: None,
                     counts: Some(ViolationCounts {
                         affected: transitive_n,
@@ -443,6 +449,7 @@ impl ComplianceChecker {
                     }),
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
         }
@@ -536,6 +543,7 @@ impl ComplianceChecker {
                         }),
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 }
             }
@@ -569,6 +577,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -601,6 +610,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
         }
@@ -640,11 +650,12 @@ impl ComplianceChecker {
                 ),
                 element: None,
                 requirement: "CRA Art. 13(8): Support period / lifecycle management".to_string(),
-                rule_id: "SBOM-CRA-ART-13-8",
+                rule_id: "SBOM-CRA-ART-13-8-EOL",
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -664,11 +675,12 @@ impl ComplianceChecker {
                 ),
                 element: None,
                 requirement: "CRA Annex II (7): Component lifecycle monitoring".to_string(),
-                rule_id: "SBOM-CRA-LIFECYCLE",
+                rule_id: "SBOM-CRA-LIFECYCLE-APPROACHING-EOL",
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -697,11 +709,12 @@ impl ComplianceChecker {
                     element: None,
                     requirement: "CRA Annex I Part II (4): SPDX 3.0 Security profile conformance"
                         .to_string(),
-                    rule_id: "SBOM-CRA-VULN-METADATA",
+                    rule_id: "SBOM-CRA-VULN-METADATA-PROFILE",
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -729,11 +742,12 @@ impl ComplianceChecker {
                     element: None,
                     requirement: "CRA Art. 13(5): SPDX 3.0 SimpleLicensing profile conformance"
                         .to_string(),
-                    rule_id: "SBOM-CRA-ART-13-5",
+                    rule_id: "SBOM-CRA-ART-13-5-PROFILE",
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
         }
@@ -763,6 +777,7 @@ impl ComplianceChecker {
         if sidecar.annex_i_part_i_controls.is_empty() {
             return;
         }
+        // One finding per un-evidenced control, told apart by the control id.
         for (id, claim) in &sidecar.annex_i_part_i_controls {
             if claim.satisfied && claim.evidence_url.is_none() {
                 violations.push(Violation {
@@ -780,6 +795,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: Some(id.clone()),
                 });
             }
         }
@@ -853,6 +869,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
     }
@@ -905,6 +922,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
     }
@@ -965,11 +983,12 @@ impl ComplianceChecker {
                 element: None,
                 requirement: "CRA Art. 14: PSIRT contact for external vulnerability reports"
                     .to_string(),
-                rule_id: "SBOM-CRA-ART-14",
+                rule_id: "SBOM-CRA-ART-14-PSIRT",
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -986,11 +1005,12 @@ impl ComplianceChecker {
                 message: msg.to_string(),
                 element: None,
                 requirement: "CRA Art. 14(2)(a): 24-hour early-warning channel".to_string(),
-                rule_id: "SBOM-CRA-ART-14",
+                rule_id: "SBOM-CRA-ART-14-EARLY-WARNING",
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -1007,11 +1027,12 @@ impl ComplianceChecker {
                 message: msg.to_string(),
                 element: None,
                 requirement: "CRA Art. 14(2)(b): 72-hour notification channel".to_string(),
-                rule_id: "SBOM-CRA-ART-14",
+                rule_id: "SBOM-CRA-ART-14-NOTIFICATION",
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -1027,11 +1048,12 @@ impl ComplianceChecker {
                     .to_string(),
                 element: None,
                 requirement: "CRA Art. 14(7): ENISA single reporting platform".to_string(),
-                rule_id: "SBOM-CRA-ART-14",
+                rule_id: "SBOM-CRA-ART-14-ENISA",
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
     }
@@ -1081,11 +1103,12 @@ impl ComplianceChecker {
                     ),
                     element: Some(comp.name.clone()),
                     requirement: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware producer".to_string(),
-                    rule_id: "SBOM-CRA-PRE-8-RQ-02",
+                    rule_id: "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -1103,11 +1126,12 @@ impl ComplianceChecker {
                     ),
                     element: Some(comp.name.clone()),
                     requirement: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware identifier".to_string(),
-                    rule_id: "SBOM-CRA-PRE-8-RQ-02",
+                    rule_id: "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -1122,11 +1146,12 @@ impl ComplianceChecker {
                     ),
                     element: Some(comp.name.clone()),
                     requirement: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Firmware version".to_string(),
-                    rule_id: "SBOM-CRA-PRE-8-RQ-02",
+                    rule_id: "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -1148,11 +1173,12 @@ impl ComplianceChecker {
                         ),
                         element: Some(comp.name.clone()),
                         requirement: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Device firmware association".to_string(),
-                        rule_id: "SBOM-CRA-PRE-8-RQ-02",
+                        rule_id: "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
                         component_id: Some(comp.canonical_id.value().to_string()),
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 }
             }
@@ -1225,6 +1251,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -1252,6 +1279,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 

@@ -207,6 +207,7 @@ mod tests {
             rule_id: "SBOM-AIACT-ANNEX-IV-2D",
             standard_refs: vec![StandardRef::new(StandardKind::EuAiAct, "Annex IV §2(d)")],
             remediation: None,
+            finding_detail: None,
         }
     }
 
@@ -257,6 +258,7 @@ mod tests {
                     .expect("registered rule")
                     .remediation_for(crate::quality::RemediationFormat::CycloneDx),
             ),
+            finding_detail: None,
         }
     }
 

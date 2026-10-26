@@ -354,6 +354,13 @@
                   "TLS 1.2",
                   "SSH 2.0"
                 ]
+              },
+              {
+                "rule": "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
+                "text": [
+                  "TLS 1.2",
+                  "SSH 2.0"
+                ]
               }
             ]
           }
@@ -1145,7 +1152,7 @@
             ],
             "message_excludes": [
               {
-                "rule": "SBOM-CRA-GENERAL",
+                "rule": "SBOM-CRA-SPEC-VERSION",
                 "text": [
                   "is outdated"
                 ]
@@ -1452,7 +1459,7 @@
           "expect": {
             "rules_present": [
               {
-                "rule": "SBOM-CRA-VULN-METADATA",
+                "rule": "SBOM-CRA-VULN-METADATA-REMEDIATION",
                 "severity": "info"
               }
             ]

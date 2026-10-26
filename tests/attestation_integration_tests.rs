@@ -68,6 +68,22 @@ fn has_rule(result: &ComplianceResult, rule_id: &str) -> bool {
     !rule_messages(result, rule_id).is_empty()
 }
 
+/// Messages of every finding reported under the SARIF rule `sarif_id`: both
+/// PS.1 checks (creator, SBOM-SSDF-PS1, and generation tool,
+/// SBOM-SSDF-PS1-TOOL) report as SBOM-SSDF-PS1.
+fn sarif_rule_messages<'a>(result: &'a ComplianceResult, sarif_id: &str) -> Vec<&'a str> {
+    result
+        .violations
+        .iter()
+        .filter(|v| v.sarif_rule_id() == sarif_id)
+        .map(|v| v.message.as_str())
+        .collect()
+}
+
+fn has_sarif_rule(result: &ComplianceResult, sarif_id: &str) -> bool {
+    !sarif_rule_messages(result, sarif_id).is_empty()
+}
+
 /// Minimal CycloneDX 1.6 document (no tool creator, no build refs, no
 /// attestation-relevant external refs) with one CDXA standard/requirement,
 /// one evidence item (fresh 2026-01-10..2027-01-10, signature present), and
@@ -131,9 +147,9 @@ fn ssdf_ps1_po3_satisfied_by_attestation_where_legacy_path_fails() {
 
     let fresh = check_at(ComplianceLevel::NistSsdf, &sbom, FRESH);
     assert!(
-        !has_rule(&fresh, "SBOM-SSDF-PS1"),
+        !has_sarif_rule(&fresh, "SBOM-SSDF-PS1"),
         "fresh PS.1 attestation must satisfy the rule: {:?}",
-        rule_messages(&fresh, "SBOM-SSDF-PS1")
+        sarif_rule_messages(&fresh, "SBOM-SSDF-PS1")
     );
     assert!(
         !has_rule(&fresh, "SBOM-SSDF-PO3"),
@@ -145,6 +161,7 @@ fn ssdf_ps1_po3_satisfied_by_attestation_where_legacy_path_fails() {
     // away and the legacy path alone demonstrably fails — both rules fire.
     let expired = check_at(ComplianceLevel::NistSsdf, &sbom, EXPIRED);
     assert!(has_rule(&expired, "SBOM-SSDF-PS1"));
+    assert!(has_rule(&expired, "SBOM-SSDF-PS1-TOOL"));
     assert!(has_rule(&expired, "SBOM-SSDF-PO3"));
 }
 
@@ -158,7 +175,7 @@ fn expired_and_anachronistic_evidence_is_rejected_with_reason() {
 
     let expired = check_at(ComplianceLevel::NistSsdf, &sbom, EXPIRED);
     for rule in ["SBOM-SSDF-PS1", "SBOM-SSDF-PO3"] {
-        let messages = rule_messages(&expired, rule);
+        let messages = sarif_rule_messages(&expired, rule);
         assert!(
             !messages.is_empty(),
             "{rule} must fire once evidence expired"
@@ -189,7 +206,7 @@ fn dangling_attestation_chain_is_rejected_with_reason() {
     let result = check_at(ComplianceLevel::NistSsdf, &sbom, FRESH);
 
     // PS.1 satisfied (legacy tool creator also present in this fixture).
-    assert!(!has_rule(&result, "SBOM-SSDF-PS1"));
+    assert!(!has_sarif_rule(&result, "SBOM-SSDF-PS1"));
 
     // PO.3 fails closed and the message names the dangling chain.
     let messages = rule_messages(&result, "SBOM-SSDF-PO3");
@@ -231,7 +248,7 @@ fn counter_evidence_on_claim_is_rejected_with_reason() {
     );
     let sbom = parse_sbom_str(&doc).expect("document must parse");
     let result = check_at(ComplianceLevel::NistSsdf, &sbom, FRESH);
-    let messages = rule_messages(&result, "SBOM-SSDF-PS1");
+    let messages = sarif_rule_messages(&result, "SBOM-SSDF-PS1");
     assert!(
         !messages.is_empty(),
         "countered claim must not satisfy PS.1"
@@ -253,7 +270,7 @@ fn counter_claims_on_map_entry_are_rejected_with_reason() {
     );
     let sbom = parse_sbom_str(&doc).expect("document must parse");
     let result = check_at(ComplianceLevel::NistSsdf, &sbom, FRESH);
-    let messages = rule_messages(&result, "SBOM-SSDF-PS1");
+    let messages = sarif_rule_messages(&result, "SBOM-SSDF-PS1");
     assert!(
         !messages.is_empty(),
         "counter-claimed mapping must not satisfy"
@@ -275,7 +292,7 @@ fn partial_conformance_is_rejected_with_reason() {
     );
     let sbom = parse_sbom_str(&doc).expect("document must parse");
     let result = check_at(ComplianceLevel::NistSsdf, &sbom, FRESH);
-    let messages = rule_messages(&result, "SBOM-SSDF-PS1");
+    let messages = sarif_rule_messages(&result, "SBOM-SSDF-PS1");
     assert!(!messages.is_empty(), "partial conformance must not satisfy");
     assert!(
         messages.iter().all(|m| m.contains("partial")),

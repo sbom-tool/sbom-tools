@@ -5,39 +5,44 @@ fixture: compliance/regressions/b1-attestation-only.cdx.json
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I1
-  I SBOM-QUALITY-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
 [Standard] compliant · E0 W1 I1
-  I SBOM-QUALITY-GENERAL  pkg:generic/example/gateway@3.1.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/example/gateway@3.1.0
 [NtiaMinimum] compliant · E0 W0 I1
-  I SBOM-NTIA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
 [CraPhase1] compliant · E0 W6 I5
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
-  I SBOM-CRA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-CRA-ART-14-ENISA  -
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (1/1)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
 [CraPhase2] NON-COMPLIANT · E1 W7 I6
   E SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
-  I SBOM-CRA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-CRA-ART-14-ENISA  -
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-13-5  - (1/1)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-CVD-POLICY  -
 [FdaMedicalDevice] NON-COMPLIANT · E1 W2 I1
   E SBOM-FDA-HASH  pkg:generic/example/gateway@3.1.0
-  I SBOM-FDA-GENERAL  pkg:generic/example/gateway@3.1.0
-  W SBOM-FDA-SUPPORT  - ×2
+  I SBOM-FDA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
+  W SBOM-FDA-CONTACT  -
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E1 W1 I2
   E SBOM-SSDF-PS2  - (1/1)
   I SBOM-SSDF-PO3  -
@@ -58,7 +63,7 @@ as_of: 2026-10-12T00:00:00Z
 [CraOssSteward] NON-COMPLIANT · E1 W1 I2
   E SBOM-CRA-ART-24  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/gateway@3.1.0
-  I SBOM-CRA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   W SBOM-CRA-CVD-POLICY  -
 [EuccSubstantial] NON-COMPLIANT · E4 W1 I0
   E SBOM-EUCC-ITSEF  -
@@ -95,39 +100,44 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-IDENTIFIER-MULTI  - (1/1)
   W SBOM-FSCT-LICENSE-COVERAGE  - (0/1)
 [Comprehensive] compliant · E0 W2 I1
-  I SBOM-QUALITY-GENERAL  pkg:generic/example/gateway@3.1.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/example/gateway@3.1.0 ×2
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
+  W SBOM-QUALITY-HASH  pkg:generic/example/gateway@3.1.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/example/gateway@3.1.0
 
 with auto-discovered CRA sidecar:
 [CraPhase1 + sidecar] compliant · E0 W7 I5
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
-  I SBOM-CRA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-CRA-ART-14-ENISA  -
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-VIII  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (1/1)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
 [CraPhase2 + sidecar] NON-COMPLIANT · E1 W8 I6
   E SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
-  I SBOM-CRA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-CRA-ART-14-ENISA  -
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-VIII  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-13-5  - (1/1)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-CVD-POLICY  -
 [CraOssSteward + sidecar] NON-COMPLIANT · E1 W1 I2
   E SBOM-CRA-ART-24  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/gateway@3.1.0
-  I SBOM-CRA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   W SBOM-CRA-CVD-POLICY  -
 [EuccSubstantial + sidecar] NON-COMPLIANT · E4 W1 I0
   E SBOM-EUCC-ITSEF  -

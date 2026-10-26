@@ -1693,8 +1693,8 @@ fn map_cdx_external_ref_type(ref_type: &str) -> ExternalRefType {
 ///   upgrade type and a lone workaround text is a workaround.
 /// - A response of `update` or `workaround_available` with neither text is
 ///   a remediation without details, which CRA Phase 2 reports
-///   (SBOM-CRA-VULN-METADATA: Annex I Part II (4) asks for information that
-///   helps users remediate). `rollback` has no remediation type in the
+///   (SBOM-CRA-VULN-METADATA-REMEDIATION: Annex I Part II (4) asks for
+///   information that helps users remediate). `rollback` has no remediation type in the
 ///   model, and `can_not_fix` / `will_not_fix` state that no remediation
 ///   will come, so they create no record.
 fn cdx_remediation(vuln: &CdxVulnerability) -> Option<Remediation> {

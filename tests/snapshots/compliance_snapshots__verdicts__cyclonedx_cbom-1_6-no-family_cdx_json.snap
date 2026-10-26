@@ -5,49 +5,54 @@ fixture: cyclonedx/cbom-1.6-no-family.cdx.json
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I1
-  I SBOM-QUALITY-GENERAL  pkg:cargo/legacy-service@1.4.2
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/legacy-service@1.4.2
 [Standard] compliant · E0 W1 I1
-  I SBOM-QUALITY-GENERAL  pkg:cargo/legacy-service@1.4.2
-  W SBOM-QUALITY-GENERAL  pkg:cargo/legacy-service@1.4.2
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/legacy-service@1.4.2
+  W SBOM-QUALITY-LICENSE  pkg:cargo/legacy-service@1.4.2
 [NtiaMinimum] NON-COMPLIANT · E1 W0 I1
   E SBOM-NTIA-SUPPLIER  pkg:cargo/legacy-service@1.4.2
-  I SBOM-NTIA-GENERAL  pkg:cargo/legacy-service@1.4.2
+  I SBOM-NTIA-ELEMENT-ID  pkg:cargo/legacy-service@1.4.2
 [CraPhase1] compliant · E0 W8 I6
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/legacy-service@1.4.2
-  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
+  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/1)
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
-  I SBOM-CRA-GENERAL  pkg:cargo/legacy-service@1.4.2
+  I SBOM-CRA-ART-14-ENISA  -
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/legacy-service@1.4.2
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (1/1)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/legacy-service@1.4.2
   W SBOM-CRA-SBOM-FRESHNESS  -
 [CraPhase2] compliant · E0 W11 I7
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/legacy-service@1.4.2
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
-  I SBOM-CRA-GENERAL  pkg:cargo/legacy-service@1.4.2
+  I SBOM-CRA-ART-14-ENISA  -
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/legacy-service@1.4.2
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
-  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
+  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/1)
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-13-5  - (1/1)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/legacy-service@1.4.2
   W SBOM-CRA-CVD-POLICY  -
   W SBOM-CRA-SBOM-FRESHNESS  -
 [FdaMedicalDevice] NON-COMPLIANT · E2 W3 I1
   E SBOM-FDA-HASH  pkg:cargo/legacy-service@1.4.2
   E SBOM-FDA-SUPPLIER  pkg:cargo/legacy-service@1.4.2
-  I SBOM-FDA-GENERAL  pkg:cargo/legacy-service@1.4.2
+  I SBOM-FDA-ELEMENT-ID  pkg:cargo/legacy-service@1.4.2
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E1 W2 I2
   E SBOM-SSDF-PS2  - (1/1)
   I SBOM-SSDF-PO3  -
@@ -77,7 +82,7 @@ as_of: 2026-10-12T00:00:00Z
 [CraOssSteward] NON-COMPLIANT · E1 W2 I2
   E SBOM-CRA-ART-24  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/legacy-service@1.4.2
-  I SBOM-CRA-GENERAL  pkg:cargo/legacy-service@1.4.2
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/legacy-service@1.4.2
   W SBOM-CRA-ART-24-SUPPLIER  pkg:cargo/legacy-service@1.4.2
   W SBOM-CRA-CVD-POLICY  -
 [EuccSubstantial] NON-COMPLIANT · E4 W1 I0
@@ -120,5 +125,6 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-TRANSITIVE-DEPS  -
 [Comprehensive] NON-COMPLIANT · E1 W2 I1
   E SBOM-NTIA-SUPPLIER  pkg:cargo/legacy-service@1.4.2
-  I SBOM-QUALITY-GENERAL  pkg:cargo/legacy-service@1.4.2
-  W SBOM-QUALITY-GENERAL  pkg:cargo/legacy-service@1.4.2 ×2
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/legacy-service@1.4.2
+  W SBOM-QUALITY-HASH  pkg:cargo/legacy-service@1.4.2
+  W SBOM-QUALITY-LICENSE  pkg:cargo/legacy-service@1.4.2

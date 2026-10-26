@@ -201,7 +201,7 @@ violation messages.
 | `SBOM-CRA-ANNEX-V` — Annex V DoC violation                         | no                  | `Attestation`/`Certification` external ref or sidecar `ceMarkingReference` |
 | `SBOM-CRA-ANNEX-VIII` — module certificate violation               | no                  | `Certification` external ref (an `Attestation` ref does not count) |
 | `SBOM-EUCC-PP` / `-TOE` / `-ITSEF` / `-VALIDITY`                   | no                  | dedicated sidecar EUCC fields                       |
-| `SBOM-CRA-ART-14` channels + the `conformity_summary` PSIRT row     | no                  | sidecar fields                                      |
+| `SBOM-CRA-ART-14-PSIRT` / `-EARLY-WARNING` / `-NOTIFICATION` / `-ENISA` channels + the `conformity_summary` PSIRT row | no | sidecar fields |
 
 The `conformity_summary` block is the Annex VIII checklist emitted next to
 `violations` by `validate --standard cra -o json`. It only appears once a

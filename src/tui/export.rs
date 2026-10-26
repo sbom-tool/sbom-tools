@@ -879,6 +879,7 @@ mod compliance_export_tests {
             counts: None,
             standard_refs: Vec::new(),
             remediation: None,
+            finding_detail: None,
         }
     }
 

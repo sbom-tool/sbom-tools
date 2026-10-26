@@ -11,7 +11,8 @@
 mod rule_matrix;
 
 use rule_matrix::{
-    ComponentFixture, MD5_FILLER, RuleEntry, SbomFixture, assert_no_violations, run_matrix,
+    ComponentFixture, MD5_FILLER, RuleEntry, SbomFixture, assert_no_violations,
+    assert_spdx_version_unknown, run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, FDA_SARIF_RULE_IDS, ViolationSeverity as Sev};
 
@@ -120,7 +121,7 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| {
                 s.manufacturer = None;
                 // Person author keeps creators non-empty (no FDA-CREATOR) and
-                // carries the contact email (no FDA-SUPPORT).
+                // carries the contact email (no FDA-CONTACT).
                 s.authors = vec![(
                     "Dana Author".to_string(),
                     Some("dana@acme.example".to_string()),
@@ -175,25 +176,18 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 )];
             }),
         ),
-        // Two sites share SBOM-FDA-SUPPORT at Warning: creator contact email
-        // and level-of-support / end-of-support evidence.
+        // Two checks report under the SBOM-FDA-SUPPORT SARIF rule at Warning:
+        // level-of-support / end-of-support evidence (this row) and the
+        // creator contact email (SBOM-FDA-CONTACT, per-key row below).
         RuleEntry::tested(
             "SBOM-FDA-SUPPORT",
-            Sev::Warning,
-            broken(|s| {
-                // Drop the only contact email; end-of-support evidence stays.
-                s.manufacturer = Some(("Acme Medical Inc".to_string(), None));
-            }),
-            base(),
-        )
-        .with_firing(
-            "no level-of-support / end-of-support evidence",
             Sev::Warning,
             broken(|s| {
                 if let Some(primary) = &mut s.primary {
                     primary.properties.clear();
                 }
             }),
+            base(),
         ),
         // Fires on unresolved critical/high vulnerabilities; medium ones must
         // stay silent.
@@ -215,33 +209,93 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 )];
             }),
         ),
-        // The FDA generic bucket: a missing document name emits the aliased
-        // SBOM-FDA-NAME key at Warning; a placeholder component name emits
-        // SBOM-FDA-GENERAL directly, escalated to Error.
-        RuleEntry::tested(
+        // The FDA generic bucket: the document name, component name and
+        // format checks each report an alias key of its own (per-key rows
+        // below).
+        RuleEntry::skipped(
             "SBOM-FDA-GENERAL",
-            Sev::Warning,
-            broken(|s| s.primary = None),
-            base(),
-        )
-        .with_departing_firing(
-            "placeholder component name",
-            Sev::Error,
-            broken(|s| {
-                // "unknown" without a corroborating PURL name segment does
-                // not count as a real component name.
-                s.component_mut("libalpha").name = "unknown".to_string();
-            }),
+            "no check emits SBOM-FDA-GENERAL under its own key since WP 1.8b: every \
+             check that shares the SARIF rule reports an alias key of its own (NAME, \
+             COMPONENT-NAME, SPEC-VERSION, SPEC-VERSION-UNKNOWN, ELEMENT-ID), each with a \
+             per-key row",
         ),
-        // Per-key: the document-name site's own key (SARIF identity
-        // SBOM-FDA-GENERAL, shared with the component-name site above).
+        // ── Per-key rows ─────────────────────────────────────────────────
+        // A missing document name (no primary component to lift it from).
         RuleEntry::key_tested(
             "SBOM-FDA-NAME",
             Sev::Warning,
             broken(|s| s.primary = None),
             base(),
         ),
+        // "unknown" without a corroborating PURL name segment does not count
+        // as a real component name.
+        RuleEntry::key_tested(
+            "SBOM-FDA-COMPONENT-NAME",
+            Sev::Error,
+            broken(|s| s.component_mut("libalpha").name = "unknown".to_string()),
+            base(),
+        ),
+        // A CycloneDX version newer than any this tool reads warns; an
+        // outdated version is an Info.
+        RuleEntry::key_tested(
+            "SBOM-FDA-SPEC-VERSION",
+            Sev::Warning,
+            broken(|s| s.spec_version = "1.8".to_string()),
+            base(),
+        )
+        .with_departing_firing(
+            "CycloneDX 1.3 is outdated",
+            Sev::Info,
+            broken(|s| s.spec_version = "1.3".to_string()),
+        ),
+        RuleEntry::key_skipped(
+            "SBOM-FDA-SPEC-VERSION-UNKNOWN",
+            "an SPDX version that is neither 2.x nor 3.x is an SPDX-only check, out of \
+             the CycloneDX-only DSL's reach; fda_spec_version_unknown_reads_only_spdx \
+             below fires it on SPDX 4.0 and keeps it silent on SPDX 2.3",
+        ),
+        // A component whose bom-ref collapses to its name.
+        RuleEntry::key_tested(
+            "SBOM-FDA-ELEMENT-ID",
+            Sev::Info,
+            broken(|s| {
+                s.component_mut("libalpha").bom_ref = "libalpha".to_string();
+                s.dependencies = vec![(
+                    "ref-acme-device".to_string(),
+                    vec!["libalpha".to_string(), "ref-libbeta".to_string()],
+                )];
+            }),
+            base(),
+        ),
+        // No creator carries a contact email; a person author's email
+        // counts as well as the manufacturer's.
+        RuleEntry::key_tested(
+            "SBOM-FDA-CONTACT",
+            Sev::Warning,
+            broken(|s| {
+                // Drop the only contact email; end-of-support evidence stays.
+                s.manufacturer = Some(("Acme Medical Inc".to_string(), None));
+            }),
+            base(),
+        )
+        .with_silent(
+            "contact email on a person author only",
+            broken(|s| {
+                s.manufacturer = Some(("Acme Medical Inc".to_string(), None));
+                s.authors = vec![(
+                    "Dana Author".to_string(),
+                    Some("dana@acme.example".to_string()),
+                )];
+            }),
+        ),
     ];
 
     run_matrix(LEVEL, FDA_SARIF_RULE_IDS, &entries);
+}
+
+/// SBOM-FDA-SPEC-VERSION-UNKNOWN reads only SPDX input, so its per-key row
+/// is skipped.
+#[test]
+fn fda_spec_version_unknown_reads_only_spdx() {
+    assert_spdx_version_unknown(LEVEL, "SBOM-FDA-SPEC-VERSION-UNKNOWN");
 }

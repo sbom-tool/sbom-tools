@@ -5,26 +5,28 @@ fixture: cyclonedx/cbom-1.6.cdx.xml
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I1
-  I SBOM-QUALITY-GENERAL  pkg:cargo/acme-webapp@3.1.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/acme-webapp@3.1.0
 [Standard] compliant · E0 W1 I1
-  I SBOM-QUALITY-GENERAL  pkg:cargo/acme-webapp@3.1.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/acme-webapp@3.1.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/acme-webapp@3.1.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/acme-webapp@3.1.0
 [NtiaMinimum] NON-COMPLIANT · E2 W0 I1
   E SBOM-NTIA-SUPPLIER  pkg:cargo/acme-webapp@3.1.0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/openssl@3.2.1
-  I SBOM-NTIA-GENERAL  pkg:cargo/acme-webapp@3.1.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:cargo/acme-webapp@3.1.0
 [CraPhase1] compliant · E0 W9 I7
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/acme-webapp@3.1.0
-  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/2)
+  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/2)
   I SBOM-CRA-ART-13-5  - (1/2)
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
-  I SBOM-CRA-GENERAL  pkg:cargo/acme-webapp@3.1.0
+  I SBOM-CRA-ART-14-ENISA  -
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/acme-webapp@3.1.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/acme-webapp@3.1.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/openssl@3.2.1
   W SBOM-CRA-SBOM-FRESHNESS  -
@@ -34,15 +36,17 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-5  - (1/2)
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
-  I SBOM-CRA-GENERAL  pkg:cargo/acme-webapp@3.1.0
+  I SBOM-CRA-ART-14-ENISA  -
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/acme-webapp@3.1.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
-  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/2)
+  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/2)
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/acme-webapp@3.1.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/openssl@3.2.1
   W SBOM-CRA-CVD-POLICY  -
@@ -51,9 +55,10 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-HASH  pkg:cargo/acme-webapp@3.1.0
   E SBOM-FDA-SUPPLIER  pkg:cargo/acme-webapp@3.1.0
   E SBOM-FDA-SUPPLIER  pkg:cargo/openssl@3.2.1
-  I SBOM-FDA-GENERAL  pkg:cargo/acme-webapp@3.1.0
+  I SBOM-FDA-ELEMENT-ID  pkg:cargo/acme-webapp@3.1.0
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] compliant · E0 W3 I2
   I SBOM-SSDF-PO3  -
   I SBOM-SSDF-PW6  -
@@ -93,7 +98,7 @@ as_of: 2026-10-12T00:00:00Z
 [CraOssSteward] NON-COMPLIANT · E1 W3 I2
   E SBOM-CRA-ART-24  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/acme-webapp@3.1.0
-  I SBOM-CRA-GENERAL  pkg:cargo/acme-webapp@3.1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/acme-webapp@3.1.0
   W SBOM-CRA-ART-24-SUPPLIER  pkg:cargo/acme-webapp@3.1.0
   W SBOM-CRA-ART-24-SUPPLIER  pkg:cargo/openssl@3.2.1
   W SBOM-CRA-CVD-POLICY  -
@@ -133,5 +138,6 @@ as_of: 2026-10-12T00:00:00Z
 [Comprehensive] NON-COMPLIANT · E2 W2 I1
   E SBOM-NTIA-SUPPLIER  pkg:cargo/acme-webapp@3.1.0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/openssl@3.2.1
-  I SBOM-QUALITY-GENERAL  pkg:cargo/acme-webapp@3.1.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/acme-webapp@3.1.0 ×2
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/acme-webapp@3.1.0
+  W SBOM-QUALITY-HASH  pkg:cargo/acme-webapp@3.1.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/acme-webapp@3.1.0

@@ -5,6 +5,7 @@
 //!
 //! ```text
 //! <standard>|<rule id>|<subject>
+//! <standard>|<rule id>:<detail>|<subject>
 //! ```
 //!
 //! - `<standard>` is the canonical `validate --standard` value of the level
@@ -13,14 +14,25 @@
 //!   `sarif_rule_id`: dozens of registry keys alias a shared SARIF rule (the
 //!   ten `SBOM-BSIAI-MODEL-*` checks all report as `SBOM-BSIAI-MODEL`), so a
 //!   SARIF-keyed id would merge distinct findings about the same component.
+//! - `<detail>` is the [`Violation::finding_detail`] of a rule that reports
+//!   several findings on one subject (the vulnerability id, the cipher
+//!   suite, …), with `%`, `|` and `:` percent-encoded as `%25`, `%7C` and
+//!   `%3A`. Without a detail the `:` is omitted too.
 //! - `<subject>` is the offending component's canonical id
 //!   ([`Violation::component_id`]), or [`DOCUMENT_SUBJECT`] for document-level
 //!   and aggregate findings. A finding about one dependency edge would use
 //!   `edge:<from>-><to>`, but no rule reports a single edge today, so that
-//!   form is reserved.
+//!   form is reserved. A canonical id that would read as one of those forms
+//!   — `document` itself, or one starting with `edge:` — gets `component:`
+//!   prepended, as does one already starting with `component:`, so a
+//!   component never shares the document's subject (see
+//!   [`finding_subject`]).
 //!
-//! Neither the standard key nor a rule id contains `|`, so the subject is
-//! everything after the second `|`. Severity, message, element label,
+//! Neither the standard key nor a rule id contains `|` or `:`, and the
+//! encoded detail contains neither, so the key splits unambiguously: the
+//! standard is everything before the first `|`, the rule id runs to the
+//! first `:` or `|` after it, the detail (if any) to the second `|`, and the
+//! subject is everything after that. Severity, message, element label,
 //! requirement text, counts and standard references are not part of the key:
 //! rewording a message or recalibrating a severity keeps the id. The canonical
 //! id is derived from the document's own identifiers (purl, CPE, SWHID, SWID,
@@ -28,14 +40,28 @@
 //! and a key changes exactly when its component's canonical id does — a purl
 //! added or changed, a bom-ref renamed.
 //!
+//! No two findings of one result share a key: every distinct check has a
+//! rule id of its own, a rule reports at most one finding per subject unless
+//! it sets a detail, and `number_repeated_details` numbers the detail of an
+//! entry the SBOM lists twice. tests/finding_identity_tests.rs checks this
+//! for every fixture at every level.
+//!
 //! [`finding_id`] digests the key into a fixed-length opaque id for SARIF
 //! fingerprints and baselines.
 
 use super::{ComplianceLevel, Violation};
+use std::borrow::Cow;
 use std::fmt::Write as _;
 
 /// Subject of a finding that is about the document rather than a component.
 pub const DOCUMENT_SUBJECT: &str = "document";
+
+/// Prefix of the reserved dependency-edge subject form.
+const EDGE_SUBJECT_PREFIX: &str = "edge:";
+
+/// Prepended to a component's canonical id that would otherwise read as the
+/// document subject or an edge subject (or as an id prefixed this way).
+const COMPONENT_SUBJECT_PREFIX: &str = "component:";
 
 /// Prefix of every [`finding_id`]. The version changes only if the key
 /// scheme does.
@@ -71,26 +97,95 @@ pub const fn standard_key(level: ComplianceLevel) -> &'static str {
     }
 }
 
-/// What `violation` is about: the offending component's canonical id, or
-/// [`DOCUMENT_SUBJECT`].
+/// What `violation` is about, the `<subject>` of its finding key: the
+/// offending component's canonical id, or [`DOCUMENT_SUBJECT`]. Several
+/// findings of one rule on one subject are told apart by their
+/// [`Violation::finding_detail`], not by the subject.
+///
+/// A canonical id falls back to the bom-ref or SPDXID, which can be any
+/// string, so a component id that reads `document`, or starts with `edge:` or
+/// `component:`, is written with `component:` prepended: a component with the
+/// bom-ref `document` must not share the subject of a rule's document-level
+/// finding.
 #[must_use]
-pub fn finding_subject(violation: &Violation) -> &str {
-    violation
-        .component_id
-        .as_deref()
-        .unwrap_or(DOCUMENT_SUBJECT)
+pub fn finding_subject(violation: &Violation) -> Cow<'_, str> {
+    match violation.component_id.as_deref() {
+        None => Cow::Borrowed(DOCUMENT_SUBJECT),
+        Some(id)
+            if id == DOCUMENT_SUBJECT
+                || id.starts_with(EDGE_SUBJECT_PREFIX)
+                || id.starts_with(COMPONENT_SUBJECT_PREFIX) =>
+        {
+            Cow::Owned(format!("{COMPONENT_SUBJECT_PREFIX}{id}"))
+        }
+        Some(id) => Cow::Borrowed(id),
+    }
 }
 
-/// The finding key `<standard>|<rule id>|<subject>` of `violation` reported
-/// under `level`.
+/// The finding key of `violation` reported under `level`:
+/// `<standard>|<rule id>|<subject>`, or `<standard>|<rule id>:<detail>|<subject>`
+/// when it carries a [`Violation::finding_detail`] (percent-encoded, see the
+/// module docs).
 #[must_use]
 pub fn finding_key(level: ComplianceLevel, violation: &Violation) -> String {
-    format!(
-        "{}|{}|{}",
-        standard_key(level),
-        violation.rule_id,
-        finding_subject(violation)
-    )
+    let mut key = format!("{}|{}", standard_key(level), violation.rule_id);
+    if let Some(detail) = &violation.finding_detail {
+        key.push(':');
+        for c in detail.chars() {
+            match c {
+                '%' => key.push_str("%25"),
+                '|' => key.push_str("%7C"),
+                ':' => key.push_str("%3A"),
+                c => key.push(c),
+            }
+        }
+    }
+    key.push('|');
+    key.push_str(&finding_subject(violation));
+    key
+}
+
+/// Number the repeats among `violations` that carry the same rule, subject
+/// and [`Violation::finding_detail`]: the second gets `#2` appended to its
+/// detail, the third `#3`, and so on, in report order, skipping a numbered
+/// detail another finding already carries. Findings without a detail are
+/// left alone.
+///
+/// A repeat means the SBOM lists one entry twice — two CycloneDX
+/// `vulnerabilities[]` entries with the same id for one component, or an
+/// SPDX 3.0 vulnerability attached both by its `AFFECTS` relationship and by
+/// an assessment — and both entries are reported. Numbering keeps a finding
+/// key per finding, and the first occurrence keeps the plain detail.
+/// `ComplianceChecker::check()` runs this on every result.
+pub(crate) fn number_repeated_details(violations: &mut [Violation]) {
+    use std::collections::HashSet;
+    // Rule, subject and detail as the finding key spells them.
+    type Identity = (&'static str, String, String);
+    let identity = |v: &Violation, detail: String| -> Identity {
+        (v.rule_id, finding_subject(v).into_owned(), detail)
+    };
+    let taken: HashSet<Identity> = violations
+        .iter()
+        .filter_map(|v| Some(identity(v, v.finding_detail.clone()?)))
+        .collect();
+    let mut seen: HashSet<Identity> = HashSet::new();
+    for v in violations.iter_mut() {
+        let Some(detail) = v.finding_detail.clone() else {
+            continue;
+        };
+        if seen.insert(identity(v, detail.clone())) {
+            continue;
+        }
+        let numbered = (2..)
+            .map(|n| format!("{detail}#{n}"))
+            .find(|candidate| {
+                let candidate = identity(v, candidate.clone());
+                !taken.contains(&candidate) && !seen.contains(&candidate)
+            })
+            .expect("an unbounded range yields a free number");
+        seen.insert(identity(v, numbered.clone()));
+        v.finding_detail = Some(numbered);
+    }
 }
 
 /// The opaque id of a finding key: [`FINDING_ID_PREFIX`] followed by the
@@ -157,6 +252,194 @@ mod tests {
         );
     }
 
+    #[test]
+    fn detail_follows_the_rule_id_after_a_colon() {
+        let violations = ntia_violations();
+        let mut supplier = find(&violations, "SBOM-NTIA-SUPPLIER").clone();
+        supplier.finding_detail = Some("CVE-2026-0001".to_string());
+        assert_eq!(
+            finding_key(ComplianceLevel::NtiaMinimum, &supplier),
+            "ntia|SBOM-NTIA-SUPPLIER:CVE-2026-0001|pkg:npm/lodash@4.17.21"
+        );
+        let mut author = find(&violations, "SBOM-NTIA-AUTHOR").clone();
+        author.finding_detail = Some(String::new());
+        assert_eq!(
+            finding_key(ComplianceLevel::NtiaMinimum, &author),
+            "ntia|SBOM-NTIA-AUTHOR:|document",
+            "an empty detail still differs from none"
+        );
+    }
+
+    #[test]
+    fn detail_percent_encodes_the_separators() {
+        let violations = ntia_violations();
+        let mut v = find(&violations, "SBOM-NTIA-AUTHOR").clone();
+        v.finding_detail = Some("100%|a:b".to_string());
+        assert_eq!(
+            finding_key(ComplianceLevel::NtiaMinimum, &v),
+            "ntia|SBOM-NTIA-AUTHOR:100%25%7Ca%3Ab|document"
+        );
+    }
+
+    /// The parse the module docs describe: standard before the first `|`,
+    /// rule id up to the first `:` or `|` after it, the encoded detail up to
+    /// the second `|`, the subject after it.
+    fn split_key(key: &str) -> (&str, &str, Option<String>, &str) {
+        let (standard, rest) = key.split_once('|').expect("first separator");
+        let (head, subject) = rest.split_once('|').expect("second separator");
+        let (rule_id, detail) = match head.split_once(':') {
+            Some((rule_id, encoded)) => (
+                rule_id,
+                Some(
+                    encoded
+                        .replace("%7C", "|")
+                        .replace("%3A", ":")
+                        .replace("%25", "%"),
+                ),
+            ),
+            None => (head, None),
+        };
+        (standard, rule_id, detail, subject)
+    }
+
+    /// Whatever the detail and subject contain, the key splits back into
+    /// exactly its parts, so two findings share a key only when standard,
+    /// rule, detail and subject are all equal.
+    #[test]
+    fn keys_split_back_into_their_parts() {
+        let violations = ntia_violations();
+        let base = find(&violations, "SBOM-NTIA-SUPPLIER");
+        let mut keys = std::collections::BTreeSet::new();
+        let details = [
+            None,
+            Some(""),
+            Some("TLS_AES_256_GCM_SHA384"),
+            Some("a|b"),
+            Some("a:b"),
+            Some("100%"),
+            Some("%7C"),
+            Some("%3A|:%25"),
+        ];
+        let subjects = [
+            None,
+            Some("pkg:npm/x@1"),
+            Some("a|b:c"),
+            Some("b|c"),
+            Some("document"),
+            Some("edge:a->b"),
+            Some("component:document"),
+        ];
+        for detail in details {
+            for subject in subjects {
+                let mut v = base.clone();
+                v.finding_detail = detail.map(str::to_string);
+                v.component_id = subject.map(str::to_string);
+                let key = finding_key(ComplianceLevel::Cisa2026, &v);
+                let (standard, rule_id, parsed_detail, parsed_subject) = split_key(&key);
+                assert_eq!(standard, "cisa-2026", "{key}");
+                assert_eq!(rule_id, "SBOM-NTIA-SUPPLIER", "{key}");
+                assert_eq!(parsed_detail.as_deref(), detail, "{key}");
+                let component = parsed_subject.strip_prefix("component:");
+                let expected = match subject {
+                    None => DOCUMENT_SUBJECT,
+                    Some(id) if component.is_some() => {
+                        assert_eq!(component, Some(id), "{key}");
+                        parsed_subject
+                    }
+                    Some(id) => id,
+                };
+                assert_eq!(parsed_subject, expected, "{key}");
+                assert!(keys.insert(key.clone()), "two inputs share {key}");
+            }
+        }
+    }
+
+    /// A component's canonical id falls back to its bom-ref, which can read
+    /// `document` or `edge:…`: such an id is prefixed, so the component never
+    /// shares the subject of a document-level (or edge) finding.
+    #[test]
+    fn component_ids_never_read_as_another_kind_of_subject() {
+        let violations = ntia_violations();
+        let mut v = find(&violations, "SBOM-NTIA-SUPPLIER").clone();
+        for (component_id, subject) in [
+            (None, "document"),
+            (Some("document"), "component:document"),
+            (Some("edge:a->b"), "component:edge:a->b"),
+            (Some("component:document"), "component:component:document"),
+            (Some("pkg:npm/lodash@4.17.21"), "pkg:npm/lodash@4.17.21"),
+            (Some("documents"), "documents"),
+        ] {
+            v.component_id = component_id.map(str::to_string);
+            assert_eq!(finding_subject(&v), subject, "{component_id:?}");
+        }
+    }
+
+    fn with_detail(base: &Violation, detail: Option<&str>, subject: Option<&str>) -> Violation {
+        let mut v = base.clone();
+        v.finding_detail = detail.map(str::to_string);
+        v.component_id = subject.map(str::to_string);
+        v
+    }
+
+    fn details(violations: &[Violation]) -> Vec<Option<&str>> {
+        violations
+            .iter()
+            .map(|v| v.finding_detail.as_deref())
+            .collect()
+    }
+
+    /// A repeat of rule, subject and detail is numbered in report order; the
+    /// first occurrence, other subjects and findings without a detail keep
+    /// theirs.
+    #[test]
+    fn repeated_details_are_numbered_in_report_order() {
+        let violations = ntia_violations();
+        let base = find(&violations, "SBOM-NTIA-SUPPLIER");
+        let mut repeated = vec![
+            with_detail(base, Some("CVE-1"), Some("pkg:a")),
+            with_detail(base, Some("CVE-1"), Some("pkg:b")),
+            with_detail(base, Some("CVE-1"), Some("pkg:a")),
+            with_detail(base, None, Some("pkg:a")),
+            with_detail(base, Some("CVE-1"), Some("pkg:a")),
+            with_detail(base, Some("CVE-2"), Some("pkg:a")),
+        ];
+        number_repeated_details(&mut repeated);
+        assert_eq!(
+            details(&repeated),
+            [
+                Some("CVE-1"),
+                Some("CVE-1"),
+                Some("CVE-1#2"),
+                None,
+                Some("CVE-1#3"),
+                Some("CVE-2"),
+            ]
+        );
+    }
+
+    /// A number another finding's detail already spells is skipped, so the
+    /// numbered repeat cannot collide with it.
+    #[test]
+    fn numbering_skips_details_already_taken() {
+        let violations = ntia_violations();
+        let base = find(&violations, "SBOM-NTIA-SUPPLIER");
+        let mut repeated = vec![
+            with_detail(base, Some("suite"), None),
+            with_detail(base, Some("suite"), None),
+            with_detail(base, Some("suite#2"), None),
+        ];
+        number_repeated_details(&mut repeated);
+        assert_eq!(
+            details(&repeated),
+            [Some("suite"), Some("suite#3"), Some("suite#2")]
+        );
+        let keys: std::collections::BTreeSet<String> = repeated
+            .iter()
+            .map(|v| finding_key(ComplianceLevel::NtiaMinimum, v))
+            .collect();
+        assert_eq!(keys.len(), repeated.len(), "{keys:?}");
+    }
+
     /// Known answers pin the digest, the truncation and the prefix, so the
     /// ids a baseline stores cannot drift with a refactor.
     #[test]
@@ -205,7 +488,7 @@ mod tests {
     }
 
     #[test]
-    fn standard_rule_and_subject_each_change_the_id() {
+    fn standard_rule_detail_and_subject_each_change_the_id() {
         let violations = ntia_violations();
         let original = find(&violations, "SBOM-NTIA-SUPPLIER");
         let id = finding_id(&finding_key(ComplianceLevel::NtiaMinimum, original));
@@ -213,6 +496,11 @@ mod tests {
         let other_standard = finding_id(&finding_key(ComplianceLevel::Cisa2026, original));
         let mut other_rule = original.clone();
         other_rule.rule_id = "SBOM-NTIA-VERSION";
+        let mut with_detail = original.clone();
+        with_detail.finding_detail = Some("CVE-2026-0001".to_string());
+        let mut other_detail = original.clone();
+        other_detail.finding_detail = Some("CVE-2026-0002".to_string());
+        let detail_id = finding_id(&finding_key(ComplianceLevel::NtiaMinimum, &with_detail));
         let mut other_subject = original.clone();
         other_subject.component_id = Some("pkg:npm/lodash@4.17.22".to_string());
         let mut document = original.clone();
@@ -224,6 +512,7 @@ mod tests {
                 "rule",
                 finding_id(&finding_key(ComplianceLevel::NtiaMinimum, &other_rule)),
             ),
+            ("detail", detail_id.clone()),
             (
                 "subject",
                 finding_id(&finding_key(ComplianceLevel::NtiaMinimum, &other_subject)),
@@ -235,6 +524,11 @@ mod tests {
         ] {
             assert_ne!(changed, id, "a different {what} must change the id");
         }
+        assert_ne!(
+            finding_id(&finding_key(ComplianceLevel::NtiaMinimum, &other_detail)),
+            detail_id,
+            "a different detail must change the id"
+        );
     }
 
     #[test]
@@ -248,15 +542,16 @@ mod tests {
         }
     }
 
-    /// The subject is everything after the second `|` only while neither the
-    /// standard key nor a rule id can contain one.
+    /// The key splits unambiguously only while neither the standard key nor
+    /// a rule id can contain a `|` or a `:`.
     #[test]
-    fn key_separator_never_appears_before_the_subject() {
+    fn key_separators_never_appear_in_standards_or_rule_ids() {
         for level in ComplianceLevel::all() {
-            assert!(!standard_key(*level).contains('|'), "{level:?}");
+            let standard = standard_key(*level);
+            assert!(!standard.contains(['|', ':']), "{level:?}");
         }
         for rule_id in crate::quality::all_rule_ids() {
-            assert!(!rule_id.contains('|'), "{rule_id}");
+            assert!(!rule_id.contains(['|', ':']), "{rule_id}");
         }
     }
 }

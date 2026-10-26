@@ -51,12 +51,13 @@ identity.
 | Field | Type | Meaning |
 |---|---|---|
 | `finding_id` | string | Opaque, stable id of the finding (see [Finding identity](#finding-identity)). |
-| `finding_key` | string | `<standard>\|<rule_id>\|<subject>`, the readable form of the id. |
+| `finding_key` | string | `<standard>\|<rule_id>\|<subject>`, or `<standard>\|<rule_id>:<finding_detail>\|<subject>`: the readable form of the id. |
 | `severity` | string | `Error`, `Warning` or `Info`. |
 | `category` | string | e.g. `DocumentMetadata`, `ComponentIdentification`, `SupplierInfo`. |
 | `message` | string | Human-readable explanation. Its wording may change in any release. |
 | `element` | string or null | Human-readable label of the offending element (usually a component name). Not unique. |
 | `component_id` | string | Canonical id of the offending component. Absent for document-level and aggregate findings. |
+| `finding_detail` | string | What tells this finding apart from the rule's other findings on the same subject: a value from the SBOM, such as the vulnerability id or the cipher suite (see [Uniqueness](#finding-identity)). Absent when the rule reports at most one finding per subject. |
 | `counts` | object | `affected` and `total` components of an aggregate finding. Absent otherwise. |
 | `requirement` | string | The requirement, as text. |
 | `rule_id` | string | Stable internal rule key, e.g. `SBOM-NTIA-SUPPLIER`. |
@@ -69,8 +70,10 @@ The finding key names what a finding is about, not how it is worded:
 
 ```text
 <standard>|<rule_id>|<subject>
+<standard>|<rule_id>:<finding_detail>|<subject>
 ntia|SBOM-NTIA-SUPPLIER|pkg:npm/lodash@4.17.21
 ntia|SBOM-NTIA-AUTHOR|document
+cra|SBOM-CRA-VULN-METADATA:CVE-2024-3094|pkg:generic/xz-utils@5.6.0
 ```
 
 - `<standard>` is the canonical `--standard` value.
@@ -78,14 +81,24 @@ ntia|SBOM-NTIA-AUTHOR|document
   rules share a SARIF id (all ten `SBOM-BSIAI-MODEL-*` checks report as
   `SBOM-BSIAI-MODEL`), so keying on the SARIF id would merge distinct findings
   about one component.
+- `<finding_detail>` is the violation's `finding_detail`, present only for a
+  rule that reports several findings on one subject (one per vulnerability of
+  a component, one per cipher suite of a protocol). `%`, `|` and `:` in it are
+  percent-encoded as `%25`, `%7C` and `%3A`. Without a detail the key has no
+  `:` after the rule id.
 - `<subject>` is the violation's `component_id` when it has one, otherwise
   `document`. A finding about one dependency edge would use
   `edge:<from>-><to>`; no rule reports a single edge today, so that form is
-  reserved.
+  reserved. A `component_id` that would read as one of those forms (a
+  component whose bom-ref is `document`, say), or that starts with
+  `component:`, gets `component:` prepended: `component:document`.
 
-Neither the standard nor a rule id contains `|`, so the subject is everything
-after the second `|`. The `finding_id` is `sbomtools:v1:` followed by the first
-16 hex digits of the SHA-256 of the key's UTF-8 bytes. The library computes both
+Neither the standard nor a rule id contains `|` or `:`, and the encoded detail
+contains neither, so the key splits unambiguously: the standard is everything
+before the first `|`, the rule id runs to the next `:` or `|`, the detail (if
+any) runs from that `:` to the second `|`, and the subject is everything after
+the second `|`. The `finding_id` is `sbomtools:v1:` followed by the first 16
+hex digits of the SHA-256 of the key's UTF-8 bytes. The library computes both
 (`sbom_tools::quality::{finding_key, finding_id}`), so SARIF fingerprints and
 baselines can use the same identity.
 
@@ -106,13 +119,29 @@ component's findings new ids. Generators that write random UUIDs as `bom-ref`s
 therefore produce new ids on every regeneration for components without a purl,
 CPE, SWHID or SWID. When two different components share a canonical id, the
 later one in the document is re-keyed by appending `#` and its `bom-ref` or
-`SPDXID`, so reordering such components can move that suffix.
+`SPDXID`, so reordering such components can move that suffix. A finding with a
+`finding_detail` also changes id with its detail, which comes from the SBOM's
+own data (a vulnerability id, a cipher suite name), never from the message.
 
-**Uniqueness.** The key identifies one rule on one subject. Some rules report
-several findings on the same subject, and those share key and id: one
-`SBOM-CRA-VULN-METADATA` finding per vulnerability of a component, the four
-`SBOM-CRA-ART-14` reporting-channel checks on the document, or the generic
-`SBOM-QUALITY-GENERAL` and `SBOM-CRA-GENERAL` buckets.
+**Uniqueness.** No two findings in one result share a key, so no two share an
+id. Each distinct check has a rule id of its own (the four CRA Art. 14
+reporting channels are `SBOM-CRA-ART-14-PSIRT`, `-EARLY-WARNING`,
+`-NOTIFICATION` and `-ENISA`, for example), so a rule without a
+`finding_detail` reports at most one finding per subject. A rule that reports
+one finding per item on a subject sets `finding_detail` to the item:
+
+| Rule | One finding per | `finding_detail` |
+|---|---|---|
+| `SBOM-CRA-VULN-METADATA`, `SBOM-CRA-VULN-METADATA-REMEDIATION` | vulnerability of a component | the vulnerability id |
+| `SBOM-CNSA2-PROTO-002`, `SBOM-PQC-PROTO-002` | cipher suite of a protocol, plus its IKEv2 transforms and its crypto references | the suite's name, else its IANA identifiers, else its algorithm refs; `ikev2-transforms`; `crypto-refs` |
+| `SBOM-CNSA2-CERT-001`, `SBOM-CNSA2-CERT-UNKNOWN`, `SBOM-PQC-CERT-001`, `SBOM-PQC-CERT-UNKNOWN` | signature-algorithm candidate of a certificate | the candidate's bom-ref |
+| `SBOM-CRA-ANNEX-I-CONTROLS` | sidecar control claimed without evidence | the control id |
+| `SBOM-CRA-ART-13-16-EMAIL` | invalid manufacturer email | the address |
+
+When the SBOM itself lists an entry twice (two `vulnerabilities[]` entries
+with one id for the same component, say), both findings are reported, and the
+second one's detail is numbered: `CVE-2024-3094`, then `CVE-2024-3094#2`. The
+test suite checks the guarantee on every fixture at every level.
 
 ## Compatibility
 

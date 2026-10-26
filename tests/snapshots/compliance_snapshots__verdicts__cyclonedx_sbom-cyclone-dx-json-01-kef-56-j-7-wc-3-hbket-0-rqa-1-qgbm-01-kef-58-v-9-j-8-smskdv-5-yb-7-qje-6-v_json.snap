@@ -9,23 +9,25 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-VERSION  7f4624d5-ef2d-4608-b2bb-f06428058ebf
   E SBOM-NTIA-VERSION  89cce52e-31c3-4f9f-ab40-6a8362c750d1
   E SBOM-NTIA-VERSION  bd69e55b-b840-4672-99ed-0da45799cc85
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  7f4624d5-ef2d-4608-b2bb-f06428058ebf ×2
-  W SBOM-QUALITY-GENERAL  89cce52e-31c3-4f9f-ab40-6a8362c750d1
-  W SBOM-QUALITY-GENERAL  bc45c2ff-643a-4ace-81ed-ba11d2e6a6bd
-  W SBOM-QUALITY-GENERAL  bd69e55b-b840-4672-99ed-0da45799cc85 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/d-bus/d-bus@1.14.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/d-bus_project/d-bus@1.14.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/facebook/zstandard@1.5.2
-  W SBOM-QUALITY-GENERAL  pkg:generic/freedesktop/libdbus@1.14.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/haxx/libcurl@8.9.1
-  W SBOM-QUALITY-GENERAL  pkg:generic/libexpat_project/libexpat@2.2.9
-  W SBOM-QUALITY-GENERAL  pkg:generic/libuv/libuv@1.45.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/libuv_project/libuv@1.45.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/linux/linux_kernel@5.4.62
-  W SBOM-QUALITY-GENERAL  pkg:generic/mit/kerberos_5@1.18.5
-  W SBOM-QUALITY-GENERAL  pkg:generic/ntp/ntp@4.2.8p12
-  W SBOM-QUALITY-GENERAL  pkg:generic/pupnp_project/pupnp@1.14.20
+  W SBOM-QUALITY-IDENTIFIER  7f4624d5-ef2d-4608-b2bb-f06428058ebf
+  W SBOM-QUALITY-IDENTIFIER  89cce52e-31c3-4f9f-ab40-6a8362c750d1
+  W SBOM-QUALITY-IDENTIFIER  bc45c2ff-643a-4ace-81ed-ba11d2e6a6bd
+  W SBOM-QUALITY-IDENTIFIER  bd69e55b-b840-4672-99ed-0da45799cc85
+  W SBOM-QUALITY-LICENSE  7f4624d5-ef2d-4608-b2bb-f06428058ebf
+  W SBOM-QUALITY-LICENSE  bd69e55b-b840-4672-99ed-0da45799cc85
+  W SBOM-QUALITY-LICENSE  pkg:generic/d-bus/d-bus@1.14.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/d-bus_project/d-bus@1.14.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/facebook/zstandard@1.5.2
+  W SBOM-QUALITY-LICENSE  pkg:generic/freedesktop/libdbus@1.14.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/haxx/libcurl@8.9.1
+  W SBOM-QUALITY-LICENSE  pkg:generic/libexpat_project/libexpat@2.2.9
+  W SBOM-QUALITY-LICENSE  pkg:generic/libuv/libuv@1.45.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/libuv_project/libuv@1.45.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/linux/linux_kernel@5.4.62
+  W SBOM-QUALITY-LICENSE  pkg:generic/mit/kerberos_5@1.18.5
+  W SBOM-QUALITY-LICENSE  pkg:generic/ntp/ntp@4.2.8p12
+  W SBOM-QUALITY-LICENSE  pkg:generic/pupnp_project/pupnp@1.14.20
+  W SBOM-QUALITY-SERIAL  -
 [NtiaMinimum] NON-COMPLIANT · E56 W0 I0
   E SBOM-NTIA-IDENTIFIER  7f4624d5-ef2d-4608-b2bb-f06428058ebf
   E SBOM-NTIA-IDENTIFIER  89cce52e-31c3-4f9f-ab40-6a8362c750d1
@@ -141,15 +143,17 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/xmlsoft/libxml2@2.10.4
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/zlib/zlib@1.2.11
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/zlib/zlib@1.2.8
-  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (49/50)
+  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (49/50)
   I SBOM-CRA-ART-13-5  - (14/50)
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-DOC-INTEGRITY  -
   W SBOM-CRA-ANNEX-I-TRACEABILITY  7f4624d5-ef2d-4608-b2bb-f06428058ebf
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  89cce52e-31c3-4f9f-ab40-6a8362c750d1
   W SBOM-CRA-COMPONENT-SUPPLIER  bc45c2ff-643a-4ace-81ed-ba11d2e6a6bd
   W SBOM-CRA-COMPONENT-SUPPLIER  bd69e55b-b840-4672-99ed-0da45799cc85
@@ -199,8 +203,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:generic/xmlsoft/libxml2@2.10.4
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:generic/zlib/zlib@1.2.11
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:generic/zlib/zlib@1.2.8
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [CraPhase2] NON-COMPLIANT · E7 W7657 I56
   E SBOM-CRA-ANNEX-I-IDENTIFIER  7f4624d5-ef2d-4608-b2bb-f06428058ebf
   E SBOM-CRA-ANNEX-I-IDENTIFIER  89cce52e-31c3-4f9f-ab40-6a8362c750d1
@@ -262,15 +266,17 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-5  - (14/50)
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-LIFECYCLE  -
-  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (49/50)
+  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (49/50)
   W SBOM-CRA-ANNEX-I-TRACEABILITY  7f4624d5-ef2d-4608-b2bb-f06428058ebf
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  89cce52e-31c3-4f9f-ab40-6a8362c750d1
   W SBOM-CRA-COMPONENT-SUPPLIER  bc45c2ff-643a-4ace-81ed-ba11d2e6a6bd
   W SBOM-CRA-COMPONENT-SUPPLIER  bd69e55b-b840-4672-99ed-0da45799cc85
@@ -321,8 +327,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:generic/zlib/zlib@1.2.11
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:generic/zlib/zlib@1.2.8
   W SBOM-CRA-CVD-POLICY  -
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
   W SBOM-CRA-VULN-METADATA  000002b5-7ea4-49d0-b371-adcef5f96c3d
   W SBOM-CRA-VULN-METADATA  000d8527-800f-45f1-91fb-af850cdef26d ×12
   W SBOM-CRA-VULN-METADATA  0013d7d5-27bc-421f-8a03-1cbdfbc2b374 ×2
@@ -1225,9 +1231,10 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-VERSION  7f4624d5-ef2d-4608-b2bb-f06428058ebf
   E SBOM-FDA-VERSION  89cce52e-31c3-4f9f-ab40-6a8362c750d1
   E SBOM-FDA-VERSION  bd69e55b-b840-4672-99ed-0da45799cc85
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-NAMESPACE  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E1 W3 I1
   E SBOM-SSDF-PS2  - (50/50)
   I SBOM-SSDF-PO3  -
@@ -1574,54 +1581,72 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-VERSION  7f4624d5-ef2d-4608-b2bb-f06428058ebf
   E SBOM-NTIA-VERSION  89cce52e-31c3-4f9f-ab40-6a8362c750d1
   E SBOM-NTIA-VERSION  bd69e55b-b840-4672-99ed-0da45799cc85
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  7f4624d5-ef2d-4608-b2bb-f06428058ebf ×3
-  W SBOM-QUALITY-GENERAL  89cce52e-31c3-4f9f-ab40-6a8362c750d1 ×2
-  W SBOM-QUALITY-GENERAL  bc45c2ff-643a-4ace-81ed-ba11d2e6a6bd ×2
-  W SBOM-QUALITY-GENERAL  bd69e55b-b840-4672-99ed-0da45799cc85 ×3
-  W SBOM-QUALITY-GENERAL  pkg:generic/busybox/busybox@1.35.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/d-bus/d-bus@1.14.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/d-bus_project/d-bus@1.14.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/dbus-broker_project/dbus-broker@1.14.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/e2fsprogs_project/e2fsprogs@1.45.6
-  W SBOM-QUALITY-GENERAL  pkg:generic/e2fsprogs_project/e2fsprogs@1.46.5
-  W SBOM-QUALITY-GENERAL  pkg:generic/ext2_filesystems_utilities/e2fsprogs@1.45.6
-  W SBOM-QUALITY-GENERAL  pkg:generic/ext2_filesystems_utilities/e2fsprogs@1.46.5
-  W SBOM-QUALITY-GENERAL  pkg:generic/facebook/zstandard@1.5.2 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/freedesktop/dbus@1.14.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/freedesktop/libdbus@1.14.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/gnu/gcc@12.2.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/gnu/gcc@4.1.1
-  W SBOM-QUALITY-GENERAL  pkg:generic/gnu/gcc@4.9.1
-  W SBOM-QUALITY-GENERAL  pkg:generic/gnu/gcc@9.2.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/gnu/glibc@2.36
-  W SBOM-QUALITY-GENERAL  pkg:generic/gnu/ncurses@6.3
-  W SBOM-QUALITY-GENERAL  pkg:generic/gnu/zlib@1.2.11
-  W SBOM-QUALITY-GENERAL  pkg:generic/gnu/zlib@1.2.8
-  W SBOM-QUALITY-GENERAL  pkg:generic/haxx/curl@8.9.1
-  W SBOM-QUALITY-GENERAL  pkg:generic/haxx/libcurl@8.9.1 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/isc/bind@9.18.24
-  W SBOM-QUALITY-GENERAL  pkg:generic/json-c/json-c@0.13.99
-  W SBOM-QUALITY-GENERAL  pkg:generic/json-c_project/json-c@0.13.99
-  W SBOM-QUALITY-GENERAL  pkg:generic/libexpat_project/libexpat@2.2.9 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/libseccomp_project/libseccomp@2.5.4
-  W SBOM-QUALITY-GENERAL  pkg:generic/libupnp_project/libupnp@1.14.20
-  W SBOM-QUALITY-GENERAL  pkg:generic/libuv/libuv@1.45.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/libuv_project/libuv@1.45.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/lighttpd/lighttpd@1.4.54
-  W SBOM-QUALITY-GENERAL  pkg:generic/linux/linux_kernel@5.4.62 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/marlam/msmtp@1.8.23
-  W SBOM-QUALITY-GENERAL  pkg:generic/martin_lambers/msmtp@1.8.23
-  W SBOM-QUALITY-GENERAL  pkg:generic/mit/kerberos_5@1.18.5 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/netfilter/iptables@1.4.21
-  W SBOM-QUALITY-GENERAL  pkg:generic/ntp/ntp@4.2.8p12 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/openbsd/openssh@9.8p1
-  W SBOM-QUALITY-GENERAL  pkg:generic/openssh/openssh@9.8p1
-  W SBOM-QUALITY-GENERAL  pkg:generic/openssl/openssl@1.1.1w
-  W SBOM-QUALITY-GENERAL  pkg:generic/pcre/pcre@8.33
-  W SBOM-QUALITY-GENERAL  pkg:generic/pupnp_project/pupnp@1.14.20 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/stunnel/stunnel@5.54
-  W SBOM-QUALITY-GENERAL  pkg:generic/systemd_project/systemd@251
-  W SBOM-QUALITY-GENERAL  pkg:generic/xmlsoft/libxml2@2.10.4
-  W SBOM-QUALITY-GENERAL  pkg:generic/zlib/zlib@1.2.11
-  W SBOM-QUALITY-GENERAL  pkg:generic/zlib/zlib@1.2.8
+  W SBOM-QUALITY-HASH  7f4624d5-ef2d-4608-b2bb-f06428058ebf
+  W SBOM-QUALITY-HASH  89cce52e-31c3-4f9f-ab40-6a8362c750d1
+  W SBOM-QUALITY-HASH  bc45c2ff-643a-4ace-81ed-ba11d2e6a6bd
+  W SBOM-QUALITY-HASH  bd69e55b-b840-4672-99ed-0da45799cc85
+  W SBOM-QUALITY-HASH  pkg:generic/busybox/busybox@1.35.0
+  W SBOM-QUALITY-HASH  pkg:generic/d-bus/d-bus@1.14.0
+  W SBOM-QUALITY-HASH  pkg:generic/d-bus_project/d-bus@1.14.0
+  W SBOM-QUALITY-HASH  pkg:generic/dbus-broker_project/dbus-broker@1.14.0
+  W SBOM-QUALITY-HASH  pkg:generic/e2fsprogs_project/e2fsprogs@1.45.6
+  W SBOM-QUALITY-HASH  pkg:generic/e2fsprogs_project/e2fsprogs@1.46.5
+  W SBOM-QUALITY-HASH  pkg:generic/ext2_filesystems_utilities/e2fsprogs@1.45.6
+  W SBOM-QUALITY-HASH  pkg:generic/ext2_filesystems_utilities/e2fsprogs@1.46.5
+  W SBOM-QUALITY-HASH  pkg:generic/facebook/zstandard@1.5.2
+  W SBOM-QUALITY-HASH  pkg:generic/freedesktop/dbus@1.14.0
+  W SBOM-QUALITY-HASH  pkg:generic/freedesktop/libdbus@1.14.0
+  W SBOM-QUALITY-HASH  pkg:generic/gnu/gcc@12.2.0
+  W SBOM-QUALITY-HASH  pkg:generic/gnu/gcc@4.1.1
+  W SBOM-QUALITY-HASH  pkg:generic/gnu/gcc@4.9.1
+  W SBOM-QUALITY-HASH  pkg:generic/gnu/gcc@9.2.0
+  W SBOM-QUALITY-HASH  pkg:generic/gnu/glibc@2.36
+  W SBOM-QUALITY-HASH  pkg:generic/gnu/ncurses@6.3
+  W SBOM-QUALITY-HASH  pkg:generic/gnu/zlib@1.2.11
+  W SBOM-QUALITY-HASH  pkg:generic/gnu/zlib@1.2.8
+  W SBOM-QUALITY-HASH  pkg:generic/haxx/curl@8.9.1
+  W SBOM-QUALITY-HASH  pkg:generic/haxx/libcurl@8.9.1
+  W SBOM-QUALITY-HASH  pkg:generic/isc/bind@9.18.24
+  W SBOM-QUALITY-HASH  pkg:generic/json-c/json-c@0.13.99
+  W SBOM-QUALITY-HASH  pkg:generic/json-c_project/json-c@0.13.99
+  W SBOM-QUALITY-HASH  pkg:generic/libexpat_project/libexpat@2.2.9
+  W SBOM-QUALITY-HASH  pkg:generic/libseccomp_project/libseccomp@2.5.4
+  W SBOM-QUALITY-HASH  pkg:generic/libupnp_project/libupnp@1.14.20
+  W SBOM-QUALITY-HASH  pkg:generic/libuv/libuv@1.45.0
+  W SBOM-QUALITY-HASH  pkg:generic/libuv_project/libuv@1.45.0
+  W SBOM-QUALITY-HASH  pkg:generic/lighttpd/lighttpd@1.4.54
+  W SBOM-QUALITY-HASH  pkg:generic/linux/linux_kernel@5.4.62
+  W SBOM-QUALITY-HASH  pkg:generic/marlam/msmtp@1.8.23
+  W SBOM-QUALITY-HASH  pkg:generic/martin_lambers/msmtp@1.8.23
+  W SBOM-QUALITY-HASH  pkg:generic/mit/kerberos_5@1.18.5
+  W SBOM-QUALITY-HASH  pkg:generic/netfilter/iptables@1.4.21
+  W SBOM-QUALITY-HASH  pkg:generic/ntp/ntp@4.2.8p12
+  W SBOM-QUALITY-HASH  pkg:generic/openbsd/openssh@9.8p1
+  W SBOM-QUALITY-HASH  pkg:generic/openssh/openssh@9.8p1
+  W SBOM-QUALITY-HASH  pkg:generic/openssl/openssl@1.1.1w
+  W SBOM-QUALITY-HASH  pkg:generic/pcre/pcre@8.33
+  W SBOM-QUALITY-HASH  pkg:generic/pupnp_project/pupnp@1.14.20
+  W SBOM-QUALITY-HASH  pkg:generic/stunnel/stunnel@5.54
+  W SBOM-QUALITY-HASH  pkg:generic/systemd_project/systemd@251
+  W SBOM-QUALITY-HASH  pkg:generic/xmlsoft/libxml2@2.10.4
+  W SBOM-QUALITY-HASH  pkg:generic/zlib/zlib@1.2.11
+  W SBOM-QUALITY-HASH  pkg:generic/zlib/zlib@1.2.8
+  W SBOM-QUALITY-IDENTIFIER  7f4624d5-ef2d-4608-b2bb-f06428058ebf
+  W SBOM-QUALITY-IDENTIFIER  89cce52e-31c3-4f9f-ab40-6a8362c750d1
+  W SBOM-QUALITY-IDENTIFIER  bc45c2ff-643a-4ace-81ed-ba11d2e6a6bd
+  W SBOM-QUALITY-IDENTIFIER  bd69e55b-b840-4672-99ed-0da45799cc85
+  W SBOM-QUALITY-LICENSE  7f4624d5-ef2d-4608-b2bb-f06428058ebf
+  W SBOM-QUALITY-LICENSE  bd69e55b-b840-4672-99ed-0da45799cc85
+  W SBOM-QUALITY-LICENSE  pkg:generic/d-bus/d-bus@1.14.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/d-bus_project/d-bus@1.14.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/facebook/zstandard@1.5.2
+  W SBOM-QUALITY-LICENSE  pkg:generic/freedesktop/libdbus@1.14.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/haxx/libcurl@8.9.1
+  W SBOM-QUALITY-LICENSE  pkg:generic/libexpat_project/libexpat@2.2.9
+  W SBOM-QUALITY-LICENSE  pkg:generic/libuv/libuv@1.45.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/libuv_project/libuv@1.45.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/linux/linux_kernel@5.4.62
+  W SBOM-QUALITY-LICENSE  pkg:generic/mit/kerberos_5@1.18.5
+  W SBOM-QUALITY-LICENSE  pkg:generic/ntp/ntp@4.2.8p12
+  W SBOM-QUALITY-LICENSE  pkg:generic/pupnp_project/pupnp@1.14.20
+  W SBOM-QUALITY-SERIAL  -

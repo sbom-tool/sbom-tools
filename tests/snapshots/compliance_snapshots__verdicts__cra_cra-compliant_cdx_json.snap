@@ -5,35 +5,39 @@ fixture: cra/cra-compliant.cdx.json
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I2
-  I SBOM-QUALITY-GENERAL  pkg:cargo/lib-a@2.3.4
-  I SBOM-QUALITY-GENERAL  pkg:cargo/lib-b@0.9.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/lib-a@2.3.4
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/lib-b@0.9.1
 [Standard] compliant · E0 W0 I2
-  I SBOM-QUALITY-GENERAL  pkg:cargo/lib-a@2.3.4
-  I SBOM-QUALITY-GENERAL  pkg:cargo/lib-b@0.9.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/lib-a@2.3.4
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/lib-b@0.9.1
 [NtiaMinimum] compliant · E0 W0 I2
-  I SBOM-NTIA-GENERAL  pkg:cargo/lib-a@2.3.4
-  I SBOM-NTIA-GENERAL  pkg:cargo/lib-b@0.9.1
+  I SBOM-NTIA-ELEMENT-ID  pkg:cargo/lib-a@2.3.4
+  I SBOM-NTIA-ELEMENT-ID  pkg:cargo/lib-b@0.9.1
 [CraPhase1] compliant · E0 W4 I5
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-a@2.3.4
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-b@0.9.1
+  I SBOM-CRA-ART-14-ENISA  -
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-a@2.3.4
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-b@0.9.1
   I SBOM-CRA-VULN-STATEMENT  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-SBOM-FRESHNESS  -
 [CraPhase2] compliant · E0 W5 I6
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-a@2.3.4
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-b@0.9.1
+  I SBOM-CRA-ART-14-ENISA  -
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-a@2.3.4
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-b@0.9.1
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-2  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-SBOM-FRESHNESS  -
 [FdaMedicalDevice] compliant · E0 W1 I2
-  I SBOM-FDA-GENERAL  pkg:cargo/lib-a@2.3.4
-  I SBOM-FDA-GENERAL  pkg:cargo/lib-b@0.9.1
+  I SBOM-FDA-ELEMENT-ID  pkg:cargo/lib-a@2.3.4
+  I SBOM-FDA-ELEMENT-ID  pkg:cargo/lib-b@0.9.1
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] compliant · E0 W0 I1
   I SBOM-SSDF-PO3  -
@@ -45,8 +49,8 @@ as_of: 2026-10-12T00:00:00Z
 [BsiTr03183_2] compliant · E0 W1 I0
   W SBOM-BSI-TR-03183-2-5-5-COMPLETENESS  -
 [CraOssSteward] compliant · E0 W0 I2
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-a@2.3.4
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-b@0.9.1
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-a@2.3.4
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-b@0.9.1
 [EuccSubstantial] NON-COMPLIANT · E4 W1 I0
   E SBOM-EUCC-ITSEF  -
   E SBOM-EUCC-PP  -
@@ -74,23 +78,23 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-TRANSITIVE-DEPS  -
   W SBOM-FSCT-UPSTREAM-SBOM  -
 [Comprehensive] compliant · E0 W0 I2
-  I SBOM-QUALITY-GENERAL  pkg:cargo/lib-a@2.3.4
-  I SBOM-QUALITY-GENERAL  pkg:cargo/lib-b@0.9.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/lib-a@2.3.4
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/lib-b@0.9.1
 
 with auto-discovered CRA sidecar:
 [CraPhase1 + sidecar] compliant · E0 W1 I3
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-a@2.3.4
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-b@0.9.1
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-a@2.3.4
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-b@0.9.1
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-SBOM-FRESHNESS  -
 [CraPhase2 + sidecar] compliant · E0 W1 I3
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-a@2.3.4
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-b@0.9.1
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-a@2.3.4
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-b@0.9.1
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-SBOM-FRESHNESS  -
 [CraOssSteward + sidecar] compliant · E0 W0 I2
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-a@2.3.4
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-b@0.9.1
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-a@2.3.4
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-b@0.9.1
 [EuccSubstantial + sidecar] NON-COMPLIANT · E4 W1 I0
   E SBOM-EUCC-ITSEF  -
   E SBOM-EUCC-PP  -

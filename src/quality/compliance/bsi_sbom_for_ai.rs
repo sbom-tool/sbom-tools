@@ -66,6 +66,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
             return;
         }
@@ -115,6 +116,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -137,6 +139,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -157,6 +160,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -178,6 +182,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -196,6 +201,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
     }
@@ -234,6 +240,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -261,6 +268,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -279,6 +287,7 @@ impl ComplianceChecker {
             counts: None,
             standard_refs: Vec::new(),
             remediation: None,
+            finding_detail: None,
         });
     }
 
@@ -617,6 +626,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
     }
@@ -638,6 +648,7 @@ impl ComplianceChecker {
             counts: None,
             standard_refs: Vec::new(),
             remediation: None,
+            finding_detail: None,
         });
         violations.push(Violation {
             severity: ViolationSeverity::Info,
@@ -652,6 +663,7 @@ impl ComplianceChecker {
             counts: None,
             standard_refs: Vec::new(),
             remediation: None,
+            finding_detail: None,
         });
     }
 }
@@ -721,6 +733,7 @@ fn push_model_finding(
         }),
         standard_refs: Vec::new(),
         remediation: None,
+        finding_detail: None,
     });
 }
 

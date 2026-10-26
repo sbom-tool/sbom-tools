@@ -1631,9 +1631,11 @@ expression: "render(&SarifReporter::new())"
           "locations": [],
           "properties": {
             "standardIds": [
-              "CRA:Art. 14"
+              "CRA:Art. 14(2)(a)",
+              "CRA:Art. 14(4)(a)"
             ],
             "standardHelpUris": [
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ]
           }
@@ -1647,9 +1649,11 @@ expression: "render(&SarifReporter::new())"
           "locations": [],
           "properties": {
             "standardIds": [
-              "CRA:Art. 14"
+              "CRA:Art. 14(2)(b)",
+              "CRA:Art. 14(4)(b)"
             ],
             "standardHelpUris": [
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ]
           }
@@ -1663,7 +1667,7 @@ expression: "render(&SarifReporter::new())"
           "locations": [],
           "properties": {
             "standardIds": [
-              "CRA:Art. 14"
+              "CRA:Art. 14(7)"
             ],
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
@@ -2377,9 +2381,11 @@ expression: "render(&SarifReporter::new())"
           "locations": [],
           "properties": {
             "standardIds": [
-              "CRA:Art. 14"
+              "CRA:Art. 14(2)(a)",
+              "CRA:Art. 14(4)(a)"
             ],
             "standardHelpUris": [
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ]
           }
@@ -2393,9 +2399,11 @@ expression: "render(&SarifReporter::new())"
           "locations": [],
           "properties": {
             "standardIds": [
-              "CRA:Art. 14"
+              "CRA:Art. 14(2)(b)",
+              "CRA:Art. 14(4)(b)"
             ],
             "standardHelpUris": [
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ]
           }
@@ -2409,7 +2417,7 @@ expression: "render(&SarifReporter::new())"
           "locations": [],
           "properties": {
             "standardIds": [
-              "CRA:Art. 14"
+              "CRA:Art. 14(7)"
             ],
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"

@@ -33,12 +33,13 @@ const CRYPTO_ASSETS: [&str; 6] = [
     "3DES",
 ];
 
-/// Package-only findings: NTIA/CRA component elements and the generic
-/// license/hash recommendations.
+/// Package-only findings: NTIA/CRA component elements and the quality
+/// profiles' license/hash recommendations (all reported under the
+/// SBOM-QUALITY-GENERAL SARIF rule).
 fn is_package_finding(v: &Violation) -> bool {
     v.rule_id.starts_with("SBOM-NTIA-")
         || v.rule_id.starts_with("SBOM-CRA-COMPONENT-")
-        || v.rule_id == "SBOM-QUALITY-GENERAL"
+        || v.sarif_rule_id() == "SBOM-QUALITY-GENERAL"
 }
 
 fn names_crypto_asset(v: &Violation) -> bool {

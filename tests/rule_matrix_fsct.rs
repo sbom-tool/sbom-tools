@@ -294,6 +294,14 @@ fn fsct_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.component_mut("liba").licenses.clear()),
             base(),
         ),
+        RuleEntry::key_skipped(
+            "SBOM-FSCT-LICENSE-CONCLUDED",
+            "the concluded-license prong of §2.2.2.7 is evidence-gated to SPDX \
+             (PackageLicenseConcluded; the CycloneDX licenses[].acknowledgement field is \
+             not parsed), so the CycloneDX-only DSL cannot reach the firing state; \
+             fsct_license_concluded_is_spdx_gated_with_firing_and_silent_states covers \
+             both states with SPDX tag-value documents",
+        ),
         // The DSL cannot express component copyright, so the base fixture
         // fires; the silent states need copyright (conforming raw-JSON
         // document), no primary, or an empty inventory.
@@ -718,6 +726,52 @@ fn fsct_dynamic_deps_is_spdx_gated_with_firing_and_silent_states() {
     assert!(
         fired_severities(&cyclonedx, "SBOM-FSCT-DYNAMIC-DEPS").is_empty(),
         "[Fsct] CycloneDX input must never fire SBOM-FSCT-DYNAMIC-DEPS:\n{}",
+        render(&cyclonedx)
+    );
+}
+
+#[test]
+fn fsct_license_concluded_is_spdx_gated_with_firing_and_silent_states() {
+    // SBOM-FSCT-LICENSE-CONCLUDED shares the LICENSE-ALL SARIF rule, so the
+    // findings are told apart by their key.
+    let concluded = |result: &ComplianceResult| -> Vec<Sev> {
+        result
+            .violations
+            .iter()
+            .filter(|v| v.rule_id == "SBOM-FSCT-LICENSE-CONCLUDED")
+            .map(|v| v.severity)
+            .collect()
+    };
+
+    // No package carries a concluded license: the aspirational
+    // attestation note fires as Info.
+    let without = SPDX_TAG_VALUE_BASE
+        .replace("PackageLicenseConcluded: Apache-2.0\n", "")
+        .replace("PackageLicenseConcluded: MIT\n", "");
+    let firing = check_str(&without);
+    assert_eq!(
+        concluded(&firing),
+        vec![Sev::Info],
+        "[Fsct] SPDX without PackageLicenseConcluded must fire \
+         SBOM-FSCT-LICENSE-CONCLUDED as Info:\n{}",
+        render(&firing)
+    );
+
+    // A concluded license on any package is the attestation.
+    let silent = check_str(SPDX_TAG_VALUE_BASE);
+    assert!(
+        concluded(&silent).is_empty(),
+        "[Fsct] a PackageLicenseConcluded value must silence \
+         SBOM-FSCT-LICENSE-CONCLUDED:\n{}",
+        render(&silent)
+    );
+
+    // CycloneDX input never fires the note: its parsed model carries no
+    // concluded license.
+    let cyclonedx = check_doc(&conforming_doc());
+    assert!(
+        concluded(&cyclonedx).is_empty(),
+        "[Fsct] CycloneDX input must never fire SBOM-FSCT-LICENSE-CONCLUDED:\n{}",
         render(&cyclonedx)
     );
 }
