@@ -339,7 +339,9 @@ fn assert_invariants(document: &Value, results: &[ComplianceResult], label: &str
 
     let mut uuids = vec![uuid_of(ar)];
     let mut component_ids: std::collections::HashMap<&str, &str> = Default::default();
-    for entry in entries {
+    for (i, entry) in entries.iter().enumerate() {
+        let passed = results.get(i).map_or(0, |result| result.passed.len());
+        let mut control_objectives = 0usize;
         uuids.push(uuid_of(entry));
         let mut local = HashSet::new();
         for component in array(&entry["local-definitions"], "components") {
@@ -361,8 +363,13 @@ fn assert_invariants(document: &Value, results: &[ComplianceResult], label: &str
             .iter()
             .map(|observation| {
                 // OSCAL 1.2 deprecates the `finding` observation type in favour
-                // of `discovery`.
-                assert_eq!(observation["types"], json!(["discovery"]), "{label}");
+                // of `discovery`, the type of a violation's observation; a
+                // passed check's is about a `control-objective`.
+                if observation["types"] == json!(["control-objective"]) {
+                    control_objectives += 1;
+                } else {
+                    assert_eq!(observation["types"], json!(["discovery"]), "{label}");
+                }
                 let subjects = array(observation, "subjects");
                 assert_eq!(subjects[0]["type"], "resource", "{label}");
                 assert_eq!(subjects[0]["subject-uuid"], document_uuid, "{label}");
@@ -379,6 +386,10 @@ fn assert_invariants(document: &Value, results: &[ComplianceResult], label: &str
             })
             .collect();
         assert_eq!(named, local, "{label}: every local component is named");
+        assert_eq!(
+            control_objectives, passed,
+            "{label}: one control-objective observation per passed check"
+        );
         uuids.extend(observations.iter().copied());
         for finding in array(entry, "findings") {
             uuids.push(uuid_of(finding));

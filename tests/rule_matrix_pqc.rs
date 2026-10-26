@@ -7,7 +7,10 @@
 //! fixture (a CycloneDX 1.6 CBOM through the real parser), or an explicit
 //! skip-with-reason; exhaustiveness is enforced against the registry slice.
 //! Each row breaks one asset of the ready baseline, so a crypto-vocabulary
-//! change that moves a verdict touches exactly the row that pins it.
+//! change that moves a verdict touches exactly the row that pins it. The
+//! two pass-only rules, SBOM-PQC-009 and SBOM-PQC-010, get passing fixtures
+//! instead: each adds an approved asset, which the result reports as a
+//! passed check.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
@@ -17,12 +20,13 @@ use sbom_tools::quality::{ComplianceLevel, PQC_SARIF_RULE_IDS, ViolationSeverity
 
 const LEVEL: ComplianceLevel = ComplianceLevel::NistPqc;
 
-/// A PQC-ready CBOM that triggers no finding at all, not even the
-/// informational ones: AES-256-GCM and SHA-384 with declared quantum levels,
-/// a 256-bit symmetric key, a certificate whose (unresolved) signature
-/// reference names ML-DSA-87, and a TLS 1.3 protocol whose cipher suite
-/// resolves to the AES and SHA assets. No approved-PQC *algorithm asset* is
-/// listed, because SBOM-PQC-009 reports each one as an Info.
+/// A PQC-ready CBOM that triggers no finding at all: AES-256-GCM and SHA-384
+/// with declared quantum levels, a 256-bit symmetric key, a certificate
+/// whose (unresolved) signature reference names ML-DSA-87, and a TLS 1.3
+/// protocol whose cipher suite resolves to the AES and SHA assets. No
+/// approved-PQC *algorithm asset* is listed, so the baseline passes no
+/// check either: SBOM-PQC-009 and -010 report one pass per approved asset,
+/// and their rows add one.
 fn base() -> SbomFixture {
     SbomFixture {
         spec_version: "1.6".to_string(),
@@ -161,10 +165,10 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             }),
         ),
         // A PQ/T hybrid whose post-quantum part NIST approves is an approved
-        // combination (Info): SP 800-227 §4.6.2 for key establishment.
-        RuleEntry::tested(
+        // combination, a passed check: SP 800-227 §4.6.2 for key
+        // establishment.
+        RuleEntry::passing(
             "SBOM-PQC-010",
-            Sev::Info,
             broken(|s| {
                 s.crypto_assets.push(
                     CryptoAssetFixture::algorithm("algo-hybrid", "X25519MLKEM768")
@@ -194,10 +198,9 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.crypto_mut("algo-aes256").algorithm_mut().mode = Some("ecb".to_string())),
             base(),
         ),
-        // An approved PQC algorithm asset is reported as an Info.
-        RuleEntry::tested(
+        // An approved PQC algorithm asset is a passed check.
+        RuleEntry::passing(
             "SBOM-PQC-009",
-            Sev::Info,
             broken(|s| {
                 s.crypto_assets.push(
                     CryptoAssetFixture::algorithm("algo-mlkem768", "ML-KEM")
@@ -208,9 +211,8 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             }),
             base(),
         )
-        .with_firing(
+        .with_passing(
             "ML-DSA-87 identified by OID only",
-            Sev::Info,
             broken(|s| {
                 s.crypto_assets.push(
                     CryptoAssetFixture::unidentified_algorithm("algo-mldsa")

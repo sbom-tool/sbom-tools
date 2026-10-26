@@ -8,7 +8,9 @@ use crate::quality::{
     ComplianceChecker, ComplianceLevel, ComplianceResult, StandardSelector, ViolationSeverity,
 };
 use crate::reports::escape::sanitize_line;
-use crate::reports::{ReportFormat, generate_compliance_json, generate_compliance_sarif};
+use crate::reports::{
+    ComplianceSarifOptions, ReportFormat, generate_compliance_json, generate_compliance_sarif_with,
+};
 use anyhow::Result;
 use std::path::PathBuf;
 
@@ -69,6 +71,7 @@ pub fn run_validate(
     as_of: Option<&str>,
     require_applicable: bool,
     json_schema: ValidateJsonSchema,
+    sarif_include_passes: bool,
 ) -> Result<i32> {
     // `--summary` overrides `--output` (documented on the flag), so the
     // requested format is never rendered and must not be gated.
@@ -147,6 +150,9 @@ pub fn run_validate(
         sbom: parsed.sbom(),
         sbom_digest: sha256_hex(parsed.raw_content.as_bytes()),
         as_of,
+        sarif: ComplianceSarifOptions {
+            include_passes: sarif_include_passes,
+        },
     };
 
     if !summary && output == ReportFormat::Json && json_schema == ValidateJsonSchema::V1 {
@@ -195,6 +201,8 @@ struct OutputProvenance<'a> {
     sbom_digest: String,
     /// The pinned evaluation instant (`--as-of`), if any.
     as_of: Option<chrono::DateTime<chrono::Utc>>,
+    /// How `-o sarif` renders the results (`--sarif-include-passes`).
+    sarif: ComplianceSarifOptions,
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {
@@ -217,10 +225,10 @@ fn write_compliance_output(
     let content = match output {
         ReportFormat::Json => match json_schema {
             ValidateJsonSchema::V2 => generate_compliance_json(std::slice::from_ref(result))?,
-            ValidateJsonSchema::V1 => serde_json::to_string_pretty(result)
+            ValidateJsonSchema::V1 => serde_json::to_string_pretty(&v1_result(result))
                 .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
         },
-        ReportFormat::Sarif => generate_compliance_sarif(result)?,
+        ReportFormat::Sarif => generate_compliance_sarif_with(result, provenance.sarif)?,
         ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results_at(
             std::slice::from_ref(result),
             provenance.sbom,
@@ -232,6 +240,16 @@ fn write_compliance_output(
 
     write_output(&content, &target, false)?;
     Ok(())
+}
+
+/// `result` as the deprecated `--json-schema v1` layout prints it: the
+/// result's own serialization without the passed checks, which that layout
+/// predates. A passed check simply does not appear there (it used to be an
+/// Info violation).
+fn v1_result(result: &ComplianceResult) -> ComplianceResult {
+    let mut v1 = result.clone();
+    v1.passed.clear();
+    v1
 }
 
 /// Compact summary for CI badge generation
@@ -289,10 +307,15 @@ fn write_multi_compliance_output(
     let content = match output {
         ReportFormat::Json => match json_schema {
             ValidateJsonSchema::V2 => generate_compliance_json(results)?,
-            ValidateJsonSchema::V1 => serde_json::to_string_pretty(results)
-                .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
+            ValidateJsonSchema::V1 => {
+                let v1: Vec<ComplianceResult> = results.iter().map(v1_result).collect();
+                serde_json::to_string_pretty(&v1)
+                    .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?
+            }
         },
-        ReportFormat::Sarif => crate::reports::generate_multi_compliance_sarif(results)?,
+        ReportFormat::Sarif => {
+            crate::reports::generate_multi_compliance_sarif_with(results, provenance.sarif)?
+        }
         ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results_at(
             results,
             provenance.sbom,
@@ -323,6 +346,15 @@ fn write_multi_compliance_summary(
         .map_err(|e| anyhow::anyhow!("Failed to serialize multi-standard summary: {e}"))?;
     write_output(&content, &target, false)?;
     Ok(())
+}
+
+/// The "N checks passed" line under a result's status, when it passed any.
+fn passed_checks_line(result: &ComplianceResult) -> Option<String> {
+    match result.passed.len() {
+        0 => None,
+        1 => Some("1 check passed".to_string()),
+        n => Some(format!("{n} checks passed")),
+    }
 }
 
 /// Render a compliance result as plain text, one finding per three lines:
@@ -356,6 +388,10 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
             result.warning_count,
             result.info_count
         ));
+    }
+    // Passed checks are no findings: a count, never a finding line.
+    if let Some(passed) = passed_checks_line(result) {
+        lines.push(passed);
     }
     lines.push(String::new());
 
@@ -418,6 +454,40 @@ mod tests {
         print_ntia_validation(&NormalizedSbom::default());
     }
 
+    /// The text report counts passed checks under the status and lists none
+    /// of them as a finding.
+    #[test]
+    fn text_counts_passed_checks_and_lists_no_pass() {
+        let pass = |name: &str| crate::quality::PassedCheck {
+            rule_id: "SBOM-PQC-009",
+            message: format!("'{name}' uses NIST-approved PQC algorithm (FIPS 203/204/205)"),
+            element: Some(name.to_string()),
+            component_id: Some(format!("crypto/algorithm/{name}")),
+            finding_detail: None,
+            requirement: "FIPS 203/204/205: approved".to_string(),
+            standard_refs: Vec::new(),
+        };
+        let result = ComplianceResult::new(ComplianceLevel::NistPqc, Vec::new())
+            .with_passed(vec![pass("ML-KEM-1024"), pass("ML-DSA-87")]);
+        let text = format_compliance_text(&result);
+        assert_eq!(
+            text.lines().take(3).collect::<Vec<_>>(),
+            [
+                "Compliance (NIST PQC Readiness)",
+                "Status: COMPLIANT (0 errors, 0 warnings, 0 info)",
+                "2 checks passed",
+            ],
+            "{text}"
+        );
+        assert!(text.contains("No violations found."), "{text}");
+        assert!(!text.contains("NIST-approved"), "no pass is listed: {text}");
+
+        let none = ComplianceResult::new(ComplianceLevel::NistPqc, Vec::new());
+        assert!(!format_compliance_text(&none).contains("passed"));
+        let one = none.with_passed(vec![pass("XMSS")]);
+        assert!(format_compliance_text(&one).contains("\n1 check passed\n"));
+    }
+
     #[test]
     fn rejects_unsupported_output_format_before_reading_sbom() {
         // html/markdown/etc. used to silently fall through to the text
@@ -444,6 +514,7 @@ mod tests {
                 None,
                 false,
                 ValidateJsonSchema::V2,
+                false,
             )
             .expect_err("unsupported format must be rejected");
             let msg = err.to_string();
@@ -472,6 +543,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            false,
         )
         .expect_err("empty standard list must be rejected");
         assert!(err.to_string().contains("no compliance standard selected"));
@@ -501,6 +573,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            false,
         )
         .expect("--summary must override -o html instead of hard-erroring");
         let content = std::fs::read_to_string(out).unwrap();
@@ -532,6 +605,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            false,
         )
         .expect_err("typo'd --cra-product-class must be a hard error");
         let msg = err.to_string();
@@ -565,6 +639,7 @@ mod tests {
             Some("2027-01-01T00:00:00"),
             false,
             ValidateJsonSchema::V2,
+            false,
         )
         .expect("offset-less --as-of datetime must parse (assumed UTC)");
     }
@@ -592,6 +667,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            false,
         )
         .expect_err("broken explicit sidecar must be a hard error");
         assert!(err.to_string().contains("Failed to load CRA sidecar"));

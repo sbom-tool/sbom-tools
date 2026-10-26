@@ -1,7 +1,8 @@
 //! Stable identity of a compliance finding.
 //!
-//! A finding is one [`Violation`] reported under one standard. Its key names
-//! what the finding is about, never how it is worded:
+//! A finding is one check reported under one standard: a [`Violation`], or
+//! any other type that implements [`FindingIdentity`]. Its key names what
+//! the finding is about, never how it is worded:
 //!
 //! ```text
 //! <standard>|<rule id>|<subject>
@@ -53,6 +54,49 @@ use super::{ComplianceLevel, Violation};
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
+/// The parts of a reported check that its finding key is built from: the
+/// rule, the detail that tells the rule's findings on one subject apart, and
+/// the component the check is about. Severity, wording and every other field
+/// stay out of the key.
+pub trait FindingIdentity {
+    /// The stable internal rule key ([`Violation::rule_id`]).
+    fn rule_id(&self) -> &'static str;
+    /// What tells this finding apart from the rule's other findings on the
+    /// same subject ([`Violation::finding_detail`]); `None` for a rule that
+    /// reports at most one finding per subject.
+    fn finding_detail(&self) -> Option<&str>;
+    /// Canonical id of the component the finding is about
+    /// ([`Violation::component_id`]); `None` for the document and for
+    /// aggregate findings.
+    fn component_id(&self) -> Option<&str>;
+}
+
+impl FindingIdentity for Violation {
+    fn rule_id(&self) -> &'static str {
+        self.rule_id
+    }
+
+    fn finding_detail(&self) -> Option<&str> {
+        self.finding_detail.as_deref()
+    }
+
+    fn component_id(&self) -> Option<&str> {
+        self.component_id.as_deref()
+    }
+}
+
+/// A finding whose detail [`number_repeated_details`] may rewrite.
+pub(crate) trait NumberedDetail: FindingIdentity {
+    /// Replace the finding's detail.
+    fn set_finding_detail(&mut self, detail: String);
+}
+
+impl NumberedDetail for Violation {
+    fn set_finding_detail(&mut self, detail: String) {
+        self.finding_detail = Some(detail);
+    }
+}
+
 /// Subject of a finding that is about the document rather than a component.
 pub const DOCUMENT_SUBJECT: &str = "document";
 
@@ -97,10 +141,10 @@ pub const fn standard_key(level: ComplianceLevel) -> &'static str {
     }
 }
 
-/// What `violation` is about, the `<subject>` of its finding key: the
+/// What `finding` is about, the `<subject>` of its finding key: the
 /// offending component's canonical id, or [`DOCUMENT_SUBJECT`]. Several
 /// findings of one rule on one subject are told apart by their
-/// [`Violation::finding_detail`], not by the subject.
+/// [`FindingIdentity::finding_detail`], not by the subject.
 ///
 /// A canonical id falls back to the bom-ref or SPDXID, which can be any
 /// string, so a component id that reads `document`, or starts with `edge:` or
@@ -108,8 +152,8 @@ pub const fn standard_key(level: ComplianceLevel) -> &'static str {
 /// bom-ref `document` must not share the subject of a rule's document-level
 /// finding.
 #[must_use]
-pub fn finding_subject(violation: &Violation) -> Cow<'_, str> {
-    match violation.component_id.as_deref() {
+pub fn finding_subject<F: FindingIdentity + ?Sized>(finding: &F) -> Cow<'_, str> {
+    match finding.component_id() {
         None => Cow::Borrowed(DOCUMENT_SUBJECT),
         Some(id)
             if id == DOCUMENT_SUBJECT
@@ -122,14 +166,14 @@ pub fn finding_subject(violation: &Violation) -> Cow<'_, str> {
     }
 }
 
-/// The finding key of `violation` reported under `level`:
+/// The finding key of `finding` reported under `level`:
 /// `<standard>|<rule id>|<subject>`, or `<standard>|<rule id>:<detail>|<subject>`
-/// when it carries a [`Violation::finding_detail`] (percent-encoded, see the
-/// module docs).
+/// when it carries a [`FindingIdentity::finding_detail`] (percent-encoded,
+/// see the module docs).
 #[must_use]
-pub fn finding_key(level: ComplianceLevel, violation: &Violation) -> String {
-    let mut key = format!("{}|{}", standard_key(level), violation.rule_id);
-    if let Some(detail) = &violation.finding_detail {
+pub fn finding_key<F: FindingIdentity + ?Sized>(level: ComplianceLevel, finding: &F) -> String {
+    let mut key = format!("{}|{}", standard_key(level), finding.rule_id());
+    if let Some(detail) = finding.finding_detail() {
         key.push(':');
         for c in detail.chars() {
             match c {
@@ -141,15 +185,15 @@ pub fn finding_key(level: ComplianceLevel, violation: &Violation) -> String {
         }
     }
     key.push('|');
-    key.push_str(&finding_subject(violation));
+    key.push_str(&finding_subject(finding));
     key
 }
 
-/// Number the repeats among `violations` that carry the same rule, subject
-/// and [`Violation::finding_detail`]: the second gets `#2` appended to its
-/// detail, the third `#3`, and so on, in report order, skipping a numbered
-/// detail another finding already carries. Findings without a detail are
-/// left alone.
+/// Number the repeats among `findings` that carry the same rule, subject
+/// and [`FindingIdentity::finding_detail`]: the second gets `#2` appended to
+/// its detail, the third `#3`, and so on, in report order, skipping a
+/// numbered detail another finding already carries. Findings without a
+/// detail are left alone.
 ///
 /// A repeat means the SBOM lists one entry twice — two CycloneDX
 /// `vulnerabilities[]` entries with the same id for one component, or an
@@ -157,34 +201,34 @@ pub fn finding_key(level: ComplianceLevel, violation: &Violation) -> String {
 /// an assessment — and both entries are reported. Numbering keeps a finding
 /// key per finding, and the first occurrence keeps the plain detail.
 /// `ComplianceChecker::check()` runs this on every result.
-pub(crate) fn number_repeated_details(violations: &mut [Violation]) {
+pub(crate) fn number_repeated_details<F: NumberedDetail>(findings: &mut [F]) {
     use std::collections::HashSet;
     // Rule, subject and detail as the finding key spells them.
     type Identity = (&'static str, String, String);
-    let identity = |v: &Violation, detail: String| -> Identity {
-        (v.rule_id, finding_subject(v).into_owned(), detail)
+    let identity = |f: &F, detail: String| -> Identity {
+        (f.rule_id(), finding_subject(f).into_owned(), detail)
     };
-    let taken: HashSet<Identity> = violations
+    let taken: HashSet<Identity> = findings
         .iter()
-        .filter_map(|v| Some(identity(v, v.finding_detail.clone()?)))
+        .filter_map(|f| Some(identity(f, f.finding_detail()?.to_string())))
         .collect();
     let mut seen: HashSet<Identity> = HashSet::new();
-    for v in violations.iter_mut() {
-        let Some(detail) = v.finding_detail.clone() else {
+    for f in findings.iter_mut() {
+        let Some(detail) = f.finding_detail().map(str::to_string) else {
             continue;
         };
-        if seen.insert(identity(v, detail.clone())) {
+        if seen.insert(identity(f, detail.clone())) {
             continue;
         }
         let numbered = (2..)
             .map(|n| format!("{detail}#{n}"))
             .find(|candidate| {
-                let candidate = identity(v, candidate.clone());
+                let candidate = identity(f, candidate.clone());
                 !taken.contains(&candidate) && !seen.contains(&candidate)
             })
             .expect("an unbounded range yields a free number");
-        seen.insert(identity(v, numbered.clone()));
-        v.finding_detail = Some(numbered);
+        seen.insert(identity(f, numbered.clone()));
+        f.set_finding_detail(numbered);
     }
 }
 
@@ -438,6 +482,37 @@ mod tests {
             .map(|v| finding_key(ComplianceLevel::NtiaMinimum, v))
             .collect();
         assert_eq!(keys.len(), repeated.len(), "{keys:?}");
+    }
+
+    /// A passed check is keyed exactly like a violation, and its repeats
+    /// are numbered the same way.
+    #[test]
+    fn passed_checks_share_the_key_scheme_and_the_numbering() {
+        use crate::quality::PassedCheck;
+        let pass = |detail: Option<&str>| PassedCheck {
+            rule_id: "SBOM-PQC-009",
+            message: "'ML-KEM-1024' uses NIST-approved PQC algorithm".to_string(),
+            element: Some("ML-KEM-1024".to_string()),
+            component_id: Some("crypto/algorithm/ml-kem-1024".to_string()),
+            finding_detail: detail.map(str::to_string),
+            requirement: "FIPS 203/204/205: approved".to_string(),
+            standard_refs: Vec::new(),
+        };
+        assert_eq!(
+            finding_key(ComplianceLevel::NistPqc, &pass(None)),
+            "pqc|SBOM-PQC-009|crypto/algorithm/ml-kem-1024"
+        );
+        assert_eq!(
+            finding_key(ComplianceLevel::NistPqc, &pass(Some("a:b"))),
+            "pqc|SBOM-PQC-009:a%3Ab|crypto/algorithm/ml-kem-1024"
+        );
+        let mut repeated = vec![pass(Some("a")), pass(Some("a")), pass(None)];
+        number_repeated_details(&mut repeated);
+        let details: Vec<Option<&str>> = repeated
+            .iter()
+            .map(|p| p.finding_detail.as_deref())
+            .collect();
+        assert_eq!(details, [Some("a"), Some("a#2"), None]);
     }
 
     /// Known answers pin the digest, the truncation and the prefix, so the

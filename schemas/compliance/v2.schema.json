@@ -27,7 +27,7 @@
     },
     "result": {
       "type": "object",
-      "required": ["standard", "name", "applicable", "compliant", "score", "counts", "violations"],
+      "required": ["standard", "name", "applicable", "compliant", "score", "counts", "violations", "passed"],
       "properties": {
         "standard": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "description": "Canonical --standard value: ntia, fda, cra, cra-phase1, ssdf, eo14028, cnsa2, pqc, bsi, oss-steward, eucc, ai-act, bsi-ai, cisa-2026, pci-dss, fsct."},
         "name": {"type": "string", "minLength": 1, "description": "Display name of the standard."},
@@ -37,19 +37,36 @@
         "score": {"type": ["integer", "null"], "minimum": 0, "maximum": 100, "description": "Compliance score; null exactly when `applicable` is false."},
         "counts": {"$ref": "#/$defs/counts"},
         "violations": {"type": "array", "items": {"$ref": "#/$defs/violation"}},
-        "passed": {"type": "array", "description": "Checks the SBOM passed (populated by a later release)."},
+        "passed": {"type": "array", "description": "Checks the SBOM passed, such as an algorithm NIST approves for post-quantum use. Not violations: no severity count includes them. Empty when the standard passed no check or did not apply.", "items": {"$ref": "#/$defs/passed_check"}},
         "conformity_summary": {"$ref": "#/$defs/conformity_summary"}
       }
     },
     "counts": {
       "type": "object",
-      "description": "Violations per severity, plus passed checks once `passed` is populated.",
-      "required": ["error", "warning", "info"],
+      "description": "Violations per severity, and passed checks.",
+      "required": ["error", "warning", "info", "passed"],
       "properties": {
         "error": {"$ref": "#/$defs/count"},
         "warning": {"$ref": "#/$defs/count"},
         "info": {"$ref": "#/$defs/count"},
-        "passed": {"$ref": "#/$defs/count"}
+        "passed": {"$ref": "#/$defs/count", "description": "Entries of `passed`."}
+      }
+    },
+    "passed_check": {
+      "type": "object",
+      "description": "A check the SBOM passed. Its finding identity shares the violations' key space: a rule reports either violations or passed checks, never both.",
+      "required": ["finding_id", "finding_key", "message", "element", "requirement", "rule_id", "sarif_rule_id"],
+      "properties": {
+        "finding_id": {"type": "string", "pattern": "^sbomtools:v1:[0-9a-f]{16}$", "description": "As a violation's: `sbomtools:v1:` followed by the first 16 hex digits of SHA-256(finding_key)."},
+        "finding_key": {"type": "string", "pattern": "^[^|]+\\|[^|]+\\|", "description": "As a violation's: `<standard>|<rule_id>|<subject>`, or `<standard>|<rule_id>:<finding_detail>|<subject>`."},
+        "message": {"type": "string"},
+        "element": {"type": ["string", "null"], "description": "Human-readable label of the element the check is about; not unique."},
+        "component_id": {"type": "string", "description": "Canonical id of the component the check is about; absent for document-level checks."},
+        "finding_detail": {"type": "string", "description": "What tells this pass apart from the rule's other passes on the same subject; absent when the rule passes a subject at most once."},
+        "requirement": {"type": "string"},
+        "rule_id": {"type": "string", "minLength": 1, "description": "Stable internal rule key of a pass-only rule."},
+        "sarif_rule_id": {"type": "string", "minLength": 1, "description": "Rule id `--sarif-include-passes` reports this pass under."},
+        "standard_refs": {"type": "array", "items": {"$ref": "#/$defs/standard_ref"}}
       }
     },
     "violation": {

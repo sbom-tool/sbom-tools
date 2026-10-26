@@ -378,6 +378,13 @@ fn render_compliance_header(frame: &mut Frame, area: Rect, ctx: &RenderContext) 
     let new_count = compute_new_violations(old_result, new_result).len();
     let resolved_count = compute_resolved_violations(old_result, new_result).len();
 
+    // Passed checks are no violations: a count when there are any, never a
+    // line among the violations.
+    let passed = if new_result.passed.is_empty() {
+        String::new()
+    } else {
+        format!(" Passed: {} ", new_result.passed.len())
+    };
     let content = Line::from(vec![
         Span::styled(
             format!("Errors: {} ", new_result.error_count),
@@ -391,6 +398,7 @@ fn render_compliance_header(frame: &mut Frame, area: Rect, ctx: &RenderContext) 
             format!(" Info: {} ", new_result.info_count),
             Style::default().fg(colors().info),
         ),
+        Span::styled(passed, Style::default().fg(colors().success)),
         Span::styled(" \u{2502} ", Style::default().fg(colors().muted)),
         Span::styled(
             format!(" New: {new_count}"),
@@ -1520,6 +1528,7 @@ mod tests {
             is_compliant: violations.is_empty(),
             level: ComplianceLevel::NtiaMinimum,
             violations,
+            passed: Vec::new(),
             error_count,
             warning_count,
             info_count,

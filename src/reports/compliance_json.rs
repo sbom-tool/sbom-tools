@@ -5,17 +5,18 @@
 //! `schemas/compliance/v2.schema.json`; docs/compliance-output.md describes
 //! every field.
 //!
-//! Each violation is the [`Violation`]'s own serialization plus its finding
-//! identity ([`finding_id`], [`finding_key`]), and each result carries every
-//! field of the [`ComplianceResult`]'s serialization the envelope does not
-//! render itself, with each `<kind>_count` collected under `counts.<kind>`. A
-//! field either type gains therefore reaches this envelope without a change
-//! here; the schema tests fail until the schema declares it.
+//! Each violation, and each passed check, is its own serialization
+//! ([`Violation`], [`PassedCheck`]) plus its finding identity ([`finding_id`],
+//! [`finding_key`]), and each result carries every field of the
+//! [`ComplianceResult`]'s serialization the envelope does not render itself,
+//! with each `<kind>_count` collected under `counts.<kind>`. A field any of
+//! these types gains therefore reaches this envelope without a change here;
+//! the schema tests fail until the schema declares it.
 
 use super::ReportError;
 use crate::quality::{
-    Applicability, ComplianceResult, ConformityAssessmentSummary, Violation, finding_id,
-    finding_key, standard_key,
+    Applicability, ComplianceResult, ConformityAssessmentSummary, FindingIdentity, PassedCheck,
+    Violation, finding_id, finding_key, standard_key,
 };
 use serde::Serialize;
 use serde_json::{Map, Value};
@@ -25,8 +26,8 @@ pub const COMPLIANCE_JSON_SCHEMA: &str = "sbom-tools/compliance/v2";
 
 /// Fields of a [`ComplianceResult`]'s serialization that the envelope
 /// renders itself (as `standard`/`name`, `compliant`, `applicable`/
-/// `not_applicable_reason`, `counts`, `violations` and `conformity_summary`)
-/// instead of passing them through.
+/// `not_applicable_reason`, `counts`, `violations`, `passed` and
+/// `conformity_summary`) instead of passing them through.
 const RENDERED_FIELDS: &[&str] = &[
     "level",
     "is_compliant",
@@ -35,6 +36,7 @@ const RENDERED_FIELDS: &[&str] = &[
     "warning_count",
     "info_count",
     "violations",
+    "passed",
     "conformity_summary",
 ];
 
@@ -62,7 +64,8 @@ struct EnvelopeResult<'a> {
     compliant: bool,
     score: Option<u8>,
     counts: Counts,
-    violations: Vec<EnvelopeViolation<'a>>,
+    violations: Vec<Identified<'a, Violation>>,
+    passed: Vec<Identified<'a, PassedCheck>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     conformity_summary: Option<&'a ConformityAssessmentSummary>,
     /// Every other field of the result's serialization, as a JSON value
@@ -76,17 +79,32 @@ struct Counts {
     error: usize,
     warning: usize,
     info: usize,
+    /// Passed checks, which no severity count includes.
+    passed: usize,
     /// Any other `<kind>_count` field of the result, keyed by `<kind>`.
     #[serde(flatten)]
     other: Map<String, Value>,
 }
 
+/// A violation or a passed check: its own serialization behind its finding
+/// identity.
 #[derive(Serialize)]
-struct EnvelopeViolation<'a> {
+struct Identified<'a, F: Serialize> {
     finding_id: String,
     finding_key: String,
     #[serde(flatten)]
-    violation: &'a Violation,
+    finding: &'a F,
+}
+
+impl<'a, F: Serialize + FindingIdentity> Identified<'a, F> {
+    fn new(result: &ComplianceResult, finding: &'a F) -> Self {
+        let finding_key = finding_key(result.level, finding);
+        Self {
+            finding_id: finding_id(&finding_key),
+            finding_key,
+            finding,
+        }
+    }
 }
 
 /// Render `results` as one `sbom-tools/compliance/v2` envelope.
@@ -148,19 +166,18 @@ fn envelope_result(result: &ComplianceResult) -> Result<EnvelopeResult<'_>, Repo
             error: result.error_count,
             warning: result.warning_count,
             info: result.info_count,
+            passed: result.passed.len(),
             other: other_counts,
         },
         violations: result
             .violations
             .iter()
-            .map(|violation| {
-                let finding_key = finding_key(result.level, violation);
-                EnvelopeViolation {
-                    finding_id: finding_id(&finding_key),
-                    finding_key,
-                    violation,
-                }
-            })
+            .map(|violation| Identified::new(result, violation))
+            .collect(),
+        passed: result
+            .passed
+            .iter()
+            .map(|pass| Identified::new(result, pass))
             .collect(),
         conformity_summary: result.conformity_summary.as_ref(),
         rest,
@@ -220,6 +237,8 @@ mod tests {
         assert_eq!(entry["counts"]["error"], result.error_count);
         assert_eq!(entry["counts"]["warning"], result.warning_count);
         assert_eq!(entry["counts"]["info"], result.info_count);
+        assert_eq!(entry["counts"]["passed"], 0);
+        assert_eq!(entry["passed"], serde_json::json!([]), "always present");
         for field in ["level", "is_compliant", "applicability", "error_count"] {
             assert!(entry.get(field).is_none(), "{field} leaked: {entry}");
         }
@@ -234,22 +253,69 @@ mod tests {
         else {
             panic!("a result serializes to an object");
         };
-        fields.insert("passed_count".to_string(), serde_json::json!(3));
-        fields.insert("passed".to_string(), serde_json::json!([{"rule_id": "X"}]));
+        fields.insert("skipped_count".to_string(), serde_json::json!(3));
+        fields.insert("skipped".to_string(), serde_json::json!([{"rule_id": "X"}]));
         let (counts, rest) = passed_through(fields);
         assert_eq!(
             counts,
-            serde_json::json!({"passed": 3})
+            serde_json::json!({"skipped": 3})
                 .as_object()
                 .cloned()
                 .expect("object")
         );
         assert_eq!(
             rest,
-            serde_json::json!({"passed": [{"rule_id": "X"}]})
+            serde_json::json!({"skipped": [{"rule_id": "X"}]})
                 .as_object()
                 .cloned()
                 .expect("object")
+        );
+    }
+
+    /// A NIST PQC result with one passed check on a component.
+    fn with_one_pass() -> ComplianceResult {
+        ComplianceResult::new(ComplianceLevel::NistPqc, Vec::new()).with_passed(vec![PassedCheck {
+            rule_id: "SBOM-PQC-009",
+            message: "'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205)"
+                .to_string(),
+            element: Some("ML-KEM-1024".to_string()),
+            component_id: Some("crypto/algorithm/ml-kem-1024".to_string()),
+            finding_detail: None,
+            requirement: "FIPS 203/204/205: approved".to_string(),
+            standard_refs: Vec::new(),
+        }])
+    }
+
+    #[test]
+    fn passed_checks_carry_their_own_fields_plus_finding_identity() {
+        let result = with_one_pass();
+        let value = envelope(std::slice::from_ref(&result));
+        let entry = &value["results"][0];
+        assert_eq!(entry["counts"]["passed"], 1);
+        assert_eq!(entry["counts"]["info"], 0, "a pass is no Info violation");
+        assert_eq!(entry["violations"], serde_json::json!([]));
+        let passed = entry["passed"].as_array().expect("passed array");
+        assert_eq!(passed.len(), 1);
+        let pass = &result.passed[0];
+        let key = finding_key(result.level, pass);
+        assert_eq!(key, "pqc|SBOM-PQC-009|crypto/algorithm/ml-kem-1024");
+        assert_eq!(passed[0]["finding_key"], key.as_str());
+        assert_eq!(passed[0]["finding_id"], finding_id(&key).as_str());
+        let Value::Object(own) = serde_json::to_value(pass).expect("serializes") else {
+            panic!("a passed check serializes to an object");
+        };
+        for (field, own_value) in &own {
+            assert_eq!(&passed[0][field], own_value, "{field}");
+        }
+        assert_eq!(
+            passed[0].as_object().map(Map::len),
+            Some(own.len() + 2),
+            "exactly the pass's fields plus the identity: {}",
+            passed[0]
+        );
+        assert!(
+            entry.get("passed_count").is_none(),
+            "no pass-through copy: {entry}"
         );
     }
 

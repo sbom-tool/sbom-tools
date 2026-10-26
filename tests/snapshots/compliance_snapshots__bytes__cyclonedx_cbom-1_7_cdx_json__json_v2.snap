@@ -17,7 +17,8 @@ source: tests/compliance_snapshots.rs
       "counts": {
         "error": 11,
         "warning": 0,
-        "info": 0
+        "info": 0,
+        "passed": 0
       },
       "violations": [
         {
@@ -253,7 +254,8 @@ source: tests/compliance_snapshots.rs
           "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
           "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
         }
-      ]
+      ],
+      "passed": []
     },
     {
       "standard": "pqc",
@@ -264,139 +266,10 @@ source: tests/compliance_snapshots.rs
       "counts": {
         "error": 3,
         "warning": 0,
-        "info": 7
+        "info": 0,
+        "passed": 7
       },
       "violations": [
-        {
-          "finding_id": "sbomtools:v1:1b668fce7dabff77",
-          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/ml-kem-1024",
-          "severity": "Info",
-          "category": "CryptographyInfo",
-          "message": "'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
-          "element": "ML-KEM-1024",
-          "component_id": "crypto/algorithm/ml-kem-1024",
-          "requirement": "FIPS 203/204/205: approved",
-          "rule_id": "SBOM-PQC-009",
-          "sarif_rule_id": "SBOM-PQC-009",
-          "standard_refs": [
-            {
-              "standard": "NistPqc",
-              "id": "FIPS 203/204/205",
-              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            },
-            {
-              "standard": "NistPqc",
-              "id": "SP 800-208",
-              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            }
-          ],
-          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
-          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-        },
-        {
-          "finding_id": "sbomtools:v1:1ab07b91d0dfc149",
-          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/ml-kem-768",
-          "severity": "Info",
-          "category": "CryptographyInfo",
-          "message": "'ML-KEM-768' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
-          "element": "ML-KEM-768",
-          "component_id": "crypto/algorithm/ml-kem-768",
-          "requirement": "FIPS 203/204/205: approved",
-          "rule_id": "SBOM-PQC-009",
-          "sarif_rule_id": "SBOM-PQC-009",
-          "standard_refs": [
-            {
-              "standard": "NistPqc",
-              "id": "FIPS 203/204/205",
-              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            },
-            {
-              "standard": "NistPqc",
-              "id": "SP 800-208",
-              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            }
-          ],
-          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
-          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-        },
-        {
-          "finding_id": "sbomtools:v1:1e7ace63cafd4753",
-          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/ml-dsa-87",
-          "severity": "Info",
-          "category": "CryptographyInfo",
-          "message": "'ML-DSA-87' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
-          "element": "ML-DSA-87",
-          "component_id": "crypto/algorithm/ml-dsa-87",
-          "requirement": "FIPS 203/204/205: approved",
-          "rule_id": "SBOM-PQC-009",
-          "sarif_rule_id": "SBOM-PQC-009",
-          "standard_refs": [
-            {
-              "standard": "NistPqc",
-              "id": "FIPS 203/204/205",
-              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            },
-            {
-              "standard": "NistPqc",
-              "id": "SP 800-208",
-              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            }
-          ],
-          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
-          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-        },
-        {
-          "finding_id": "sbomtools:v1:82ab8e3138bc09d9",
-          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/ml-dsa-65",
-          "severity": "Info",
-          "category": "CryptographyInfo",
-          "message": "'ML-DSA-65' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
-          "element": "ML-DSA-65",
-          "component_id": "crypto/algorithm/ml-dsa-65",
-          "requirement": "FIPS 203/204/205: approved",
-          "rule_id": "SBOM-PQC-009",
-          "sarif_rule_id": "SBOM-PQC-009",
-          "standard_refs": [
-            {
-              "standard": "NistPqc",
-              "id": "FIPS 203/204/205",
-              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            },
-            {
-              "standard": "NistPqc",
-              "id": "SP 800-208",
-              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            }
-          ],
-          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
-          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-        },
-        {
-          "finding_id": "sbomtools:v1:ce3f644b51d4d60e",
-          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/slh-dsa-shake-256s",
-          "severity": "Info",
-          "category": "CryptographyInfo",
-          "message": "'SLH-DSA-SHAKE-256s' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
-          "element": "SLH-DSA-SHAKE-256s",
-          "component_id": "crypto/algorithm/slh-dsa-shake-256s",
-          "requirement": "FIPS 203/204/205: approved",
-          "rule_id": "SBOM-PQC-009",
-          "sarif_rule_id": "SBOM-PQC-009",
-          "standard_refs": [
-            {
-              "standard": "NistPqc",
-              "id": "FIPS 203/204/205",
-              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            },
-            {
-              "standard": "NistPqc",
-              "id": "SP 800-208",
-              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            }
-          ],
-          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
-          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-        },
         {
           "finding_id": "sbomtools:v1:9f9263b04c514a5f",
           "finding_key": "pqc|SBOM-PQC-001|crypto/algorithm/x25519",
@@ -417,32 +290,6 @@ source: tests/compliance_snapshots.rs
             {
               "standard": "NistPqc",
               "id": "SP 800-131A Rev. 2",
-              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            }
-          ],
-          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
-          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-        },
-        {
-          "finding_id": "sbomtools:v1:8119d896d50ea594",
-          "finding_key": "pqc|SBOM-PQC-010|crypto/algorithm/hybrid-kem",
-          "severity": "Info",
-          "category": "CryptographyInfo",
-          "message": "'X25519-ML-KEM-768' is a PQ/T hybrid (X25519 + ML-KEM-768) whose post-quantum part is NIST-approved (FIPS 203); SP 800-227 §4.6.2 approves the key combination",
-          "element": "X25519-ML-KEM-768",
-          "component_id": "crypto/algorithm/hybrid-kem",
-          "requirement": "SP 800-227 / IR 8547: PQ/T hybrid",
-          "rule_id": "SBOM-PQC-010",
-          "sarif_rule_id": "SBOM-PQC-010",
-          "standard_refs": [
-            {
-              "standard": "NistPqc",
-              "id": "SP 800-227",
-              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            },
-            {
-              "standard": "NistPqc",
-              "id": "IR 8547 ipd",
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             }
           ],
@@ -476,32 +323,6 @@ source: tests/compliance_snapshots.rs
           "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
         },
         {
-          "finding_id": "sbomtools:v1:77d714919f4f5c86",
-          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/xmss",
-          "severity": "Info",
-          "category": "CryptographyInfo",
-          "message": "'XMSS' uses NIST-approved PQC algorithm (SP 800-208 stateful hash-based signature)",
-          "element": "XMSS",
-          "component_id": "crypto/algorithm/xmss",
-          "requirement": "FIPS 203/204/205: approved",
-          "rule_id": "SBOM-PQC-009",
-          "sarif_rule_id": "SBOM-PQC-009",
-          "standard_refs": [
-            {
-              "standard": "NistPqc",
-              "id": "FIPS 203/204/205",
-              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            },
-            {
-              "standard": "NistPqc",
-              "id": "SP 800-208",
-              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            }
-          ],
-          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
-          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-        },
-        {
           "finding_id": "sbomtools:v1:19df590ce505e4d7",
           "finding_key": "pqc|SBOM-PQC-PROTO-002:TLS_AES_256_GCM_SHA384|crypto/protocol/tls13-pqc",
           "severity": "Error",
@@ -522,6 +343,162 @@ source: tests/compliance_snapshots.rs
           ],
           "remediation": "Disable SSL and TLS versions below 1.2 (SP 800-52 Rev. 2) and remove broken (SP 800-131A) or quantum-vulnerable (IR 8547) algorithms from negotiated cipher suites and IKEv2 transforms.",
           "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+        }
+      ],
+      "passed": [
+        {
+          "finding_id": "sbomtools:v1:1b668fce7dabff77",
+          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/ml-kem-1024",
+          "message": "'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+          "element": "ML-KEM-1024",
+          "component_id": "crypto/algorithm/ml-kem-1024",
+          "requirement": "FIPS 203/204/205: approved",
+          "rule_id": "SBOM-PQC-009",
+          "sarif_rule_id": "SBOM-PQC-009",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "FIPS 203/204/205",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            },
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-208",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:1ab07b91d0dfc149",
+          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/ml-kem-768",
+          "message": "'ML-KEM-768' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+          "element": "ML-KEM-768",
+          "component_id": "crypto/algorithm/ml-kem-768",
+          "requirement": "FIPS 203/204/205: approved",
+          "rule_id": "SBOM-PQC-009",
+          "sarif_rule_id": "SBOM-PQC-009",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "FIPS 203/204/205",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            },
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-208",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:1e7ace63cafd4753",
+          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/ml-dsa-87",
+          "message": "'ML-DSA-87' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+          "element": "ML-DSA-87",
+          "component_id": "crypto/algorithm/ml-dsa-87",
+          "requirement": "FIPS 203/204/205: approved",
+          "rule_id": "SBOM-PQC-009",
+          "sarif_rule_id": "SBOM-PQC-009",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "FIPS 203/204/205",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            },
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-208",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:82ab8e3138bc09d9",
+          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/ml-dsa-65",
+          "message": "'ML-DSA-65' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+          "element": "ML-DSA-65",
+          "component_id": "crypto/algorithm/ml-dsa-65",
+          "requirement": "FIPS 203/204/205: approved",
+          "rule_id": "SBOM-PQC-009",
+          "sarif_rule_id": "SBOM-PQC-009",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "FIPS 203/204/205",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            },
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-208",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:ce3f644b51d4d60e",
+          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/slh-dsa-shake-256s",
+          "message": "'SLH-DSA-SHAKE-256s' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+          "element": "SLH-DSA-SHAKE-256s",
+          "component_id": "crypto/algorithm/slh-dsa-shake-256s",
+          "requirement": "FIPS 203/204/205: approved",
+          "rule_id": "SBOM-PQC-009",
+          "sarif_rule_id": "SBOM-PQC-009",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "FIPS 203/204/205",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            },
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-208",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:8119d896d50ea594",
+          "finding_key": "pqc|SBOM-PQC-010|crypto/algorithm/hybrid-kem",
+          "message": "'X25519-ML-KEM-768' is a PQ/T hybrid (X25519 + ML-KEM-768) whose post-quantum part is NIST-approved (FIPS 203); SP 800-227 §4.6.2 approves the key combination",
+          "element": "X25519-ML-KEM-768",
+          "component_id": "crypto/algorithm/hybrid-kem",
+          "requirement": "SP 800-227 / IR 8547: PQ/T hybrid",
+          "rule_id": "SBOM-PQC-010",
+          "sarif_rule_id": "SBOM-PQC-010",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-227",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            },
+            {
+              "standard": "NistPqc",
+              "id": "IR 8547 ipd",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:77d714919f4f5c86",
+          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/xmss",
+          "message": "'XMSS' uses NIST-approved PQC algorithm (SP 800-208 stateful hash-based signature)",
+          "element": "XMSS",
+          "component_id": "crypto/algorithm/xmss",
+          "requirement": "FIPS 203/204/205: approved",
+          "rule_id": "SBOM-PQC-009",
+          "sarif_rule_id": "SBOM-PQC-009",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "FIPS 203/204/205",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            },
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-208",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
         }
       ]
     }

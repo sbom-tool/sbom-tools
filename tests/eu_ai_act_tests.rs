@@ -14,7 +14,7 @@ use std::path::Path;
 use clock::checker;
 use sbom_tools::model::CraSidecarMetadata;
 use sbom_tools::parsers::parse_sbom;
-use sbom_tools::quality::{ComplianceLevel, ViolationSeverity};
+use sbom_tools::quality::{Applicability, ComplianceLevel, ViolationSeverity};
 use sbom_tools::reports::generate_compliance_sarif;
 
 fn fixture(rel: &str) -> std::path::PathBuf {
@@ -41,10 +41,7 @@ fn fully_documented_aibom_passes_annex_iv_readiness() {
     );
     // It is an AI SBOM, so it must NOT report the not-applicable finding.
     assert!(
-        !result
-            .violations
-            .iter()
-            .any(|v| v.rule_id == "SBOM-AIACT-NA"),
+        result.is_applicable(),
         "AI SBOM must not be marked not-applicable"
     );
 }
@@ -55,13 +52,14 @@ fn non_ai_sbom_is_not_applicable_and_does_not_fail() {
     let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
 
     assert!(result.is_compliant, "non-AI SBOM must not fail AI-Act");
-    assert_eq!(result.error_count, 0);
     assert!(
-        result
-            .violations
-            .iter()
-            .any(|v| v.rule_id == "SBOM-AIACT-NA" && v.severity == ViolationSeverity::Info),
-        "non-AI SBOM should report a single informational N/A finding"
+        matches!(result.applicability, Applicability::NotApplicable(_)),
+        "a non-AI SBOM is not applicable"
+    );
+    assert!(
+        result.violations.is_empty(),
+        "N/A is the result's applicability, not a finding: {:?}",
+        result.violations
     );
 }
 
@@ -75,15 +73,12 @@ fn web_app_with_config_data_component_is_not_applicable() {
     let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
 
     assert!(result.is_compliant, "web-app SBOM must not fail AI-Act");
-    assert_eq!(result.error_count, 0);
-    assert_eq!(
-        result.violations.len(),
-        1,
-        "exactly one informational N/A finding expected; got {:?}",
+    assert!(!result.is_applicable(), "a config bundle is no AI content");
+    assert!(
+        result.violations.is_empty(),
+        "no finding expected; got {:?}",
         result.violations
     );
-    assert_eq!(result.violations[0].rule_id, "SBOM-AIACT-NA");
-    assert_eq!(result.violations[0].severity, ViolationSeverity::Info);
 }
 
 #[test]
@@ -95,10 +90,7 @@ fn application_typed_component_with_model_card_is_applicable() {
     let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
 
     assert!(
-        !result
-            .violations
-            .iter()
-            .any(|v| v.rule_id == "SBOM-AIACT-NA"),
+        result.is_applicable(),
         "SBOM with modelCard metadata must not be N/A; got {:?}",
         result.violations
     );
@@ -141,10 +133,7 @@ fn untyped_huggingface_model_is_applicable_with_mistyped_ml_warning() {
     let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
 
     assert!(
-        !result
-            .violations
-            .iter()
-            .any(|v| v.rule_id == "SBOM-AIACT-NA"),
+        result.is_applicable(),
         "huggingface PURL must keep the profile applicable; got {:?}",
         result.violations
     );
@@ -168,10 +157,7 @@ fn dataset_only_sbom_is_applicable_without_model_energy_info() {
     let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
 
     assert!(
-        !result
-            .violations
-            .iter()
-            .any(|v| v.rule_id == "SBOM-AIACT-NA"),
+        result.is_applicable(),
         "dataset evidence keeps the profile applicable; got {:?}",
         result.violations
     );
@@ -225,10 +211,7 @@ fn huggingface_dataset_with_evidence_is_not_flagged_as_untyped_ml() {
         result.violations
     );
     assert!(
-        !result
-            .violations
-            .iter()
-            .any(|v| v.rule_id == "SBOM-AIACT-NA"),
+        result.is_applicable(),
         "the HF dataset must keep the profile applicable; got {:?}",
         result.violations
     );

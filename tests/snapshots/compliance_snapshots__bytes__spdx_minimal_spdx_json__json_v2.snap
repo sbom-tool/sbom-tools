@@ -17,7 +17,8 @@ source: tests/compliance_snapshots.rs
       "counts": {
         "error": 2,
         "warning": 0,
-        "info": 0
+        "info": 0,
+        "passed": 0
       },
       "violations": [
         {
@@ -62,7 +63,8 @@ source: tests/compliance_snapshots.rs
           "remediation": "Name the supplier of every component, the entity that creates, defines and identifies it (an NTIA minimum data field); placeholders such as NOASSERTION do not count. SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.",
           "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
         }
-      ]
+      ],
+      "passed": []
     },
     {
       "standard": "fsct",
@@ -73,7 +75,8 @@ source: tests/compliance_snapshots.rs
       "counts": {
         "error": 3,
         "warning": 2,
-        "info": 1
+        "info": 1,
+        "passed": 0
       },
       "violations": [
         {
@@ -223,7 +226,8 @@ source: tests/compliance_snapshots.rs
           "remediation": "Make efforts to uniquely and unambiguously identify dependencies that are dynamic and/or remote. The check runs on SPDX input only (CycloneDX's parsed model cannot express the signal); absence surfaces as an informational readiness note, never a failure. SPDX 2.x: add relationships[] entries of type DYNAMIC_LINK, RUNTIME_DEPENDENCY_OF or PROVIDED_DEPENDENCY_OF.",
           "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
         }
-      ]
+      ],
+      "passed": []
     }
   ]
 }

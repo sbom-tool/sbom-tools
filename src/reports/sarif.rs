@@ -51,6 +51,7 @@ impl ReportGenerator for SarifReporter {
             for comp in &result.components.added {
                 if self.include_info {
                     results.push(SarifResult {
+                        kind: None,
                         rule_id: "SBOM-TOOLS-001".to_string(),
                         level: SarifLevel::Note,
                         message: SarifMessage {
@@ -68,6 +69,7 @@ impl ReportGenerator for SarifReporter {
 
             for comp in &result.components.removed {
                 results.push(SarifResult {
+                    kind: None,
                     rule_id: "SBOM-TOOLS-002".to_string(),
                     level: SarifLevel::Warning,
                     message: SarifMessage {
@@ -91,6 +93,7 @@ impl ReportGenerator for SarifReporter {
                 }
                 if self.include_info {
                     results.push(SarifResult {
+                        kind: None,
                         rule_id: "SBOM-TOOLS-003".to_string(),
                         level: SarifLevel::Note,
                         message: SarifMessage {
@@ -119,6 +122,7 @@ impl ReportGenerator for SarifReporter {
                 let sla_label = format_sla_label(vuln);
                 let vex_label = format_vex_label(vuln.vex_state.as_ref());
                 results.push(SarifResult {
+                    kind: None,
                     rule_id: "SBOM-TOOLS-005".to_string(),
                     level: severity_to_level(&vuln.severity),
                     message: SarifMessage {
@@ -148,6 +152,7 @@ impl ReportGenerator for SarifReporter {
                     let sla_label = format_sla_label(vuln);
                     let vex_label = format_vex_label(vuln.vex_state.as_ref());
                     results.push(SarifResult {
+                        kind: None,
                         rule_id: "SBOM-TOOLS-006".to_string(),
                         level: SarifLevel::Note,
                         message: SarifMessage {
@@ -172,6 +177,7 @@ impl ReportGenerator for SarifReporter {
         if config.includes(ReportType::Licenses) {
             for license in &result.licenses.new_licenses {
                 results.push(SarifResult {
+                    kind: None,
                     rule_id: "SBOM-TOOLS-004".to_string(),
                     level: SarifLevel::Warning,
                     message: SarifMessage {
@@ -192,6 +198,7 @@ impl ReportGenerator for SarifReporter {
             let old = change.old_value.as_deref().unwrap_or("(none)");
             let new = change.new_value.as_deref().unwrap_or("(none)");
             results.push(SarifResult {
+                kind: None,
                 rule_id: "SBOM-TOOLS-008".to_string(),
                 level: SarifLevel::Note,
                 message: SarifMessage {
@@ -214,6 +221,7 @@ impl ReportGenerator for SarifReporter {
                             .eol_date
                             .map_or_else(String::new, |d| format!(" (EOL: {d})"));
                         results.push(SarifResult {
+                            kind: None,
                             rule_id: "SBOM-EOL-001".to_string(),
                             level: SarifLevel::Error,
                             message: SarifMessage {
@@ -234,6 +242,7 @@ impl ReportGenerator for SarifReporter {
                             .days_until_eol
                             .map_or_else(String::new, |d| format!(" ({d} days remaining)"));
                         results.push(SarifResult {
+                            kind: None,
                             rule_id: "SBOM-EOL-002".to_string(),
                             level: SarifLevel::Warning,
                             message: SarifMessage {
@@ -305,6 +314,7 @@ impl ReportGenerator for SarifReporter {
                 .or_else(|| comp.vex_status.as_ref().map(|v| &v.status));
             let vex_label = format_vex_label(vex_state);
             results.push(SarifResult {
+                kind: None,
                 rule_id: "SBOM-VIEW-001".to_string(),
                 level: severity_to_level(&severity_str),
                 message: SarifMessage {
@@ -509,6 +519,7 @@ pub fn generate_ai_readiness_sarif(
                 .map(|d| format!(" — {d}"))
                 .unwrap_or_default();
             SarifResult {
+                kind: None,
                 rule_id: rule_id.to_string(),
                 level: aibom_level(&check.id),
                 message: SarifMessage {
@@ -609,8 +620,32 @@ fn complete_rule_catalogue(mut rules: Vec<SarifRule>, results: &[SarifResult]) -
     rules
 }
 
+/// Options for the compliance SARIF writers
+/// ([`generate_compliance_sarif_with`], [`generate_multi_compliance_sarif_with`]).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ComplianceSarifOptions {
+    /// Also emit every passed check ([`ComplianceResult::passed`]) as a
+    /// result of `kind: "pass"` at level `none` (`validate
+    /// --sarif-include-passes`). Off by default: code scanning lists every
+    /// result it receives, so a pass reported as one would read as an alert.
+    pub include_passes: bool,
+}
+
+/// SARIF for one compliance result: its violations, and none of its passed
+/// checks (see [`generate_compliance_sarif_with`]).
 pub fn generate_compliance_sarif(result: &ComplianceResult) -> Result<String, ReportError> {
-    let results = compliance_results_to_sarif(result, None);
+    generate_compliance_sarif_with(result, ComplianceSarifOptions::default())
+}
+
+/// [`generate_compliance_sarif`] with `options`.
+pub fn generate_compliance_sarif_with(
+    result: &ComplianceResult,
+    options: ComplianceSarifOptions,
+) -> Result<String, ReportError> {
+    let mut results = compliance_results_to_sarif(result, None);
+    if options.include_passes {
+        results.extend(passed_checks_to_sarif(result));
+    }
     // Surface applicability at run level: a readiness standard that never
     // evaluated the SBOM must be machine-distinguishable from a pass.
     let not_applicable_reason = match &result.applicability {
@@ -651,9 +686,19 @@ pub fn generate_compliance_sarif(result: &ComplianceResult) -> Result<String, Re
     serde_json::to_string_pretty(&sarif).map_err(|e| ReportError::SerializationError(e.to_string()))
 }
 
-/// Generate SARIF output for multiple compliance standards merged into one report.
+/// Generate SARIF output for multiple compliance standards merged into one
+/// report, without their passed checks (see
+/// [`generate_multi_compliance_sarif_with`]).
 pub fn generate_multi_compliance_sarif(
     results: &[ComplianceResult],
+) -> Result<String, ReportError> {
+    generate_multi_compliance_sarif_with(results, ComplianceSarifOptions::default())
+}
+
+/// [`generate_multi_compliance_sarif`] with `options`.
+pub fn generate_multi_compliance_sarif_with(
+    results: &[ComplianceResult],
+    options: ComplianceSarifOptions,
 ) -> Result<String, ReportError> {
     // Merge rules from all standards; `complete_rule_catalogue` dedups the
     // descriptors (two standards sharing the generic table used to emit
@@ -665,6 +710,9 @@ pub fn generate_multi_compliance_sarif(
     for result in results {
         all_rules.extend(get_sarif_rules_for_standard(result.level));
         all_results.extend(compliance_results_to_sarif(result, None));
+        if options.include_passes {
+            all_results.extend(passed_checks_to_sarif(result));
+        }
     }
     let all_rules = complete_rule_catalogue(all_rules, &all_results);
 
@@ -747,6 +795,7 @@ pub fn generate_quality_sarif(
             });
         }
         results.push(SarifResult {
+            kind: None,
             rule_id,
             level: recommendation_level(rec.priority),
             message: SarifMessage {
@@ -911,6 +960,7 @@ fn compliance_results_to_sarif(result: &ComplianceResult, label: Option<&str>) -
                 })
             };
             SarifResult {
+                kind: None,
                 rule_id: sarif_rule_id.to_string(),
                 level: violation_severity_to_level(v.severity),
                 message: SarifMessage {
@@ -920,6 +970,56 @@ fn compliance_results_to_sarif(result: &ComplianceResult, label: Option<&str>) -
                         result.level.name(),
                         v.message,
                         v.requirement,
+                        element
+                    ),
+                },
+                locations: vec![],
+                properties,
+            }
+        })
+        .collect()
+}
+
+/// One SARIF result per check `result` passed: `kind: "pass"` at level
+/// `none` (SARIF 2.1.0 §3.27.9: a result whose kind is not `fail` has level
+/// `none`), under the pass-only rule's registry SARIF id, with the
+/// properties a violation's result carries. Emitted only under
+/// [`ComplianceSarifOptions::include_passes`].
+fn passed_checks_to_sarif(result: &ComplianceResult) -> Vec<SarifResult> {
+    result
+        .passed
+        .iter()
+        .map(|pass| {
+            let element = pass.element.as_deref().unwrap_or("unknown");
+            let standard_ids: Vec<String> = pass
+                .standard_refs
+                .iter()
+                .map(|sr| format!("{}:{}", sarif_standard_label(sr.standard), sr.id))
+                .collect();
+            let standard_help_uris: Vec<String> = pass
+                .standard_refs
+                .iter()
+                .filter_map(|sr| sr.help_uri.clone())
+                .collect();
+            let properties = (!standard_ids.is_empty()
+                || !standard_help_uris.is_empty()
+                || pass.component_id.is_some())
+            .then(|| SarifResultProperties {
+                standard_ids,
+                standard_help_uris,
+                component_id: pass.component_id.clone(),
+                ..SarifResultProperties::default()
+            });
+            SarifResult {
+                kind: Some(SarifKind::Pass),
+                rule_id: pass.sarif_rule_id().to_string(),
+                level: SarifLevel::None,
+                message: SarifMessage {
+                    text: format!(
+                        "{}: {} (Requirement: {}) [Element: {}]",
+                        result.level.name(),
+                        pass.message,
+                        pass.requirement,
                         element
                     ),
                 },
@@ -1397,6 +1497,10 @@ struct SarifConfiguration {
 #[serde(rename_all = "camelCase")]
 struct SarifResult {
     rule_id: String,
+    /// The result's kind; omitted for a failed check (SARIF's default
+    /// `fail`). Only a passed check under `--sarif-include-passes` sets it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    kind: Option<SarifKind>,
     level: SarifLevel,
     message: SarifMessage,
     locations: Vec<SarifLocation>,
@@ -1471,11 +1575,20 @@ struct SarifArtifactLocation {
 #[derive(Serialize, Clone, Copy, Debug)]
 #[serde(rename_all = "lowercase")]
 enum SarifLevel {
-    #[allow(dead_code)]
+    /// The level of a result whose kind is not `fail` (SARIF 2.1.0
+    /// §3.27.9), such as a passed check.
     None,
     Note,
     Warning,
     Error,
+}
+
+/// SARIF `result.kind` values sbom-tools emits besides the default `fail`.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+enum SarifKind {
+    /// The rule was evaluated and its conditions were met.
+    Pass,
 }
 
 #[cfg(test)]
@@ -1540,5 +1653,122 @@ mod registry_consistency_tests {
             "registry default_severity and SARIF catalogue drifted:\n{}",
             mismatches.join("\n")
         );
+    }
+}
+
+#[cfg(test)]
+mod passed_check_tests {
+    use super::*;
+    use crate::quality::{PassedCheck, StandardKind};
+    use serde_json::Value;
+
+    /// A NIST PQC result with one passed check and no violation.
+    fn pqc_with_one_pass() -> ComplianceResult {
+        ComplianceResult::new(ComplianceLevel::NistPqc, Vec::new()).with_passed(vec![PassedCheck {
+            rule_id: "SBOM-PQC-009",
+            message: "'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205)"
+                .to_string(),
+            element: Some("ML-KEM-1024".to_string()),
+            component_id: Some("crypto/algorithm/ml-kem-1024".to_string()),
+            finding_detail: None,
+            requirement: "FIPS 203/204/205: approved".to_string(),
+            standard_refs: vec![StandardRef::new(StandardKind::NistPqc, "FIPS 203/204/205")],
+        }])
+    }
+
+    fn results(sarif: &str) -> Vec<Value> {
+        let value: Value = serde_json::from_str(sarif).expect("SARIF is JSON");
+        value["runs"][0]["results"]
+            .as_array()
+            .expect("results array")
+            .clone()
+    }
+
+    /// Without the option, no SARIF result describes a pass.
+    #[test]
+    fn passes_are_no_results_by_default() {
+        let result = pqc_with_one_pass();
+        for sarif in [
+            generate_compliance_sarif(&result).expect("serializes"),
+            generate_multi_compliance_sarif(std::slice::from_ref(&result)).expect("serializes"),
+        ] {
+            assert!(results(&sarif).is_empty(), "{sarif}");
+            assert!(!sarif.contains("\"kind\""), "{sarif}");
+        }
+    }
+
+    /// With the option, each pass is a `kind: "pass"` result at level
+    /// `none` under the pass-only rule, which the catalogue declares.
+    #[test]
+    fn include_passes_emits_kind_pass_at_level_none() {
+        let result = pqc_with_one_pass();
+        let options = ComplianceSarifOptions {
+            include_passes: true,
+        };
+        for sarif in [
+            generate_compliance_sarif_with(&result, options).expect("serializes"),
+            generate_multi_compliance_sarif_with(std::slice::from_ref(&result), options)
+                .expect("serializes"),
+        ] {
+            let results = results(&sarif);
+            assert_eq!(results.len(), 1, "{sarif}");
+            let pass = &results[0];
+            assert_eq!(pass["ruleId"], "SBOM-PQC-009");
+            assert_eq!(pass["kind"], "pass");
+            assert_eq!(pass["level"], "none");
+            assert_eq!(
+                pass["properties"]["componentId"],
+                "crypto/algorithm/ml-kem-1024"
+            );
+            assert_eq!(
+                pass["properties"]["standardIds"][0],
+                "NIST-PQC:FIPS 203/204/205"
+            );
+            assert!(
+                pass["message"]["text"]
+                    .as_str()
+                    .is_some_and(|t| t.contains("uses NIST-approved PQC algorithm")),
+                "{pass}"
+            );
+            let value: Value = serde_json::from_str(&sarif).expect("SARIF is JSON");
+            let declared = value["runs"][0]["tool"]["driver"]["rules"]
+                .as_array()
+                .expect("rules")
+                .iter()
+                .any(|rule| rule["id"] == "SBOM-PQC-009");
+            assert!(declared, "the catalogue declares the pass rule: {sarif}");
+        }
+    }
+
+    /// A violation's result keeps SARIF's default kind (`fail`): no `kind`.
+    #[test]
+    fn violations_carry_no_kind() {
+        let result = ComplianceResult::new(
+            ComplianceLevel::NtiaMinimum,
+            vec![crate::quality::Violation {
+                severity: ViolationSeverity::Error,
+                category: crate::quality::ViolationCategory::DocumentMetadata,
+                message: "SBOM must have creator/tool information".to_string(),
+                element: None,
+                requirement: "NTIA Minimum Elements: Author".to_string(),
+                rule_id: "SBOM-NTIA-AUTHOR",
+                component_id: None,
+                counts: None,
+                standard_refs: Vec::new(),
+                remediation: None,
+                finding_detail: None,
+            }],
+        );
+        let sarif = generate_compliance_sarif_with(
+            &result,
+            ComplianceSarifOptions {
+                include_passes: true,
+            },
+        )
+        .expect("serializes");
+        let results = results(&sarif);
+        assert_eq!(results.len(), 1);
+        assert!(results[0].get("kind").is_none(), "{sarif}");
+        assert_eq!(results[0]["level"], "error");
     }
 }

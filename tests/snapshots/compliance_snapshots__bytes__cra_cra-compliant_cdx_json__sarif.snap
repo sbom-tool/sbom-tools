@@ -486,17 +486,6 @@ source: tests/compliance_snapshots.rs
               "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
             },
             {
-              "id": "SBOM-AIACT-NA",
-              "name": "AiActNotApplicable",
-              "shortDescription": {
-                "text": "EU AI Act Annex IV readiness not applicable — SBOM has no ML-model or dataset components"
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
-            },
-            {
               "id": "SBOM-AIACT-ANNEX-IV-1",
               "name": "AiActGeneralDescription",
               "shortDescription": {
@@ -561,17 +550,6 @@ source: tests/compliance_snapshots.rs
                 "level": "warning"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
-            },
-            {
-              "id": "SBOM-BSIAI-NA",
-              "name": "BsiSbomForAiNotApplicable",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI minimum-elements readiness not applicable — SBOM has no ML-model or dataset components"
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             },
             {
               "id": "SBOM-BSIAI-META",
