@@ -1780,7 +1780,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CISA 2026: SBOM Author Signature — digital signature attributable to the SBOM author",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::CisaMinimum2026, "SBOM Author Signature")],
-            remediation: "Sign the SBOM with a digital signature attributable to the SBOM author, using an algorithm approved per NIST DSS, ISO/IEC 14888-4:2024, or the ENISA Agreed Cryptographic Mechanisms. In-document evidence is read from CycloneDX JSF signatures and SPDX 3 verifiedUsing signature entries; SPDX 2.x has no in-document signature field and detached signatures are invisible to this check — hence Warning, not Error.",
+            remediation: "Sign the SBOM with a digital signature attributable to the SBOM author, using an algorithm approved per NIST DSS, ISO/IEC 14888-4:2024, or the ENISA Agreed Cryptographic Mechanisms. In-document evidence is read from CycloneDX JSF signatures and SPDX 3 verifiedUsing signature entries; detached signatures are invisible to this check — hence Warning, not Error. SPDX 2.x has no in-document signature field, so the rule is not evaluated for SPDX 2.x documents.",
         },
         "SBOM-CISA2026-FORMAT" => RuleMeta {
             sarif_id: "SBOM-CISA2026-FORMAT",
@@ -1800,7 +1800,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CISA 2026: SBOM Generation Context — software lifecycle phase at SBOM generation",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::CisaMinimum2026, "SBOM Generation Context")],
-            remediation: "Declare the lifecycle phase the SBOM was generated in — 'before build', 'build', 'after build', or a more specific identifier. CycloneDX 1.5+: metadata.lifecycles. SPDX 2.x has no standard field (parsers yield no phase for it), hence Warning severity.",
+            remediation: "Declare the lifecycle phase the SBOM was generated in — 'before build', 'build', 'after build', or a more specific identifier. CycloneDX 1.5+: metadata.lifecycles. SPDX 2.x has no standard field, so the rule is not evaluated for SPDX 2.x documents; SPDX 3 sbomType is not read yet, hence Warning severity.",
         },
         "SBOM-CISA2026-TIMESTAMP" => RuleMeta {
             sarif_id: "SBOM-CISA2026-TIMESTAMP",
@@ -1918,7 +1918,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
                     "Explicitly Identifying Unknown Information",
                 ),
             ],
-            remediation: "Declare the SBOM's completeness (CycloneDX compositions aggregate): the 2026 Coverage element expects all components including transitive dependencies, and information gaps must be explicitly stated as unknown or deliberately withheld. This rule verifies the declaration, not actual completeness — the document itself points to external repositories / binary analysis for that.",
+            remediation: "Declare the SBOM's completeness (CycloneDX compositions aggregate; SPDX 3 relationship completeness): the 2026 Coverage element expects all components including transitive dependencies, and information gaps must be explicitly stated as unknown or deliberately withheld. This rule verifies the declaration, not actual completeness — the document itself points to external repositories / binary analysis for that. SPDX 2.x has no completeness declaration, so the rule is not evaluated for SPDX 2.x documents.",
         },
         // Generic bucket for CISA-2026-run findings whose check site has no
         // specific registry mapping (SARIF fallback re-bucketing).

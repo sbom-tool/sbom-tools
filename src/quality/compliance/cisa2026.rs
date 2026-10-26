@@ -21,6 +21,18 @@
 //! is invisible to a document checker (e.g., detached signatures, SPDX 2.x
 //! fields that do not exist), so absence must not hard-fail the run.
 //!
+//! Evidence gates (as in the FSCT profile): SPDX 2.x has no field for an
+//! in-document signature, the lifecycle phase, or a completeness
+//! declaration, so these rules do not run on SPDX 2.x input (see
+//! `is_spdx2`):
+//! - `SBOM-CISA2026-SIGNATURE`
+//! - `SBOM-CISA2026-GENERATION-CONTEXT`
+//! - `SBOM-CISA2026-COVERAGE`
+//!
+//! Firing them anyway meant an SPDX 2.x SBOM could never pass
+//! `--fail-on-warning`, however complete. CycloneDX and SPDX 3 input is
+//! still checked.
+//!
 //! Escape hatches: several 2026 elements require the author to *explicitly*
 //! state that information is unknown instead of omitting it (Component
 //! Version, Component Producer, Component Hash Value, Component License).
@@ -83,6 +95,30 @@ fn hash_algorithm_shortfall(algorithm: &crate::model::HashAlgorithm) -> Option<S
     }
 }
 
+/// Whether the document is SPDX 2.x, whose data model has no field for
+/// three pieces of evidence the 2026 elements ask for:
+/// - an in-document signature (SBOM Author Signature): SPDX 2.x defines no
+///   signature field, so its signatures live in detached files or
+///   envelopes, unlike CycloneDX JSF `signature` or SPDX 3 `verifiedUsing`;
+/// - the lifecycle phase (SBOM Generation Context): SPDX 2.x has no
+///   counterpart of CycloneDX `metadata.lifecycles` or SPDX 3 `sbomType`,
+///   only free-text comments;
+/// - a completeness declaration (Coverage): SPDX 2.x has no counterpart of
+///   CycloneDX `compositions` or SPDX 3 relationship `completeness`; a
+///   `NONE`/`NOASSERTION` relationship target speaks for one relationship,
+///   not for the inventory.
+///
+/// The rules looking for that evidence are gated off for SPDX 2.x, as the
+/// FSCT profile gates attributes a format cannot express. Unparseable SPDX
+/// versions count as 2.x: the SPDX 3 parser always records a 3.x version.
+fn is_spdx2(sbom: &NormalizedSbom) -> bool {
+    sbom.document.format == SbomFormat::Spdx
+        && sbom
+            .document
+            .spec_version_parsed()
+            .is_none_or(|v| v.major < 3)
+}
+
 impl ComplianceChecker {
     // ════════════════════════════════════════════════════════════════════
     // CISA 2026 Minimum Elements (successor to NTIA 2021)
@@ -107,6 +143,10 @@ impl ComplianceChecker {
             "SBOM-CISA2026-INVENTORY",
             "CISA 2026 Minimum Elements: component inventory",
         ));
+
+        // Signature, generation context and coverage evidence cannot be
+        // expressed in SPDX 2.x; those checks skip it (see module docs).
+        let spdx2 = is_spdx2(sbom);
 
         // SBOM Author (Error) — "the name of the entity that creates the
         // SBOM data": the entity operating the generation tool, not the tool
@@ -140,16 +180,16 @@ impl ComplianceChecker {
         // SBOM Author Signature (Warning — evidence-limited). In-document
         // evidence exists only as a CycloneDX JSF signature or an SPDX 3
         // verifiedUsing signature entry; SPDX 2.x cannot express a signature
-        // in-document and detached signatures are invisible to a document
-        // checker, so absence must not hard-fail the run. Presence is
-        // structural (algorithm + non-empty value) — nothing is
-        // cryptographically verified.
+        // in-document, so the check skips it, and detached signatures are
+        // invisible to a document checker, so absence must not hard-fail the
+        // run. Presence is structural (algorithm + non-empty value) — nothing
+        // is cryptographically verified.
         let has_signature = sbom
             .document
             .signature
             .as_ref()
             .is_some_and(|s| s.has_value);
-        if !has_signature {
+        if !has_signature && !spdx2 {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::DocumentMetadata,
@@ -207,10 +247,10 @@ impl ComplianceChecker {
         // lifecycle phase at generation time ("before build" / "build" /
         // "after build", or a more specific identifier — free-form names are
         // accepted per the element). Only CycloneDX 1.5+ metadata.lifecycles
-        // populates the field; SPDX 2.x has no standard field and its
-        // parsers yield None, so an Error would condemn every SPDX 2.x SBOM
-        // regardless of author diligence.
-        if known_value(sbom.document.lifecycle_phase.as_deref()).is_none() {
+        // populates the field. SPDX 2.x has no standard field, so the check
+        // skips it; SPDX 3 sbomType is not parsed yet, which keeps this a
+        // Warning rather than an Error.
+        if !spdx2 && known_value(sbom.document.lifecycle_phase.as_deref()).is_none() {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::DocumentMetadata,
@@ -604,8 +644,10 @@ impl ComplianceChecker {
         // repositories / binary analysis for that. A declared-incomplete
         // inventory still warns (the 2026 Coverage element expects all
         // components including transitive dependencies) but with a message
-        // acknowledging the declaration is honest.
+        // acknowledging the declaration is honest. SPDX 2.x cannot declare
+        // completeness at all, so the check skips it.
         match sbom.document.completeness_declaration {
+            _ if spdx2 => {}
             CompletenessDeclaration::Unknown | CompletenessDeclaration::NotSpecified => {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,

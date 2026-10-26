@@ -693,6 +693,26 @@
           }
         }
       ]
+    },
+    {
+      "id": "v14-spdx2-cisa2026-complete",
+      "review_id": "V14",
+      "fixture": "v14-spdx2-cisa2026-complete.spdx.json",
+      "note": "A complete SPDX 2.3 SBOM. Three CISA 2026 warnings asked for a signature, a lifecycle phase and a completeness declaration, none of which SPDX 2.x can carry, so --fail-on-warning could never pass.",
+      "checks": [
+        {
+          "standard": "cisa-2026",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-CISA2026-SIGNATURE",
+              "SBOM-CISA2026-GENERATION-CONTEXT",
+              "SBOM-CISA2026-COVERAGE"
+            ]
+          }
+        }
+      ]
     }
   ]
 }
