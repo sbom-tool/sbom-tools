@@ -1152,11 +1152,8 @@
           "expect": {
             "compliant": true,
             "errors": 0,
-            "rules_present": [
-              {
-                "rule": "SBOM-PQC-010",
-                "severity": "info"
-              }
+            "rules_passed": [
+              "SBOM-PQC-010"
             ],
             "rules_absent": [
               "SBOM-PQC-ALG-UNKNOWN",
@@ -1204,11 +1201,8 @@
           "expect": {
             "compliant": true,
             "errors": 0,
-            "rules_present": [
-              {
-                "rule": "SBOM-PQC-010",
-                "severity": "info"
-              }
+            "rules_passed": [
+              "SBOM-PQC-010"
             ]
           }
         }
@@ -1236,11 +1230,8 @@
           "expect": {
             "compliant": true,
             "errors": 0,
-            "rules_present": [
-              {
-                "rule": "SBOM-PQC-010",
-                "severity": "info"
-              }
+            "rules_passed": [
+              "SBOM-PQC-010"
             ],
             "rules_absent": [
               "SBOM-PQC-CERT-001",
@@ -1261,11 +1252,8 @@
           "expect": {
             "compliant": true,
             "errors": 0,
-            "rules_present": [
-              {
-                "rule": "SBOM-PQC-010",
-                "severity": "info"
-              }
+            "rules_passed": [
+              "SBOM-PQC-010"
             ]
           }
         },
@@ -1689,7 +1677,7 @@
       "id": "b6-registry-severities",
       "review_id": "B6",
       "fixture": "b6-registry-severities.cdx.json",
-      "note": "Pins the severities these checks emit, which the rule registry and so the SARIF rule catalogue now advertise: a creator-less SBOM (SBOM-FDA-CREATOR), a component without an identifier (SBOM-CRA-ANNEX-I-IDENTIFIER), a steward product without a vulnerability-handling reference (SBOM-CRA-ART-24) and a hybrid PQC combiner (SBOM-PQC-010). The registry documented a Warning default for all four, though the first three are emitted as Errors and the last as an Info.",
+      "note": "Pins the severities these checks emit, which the rule registry and so the SARIF rule catalogue now advertise: a creator-less SBOM (SBOM-FDA-CREATOR), a component without an identifier (SBOM-CRA-ANNEX-I-IDENTIFIER), a steward product without a vulnerability-handling reference (SBOM-CRA-ART-24) and a hybrid PQC combiner (SBOM-PQC-010). The registry documented a Warning default for all four, though the first three are emitted as Errors and the last as an Info. Since v0.4.0 (review finding O2) SBOM-PQC-010 is a pass-only rule: the combiner is a passed check, not an Info violation, and the registry's Info default is what the SARIF catalogue declares for it.",
       "checks": [
         {
           "standard": "fda",
@@ -1734,11 +1722,8 @@
         {
           "standard": "pqc",
           "expect": {
-            "rules_present": [
-              {
-                "rule": "SBOM-PQC-010",
-                "severity": "info"
-              }
+            "rules_passed": [
+              "SBOM-PQC-010"
             ]
           }
         }

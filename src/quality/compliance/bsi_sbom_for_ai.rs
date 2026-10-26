@@ -13,8 +13,9 @@
 //!   guarantee. Passing every check does not certify an AI-BOM as BSI/G7
 //!   conformant; it reports which minimum elements are declared.
 //! - When the SBOM carries no ML-model or dataset metadata the profile is
-//!   *not applicable* and returns a single informational finding rather than
-//!   failing every non-AI SBOM (mirrors the EU-AI-Act non-AI guard exactly).
+//!   *not applicable*: the result's applicability says so, with the reason,
+//!   and no finding is reported, rather than failing every non-AI SBOM
+//!   (mirrors the EU-AI-Act non-AI guard exactly).
 //! - Some clusters (data-flow, AI-specific security controls, exploitability
 //!   references) have no home in the model yet; those elements emit an
 //!   informational "not declared" finding so the readiness scorecard stays
@@ -28,16 +29,19 @@ use super::ai_shared::{ai_bom_scope, has_model_card_ref, push_untyped_ml_warning
 use super::*;
 use crate::model::{ComponentType, CreatorType, HashAlgorithm};
 
+/// Why the profile does not apply to an SBOM without AI/ML content: the
+/// result's not-applicable reason.
+const NOT_APPLICABLE_REASON: &str = "[BSI-AI] Not applicable: SBOM contains no \
+     machine-learning-model components, ML-model metadata, or AI-dataset evidence, so BSI/G7 \
+     SBOM-for-AI minimum-elements readiness cannot be assessed (readiness profile, not a \
+     legal-conformity guarantee)";
+
 impl ComplianceChecker {
     // ════════════════════════════════════════════════════════════════════
     // BSI/G7 SBOM-for-AI Minimum Elements readiness
     // ════════════════════════════════════════════════════════════════════
 
-    pub(crate) fn check_bsi_sbom_for_ai(
-        &self,
-        sbom: &NormalizedSbom,
-        violations: &mut Vec<Violation>,
-    ) {
+    pub(crate) fn check_bsi_sbom_for_ai(&self, sbom: &NormalizedSbom, findings: &mut Findings) {
         // ML-model and dataset components drive the readiness checks. The
         // classification and the N/A gate are shared with the EU-AI-Act
         // profile (compliance/ai_shared.rs) so the two profiles scope
@@ -47,29 +51,14 @@ impl ComplianceChecker {
         // dataset and must not fail the MUST dataset elements).
         let scope = ai_bom_scope(sbom);
 
-        // N/A gate: no AI/ML content at all → single informational finding,
-        // never a failure (a non-AI SBOM is simply out of scope here). Mirrors
-        // the EU-AI-Act non-AI guard exactly.
+        // N/A gate: no AI/ML content at all → the profile does not apply,
+        // never a failure (a non-AI SBOM is simply out of scope here).
+        // Mirrors the EU-AI-Act non-AI guard exactly.
         if !scope.is_applicable() {
-            violations.push(Violation {
-                severity: ViolationSeverity::Info,
-                category: ViolationCategory::DocumentMetadata,
-                message: "[BSI-AI] Not applicable: SBOM contains no machine-learning-model \
-                          components, ML-model metadata, or AI-dataset evidence, so BSI/G7 \
-                          SBOM-for-AI minimum-elements readiness cannot be assessed (readiness \
-                          profile, not a legal-conformity guarantee)"
-                    .to_string(),
-                element: None,
-                requirement: "BSI/G7 SBOM-for-AI: applicability".to_string(),
-                rule_id: "SBOM-BSIAI-NA",
-                component_id: None,
-                counts: None,
-                standard_refs: Vec::new(),
-                remediation: None,
-                finding_detail: None,
-            });
+            findings.not_applicable(NOT_APPLICABLE_REASON);
             return;
         }
+        let violations = &mut findings.violations;
 
         // Evasion guard: ML-looking components (pkg:huggingface PURL or
         // model-card reference) that are neither typed machine-learning-model
@@ -823,15 +812,15 @@ mod tests {
 
         let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
         assert!(result.is_compliant, "non-AI SBOM must not fail BSI-AI");
-        assert_eq!(result.error_count, 0);
-        assert_eq!(
-            result.violations.len(),
-            1,
-            "exactly one informational N/A finding"
+        assert!(
+            result.violations.is_empty(),
+            "N/A is the result's applicability, not a finding: {:?}",
+            result.violations
         );
-        let v = &result.violations[0];
-        assert_eq!(v.rule_id, "SBOM-BSIAI-NA");
-        assert_eq!(v.severity, ViolationSeverity::Info);
+        assert_eq!(
+            result.applicability,
+            Applicability::NotApplicable(NOT_APPLICABLE_REASON.to_string())
+        );
     }
 
     #[test]
@@ -970,9 +959,8 @@ mod tests {
             "web app with config data component must not fail BSI-AI; got {:?}",
             result.violations
         );
-        assert_eq!(result.error_count, 0);
-        assert_eq!(result.violations.len(), 1, "single N/A finding expected");
-        assert_eq!(result.violations[0].rule_id, "SBOM-BSIAI-NA");
+        assert!(!result.is_applicable());
+        assert!(result.violations.is_empty(), "{:?}", result.violations);
     }
 
     #[test]

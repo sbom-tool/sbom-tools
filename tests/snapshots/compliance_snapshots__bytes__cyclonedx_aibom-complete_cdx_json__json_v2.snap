@@ -17,9 +17,11 @@ source: tests/compliance_snapshots.rs
       "counts": {
         "error": 0,
         "warning": 0,
-        "info": 0
+        "info": 0,
+        "passed": 0
       },
-      "violations": []
+      "violations": [],
+      "passed": []
     },
     {
       "standard": "bsi-ai",
@@ -30,7 +32,8 @@ source: tests/compliance_snapshots.rs
       "counts": {
         "error": 2,
         "warning": 5,
-        "info": 5
+        "info": 5,
+        "passed": 0
       },
       "violations": [
         {
@@ -297,7 +300,8 @@ source: tests/compliance_snapshots.rs
           "remediation": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.",
           "help_uri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
         }
-      ]
+      ],
+      "passed": []
     }
   ]
 }

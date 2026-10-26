@@ -85,9 +85,9 @@ fn well_documented_aibom_passes_models_and_datasets_element_checks() {
         );
     }
 
-    // It is an AI SBOM, so it must NOT report the not-applicable finding.
+    // It is an AI SBOM, so it must NOT be marked not applicable.
     assert!(
-        !ids.contains(&"SBOM-BSIAI-NA"),
+        result.is_applicable(),
         "AI SBOM must not be marked not-applicable"
     );
 }
@@ -98,16 +98,12 @@ fn non_ai_sbom_is_not_applicable_and_does_not_fail() {
     let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
 
     assert!(result.is_compliant, "non-AI SBOM must not fail BSI-AI");
-    assert_eq!(result.error_count, 0);
-    assert_eq!(
-        result.violations.len(),
-        1,
-        "non-AI SBOM should produce exactly one informational N/A finding; got {:?}",
+    assert!(!result.is_applicable(), "a non-AI SBOM is not applicable");
+    assert!(
+        result.violations.is_empty(),
+        "N/A is the result's applicability, not a finding: {:?}",
         result.violations
     );
-    let v = &result.violations[0];
-    assert_eq!(v.rule_id, "SBOM-BSIAI-NA");
-    assert_eq!(v.severity, ViolationSeverity::Info);
 }
 
 #[test]
@@ -125,15 +121,12 @@ fn web_app_with_config_data_component_is_not_applicable() {
         "web-app SBOM must not fail BSI-AI; violations: {:?}",
         result.violations
     );
-    assert_eq!(result.error_count, 0, "no blocking errors expected");
-    assert_eq!(
-        result.violations.len(),
-        1,
-        "exactly one informational N/A finding expected; got {:?}",
+    assert!(!result.is_applicable(), "a config bundle is no AI content");
+    assert!(
+        result.violations.is_empty(),
+        "no finding expected; got {:?}",
         result.violations
     );
-    assert_eq!(result.violations[0].rule_id, "SBOM-BSIAI-NA");
-    assert_eq!(result.violations[0].severity, ViolationSeverity::Info);
 }
 
 #[test]
@@ -166,7 +159,7 @@ fn application_typed_component_with_model_card_is_applicable() {
 
     let ids: Vec<_> = result.violations.iter().map(|v| v.rule_id).collect();
     assert!(
-        !ids.contains(&"SBOM-BSIAI-NA"),
+        result.is_applicable(),
         "SBOM with modelCard metadata must not be N/A; got {ids:?}"
     );
     // The Models element checks ran (no PURL/hash on the mistyped model).
@@ -204,10 +197,7 @@ fn untyped_huggingface_model_is_applicable_with_mistyped_ml_warning() {
     let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
 
     assert!(
-        !result
-            .violations
-            .iter()
-            .any(|v| v.rule_id == "SBOM-BSIAI-NA"),
+        result.is_applicable(),
         "huggingface PURL must keep the profile applicable; got {:?}",
         result.violations
     );
@@ -231,10 +221,7 @@ fn dataset_component_with_dataset_evidence_still_counts() {
     let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
 
     assert!(
-        !result
-            .violations
-            .iter()
-            .any(|v| v.rule_id == "SBOM-BSIAI-NA"),
+        result.is_applicable(),
         "dataset evidence keeps the profile applicable; got {:?}",
         result.violations
     );
@@ -283,7 +270,7 @@ fn xml_documented_dataset_passes_datasets_cluster() {
 
     let ids: Vec<_> = result.violations.iter().map(|v| v.rule_id).collect();
     assert!(
-        !ids.contains(&"SBOM-BSIAI-NA"),
+        result.is_applicable(),
         "XML dataset evidence must keep the profile applicable; got {ids:?}"
     );
     for rule in [
@@ -321,7 +308,7 @@ fn huggingface_dataset_with_evidence_is_not_flagged_as_untyped_ml() {
     );
     // It stays enrolled as a dataset (profile applicable, no N/A).
     assert!(
-        !ids.contains(&"SBOM-BSIAI-NA"),
+        result.is_applicable(),
         "the HF dataset must keep the profile applicable; got {ids:?}"
     );
 }

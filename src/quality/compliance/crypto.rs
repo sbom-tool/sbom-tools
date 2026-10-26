@@ -1290,9 +1290,12 @@ impl ComplianceChecker {
     // NIST PQC Readiness checks
     // ════════════════════════════════════════════════════════════════════
 
-    pub(crate) fn check_nist_pqc(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
+    pub(crate) fn check_nist_pqc(&self, sbom: &NormalizedSbom, findings: &mut Findings) {
         use crate::model::ComponentType;
 
+        let Findings {
+            violations, passed, ..
+        } = findings;
         let index = sbom.build_index();
 
         // Track whether we actually evaluated any cryptographic asset. A tool
@@ -1312,7 +1315,7 @@ impl ComplianceChecker {
 
             match cp.asset_type {
                 CryptoAssetType::Algorithm => {
-                    if Self::check_pqc_algorithm(comp, cp, violations) {
+                    if Self::check_pqc_algorithm(comp, cp, violations, passed) {
                         crypto_assets_evaluated += 1;
                     }
                 }
@@ -1461,13 +1464,16 @@ impl ComplianceChecker {
         }
     }
 
-    /// Evaluate a single algorithm asset for NIST PQC readiness. Returns
-    /// whether the asset was judged — classified, or declared
-    /// quantum-vulnerable — which is what the PQC-000 inventory gate counts.
+    /// Evaluate a single algorithm asset for NIST PQC readiness: problems go
+    /// to `violations`, the approvals of SBOM-PQC-009 and SBOM-PQC-010 to
+    /// `passed`. Returns whether the asset was judged — classified, or
+    /// declared quantum-vulnerable — which is what the PQC-000 inventory gate
+    /// counts.
     fn check_pqc_algorithm(
         comp: &Component,
         cp: &crate::model::CryptoProperties,
         violations: &mut Vec<Violation>,
+        passed: &mut Vec<PassedCheck>,
     ) -> bool {
         let algo = cp.algorithm_properties.as_ref();
         let cls = classify_crypto_component(comp);
@@ -1601,10 +1607,10 @@ impl ComplianceChecker {
             });
         }
 
-        // PQC-009: approved PQC (informational). FIPS 203/204/205 finals and
+        // PQC-009: approved PQC, a passed check. FIPS 203/204/205 finals and
         // the SP 800-208 stateful hash-based signatures both qualify; FN-DSA
-        // (Falcon) is recognized but not yet standardized, so it gets no
-        // approval note.
+        // (Falcon) is recognized but not yet standardized, so it passes no
+        // approval.
         if let AlgorithmClass::PostQuantum(kind) = cls.class {
             let approval = match kind {
                 PqcKind::MlKem | PqcKind::MlDsa | PqcKind::SlhDsa => Some("FIPS 203/204/205"),
@@ -1614,30 +1620,26 @@ impl ComplianceChecker {
                 PqcKind::FnDsa => None,
             };
             if let Some(approval) = approval {
-                violations.push(Violation {
-                    severity: ViolationSeverity::Info,
-                    category: ViolationCategory::CryptographyInfo,
+                passed.push(PassedCheck {
+                    rule_id: "SBOM-PQC-009",
                     message: format!(
                         "'{}' uses NIST-approved PQC algorithm ({approval})",
                         comp.name
                     ),
                     element: Some(comp.name.clone()),
-                    requirement: "FIPS 203/204/205: approved".to_string(),
-                    rule_id: "SBOM-PQC-009",
                     component_id: Some(comp.canonical_id.value().to_string()),
-                    counts: None,
-                    standard_refs: Vec::new(),
-                    remediation: None,
                     finding_detail: None,
+                    requirement: "FIPS 203/204/205: approved".to_string(),
+                    standard_refs: Vec::new(),
                 });
             }
         }
 
         // PQC-010: a PQ/T hybrid whose post-quantum part NIST approves is an
-        // approved combination (informational) — SP 800-227 §4.6.2 for key
+        // approved combination, a passed check — SP 800-227 §4.6.2 for key
         // establishment, IR 8547 ipd §3.2.2 for composite signatures — and
         // so is a declared combiner classified as an approved post-quantum
-        // algorithm. A hybrid whose post-quantum part is not approved gets
+        // algorithm. A hybrid whose post-quantum part is not approved passes
         // no approval, like that part alone.
         let approval = match subject.class {
             AlgorithmClass::PostQuantum(PqcKind::MlKem) => Some("FIPS 203"),
@@ -1670,18 +1672,14 @@ impl ComplianceChecker {
                     comp.name
                 )
             };
-            violations.push(Violation {
-                severity: ViolationSeverity::Info,
-                category: ViolationCategory::CryptographyInfo,
+            passed.push(PassedCheck {
+                rule_id: "SBOM-PQC-010",
                 message,
                 element: Some(comp.name.clone()),
-                requirement: "SP 800-227 / IR 8547: PQ/T hybrid".to_string(),
-                rule_id: "SBOM-PQC-010",
                 component_id: Some(comp.canonical_id.value().to_string()),
-                counts: None,
-                standard_refs: Vec::new(),
-                remediation: None,
                 finding_detail: None,
+                requirement: "SP 800-227 / IR 8547: PQ/T hybrid".to_string(),
+                standard_refs: Vec::new(),
             });
         }
         subject.class != AlgorithmClass::Unknown || ql == Some(0)

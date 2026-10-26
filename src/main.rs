@@ -552,6 +552,9 @@ JSON OUTPUT:
     -o json emits the sbom-tools/compliance/v2 envelope (one object for any
     number of standards; schema: schemas/compliance/v2.schema.json). The
     pre-0.4 layout stays available with --json-schema v1 until v0.5.0.
+    Checks the SBOM passed (e.g. a NIST-approved PQC algorithm) are listed
+    under passed[], never as violations; -o sarif reports them only with
+    --sarif-include-passes.
 
 EXAMPLES:
     sbom-tools validate app.cdx.json                              # NTIA minimum
@@ -607,6 +610,12 @@ struct ValidateArgs {
     /// envelope; v1 is the deprecated pre-0.4 layout, removed in v0.5.0
     #[arg(long, value_enum, default_value_t = cli::ValidateJsonSchema::V2, value_name = "VERSION")]
     json_schema: cli::ValidateJsonSchema,
+
+    /// With `-o sarif`, also report every check the SBOM passed (e.g. an
+    /// approved post-quantum algorithm) as a result of kind "pass", level
+    /// "none". Off by default: code scanning lists every result as an alert
+    #[arg(long)]
+    sarif_include_passes: bool,
 
     /// Output only a compact JSON summary (overrides --output)
     #[arg(long)]
@@ -2112,6 +2121,7 @@ fn run() -> Result<()> {
                 args.as_of.as_deref(),
                 args.require_applicable,
                 args.json_schema,
+                args.sarif_include_passes,
             )?;
             if exit_code != 0 {
                 std::process::exit(exit_code);

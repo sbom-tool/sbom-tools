@@ -522,6 +522,40 @@ fn json_schema_v1_keeps_the_pre_0_4_shape() {
         )
     );
 
+    // The v1 layout predates passed checks: they simply stop appearing
+    // there (they used to be Info violations), and no `passed` field joins.
+    let cbom = fixture_path("cyclonedx/cbom-quantum-ready.cdx.json");
+    let cbom_raw = std::fs::read_to_string(&cbom).expect("fixture readable");
+    let cbom_sbom = sbom_tools::parse_sbom_str(&cbom_raw).expect("fixture parses");
+    let mut pqc = ComplianceChecker::new(StandardSelector::Pqc.level())
+        .with_as_of(as_of)
+        .check(&cbom_sbom);
+    assert!(!pqc.passed.is_empty(), "the fixture passes PQC checks");
+    pqc.passed.clear();
+    let cbom = cbom.to_str().expect("utf-8");
+    let pqc_v1 = run(&[
+        "validate",
+        cbom,
+        "--standard",
+        "pqc",
+        "-o",
+        "json",
+        "--json-schema",
+        "v1",
+        "--as-of",
+        AS_OF,
+    ]);
+    assert_eq!(
+        stdout(&pqc_v1),
+        format!(
+            "{}\n",
+            serde_json::to_string_pretty(&pqc).expect("serializes")
+        )
+    );
+    let json: Value = serde_json::from_str(&stdout(&pqc_v1)).expect("v1 is JSON");
+    assert!(json.get("passed").is_none(), "{json}");
+    assert_eq!(json["info_count"], 0, "{json}");
+
     // The deprecation note goes to stderr, never into the JSON.
     let noisy = base_command()
         .env("RUST_LOG", "warn")
@@ -545,6 +579,67 @@ fn json_schema_v1_keeps_the_pre_0_4_shape() {
         stderr(&noisy)
     );
     assert_eq!(stdout(&noisy), stdout(&single));
+}
+
+/// A pass is no finding: `-o sarif` reports none by default, and
+/// `--sarif-include-passes` reports each as a `kind: "pass"` result at level
+/// `none`. cbom-quantum-ready passes eight NIST PQC checks and has no Info.
+#[test]
+fn sarif_reports_passes_only_on_request() {
+    let path = fixture_arg("cyclonedx/cbom-quantum-ready.cdx.json");
+    let sarif = |extra: &[&str]| -> Value {
+        let mut args = vec![
+            "validate",
+            path.as_str(),
+            "--standard",
+            "pqc",
+            "-o",
+            "sarif",
+            "--as-of",
+            AS_OF,
+        ];
+        args.extend_from_slice(extra);
+        let output = run(&args);
+        assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+        serde_json::from_str(&stdout(&output)).expect("SARIF is JSON")
+    };
+    let results = |sarif: &Value| -> Vec<Value> {
+        sarif["runs"][0]["results"]
+            .as_array()
+            .expect("results array")
+            .clone()
+    };
+
+    let plain = sarif(&[]);
+    assert!(
+        results(&plain).is_empty(),
+        "no SARIF result may describe a pass: {plain}"
+    );
+
+    let with_passes = sarif(&["--sarif-include-passes"]);
+    let passes = results(&with_passes);
+    assert_eq!(passes.len(), 8, "{with_passes}");
+    for pass in &passes {
+        assert_eq!(pass["kind"], "pass", "{pass}");
+        assert_eq!(pass["level"], "none", "{pass}");
+        assert_eq!(pass["ruleId"], "SBOM-PQC-009", "{pass}");
+    }
+
+    // The JSON envelope agrees: 0 Info, 8 passed.
+    let json = validated_envelope(&[
+        "validate",
+        path.as_str(),
+        "--standard",
+        "pqc",
+        "-o",
+        "json",
+        "--as-of",
+        AS_OF,
+    ]);
+    let entry = &json["results"][0];
+    assert_eq!(entry["counts"]["info"], 0, "{entry}");
+    assert_eq!(entry["counts"]["passed"], 8, "{entry}");
+    assert_eq!(entry["passed"].as_array().map(Vec::len), Some(8), "{entry}");
 }
 
 #[test]
@@ -1534,8 +1629,14 @@ fn every_text_output_neutralizes_sbom_text() {
         assert_neutralized(&label, "stdout", &out);
         assert_neutralized(&label, "stderr", &stderr(&output));
         // The remediation line under each finding goes through the same
-        // sanitizer; it must be present for every finding.
-        if args[0] == "validate" {
+        // sanitizer; it must be present for every finding. A standard that
+        // does not apply (the AI profiles on this SBOM) reports none.
+        if args[0] == "validate" && out.contains("Status: NOT APPLICABLE") {
+            assert!(
+                out.contains("No violations found."),
+                "{label}: an N/A standard reports no finding:\n{out}"
+            );
+        } else if args[0] == "validate" {
             assert_fix_line_per_finding(&label, &out, &["[ERROR] ", "[WARN] ", "[INFO] "], 2);
         } else if args.contains(&"--validate-ntia") {
             assert_fix_line_per_finding(&label, &out, &["  - "], 1);

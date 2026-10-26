@@ -493,11 +493,14 @@ Checks an SBOM against a compliance standard and reports missing fields or faili
 | `-o, --output <fmt>` | Output format: `summary` (default via `auto`), `json`, `sarif`, `oscal-json` |
 | `--require-applicable` | Exit `1` when a selected standard does not apply to the SBOM (e.g. `ai-act` on an SBOM without ML components); without it, such a standard is reported as N/A and exits `0` |
 | `--json-schema <v1\|v2>` | Layout of `-o json`: `v2` (default) is the `sbom-tools/compliance/v2` envelope; `v1` is the deprecated pre-0.4 layout, removed in v0.5.0 |
+| `--sarif-include-passes` | With `-o sarif`, also report every check the SBOM passed (e.g. an approved post-quantum algorithm) as a result of `kind: "pass"`, level `none`. Off by default, so code scanning shows no pass as an alert |
 
 `-o json` emits one object for any number of standards, with a stable
-`finding_id` on every violation; [docs/compliance-output.md](docs/compliance-output.md)
-describes every field, and the schema is
+`finding_id` on every violation and every passed check;
+[docs/compliance-output.md](docs/compliance-output.md) describes every field,
+and the schema is
 [`schemas/compliance/v2.schema.json`](schemas/compliance/v2.schema.json).
+Checks the SBOM passed are listed under `passed`, never as violations.
 
 </details>
 

@@ -17,7 +17,8 @@ source: tests/compliance_snapshots.rs
       "counts": {
         "error": 3,
         "warning": 5,
-        "info": 0
+        "info": 0,
+        "passed": 0
       },
       "violations": [
         {
@@ -214,7 +215,8 @@ source: tests/compliance_snapshots.rs
           "remediation": "Remove vulnerability information from the SBOM and publish it separately (e.g. as CSAF advisories); a document containing both SBOM and vulnerability information does not conform to TR-03183-2. SPDX 3.0: remove the security_Vulnerability elements and their affects and assessment Relationships.",
           "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
         }
-      ]
+      ],
+      "passed": []
     },
     {
       "standard": "eo14028",
@@ -225,7 +227,8 @@ source: tests/compliance_snapshots.rs
       "counts": {
         "error": 2,
         "warning": 2,
-        "info": 0
+        "info": 0,
+        "passed": 0
       },
       "violations": [
         {
@@ -320,7 +323,8 @@ source: tests/compliance_snapshots.rs
           "remediation": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information. SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.",
           "help_uri": "https://www.federalregister.gov/d/2021-10460"
         }
-      ]
+      ],
+      "passed": []
     }
   ]
 }

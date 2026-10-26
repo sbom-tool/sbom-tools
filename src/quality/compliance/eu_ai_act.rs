@@ -14,9 +14,9 @@
 //!   guarantee. Passing every check does not make a system AI-Act compliant,
 //!   and the tool does not itself classify a system as high-risk.
 //! - When the SBOM carries no ML-model or dataset metadata the profile is
-//!   *not applicable* and returns a single informational finding rather than
-//!   failing every non-AI SBOM (mirrors the EUCC reference-only precedent in
-//!   `compliance/eucc.rs`).
+//!   *not applicable*: the result's applicability says so, with the reason,
+//!   and no finding is reported, rather than failing every non-AI SBOM
+//!   (mirrors the EUCC reference-only precedent in `compliance/eucc.rs`).
 //! - When the CRA sidecar `is_high_risk_ai` flag is set, missing-documentation
 //!   findings escalate from Info/Warning to Error: Annex IV is mandatory for
 //!   high-risk systems, so gaps are blocking rather than advisory.
@@ -24,12 +24,19 @@
 use super::ai_shared::{ai_bom_scope, has_model_card_ref, push_untyped_ml_warning};
 use super::*;
 
+/// Why the profile does not apply to an SBOM without AI/ML content: the
+/// result's not-applicable reason.
+const NOT_APPLICABLE_REASON: &str = "[AI-Act] Not applicable: SBOM contains no \
+     machine-learning-model components, ML-model metadata, or AI-dataset evidence, so EU AI Act \
+     Annex IV technical-documentation readiness cannot be assessed (readiness profile, not a \
+     legal-conformity guarantee)";
+
 impl ComplianceChecker {
     // ════════════════════════════════════════════════════════════════════
     // EU AI Act Annex IV technical-documentation readiness (AI3)
     // ════════════════════════════════════════════════════════════════════
 
-    pub(crate) fn check_eu_ai_act(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
+    pub(crate) fn check_eu_ai_act(&self, sbom: &NormalizedSbom, findings: &mut Findings) {
         let high_risk = self.sidecar.as_ref().is_some_and(|s| s.is_high_risk_ai);
 
         // ML-model and dataset components drive the readiness checks. The
@@ -41,28 +48,13 @@ impl ComplianceChecker {
         // AI dataset).
         let scope = ai_bom_scope(sbom);
 
-        // N/A gate: no AI/ML content at all → single informational finding,
+        // N/A gate: no AI/ML content at all → the profile does not apply,
         // never a failure (a non-AI SBOM is simply out of scope here).
         if !scope.is_applicable() {
-            violations.push(Violation {
-                severity: ViolationSeverity::Info,
-                category: ViolationCategory::DocumentMetadata,
-                message: "[AI-Act] Not applicable: SBOM contains no machine-learning-model \
-                          components, ML-model metadata, or AI-dataset evidence, so EU AI Act \
-                          Annex IV technical-documentation readiness cannot be assessed \
-                          (readiness profile, not a legal-conformity guarantee)"
-                    .to_string(),
-                element: None,
-                requirement: "EU AI Act Annex IV: applicability".to_string(),
-                rule_id: "SBOM-AIACT-NA",
-                component_id: None,
-                counts: None,
-                standard_refs: Vec::new(),
-                remediation: None,
-                finding_detail: None,
-            });
+            findings.not_applicable(NOT_APPLICABLE_REASON);
             return;
         }
+        let violations = &mut findings.violations;
 
         // Evasion guard: ML-looking components (pkg:huggingface PURL or
         // model-card reference) that are neither typed machine-learning-model
@@ -573,15 +565,15 @@ mod tests {
 
         let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
         assert!(result.is_compliant, "non-AI SBOM must not fail AI-Act");
-        assert_eq!(result.error_count, 0);
-        assert_eq!(
-            result.violations.len(),
-            1,
-            "exactly one informational N/A finding"
+        assert!(
+            result.violations.is_empty(),
+            "N/A is the result's applicability, not a finding: {:?}",
+            result.violations
         );
-        let v = &result.violations[0];
-        assert_eq!(v.rule_id, "SBOM-AIACT-NA");
-        assert_eq!(v.severity, ViolationSeverity::Info);
+        assert_eq!(
+            result.applicability,
+            Applicability::NotApplicable(NOT_APPLICABLE_REASON.to_string())
+        );
     }
 
     #[test]
@@ -702,9 +694,8 @@ mod tests {
 
         let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
         assert!(result.is_compliant);
-        assert_eq!(result.error_count, 0);
-        assert_eq!(result.violations.len(), 1, "single N/A finding expected");
-        assert_eq!(result.violations[0].rule_id, "SBOM-AIACT-NA");
+        assert!(!result.is_applicable());
+        assert!(result.violations.is_empty(), "{:?}", result.violations);
     }
 
     #[test]
