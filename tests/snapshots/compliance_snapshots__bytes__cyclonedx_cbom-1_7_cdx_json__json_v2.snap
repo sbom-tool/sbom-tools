@@ -37,7 +37,9 @@ source: tests/compliance_snapshots.rs
               "id": "CNSA 2.0",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
-          ]
+          ],
+          "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+          "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
         },
         {
           "finding_id": "sbomtools:v1:f6f3e69908944371",
@@ -56,7 +58,9 @@ source: tests/compliance_snapshots.rs
               "id": "CNSA 2.0",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
-          ]
+          ],
+          "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+          "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
         },
         {
           "finding_id": "sbomtools:v1:326a99536d9bc878",
@@ -75,7 +79,9 @@ source: tests/compliance_snapshots.rs
               "id": "CNSA 2.0",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
-          ]
+          ],
+          "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+          "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
         },
         {
           "finding_id": "sbomtools:v1:059cf70a9ae9a775",
@@ -94,7 +100,9 @@ source: tests/compliance_snapshots.rs
               "id": "CNSA 2.0",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
-          ]
+          ],
+          "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+          "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
         },
         {
           "finding_id": "sbomtools:v1:83cc7dc911fdae9e",
@@ -113,7 +121,9 @@ source: tests/compliance_snapshots.rs
               "id": "CNSA 2.0",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
-          ]
+          ],
+          "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+          "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
         },
         {
           "finding_id": "sbomtools:v1:9682dc81d044cfe2",
@@ -132,7 +142,9 @@ source: tests/compliance_snapshots.rs
               "id": "CNSA 2.0",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
-          ]
+          ],
+          "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+          "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
         },
         {
           "finding_id": "sbomtools:v1:ee8a3c54afb74d2d",
@@ -151,7 +163,9 @@ source: tests/compliance_snapshots.rs
               "id": "CNSA 2.0",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
-          ]
+          ],
+          "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+          "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
         },
         {
           "finding_id": "sbomtools:v1:f71ab2860b405cc2",
@@ -170,7 +184,9 @@ source: tests/compliance_snapshots.rs
               "id": "CNSA 2.0",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
-          ]
+          ],
+          "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+          "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
         },
         {
           "finding_id": "sbomtools:v1:3d1e46793ae574a2",
@@ -189,7 +205,9 @@ source: tests/compliance_snapshots.rs
               "id": "CNSA 2.0",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
-          ]
+          ],
+          "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+          "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
         },
         {
           "finding_id": "sbomtools:v1:2fad371371b58c48",
@@ -208,7 +226,9 @@ source: tests/compliance_snapshots.rs
               "id": "CNSA 2.0",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
-          ]
+          ],
+          "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+          "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
         },
         {
           "finding_id": "sbomtools:v1:2fad371371b58c48",
@@ -227,7 +247,9 @@ source: tests/compliance_snapshots.rs
               "id": "CNSA 2.0",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
-          ]
+          ],
+          "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+          "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
         },
         {
           "finding_id": "sbomtools:v1:1c8d3d26b0929d61",
@@ -246,7 +268,9 @@ source: tests/compliance_snapshots.rs
               "id": "CNSA 2.0",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
-          ]
+          ],
+          "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+          "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
         }
       ]
     },
@@ -284,7 +308,9 @@ source: tests/compliance_snapshots.rs
               "id": "SP 800-208",
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             }
-          ]
+          ],
+          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
+          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
         },
         {
           "finding_id": "sbomtools:v1:1ab07b91d0dfc149",
@@ -308,7 +334,9 @@ source: tests/compliance_snapshots.rs
               "id": "SP 800-208",
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             }
-          ]
+          ],
+          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
+          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
         },
         {
           "finding_id": "sbomtools:v1:1e7ace63cafd4753",
@@ -332,7 +360,9 @@ source: tests/compliance_snapshots.rs
               "id": "SP 800-208",
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             }
-          ]
+          ],
+          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
+          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
         },
         {
           "finding_id": "sbomtools:v1:82ab8e3138bc09d9",
@@ -356,7 +386,9 @@ source: tests/compliance_snapshots.rs
               "id": "SP 800-208",
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             }
-          ]
+          ],
+          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
+          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
         },
         {
           "finding_id": "sbomtools:v1:ce3f644b51d4d60e",
@@ -380,7 +412,9 @@ source: tests/compliance_snapshots.rs
               "id": "SP 800-208",
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             }
-          ]
+          ],
+          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
+          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
         },
         {
           "finding_id": "sbomtools:v1:9f9263b04c514a5f",
@@ -404,7 +438,9 @@ source: tests/compliance_snapshots.rs
               "id": "SP 800-131A Rev. 2",
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             }
-          ]
+          ],
+          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
+          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
         },
         {
           "finding_id": "sbomtools:v1:8119d896d50ea594",
@@ -423,7 +459,9 @@ source: tests/compliance_snapshots.rs
               "id": "FIPS 203/204/205",
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             }
-          ]
+          ],
+          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
+          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
         },
         {
           "finding_id": "sbomtools:v1:461158e579e9d249",
@@ -447,7 +485,9 @@ source: tests/compliance_snapshots.rs
               "id": "SP 800-131A Rev. 2",
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             }
-          ]
+          ],
+          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
+          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
         },
         {
           "finding_id": "sbomtools:v1:77d714919f4f5c86",
@@ -471,7 +511,9 @@ source: tests/compliance_snapshots.rs
               "id": "SP 800-208",
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             }
-          ]
+          ],
+          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
+          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
         },
         {
           "finding_id": "sbomtools:v1:4f38695956b2fe51",
@@ -490,7 +532,9 @@ source: tests/compliance_snapshots.rs
               "id": "SP 800-131A / IR 8547",
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             }
-          ]
+          ],
+          "remediation": "Disable SSL and TLS versions below 1.2 (SP 800-52 Rev. 2) and remove broken (SP 800-131A) or quantum-vulnerable (IR 8547) algorithms from negotiated cipher suites and IKEv2 transforms.",
+          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
         },
         {
           "finding_id": "sbomtools:v1:0989a78580e29dc4",
@@ -509,7 +553,9 @@ source: tests/compliance_snapshots.rs
               "id": "IR 8547 ipd",
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             }
-          ]
+          ],
+          "remediation": "Declare the asset's algorithm identity (algorithmFamily, OID, or a recognizable name), make bom-refs resolvable within the SBOM, and use parseable protocol versions so signature algorithms, cipher suites, and protocol references can be verified for PQC readiness.",
+          "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
         }
       ]
     }

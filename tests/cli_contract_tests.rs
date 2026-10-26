@@ -1616,7 +1616,9 @@ fn validate_remediation_follows_the_input_format() {
                 .expect("validate -o json should run"),
         ))
         .expect("validate -o json is JSON");
-        let violations = json["violations"].as_array().expect("violations array");
+        let violations = json["results"][0]["violations"]
+            .as_array()
+            .expect("violations array in the v2 envelope");
         assert!(!violations.is_empty(), "{rel}: expected violations");
         for v in violations {
             assert!(

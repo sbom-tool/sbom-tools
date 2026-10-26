@@ -37,7 +37,9 @@ source: tests/compliance_snapshots.rs
               "id": "NTIA Minimum Elements",
               "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Give every component another unique identifier (an NTIA minimum data field): a PURL, CPE, SWHID or SWID. CycloneDX: set components[].purl (or cpe, or swhid[]).",
+          "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:ab835691e2f798bb",
@@ -56,7 +58,9 @@ source: tests/compliance_snapshots.rs
               "id": "NTIA Minimum Elements",
               "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Name the supplier of every component, the entity that creates, defines and identifies it (an NTIA minimum data field); placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:f863b422f8675d3b",
@@ -75,7 +79,9 @@ source: tests/compliance_snapshots.rs
               "id": "NTIA Minimum Elements",
               "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Name the supplier of every component, the entity that creates, defines and identifies it (an NTIA minimum data field); placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:3ac7f51e13b33edf",
@@ -94,7 +100,9 @@ source: tests/compliance_snapshots.rs
               "id": "NTIA Minimum Elements",
               "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Name the supplier of every component, the entity that creates, defines and identifies it (an NTIA minimum data field); placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:8b7cd2c62a51b687",
@@ -113,7 +121,9 @@ source: tests/compliance_snapshots.rs
               "id": "NTIA Minimum Elements",
               "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Declare the dependency relationships between components (an NTIA minimum data field): connect the primary component to its direct dependencies and keep most components inside the dependency graph. CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.",
+          "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:63a55683cef416e3",
@@ -132,7 +142,9 @@ source: tests/compliance_snapshots.rs
               "id": "NTIA Minimum Elements",
               "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Fix the format-level issue the finding names: use a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and give every element a well-formed identifier. CycloneDX: set specVersion 1.4–1.7 and a bom-ref on every component.",
+          "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
         }
       ]
     },
@@ -164,7 +176,9 @@ source: tests/compliance_snapshots.rs
               "id": "SBOM Author",
               "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Add a Person or Organization creator naming the entity that created the SBOM data — the entity operating the generation tool, not the tool itself, so tool-only creator lists do not satisfy the element. Use full names, no acronyms. CycloneDX: add metadata.authors[] (name, email) or metadata.manufacturer (name, contact[].email); metadata.tools entries do not count.",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:a8f36f3ede2cbd0f",
@@ -182,7 +196,9 @@ source: tests/compliance_snapshots.rs
               "id": "SBOM Author Signature",
               "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Sign the SBOM with a digital signature attributable to the SBOM author, using an algorithm approved per NIST DSS, ISO/IEC 14888-4:2024, or the ENISA Agreed Cryptographic Mechanisms. Detached signatures are invisible to this check, and not every format can carry one in-document — hence Warning, not Error. SPDX 2.x has no in-document signature field, so the rule is not evaluated for SPDX 2.x documents. CycloneDX: sign the BOM: in JSON, a JSF signature object (algorithm and value) at the document root; in XML, an enveloped XML-DSig <Signature> element on <bom>.",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:98b748f2ca790daf",
@@ -200,7 +216,9 @@ source: tests/compliance_snapshots.rs
               "id": "SBOM Generation Context",
               "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Declare the lifecycle phase the SBOM was generated in — 'before build', 'build', 'after build', or a more specific identifier. Warning, not Error: not every format can carry the phase. SPDX 2.x has no standard field for it, so the rule is not evaluated for SPDX 2.x documents. CycloneDX: set metadata.lifecycles[].phase, e.g. build (the first entry is read).",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:237e61efe1f7dfd4",
@@ -219,7 +237,9 @@ source: tests/compliance_snapshots.rs
               "id": "Component Producer",
               "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Identify each component's producer (the 2026 rename of the ambiguous Supplier Name): the entity that created the component is preferred, its supplier or manufacturer is accepted; if no clear producer exists, explicitly mark the component as of unknown provenance. File-type entries are exempt. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:17ed5a828034d7b5",
@@ -238,7 +258,9 @@ source: tests/compliance_snapshots.rs
               "id": "Component Identifiers",
               "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Add at least one common machine-processable identifier per component — the document names CPE and PURL (ECMA-427); UUIDs, organization-specific identifiers, commit hashes, and intrinsic identifiers (OmniBOR, SWHID / ISO/IEC 18670:2025) also qualify. Include all known identifiers. CycloneDX: set components[].purl (or cpe, or swhid[]).",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:9d8266cde530b4f9",
@@ -257,7 +279,9 @@ source: tests/compliance_snapshots.rs
               "id": "Component Hash Value",
               "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Provide an ASCII-hexadecimal cryptographic hash of each executable component artifact; when the SBOM author lacks access to the artifact, explicitly indicate the value is unknown. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:9942ba05bb3e949d",
@@ -276,7 +300,9 @@ source: tests/compliance_snapshots.rs
               "id": "Component License",
               "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Declare each component's license(s), preferring machine-processable SPDX license identifiers; a LicenseRef-* expression or a pointer to where the full license details are available also satisfies the element, and an explicit unknown (NOASSERTION) is required when the author is unaware. Silent absence fails. CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:ed9b044d1e184c63",
@@ -295,7 +321,9 @@ source: tests/compliance_snapshots.rs
               "id": "Component Producer",
               "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Identify each component's producer (the 2026 rename of the ambiguous Supplier Name): the entity that created the component is preferred, its supplier or manufacturer is accepted; if no clear producer exists, explicitly mark the component as of unknown provenance. File-type entries are exempt. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:95cd0336e73dcd72",
@@ -314,7 +342,9 @@ source: tests/compliance_snapshots.rs
               "id": "Component Hash Value",
               "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Provide an ASCII-hexadecimal cryptographic hash of each executable component artifact; when the SBOM author lacks access to the artifact, explicitly indicate the value is unknown. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:7dfaa34cd5221fcc",
@@ -333,7 +363,9 @@ source: tests/compliance_snapshots.rs
               "id": "Component Producer",
               "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Identify each component's producer (the 2026 rename of the ambiguous Supplier Name): the entity that created the component is preferred, its supplier or manufacturer is accepted; if no clear producer exists, explicitly mark the component as of unknown provenance. File-type entries are exempt. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:7b85bdafcc0877b0",
@@ -352,7 +384,9 @@ source: tests/compliance_snapshots.rs
               "id": "Component Hash Value",
               "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Provide an ASCII-hexadecimal cryptographic hash of each executable component artifact; when the SBOM author lacks access to the artifact, explicitly indicate the value is unknown. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
         },
         {
           "finding_id": "sbomtools:v1:17cdd69dc4e4f721",
@@ -375,7 +409,9 @@ source: tests/compliance_snapshots.rs
               "id": "Explicitly Identifying Unknown Information",
               "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             }
-          ]
+          ],
+          "remediation": "Declare the SBOM's completeness: the 2026 Coverage element expects all components including transitive dependencies, and information gaps must be explicitly stated as unknown or deliberately withheld. This rule verifies the declaration, not actual completeness — the document itself points to external repositories / binary analysis for that. SPDX 2.x has no completeness declaration, so the rule is not evaluated for SPDX 2.x documents. CycloneDX: set compositions[].aggregate (complete, incomplete, incomplete_first_party_only, …); the first composition is read.",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
         }
       ]
     }
