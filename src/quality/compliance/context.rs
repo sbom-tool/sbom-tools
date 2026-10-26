@@ -1,13 +1,14 @@
 //! Dispatch layer: the [`StandardChecker`] trait, the read-only
-//! [`ComplianceContext`] passed to each checker, and the per-standard checker
-//! structs that turn [`ComplianceLevel`] into a concrete set of violations.
+//! [`ComplianceContext`] passed to each checker, the [`Findings`] each
+//! checker returns, and the per-standard checker structs that turn
+//! [`ComplianceLevel`] into a concrete set of findings.
 //!
 //! Each checker delegates to the (now module-split) check methods on
 //! [`ComplianceChecker`]; the bodies are unchanged, so the dispatch is a pure
 //! structural reorganisation of the previous `match self.level { … }` in
 //! `ComplianceChecker::check`.
 
-use super::{ComplianceChecker, ComplianceLevel, NormalizedSbom, Violation};
+use super::{Applicability, ComplianceChecker, ComplianceLevel, NormalizedSbom, Violation};
 use crate::model::{AttestationDeclarations, AttestationRuleFamily, SupportedRequirement};
 
 /// Read-only context threaded through every [`StandardChecker`].
@@ -71,18 +72,49 @@ impl<'a> ComplianceContext<'a> {
     }
 }
 
+/// What one standard's checks report: the violations found, and whether the
+/// standard applied to the SBOM at all.
+///
+/// A readiness profile that does not apply (the EU AI Act and BSI/G7
+/// SBOM-for-AI profiles on an SBOM without AI/ML content) says so through
+/// [`Findings::not_applicable`] instead of reporting a placeholder violation;
+/// [`ComplianceChecker::check`] copies it to
+/// [`ComplianceResult::applicability`](super::ComplianceResult::applicability).
+#[derive(Debug, Default)]
+pub(crate) struct Findings {
+    /// The violations the checks found.
+    pub(crate) violations: Vec<Violation>,
+    /// Whether the standard evaluated the SBOM.
+    pub(crate) applicability: Applicability,
+}
+
+impl Findings {
+    /// The findings of a standard that applied: these violations.
+    pub(crate) const fn from_violations(violations: Vec<Violation>) -> Self {
+        Self {
+            violations,
+            applicability: Applicability::Applicable,
+        }
+    }
+
+    /// Mark the standard as not applicable to the SBOM, for `reason`.
+    pub(crate) fn not_applicable(&mut self, reason: impl Into<String>) {
+        self.applicability = Applicability::NotApplicable(reason.into());
+    }
+}
+
 /// One compliance standard's check logic.
 ///
 /// `level()` reports the [`ComplianceLevel`] the checker implements;
 /// `check()` runs the standard against the context and returns its
-/// violations. The top-level [`ComplianceChecker::check`] selects the checker
-/// for the configured level and merges its output.
+/// [`Findings`]. The top-level [`ComplianceChecker::check`] selects the
+/// checker for the configured level and merges its output.
 pub(crate) trait StandardChecker {
     /// The compliance level this checker implements.
     fn level(&self) -> ComplianceLevel;
 
-    /// Run the standard's checks against `ctx`, returning all violations.
-    fn check(&self, ctx: &ComplianceContext) -> Vec<Violation>;
+    /// Run the standard's checks against `ctx`, returning what they found.
+    fn check(&self, ctx: &ComplianceContext) -> Findings;
 }
 
 /// Generic profile path shared by the non-dedicated levels (Minimum,
@@ -104,7 +136,7 @@ impl StandardChecker for GenericChecker {
         self.level
     }
 
-    fn check(&self, ctx: &ComplianceContext) -> Vec<Violation> {
+    fn check(&self, ctx: &ComplianceContext) -> Findings {
         let checker = ctx.checker;
         let sbom = ctx.sbom;
         let mut violations = Vec::new();
@@ -130,12 +162,14 @@ impl StandardChecker for GenericChecker {
             checker.check_hardware_components(sbom, &mut violations);
         }
 
-        violations
+        Findings::from_violations(violations)
     }
 }
 
 /// Generates a thin [`StandardChecker`] struct whose `check()` delegates to a
-/// single dedicated method on [`ComplianceChecker`].
+/// single dedicated method on [`ComplianceChecker`]. The method takes the
+/// violations it pushes to, or, with the trailing `findings`, the whole
+/// [`Findings`] (for a standard that can decide it does not apply).
 macro_rules! dedicated_checker {
     ($name:ident, $level:expr, $method:ident) => {
         pub(crate) struct $name;
@@ -145,10 +179,25 @@ macro_rules! dedicated_checker {
                 $level
             }
 
-            fn check(&self, ctx: &ComplianceContext) -> Vec<Violation> {
+            fn check(&self, ctx: &ComplianceContext) -> Findings {
                 let mut violations = Vec::new();
                 ctx.checker.$method(ctx.sbom, &mut violations);
-                violations
+                Findings::from_violations(violations)
+            }
+        }
+    };
+    ($name:ident, $level:expr, $method:ident, findings) => {
+        pub(crate) struct $name;
+
+        impl StandardChecker for $name {
+            fn level(&self) -> ComplianceLevel {
+                $level
+            }
+
+            fn check(&self, ctx: &ComplianceContext) -> Findings {
+                let mut findings = Findings::default();
+                ctx.checker.$method(ctx.sbom, &mut findings);
+                findings
             }
         }
     };
@@ -173,11 +222,17 @@ dedicated_checker!(
     ComplianceLevel::EuccSubstantial,
     check_eucc_substantial
 );
-dedicated_checker!(EuAiActChecker, ComplianceLevel::EuAiAct, check_eu_ai_act);
+dedicated_checker!(
+    EuAiActChecker,
+    ComplianceLevel::EuAiAct,
+    check_eu_ai_act,
+    findings
+);
 dedicated_checker!(
     BsiSbomForAiChecker,
     ComplianceLevel::BsiSbomForAi,
-    check_bsi_sbom_for_ai
+    check_bsi_sbom_for_ai,
+    findings
 );
 dedicated_checker!(Cisa2026Checker, ComplianceLevel::Cisa2026, check_cisa2026);
 dedicated_checker!(

@@ -1534,8 +1534,14 @@ fn every_text_output_neutralizes_sbom_text() {
         assert_neutralized(&label, "stdout", &out);
         assert_neutralized(&label, "stderr", &stderr(&output));
         // The remediation line under each finding goes through the same
-        // sanitizer; it must be present for every finding.
-        if args[0] == "validate" {
+        // sanitizer; it must be present for every finding. A standard that
+        // does not apply (the AI profiles on this SBOM) reports none.
+        if args[0] == "validate" && out.contains("Status: NOT APPLICABLE") {
+            assert!(
+                out.contains("No violations found."),
+                "{label}: an N/A standard reports no finding:\n{out}"
+            );
+        } else if args[0] == "validate" {
             assert_fix_line_per_finding(&label, &out, &["[ERROR] ", "[WARN] ", "[INFO] "], 2);
         } else if args.contains(&"--validate-ntia") {
             assert_fix_line_per_finding(&label, &out, &["  - "], 1);

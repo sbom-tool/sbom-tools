@@ -448,8 +448,7 @@ fn compliance_to_csv(results: &[crate::quality::ComplianceResult], selected: usi
         let status = compliance_status_label(r);
         if !r.is_applicable() {
             // One status row: an unevaluated standard has no actionable
-            // violations, and its N/A placeholder finding must not be
-            // mistaken for one.
+            // violations; the row carries the reason it did not apply.
             let reason = not_applicable_reason(r).unwrap_or("");
             lines.push(format!(
                 "\"{std_name}\",\"{status}\",\"\",\"\",\"\",\"\",\"\",\"{}\",\"\"",
@@ -866,6 +865,8 @@ mod compliance_export_tests {
     };
 
     const RULE_ID: &str = "SBOM-BSI-TR-03183-2-VERSION";
+    /// Why the fixture's readiness standard did not apply.
+    const NA_REASON: &str = "SBOM contains no ML components";
 
     fn violation(rule_id: &'static str, severity: ViolationSeverity) -> Violation {
         Violation {
@@ -889,12 +890,7 @@ mod compliance_export_tests {
             ComplianceLevel::BsiTr03183_2,
             vec![violation(RULE_ID, ViolationSeverity::Error)],
         );
-        // "SBOM-AIACT-NA" is the readiness profiles' N/A marker rule;
-        // ComplianceResult::new derives Applicability::NotApplicable from it.
-        let not_applicable = ComplianceResult::new(
-            ComplianceLevel::EuAiAct,
-            vec![violation("SBOM-AIACT-NA", ViolationSeverity::Info)],
-        );
+        let not_applicable = ComplianceResult::not_applicable(ComplianceLevel::EuAiAct, NA_REASON);
         assert!(!not_applicable.is_applicable(), "fixture must be N/A");
         vec![applicable, not_applicable]
     }
@@ -988,7 +984,7 @@ mod compliance_export_tests {
             !md.contains("COMPLIANT"),
             "an unevaluated standard must not render as a pass: {md}"
         );
-        assert!(md.contains("test finding message"), "reason surfaced");
+        assert!(md.contains(NA_REASON), "reason surfaced");
     }
 
     #[test]

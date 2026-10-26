@@ -52,9 +52,9 @@ pub(crate) struct AiBomScope<'a> {
 }
 
 impl AiBomScope<'_> {
-    /// Whether the AI profiles apply to this SBOM at all. Non-applicable
-    /// SBOMs get the single informational N/A finding
-    /// (`SBOM-AIACT-NA` / `SBOM-BSIAI-NA`) and never fail.
+    /// Whether the AI profiles apply to this SBOM at all. For a
+    /// non-applicable SBOM the profiles report no finding: their result is
+    /// not applicable, with the reason, and never fails.
     pub(crate) fn is_applicable(&self) -> bool {
         !self.ml_components.is_empty()
             || !self.dataset_components.is_empty()

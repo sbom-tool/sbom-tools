@@ -195,7 +195,7 @@ sbom-tools validate sbom.json --standard ntia -o oscal-json --as-of 2026-10-12T0
 |---|---|
 | `metadata.oscal-version` | `1.2.3`. |
 | `results[]` | One per checked standard, in `--standard` order. Its `props` carry the verdict: `standard`, `standard-name`, `is-compliant`, `applicability`, `error-count`, `warning-count`, `info-count`, `score`, and `not-applicable-reason` when the standard did not apply. |
-| `results[].findings[]` | A roll-up finding for the standard (`satisfied` when compliant), then one `not-satisfied` finding per violation, targeting the objective named by the lowercased rule id. A standard that did not apply gets no roll-up, and its not-applicable marker is not reported as a violation. |
+| `results[].findings[]` | A roll-up finding for the standard (`satisfied` when compliant), then one `not-satisfied` finding per violation, targeting the objective named by the lowercased rule id. A standard that did not apply gets no roll-up and no finding. |
 | `results[].observations[]` | One per violation, the evidence its finding relates to, typed `discovery`, with the properties `severity`, `standard-reference`, `rule-id`, `sarif-rule-id` and, when the SBOM gives a label, `sbom-element`. |
 | `results[].observations[].subjects[]` | The SBOM document (`type: resource`), then, for a finding about a component, the component (`type: component`). |
 | `results[].local-definitions.components[]` | The components the result's observations name, titled by name and version, with OSCAL's `version` property, `component-id` (the canonical id: `component_id` in `-o json`) and `component-type` (the SBOM's own type). |

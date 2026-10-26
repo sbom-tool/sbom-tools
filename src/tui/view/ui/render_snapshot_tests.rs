@@ -481,33 +481,12 @@ fn compliance_selector_exposes_every_standard() {
 
 #[test]
 fn compliance_overview_marks_na_standards_muted_not_green() {
-    use crate::quality::{
-        ComplianceLevel, ComplianceResult, Violation, ViolationCategory, ViolationSeverity,
-    };
+    use crate::quality::{ComplianceLevel, ComplianceResult};
 
     // Readiness N/A results keep `is_compliant = true` and warning_count = 0
     // by contract — indistinguishable from a clean pass unless the renderer
     // checks `is_applicable()` first. The cross-standard overview must show
     // them as muted "not applicable", matching the tab strip one panel up.
-    fn na_marker(level: ComplianceLevel, rule_id: &'static str) -> ComplianceResult {
-        ComplianceResult::new(
-            level,
-            vec![Violation {
-                severity: ViolationSeverity::Info,
-                category: ViolationCategory::DocumentMetadata,
-                message: "SBOM contains no AI components".to_string(),
-                element: None,
-                requirement: "Applicability".to_string(),
-                rule_id,
-                component_id: None,
-                counts: None,
-                standard_refs: Vec::new(),
-                remediation: None,
-                finding_detail: None,
-            }],
-        )
-    }
-
     let mut app = demo_view_app(ViewTab::Compliance);
     // Synthetic per-standard results: everything clean except the two AI
     // readiness profiles, which are N/A. Selecting a clean standard (index 0)
@@ -515,8 +494,9 @@ fn compliance_overview_marks_na_standards_muted_not_green() {
     let results: Vec<ComplianceResult> = ComplianceLevel::all()
         .iter()
         .map(|level| match level {
-            ComplianceLevel::EuAiAct => na_marker(*level, "SBOM-AIACT-NA"),
-            ComplianceLevel::BsiSbomForAi => na_marker(*level, "SBOM-BSIAI-NA"),
+            ComplianceLevel::EuAiAct | ComplianceLevel::BsiSbomForAi => {
+                ComplianceResult::not_applicable(*level, "SBOM contains no AI components")
+            }
             _ => ComplianceResult::new(*level, Vec::new()),
         })
         .collect();

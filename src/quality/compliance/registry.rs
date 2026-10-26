@@ -174,7 +174,6 @@ const REMEDIATION_SSDF: &str = "Follow NIST SP 800-218 SSDF practices: include t
 /// EO 14028 §4 requirements share one remediation paragraph.
 const REMEDIATION_EO14028: &str = "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.";
 
-/// EU AI Act not-applicable remediation.
 /// Remediation for every `*-INVENTORY` rule: the document must list the
 /// software components it describes.
 const REMEDIATION_INVENTORY: &str = "List the software components the product is made of. A document with no components, or with only files, snippets or cryptographic assets, is not a software inventory; validate a CBOM with --standard cnsa2 or pqc instead.";
@@ -205,11 +204,6 @@ const REMEDIATION_SPEC_VERSION_UNKNOWN: &str =
 /// (SBOM-{QUALITY,NTIA,CRA,FDA}-ELEMENT-ID).
 const REMEDIATION_ELEMENT_ID: &str =
     "Give every element its own well-formed identifier, the one dependency relationships refer to.";
-
-const REMEDIATION_AIACT_NA: &str = "EU AI Act Annex IV readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components to enable the assessment.";
-
-/// BSI/G7 SBOM-for-AI not-applicable remediation.
-const REMEDIATION_BSIAI_NA: &str = "BSI/G7 SBOM-for-AI minimum-elements readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components to enable the assessment.";
 
 /// Mistyped-ML remediation, shared by the EU AI Act and BSI/G7 SBOM-for-AI
 /// applicability guards.
@@ -1062,22 +1056,6 @@ const ADVICE_CONFORMITY_EVIDENCE: FormatAdvice = FormatAdvice {
     spdx3: FieldAdvice {
         text: "add an externalRef[] entry with externalRefType certificationReport to the root package; secureSoftwareAttestation does not count.",
         field: Some("externalRef[]"),
-    },
-};
-
-/// AI-BOM content: ML-model and dataset components.
-const ADVICE_AI_COMPONENTS: FormatAdvice = FormatAdvice {
-    cyclonedx: FieldAdvice {
-        text: "set components[].type to machine-learning-model (with a modelCard) for models, and give dataset components a data[] block.",
-        field: Some("components[].type"),
-    },
-    spdx2: FieldAdvice {
-        text: "no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.",
-        field: None,
-    },
-    spdx3: FieldAdvice {
-        text: "describe models as ai_AIPackage and datasets as dataset_DatasetPackage elements.",
-        field: Some("ai_AIPackage"),
     },
 };
 
@@ -2249,15 +2227,6 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "State each model's foreseeable limitations and risks (Annex IV §3), including ethical and fairness considerations.",
             advice: Some(&ADVICE_AI_LIMITATIONS),
         },
-        "SBOM-AIACT-NA" => RuleMeta {
-            sarif_id: "SBOM-AIACT-NA",
-            name: "AiActNotApplicable",
-            short_description: "EU AI Act Annex IV readiness not applicable — SBOM has no ML-model or dataset components",
-            default_severity: ViolationSeverity::Info,
-            refs: &[(K::EuAiAct, "Annex IV")],
-            remediation: REMEDIATION_AIACT_NA,
-            advice: Some(&ADVICE_AI_COMPONENTS),
-        },
         "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION" => RuleMeta {
             sarif_id: "SBOM-AIACT-ANNEX-IV-1",
             name: "AiActGeneralDescription",
@@ -2412,15 +2381,6 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             refs: &[(K::BsiSbomForAi, "Security")],
             remediation: REMEDIATION_BSIAI_GENERAL,
             advice: None,
-        },
-        "SBOM-BSIAI-NA" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-NA",
-            name: "BsiSbomForAiNotApplicable",
-            short_description: "BSI/G7 SBOM-for-AI minimum-elements readiness not applicable — SBOM has no ML-model or dataset components",
-            default_severity: ViolationSeverity::Info,
-            refs: &[(K::BsiSbomForAi, "Applicability")],
-            remediation: REMEDIATION_BSIAI_NA,
-            advice: Some(&ADVICE_AI_COMPONENTS),
         },
         "SBOM-BSIAI-UNTYPED-ML" => RuleMeta {
             sarif_id: "SBOM-BSIAI-UNTYPED-ML",
@@ -4303,7 +4263,6 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-AIACT-ANNEX-IV-2G",
     "SBOM-AIACT-ANNEX-IV-2C",
     "SBOM-AIACT-ANNEX-IV-3",
-    "SBOM-AIACT-NA",
     "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION",
     "SBOM-AIACT-ANNEX-IV-1-PURPOSE",
     "SBOM-AIACT-ANNEX-IV-2D-DATASETS",
@@ -4320,7 +4279,6 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-BSIAI-DATASET",
     "SBOM-BSIAI-INFRA",
     "SBOM-BSIAI-SEC",
-    "SBOM-BSIAI-NA",
     "SBOM-BSIAI-UNTYPED-ML",
     "SBOM-BSIAI-META-AUTHOR",
     "SBOM-BSIAI-META-FORMAT",
@@ -4647,14 +4605,12 @@ pub const COMPLIANCE_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-BSI-TR-03183-2-5-2-4",
     "SBOM-BSI-TR-03183-2-3-1",
     "SBOM-BSI-TR-03183-2-GENERAL",
-    "SBOM-AIACT-NA",
     "SBOM-AIACT-ANNEX-IV-1",
     "SBOM-AIACT-ANNEX-IV-2D",
     "SBOM-AIACT-ANNEX-IV-2G",
     "SBOM-AIACT-ANNEX-IV-2C",
     "SBOM-AIACT-ANNEX-IV-3",
     "SBOM-AIACT-UNTYPED-ML",
-    "SBOM-BSIAI-NA",
     "SBOM-BSIAI-META",
     "SBOM-BSIAI-SYS",
     "SBOM-BSIAI-MODEL",

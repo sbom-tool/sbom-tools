@@ -33,7 +33,7 @@ mod selector;
 mod shared;
 mod ssdf;
 
-use context::{ComplianceContext, checker_for};
+use context::{ComplianceContext, Findings, checker_for};
 pub use finding::{
     DOCUMENT_SUBJECT, FINDING_ID_PREFIX, FindingIdentity, finding_id, finding_key, finding_subject,
     standard_key,
@@ -953,11 +953,11 @@ impl ViolationCategory {
 
 /// Whether the checked standard actually evaluated this SBOM.
 ///
-/// Readiness profiles (EU AI Act, BSI/G7 SBOM-for-AI) return a single Info
-/// violation and `is_compliant = true` for SBOMs outside their scope; that
-/// contract is kept for compatibility, but consumers must render such runs
-/// as N/A — never as a pass. Old payloads without the field deserialize as
-/// `Applicable`.
+/// Readiness profiles (EU AI Act, BSI/G7 SBOM-for-AI) do not apply to SBOMs
+/// outside their scope: their result is `NotApplicable` with the reason, has
+/// no violations, and keeps `is_compliant = true` for compatibility, so
+/// consumers must render such runs as N/A — never as a pass. Old payloads
+/// without the field deserialize as `Applicable`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case", tag = "status", content = "reason")]
 pub enum Applicability {
@@ -967,10 +967,6 @@ pub enum Applicability {
     /// The standard did not apply (the string is the human-readable reason).
     NotApplicable(String),
 }
-
-/// Rule ids whose presence marks a result as not applicable (the readiness
-/// profiles emit exactly one of these, as an Info, for out-of-scope SBOMs).
-const NOT_APPLICABLE_RULES: &[&str] = &["SBOM-AIACT-NA", "SBOM-BSIAI-NA"];
 
 /// Result of compliance checking
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1027,7 +1023,8 @@ pub struct ConformityEvidence {
 }
 
 impl ComplianceResult {
-    /// Create a new compliance result
+    /// Create the result of a standard that evaluated the SBOM and found
+    /// `violations`.
     #[must_use]
     pub fn new(level: ComplianceLevel, violations: Vec<Violation>) -> Self {
         let error_count = violations
@@ -1043,23 +1040,26 @@ impl ComplianceResult {
             .filter(|v| v.severity == ViolationSeverity::Info)
             .count();
 
-        let applicability = violations
-            .iter()
-            .find(|v| NOT_APPLICABLE_RULES.contains(&v.rule_id))
-            .map_or(Applicability::Applicable, |v| {
-                Applicability::NotApplicable(v.message.clone())
-            });
-
         Self {
             is_compliant: error_count == 0,
             level,
             violations,
             conformity_summary: None,
-            applicability,
+            applicability: Applicability::Applicable,
             error_count,
             warning_count,
             info_count,
         }
+    }
+
+    /// Create the result of a standard that does not apply to the SBOM, for
+    /// `reason`: no violations, and `is_compliant` stays `true` by contract
+    /// (see [`Applicability`]).
+    #[must_use]
+    pub fn not_applicable(level: ComplianceLevel, reason: impl Into<String>) -> Self {
+        let mut result = Self::new(level, Vec::new());
+        result.applicability = Applicability::NotApplicable(reason.into());
+        result
     }
 
     /// Whether the standard actually evaluated this SBOM.
@@ -1313,9 +1313,9 @@ impl ComplianceChecker {
     /// path), runs it, then back-fills harmonised-standard references and the
     /// remediation for the SBOM's format from the rule registry, numbers the
     /// finding details of entries the SBOM repeats (so every finding keeps a
-    /// key of its own, see [`finding_key`]), and attaches the CRA Annex VIII
-    /// conformity summary when a product class has been pinned on a CRA
-    /// profile.
+    /// key of its own, see [`finding_key`]), records whether the standard
+    /// applied, and attaches the CRA Annex VIII conformity summary when a
+    /// product class has been pinned on a CRA profile.
     #[must_use]
     pub fn check(&self, sbom: &NormalizedSbom) -> ComplianceResult {
         let ctx = ComplianceContext::new(self, sbom);
@@ -1325,7 +1325,10 @@ impl ComplianceChecker {
             self.level,
             "dispatched checker must match the configured level"
         );
-        let mut violations = checker.check(&ctx);
+        let Findings {
+            mut violations,
+            applicability,
+        } = checker.check(&ctx);
 
         // Populate harmonised-standard references and the remediation,
         // phrased for the input format, from the rule registry.
@@ -1343,6 +1346,7 @@ impl ComplianceChecker {
         finding::number_repeated_details(&mut violations);
 
         let mut result = ComplianceResult::new(self.level, violations);
+        result.applicability = applicability;
         // Attach the CRA Annex VIII conformity summary when a product class
         // has been pinned and the level is a CRA profile.
         if self.level.is_cra() && self.has_explicit_product_class() {
