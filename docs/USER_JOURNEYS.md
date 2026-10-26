@@ -213,10 +213,12 @@ cargo run --release -- validate \
 With the repository's deliberately minimal fixture, the quality command exits
 with code 1 because its score is below 70, and validation exits with code 1
 because the engine-backed NTIA check reports compliance errors (code 2 signals
-a warnings-only result under `--fail-on-warning`; the same code also covers
-command-line usage errors and vulnerabilities introduced under
-`--fail-on-vuln`). Those non-zero results demonstrate the gates; they are not
-command failures.
+a warnings-only result under `--fail-on-warning`, as it signals vulnerabilities
+introduced under `--fail-on-vuln` in `diff`; command-line usage errors exit 3,
+like operational errors). Those non-zero results demonstrate the gates; they
+are not command failures. Add `--require-applicable` when a standard that does
+not apply to the BOM (an AI readiness profile on a BOM without ML components)
+must fail the gate rather than pass as N/A.
 
 Exit codes are part of the CLI contract. A pipeline should gate on the selected
 flag and exit code, then retain the JSON or SARIF output for diagnosis. See
@@ -304,7 +306,7 @@ cargo run --release -- timeline \
   -o markdown
 # error: invalid value 'markdown' for '--output <OUTPUT>'
 #   [possible values: auto, tui, json]
-# exit code 2
+# exit code 3
 ```
 
 In the TUI, `?` opens the shortcut overlay, `e` opens the export menu, and `q`

@@ -83,8 +83,8 @@ fn alias_table() -> Vec<(&'static str, ComplianceLevel)> {
     ]
 }
 
-/// Each alias must complete a real validation (exit 0 or 1 — never clap's
-/// parse-error 2) and the summary must name the engine standard the alias is
+/// Each alias must complete a real validation (exit 0 or 1 — never a usage
+/// error) and the summary must name the engine standard the alias is
 /// documented to select.
 #[test]
 fn every_documented_standard_alias_dispatches_to_its_engine_standard() {

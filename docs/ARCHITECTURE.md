@@ -69,7 +69,7 @@ cli/multi.rs
 
 Key differences from single-diff:
 - Typed `MultiDiffConfig` (baseline/targets, enrichment, filtering, graph-diff, output sections)
-- No report format variety — JSON or TUI only. `-o` is a restricted enum (`auto|tui|json`) declared on the commands themselves, so `--help` lists exactly those and an unsupported value is a clap usage error (exit 2) before any SBOM is read
+- No report format variety — JSON or TUI only. `-o` is a restricted enum (`auto|tui|json`) declared on the commands themselves, so `--help` lists exactly those and an unsupported value is a clap usage error (exit 3) before any SBOM is read
 - No streaming support
 - Timeline JSON carries `incremental_pairs` / `cumulative_pairs` alongside `incremental_diffs` / `cumulative_from_first`: index-aligned `{from_index, to_index, from_name, to_name}` records, so a consumer never has to infer which pair an array position refers to
 

@@ -28,8 +28,10 @@ pub const VALIDATE_OUTPUT_FORMATS: &[ReportFormat] = &[
 ///
 /// # Exit codes
 /// - [`exit_codes::SUCCESS`] (0): compliant (no errors; no warnings when
-///   `--fail-on-warning` is set)
-/// - [`exit_codes::COMPLIANCE_ERRORS`] (1): one or more compliance errors found
+///   `--fail-on-warning` is set). A standard that does not apply to the SBOM
+///   counts as compliant unless `require_applicable` is set.
+/// - [`exit_codes::COMPLIANCE_ERRORS`] (1): one or more compliance errors
+///   found, or (with `require_applicable`) a standard did not apply
 /// - [`exit_codes::COMPLIANCE_WARNINGS`] (2): warnings found with
 ///   `--fail-on-warning`
 ///
@@ -37,9 +39,8 @@ pub const VALIDATE_OUTPUT_FORMATS: &[ReportFormat] = &[
 /// usage/configuration error surfaced from this function (unsupported output
 /// format, invalid `--as-of` or `--cra-product-class`, broken explicit
 /// sidecar) propagates as an `Err`, which the binary's `main()` maps to
-/// [`exit_codes::ERROR`] (3). Clap's own argument-parse errors exit 2, the
-/// same number as the warnings gate, so CI pipelines must not read exit 2 as
-/// a compliance verdict unless the expected report was produced.
+/// [`exit_codes::ERROR`] (3) — the code clap's own argument-parse errors
+/// exit with too, so exit 2 only ever means the warnings gate.
 ///
 /// The caller is responsible for calling `std::process::exit()` with the
 /// returned code when it is non-zero.
@@ -54,6 +55,7 @@ pub fn run_validate(
     cra_sidecar_path: Option<PathBuf>,
     cra_product_class: Option<String>,
     as_of: Option<&str>,
+    require_applicable: bool,
 ) -> Result<i32> {
     // `--summary` overrides `--output` (documented on the flag), so the
     // requested format is never rendered and must not be gated.
@@ -139,13 +141,6 @@ pub fn run_validate(
         } else {
             write_compliance_output(result, output, output_file, &provenance)?;
         }
-
-        if result.error_count > 0 {
-            return Ok(exit_codes::COMPLIANCE_ERRORS);
-        }
-        if fail_on_warning && result.warning_count > 0 {
-            return Ok(exit_codes::COMPLIANCE_WARNINGS);
-        }
     } else {
         // Multi-standard: merge results for output
         if summary {
@@ -153,15 +148,18 @@ pub fn run_validate(
         } else {
             write_multi_compliance_output(&results, output, output_file, &provenance)?;
         }
+    }
 
-        let has_errors = results.iter().any(|r| r.error_count > 0);
-        let has_warnings = results.iter().any(|r| r.warning_count > 0);
-        if has_errors {
-            return Ok(exit_codes::COMPLIANCE_ERRORS);
-        }
-        if fail_on_warning && has_warnings {
-            return Ok(exit_codes::COMPLIANCE_WARNINGS);
-        }
+    let has_errors = results.iter().any(|r| r.error_count > 0);
+    let has_warnings = results.iter().any(|r| r.warning_count > 0);
+    // `--require-applicable`: a standard that did not evaluate the SBOM is
+    // a failed gate, not a pass.
+    let not_applicable = require_applicable && results.iter().any(|r| !r.is_applicable());
+    if has_errors || not_applicable {
+        return Ok(exit_codes::COMPLIANCE_ERRORS);
+    }
+    if fail_on_warning && has_warnings {
+        return Ok(exit_codes::COMPLIANCE_WARNINGS);
     }
 
     Ok(exit_codes::SUCCESS)
@@ -401,6 +399,7 @@ mod tests {
                 None,
                 None,
                 None,
+                false,
             )
             .expect_err("unsupported format must be rejected");
             let msg = err.to_string();
@@ -427,6 +426,7 @@ mod tests {
             None,
             None,
             None,
+            false,
         )
         .expect_err("empty standard list must be rejected");
         assert!(err.to_string().contains("no compliance standard selected"));
@@ -454,6 +454,7 @@ mod tests {
             None,
             None,
             None,
+            false,
         )
         .expect("--summary must override -o html instead of hard-erroring");
         let content = std::fs::read_to_string(out).unwrap();
@@ -483,6 +484,7 @@ mod tests {
             None,
             Some("critcal".to_string()),
             None,
+            false,
         )
         .expect_err("typo'd --cra-product-class must be a hard error");
         let msg = err.to_string();
@@ -514,6 +516,7 @@ mod tests {
             None,
             None,
             Some("2027-01-01T00:00:00"),
+            false,
         )
         .expect("offset-less --as-of datetime must parse (assumed UTC)");
     }
@@ -539,6 +542,7 @@ mod tests {
             Some(dir.path().join("missing.cra.json")),
             None,
             None,
+            false,
         )
         .expect_err("broken explicit sidecar must be a hard error");
         assert!(err.to_string().contains("Failed to load CRA sidecar"));

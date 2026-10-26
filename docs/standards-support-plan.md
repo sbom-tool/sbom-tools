@@ -40,7 +40,7 @@ Two deviations from Part 2's model plan are worth knowing:
 `sbom-tools validate --standard` accepts exactly `ntia`, `fda`, `cra`,
 `cra-phase1`, `ssdf`, `eo14028`, `cnsa2`, `pqc`, `bsi`, `oss-steward`,
 `eucc`, `ai-act`, `bsi-ai`, `cisa-2026`, `pci-dss`, `fsct` (plus the aliases
-listed in `--help`). Any other value is a clap usage error — exit code 2,
+listed in `--help`). Any other value is a clap usage error — exit code 3,
 before any SBOM is parsed.
 
 Three of those shipped on 2026-07-30 (commit `b0e533b`), taking the count
@@ -74,7 +74,7 @@ remains valid as a self-declared fallback, and documents without
   SBOM. Phase 1 covers in-document CDXA only, and signatures are recorded as
   *present*, never cryptographically verified.
 - **METI, OpenChain Telco SBOM, NIST SP 800-161r1** — no profile exists;
-  `--standard` rejects those names with exit 2. They were never in scope for
+  `--standard` rejects those names with exit 3. They were never in scope for
   this document, which covers format support only.
 
 ---

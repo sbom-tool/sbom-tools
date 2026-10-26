@@ -4,6 +4,8 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
+use serde_json::Value;
+
 const FIXTURES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
 fn fixture_path(name: &str) -> PathBuf {
@@ -114,6 +116,225 @@ fn query_match_returns_exit_code_0() {
     assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
 }
 
+// ---------------------------------------------------------------------------
+// Usage errors exit 3 in every command; --help and --version exit 0
+// ---------------------------------------------------------------------------
+
+fn run(args: &[&str]) -> Output {
+    base_command()
+        .args(args)
+        .output()
+        .expect("sbom-tools should run")
+}
+
+fn fixture_arg(name: &str) -> String {
+    fixture_path(name)
+        .to_str()
+        .expect("fixture paths are UTF-8")
+        .to_string()
+}
+
+fn assert_usage_error(args: &[&str], output: &Output) {
+    assert_eq!(
+        output.status.code(),
+        Some(3),
+        "{args:?} must be a usage error (exit 3): {}",
+        stderr(output)
+    );
+    assert!(stdout(output).is_empty(), "{args:?} wrote to stdout");
+    assert!(
+        stderr(output).starts_with("error:") || stderr(output).contains("Usage:"),
+        "{args:?} must keep clap's message: {}",
+        stderr(output)
+    );
+}
+
+/// Exit 2 used to mean both "warnings found" and "clap rejected the command
+/// line", so a pipeline that tolerated warnings also passed a mistyped
+/// standard.
+#[test]
+fn mistyped_standard_or_flag_value_exits_3_in_validate_and_diff() {
+    let new = fixture_arg("demo-new.cdx.json");
+    let old = fixture_arg("demo-old.cdx.json");
+    let (new, old) = (new.as_str(), old.as_str());
+    let cases = [
+        vec!["validate", new, "--standard", "ntai"],
+        vec!["validate", new, "--standard", "ntai", "--fail-on-warning"],
+        vec!["validate", new, "--standard", "ntia,cra-phase3"],
+        // `diff` takes no --standard, so passing one is an unknown argument.
+        vec!["diff", old, new, "--standard", "ntia"],
+        vec!["diff", old, new, "--fuzzy-preset", "balancd"],
+        vec!["diff", old, new, "--graph-impact-threshold", "hgh"],
+    ];
+    for args in &cases {
+        assert_usage_error(args, &run(args));
+    }
+}
+
+#[test]
+fn unknown_flag_exits_3_in_every_command() {
+    let sbom = fixture_arg("demo-new.cdx.json");
+    let sbom = sbom.as_str();
+    let commands = [
+        vec![],
+        vec!["validate", sbom],
+        vec!["diff", sbom, sbom],
+        vec!["view", sbom],
+        vec!["quality", sbom],
+        vec!["query", "lodash", sbom],
+        vec!["diff-multi", sbom, sbom],
+        vec!["timeline", sbom, sbom],
+        vec!["matrix", sbom, sbom],
+        vec!["license-check", sbom],
+        vec!["vex", "status", sbom],
+        vec!["verify", "hash", sbom],
+        vec!["merge", sbom, sbom],
+        vec!["convert", sbom, "--to", "spdx"],
+        vec!["tailor", sbom],
+        vec!["cra-docs", sbom],
+        vec!["cra-standards-watch"],
+        vec!["watch", "--dir", "."],
+        vec!["config", "show"],
+        vec!["config-schema"],
+        vec!["completions", "bash"],
+        vec!["man"],
+    ];
+    for command in commands {
+        let mut args = command;
+        args.push("--no-such-flag");
+        let output = run(&args);
+        assert_usage_error(&args, &output);
+        assert!(
+            stderr(&output).contains("unexpected argument '--no-such-flag'"),
+            "{args:?}: {}",
+            stderr(&output)
+        );
+    }
+}
+
+#[test]
+fn help_and_version_exit_0_on_stdout() {
+    for args in [
+        vec!["--help"],
+        vec!["-h"],
+        vec!["--version"],
+        vec!["-V"],
+        vec!["help"],
+        vec!["help", "validate"],
+        vec!["validate", "--help"],
+        vec!["diff", "-h"],
+        vec!["vex", "help", "status"],
+    ] {
+        let output = run(&args);
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{args:?}: {}",
+            stderr(&output)
+        );
+        assert!(
+            !stdout(&output).trim().is_empty(),
+            "{args:?} printed nothing"
+        );
+        assert!(stderr(&output).is_empty(), "{args:?}: {}", stderr(&output));
+    }
+}
+
+/// Help printed because a required argument or subcommand is missing is a
+/// usage error, not a help request.
+#[test]
+fn missing_arguments_exit_3_even_when_clap_prints_help() {
+    let old = fixture_arg("demo-old.cdx.json");
+    for args in [
+        vec![],
+        vec!["vex"],
+        vec!["verify"],
+        vec!["validate"],
+        vec!["diff", old.as_str()],
+        vec!["query"],
+    ] {
+        assert_usage_error(&args, &run(&args));
+    }
+    // With no argument at all (not even the `--no-color` every other run
+    // passes), clap prints the full help, to stderr, and it still fails.
+    let bare = Command::new(env!("CARGO_BIN_EXE_sbom-tools"))
+        .output()
+        .expect("sbom-tools should run");
+    assert_usage_error(&[], &bare);
+    assert!(
+        stderr(&bare).contains("Commands:"),
+        "a bare invocation still shows the help: {}",
+        stderr(&bare)
+    );
+}
+
+// ---------------------------------------------------------------------------
+// validate --require-applicable
+// ---------------------------------------------------------------------------
+
+#[test]
+fn require_applicable_makes_a_not_applicable_standard_exit_1() {
+    // demo-new has no ML components, so both AI readiness profiles are N/A.
+    let plain = fixture_arg("demo-new.cdx.json");
+    let plain = plain.as_str();
+    for standard in ["ai-act", "bsi-ai"] {
+        let args = ["validate", plain, "--standard", standard, "--summary"];
+        let without = run(&args);
+        assert_eq!(
+            without.status.code(),
+            Some(0),
+            "{standard}: N/A exits 0 by default: {}",
+            stderr(&without)
+        );
+        let json: Value = serde_json::from_str(stdout(&without).trim()).expect("summary JSON");
+        assert_eq!(
+            json["applicable"], false,
+            "{standard} must be N/A for this fixture: {json}"
+        );
+
+        let with = run(&[&args[..], &["--require-applicable"][..]].concat());
+        assert_eq!(
+            with.status.code(),
+            Some(1),
+            "{standard}: N/A is non-compliant under --require-applicable: {}",
+            stderr(&with)
+        );
+        assert_eq!(
+            stdout(&with),
+            stdout(&without),
+            "the flag changes the exit code, not the report"
+        );
+    }
+
+    // With several standards, one N/A standard is enough; ntia alone only
+    // has warnings here, so it passes without --fail-on-warning.
+    let warnings_only = fixture_arg("cyclonedx/ntia-warnings-only.cdx.json");
+    let warnings_only = warnings_only.as_str();
+    let both = [
+        "validate",
+        warnings_only,
+        "--standard",
+        "ntia,ai-act",
+        "--summary",
+    ];
+    assert_eq!(run(&both).status.code(), Some(0));
+    assert_eq!(
+        run(&[&both[..], &["--require-applicable"][..]].concat())
+            .status
+            .code(),
+        Some(1)
+    );
+    // An applicable standard is unaffected by the flag.
+    let ntia = [
+        "validate",
+        warnings_only,
+        "--standard",
+        "ntia",
+        "--require-applicable",
+    ];
+    assert_eq!(run(&ntia).status.code(), Some(0));
+}
+
 #[test]
 fn invalid_fuzzy_preset_is_rejected_at_parse() {
     let output = base_command()
@@ -124,8 +345,8 @@ fn invalid_fuzzy_preset_is_rejected_at_parse() {
         .output()
         .expect("diff command should run");
 
-    // clap exits with code 2 on argument parse errors.
-    assert_eq!(output.status.code(), Some(2), "{}", stdout(&output));
+    // Argument parse errors are usage errors: exit 3, never a gate code.
+    assert_eq!(output.status.code(), Some(3), "{}", stdout(&output));
     let err = stderr(&output);
     assert!(
         err.contains("invalid value 'not-a-preset'"),
@@ -147,7 +368,7 @@ fn invalid_merge_dedup_strategy_is_rejected_at_parse() {
         .output()
         .expect("merge command should run");
 
-    assert_eq!(output.status.code(), Some(2), "{}", stdout(&output));
+    assert_eq!(output.status.code(), Some(3), "{}", stdout(&output));
     let err = stderr(&output);
     assert!(
         err.contains("invalid value 'not-a-strategy'"),
@@ -274,8 +495,8 @@ fn invalid_standard_is_rejected_at_parse_with_possible_values() {
         .output()
         .expect("validate command should run");
 
-    // clap exits with code 2 on argument parse errors.
-    assert_eq!(output.status.code(), Some(2), "{}", stdout(&output));
+    // A usage error, not the warnings gate (2) a pipeline may tolerate.
+    assert_eq!(output.status.code(), Some(3), "{}", stdout(&output));
     let err = stderr(&output);
     assert!(
         err.contains("invalid value 'not-a-standard'"),
@@ -296,7 +517,7 @@ fn invalid_profile_is_rejected_at_parse_with_possible_values() {
         .output()
         .expect("quality command should run");
 
-    assert_eq!(output.status.code(), Some(2), "{}", stdout(&output));
+    assert_eq!(output.status.code(), Some(3), "{}", stdout(&output));
     let err = stderr(&output);
     assert!(
         err.contains("invalid value 'not-a-profile'"),
@@ -360,8 +581,7 @@ fn validate_standard_aliases_parse_through_clap() {
 
 /// Regression: the pre-typed hand parser split on ',' and trimmed, so quoted
 /// lists with spaces (`--standard "ntia, cra"`) parsed. The typed parser must
-/// keep accepting them instead of exiting 2 (which the documented contract
-/// reads as "warnings found").
+/// keep accepting them instead of failing with a usage error.
 #[test]
 fn validate_standard_list_with_spaces_after_commas_parses() {
     let output = base_command()
@@ -374,7 +594,7 @@ fn validate_standard_list_with_spaces_after_commas_parses() {
     let err = stderr(&output);
     assert_ne!(
         output.status.code(),
-        Some(2),
+        Some(3),
         "'ntia, cra' must not be a usage error: {err}"
     );
     let json: serde_json::Value =

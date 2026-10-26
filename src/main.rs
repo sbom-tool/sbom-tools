@@ -22,7 +22,7 @@ use sbom_tools::{
         MatrixConfig, MultiDiffConfig, OutputConfig, QueryConfig, TimelineConfig, ViewConfig,
         WatchConfig,
     },
-    pipeline::dirs,
+    pipeline::{dirs, exit_codes},
     quality::{ScoringProfile, StandardSelector},
     reports::{ReportFormat, ReportType},
     watch::parse_duration,
@@ -53,11 +53,12 @@ const fn build_long_version() -> &'static str {
 #[command(after_help = "EXIT CODES:
     0  Success / gate passed
     1  Gate failed: --fail-on-change, --min-score, --fail-on-noncompliant,
-       query with no matches, vex status/filter --actionable-only,
-       verify audit-hashes gate
-    2  Command-line usage error; also vulnerabilities introduced
-       (diff/view --fail-on-vuln)
-    3  Operational error (I/O, parse, config, invalid values)
+       validate errors (or N/A under --require-applicable), query with no
+       matches, vex status/filter --actionable-only, verify audit-hashes gate
+    2  Vulnerabilities introduced (diff/view --fail-on-vuln); compliance
+       warnings (validate --fail-on-warning)
+    3  Usage error (unknown flag or value, missing argument) or operational
+       error (I/O, parse, config, invalid values)
     4  VEX gaps found (--fail-on-vex-gap)
     5  License policy violations found (license-check)
     6  Actively exploited (KEV) vulnerability introduced (--fail-on-kev)
@@ -341,8 +342,9 @@ fn seed_vex_enrichment(
 #[command(after_help = "EXIT CODES:
     0  Success (changes alone exit 0 without --fail-on-change)
     1  Changes detected (--fail-on-change)
-    2  Vulnerabilities introduced (--fail-on-vuln); also CLI usage errors
-    3  Operational error (I/O, parse, config, invalid values)
+    2  Vulnerabilities introduced (--fail-on-vuln)
+    3  Usage error (unknown flag or value, missing argument) or operational
+       error (I/O, parse, config, invalid values)
     4  VEX gaps found (--fail-on-vex-gap)
     6  Actively exploited (KEV) vulnerability introduced (--fail-on-kev)
     7  ML performance metric regressed (--fail-on-ml-regression)
@@ -532,14 +534,17 @@ struct ViewArgs {
 /// Arguments for the `validate` subcommand
 #[derive(Parser)]
 #[command(after_help = "EXIT CODES:
-    0  Compliant (no errors; no warnings with --fail-on-warning)
-    1  Compliance errors found (non-compliant)
-    2  Compliance warnings found (only with --fail-on-warning); also
-       command-line parse errors
-    3  Operational error (unsupported output format, invalid --as-of /
-       --cra-product-class / --cra-sidecar, broken config file, I/O)
+    0  Compliant (no errors; no warnings with --fail-on-warning). A standard
+       that does not apply to the SBOM (N/A) also exits 0, unless
+       --require-applicable
+    1  Compliance errors found (non-compliant), or a standard is N/A under
+       --require-applicable
+    2  Compliance warnings found (only with --fail-on-warning)
+    3  Usage error (unknown flag or standard, invalid flag value, missing
+       argument) or operational error (unsupported output format, invalid
+       --as-of / --cra-product-class / --cra-sidecar, broken config file, I/O)
 
-    The gate codes (0/1/warning-2) only apply to runs that completed a
+    The gate codes (0/1/2) only apply to runs that completed a
     validation — a nonzero exit is only a compliance verdict when the
     expected report was produced.
 
@@ -548,7 +553,8 @@ EXAMPLES:
     sbom-tools validate app.cdx.json --standard cra,eo14028       # Multi-standard
     sbom-tools validate app.cdx.json --standard ntia -o sarif     # SARIF for CI
     sbom-tools validate app.cdx.json --standard ntia -o oscal-json # OSCAL assessment results
-    sbom-tools validate app.cdx.json --fail-on-warning            # Strict CI gate")]
+    sbom-tools validate app.cdx.json --fail-on-warning            # Strict CI gate
+    sbom-tools validate ai.cdx.json --standard ai-act --require-applicable")]
 struct ValidateArgs {
     /// Path to the SBOM file
     sbom: PathBuf,
@@ -585,6 +591,12 @@ struct ValidateArgs {
     #[arg(long)]
     fail_on_warning: bool,
 
+    /// Exit 1 (non-compliant) when a selected standard does not apply to the
+    /// SBOM, e.g. ai-act or bsi-ai on an SBOM without ML components. Without
+    /// it, such a standard is reported as N/A and exits 0
+    #[arg(long)]
+    require_applicable: bool,
+
     /// Output only a compact JSON summary (overrides --output)
     #[arg(long)]
     summary: bool,
@@ -615,8 +627,8 @@ struct ValidateArgs {
 /// `diff-multi`, `timeline` and `matrix` have no summary/markdown/SARIF
 /// renderers — offering the full [`ReportFormat`] list in `--help` advertised
 /// formats that failed at runtime. Restricting the parser here makes `--help`
-/// honest and turns a bad value into a clap usage error (exit 2) listing the
-/// real choices, instead of an operational error (exit 3) after the SBOMs are
+/// honest and turns a bad value into a clap usage error listing the real
+/// choices before any SBOM is read, instead of a failure after the SBOMs are
 /// parsed. `cli::multi` still gates at runtime, which also covers a format
 /// arriving from the config file.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
@@ -643,7 +655,7 @@ impl From<MultiOutputFormat> for ReportFormat {
 #[derive(Parser)]
 #[command(after_help = "EXIT CODES:
     Gates: 1 changes (--fail-on-change), 2 vulnerabilities (--fail-on-vuln),
-    4 VEX gaps (--fail-on-vex-gap). Operational errors exit 3.
+    4 VEX gaps (--fail-on-vex-gap). Usage and operational errors exit 3.
 
 EXAMPLES:
     sbom-tools diff-multi baseline.json target1.json target2.json
@@ -717,7 +729,7 @@ struct DiffMultiArgs {
 #[derive(Parser)]
 #[command(after_help = "EXIT CODES:
     Gates: 1 changes (--fail-on-change), 2 vulnerabilities (--fail-on-vuln),
-    4 VEX gaps (--fail-on-vex-gap). Operational errors exit 3.
+    4 VEX gaps (--fail-on-vex-gap). Usage and operational errors exit 3.
 
 EXAMPLES:
     sbom-tools timeline v1.0.json v1.1.json v1.2.json             # Version evolution
@@ -784,7 +796,7 @@ struct TimelineArgs {
 #[derive(Parser)]
 #[command(after_help = "EXIT CODES:
     Gates: 1 changes (--fail-on-change), 2 vulnerabilities (--fail-on-vuln),
-    4 VEX gaps (--fail-on-vex-gap). Operational errors exit 3.
+    4 VEX gaps (--fail-on-vex-gap). Usage and operational errors exit 3.
 
 EXAMPLES:
     sbom-tools matrix v1.json v2.json v3.json                     # NxN comparison
@@ -856,8 +868,8 @@ struct MatrixArgs {
 #[command(after_help = "EXIT CODES:
     0  Score meets --min-score (or no threshold) and, with --fail-on-noncompliant, the SBOM is compliant
     1  Overall score below --min-score, OR (with --fail-on-noncompliant) the SBOM is non-compliant
-    2  Command-line parse errors
-    3  Operational error (unsupported output format, invalid --as-of /
+    3  Usage error (unknown flag or value, missing argument) or operational
+       error (unsupported output format, invalid --as-of /
        --cra-product-class / --cra-sidecar, broken config file, I/O)
 
     The gate codes (0/1) only apply to runs that completed an assessment —
@@ -939,7 +951,7 @@ struct QualityArgs {
 #[command(after_help = "EXIT CODES:
     0  At least one component matched the filter
     1  No components matched the filter
-    3  Error occurred
+    3  Usage or operational error
 
 EXAMPLES:
     sbom-tools query log4j fleet/*.json                            # Search by name
@@ -1390,7 +1402,8 @@ enum VerifyAction {
 #[derive(Parser)]
 #[command(after_help = "EXIT CODES:
     0    License policy passed
-    3    Operational error (unreadable SBOM, parse failure, invalid policy file)
+    3    Usage or operational error (unknown flag, unreadable SBOM, parse
+         failure, invalid policy file)
     5    License policy violations (denied licenses; review-needed under --strict;
          propagation conflicts under --check-propagation)
 
@@ -1800,21 +1813,47 @@ fn main() {
     reset_sigpipe();
 
     // Central operational-error exit: every anyhow error (I/O, parse, config,
-    // unsupported output format, invalid flag values) leaves with code 3, so
-    // it can never collide with gate codes (1 = verdict gates, 2 = clap usage
-    // errors and diff/view --fail-on-vuln, 4 = --fail-on-vex-gap, 5 =
-    // license-check denial, 6 = --fail-on-kev, 7 = diff ML regression).
+    // unsupported output format, invalid flag values) leaves with code 3 —
+    // as do clap usage errors (`exit_on_clap_error`) — so it can never
+    // collide with gate codes (1 = verdict gates, 2 = diff/view
+    // --fail-on-vuln and validate --fail-on-warning, 4 = --fail-on-vex-gap,
+    // 5 = license-check denial, 6 = --fail-on-kev, 7 = diff ML regression).
     if let Err(err) = run() {
         // Mirror the format the default `fn main() -> Result` termination
         // prints: message plus the "Caused by:" chain.
         eprintln!("Error: {err:?}");
-        std::process::exit(3);
+        std::process::exit(exit_codes::ERROR);
     }
 }
 
+/// Print a clap error and exit with the documented code.
+///
+/// `--help`, `--version` and the `help` subcommand are requests, not errors:
+/// their text goes to stdout and the exit code is 0. Every other clap error
+/// is a usage error and exits 3, including help printed because a required
+/// argument or subcommand is missing. Clap's own `Error::exit` uses 2, which
+/// is also the `validate --fail-on-warning` and `--fail-on-vuln` gate code,
+/// so a mistyped standard used to pass a pipeline that tolerates warnings.
+/// The message keeps clap's formatting; only the exit code differs.
+fn exit_on_clap_error(err: &clap::Error) -> ! {
+    use clap::error::ErrorKind;
+    // A closed stream is no reason to panic (clap's `Error::exit` also
+    // ignores this result).
+    let _ = err.print();
+    let code = match err.kind() {
+        ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => exit_codes::SUCCESS,
+        _ => exit_codes::ERROR,
+    };
+    let _ = io::stdout().flush();
+    let _ = io::stderr().flush();
+    std::process::exit(code);
+}
+
 fn run() -> Result<()> {
-    let matches = Cli::command().get_matches();
-    let cli = Cli::from_arg_matches(&matches).unwrap_or_else(|e| e.exit());
+    let matches = Cli::command()
+        .try_get_matches()
+        .unwrap_or_else(|e| exit_on_clap_error(&e));
+    let cli = Cli::from_arg_matches(&matches).unwrap_or_else(|e| exit_on_clap_error(&e));
 
     // Initialize logging. ANSI escapes only when stderr is a live terminal
     // and neither --no-color nor the NO_COLOR convention (set to a non-empty
@@ -2060,6 +2099,7 @@ fn run() -> Result<()> {
                 args.cra_product_class
                     .or_else(|| app.compliance.cra_product_class.clone()),
                 args.as_of.as_deref(),
+                args.require_applicable,
             )?;
             if exit_code != 0 {
                 std::process::exit(exit_code);
@@ -2897,7 +2937,7 @@ mod tests {
 
     /// The phantom `--no-fail-on-change` flag must not be advertised anywhere
     /// (it never existed), and the root exit-code table must document the
-    /// central operational-error code 3.
+    /// central code 3 for usage and operational errors.
     #[test]
     fn help_text_matches_reality() {
         let mut cmd = Cli::command();
@@ -2908,8 +2948,10 @@ mod tests {
             "phantom flag in root help"
         );
         assert!(
-            root.contains("Operational error"),
-            "root help must document exit 3"
+            root.contains(
+                "3  Usage error (unknown flag or value, missing argument) or operational"
+            ),
+            "root help must document exit 3 for usage and operational errors"
         );
         let diff = cmd
             .find_subcommand_mut("diff")

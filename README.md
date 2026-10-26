@@ -491,6 +491,7 @@ Checks an SBOM against a compliance standard and reports missing fields or faili
 |------|-------------|
 | `--standard <std>` | Standard to validate: `ntia` (default), `cisa-2026`, `fda`, `cra` (= Phase 2), `cra-phase1`, `ssdf`, `eo14028`, `cnsa2`, `pqc`, `bsi`, `oss-steward`, `eucc`, `ai-act`, `bsi-ai`, `pci-dss`, `fsct` (comma-separated for multiple; aliases in `--help`) |
 | `-o, --output <fmt>` | Output format: `summary` (default via `auto`), `json`, `sarif`, `oscal-json` |
+| `--require-applicable` | Exit `1` when a selected standard does not apply to the SBOM (e.g. `ai-act` on an SBOM without ML components); without it, such a standard is reported as N/A and exits `0` |
 
 </details>
 
@@ -775,11 +776,11 @@ Select with `-o` / `--output`:
 Not every command accepts every format — `--help` lists the ones a command
 supports, and how an out-of-list value is rejected depends on the command.
 `diff-multi`, `timeline`, and `matrix` accept `auto`, `tui`, and `json` only,
-and reject anything else as a command-line usage error (exit `2`). `diff`,
-`view`, `validate`, `quality`, and `query` reject it at run time as an
-operational error (exit `3`), before any SBOM is read, naming the formats they
-do accept (`validate --summary` is the exception — it overrides `-o` outright,
-so no format is gated).
+and reject anything else as a command-line usage error. `diff`, `view`,
+`validate`, `quality`, and `query` reject it at run time as an operational
+error, before any SBOM is read, naming the formats they do accept
+(`validate --summary` is the exception — it overrides `-o` outright, so no
+format is gated). Both exit `3`.
 
 ### JSON output contract
 
@@ -972,21 +973,22 @@ jobs:
 | Code | Meaning |
 |------|---------|
 | `0` | Success (no changes detected, or run without `--fail-on-change`) |
-| `1` | Changes detected (`--fail-on-change`) / compliance errors (`validate`) / quality score below `--min-score` or non-compliant with `--fail-on-noncompliant` (`quality`) / no query matches |
-| `2` | New vulnerabilities introduced (`--fail-on-vuln`) / compliance warnings (`validate --fail-on-warning`); also command-line parse errors |
-| `3` | Operational error (I/O, parse, config, invalid flag values) |
+| `1` | Changes detected (`--fail-on-change`) / compliance errors, or a not-applicable standard under `--require-applicable` (`validate`) / quality score below `--min-score` or non-compliant with `--fail-on-noncompliant` (`quality`) / no query matches |
+| `2` | New vulnerabilities introduced (`--fail-on-vuln`) / compliance warnings (`validate --fail-on-warning`) |
+| `3` | Usage error (unknown flag or value, missing argument) or operational error (I/O, parse, config, invalid flag values) |
 | `4` | VEX coverage gaps found (`--fail-on-vex-gap`) |
 | `5` | License policy violations found (`license-check`) |
 | `6` | Actively exploited (KEV) vulnerability introduced (`--fail-on-kev`) |
 | `7` | Supported ML performance metric regressed (`--fail-on-ml-regression`) |
 
 Gate codes only apply to runs that completed successfully and produced their
-report. Every operational error — I/O, parse failures, an unsupported `-o`
-format for the command, an invalid `--as-of`/`--cra-product-class` value, a
-broken explicit `--cra-sidecar`, or an invalid config file — exits `3`, and
-command-line parse errors exit `2` — CI pipelines should therefore only
-interpret a nonzero exit as a gate verdict when the expected report output was
-produced.
+report. Every usage error (an unknown flag or standard, an invalid flag value,
+a missing argument) and every operational error — I/O, parse failures, an
+unsupported `-o` format for the command, an invalid `--as-of`/
+`--cra-product-class` value, a broken explicit `--cra-sidecar`, or an invalid
+config file — exits `3`, in every command. `--help` and `--version` exit `0`.
+CI pipelines should therefore only interpret a nonzero exit as a gate verdict
+when the expected report output was produced.
 
 ML regression directions are explicit. Higher is better for `accuracy`, `f1`,
 `f1_score`, `precision`, `recall`, `auc`, `roc_auc`, `bleu`, and `rouge`.
