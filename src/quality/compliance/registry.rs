@@ -383,19 +383,19 @@ const ADVICE_LICENSE: FormatAdvice = FormatAdvice {
     },
 };
 
-/// CRA Art. 13(5) licence evidence, plus the SPDX 3.0 SimpleLicensing profile declaration the same rule checks.
-const ADVICE_CRA_LICENSE: FormatAdvice = FormatAdvice {
+/// SPDX 3.0 SimpleLicensing profile declaration; the check runs on SPDX 3.0 only.
+const ADVICE_LICENSING_PROFILE: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).",
-        field: Some("components[].licenses[]"),
+        text: "the check does not run on CycloneDX input.",
+        field: None,
     },
     spdx2: FieldAdvice {
-        text: "set packages[].licenseDeclared (PackageLicenseDeclared) or packages[].licenseConcluded; NOASSERTION and NONE are read as absent.",
-        field: Some("packages[].licenseDeclared"),
+        text: "the check does not run on SPDX 2.x input.",
+        field: None,
     },
     spdx3: FieldAdvice {
-        text: "add a hasDeclaredLicense (or hasConcludedLicense) Relationship from each package to a simplelicensing_LicenseExpression element, and list simpleLicensing in the SpdxDocument's profileConformance.",
-        field: Some("hasDeclaredLicense"),
+        text: "list simpleLicensing in the SpdxDocument's profileConformance.",
+        field: Some("profileConformance"),
     },
 };
 
@@ -443,22 +443,6 @@ const ADVICE_DEPENDENCIES: FormatAdvice = FormatAdvice {
     },
     spdx3: FieldAdvice {
         text: "add Relationship elements with relationshipType dependsOn (or contains) between the packages.",
-        field: Some("relationshipType"),
-    },
-};
-
-/// Dependency relationships plus the primary component (CRA Annex I dependency findings).
-const ADVICE_CRA_DEPENDENCY: FormatAdvice = FormatAdvice {
-    cyclonedx: FieldAdvice {
-        text: "add dependencies[] entries (ref plus dependsOn[]) and set metadata.component to the product.",
-        field: Some("dependencies[]"),
-    },
-    spdx2: FieldAdvice {
-        text: "add DEPENDS_ON (or CONTAINS) relationships[] entries and name the product package in documentDescribes.",
-        field: Some("relationships[]"),
-    },
-    spdx3: FieldAdvice {
-        text: "add Relationship elements with relationshipType dependsOn (or contains), and set the SpdxDocument's rootElement to the product package.",
         field: Some("relationshipType"),
     },
 };
@@ -959,6 +943,22 @@ const ADVICE_HARDWARE: FormatAdvice = FormatAdvice {
     },
 };
 
+/// A device's version, or its dependency on the firmware it runs.
+const ADVICE_DEVICE_FIRMWARE: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "set components[].version on the device, or add a dependencies[] entry from the device to its firmware component.",
+        field: Some("components[].version"),
+    },
+    spdx2: FieldAdvice {
+        text: "set packages[].versionInfo on the device package, or add a DEPENDS_ON relationships[] entry from it to its firmware package.",
+        field: Some("packages[].versionInfo"),
+    },
+    spdx3: FieldAdvice {
+        text: "set software_packageVersion on the device package, or add a dependsOn Relationship from it to its firmware package.",
+        field: Some("software_packageVersion"),
+    },
+};
+
 /// EU Declaration of Conformity reference; only SPDX 2.x has an in-SBOM path the check reads.
 const ADVICE_DOC_REF: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
@@ -1417,7 +1417,18 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 13(5)")],
             remediation: "Record license information for every component to support the Art. 13(5) due diligence on integrated third-party components.",
-            advice: Some(&ADVICE_CRA_LICENSE),
+            advice: Some(&ADVICE_LICENSE),
+        },
+        // The SPDX 3.0 SimpleLicensing profile declaration, a document-level
+        // check apart from the licence coverage above.
+        "SBOM-CRA-ART-13-5-PROFILE" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-5",
+            name: "CraLicensedComponentTracking",
+            short_description: "CRA Art. 13(5): Third-party due diligence — license information for all components",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(CRA, "Art. 13(5)")],
+            remediation: "Declare SPDX 3.0 SimpleLicensing profile conformance when the document carries license data, so its Art. 13(5) licence evidence is conveyed completely.",
+            advice: Some(&ADVICE_LICENSING_PROFILE),
         },
         // Single point of contact for vulnerability reporting. Formerly
         // cited Art. 13(6), which is the manufacturer's duty to report
@@ -1496,8 +1507,23 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
                 (CRA, "Art. 13(19)"),
                 (ANNEX, "Annex II (7)"),
             ],
-            remediation: "Declare when security updates end (Art. 13(8) / 13(19)): set supportEndDate in the CRA sidecar, or record the date in the SBOM. Components the end-of-life data marks as no longer supported need upgrading or replacing.",
+            remediation: "Declare when security updates end (Art. 13(8) / 13(19)): set supportEndDate in the CRA sidecar, or record the date in the SBOM.",
             advice: Some(&ADVICE_SUPPORT_END),
+        },
+        // Components the end-of-life data marks as no longer supported: a
+        // document-level count apart from the missing support end date.
+        "SBOM-CRA-ART-13-8-EOL" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-8",
+            name: "CraSupportPeriod",
+            short_description: "CRA Art. 13(8) / 13(19): Support period and security update end date (Annex II (7))",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[
+                (CRA, "Art. 13(8)"),
+                (CRA, "Art. 13(19)"),
+                (ANNEX, "Annex II (7)"),
+            ],
+            remediation: "Upgrade or replace the components the end-of-life data marks as no longer supported: they receive no more security updates (Art. 13(8)).",
+            advice: None,
         },
         // Documented vulnerability information. Formerly cited Art. 13(9),
         // which is actually the 10-year availability of issued security
@@ -1521,8 +1547,20 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Art. 13(8) / Annex II (7): Component lifecycle and end-of-support status",
             default_severity: ViolationSeverity::Info,
             refs: &[(CRA, "Art. 13(8)"), (ANNEX, "Annex II (7)")],
-            remediation: "Record component lifecycle or end-of-support status (Art. 13(8) / Annex II (7)); supportEndDate in the CRA sidecar counts too. Plan replacements for components approaching end-of-life.",
+            remediation: "Record component lifecycle or end-of-support status (Art. 13(8) / Annex II (7)); supportEndDate in the CRA sidecar counts too.",
             advice: Some(&ADVICE_LIFECYCLE),
+        },
+        // Components the end-of-life data shows reaching end-of-life within
+        // six months: a document-level count apart from the missing
+        // lifecycle evidence.
+        "SBOM-CRA-LIFECYCLE-APPROACHING-EOL" => RuleMeta {
+            sarif_id: "SBOM-CRA-LIFECYCLE",
+            name: "CraComponentLifecycle",
+            short_description: "CRA Art. 13(8) / Annex II (7): Component lifecycle and end-of-support status",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(CRA, "Art. 13(8)"), (ANNEX, "Annex II (7)")],
+            remediation: "Plan replacements for the components the end-of-life data shows reaching end-of-life within six months (Art. 13(8) / Annex II (7)).",
+            advice: None,
         },
         // Product identification. Formerly cited Art. 13(12) (technical
         // documentation + conformity assessment + DoC + CE marking); product
@@ -1689,10 +1727,25 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
                 (PREN, "PRE-7-RQ-01"),
                 (PREN, "PRE-7-RQ-03"),
             ],
-            // Emitted only by the supplier checks in cra.rs (direct = mandatory,
-            // transitive = recommended); the guidance must talk about suppliers,
-            // not dependency relationships (#347).
-            remediation: "Identify each component's supplier, starting with direct dependencies (mandatory under PRE-7-RQ-03; transitive dependencies are recommended).",
+            // Emitted only by the direct-dependency supplier check in cra.rs
+            // (mandatory); the guidance must talk about suppliers, not
+            // dependency relationships (#347).
+            remediation: "Identify the supplier of every direct dependency of the primary component (mandatory under PRE-7-RQ-03).",
+            advice: Some(&ADVICE_PRODUCER),
+        },
+        // The transitive-dependency supplier check (recommended), a second
+        // document-level finding beside the direct one.
+        "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE" => RuleMeta {
+            sarif_id: "SBOM-CRA-ANNEX-I",
+            name: "CraTechnicalDocumentation",
+            short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
+            default_severity: ViolationSeverity::Info,
+            refs: &[
+                (ANNEX, "Annex I Part II"),
+                (PREN, "PRE-7-RQ-01"),
+                (PREN, "PRE-7-RQ-03"),
+            ],
+            remediation: "Identify the suppliers of transitive dependencies as well (recommended under PRE-7-RQ-03).",
             advice: Some(&ADVICE_PRODUCER),
         },
         "SBOM-CRA-ANNEX-I-INTEGRITY" => RuleMeta {
@@ -1710,8 +1763,19 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
             default_severity: ViolationSeverity::Error,
             refs: &[(ANNEX, "Annex I")],
-            remediation: "Add dependency relationships between components, and identify the primary product component when the graph has several roots.",
-            advice: Some(&ADVICE_CRA_DEPENDENCY),
+            remediation: "Add dependency relationships between components: connect the primary component to its direct dependencies and keep most components inside the dependency graph.",
+            advice: Some(&ADVICE_DEPENDENCIES),
+        },
+        // Several roots and no primary component: a document-level finding
+        // beside the relationship gaps above.
+        "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS" => RuleMeta {
+            sarif_id: "SBOM-CRA-ANNEX-I",
+            name: "CraTechnicalDocumentation",
+            short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(ANNEX, "Annex I")],
+            remediation: "Identify the primary product component when the dependency graph has several roots, so the product's top-level dependencies are unambiguous.",
+            advice: Some(&ADVICE_PRIMARY),
         },
         "SBOM-CRA-ANNEX-I-PRIMARY" => RuleMeta {
             sarif_id: "SBOM-CRA-ANNEX-I",
@@ -1788,6 +1852,46 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             refs: &[(PREN, "PRE-8-RQ-02")],
             remediation: "Inventory every hardware component — device, firmware or device driver — with its producer, a unique identifier (PURL, CPE, SWHID or SWID) and, for firmware, the firmware version; give a device either a version or a dependency on its firmware component.",
             advice: Some(&ADVICE_HARDWARE),
+        },
+        // The four [PRE-8-RQ-02] checks on a hardware component, one id each
+        // so several gaps on one component never share a finding key. They
+        // alias the SBOM-CRA-PRE-8-RQ-02 SARIF rule above, which no check
+        // site emits any more.
+        "SBOM-CRA-PRE-8-RQ-02-PRODUCER" => RuleMeta {
+            sarif_id: "SBOM-CRA-PRE-8-RQ-02",
+            name: "CraHardwareInventory",
+            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware components must be inventoried with producer, name, identifier, and firmware version",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(PREN, "PRE-8-RQ-02")],
+            remediation: "Name the producer (supplier or author) of every hardware component: device, firmware or device driver.",
+            advice: Some(&ADVICE_PRODUCER),
+        },
+        "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER" => RuleMeta {
+            sarif_id: "SBOM-CRA-PRE-8-RQ-02",
+            name: "CraHardwareInventory",
+            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware components must be inventoried with producer, name, identifier, and firmware version",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(PREN, "PRE-8-RQ-02")],
+            remediation: "Give every hardware component a unique identifier: a PURL, CPE, SWHID or SWID.",
+            advice: Some(&ADVICE_IDENTIFIER),
+        },
+        "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION" => RuleMeta {
+            sarif_id: "SBOM-CRA-PRE-8-RQ-02",
+            name: "CraHardwareInventory",
+            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware components must be inventoried with producer, name, identifier, and firmware version",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(PREN, "PRE-8-RQ-02")],
+            remediation: "Give every firmware component its firmware version.",
+            advice: Some(&ADVICE_VERSION),
+        },
+        "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE" => RuleMeta {
+            sarif_id: "SBOM-CRA-PRE-8-RQ-02",
+            name: "CraHardwareInventory",
+            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware components must be inventoried with producer, name, identifier, and firmware version",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(PREN, "PRE-8-RQ-02")],
+            remediation: "Give every device a version, or a dependency on the firmware component it runs.",
+            advice: Some(&ADVICE_DEVICE_FIRMWARE),
         },
         "SBOM-CRA-PRE-7-RQ-07-RE" => RuleMeta {
             sarif_id: "SBOM-CRA-PRE-7-RQ-07-RE",
@@ -4021,14 +4125,17 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-CRA-SBOM-FRESHNESS",
     "SBOM-CRA-MACHINE-READABLE",
     "SBOM-CRA-ART-13-5",
+    "SBOM-CRA-ART-13-5-PROFILE",
     "SBOM-CRA-ART-13-17-CONTACT",
     "SBOM-CRA-VULN-METADATA",
     "SBOM-CRA-VULN-METADATA-REMEDIATION",
     "SBOM-CRA-VULN-METADATA-PROFILE",
     "SBOM-CRA-CVD-POLICY",
     "SBOM-CRA-ART-13-8",
+    "SBOM-CRA-ART-13-8-EOL",
     "SBOM-CRA-VULN-STATEMENT",
     "SBOM-CRA-LIFECYCLE",
+    "SBOM-CRA-LIFECYCLE-APPROACHING-EOL",
     "SBOM-CRA-ART-13-15-PRODUCT",
     "SBOM-CRA-COMPONENT-VERSION",
     "SBOM-CRA-ART-24-SUPPLIER",
@@ -4044,9 +4151,11 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-CRA-ANNEX-I-IDENTIFIER",
     "SBOM-CRA-ANNEX-I-TRACEABILITY",
     "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
+    "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
     "SBOM-CRA-INVENTORY",
     "SBOM-CRA-ANNEX-I-INTEGRITY",
     "SBOM-CRA-ANNEX-I-DEPENDENCY",
+    "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS",
     "SBOM-CRA-ANNEX-I-PRIMARY",
     "SBOM-CRA-ANNEX-I-CONTROLS",
     "SBOM-CRA-DOC-INTEGRITY",
@@ -4055,6 +4164,10 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-CRA-CYCLES",
     "SBOM-CRA-ANNEX-VIII",
     "SBOM-CRA-PRE-8-RQ-02",
+    "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
+    "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
+    "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
+    "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
     "SBOM-CRA-PRE-7-RQ-07-RE",
     "SBOM-CRA-GENERAL",
     "SBOM-CRA-CREATOR",

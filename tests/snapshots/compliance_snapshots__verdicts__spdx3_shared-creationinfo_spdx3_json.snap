@@ -8,7 +8,7 @@ as_of: 2026-10-12T00:00:00Z
 [Standard] compliant · E0 W0 I0
 [NtiaMinimum] compliant · E0 W0 I0
 [CraPhase1] compliant · E0 W5 I4
-  I SBOM-CRA-ART-13-5  -
+  I SBOM-CRA-ART-13-5-PROFILE  -
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-VULN-STATEMENT  -
@@ -19,7 +19,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-SBOM-FRESHNESS  -
 [CraPhase2] compliant · E0 W7 I6
   I SBOM-CRA-ANNEX-V  -
-  I SBOM-CRA-ART-13-5  -
+  I SBOM-CRA-ART-13-5-PROFILE  -
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-LIFECYCLE  -

@@ -354,6 +354,13 @@
                   "TLS 1.2",
                   "SSH 2.0"
                 ]
+              },
+              {
+                "rule": "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
+                "text": [
+                  "TLS 1.2",
+                  "SSH 2.0"
+                ]
               }
             ]
           }

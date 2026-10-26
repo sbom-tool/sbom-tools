@@ -1263,7 +1263,7 @@ impl ComplianceChecker {
                     message: "[CRA Annex I] SBOM appears to have multiple root components; identify a primary product component for top-level dependencies".to_string(),
                     element: None,
                     requirement: "CRA Annex I: Top-level dependency clarity".to_string(),
-                    rule_id: "SBOM-CRA-ANNEX-I-DEPENDENCY",
+                    rule_id: "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS",
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
