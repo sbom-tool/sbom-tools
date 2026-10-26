@@ -399,18 +399,18 @@ const ADVICE_LICENSING_PROFILE: FormatAdvice = FormatAdvice {
     },
 };
 
-/// Licence on every component plus a concluded-licence attestation (FSCT §2.2.2.7 aspirational tier).
-const ADVICE_LICENSE_ALL: FormatAdvice = FormatAdvice {
+/// Concluded-licence attestation (FSCT §2.2.2.7 aspirational tier); the check runs on SPDX input only.
+const ADVICE_LICENSE_CONCLUDED: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "add components[].licenses[] entries to every component; licenses[].acknowledgement is not read, so the concluded-licence prong applies to SPDX input only.",
-        field: Some("components[].licenses[]"),
+        text: "licenses[].acknowledgement is not read, so the check does not run on CycloneDX input.",
+        field: None,
     },
     spdx2: FieldAdvice {
-        text: "set packages[].licenseDeclared on every package, and record a concluded licence in packages[].licenseConcluded (PackageLicenseConcluded).",
+        text: "record a concluded licence in packages[].licenseConcluded (PackageLicenseConcluded).",
         field: Some("packages[].licenseConcluded"),
     },
     spdx3: FieldAdvice {
-        text: "add a hasDeclaredLicense Relationship for every package, and a hasConcludedLicense Relationship recording the concluded licence.",
+        text: "add a hasConcludedLicense Relationship recording the concluded licence.",
         field: Some("hasConcludedLicense"),
     },
 };
@@ -703,18 +703,34 @@ const ADVICE_LIFECYCLE: FormatAdvice = FormatAdvice {
     },
 };
 
-/// FDA contact email and level-of-support evidence (both SBOM-FDA-SUPPORT findings).
+/// FDA level-of-support / end-of-support evidence.
 const ADVICE_FDA_SUPPORT: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "add metadata.authors[].email (or a metadata.manufacturer contact[].email), and an end-of-support date in metadata.component.properties[] or eol / lifecycle entries in components[].properties[].",
+        text: "add an end-of-support date to metadata.component.properties[], or eol / lifecycle entries to components[].properties[].",
+        field: Some("components[].properties[]"),
+    },
+    spdx2: FieldAdvice {
+        text: "set packages[].validUntilDate (ValidUntilDate) on the described package as an RFC 3339 date-time.",
+        field: Some("packages[].validUntilDate"),
+    },
+    spdx3: FieldAdvice {
+        text: "validUntilTime is not read from SPDX 3.0, so this check cannot be satisfied from the document.",
+        field: None,
+    },
+};
+
+/// FDA SBOM creator contact email.
+const ADVICE_FDA_CONTACT: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "add metadata.authors[].email (or a metadata.manufacturer contact[].email).",
         field: Some("metadata.authors[].email"),
     },
     spdx2: FieldAdvice {
-        text: "append the email to a creationInfo.creators[] entry (\"Organization: Name (email)\"), and set validUntilDate on the described package as an RFC 3339 date-time.",
+        text: "append the email to a creationInfo.creators[] entry (\"Organization: Name (email)\").",
         field: Some("creationInfo.creators[]"),
     },
     spdx3: FieldAdvice {
-        text: "creator emails and validUntilTime are not read from SPDX 3.0, so neither part of this check can be satisfied from the document.",
+        text: "creator emails are not read from SPDX 3.0, so this check cannot be satisfied from the document.",
         field: None,
     },
 };
@@ -2677,8 +2693,19 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "FDA Medical Device: Component support/contact information",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
-            remediation: "Give the SBOM creator a contact email, and state the components' level of support and end-of-support date (FD&C §524B); the support information may also accompany the SBOM.",
+            remediation: "State the components' level of support and end-of-support date (FD&C §524B); the information may also accompany the SBOM.",
             advice: Some(&ADVICE_FDA_SUPPORT),
+        },
+        // The creator contact-email check, a second document-level finding
+        // beside the support information above.
+        "SBOM-FDA-CONTACT" => RuleMeta {
+            sarif_id: "SBOM-FDA-SUPPORT",
+            name: "FdaSupport",
+            short_description: "FDA Medical Device: Component support/contact information",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: "Give the SBOM creator a contact email (FDA premarket guidance).",
+            advice: Some(&ADVICE_FDA_CONTACT),
         },
         "SBOM-FDA-NAME" => RuleMeta {
             sarif_id: "SBOM-FDA-GENERAL",
@@ -2916,6 +2943,17 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             refs: &[(K::NistSsdf, "PS.1")],
             remediation: REMEDIATION_SSDF,
             advice: Some(&ADVICE_CREATORS),
+        },
+        // The PS.1 generation-tool check, a second document-level finding
+        // beside the creator check above.
+        "SBOM-SSDF-PS1-TOOL" => RuleMeta {
+            sarif_id: "SBOM-SSDF-PS1",
+            name: "SsdfProvenance",
+            short_description: "NIST SSDF PS.1: Provenance and creator identification",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::NistSsdf, "PS.1")],
+            remediation: "Identify the tool that generated the SBOM, so its provenance shows how it was produced (NIST SSDF PS.1).",
+            advice: Some(&ADVICE_TOOL),
         },
         "SBOM-SSDF-PS2" => RuleMeta {
             sarif_id: "SBOM-SSDF-PS2",
@@ -4044,8 +4082,19 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CISA FSCT 3e §2.2.2.7 (Aspirational): license information incl. concluded-license attestation for ALL components",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::CisaFsct, "§2.2.2.7")],
-            remediation: "Provide license information for all listed components, including a concluded-license attestation.",
-            advice: Some(&ADVICE_LICENSE_ALL),
+            remediation: "Provide license information for all listed components.",
+            advice: Some(&ADVICE_LICENSE),
+        },
+        // The concluded-licence attestation, a second document-level finding
+        // beside the all-components coverage above.
+        "SBOM-FSCT-LICENSE-CONCLUDED" => RuleMeta {
+            sarif_id: "SBOM-FSCT-LICENSE-ALL",
+            name: "FsctLicenseAll",
+            short_description: "CISA FSCT 3e §2.2.2.7 (Aspirational): license information incl. concluded-license attestation for ALL components",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::CisaFsct, "§2.2.2.7")],
+            remediation: "Record a concluded-license attestation for the listed components, alongside their declared license information.",
+            advice: Some(&ADVICE_LICENSE_CONCLUDED),
         },
         "SBOM-FSCT-COPYRIGHT-PRIMARY" => RuleMeta {
             sarif_id: "SBOM-FSCT-COPYRIGHT-PRIMARY",
@@ -4251,6 +4300,7 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-NTIA-DEPENDENCY",
     "SBOM-FDA-SUPPLIER",
     "SBOM-FDA-SUPPORT",
+    "SBOM-FDA-CONTACT",
     "SBOM-FDA-NAME",
     "SBOM-FDA-VERSION",
     "SBOM-FDA-IDENTIFIER",
@@ -4276,6 +4326,7 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-SSDF-GENERAL",
     "SBOM-EO14028-GENERAL",
     "SBOM-SSDF-PS1",
+    "SBOM-SSDF-PS1-TOOL",
     "SBOM-SSDF-PS2",
     "SBOM-SSDF-PS3",
     "SBOM-SSDF-INVENTORY",
@@ -4395,6 +4446,7 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-FSCT-LICENSE-PRIMARY",
     "SBOM-FSCT-LICENSE-COVERAGE",
     "SBOM-FSCT-LICENSE-ALL",
+    "SBOM-FSCT-LICENSE-CONCLUDED",
     "SBOM-FSCT-COPYRIGHT-PRIMARY",
     "SBOM-FSCT-COPYRIGHT-COVERAGE",
     "SBOM-FSCT-COPYRIGHT-ALL",
@@ -5018,7 +5070,9 @@ mod tests {
     /// rule family (same guarantee as the CNSA 2.0 / PQC test above): the
     /// parallel checker wave adds check sites but may not touch this file,
     /// so a family rule missing from its slice would silently fall off the
-    /// upfront-declared SARIF catalogue.
+    /// upfront-declared SARIF catalogue. A family id that aliases another
+    /// family rule (SBOM-FSCT-LICENSE-CONCLUDED reports as
+    /// SBOM-FSCT-LICENSE-ALL) is covered by the rule it aliases.
     #[test]
     fn p4_profile_slices_cover_their_rule_families() {
         for (prefix, slice) in [
@@ -5030,6 +5084,7 @@ mod tests {
                 .iter()
                 .copied()
                 .filter(|id| id.starts_with(prefix))
+                .map(|id| rule_meta(id).expect("listed id resolves").sarif_id)
                 .collect();
             let actual: std::collections::BTreeSet<&str> = slice.iter().copied().collect();
             assert_eq!(

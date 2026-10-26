@@ -522,7 +522,7 @@ impl ComplianceChecker {
                     message: "FDA: SBOM creators should include contact email".to_string(),
                     element: None,
                     requirement: "FDA: Contact information".to_string(),
-                    rule_id: "SBOM-FDA-SUPPORT",
+                    rule_id: "SBOM-FDA-CONTACT",
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),

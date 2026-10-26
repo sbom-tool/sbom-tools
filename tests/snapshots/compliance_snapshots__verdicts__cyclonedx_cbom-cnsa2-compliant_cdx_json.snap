@@ -53,8 +53,9 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-HASH  pkg:cargo/national-security-app@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:cargo/cnsa2-crypto-suite@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:cargo/national-security-app@1.0.0
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E1 W2 I2
   E SBOM-SSDF-PS2  - (2/2)
   I SBOM-SSDF-PO3  -

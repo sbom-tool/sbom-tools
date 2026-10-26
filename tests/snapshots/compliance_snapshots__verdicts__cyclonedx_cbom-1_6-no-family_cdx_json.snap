@@ -50,8 +50,9 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-HASH  pkg:cargo/legacy-service@1.4.2
   E SBOM-FDA-SUPPLIER  pkg:cargo/legacy-service@1.4.2
   I SBOM-FDA-ELEMENT-ID  pkg:cargo/legacy-service@1.4.2
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E1 W2 I2
   E SBOM-SSDF-PS2  - (1/1)
   I SBOM-SSDF-PO3  -

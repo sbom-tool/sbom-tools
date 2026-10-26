@@ -50,8 +50,9 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-HASH  pkg:cargo/fully-quantum-safe-app@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:cargo/fully-quantum-safe-app@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:cargo/pqc-crypto-suite@2.0.0
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] compliant · E0 W3 I2
   I SBOM-SSDF-PO3  -
   I SBOM-SSDF-PW6  -

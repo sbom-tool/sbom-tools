@@ -59,11 +59,12 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-HASH  pkg:npm/lodash@4.17.20
   E SBOM-FDA-SUPPLIER  pkg:maven/org.apache.logging.log4j/log4j-core@2.14.0
   E SBOM-FDA-SUPPLIER  pkg:npm/lodash@4.17.20
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-NAME  -
   W SBOM-FDA-NAMESPACE  -
   W SBOM-FDA-SECURITY  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E2 W2 I1
   E SBOM-SSDF-PS2  - (2/2)
   E SBOM-SSDF-PW4  -

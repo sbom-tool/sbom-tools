@@ -30,10 +30,11 @@
 //!   `RUNTIME_DEPENDENCY_OF`, `PROVIDED_DEPENDENCY_OF`); CycloneDX's
 //!   dependency graph cannot express the positive signal, so the readiness
 //!   note is gated to SPDX input.
-//! - `SBOM-FSCT-LICENSE-ALL` (concluded-attestation prong): concluded
-//!   licenses are parsed only from SPDX `PackageLicenseConcluded`; the
-//!   CycloneDX 1.6 `licenses[].acknowledgement` field is not parsed, so the
-//!   prong is gated to SPDX input.
+//! - `SBOM-FSCT-LICENSE-CONCLUDED` (the concluded-attestation prong of
+//!   `SBOM-FSCT-LICENSE-ALL`): concluded licenses are parsed only from SPDX
+//!   `PackageLicenseConcluded`; the CycloneDX 1.6
+//!   `licenses[].acknowledgement` field is not parsed, so the prong is gated
+//!   to SPDX input.
 //!
 //! Profile-policy heuristics (documented as policy, not standard text —
 //! "as many as possible"-style tiers are not crisply verifiable from the
@@ -1275,7 +1276,7 @@ fn fsct_aspirational_goals(
             requirement: "CISA FSCT 3e §2.2.2.7: Concluded license attestation (Aspirational \
                           Goal)"
                 .to_string(),
-            rule_id: "SBOM-FSCT-LICENSE-ALL",
+            rule_id: "SBOM-FSCT-LICENSE-CONCLUDED",
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),

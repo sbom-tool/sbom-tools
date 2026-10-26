@@ -76,8 +76,9 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-FDA-ELEMENT-ID  pkg:cargo/acme-app@2.0.0
   I SBOM-FDA-ELEMENT-ID  pkg:cargo/lib-a@1.0.0
   I SBOM-FDA-ELEMENT-ID  pkg:cargo/lib-b@2.0.0
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E1 W2 I2
   E SBOM-SSDF-PS2  - (2/3)
   I SBOM-SSDF-PO3  -

@@ -120,7 +120,7 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| {
                 s.manufacturer = None;
                 // Person author keeps creators non-empty (no FDA-CREATOR) and
-                // carries the contact email (no FDA-SUPPORT).
+                // carries the contact email (no FDA-CONTACT).
                 s.authors = vec![(
                     "Dana Author".to_string(),
                     Some("dana@acme.example".to_string()),
@@ -175,8 +175,9 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 )];
             }),
         ),
-        // Two sites share SBOM-FDA-SUPPORT at Warning: creator contact email
-        // and level-of-support / end-of-support evidence.
+        // Two checks report under the SBOM-FDA-SUPPORT SARIF rule at Warning:
+        // the creator contact email (SBOM-FDA-CONTACT) and level-of-support /
+        // end-of-support evidence.
         RuleEntry::tested(
             "SBOM-FDA-SUPPORT",
             Sev::Warning,

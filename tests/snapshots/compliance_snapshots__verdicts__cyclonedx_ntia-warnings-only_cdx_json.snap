@@ -67,11 +67,12 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-HASH  pkg:npm/express@4.18.2
   E SBOM-FDA-HASH  pkg:npm/lodash@4.17.21
   E SBOM-FDA-HASH  pkg:npm/test-app@1.0.0
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-DEPENDENCY  - (3/5)
   W SBOM-FDA-DEPENDENCY  pkg:npm/test-app@1.0.0
   W SBOM-FDA-NAMESPACE  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E1 W1 I2
   E SBOM-SSDF-PS2  - (5/5)
   I SBOM-SSDF-PO3  -

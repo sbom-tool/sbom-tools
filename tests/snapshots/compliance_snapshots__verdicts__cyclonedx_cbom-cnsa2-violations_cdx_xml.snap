@@ -54,8 +54,9 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-HASH  pkg:cargo/noncompliant-nss-app@0.5.0
   E SBOM-FDA-SUPPLIER  pkg:cargo/mixed-crypto@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:cargo/noncompliant-nss-app@0.5.0
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E1 W2 I2
   E SBOM-SSDF-PS2  - (2/2)
   I SBOM-SSDF-PO3  -

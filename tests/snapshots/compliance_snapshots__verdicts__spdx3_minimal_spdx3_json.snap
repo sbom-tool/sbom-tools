@@ -54,8 +54,9 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-IDENTIFIER  urn:spdx:pkg:lib-utils
   E SBOM-FDA-SUPPLIER  pkg:cargo/lib-core@2.3.0
   E SBOM-FDA-SUPPLIER  urn:spdx:pkg:lib-utils
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] compliant · E0 W3 I1
   I SBOM-SSDF-PO3  -
   W SBOM-SSDF-PS2  - (1/3)
