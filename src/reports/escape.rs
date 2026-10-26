@@ -320,6 +320,40 @@ pub fn escape_md_opt(s: Option<&str>) -> String {
     s.map_or_else(|| "-".to_string(), escape_markdown_table)
 }
 
+/// A Markdown link destination for a URL taken from untrusted input, in the
+/// pointy-bracket form `<…>`.
+///
+/// Whitespace, control and bidi characters and the brackets themselves are
+/// removed, so the URL can neither end the destination early nor start a new
+/// line, and `|` is percent-encoded so the link also holds inside a table
+/// cell. Used for `[text](<url>)` links and, on its own, as an autolink.
+pub(crate) fn markdown_link_destination(url: &str) -> String {
+    let mut out = String::with_capacity(url.len() + 2);
+    out.push('<');
+    for c in url.chars() {
+        match c {
+            '|' => out.push_str("%7C"),
+            '<' | '>' => {}
+            c if c.is_whitespace() || is_stripped(c) => {}
+            _ => out.push(c),
+        }
+    }
+    out.push('>');
+    out
+}
+
+/// A value for Markdown that may be a URL: an `http://` or `https://` URL
+/// becomes an autolink (see [`markdown_link_destination`]), so it stays
+/// clickable and byte-exact; anything else is escaped as inline text.
+pub(crate) fn markdown_url_or_text(s: &str) -> String {
+    let trimmed = s.trim();
+    if trimmed.starts_with("https://") || trimmed.starts_with("http://") {
+        markdown_link_destination(trimmed)
+    } else {
+        escape_markdown_inline(s)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -557,6 +591,36 @@ mod tests {
         assert_eq!(
             escape_html("pkg:npm/%40scope/name@1.0.0"),
             "pkg:npm/%40scope/name@1.0.0"
+        );
+    }
+
+    #[test]
+    fn markdown_link_destination_cannot_break_out() {
+        assert_eq!(
+            markdown_link_destination("https://example.com/a_b?x=1"),
+            "<https://example.com/a_b?x=1>"
+        );
+        // A newline, a closing bracket or a space would end the destination
+        // or start a new line; a `|` would split a table cell.
+        assert_eq!(
+            markdown_link_destination("https://e.x/p>\n# Forged\u{202E} q|r"),
+            "<https://e.x/p#Forgedq%7Cr>"
+        );
+    }
+
+    #[test]
+    fn markdown_url_or_text_links_urls_and_escapes_the_rest() {
+        assert_eq!(
+            markdown_url_or_text(" https://example.com/psirt "),
+            "<https://example.com/psirt>"
+        );
+        assert_eq!(
+            markdown_url_or_text("security@example.com"),
+            "security@example.com"
+        );
+        assert_eq!(
+            markdown_url_or_text("[click](javascript:alert(1))\n## Signed"),
+            "\\[click\\](javascript:alert(1)) \\#\\# Signed"
         );
     }
 }
