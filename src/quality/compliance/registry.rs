@@ -12,6 +12,7 @@ use crate::model::{DocumentMetadata, SbomFormat};
 /// and the remediation text. Rewording a message can no longer silently
 /// re-bucket a GitHub code-scanning rule or drop a prEN/BSI reference.
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub struct RuleMeta {
     /// Externally-visible SARIF rule ID (e.g., `SBOM-CRA-MACHINE-READABLE`).
     /// GitHub code scanning dedups on this value, so it must stay stable.
@@ -84,6 +85,7 @@ impl RuleMeta {
 /// `components[].supplier.name` in CycloneDX, `packages[].supplier` in
 /// SPDX 2.x and `suppliedBy` in SPDX 3.0 — so advice is chosen per format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum RemediationFormat {
     /// CycloneDX (JSON or XML).
     CycloneDx,
@@ -124,6 +126,7 @@ impl RemediationFormat {
 
 /// Where a rule's fix goes in one SBOM format.
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub struct FieldAdvice {
     /// The fix in this format, written to follow the format label
     /// ("set components[].supplier.name …"). Names [`FieldAdvice::field`]
@@ -138,6 +141,7 @@ pub struct FieldAdvice {
 
 /// Per-format advice for a rule whose fix lives in a format-specific field.
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub struct FormatAdvice {
     /// CycloneDX advice.
     pub cyclonedx: FieldAdvice,
@@ -4302,6 +4306,7 @@ pub fn all_rule_ids() -> &'static [&'static str] {
 
 /// What a rule reports.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum RuleKind {
     /// A gap or an advisory: a [`Violation`](super::Violation) at a
     /// severity.

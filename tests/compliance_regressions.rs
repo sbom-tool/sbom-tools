@@ -121,6 +121,7 @@ fn severity_name(v: &Violation) -> &'static str {
         sbom_tools::quality::ViolationSeverity::Error => "error",
         sbom_tools::quality::ViolationSeverity::Warning => "warning",
         sbom_tools::quality::ViolationSeverity::Info => "info",
+        other => panic!("the corpus names no severity {other:?}"),
     }
 }
 

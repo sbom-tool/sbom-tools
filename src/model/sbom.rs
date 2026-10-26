@@ -677,6 +677,7 @@ impl EolInfo {
 
 /// Component in the normalized SBOM
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Component {
     /// Canonical identifier
     pub canonical_id: CanonicalId,
