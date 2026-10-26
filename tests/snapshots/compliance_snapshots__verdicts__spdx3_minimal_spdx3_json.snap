@@ -6,7 +6,8 @@ as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I0
 [Standard] compliant · E0 W2 I0
-  W SBOM-QUALITY-GENERAL  urn:spdx:pkg:lib-utils ×2
+  W SBOM-QUALITY-IDENTIFIER  urn:spdx:pkg:lib-utils
+  W SBOM-QUALITY-LICENSE  urn:spdx:pkg:lib-utils
 [NtiaMinimum] NON-COMPLIANT · E3 W0 I0
   E SBOM-NTIA-IDENTIFIER  urn:spdx:pkg:lib-utils
   E SBOM-NTIA-SUPPLIER  pkg:cargo/lib-core@2.3.0
@@ -127,4 +128,6 @@ as_of: 2026-10-12T00:00:00Z
 [Comprehensive] NON-COMPLIANT · E2 W3 I0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/lib-core@2.3.0
   E SBOM-NTIA-SUPPLIER  urn:spdx:pkg:lib-utils
-  W SBOM-QUALITY-GENERAL  urn:spdx:pkg:lib-utils ×3
+  W SBOM-QUALITY-HASH  urn:spdx:pkg:lib-utils
+  W SBOM-QUALITY-IDENTIFIER  urn:spdx:pkg:lib-utils
+  W SBOM-QUALITY-LICENSE  urn:spdx:pkg:lib-utils

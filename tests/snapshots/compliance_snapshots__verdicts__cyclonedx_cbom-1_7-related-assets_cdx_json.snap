@@ -5,24 +5,25 @@ fixture: cyclonedx/cbom-1.7-related-assets.cdx.json
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W1 I1
-  I SBOM-QUALITY-GENERAL  related-assets-service
-  W SBOM-QUALITY-GENERAL  -
+  I SBOM-QUALITY-ELEMENT-ID  related-assets-service
+  W SBOM-QUALITY-CREATOR  -
 [Standard] NON-COMPLIANT · E1 W2 I1
-  E SBOM-QUALITY-GENERAL  -
-  I SBOM-QUALITY-GENERAL  related-assets-service
-  W SBOM-QUALITY-GENERAL  related-assets-service ×2
+  E SBOM-QUALITY-CREATOR  -
+  I SBOM-QUALITY-ELEMENT-ID  related-assets-service
+  W SBOM-QUALITY-IDENTIFIER  related-assets-service
+  W SBOM-QUALITY-LICENSE  related-assets-service
 [NtiaMinimum] NON-COMPLIANT · E3 W0 I1
   E SBOM-NTIA-AUTHOR  -
   E SBOM-NTIA-IDENTIFIER  related-assets-service
   E SBOM-NTIA-SUPPLIER  related-assets-service
-  I SBOM-NTIA-GENERAL  related-assets-service
+  I SBOM-NTIA-ELEMENT-ID  related-assets-service
 [CraPhase1] NON-COMPLIANT · E2 W8 I5
   E SBOM-CRA-ANNEX-I-IDENTIFIER  related-assets-service
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  related-assets-service
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-ART-14-ENISA  -
-  I SBOM-CRA-GENERAL  related-assets-service
+  I SBOM-CRA-ELEMENT-ID  related-assets-service
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-TRACEABILITY  related-assets-service
   W SBOM-CRA-ART-13-16  -
@@ -34,12 +35,12 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  related-assets-service
 [CraPhase2] NON-COMPLIANT · E2 W10 I7
   E SBOM-CRA-ANNEX-I-IDENTIFIER  related-assets-service
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  related-assets-service
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-ART-14-ENISA  -
-  I SBOM-CRA-GENERAL  related-assets-service
+  I SBOM-CRA-ELEMENT-ID  related-assets-service
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-TRACEABILITY  related-assets-service
@@ -57,7 +58,7 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-HASH  related-assets-service
   E SBOM-FDA-IDENTIFIER  related-assets-service
   E SBOM-FDA-SUPPLIER  related-assets-service
-  I SBOM-FDA-GENERAL  related-assets-service
+  I SBOM-FDA-ELEMENT-ID  related-assets-service
   W SBOM-FDA-SUPPLIER  -
   W SBOM-FDA-SUPPORT  - ×2
 [NistSsdf] NON-COMPLIANT · E2 W4 I2
@@ -97,7 +98,7 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-CRA-ANNEX-I-IDENTIFIER  related-assets-service
   E SBOM-CRA-ART-24  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  related-assets-service
-  I SBOM-CRA-GENERAL  related-assets-service
+  I SBOM-CRA-ELEMENT-ID  related-assets-service
   W SBOM-CRA-ART-24-SUPPLIER  related-assets-service
   W SBOM-CRA-CVD-POLICY  -
 [EuccSubstantial] NON-COMPLIANT · E4 W1 I0
@@ -146,6 +147,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-LICENSE-COVERAGE  - (0/1)
 [Comprehensive] NON-COMPLIANT · E2 W3 I1
   E SBOM-NTIA-SUPPLIER  related-assets-service
-  E SBOM-QUALITY-GENERAL  -
-  I SBOM-QUALITY-GENERAL  related-assets-service
-  W SBOM-QUALITY-GENERAL  related-assets-service ×3
+  E SBOM-QUALITY-CREATOR  -
+  I SBOM-QUALITY-ELEMENT-ID  related-assets-service
+  W SBOM-QUALITY-HASH  related-assets-service
+  W SBOM-QUALITY-IDENTIFIER  related-assets-service
+  W SBOM-QUALITY-LICENSE  related-assets-service

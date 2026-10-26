@@ -6,7 +6,7 @@ as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I0
 [Standard] compliant · E0 W1 I0
-  W SBOM-QUALITY-GENERAL  -
+  W SBOM-QUALITY-SERIAL  -
 [NtiaMinimum] NON-COMPLIANT · E3 W0 I0
   E SBOM-NTIA-DEPENDENCY  -
   E SBOM-NTIA-SUPPLIER  pkg:maven/org.apache.logging.log4j/log4j-core@2.14.0
@@ -28,8 +28,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:maven/org.apache.logging.log4j/log4j-core@2.14.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/lodash@4.17.20
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [CraPhase2] NON-COMPLIANT · E1 W14 I7
   E SBOM-CRA-ANNEX-I-DEPENDENCY  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:maven/org.apache.logging.log4j/log4j-core@2.14.0
@@ -51,8 +51,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:maven/org.apache.logging.log4j/log4j-core@2.14.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/lodash@4.17.20
   W SBOM-CRA-CVD-POLICY  -
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [FdaMedicalDevice] NON-COMPLIANT · E5 W6 I0
   E SBOM-FDA-DEPENDENCY  -
   E SBOM-FDA-HASH  pkg:maven/org.apache.logging.log4j/log4j-core@2.14.0
@@ -134,6 +134,6 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-DEPENDENCY  -
   E SBOM-NTIA-SUPPLIER  pkg:maven/org.apache.logging.log4j/log4j-core@2.14.0
   E SBOM-NTIA-SUPPLIER  pkg:npm/lodash@4.17.20
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  pkg:maven/org.apache.logging.log4j/log4j-core@2.14.0
-  W SBOM-QUALITY-GENERAL  pkg:npm/lodash@4.17.20
+  W SBOM-QUALITY-HASH  pkg:maven/org.apache.logging.log4j/log4j-core@2.14.0
+  W SBOM-QUALITY-HASH  pkg:npm/lodash@4.17.20
+  W SBOM-QUALITY-SERIAL  -

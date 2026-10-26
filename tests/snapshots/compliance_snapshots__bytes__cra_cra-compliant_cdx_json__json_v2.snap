@@ -21,30 +21,30 @@ source: tests/compliance_snapshots.rs
       },
       "violations": [
         {
-          "finding_id": "sbomtools:v1:a1a7aa2a9acb7c4e",
-          "finding_key": "cra|SBOM-CRA-GENERAL|pkg:cargo/lib-a@2.3.4",
+          "finding_id": "sbomtools:v1:8d3abdb4f047da6f",
+          "finding_key": "cra|SBOM-CRA-ELEMENT-ID|pkg:cargo/lib-a@2.3.4",
           "severity": "Info",
           "category": "FormatSpecific",
           "message": "Component 'lib-a' may be missing bom-ref",
           "element": "lib-a",
           "component_id": "pkg:cargo/lib-a@2.3.4",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
-          "finding_id": "sbomtools:v1:64fde278485cf42f",
-          "finding_key": "cra|SBOM-CRA-GENERAL|pkg:cargo/lib-b@0.9.1",
+          "finding_id": "sbomtools:v1:1856ab48d3130417",
+          "finding_key": "cra|SBOM-CRA-ELEMENT-ID|pkg:cargo/lib-b@0.9.1",
           "severity": "Info",
           "category": "FormatSpecific",
           "message": "Component 'lib-b' may be missing bom-ref",
           "element": "lib-b",
           "component_id": "pkg:cargo/lib-b@0.9.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "finding_id": "sbomtools:v1:2423ce73fc79ae3c",
@@ -127,30 +127,30 @@ source: tests/compliance_snapshots.rs
       },
       "violations": [
         {
-          "finding_id": "sbomtools:v1:e54f5d06f07c67b6",
-          "finding_key": "cra-phase1|SBOM-CRA-GENERAL|pkg:cargo/lib-a@2.3.4",
+          "finding_id": "sbomtools:v1:f90a7165f75452f6",
+          "finding_key": "cra-phase1|SBOM-CRA-ELEMENT-ID|pkg:cargo/lib-a@2.3.4",
           "severity": "Info",
           "category": "FormatSpecific",
           "message": "Component 'lib-a' may be missing bom-ref",
           "element": "lib-a",
           "component_id": "pkg:cargo/lib-a@2.3.4",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
-          "finding_id": "sbomtools:v1:1d19c44a1a1f5061",
-          "finding_key": "cra-phase1|SBOM-CRA-GENERAL|pkg:cargo/lib-b@0.9.1",
+          "finding_id": "sbomtools:v1:10c544cf70ae7cec",
+          "finding_key": "cra-phase1|SBOM-CRA-ELEMENT-ID|pkg:cargo/lib-b@0.9.1",
           "severity": "Info",
           "category": "FormatSpecific",
           "message": "Component 'lib-b' may be missing bom-ref",
           "element": "lib-b",
           "component_id": "pkg:cargo/lib-b@0.9.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "finding_id": "sbomtools:v1:78fe654fd47ccc0f",

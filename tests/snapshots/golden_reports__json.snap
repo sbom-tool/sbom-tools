@@ -47,9 +47,9 @@ expression: "render(&JsonReporter::new())"
           "message": "SBOM must have creator/tool information",
           "element": null,
           "requirement": "Document creator identification",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-CREATOR",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Identify who created the SBOM: a person, organization or tool. CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools."
         },
         {
           "severity": "Warning",
@@ -227,9 +227,9 @@ expression: "render(&JsonReporter::new())"
           "message": "SBOM should have a serial number/unique identifier",
           "element": null,
           "requirement": "Document unique identification",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-SERIAL",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give the SBOM a unique document identifier. CycloneDX: set serialNumber (urn:uuid:…)."
         },
         {
           "severity": "Error",
@@ -658,9 +658,9 @@ expression: "render(&JsonReporter::new())"
           "element": "acme-webapp",
           "component_id": "acme-webapp",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -669,9 +669,9 @@ expression: "render(&JsonReporter::new())"
           "element": "lodash",
           "component_id": "pkg:npm/lodash@4.17.20",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -680,9 +680,9 @@ expression: "render(&JsonReporter::new())"
           "element": "express",
           "component_id": "pkg:npm/express@4.17.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -691,9 +691,9 @@ expression: "render(&JsonReporter::new())"
           "element": "moment",
           "component_id": "pkg:npm/moment@2.29.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -702,9 +702,9 @@ expression: "render(&JsonReporter::new())"
           "element": "request",
           "component_id": "pkg:npm/request@2.88.2",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -713,9 +713,9 @@ expression: "render(&JsonReporter::new())"
           "element": "axios",
           "component_id": "pkg:npm/axios@0.21.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -724,9 +724,9 @@ expression: "render(&JsonReporter::new())"
           "element": "underscore",
           "component_id": "pkg:npm/underscore@1.12.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -735,9 +735,9 @@ expression: "render(&JsonReporter::new())"
           "element": "jquery",
           "component_id": "pkg:npm/jquery@3.5.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -746,9 +746,9 @@ expression: "render(&JsonReporter::new())"
           "element": "react",
           "component_id": "pkg:npm/react@17.0.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Warning",
@@ -967,9 +967,9 @@ expression: "render(&JsonReporter::new())"
           "message": "SBOM must have creator/tool information",
           "element": null,
           "requirement": "Document creator identification",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-CREATOR",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Identify who created the SBOM: a person, organization or tool. CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools."
         },
         {
           "severity": "Warning",
@@ -1147,9 +1147,9 @@ expression: "render(&JsonReporter::new())"
           "message": "SBOM should have a serial number/unique identifier",
           "element": null,
           "requirement": "Document unique identification",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-SERIAL",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give the SBOM a unique document identifier. CycloneDX: set serialNumber (urn:uuid:…)."
         },
         {
           "severity": "Error",
@@ -1578,9 +1578,9 @@ expression: "render(&JsonReporter::new())"
           "element": "acme-webapp",
           "component_id": "acme-webapp",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1589,9 +1589,9 @@ expression: "render(&JsonReporter::new())"
           "element": "lodash",
           "component_id": "pkg:npm/lodash@4.17.21",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1600,9 +1600,9 @@ expression: "render(&JsonReporter::new())"
           "element": "express",
           "component_id": "pkg:npm/express@4.18.2",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1611,9 +1611,9 @@ expression: "render(&JsonReporter::new())"
           "element": "dayjs",
           "component_id": "pkg:npm/dayjs@1.11.7",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1622,9 +1622,9 @@ expression: "render(&JsonReporter::new())"
           "element": "axios",
           "component_id": "pkg:npm/axios@1.4.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1633,9 +1633,9 @@ expression: "render(&JsonReporter::new())"
           "element": "react",
           "component_id": "pkg:npm/react@18.2.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1644,9 +1644,9 @@ expression: "render(&JsonReporter::new())"
           "element": "typescript",
           "component_id": "pkg:npm/typescript@5.0.4",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1655,9 +1655,9 @@ expression: "render(&JsonReporter::new())"
           "element": "zod",
           "component_id": "pkg:npm/zod@3.21.4",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1666,9 +1666,9 @@ expression: "render(&JsonReporter::new())"
           "element": "prisma",
           "component_id": "pkg:npm/prisma@4.15.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component."
         },
         {
           "severity": "Warning",

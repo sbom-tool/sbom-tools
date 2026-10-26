@@ -6,8 +6,8 @@ as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I0
 [Standard] compliant · E0 W2 I0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/legacy-tls@0.9.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/quantum-ready-app@2.0.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/legacy-tls@0.9.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/quantum-ready-app@2.0.0
 [NtiaMinimum] NON-COMPLIANT · E3 W0 I0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/legacy-tls@0.9.0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/quantum-crypto-lib@1.5.0
@@ -150,5 +150,7 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  pkg:cargo/legacy-tls@0.9.0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/quantum-crypto-lib@1.5.0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/quantum-ready-app@2.0.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/legacy-tls@0.9.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:cargo/quantum-ready-app@2.0.0 ×2
+  W SBOM-QUALITY-HASH  pkg:cargo/legacy-tls@0.9.0
+  W SBOM-QUALITY-HASH  pkg:cargo/quantum-ready-app@2.0.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/legacy-tls@0.9.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/quantum-ready-app@2.0.0

@@ -6,9 +6,10 @@ as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I0
 [Standard] compliant · E0 W4 I0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/libtokenizer@2.1.0
-  W SBOM-QUALITY-GENERAL  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
-  W SBOM-QUALITY-GENERAL  urn:spdx:pkg:training-dataset-v1 ×2
+  W SBOM-QUALITY-IDENTIFIER  urn:spdx:pkg:training-dataset-v1
+  W SBOM-QUALITY-LICENSE  pkg:cargo/libtokenizer@2.1.0
+  W SBOM-QUALITY-LICENSE  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
+  W SBOM-QUALITY-LICENSE  urn:spdx:pkg:training-dataset-v1
 [NtiaMinimum] NON-COMPLIANT · E2 W0 I0
   E SBOM-NTIA-IDENTIFIER  urn:spdx:pkg:training-dataset-v1
   E SBOM-NTIA-SUPPLIER  pkg:cargo/libtokenizer@2.1.0
@@ -127,6 +128,9 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-UPSTREAM-SBOM  -
 [Comprehensive] NON-COMPLIANT · E1 W6 I0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/libtokenizer@2.1.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/libtokenizer@2.1.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
-  W SBOM-QUALITY-GENERAL  urn:spdx:pkg:training-dataset-v1 ×3
+  W SBOM-QUALITY-HASH  pkg:cargo/libtokenizer@2.1.0
+  W SBOM-QUALITY-HASH  urn:spdx:pkg:training-dataset-v1
+  W SBOM-QUALITY-IDENTIFIER  urn:spdx:pkg:training-dataset-v1
+  W SBOM-QUALITY-LICENSE  pkg:cargo/libtokenizer@2.1.0
+  W SBOM-QUALITY-LICENSE  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
+  W SBOM-QUALITY-LICENSE  urn:spdx:pkg:training-dataset-v1

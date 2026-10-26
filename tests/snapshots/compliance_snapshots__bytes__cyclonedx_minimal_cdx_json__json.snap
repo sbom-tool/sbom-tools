@@ -108,7 +108,7 @@ source: tests/compliance_snapshots.rs
         "element": "test-app",
         "component_id": "test-app",
         "requirement": "CycloneDX: bom-ref for dependency tracking",
-        "rule_id": "SBOM-NTIA-GENERAL",
+        "rule_id": "SBOM-NTIA-ELEMENT-ID",
         "sarif_rule_id": "SBOM-NTIA-GENERAL",
         "standard_refs": [
           {
@@ -117,7 +117,7 @@ source: tests/compliance_snapshots.rs
             "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
           }
         ],
-        "remediation": "Fix the format-level issue the finding names: use a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and give every element a well-formed identifier. CycloneDX: set specVersion 1.4–1.7 and a bom-ref on every component.",
+        "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component.",
         "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
       }
     ],

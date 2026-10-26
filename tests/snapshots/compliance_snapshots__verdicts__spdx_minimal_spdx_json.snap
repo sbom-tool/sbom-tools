@@ -99,4 +99,4 @@ as_of: 2026-10-12T00:00:00Z
 [Comprehensive] NON-COMPLIANT · E2 W1 I0
   E SBOM-NTIA-SUPPLIER  pkg:npm/express@4.18.2
   E SBOM-NTIA-SUPPLIER  pkg:npm/lodash@4.17.21
-  W SBOM-QUALITY-GENERAL  pkg:npm/express@4.18.2
+  W SBOM-QUALITY-HASH  pkg:npm/express@4.18.2

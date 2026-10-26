@@ -5,22 +5,22 @@ fixture: compliance/regressions/v14-future-timestamp.cdx.json
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I2
-  I SBOM-QUALITY-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-QUALITY-GENERAL  pkg:npm/libfoo@2.1.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/libfoo@2.1.0
 [Standard] compliant · E0 W1 I2
-  I SBOM-QUALITY-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-QUALITY-GENERAL  pkg:npm/libfoo@2.1.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/libfoo@2.1.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/app@1.0.0
 [NtiaMinimum] compliant · E0 W0 I2
-  I SBOM-NTIA-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-NTIA-GENERAL  pkg:npm/libfoo@2.1.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
 [CraPhase1] compliant · E0 W4 I7
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/app@1.0.0
   I SBOM-CRA-ART-13-5  - (1/2)
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-ART-14-ENISA  -
-  I SBOM-CRA-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-CRA-GENERAL  pkg:npm/libfoo@2.1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-14-EARLY-WARNING  -
   W SBOM-CRA-ART-14-NOTIFICATION  -
@@ -32,8 +32,8 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ART-13-5  - (1/2)
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-ART-14-ENISA  -
-  I SBOM-CRA-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-CRA-GENERAL  pkg:npm/libfoo@2.1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-2  -
@@ -44,8 +44,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-SBOM-FRESHNESS  -
 [FdaMedicalDevice] NON-COMPLIANT · E1 W1 I2
   E SBOM-FDA-HASH  pkg:generic/app@1.0.0
-  I SBOM-FDA-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-FDA-GENERAL  pkg:npm/libfoo@2.1.0
+  I SBOM-FDA-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] compliant · E0 W2 I1
   I SBOM-SSDF-PO3  -
@@ -63,8 +63,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-BSI-TR-03183-2-5-4-MISSING  - (1/2)
 [CraOssSteward] compliant · E0 W0 I3
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/app@1.0.0
-  I SBOM-CRA-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-CRA-GENERAL  pkg:npm/libfoo@2.1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
 [EuccSubstantial] NON-COMPLIANT · E4 W1 I0
   E SBOM-EUCC-ITSEF  -
   E SBOM-EUCC-PP  -
@@ -94,6 +94,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-HASH-PRIMARY-SHA2  pkg:generic/app@1.0.0
   W SBOM-FSCT-IDENTIFIER-MULTI  - (2/2)
 [Comprehensive] compliant · E0 W2 I2
-  I SBOM-QUALITY-GENERAL  pkg:generic/app@1.0.0
-  I SBOM-QUALITY-GENERAL  pkg:npm/libfoo@2.1.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/app@1.0.0 ×2
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/libfoo@2.1.0
+  W SBOM-QUALITY-HASH  pkg:generic/app@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/app@1.0.0

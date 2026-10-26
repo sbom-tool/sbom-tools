@@ -6,12 +6,12 @@ as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I0
 [Standard] compliant · E0 W6 I0
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  pkg:npm/axios@1.6.0
-  W SBOM-QUALITY-GENERAL  pkg:npm/dayjs@1.11.10
-  W SBOM-QUALITY-GENERAL  pkg:npm/express@4.18.2
-  W SBOM-QUALITY-GENERAL  pkg:npm/lodash@4.17.21
-  W SBOM-QUALITY-GENERAL  pkg:npm/test-app@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:npm/axios@1.6.0
+  W SBOM-QUALITY-LICENSE  pkg:npm/dayjs@1.11.10
+  W SBOM-QUALITY-LICENSE  pkg:npm/express@4.18.2
+  W SBOM-QUALITY-LICENSE  pkg:npm/lodash@4.17.21
+  W SBOM-QUALITY-LICENSE  pkg:npm/test-app@1.0.0
+  W SBOM-QUALITY-SERIAL  -
 [NtiaMinimum] compliant · E0 W2 I0
   W SBOM-NTIA-DEPENDENCY  - (3/5)
   W SBOM-NTIA-DEPENDENCY  pkg:npm/test-app@1.0.0
@@ -33,9 +33,9 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-EARLY-WARNING  -
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-PRE-7-RQ-07-RE  - (0/5)
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [CraPhase2] NON-COMPLIANT · E1 W12 I11
   E SBOM-CRA-PRE-7-RQ-07-RE  - (0/5)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/axios@1.6.0
@@ -59,8 +59,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-CVD-POLICY  -
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [FdaMedicalDevice] NON-COMPLIANT · E5 W6 I0
   E SBOM-FDA-HASH  pkg:npm/axios@1.6.0
   E SBOM-FDA-HASH  pkg:npm/dayjs@1.11.10
@@ -148,9 +148,14 @@ as_of: 2026-10-12T00:00:00Z
 [Comprehensive] compliant · E0 W13 I0
   W SBOM-NTIA-DEPENDENCY  - (3/5)
   W SBOM-NTIA-DEPENDENCY  pkg:npm/test-app@1.0.0
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  pkg:npm/axios@1.6.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:npm/dayjs@1.11.10 ×2
-  W SBOM-QUALITY-GENERAL  pkg:npm/express@4.18.2 ×2
-  W SBOM-QUALITY-GENERAL  pkg:npm/lodash@4.17.21 ×2
-  W SBOM-QUALITY-GENERAL  pkg:npm/test-app@1.0.0 ×2
+  W SBOM-QUALITY-HASH  pkg:npm/axios@1.6.0
+  W SBOM-QUALITY-HASH  pkg:npm/dayjs@1.11.10
+  W SBOM-QUALITY-HASH  pkg:npm/express@4.18.2
+  W SBOM-QUALITY-HASH  pkg:npm/lodash@4.17.21
+  W SBOM-QUALITY-HASH  pkg:npm/test-app@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:npm/axios@1.6.0
+  W SBOM-QUALITY-LICENSE  pkg:npm/dayjs@1.11.10
+  W SBOM-QUALITY-LICENSE  pkg:npm/express@4.18.2
+  W SBOM-QUALITY-LICENSE  pkg:npm/lodash@4.17.21
+  W SBOM-QUALITY-LICENSE  pkg:npm/test-app@1.0.0
+  W SBOM-QUALITY-SERIAL  -

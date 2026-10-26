@@ -5,12 +5,14 @@ fixture: cyclonedx/aibom-dataset-gap.cdx.xml
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W1 I0
-  W SBOM-QUALITY-GENERAL  -
+  W SBOM-QUALITY-CREATOR  -
 [Standard] NON-COMPLIANT · E1 W5 I0
-  E SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  dataset-1 ×2
-  W SBOM-QUALITY-GENERAL  pkg:huggingface/example/sentiment-classifier@2.1.0
-  W SBOM-QUALITY-GENERAL  root ×2
+  E SBOM-QUALITY-CREATOR  -
+  W SBOM-QUALITY-IDENTIFIER  dataset-1
+  W SBOM-QUALITY-IDENTIFIER  root
+  W SBOM-QUALITY-LICENSE  dataset-1
+  W SBOM-QUALITY-LICENSE  pkg:huggingface/example/sentiment-classifier@2.1.0
+  W SBOM-QUALITY-LICENSE  root
 [NtiaMinimum] NON-COMPLIANT · E7 W0 I0
   E SBOM-NTIA-AUTHOR  -
   E SBOM-NTIA-DEPENDENCY  -
@@ -23,7 +25,7 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-CRA-ANNEX-I-DEPENDENCY  -
   E SBOM-CRA-ANNEX-I-IDENTIFIER  dataset-1
   E SBOM-CRA-ANNEX-I-IDENTIFIER  root
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  dataset-1
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:huggingface/example/sentiment-classifier@2.1.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  root
@@ -45,7 +47,7 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-CRA-ANNEX-I-DEPENDENCY  -
   E SBOM-CRA-ANNEX-I-IDENTIFIER  dataset-1
   E SBOM-CRA-ANNEX-I-IDENTIFIER  root
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  dataset-1
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:huggingface/example/sentiment-classifier@2.1.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  root
@@ -204,7 +206,12 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  dataset-1
   E SBOM-NTIA-SUPPLIER  pkg:huggingface/example/sentiment-classifier@2.1.0
   E SBOM-NTIA-SUPPLIER  root
-  E SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  dataset-1 ×3
-  W SBOM-QUALITY-GENERAL  pkg:huggingface/example/sentiment-classifier@2.1.0 ×2
-  W SBOM-QUALITY-GENERAL  root ×3
+  E SBOM-QUALITY-CREATOR  -
+  W SBOM-QUALITY-HASH  dataset-1
+  W SBOM-QUALITY-HASH  pkg:huggingface/example/sentiment-classifier@2.1.0
+  W SBOM-QUALITY-HASH  root
+  W SBOM-QUALITY-IDENTIFIER  dataset-1
+  W SBOM-QUALITY-IDENTIFIER  root
+  W SBOM-QUALITY-LICENSE  dataset-1
+  W SBOM-QUALITY-LICENSE  pkg:huggingface/example/sentiment-classifier@2.1.0
+  W SBOM-QUALITY-LICENSE  root

@@ -217,7 +217,7 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // The FDA generic bucket: a missing document name emits the aliased
         // SBOM-FDA-NAME key at Warning; a placeholder component name emits
-        // SBOM-FDA-GENERAL directly, escalated to Error.
+        // the aliased SBOM-FDA-COMPONENT-NAME key, escalated to Error.
         RuleEntry::tested(
             "SBOM-FDA-GENERAL",
             Sev::Warning,

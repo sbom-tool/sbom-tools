@@ -5,18 +5,18 @@ fixture: cra/swhid-roundtrip.cdx.json
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I3
-  I SBOM-QUALITY-GENERAL  pkg:generic/lib-content@0.1.0
-  I SBOM-QUALITY-GENERAL  pkg:generic/lib-multi-swhid@3.1.4
-  I SBOM-QUALITY-GENERAL  pkg:generic/lib-tree@2.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/lib-content@0.1.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/lib-tree@2.0.0
 [Standard] compliant · E0 W5 I3
-  I SBOM-QUALITY-GENERAL  pkg:generic/lib-content@0.1.0
-  I SBOM-QUALITY-GENERAL  pkg:generic/lib-multi-swhid@3.1.4
-  I SBOM-QUALITY-GENERAL  pkg:generic/lib-tree@2.0.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/swhid-demo@1.0.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/lib-content@0.1.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/lib-multi-swhid@3.1.4
-  W SBOM-QUALITY-GENERAL  pkg:generic/lib-tree@2.0.0
-  W SBOM-QUALITY-GENERAL  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/lib-content@0.1.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/lib-tree@2.0.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/swhid-demo@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/lib-content@0.1.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/lib-multi-swhid@3.1.4
+  W SBOM-QUALITY-LICENSE  pkg:generic/lib-tree@2.0.0
+  W SBOM-QUALITY-LICENSE  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
 [NtiaMinimum] NON-COMPLIANT · E6 W0 I3
   E SBOM-NTIA-DEPENDENCY  -
   E SBOM-NTIA-SUPPLIER  pkg:cargo/swhid-demo@1.0.0
@@ -24,9 +24,9 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  pkg:generic/lib-multi-swhid@3.1.4
   E SBOM-NTIA-SUPPLIER  pkg:generic/lib-tree@2.0.0
   E SBOM-NTIA-SUPPLIER  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
-  I SBOM-NTIA-GENERAL  pkg:generic/lib-content@0.1.0
-  I SBOM-NTIA-GENERAL  pkg:generic/lib-multi-swhid@3.1.4
-  I SBOM-NTIA-GENERAL  pkg:generic/lib-tree@2.0.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:generic/lib-content@0.1.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
+  I SBOM-NTIA-ELEMENT-ID  pkg:generic/lib-tree@2.0.0
 [CraPhase1] NON-COMPLIANT · E1 W12 I11
   E SBOM-CRA-ANNEX-I-DEPENDENCY  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/swhid-demo@1.0.0
@@ -36,9 +36,9 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-ART-14-ENISA  -
-  I SBOM-CRA-GENERAL  pkg:generic/lib-content@0.1.0
-  I SBOM-CRA-GENERAL  pkg:generic/lib-multi-swhid@3.1.4
-  I SBOM-CRA-GENERAL  pkg:generic/lib-tree@2.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-content@0.1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-tree@2.0.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
@@ -62,9 +62,9 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-ART-14-ENISA  -
-  I SBOM-CRA-GENERAL  pkg:generic/lib-content@0.1.0
-  I SBOM-CRA-GENERAL  pkg:generic/lib-multi-swhid@3.1.4
-  I SBOM-CRA-GENERAL  pkg:generic/lib-tree@2.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-content@0.1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-tree@2.0.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-16  -
@@ -93,9 +93,9 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-SUPPLIER  pkg:generic/lib-multi-swhid@3.1.4
   E SBOM-FDA-SUPPLIER  pkg:generic/lib-tree@2.0.0
   E SBOM-FDA-SUPPLIER  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
-  I SBOM-FDA-GENERAL  pkg:generic/lib-content@0.1.0
-  I SBOM-FDA-GENERAL  pkg:generic/lib-multi-swhid@3.1.4
-  I SBOM-FDA-GENERAL  pkg:generic/lib-tree@2.0.0
+  I SBOM-FDA-ELEMENT-ID  pkg:generic/lib-content@0.1.0
+  I SBOM-FDA-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
+  I SBOM-FDA-ELEMENT-ID  pkg:generic/lib-tree@2.0.0
   W SBOM-FDA-SUPPLIER  -
   W SBOM-FDA-SUPPORT  - ×2
 [NistSsdf] NON-COMPLIANT · E2 W2 I2
@@ -129,9 +129,9 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/lib-multi-swhid@3.1.4
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/lib-tree@2.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
-  I SBOM-CRA-GENERAL  pkg:generic/lib-content@0.1.0
-  I SBOM-CRA-GENERAL  pkg:generic/lib-multi-swhid@3.1.4
-  I SBOM-CRA-GENERAL  pkg:generic/lib-tree@2.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-content@0.1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-tree@2.0.0
   W SBOM-CRA-ART-24-SUPPLIER  pkg:cargo/swhid-demo@1.0.0
   W SBOM-CRA-ART-24-SUPPLIER  pkg:generic/lib-content@0.1.0
   W SBOM-CRA-ART-24-SUPPLIER  pkg:generic/lib-multi-swhid@3.1.4
@@ -196,11 +196,16 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  pkg:generic/lib-multi-swhid@3.1.4
   E SBOM-NTIA-SUPPLIER  pkg:generic/lib-tree@2.0.0
   E SBOM-NTIA-SUPPLIER  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
-  I SBOM-QUALITY-GENERAL  pkg:generic/lib-content@0.1.0
-  I SBOM-QUALITY-GENERAL  pkg:generic/lib-multi-swhid@3.1.4
-  I SBOM-QUALITY-GENERAL  pkg:generic/lib-tree@2.0.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/swhid-demo@1.0.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/lib-content@0.1.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/lib-multi-swhid@3.1.4 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/lib-tree@2.0.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef ×2
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/lib-content@0.1.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/lib-tree@2.0.0
+  W SBOM-QUALITY-HASH  pkg:cargo/swhid-demo@1.0.0
+  W SBOM-QUALITY-HASH  pkg:generic/lib-content@0.1.0
+  W SBOM-QUALITY-HASH  pkg:generic/lib-multi-swhid@3.1.4
+  W SBOM-QUALITY-HASH  pkg:generic/lib-tree@2.0.0
+  W SBOM-QUALITY-HASH  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
+  W SBOM-QUALITY-LICENSE  pkg:cargo/swhid-demo@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/lib-content@0.1.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/lib-multi-swhid@3.1.4
+  W SBOM-QUALITY-LICENSE  pkg:generic/lib-tree@2.0.0
+  W SBOM-QUALITY-LICENSE  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef

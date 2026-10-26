@@ -5,29 +5,30 @@ fixture: demo-old.cdx.json
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W1 I9
-  I SBOM-QUALITY-GENERAL  acme-webapp
-  I SBOM-QUALITY-GENERAL  pkg:npm/axios@0.21.1
-  I SBOM-QUALITY-GENERAL  pkg:npm/express@4.17.1
-  I SBOM-QUALITY-GENERAL  pkg:npm/jquery@3.5.1
-  I SBOM-QUALITY-GENERAL  pkg:npm/lodash@4.17.20
-  I SBOM-QUALITY-GENERAL  pkg:npm/moment@2.29.1
-  I SBOM-QUALITY-GENERAL  pkg:npm/react@17.0.1
-  I SBOM-QUALITY-GENERAL  pkg:npm/request@2.88.2
-  I SBOM-QUALITY-GENERAL  pkg:npm/underscore@1.12.0
-  W SBOM-QUALITY-GENERAL  -
+  I SBOM-QUALITY-ELEMENT-ID  acme-webapp
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/axios@0.21.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/express@4.17.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/jquery@3.5.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/lodash@4.17.20
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/moment@2.29.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/react@17.0.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/request@2.88.2
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/underscore@1.12.0
+  W SBOM-QUALITY-CREATOR  -
 [Standard] NON-COMPLIANT · E1 W3 I9
-  E SBOM-QUALITY-GENERAL  -
-  I SBOM-QUALITY-GENERAL  acme-webapp
-  I SBOM-QUALITY-GENERAL  pkg:npm/axios@0.21.1
-  I SBOM-QUALITY-GENERAL  pkg:npm/express@4.17.1
-  I SBOM-QUALITY-GENERAL  pkg:npm/jquery@3.5.1
-  I SBOM-QUALITY-GENERAL  pkg:npm/lodash@4.17.20
-  I SBOM-QUALITY-GENERAL  pkg:npm/moment@2.29.1
-  I SBOM-QUALITY-GENERAL  pkg:npm/react@17.0.1
-  I SBOM-QUALITY-GENERAL  pkg:npm/request@2.88.2
-  I SBOM-QUALITY-GENERAL  pkg:npm/underscore@1.12.0
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  acme-webapp ×2
+  E SBOM-QUALITY-CREATOR  -
+  I SBOM-QUALITY-ELEMENT-ID  acme-webapp
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/axios@0.21.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/express@4.17.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/jquery@3.5.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/lodash@4.17.20
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/moment@2.29.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/react@17.0.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/request@2.88.2
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/underscore@1.12.0
+  W SBOM-QUALITY-IDENTIFIER  acme-webapp
+  W SBOM-QUALITY-LICENSE  acme-webapp
+  W SBOM-QUALITY-SERIAL  -
 [NtiaMinimum] NON-COMPLIANT · E11 W1 I9
   E SBOM-NTIA-AUTHOR  -
   E SBOM-NTIA-IDENTIFIER  acme-webapp
@@ -40,19 +41,19 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  pkg:npm/react@17.0.1
   E SBOM-NTIA-SUPPLIER  pkg:npm/request@2.88.2
   E SBOM-NTIA-SUPPLIER  pkg:npm/underscore@1.12.0
-  I SBOM-NTIA-GENERAL  acme-webapp
-  I SBOM-NTIA-GENERAL  pkg:npm/axios@0.21.1
-  I SBOM-NTIA-GENERAL  pkg:npm/express@4.17.1
-  I SBOM-NTIA-GENERAL  pkg:npm/jquery@3.5.1
-  I SBOM-NTIA-GENERAL  pkg:npm/lodash@4.17.20
-  I SBOM-NTIA-GENERAL  pkg:npm/moment@2.29.1
-  I SBOM-NTIA-GENERAL  pkg:npm/react@17.0.1
-  I SBOM-NTIA-GENERAL  pkg:npm/request@2.88.2
-  I SBOM-NTIA-GENERAL  pkg:npm/underscore@1.12.0
+  I SBOM-NTIA-ELEMENT-ID  acme-webapp
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/axios@0.21.1
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/express@4.17.1
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/jquery@3.5.1
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/lodash@4.17.20
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/moment@2.29.1
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/react@17.0.1
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/request@2.88.2
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/underscore@1.12.0
   W SBOM-NTIA-DEPENDENCY  acme-webapp
 [CraPhase1] NON-COMPLIANT · E2 W18 I23
   E SBOM-CRA-ANNEX-I-IDENTIFIER  acme-webapp
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  acme-webapp
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/axios@0.21.1
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/express@4.17.1
@@ -67,15 +68,15 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-DOC-INTEGRITY  -
-  I SBOM-CRA-GENERAL  acme-webapp
-  I SBOM-CRA-GENERAL  pkg:npm/axios@0.21.1
-  I SBOM-CRA-GENERAL  pkg:npm/express@4.17.1
-  I SBOM-CRA-GENERAL  pkg:npm/jquery@3.5.1
-  I SBOM-CRA-GENERAL  pkg:npm/lodash@4.17.20
-  I SBOM-CRA-GENERAL  pkg:npm/moment@2.29.1
-  I SBOM-CRA-GENERAL  pkg:npm/react@17.0.1
-  I SBOM-CRA-GENERAL  pkg:npm/request@2.88.2
-  I SBOM-CRA-GENERAL  pkg:npm/underscore@1.12.0
+  I SBOM-CRA-ELEMENT-ID  acme-webapp
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/axios@0.21.1
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/express@4.17.1
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/jquery@3.5.1
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/lodash@4.17.20
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/moment@2.29.1
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/react@17.0.1
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/request@2.88.2
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/underscore@1.12.0
   W SBOM-CRA-ANNEX-I-DEPENDENCY  acme-webapp
   W SBOM-CRA-ANNEX-I-TRACEABILITY  acme-webapp
   W SBOM-CRA-ART-13-16  -
@@ -92,11 +93,11 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/react@17.0.1
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/request@2.88.2
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/underscore@1.12.0
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [CraPhase2] NON-COMPLIANT · E2 W21 I24
   E SBOM-CRA-ANNEX-I-IDENTIFIER  acme-webapp
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  acme-webapp
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/axios@0.21.1
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/express@4.17.1
@@ -111,15 +112,15 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-DOC-INTEGRITY  -
-  I SBOM-CRA-GENERAL  acme-webapp
-  I SBOM-CRA-GENERAL  pkg:npm/axios@0.21.1
-  I SBOM-CRA-GENERAL  pkg:npm/express@4.17.1
-  I SBOM-CRA-GENERAL  pkg:npm/jquery@3.5.1
-  I SBOM-CRA-GENERAL  pkg:npm/lodash@4.17.20
-  I SBOM-CRA-GENERAL  pkg:npm/moment@2.29.1
-  I SBOM-CRA-GENERAL  pkg:npm/react@17.0.1
-  I SBOM-CRA-GENERAL  pkg:npm/request@2.88.2
-  I SBOM-CRA-GENERAL  pkg:npm/underscore@1.12.0
+  I SBOM-CRA-ELEMENT-ID  acme-webapp
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/axios@0.21.1
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/express@4.17.1
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/jquery@3.5.1
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/lodash@4.17.20
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/moment@2.29.1
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/react@17.0.1
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/request@2.88.2
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/underscore@1.12.0
   I SBOM-CRA-LIFECYCLE  -
   W SBOM-CRA-ANNEX-I-DEPENDENCY  acme-webapp
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (9/9)
@@ -140,8 +141,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/request@2.88.2
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/underscore@1.12.0
   W SBOM-CRA-CVD-POLICY  -
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [FdaMedicalDevice] NON-COMPLIANT · E20 W7 I9
   E SBOM-FDA-CREATOR  -
   E SBOM-FDA-HASH  acme-webapp
@@ -163,15 +164,15 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-SUPPLIER  pkg:npm/react@17.0.1
   E SBOM-FDA-SUPPLIER  pkg:npm/request@2.88.2
   E SBOM-FDA-SUPPLIER  pkg:npm/underscore@1.12.0
-  I SBOM-FDA-GENERAL  acme-webapp
-  I SBOM-FDA-GENERAL  pkg:npm/axios@0.21.1
-  I SBOM-FDA-GENERAL  pkg:npm/express@4.17.1
-  I SBOM-FDA-GENERAL  pkg:npm/jquery@3.5.1
-  I SBOM-FDA-GENERAL  pkg:npm/lodash@4.17.20
-  I SBOM-FDA-GENERAL  pkg:npm/moment@2.29.1
-  I SBOM-FDA-GENERAL  pkg:npm/react@17.0.1
-  I SBOM-FDA-GENERAL  pkg:npm/request@2.88.2
-  I SBOM-FDA-GENERAL  pkg:npm/underscore@1.12.0
+  I SBOM-FDA-ELEMENT-ID  acme-webapp
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/axios@0.21.1
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/express@4.17.1
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/jquery@3.5.1
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/lodash@4.17.20
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/moment@2.29.1
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/react@17.0.1
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/request@2.88.2
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/underscore@1.12.0
   W SBOM-FDA-DEPENDENCY  - (4/9)
   W SBOM-FDA-DEPENDENCY  acme-webapp
   W SBOM-FDA-NAMESPACE  -
@@ -218,15 +219,15 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/react@17.0.1
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/request@2.88.2
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/underscore@1.12.0
-  I SBOM-CRA-GENERAL  acme-webapp
-  I SBOM-CRA-GENERAL  pkg:npm/axios@0.21.1
-  I SBOM-CRA-GENERAL  pkg:npm/express@4.17.1
-  I SBOM-CRA-GENERAL  pkg:npm/jquery@3.5.1
-  I SBOM-CRA-GENERAL  pkg:npm/lodash@4.17.20
-  I SBOM-CRA-GENERAL  pkg:npm/moment@2.29.1
-  I SBOM-CRA-GENERAL  pkg:npm/react@17.0.1
-  I SBOM-CRA-GENERAL  pkg:npm/request@2.88.2
-  I SBOM-CRA-GENERAL  pkg:npm/underscore@1.12.0
+  I SBOM-CRA-ELEMENT-ID  acme-webapp
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/axios@0.21.1
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/express@4.17.1
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/jquery@3.5.1
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/lodash@4.17.20
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/moment@2.29.1
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/react@17.0.1
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/request@2.88.2
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/underscore@1.12.0
   W SBOM-CRA-ANNEX-I-DEPENDENCY  acme-webapp
   W SBOM-CRA-ART-24-SUPPLIER  acme-webapp
   W SBOM-CRA-ART-24-SUPPLIER  pkg:npm/axios@0.21.1
@@ -307,24 +308,26 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  pkg:npm/react@17.0.1
   E SBOM-NTIA-SUPPLIER  pkg:npm/request@2.88.2
   E SBOM-NTIA-SUPPLIER  pkg:npm/underscore@1.12.0
-  E SBOM-QUALITY-GENERAL  -
-  I SBOM-QUALITY-GENERAL  acme-webapp
-  I SBOM-QUALITY-GENERAL  pkg:npm/axios@0.21.1
-  I SBOM-QUALITY-GENERAL  pkg:npm/express@4.17.1
-  I SBOM-QUALITY-GENERAL  pkg:npm/jquery@3.5.1
-  I SBOM-QUALITY-GENERAL  pkg:npm/lodash@4.17.20
-  I SBOM-QUALITY-GENERAL  pkg:npm/moment@2.29.1
-  I SBOM-QUALITY-GENERAL  pkg:npm/react@17.0.1
-  I SBOM-QUALITY-GENERAL  pkg:npm/request@2.88.2
-  I SBOM-QUALITY-GENERAL  pkg:npm/underscore@1.12.0
+  E SBOM-QUALITY-CREATOR  -
+  I SBOM-QUALITY-ELEMENT-ID  acme-webapp
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/axios@0.21.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/express@4.17.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/jquery@3.5.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/lodash@4.17.20
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/moment@2.29.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/react@17.0.1
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/request@2.88.2
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/underscore@1.12.0
   W SBOM-NTIA-DEPENDENCY  acme-webapp
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  acme-webapp ×3
-  W SBOM-QUALITY-GENERAL  pkg:npm/axios@0.21.1
-  W SBOM-QUALITY-GENERAL  pkg:npm/express@4.17.1
-  W SBOM-QUALITY-GENERAL  pkg:npm/jquery@3.5.1
-  W SBOM-QUALITY-GENERAL  pkg:npm/lodash@4.17.20
-  W SBOM-QUALITY-GENERAL  pkg:npm/moment@2.29.1
-  W SBOM-QUALITY-GENERAL  pkg:npm/react@17.0.1
-  W SBOM-QUALITY-GENERAL  pkg:npm/request@2.88.2
-  W SBOM-QUALITY-GENERAL  pkg:npm/underscore@1.12.0
+  W SBOM-QUALITY-HASH  acme-webapp
+  W SBOM-QUALITY-HASH  pkg:npm/axios@0.21.1
+  W SBOM-QUALITY-HASH  pkg:npm/express@4.17.1
+  W SBOM-QUALITY-HASH  pkg:npm/jquery@3.5.1
+  W SBOM-QUALITY-HASH  pkg:npm/lodash@4.17.20
+  W SBOM-QUALITY-HASH  pkg:npm/moment@2.29.1
+  W SBOM-QUALITY-HASH  pkg:npm/react@17.0.1
+  W SBOM-QUALITY-HASH  pkg:npm/request@2.88.2
+  W SBOM-QUALITY-HASH  pkg:npm/underscore@1.12.0
+  W SBOM-QUALITY-IDENTIFIER  acme-webapp
+  W SBOM-QUALITY-LICENSE  acme-webapp
+  W SBOM-QUALITY-SERIAL  -

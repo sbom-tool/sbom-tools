@@ -7,7 +7,8 @@ as_of: 2026-10-12T00:00:00Z
 [Minimum] compliant · E0 W0 I0
 [Standard] NON-COMPLIANT · E1 W2 I0
   E SBOM-NTIA-VERSION  SPDXRef-Package-zlib
-  W SBOM-QUALITY-GENERAL  SPDXRef-Package-zlib ×2
+  W SBOM-QUALITY-IDENTIFIER  SPDXRef-Package-zlib
+  W SBOM-QUALITY-LICENSE  SPDXRef-Package-zlib
 [NtiaMinimum] NON-COMPLIANT · E3 W0 I0
   E SBOM-NTIA-IDENTIFIER  SPDXRef-Package-zlib
   E SBOM-NTIA-SUPPLIER  SPDXRef-Package-zlib
@@ -123,4 +124,6 @@ as_of: 2026-10-12T00:00:00Z
 [Comprehensive] NON-COMPLIANT · E2 W3 I0
   E SBOM-NTIA-SUPPLIER  SPDXRef-Package-zlib
   E SBOM-NTIA-VERSION  SPDXRef-Package-zlib
-  W SBOM-QUALITY-GENERAL  SPDXRef-Package-zlib ×3
+  W SBOM-QUALITY-HASH  SPDXRef-Package-zlib
+  W SBOM-QUALITY-IDENTIFIER  SPDXRef-Package-zlib
+  W SBOM-QUALITY-LICENSE  SPDXRef-Package-zlib

@@ -897,7 +897,7 @@
             ],
             "message_excludes": [
               {
-                "rule": "SBOM-CRA-GENERAL",
+                "rule": "SBOM-CRA-SPEC-VERSION",
                 "text": [
                   "is outdated"
                 ]

@@ -5,19 +5,21 @@ fixture: compliance/regressions/v1-empty-purl-collision.cdx.json
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I1
-  I SBOM-QUALITY-GENERAL  pkg:generic/app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/app@1.0.0
 [Standard] NON-COMPLIANT · E1 W5 I1
   E SBOM-NTIA-VERSION  comp-beta
-  I SBOM-QUALITY-GENERAL  pkg:generic/app@1.0.0
-  W SBOM-QUALITY-GENERAL  comp-alpha ×2
-  W SBOM-QUALITY-GENERAL  comp-beta ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/app@1.0.0
+  W SBOM-QUALITY-IDENTIFIER  comp-alpha
+  W SBOM-QUALITY-IDENTIFIER  comp-beta
+  W SBOM-QUALITY-LICENSE  comp-alpha
+  W SBOM-QUALITY-LICENSE  comp-beta
+  W SBOM-QUALITY-LICENSE  pkg:generic/app@1.0.0
 [NtiaMinimum] NON-COMPLIANT · E4 W0 I1
   E SBOM-NTIA-IDENTIFIER  comp-alpha
   E SBOM-NTIA-IDENTIFIER  comp-beta
   E SBOM-NTIA-SUPPLIER  comp-beta
   E SBOM-NTIA-VERSION  comp-beta
-  I SBOM-NTIA-GENERAL  pkg:generic/app@1.0.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:generic/app@1.0.0
 [CraPhase1] NON-COMPLIANT · E3 W9 I7
   E SBOM-CRA-ANNEX-I-IDENTIFIER  comp-alpha
   E SBOM-CRA-ANNEX-I-IDENTIFIER  comp-beta
@@ -27,7 +29,7 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/app@1.0.0
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-ART-14-ENISA  -
-  I SBOM-CRA-GENERAL  pkg:generic/app@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/app@1.0.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/2)
   W SBOM-CRA-ART-13-16  -
@@ -50,7 +52,7 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-ART-14-ENISA  -
-  I SBOM-CRA-GENERAL  pkg:generic/app@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/app@1.0.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-16  -
@@ -70,7 +72,7 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-IDENTIFIER  comp-beta
   E SBOM-FDA-SUPPLIER  comp-beta
   E SBOM-FDA-VERSION  comp-beta
-  I SBOM-FDA-GENERAL  pkg:generic/app@1.0.0
+  I SBOM-FDA-ELEMENT-ID  pkg:generic/app@1.0.0
   W SBOM-FDA-SUPPLIER  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E1 W3 I2
@@ -105,7 +107,7 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  comp-alpha
   I SBOM-CRA-ANNEX-I-INTEGRITY  comp-beta
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/app@1.0.0
-  I SBOM-CRA-GENERAL  pkg:generic/app@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:generic/app@1.0.0
   W SBOM-CRA-ART-24-SUPPLIER  comp-beta
   W SBOM-CRA-CVD-POLICY  -
 [EuccSubstantial] NON-COMPLIANT · E4 W1 I0
@@ -158,7 +160,12 @@ as_of: 2026-10-12T00:00:00Z
 [Comprehensive] NON-COMPLIANT · E2 W8 I1
   E SBOM-NTIA-SUPPLIER  comp-beta
   E SBOM-NTIA-VERSION  comp-beta
-  I SBOM-QUALITY-GENERAL  pkg:generic/app@1.0.0
-  W SBOM-QUALITY-GENERAL  comp-alpha ×3
-  W SBOM-QUALITY-GENERAL  comp-beta ×3
-  W SBOM-QUALITY-GENERAL  pkg:generic/app@1.0.0 ×2
+  I SBOM-QUALITY-ELEMENT-ID  pkg:generic/app@1.0.0
+  W SBOM-QUALITY-HASH  comp-alpha
+  W SBOM-QUALITY-HASH  comp-beta
+  W SBOM-QUALITY-HASH  pkg:generic/app@1.0.0
+  W SBOM-QUALITY-IDENTIFIER  comp-alpha
+  W SBOM-QUALITY-IDENTIFIER  comp-beta
+  W SBOM-QUALITY-LICENSE  comp-alpha
+  W SBOM-QUALITY-LICENSE  comp-beta
+  W SBOM-QUALITY-LICENSE  pkg:generic/app@1.0.0

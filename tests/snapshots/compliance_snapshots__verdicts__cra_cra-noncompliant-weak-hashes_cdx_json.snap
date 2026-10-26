@@ -5,28 +5,28 @@ fixture: cra/cra-noncompliant-weak-hashes.cdx.json
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I3
-  I SBOM-QUALITY-GENERAL  pkg:cargo/lib-md5@1.0
-  I SBOM-QUALITY-GENERAL  pkg:cargo/lib-sha1@1.0
-  I SBOM-QUALITY-GENERAL  pkg:cargo/weakhash-app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/lib-md5@1.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/lib-sha1@1.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/weakhash-app@1.0.0
 [Standard] compliant · E0 W3 I3
-  I SBOM-QUALITY-GENERAL  pkg:cargo/lib-md5@1.0
-  I SBOM-QUALITY-GENERAL  pkg:cargo/lib-sha1@1.0
-  I SBOM-QUALITY-GENERAL  pkg:cargo/weakhash-app@1.0.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/lib-md5@1.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/lib-sha1@1.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/weakhash-app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/lib-md5@1.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/lib-sha1@1.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/weakhash-app@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/lib-md5@1.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/lib-sha1@1.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/weakhash-app@1.0.0
 [NtiaMinimum] NON-COMPLIANT · E1 W0 I3
   E SBOM-NTIA-DEPENDENCY  -
-  I SBOM-NTIA-GENERAL  pkg:cargo/lib-md5@1.0
-  I SBOM-NTIA-GENERAL  pkg:cargo/lib-sha1@1.0
-  I SBOM-NTIA-GENERAL  pkg:cargo/weakhash-app@1.0.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:cargo/lib-md5@1.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:cargo/lib-sha1@1.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:cargo/weakhash-app@1.0.0
 [CraPhase1] NON-COMPLIANT · E1 W6 I6
   E SBOM-CRA-ANNEX-I-DEPENDENCY  -
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-ART-14-ENISA  -
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-md5@1.0
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-sha1@1.0
-  I SBOM-CRA-GENERAL  pkg:cargo/weakhash-app@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-md5@1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-sha1@1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/weakhash-app@1.0.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (3/3)
@@ -39,9 +39,9 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-ART-14-ENISA  -
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-md5@1.0
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-sha1@1.0
-  I SBOM-CRA-GENERAL  pkg:cargo/weakhash-app@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-md5@1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-sha1@1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/weakhash-app@1.0.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-17-CONTACT  -
@@ -54,9 +54,9 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-SBOM-FRESHNESS  -
 [FdaMedicalDevice] NON-COMPLIANT · E1 W4 I3
   E SBOM-FDA-DEPENDENCY  -
-  I SBOM-FDA-GENERAL  pkg:cargo/lib-md5@1.0
-  I SBOM-FDA-GENERAL  pkg:cargo/lib-sha1@1.0
-  I SBOM-FDA-GENERAL  pkg:cargo/weakhash-app@1.0.0
+  I SBOM-FDA-ELEMENT-ID  pkg:cargo/lib-md5@1.0
+  I SBOM-FDA-ELEMENT-ID  pkg:cargo/lib-sha1@1.0
+  I SBOM-FDA-ELEMENT-ID  pkg:cargo/weakhash-app@1.0.0
   W SBOM-FDA-HASH  pkg:cargo/lib-md5@1.0
   W SBOM-FDA-HASH  pkg:cargo/lib-sha1@1.0
   W SBOM-FDA-HASH  pkg:cargo/weakhash-app@1.0.0
@@ -83,9 +83,9 @@ as_of: 2026-10-12T00:00:00Z
 [CraOssSteward] NON-COMPLIANT · E2 W1 I3
   E SBOM-CRA-ANNEX-I-DEPENDENCY  -
   E SBOM-CRA-ART-24  -
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-md5@1.0
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-sha1@1.0
-  I SBOM-CRA-GENERAL  pkg:cargo/weakhash-app@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-md5@1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-sha1@1.0
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/weakhash-app@1.0.0
   W SBOM-CRA-CVD-POLICY  -
 [EuccSubstantial] NON-COMPLIANT · E4 W1 I0
   E SBOM-EUCC-ITSEF  -
@@ -129,9 +129,9 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-LICENSE-COVERAGE  - (0/3)
 [Comprehensive] NON-COMPLIANT · E1 W3 I3
   E SBOM-NTIA-DEPENDENCY  -
-  I SBOM-QUALITY-GENERAL  pkg:cargo/lib-md5@1.0
-  I SBOM-QUALITY-GENERAL  pkg:cargo/lib-sha1@1.0
-  I SBOM-QUALITY-GENERAL  pkg:cargo/weakhash-app@1.0.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/lib-md5@1.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/lib-sha1@1.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/weakhash-app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/lib-md5@1.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/lib-sha1@1.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/weakhash-app@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/lib-md5@1.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/lib-sha1@1.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/weakhash-app@1.0.0

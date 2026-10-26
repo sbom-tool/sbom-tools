@@ -5,11 +5,11 @@ fixture: showcase/supply-chain-incident.cdx.json
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W1 I0
-  W SBOM-QUALITY-GENERAL  -
+  W SBOM-QUALITY-CREATOR  -
 [Standard] NON-COMPLIANT · E1 W2 I0
-  E SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  pkg:npm/acme-ai-studio@3.3.0
+  E SBOM-QUALITY-CREATOR  -
+  W SBOM-QUALITY-LICENSE  pkg:npm/acme-ai-studio@3.3.0
+  W SBOM-QUALITY-SERIAL  -
 [NtiaMinimum] NON-COMPLIANT · E8 W0 I0
   E SBOM-NTIA-AUTHOR  -
   E SBOM-NTIA-SUPPLIER  pkg:npm/acme-ai-studio@3.3.0
@@ -20,7 +20,7 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  pkg:pypi/vllm-plugins@99-99-99
   E SBOM-NTIA-SUPPLIER  pkg:pypi/vllm@0-8-5
 [CraPhase1] NON-COMPLIANT · E1 W15 I12
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/acme-ai-studio@3.3.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/axios-builder@1.2.1
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/axios@1.7.9
@@ -46,11 +46,11 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/zod@3.23.8
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:pypi/vllm-plugins@99-99-99
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:pypi/vllm@0-8-5
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [CraPhase2] NON-COMPLIANT · E2 W16 I14
   E SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (5/5)
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/acme-ai-studio@3.3.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/axios-builder@1.2.1
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/axios@1.7.9
@@ -79,8 +79,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:pypi/vllm-plugins@99-99-99
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:pypi/vllm@0-8-5
   W SBOM-CRA-CVD-POLICY  -
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [FdaMedicalDevice] NON-COMPLIANT · E15 W5 I0
   E SBOM-FDA-CREATOR  -
   E SBOM-FDA-HASH  pkg:npm/acme-ai-studio@3.3.0
@@ -200,12 +200,13 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  pkg:npm/zod@3.23.8
   E SBOM-NTIA-SUPPLIER  pkg:pypi/vllm-plugins@99-99-99
   E SBOM-NTIA-SUPPLIER  pkg:pypi/vllm@0-8-5
-  E SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  pkg:npm/acme-ai-studio@3.3.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:npm/axios-builder@1.2.1
-  W SBOM-QUALITY-GENERAL  pkg:npm/axios@1.7.9
-  W SBOM-QUALITY-GENERAL  pkg:npm/lodash@4.17.15
-  W SBOM-QUALITY-GENERAL  pkg:npm/zod@3.23.8
-  W SBOM-QUALITY-GENERAL  pkg:pypi/vllm-plugins@99-99-99
-  W SBOM-QUALITY-GENERAL  pkg:pypi/vllm@0-8-5
+  E SBOM-QUALITY-CREATOR  -
+  W SBOM-QUALITY-HASH  pkg:npm/acme-ai-studio@3.3.0
+  W SBOM-QUALITY-HASH  pkg:npm/axios-builder@1.2.1
+  W SBOM-QUALITY-HASH  pkg:npm/axios@1.7.9
+  W SBOM-QUALITY-HASH  pkg:npm/lodash@4.17.15
+  W SBOM-QUALITY-HASH  pkg:npm/zod@3.23.8
+  W SBOM-QUALITY-HASH  pkg:pypi/vllm-plugins@99-99-99
+  W SBOM-QUALITY-HASH  pkg:pypi/vllm@0-8-5
+  W SBOM-QUALITY-LICENSE  pkg:npm/acme-ai-studio@3.3.0
+  W SBOM-QUALITY-SERIAL  -

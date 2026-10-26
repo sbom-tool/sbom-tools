@@ -5,18 +5,18 @@ fixture: showcase/fleet-v1.cdx.json
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W1 I0
-  W SBOM-QUALITY-GENERAL  -
+  W SBOM-QUALITY-CREATOR  -
 [Standard] NON-COMPLIANT · E1 W2 I0
-  E SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  pkg:npm/fleet-app@1.0.0
+  E SBOM-QUALITY-CREATOR  -
+  W SBOM-QUALITY-LICENSE  pkg:npm/fleet-app@1.0.0
+  W SBOM-QUALITY-SERIAL  -
 [NtiaMinimum] NON-COMPLIANT · E4 W0 I0
   E SBOM-NTIA-AUTHOR  -
   E SBOM-NTIA-SUPPLIER  pkg:npm/axios@1.7.9
   E SBOM-NTIA-SUPPLIER  pkg:npm/express@4.18.2
   E SBOM-NTIA-SUPPLIER  pkg:npm/fleet-app@1.0.0
 [CraPhase1] NON-COMPLIANT · E1 W11 I9
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/axios@1.7.9
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/express@4.18.2
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/fleet-app@1.0.0
@@ -35,11 +35,11 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/axios@1.7.9
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/express@4.18.2
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/fleet-app@1.0.0
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [CraPhase2] NON-COMPLIANT · E2 W13 I10
   E SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (2/2)
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/axios@1.7.9
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/express@4.18.2
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/fleet-app@1.0.0
@@ -61,8 +61,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/express@4.18.2
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/fleet-app@1.0.0
   W SBOM-CRA-CVD-POLICY  -
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [FdaMedicalDevice] NON-COMPLIANT · E7 W4 I0
   E SBOM-FDA-CREATOR  -
   E SBOM-FDA-HASH  pkg:npm/axios@1.7.9
@@ -155,8 +155,9 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  pkg:npm/axios@1.7.9
   E SBOM-NTIA-SUPPLIER  pkg:npm/express@4.18.2
   E SBOM-NTIA-SUPPLIER  pkg:npm/fleet-app@1.0.0
-  E SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  pkg:npm/axios@1.7.9
-  W SBOM-QUALITY-GENERAL  pkg:npm/express@4.18.2
-  W SBOM-QUALITY-GENERAL  pkg:npm/fleet-app@1.0.0 ×2
+  E SBOM-QUALITY-CREATOR  -
+  W SBOM-QUALITY-HASH  pkg:npm/axios@1.7.9
+  W SBOM-QUALITY-HASH  pkg:npm/express@4.18.2
+  W SBOM-QUALITY-HASH  pkg:npm/fleet-app@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:npm/fleet-app@1.0.0
+  W SBOM-QUALITY-SERIAL  -

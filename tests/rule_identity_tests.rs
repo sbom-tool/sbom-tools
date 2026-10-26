@@ -267,20 +267,20 @@ fn declared_rule_ids(run: &serde_json::Value) -> BTreeSet<String> {
 }
 
 /// An NTIA-only `validate -o sarif` run must never stamp a CRA-family
-/// identity on its findings: check sites without a specific registry mapping
-/// re-bucket onto SBOM-NTIA-GENERAL (declared in rules[]), and the fallback
-/// result carries `properties.standardIds` for the running standard.
+/// identity on its findings: the generic path's shared checks report under
+/// NTIA ids that alias SBOM-NTIA-GENERAL (declared in rules[]), and those
+/// results carry `properties.standardIds` for the running standard.
 #[test]
 fn ntia_validate_sarif_emits_no_cra_rule_ids_and_family_correct_fallback() {
     let result = checker(ComplianceLevel::NtiaMinimum).check(&fallback_firing_sbom());
-    // Check sites stamp the family generic directly, so the JSON-visible
+    // Check sites stamp NTIA-family ids directly, so the JSON-visible
     // rule_id agrees with SARIF — no CRA identity anywhere in the raw result.
     assert!(
         result
             .violations
             .iter()
-            .any(|v| v.rule_id == "SBOM-NTIA-GENERAL"),
-        "fixture must exercise the unmapped-fallback path"
+            .any(|v| v.sarif_rule_id() == "SBOM-NTIA-GENERAL"),
+        "fixture must exercise a check reported under SBOM-NTIA-GENERAL"
     );
     assert!(
         result
@@ -308,24 +308,25 @@ fn ntia_validate_sarif_emits_no_cra_rule_ids_and_family_correct_fallback() {
             fallback_seen = true;
             let ids = r["properties"]["standardIds"]
                 .as_array()
-                .expect("fallback result carries properties.standardIds");
+                .expect("SBOM-NTIA-GENERAL results carry properties.standardIds");
             assert!(
                 ids.iter()
                     .filter_map(|v| v.as_str())
                     .any(|s| s.starts_with("NTIA:")),
-                "fallback standardIds must cite the running standard, got {ids:?}"
+                "standardIds must cite the running standard, got {ids:?}"
             );
         }
     }
     assert!(
         fallback_seen,
-        "unmapped findings must re-bucket onto SBOM-NTIA-GENERAL"
+        "the shared checks must report under SBOM-NTIA-GENERAL"
     );
 }
 
 /// A quality-report SARIF for a non-CRA profile must never stamp a
-/// CRA-family identity on its findings: unmapped check sites re-bucket onto
-/// SBOM-QUALITY-GENERAL, and every emitted ruleId is declared in rules[].
+/// CRA-family identity on its findings: the generic path's shared checks
+/// report under SBOM-QUALITY-* ids that alias SBOM-QUALITY-GENERAL, and every
+/// emitted ruleId is declared in rules[].
 #[test]
 fn quality_sarif_emits_no_cra_rule_ids_for_non_cra_profiles() {
     let sbom = fallback_firing_sbom();
@@ -336,8 +337,8 @@ fn quality_sarif_emits_no_cra_rule_ids_for_non_cra_profiles() {
             .compliance
             .violations
             .iter()
-            .any(|v| v.rule_id == "SBOM-QUALITY-GENERAL"),
-        "fixture must exercise the unmapped-fallback path"
+            .any(|v| v.sarif_rule_id() == "SBOM-QUALITY-GENERAL"),
+        "fixture must exercise a check reported under SBOM-QUALITY-GENERAL"
     );
     let sarif = generate_quality_sarif(&report, "test.cdx.json", "standard").expect("sarif");
     let json: serde_json::Value = serde_json::from_str(&sarif).expect("valid SARIF");
@@ -358,7 +359,7 @@ fn quality_sarif_emits_no_cra_rule_ids_for_non_cra_profiles() {
     }
     assert!(
         fallback_seen,
-        "unmapped findings must re-bucket onto SBOM-QUALITY-GENERAL"
+        "the shared checks must report under SBOM-QUALITY-GENERAL"
     );
 }
 

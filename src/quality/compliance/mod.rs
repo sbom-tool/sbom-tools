@@ -799,10 +799,12 @@ impl Violation {
     }
 
     /// Externally-visible SARIF rule id for this violation, looked up from
-    /// the rule registry by [`Violation::rule_id`]. Check sites stamp a
-    /// family-correct generic id (via [`generic_rule_id_for_level`]) when no
-    /// specific rule applies, so registered keys — i.e. every violation the
-    /// checkers produce — serialize identically in JSON and SARIF. Truly
+    /// the rule registry by [`Violation::rule_id`]. Every check site stamps a
+    /// registered id (the checks the generic path shares between profiles
+    /// use one id per profile family, aliasing that family's generic SARIF
+    /// rule from [`generic_rule_id_for_level`]), so registered keys — i.e.
+    /// every violation the checkers produce — serialize identically in JSON
+    /// and SARIF. Truly
     /// unregistered keys (violations built outside the checkers, e.g. from
     /// external config) fall back to the generic CRA rule here; the SARIF
     /// renderer additionally re-buckets those by standard family, which is
@@ -813,9 +815,11 @@ impl Violation {
     }
 }
 
-/// Family-generic rule for a compliance standard: the id a check site (or
-/// the SARIF renderer) falls back to when a finding has no specific registry
-/// mapping. Every returned id is a registered self-descriptor
+/// Family-generic rule for a compliance standard: the SARIF rule the generic
+/// path's shared checks alias (each reports under an id of its own, so two
+/// checks on one subject never share a finding key), and the id the SARIF
+/// renderer falls back to when a finding has no registry mapping. Every
+/// returned id is a registered self-descriptor
 /// (`rule_meta(id).sarif_id == id`), so rule catalogues always declare it
 /// with registry metadata.
 #[must_use]

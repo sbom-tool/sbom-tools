@@ -18,15 +18,16 @@ use sbom_tools::quality::{ComplianceLevel, ViolationSeverity as Sev};
 
 const LEVEL: ComplianceLevel = ComplianceLevel::Comprehensive;
 
-/// Every rule id the Comprehensive profile can emit (generic.rs):
+/// Every SARIF rule id the Comprehensive profile can emit (generic.rs):
 /// * `SBOM-NTIA-TIMESTAMP` — missing creation timestamp (Error);
 /// * `SBOM-NTIA-VERSION` — missing component version (Error);
 /// * `SBOM-NTIA-SUPPLIER` — missing component supplier (Error);
 /// * `SBOM-NTIA-DEPENDENCY` — dependency-relationship gaps (Error/Warning);
-/// * `SBOM-QUALITY-GENERAL` — the quality-family generic id stamped by the
-///   remaining sites: document creator (Error), serial number (Warning),
-///   component name (Error), unique identifier (Warning), license (Warning),
-///   hashes (Warning), and the format-specific Infos.
+/// * `SBOM-QUALITY-GENERAL` — the quality-family SARIF rule of the
+///   remaining checks, each under its own `SBOM-QUALITY-*` id: document
+///   creator (Error), serial number (Warning), component name (Error),
+///   unique identifier (Warning), license (Warning), hashes (Warning), and
+///   the format-specific Infos.
 const COMPREHENSIVE_RULE_UNIVERSE: &[&str] = &[
     "SBOM-NTIA-TIMESTAMP",
     "SBOM-NTIA-VERSION",

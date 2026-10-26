@@ -11,6 +11,11 @@ use sbom_tools::quality::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 
+/// Why the quality profiles' checks are slice-less: they alias
+/// SBOM-QUALITY-GENERAL, which no per-standard slice lists.
+const QUALITY_CHECK: &str = "quality-profile check aliasing SBOM-QUALITY-GENERAL; the quality \
+     profiles have no dedicated SARIF slice — their catalogue is backfilled from fired rules";
+
 /// Internal rule ids whose SARIF identity is deliberately in no per-standard
 /// SARIF slice, with the reason. These rules still render in SARIF output via
 /// the generator's catalogue-completion backfill when they fire; they are
@@ -22,6 +27,16 @@ const SLICELESS: &[(&str, &str)] = &[
          those profiles have no dedicated SARIF slice — their catalogue is \
          backfilled from fired rules",
     ),
+    ("SBOM-QUALITY-CREATOR", QUALITY_CHECK),
+    ("SBOM-QUALITY-SERIAL", QUALITY_CHECK),
+    ("SBOM-QUALITY-INVENTORY", QUALITY_CHECK),
+    ("SBOM-QUALITY-NAME", QUALITY_CHECK),
+    ("SBOM-QUALITY-IDENTIFIER", QUALITY_CHECK),
+    ("SBOM-QUALITY-LICENSE", QUALITY_CHECK),
+    ("SBOM-QUALITY-HASH", QUALITY_CHECK),
+    ("SBOM-QUALITY-SPEC-VERSION", QUALITY_CHECK),
+    ("SBOM-QUALITY-SPEC-VERSION-UNKNOWN", QUALITY_CHECK),
+    ("SBOM-QUALITY-ELEMENT-ID", QUALITY_CHECK),
     (
         "SBOM-CRA-ART-24-SUPPLIER",
         "CRA OSS-steward supplier rule: the shared COMPLIANCE slice predates the \

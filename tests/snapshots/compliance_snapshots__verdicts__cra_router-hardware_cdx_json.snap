@@ -6,10 +6,10 @@ as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I0
 [Standard] compliant · E0 W4 I0
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/edge-router-firmware@2.4.0-build312
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/edge-router@2.4.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/wifi-driver@1.2.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/wifi-radio@rev-3
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/edge-router-firmware@2.4.0-build312
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/edge-router@2.4.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/wifi-driver@1.2.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/wifi-radio@rev-3
 [NtiaMinimum] compliant · E0 W0 I0
 [CraPhase1] compliant · E0 W7 I6
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/acme/edge-router@2.4.0
@@ -111,7 +111,10 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-TRANSITIVE-DEPS  -
   W SBOM-FSCT-UPSTREAM-SBOM  -
 [Comprehensive] compliant · E0 W7 I0
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/edge-router-firmware@2.4.0-build312
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/edge-router@2.4.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/wifi-driver@1.2.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/wifi-radio@rev-3 ×2
+  W SBOM-QUALITY-HASH  pkg:generic/acme/edge-router@2.4.0
+  W SBOM-QUALITY-HASH  pkg:generic/acme/wifi-driver@1.2.0
+  W SBOM-QUALITY-HASH  pkg:generic/acme/wifi-radio@rev-3
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/edge-router-firmware@2.4.0-build312
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/edge-router@2.4.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/wifi-driver@1.2.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/wifi-radio@rev-3

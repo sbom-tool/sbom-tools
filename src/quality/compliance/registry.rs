@@ -179,6 +179,33 @@ const REMEDIATION_EO14028: &str = "Follow EO 14028 Section 4(e) requirements: us
 /// software components it describes.
 const REMEDIATION_INVENTORY: &str = "List the software components the product is made of. A document with no components, or with only files, snippets or cryptographic assets, is not a software inventory; validate a CBOM with --standard cnsa2 or pqc instead.";
 
+/// Remediation for the generic path's document-creator checks
+/// (SBOM-QUALITY-CREATOR, SBOM-CRA-CREATOR).
+const REMEDIATION_CREATOR: &str = "Identify who created the SBOM: a person, organization or tool.";
+
+/// Remediation for the generic path's document-identifier checks
+/// (SBOM-QUALITY-SERIAL, SBOM-CRA-SERIAL).
+const REMEDIATION_SERIAL: &str = "Give the SBOM a unique document identifier.";
+
+/// Remediation for the generic path's component-name checks
+/// (SBOM-QUALITY-NAME, SBOM-CRA-COMPONENT-NAME).
+const REMEDIATION_COMPONENT_NAME: &str =
+    "Give every component a name; empty names and placeholders such as NOASSERTION do not count.";
+
+/// Remediation for the generic path's spec-version range checks
+/// (SBOM-{QUALITY,NTIA,CRA,FDA}-SPEC-VERSION).
+const REMEDIATION_SPEC_VERSION: &str = "Use a spec version sbom-tools reads: CycloneDX 1.4–1.7, SPDX 2.x or 3.0. An older version lacks fields the checks read, and what a newer version adds is not evaluated.";
+
+/// Remediation for the generic path's unknown-SPDX-version checks
+/// (SBOM-{QUALITY,NTIA,CRA,FDA}-SPEC-VERSION-UNKNOWN).
+const REMEDIATION_SPEC_VERSION_UNKNOWN: &str =
+    "Declare a valid SPDX version, 2.x or 3.0, so the document is read as the version it is.";
+
+/// Remediation for the generic path's element-identifier checks
+/// (SBOM-{QUALITY,NTIA,CRA,FDA}-ELEMENT-ID).
+const REMEDIATION_ELEMENT_ID: &str =
+    "Give every element its own well-formed identifier, the one dependency relationships refer to.";
+
 const REMEDIATION_AIACT_NA: &str = "EU AI Act Annex IV readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components to enable the assessment.";
 
 /// BSI/G7 SBOM-for-AI not-applicable remediation.
@@ -1299,6 +1326,38 @@ const ADVICE_FORMAT_GENERAL: FormatAdvice = FormatAdvice {
         field: Some("creationInfo.specVersion"),
     },
 };
+
+/// Document spec version.
+const ADVICE_SPEC_VERSION: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "set specVersion 1.4–1.7.",
+        field: Some("specVersion"),
+    },
+    spdx2: FieldAdvice {
+        text: "set spdxVersion SPDX-2.x.",
+        field: Some("spdxVersion"),
+    },
+    spdx3: FieldAdvice {
+        text: "set creationInfo.specVersion 3.0.x.",
+        field: Some("creationInfo.specVersion"),
+    },
+};
+
+/// Per-element format identifier (bom-ref, SPDXID, spdxId).
+const ADVICE_ELEMENT_ID: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "set a bom-ref on every component.",
+        field: Some("bom-ref"),
+    },
+    spdx2: FieldAdvice {
+        text: "give every element an SPDXID that starts with SPDXRef-.",
+        field: Some("SPDXID"),
+    },
+    spdx3: FieldAdvice {
+        text: "give every element an IRI spdxId.",
+        field: Some("spdxId"),
+    },
+};
 /// Look up the static [`RuleMeta`] for a stable internal rule key.
 ///
 /// The key is the [`Violation::rule_id`] set at each check site. Returns
@@ -1753,10 +1812,67 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers.",
             advice: Some(&ADVICE_CRA_GENERAL),
         },
-        // Generic bucket for quality-profile (Minimum/Standard/Comprehensive)
-        // findings whose check site has no specific registry mapping. The
-        // SARIF renderer re-buckets the `SBOM-CRA-GENERAL` fallback onto this
-        // rule for quality runs so they never surface under a CRA identity.
+        // The generic path's checks under the CRA profiles, one id each so
+        // that two of them on one subject never share a finding key. All
+        // alias the SBOM-CRA-GENERAL SARIF rule they reported as before.
+        "SBOM-CRA-CREATOR" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: REMEDIATION_CREATOR,
+            advice: Some(&ADVICE_CREATORS),
+        },
+        "SBOM-CRA-SERIAL" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_SERIAL,
+            advice: Some(&ADVICE_SERIAL),
+        },
+        "SBOM-CRA-COMPONENT-NAME" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: REMEDIATION_COMPONENT_NAME,
+            advice: Some(&ADVICE_NAME),
+        },
+        "SBOM-CRA-SPEC-VERSION" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_SPEC_VERSION,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-CRA-SPEC-VERSION-UNKNOWN" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_SPEC_VERSION_UNKNOWN,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-CRA-ELEMENT-ID" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Info,
+            refs: &[],
+            remediation: REMEDIATION_ELEMENT_ID,
+            advice: Some(&ADVICE_ELEMENT_ID),
+        },
+        // SARIF rule of the quality profiles (Minimum/Standard/Comprehensive):
+        // the SBOM-QUALITY-* checks below alias it, and the SARIF renderer
+        // re-buckets the `SBOM-CRA-GENERAL` fallback onto it for quality runs
+        // so they never surface under a CRA identity.
         "SBOM-QUALITY-GENERAL" => RuleMeta {
             sarif_id: "SBOM-QUALITY-GENERAL",
             name: "QualityGeneralRequirement",
@@ -1765,6 +1881,96 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             refs: &[],
             remediation: "Fix the element the finding names. The quality profiles' generic checks look for the SBOM's creator, a document serial number, a component inventory, a name, unique identifier (PURL, CPE, SWHID or SWID), license and hash on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers.",
             advice: Some(&ADVICE_QUALITY_GENERAL),
+        },
+        "SBOM-QUALITY-CREATOR" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: REMEDIATION_CREATOR,
+            advice: Some(&ADVICE_CREATORS),
+        },
+        "SBOM-QUALITY-SERIAL" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_SERIAL,
+            advice: Some(&ADVICE_SERIAL),
+        },
+        "SBOM-QUALITY-INVENTORY" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: REMEDIATION_INVENTORY,
+            advice: Some(&ADVICE_INVENTORY),
+        },
+        "SBOM-QUALITY-NAME" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: REMEDIATION_COMPONENT_NAME,
+            advice: Some(&ADVICE_NAME),
+        },
+        "SBOM-QUALITY-IDENTIFIER" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: "Give every component a unique identifier: a PURL, CPE, SWHID or SWID.",
+            advice: Some(&ADVICE_IDENTIFIER),
+        },
+        "SBOM-QUALITY-LICENSE" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: "Record every component's license, declared or concluded.",
+            advice: Some(&ADVICE_LICENSE),
+        },
+        "SBOM-QUALITY-HASH" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: "Give every component a cryptographic hash, preferably SHA-256 or stronger.",
+            advice: Some(&ADVICE_HASH),
+        },
+        "SBOM-QUALITY-SPEC-VERSION" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_SPEC_VERSION,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-QUALITY-SPEC-VERSION-UNKNOWN" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_SPEC_VERSION_UNKNOWN,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-QUALITY-ELEMENT-ID" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Info,
+            refs: &[],
+            remediation: REMEDIATION_ELEMENT_ID,
+            advice: Some(&ADVICE_ELEMENT_ID),
         },
         // ---- EUCC Substantial (reference-only profile) -------------------
         "SBOM-EUCC-PP" => RuleMeta {
@@ -2463,6 +2669,44 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Fix the element the finding names: give every component a name (an NTIA baseline element the FDA guidance incorporates), use a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0), and give every element a well-formed identifier.",
             advice: Some(&ADVICE_FDA_GENERAL),
         },
+        // The generic path's checks under FDA that have no FDA rule of their
+        // own, one id each; all alias the SBOM-FDA-GENERAL SARIF rule.
+        "SBOM-FDA-COMPONENT-NAME" => RuleMeta {
+            sarif_id: "SBOM-FDA-GENERAL",
+            name: "FdaGeneralRequirement",
+            short_description: "FDA Medical Device: General SBOM requirement",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: "Give every component a name (an NTIA baseline element the FDA guidance incorporates); empty names and placeholders such as NOASSERTION do not count.",
+            advice: Some(&ADVICE_NAME),
+        },
+        "SBOM-FDA-SPEC-VERSION" => RuleMeta {
+            sarif_id: "SBOM-FDA-GENERAL",
+            name: "FdaGeneralRequirement",
+            short_description: "FDA Medical Device: General SBOM requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_SPEC_VERSION,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-FDA-SPEC-VERSION-UNKNOWN" => RuleMeta {
+            sarif_id: "SBOM-FDA-GENERAL",
+            name: "FdaGeneralRequirement",
+            short_description: "FDA Medical Device: General SBOM requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_SPEC_VERSION_UNKNOWN,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-FDA-ELEMENT-ID" => RuleMeta {
+            sarif_id: "SBOM-FDA-GENERAL",
+            name: "FdaGeneralRequirement",
+            short_description: "FDA Medical Device: General SBOM requirement",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_ELEMENT_ID,
+            advice: Some(&ADVICE_ELEMENT_ID),
+        },
         // NTIA rules emitted by the `validate` fast-path.
         "SBOM-NTIA-AUTHOR" => RuleMeta {
             sarif_id: "SBOM-NTIA-AUTHOR",
@@ -2508,6 +2752,35 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
             remediation: "Fix the format-level issue the finding names: use a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and give every element a well-formed identifier.",
             advice: Some(&ADVICE_FORMAT_GENERAL),
+        },
+        // The generic path's format-level checks under NTIA, one id each;
+        // all alias the SBOM-NTIA-GENERAL SARIF rule.
+        "SBOM-NTIA-SPEC-VERSION" => RuleMeta {
+            sarif_id: "SBOM-NTIA-GENERAL",
+            name: "NtiaGeneralRequirement",
+            short_description: "NTIA Minimum Elements: General requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
+            remediation: REMEDIATION_SPEC_VERSION,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-NTIA-SPEC-VERSION-UNKNOWN" => RuleMeta {
+            sarif_id: "SBOM-NTIA-GENERAL",
+            name: "NtiaGeneralRequirement",
+            short_description: "NTIA Minimum Elements: General requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
+            remediation: REMEDIATION_SPEC_VERSION_UNKNOWN,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-NTIA-ELEMENT-ID" => RuleMeta {
+            sarif_id: "SBOM-NTIA-GENERAL",
+            name: "NtiaGeneralRequirement",
+            short_description: "NTIA Minimum Elements: General requirement",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
+            remediation: REMEDIATION_ELEMENT_ID,
+            advice: Some(&ADVICE_ELEMENT_ID),
         },
         // Catch-all rule keys for the SSDF / EO 14028 profiles; not currently
         // emitted by any check site but kept so the registry mirrors the full
@@ -3784,7 +4057,23 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-CRA-PRE-8-RQ-02",
     "SBOM-CRA-PRE-7-RQ-07-RE",
     "SBOM-CRA-GENERAL",
+    "SBOM-CRA-CREATOR",
+    "SBOM-CRA-SERIAL",
+    "SBOM-CRA-COMPONENT-NAME",
+    "SBOM-CRA-SPEC-VERSION",
+    "SBOM-CRA-SPEC-VERSION-UNKNOWN",
+    "SBOM-CRA-ELEMENT-ID",
     "SBOM-QUALITY-GENERAL",
+    "SBOM-QUALITY-CREATOR",
+    "SBOM-QUALITY-SERIAL",
+    "SBOM-QUALITY-INVENTORY",
+    "SBOM-QUALITY-NAME",
+    "SBOM-QUALITY-IDENTIFIER",
+    "SBOM-QUALITY-LICENSE",
+    "SBOM-QUALITY-HASH",
+    "SBOM-QUALITY-SPEC-VERSION",
+    "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
+    "SBOM-QUALITY-ELEMENT-ID",
     "SBOM-EUCC-PP",
     "SBOM-EUCC-TOE",
     "SBOM-EUCC-ITSEF",
@@ -3859,11 +4148,18 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-FDA-DEPENDENCY",
     "SBOM-FDA-SECURITY",
     "SBOM-FDA-GENERAL",
+    "SBOM-FDA-COMPONENT-NAME",
+    "SBOM-FDA-SPEC-VERSION",
+    "SBOM-FDA-SPEC-VERSION-UNKNOWN",
+    "SBOM-FDA-ELEMENT-ID",
     "SBOM-NTIA-AUTHOR",
     "SBOM-NTIA-INVENTORY",
     "SBOM-NTIA-NAME",
     "SBOM-NTIA-IDENTIFIER",
     "SBOM-NTIA-GENERAL",
+    "SBOM-NTIA-SPEC-VERSION",
+    "SBOM-NTIA-SPEC-VERSION-UNKNOWN",
+    "SBOM-NTIA-ELEMENT-ID",
     "SBOM-SSDF-GENERAL",
     "SBOM-EO14028-GENERAL",
     "SBOM-SSDF-PS1",
