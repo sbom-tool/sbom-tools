@@ -1,0 +1,128 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:0d6f2b1e-3c4a-4b5d-8e6f-7a8b9c0d1e2f",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T00:00:00Z",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "example-generator",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    "authors": [
+      {
+        "name": "Dana Author",
+        "email": "dana@example.com"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "bom-ref": "assistant",
+      "name": "assistant",
+      "version": "1.0.0",
+      "purl": "pkg:generic/example/assistant@1.0.0",
+      "supplier": {
+        "name": "Example Corp"
+      }
+    }
+  },
+  "components": [
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "sentiment-model",
+      "name": "sentiment-model",
+      "version": "1.2.3",
+      "purl": "pkg:huggingface/example/sentiment-model@1.2.3",
+      "supplier": {
+        "name": "Example Corp"
+      },
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "modelCard": {
+        "modelParameters": {
+          "architectureFamily": "transformer",
+          "modelArchitecture": "BERT-base"
+        },
+        "considerations": {
+          "useCases": [
+            "sentiment-analysis"
+          ],
+          "technicalLimitations": [
+            "English-language input only"
+          ]
+        },
+        "quantitativeAnalysis": {
+          "performanceMetrics": [
+            {
+              "type": "accuracy",
+              "value": "0.94"
+            }
+          ]
+        }
+      },
+      "components": [
+        {
+          "type": "data",
+          "bom-ref": "reviews",
+          "name": "reviews",
+          "version": "2026.1",
+          "purl": "pkg:huggingface/datasets/example/reviews@2026.1",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce"
+            }
+          ],
+          "licenses": [
+            {
+              "license": {
+                "id": "CC-BY-4.0"
+              }
+            }
+          ],
+          "data": [
+            {
+              "type": "dataset",
+              "sensitiveData": [
+                "public"
+              ],
+              "governance": {
+                "owners": [
+                  {
+                    "organization": {
+                      "name": "Example Data Office"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "assistant",
+      "dependsOn": [
+        "sentiment-model"
+      ]
+    }
+  ]
+}

@@ -1098,6 +1098,30 @@
           }
         }
       ]
+    },
+    {
+      "id": "b3-nested-training-dataset",
+      "review_id": "B3",
+      "fixture": "b3-nested-training-dataset.cdx.json",
+      "note": "The model declares its training data as a nested dataset component with data[] evidence, not through modelParameters.datasets. BSI/G7 SBOM-for-AI and quality check AI-003 accept that shape; the EU AI Act Annex IV §2(d) check read only modelParameters.datasets and reported the datasets missing.",
+      "checks": [
+        {
+          "standard": "ai-act",
+          "expect": {
+            "rules_absent": [
+              "SBOM-AIACT-ANNEX-IV-2D-DATASETS"
+            ]
+          }
+        },
+        {
+          "standard": "bsi-ai",
+          "expect": {
+            "rules_absent": [
+              "SBOM-BSIAI-MODEL-DATASETS"
+            ]
+          }
+        }
+      ]
     }
   ]
 }
