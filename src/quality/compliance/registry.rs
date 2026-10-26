@@ -137,7 +137,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Art. 13(7) / Annex I Part II (1): SBOM freshness — timely regeneration after changes",
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 13(7)"), (ANNEX, "Annex I Part II (1)")],
-            remediation: "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components.",
+            remediation: "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
         },
         // Machine-readable SBOM format. The mandate for a 'commonly used and
         // machine-readable format' lives in Annex I Part II (1), not in
@@ -1992,7 +1992,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "PCI DSS Req. 6.3.2: 'is maintained' — the SBOM carries a creation timestamp",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::PciDss4, "Req. 6.3.2"), (K::PciDss4, "TP 6.3.2.a")],
-            remediation: "Carry a creation timestamp so the inventory's maintenance can be evidenced. The SBOM proves generation time, not the inventory process — a stale timestamp is advisory only.",
+            remediation: "Carry a creation timestamp so the inventory's maintenance can be evidenced. The SBOM proves generation time, not the inventory process — a stale timestamp is advisory only. A timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
         },
         "SBOM-PCI-6-3-2-VULN-EVIDENCE" => RuleMeta {
             sarif_id: "SBOM-PCI-6-3-2-VULN-EVIDENCE",

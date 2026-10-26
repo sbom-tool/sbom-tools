@@ -41,10 +41,10 @@ pub use registry::{
 use registry::{REMEDIATION_GENERIC, lookup_static_rule_id};
 pub use selector::StandardSelector;
 use shared::{
-    ValueState, creator_identified, has_known_license, has_known_producer, has_known_value,
-    inventory_absent_violation, is_declared_unknown, is_placeholder, is_valid_email_format,
-    known_component_name, known_value, manufacturer_scope_components, package_components,
-    truncate_list, value_state,
+    ValueState, creator_identified, future_timestamp_violation, has_known_license,
+    has_known_producer, has_known_value, inventory_absent_violation, is_declared_unknown,
+    is_placeholder, is_valid_email_format, known_component_name, known_value,
+    manufacturer_scope_components, package_components, truncate_list, value_state,
 };
 
 /// CRA enforcement phase
@@ -2356,6 +2356,60 @@ mod tests {
             eucc_expired("2028-01-01T00:00:00Z"),
             "certificate expired at the pinned instant"
         );
+    }
+
+    /// CRA SBOM freshness: a creation timestamp after the evaluation instant
+    /// gave a negative age and passed as fresh (review finding V14). It warns
+    /// like a missing timestamp now, in both CRA phases, and the document
+    /// ages normally once the clock passes its timestamp.
+    #[test]
+    fn cra_freshness_flags_a_future_timestamp() {
+        use crate::model::{Component, DocumentMetadata, NormalizedSbom};
+        let ts = |s: &str| {
+            chrono::DateTime::parse_from_rfc3339(s)
+                .expect("test timestamp must parse")
+                .with_timezone(&chrono::Utc)
+        };
+        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+        sbom.document.created = ts("2026-12-01T00:00:00Z");
+        sbom.add_component(
+            Component::new("lib".to_string(), "lib@1".to_string())
+                .with_version("1.0".to_string())
+                .with_purl("pkg:cargo/lib@1.0".to_string()),
+        );
+        let freshness = |level: ComplianceLevel, as_of: &str| -> Vec<(ViolationSeverity, String)> {
+            ComplianceChecker::new(level)
+                .with_as_of(ts(as_of))
+                .check(&sbom)
+                .violations
+                .into_iter()
+                .filter(|v| v.rule_id == "SBOM-CRA-SBOM-FRESHNESS")
+                .map(|v| (v.severity, v.message))
+                .collect()
+        };
+        for level in [ComplianceLevel::CraPhase1, ComplianceLevel::CraPhase2] {
+            let future = freshness(level, "2026-10-12T00:00:00Z");
+            assert_eq!(future.len(), 1, "{level:?}: {future:?}");
+            assert_eq!(future[0].0, ViolationSeverity::Warning, "{level:?}");
+            assert!(
+                future[0].1.contains("later than the evaluation instant"),
+                "{level:?}: {}",
+                future[0].1
+            );
+            // Two weeks after its timestamp the document is fresh...
+            assert!(
+                freshness(level, "2026-12-15T00:00:00Z").is_empty(),
+                "{level:?}"
+            );
+            // ...and 120 days after it, stale.
+            let stale = freshness(level, "2027-03-31T00:00:00Z");
+            assert_eq!(stale.len(), 1, "{level:?}: {stale:?}");
+            assert!(
+                stale[0].1.contains("120 days old"),
+                "{level:?}: {}",
+                stale[0].1
+            );
+        }
     }
 
     #[test]

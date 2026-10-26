@@ -623,6 +623,48 @@
           }
         }
       ]
+    },
+    {
+      "id": "v14-future-timestamp",
+      "review_id": "V14",
+      "fixture": "v14-future-timestamp.cdx.json",
+      "note": "Dated 2027-01-01, after the evaluation instant. The freshness checks read the negative age as just generated and stayed silent; a future timestamp now warns like a missing one.",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-SBOM-FRESHNESS",
+                "severity": "warning"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "cra-phase1",
+          "expect": {
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-SBOM-FRESHNESS",
+                "severity": "warning"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "pci-dss",
+          "expect": {
+            "compliant": true,
+            "rules_present": [
+              {
+                "rule": "SBOM-PCI-6-3-2-FRESHNESS",
+                "severity": "warning"
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

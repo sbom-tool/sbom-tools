@@ -329,9 +329,11 @@ impl ComplianceChecker {
 
     /// SBOM-PCI-6-3-2-FRESHNESS: "is maintained" — the document must carry a
     /// creation timestamp (Warning when missing: maintenance cadence is
-    /// unverifiable). A stale-but-present timestamp is an Info advisory
-    /// only, and the threshold is explicitly tool policy, not PCI DSS text:
-    /// the SBOM proves generation time, not the inventory process.
+    /// unverifiable). A timestamp later than the evaluation instant evidences
+    /// no more than a missing one and warns the same way. A stale-but-present
+    /// timestamp is an Info advisory only, and the threshold is explicitly
+    /// tool policy, not PCI DSS text: the SBOM proves generation time, not the
+    /// inventory process.
     fn check_pci_freshness(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
         if !sbom.document.has_known_timestamp() {
             violations.push(Violation {
@@ -351,7 +353,18 @@ impl ComplianceChecker {
             });
             return;
         }
-        let age_days = (self.now() - sbom.document.created).num_days();
+        let now = self.now();
+        if let Some(future) = future_timestamp_violation(
+            sbom,
+            now,
+            "SBOM-PCI-6-3-2-FRESHNESS",
+            "[PCI DSS 6.3.2]",
+            "PCI DSS v4.0.1 Req. 6.3.2: inventory 'is maintained' — creation timestamp",
+        ) {
+            violations.push(future);
+            return;
+        }
+        let age_days = (now - sbom.document.created).num_days();
         if age_days > PCI_STALE_AFTER_DAYS {
             violations.push(Violation {
                 severity: ViolationSeverity::Info,
@@ -866,6 +879,49 @@ mod tests {
                 .iter()
                 .any(|v| v.rule_id == "SBOM-PCI-6-3-2-FRESHNESS"),
             "fresh timestamp must stay silent"
+        );
+    }
+
+    /// A timestamp after the evaluation instant gave a negative age and
+    /// passed as fresh (review finding V14). It evidences no more than a
+    /// missing timestamp, so it warns like one.
+    #[test]
+    fn future_timestamp_warns_instead_of_counting_as_fresh() {
+        let mut sbom = conforming_sbom();
+        sbom.document.created = ts("2026-10-13T00:00:00Z");
+        let result = checker()
+            .with_as_of(ts("2026-10-12T00:00:00Z"))
+            .check(&sbom);
+        let freshness: Vec<_> = result
+            .violations
+            .iter()
+            .filter(|v| v.rule_id == "SBOM-PCI-6-3-2-FRESHNESS")
+            .collect();
+        assert_eq!(
+            freshness.len(),
+            1,
+            "exactly one freshness finding, got {:?}",
+            rules_of(&result.violations)
+        );
+        assert_eq!(freshness[0].severity, ViolationSeverity::Warning);
+        assert!(
+            freshness[0]
+                .message
+                .contains("later than the evaluation instant"),
+            "{}",
+            freshness[0].message
+        );
+        // Warning, not Error: the inventory itself is still compliant.
+        assert!(result.is_compliant);
+
+        // The same document evaluated after its timestamp is fresh again.
+        let result = checker()
+            .with_as_of(ts("2026-10-14T00:00:00Z"))
+            .check(&sbom);
+        assert!(
+            result.violations.is_empty(),
+            "got {:?}",
+            rules_of(&result.violations)
         );
     }
 
