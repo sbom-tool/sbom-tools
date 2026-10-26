@@ -2,9 +2,10 @@
 //!
 //! The CRA, EUCC, SSDF and PCI DSS checks accept certain external
 //! references as evidence: an attestation or certification report (EU
-//! Declaration of Conformity, notified-body certificate, EUCC certificate),
-//! a risk assessment, a vulnerability disclosure report (VDR) or VEX, a
-//! build system. Until v0.4.0 the CycloneDX parser mapped `attestation`,
+//! Declaration of Conformity), a certification report alone (notified-body
+//! or EUCC certificate, CRA Annex VIII), a risk assessment, a vulnerability
+//! disclosure report (VDR) or VEX, a build system. Until v0.4.0 the
+//! CycloneDX parser mapped `attestation`,
 //! `certification-report`, `risk-assessment`, `vulnerability-assertion`,
 //! `exploitability-statement` and `build-system` to `ExternalRefType::Other`,
 //! and the SPDX 3.0 parser did the same with their counterparts, so no
@@ -232,17 +233,25 @@ fn attestation_and_certification_references_are_the_annex_v_doc_reference() {
     }
 }
 
+/// A route beyond Module A rests on notified-body or certification-body
+/// evidence: a certification report satisfies Annex VIII, an attestation
+/// alone does not (it may be a self-attestation).
 #[test]
-fn certification_and_attestation_references_are_the_annex_viii_route_evidence() {
-    for reference in [CERTIFICATION, ATTESTATION] {
-        assert_reference_satisfies("SBOM-CRA-ANNEX-VIII", reference, |sbom| {
-            checker(ComplianceLevel::CraPhase1)
-                .with_sidecar(class_sidecar(
-                    CraProductClass::ImportantClass1,
-                    Some(ConformityRoute::ModuleBC),
-                ))
-                .check(sbom)
-        });
+fn only_a_certification_reference_is_the_annex_viii_route_evidence() {
+    let module_bc = |sbom: &NormalizedSbom| {
+        checker(ComplianceLevel::CraPhase1)
+            .with_sidecar(class_sidecar(
+                CraProductClass::ImportantClass1,
+                Some(ConformityRoute::ModuleBC),
+            ))
+            .check(sbom)
+    };
+    assert_reference_satisfies("SBOM-CRA-ANNEX-VIII", CERTIFICATION, module_bc);
+    for (label, sbom) in documents(&[ATTESTATION]) {
+        assert!(
+            fires(&module_bc(&sbom), "SBOM-CRA-ANNEX-VIII"),
+            "{label}: an attestation reference alone is not the Annex VIII certificate"
+        );
     }
 }
 
@@ -324,8 +333,11 @@ fn a_vdr_reference_is_a_pci_dss_vulnerability_management_hook() {
     });
 }
 
-/// The Annex VIII conformity summary reads the same references: each route's
-/// evidence rows are satisfied by a parsed reference, in every format.
+/// The Annex VIII conformity summary reads the same references, in every
+/// format: a certification report satisfies each route's certificate rows;
+/// an attestation satisfies the manufacturer's declarations (the EU DoC and
+/// the Module C statement) but not the Module B or Module H certificate
+/// rows.
 #[test]
 fn parsed_references_satisfy_the_conformity_summary_rows() {
     let rows = |sbom: &NormalizedSbom, class: CraProductClass, route: Option<ConformityRoute>| {
@@ -339,42 +351,71 @@ fn parsed_references_satisfy_the_conformity_summary_rows() {
             .map(|row| (row.label, row.satisfied))
             .collect::<Vec<_>>()
     };
-    let module_bc_rows = [
-        "EU Declaration of Conformity",
-        "EU-type examination certificate (Module B)",
-        "Production conformity statement (Module C)",
-    ];
-    let eucc_rows = [
-        "EU Declaration of Conformity",
-        "EUCC / Common Criteria certificate",
-        "Target of Evaluation reference",
-    ];
-    let cases: [(CraProductClass, Option<ConformityRoute>, Reference, &[&str]); 3] = [
+    const DOC: &str = "EU Declaration of Conformity";
+    const MODULE_B: &str = "EU-type examination certificate (Module B)";
+    const MODULE_C: &str = "Production conformity statement (Module C)";
+    const QMS: &str = "Quality-management-system certification (Module H)";
+    const SURVEILLANCE: &str = "QMS surveillance plan";
+    const EUCC: &str = "EUCC / Common Criteria certificate";
+    const TOE: &str = "Target of Evaluation reference";
+    // (class, route, reference, rows it satisfies, rows it leaves unsatisfied)
+    type Case = (
+        CraProductClass,
+        Option<ConformityRoute>,
+        Reference,
+        &'static [&'static str],
+        &'static [&'static str],
+    );
+    let cases: [Case; 5] = [
         (
             CraProductClass::ImportantClass1,
             Some(ConformityRoute::ModuleBC),
             CERTIFICATION,
-            &module_bc_rows,
+            &[DOC, MODULE_B, MODULE_C],
+            &[],
         ),
         (
             CraProductClass::ImportantClass2,
-            Some(ConformityRoute::ModuleBC),
-            ATTESTATION,
-            &module_bc_rows,
+            Some(ConformityRoute::ModuleH),
+            CERTIFICATION,
+            &[DOC, QMS, SURVEILLANCE],
+            &[],
         ),
         (
             CraProductClass::Critical,
             None,
             EUCC_CERTIFICATE,
-            &eucc_rows,
+            &[DOC, EUCC, TOE],
+            &[],
+        ),
+        (
+            CraProductClass::ImportantClass2,
+            Some(ConformityRoute::ModuleBC),
+            ATTESTATION,
+            &[DOC, MODULE_C],
+            &[MODULE_B],
+        ),
+        (
+            CraProductClass::ImportantClass2,
+            Some(ConformityRoute::ModuleH),
+            ATTESTATION,
+            &[DOC],
+            &[QMS, SURVEILLANCE],
         ),
     ];
-    for (class, route, reference, labels) in cases {
+    let state = |found: &[(String, bool)], row: &str| -> Option<bool> {
+        found
+            .iter()
+            .find(|(l, _)| l == row)
+            .map(|(_, satisfied)| *satisfied)
+    };
+    for (class, route, reference, satisfies, leaves) in cases {
         for (label, sbom) in documents(&[]) {
             let without = rows(&sbom, class, route);
-            for row in labels {
-                assert!(
-                    without.iter().any(|(l, satisfied)| l == row && !satisfied),
+            for row in satisfies.iter().chain(leaves) {
+                assert_eq!(
+                    state(&without, row),
+                    Some(false),
                     "{label} {class:?}: row {row:?} must be unsatisfied without a reference: \
                      {without:?}"
                 );
@@ -382,10 +423,20 @@ fn parsed_references_satisfy_the_conformity_summary_rows() {
         }
         for (label, sbom) in documents(&[reference]) {
             let with = rows(&sbom, class, route);
-            for row in labels {
-                assert!(
-                    with.iter().any(|(l, satisfied)| l == row && *satisfied),
+            for row in satisfies {
+                assert_eq!(
+                    state(&with, row),
+                    Some(true),
                     "{label} {class:?}: a {} reference must satisfy row {row:?}: {with:?}",
+                    reference.cyclonedx
+                );
+            }
+            for row in leaves {
+                assert_eq!(
+                    state(&with, row),
+                    Some(false),
+                    "{label} {class:?}: a {} reference alone must not satisfy row {row:?}: \
+                     {with:?}",
                     reference.cyclonedx
                 );
             }

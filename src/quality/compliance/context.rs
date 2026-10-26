@@ -56,7 +56,8 @@ impl<'a> ComplianceContext<'a> {
     /// regression for SBOMs that only carry presence bits):
     /// - `ssdf.rs` SBOM-SSDF-PS1 / SBOM-SSDF-PO3 / SBOM-SSDF-PW6
     /// - `eo14028.rs` SBOM-EO14028-* automation/provenance evidence
-    /// - `cra.rs` conformity-route evidence (`attestation_present` bits),
+    /// - `cra.rs` conformity-route evidence (`certificate_present` and
+    ///   `doc_or_ce` bits),
     ///   `check_class_eucc_reference`, and `eucc.rs` SBOM-EUCC-CERTREF
     pub(crate) fn evidence_for(
         &self,

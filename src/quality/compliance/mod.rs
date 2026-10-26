@@ -1098,8 +1098,8 @@ pub enum ClassCheck {
     EuccReference,
     /// PSIRT URL / 24h / 72h / ENISA channel missing (Art. 14).
     Psirt,
-    /// Conformity-assessment-module attestation reference missing
-    /// (only meaningful on Module B+C / H / EUCC routes).
+    /// Conformity-assessment-module certificate reference missing
+    /// (only meaningful on Module B+C / H / EUCC routes; SBOM-CRA-ANNEX-VIII).
     ModuleAttestation,
 }
 

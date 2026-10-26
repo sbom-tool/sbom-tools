@@ -601,9 +601,11 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
                     pin_class(s, CraProductClass::ImportantClass2, None);
                 }),
             ),
-        // Only routes beyond Module A need an attestation reference: Warning
-        // for important class I (the registry default), Error for class II
-        // and critical products.
+        // Only routes beyond Module A need the notified-body or
+        // certification-body certificate: Warning for important class I (the
+        // registry default), Error for class II and critical products. A
+        // certification-report reference is that evidence; an attestation
+        // reference alone is not (it may be a self-attestation).
         RuleEntry::tested(
             "SBOM-CRA-ANNEX-VIII",
             Sev::Warning,
@@ -643,7 +645,35 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             }),
         )
         .with_silent(
-            "attestation reference for an important class II product",
+            "certification-report reference for an important class II product",
+            broken(|s| {
+                pin_class(s, CraProductClass::ImportantClass2, None);
+                with_product_ref(
+                    s,
+                    "certification-report",
+                    "https://notified-body.example/certificates/qms-approval-0815.pdf",
+                );
+            }),
+        )
+        .with_firing(
+            "attestation reference only, Module B+C route",
+            Sev::Warning,
+            broken(|s| {
+                pin_class(
+                    s,
+                    CraProductClass::ImportantClass1,
+                    Some(ConformityRoute::ModuleBC),
+                );
+                with_product_ref(
+                    s,
+                    "attestation",
+                    "https://acme.example/attestations/eu-type.pdf",
+                );
+            }),
+        )
+        .with_departing_firing(
+            "attestation reference only, important class II product",
+            Sev::Error,
             broken(|s| {
                 pin_class(s, CraProductClass::ImportantClass2, None);
                 with_product_ref(
