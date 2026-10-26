@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:3b1c9e52-6a0f-4d7e-8c21-5f4a9b2e7d10" version="1">
+  <metadata>
+    <timestamp>2026-09-29T00:00:00Z</timestamp>
+    <component type="application" bom-ref="curve-service">
+      <name>curve-service</name>
+      <version>1.0.0</version>
+    </component>
+  </metadata>
+  <components>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/key-exchange">
+      <name>key-exchange</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>key-agree</primitive>
+          <curve>secp256r1</curve>
+        </algorithmProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/token-signer">
+      <name>token-signer</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>signature</primitive>
+          <curve>secp384r1</curve>
+          <cryptoFunctions>
+            <cryptoFunction>sign</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+        </algorithmProperties>
+      </cryptoProperties>
+    </component>
+  </components>
+</bom>

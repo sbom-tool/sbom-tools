@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.7" serialNumber="urn:uuid:2f7c9a41-6e3b-4d58-a0c2-93e1b5d7f046" version="1">
+  <metadata>
+    <timestamp>2026-09-16T00:00:00Z</timestamp>
+    <tools>
+      <components>
+        <component type="application">
+          <name>ike-scanner</name>
+          <version>1.0.0</version>
+        </component>
+      </components>
+    </tools>
+  </metadata>
+  <components>
+    <component type="cryptographic-asset" bom-ref="crypto/protocol/ike">
+      <name>IKEv1</name>
+      <cryptoProperties>
+        <assetType>protocol</assetType>
+        <protocolProperties>
+          <type>ike</type>
+          <version>1.0</version>
+        </protocolProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/protocol/ssh">
+      <name>SSH</name>
+      <cryptoProperties>
+        <assetType>protocol</assetType>
+        <protocolProperties>
+          <type>ssh</type>
+          <version>2.0</version>
+        </protocolProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/hmac-sha1">
+      <name>HMAC_SHA1</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>mac</primitive>
+        </algorithmProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/modp1024">
+      <name>modp1024</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>key-agree</primitive>
+        </algorithmProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/aes-128-cbc">
+      <name>AES-128-CBC</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>block-cipher</primitive>
+          <algorithmFamily>AES</algorithmFamily>
+          <parameterSetIdentifier>128</parameterSetIdentifier>
+          <mode>cbc</mode>
+        </algorithmProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/3des">
+      <name>3DES</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>block-cipher</primitive>
+        </algorithmProperties>
+      </cryptoProperties>
+    </component>
+  </components>
+</bom>

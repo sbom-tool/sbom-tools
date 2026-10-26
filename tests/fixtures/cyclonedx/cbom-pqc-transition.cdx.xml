@@ -1,0 +1,500 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.7" serialNumber="urn:uuid:a7b8c9d0-e1f2-3456-ab78-901234567890" version="1">
+  <metadata>
+    <timestamp>2026-04-01T22:00:00Z</timestamp>
+    <tools>
+      <components>
+        <component type="application">
+          <name>transition-scanner</name>
+          <version>1.0.0</version>
+        </component>
+      </components>
+    </tools>
+    <component type="application" bom-ref="transition-app">
+      <name>pqc-transition-app</name>
+      <version>2.0.0</version>
+      <description>Application in mid-migration from classical to post-quantum cryptography</description>
+      <purl>pkg:cargo/pqc-transition-app@2.0.0</purl>
+    </component>
+  </metadata>
+  <components>
+    <component type="library" bom-ref="hybrid-crypto-lib">
+      <name>hybrid-crypto</name>
+      <version>3.0.0</version>
+      <licenses>
+        <license>
+          <id>Apache-2.0</id>
+        </license>
+      </licenses>
+      <purl>pkg:cargo/hybrid-crypto@3.0.0</purl>
+    </component>
+    <component type="library" bom-ref="legacy-compat-lib">
+      <name>legacy-compat</name>
+      <version>1.0.0</version>
+      <description>Legacy compatibility layer for classical crypto clients</description>
+      <purl>pkg:cargo/legacy-compat@1.0.0</purl>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/hybrid-x25519-ml-kem-768">
+      <name>X25519-ML-KEM-768</name>
+      <description>Hybrid KEM combiner: classical X25519 + post-quantum ML-KEM-768 (recommended PQC transition pattern)</description>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>combiner</primitive>
+          <algorithmFamily>Hybrid-KEM</algorithmFamily>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>none</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>encapsulate</cryptoFunction>
+            <cryptoFunction>decapsulate</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>192</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>3</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.3.6.1.5.5.7.6.42</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/hybrid-ecdh-ml-kem-1024">
+      <name>ECDH-P384-ML-KEM-1024</name>
+      <description>Hybrid KEM combiner: ECDH P-384 + ML-KEM-1024 (high-security transition)</description>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>combiner</primitive>
+          <algorithmFamily>Hybrid-KEM</algorithmFamily>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>none</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>encapsulate</cryptoFunction>
+            <cryptoFunction>decapsulate</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>256</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>5</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.3.6.1.5.5.7.6.48</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/hybrid-ecdsa-ml-dsa">
+      <name>ECDSA-P384-ML-DSA-65</name>
+      <description>Hybrid signature combiner: ECDSA P-384 + ML-DSA-65 (signature transition)</description>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>combiner</primitive>
+          <algorithmFamily>Hybrid-Signature</algorithmFamily>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>none</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>sign</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>192</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>3</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.3.6.1.5.5.7.6.58</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/x25519">
+      <name>X25519</name>
+      <description>Classical key agreement (quantum-vulnerable, used in hybrid combiner)</description>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>key-agree</primitive>
+          <algorithmFamily>ECDH</algorithmFamily>
+          <ellipticCurve>other/Curve25519</ellipticCurve>
+          <certificationLevel>none</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keyderive</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>128</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>0</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.3.101.110</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/ecdh-p384">
+      <name>ECDH-P384</name>
+      <description>Classical key agreement (quantum-vulnerable, used in hybrid combiner)</description>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>key-agree</primitive>
+          <algorithmFamily>ECDH</algorithmFamily>
+          <ellipticCurve>secg/secp384r1</ellipticCurve>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keyderive</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>192</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>0</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.3.132.0.34</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/ecdsa-p384">
+      <name>ECDSA-P384</name>
+      <description>Classical signature (quantum-vulnerable, used in hybrid combiner)</description>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>signature</primitive>
+          <algorithmFamily>ECDSA</algorithmFamily>
+          <ellipticCurve>secg/secp384r1</ellipticCurve>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>sign</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>192</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>0</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.2.840.10045.4.3.3</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/ml-kem-1024">
+      <name>ML-KEM-1024</name>
+      <description>Post-quantum KEM (FIPS 203, NIST Level 5)</description>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>kem</primitive>
+          <algorithmFamily>ML-KEM</algorithmFamily>
+          <parameterSetIdentifier>1024</parameterSetIdentifier>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>encapsulate</cryptoFunction>
+            <cryptoFunction>decapsulate</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>256</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>5</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.4.3</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/ml-kem-768">
+      <name>ML-KEM-768</name>
+      <description>Post-quantum KEM (FIPS 203, NIST Level 3)</description>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>kem</primitive>
+          <algorithmFamily>ML-KEM</algorithmFamily>
+          <parameterSetIdentifier>768</parameterSetIdentifier>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>encapsulate</cryptoFunction>
+            <cryptoFunction>decapsulate</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>192</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>3</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.4.2</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/ml-dsa-65">
+      <name>ML-DSA-65</name>
+      <description>Post-quantum signature (FIPS 204, NIST Level 3)</description>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>signature</primitive>
+          <algorithmFamily>ML-DSA</algorithmFamily>
+          <parameterSetIdentifier>65</parameterSetIdentifier>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>sign</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>192</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>3</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.3.18</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/aes-256-gcm">
+      <name>AES-256-GCM</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>ae</primitive>
+          <algorithmFamily>AES</algorithmFamily>
+          <parameterSetIdentifier>256</parameterSetIdentifier>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <mode>gcm</mode>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>encrypt</cryptoFunction>
+            <cryptoFunction>decrypt</cryptoFunction>
+            <cryptoFunction>tag</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>256</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>1</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.1.46</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/sha-384">
+      <name>SHA-384</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>hash</primitive>
+          <algorithmFamily>SHA-2</algorithmFamily>
+          <parameterSetIdentifier>384</parameterSetIdentifier>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>digest</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>384</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>2</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.2.2</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/rsa-3072">
+      <name>RSA-3072</name>
+      <description>Classical RSA with acceptable key size during transition (deprecated by 2030, disallowed by 2035)</description>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>pke</primitive>
+          <algorithmFamily>RSA</algorithmFamily>
+          <parameterSetIdentifier>3072</parameterSetIdentifier>
+          <certificationLevel>fips140-2-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>encrypt</cryptoFunction>
+            <cryptoFunction>decrypt</cryptoFunction>
+            <cryptoFunction>sign</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>128</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>0</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.2.840.113549.1.1.1</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/certificate/hybrid-cert">
+      <name>transition-app.example.com</name>
+      <description>Certificate using hybrid signature (ECDSA + ML-DSA composite)</description>
+      <cryptoProperties>
+        <assetType>certificate</assetType>
+        <certificateProperties>
+          <subjectName>CN = transition-app.example.com, O = Transition Corp, C = US</subjectName>
+          <issuerName>CN = Transition PQC CA, O = Transition Corp, C = US</issuerName>
+          <notValidBefore>2026-01-01T00:00:00Z</notValidBefore>
+          <notValidAfter>2028-01-01T23:59:59Z</notValidAfter>
+          <signatureAlgorithmRef>crypto/algorithm/hybrid-ecdsa-ml-dsa</signatureAlgorithmRef>
+          <subjectPublicKeyRef>crypto/key/hybrid-pubkey</subjectPublicKeyRef>
+          <certificateFormat>X.509</certificateFormat>
+          <certificateExtension>pem</certificateExtension>
+        </certificateProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/certificate/legacy-compat-cert">
+      <name>legacy.transition-app.example.com</name>
+      <description>Legacy compatibility certificate (classical only, for clients without PQC support)</description>
+      <cryptoProperties>
+        <assetType>certificate</assetType>
+        <certificateProperties>
+          <subjectName>CN = legacy.transition-app.example.com, O = Transition Corp, C = US</subjectName>
+          <issuerName>CN = DigiCert RSA CA, O = DigiCert, C = US</issuerName>
+          <notValidBefore>2025-06-01T00:00:00Z</notValidBefore>
+          <notValidAfter>2027-06-01T23:59:59Z</notValidAfter>
+          <signatureAlgorithmRef>crypto/algorithm/rsa-3072</signatureAlgorithmRef>
+          <subjectPublicKeyRef>crypto/key/rsa-3072-pub</subjectPublicKeyRef>
+          <certificateFormat>X.509</certificateFormat>
+          <certificateExtension>pem</certificateExtension>
+        </certificateProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/key/hybrid-pubkey">
+      <name>hybrid-kem-public-key</name>
+      <cryptoProperties>
+        <assetType>related-crypto-material</assetType>
+        <relatedCryptoMaterialProperties>
+          <type>public-key</type>
+          <id>11223344-5566-7788-99aa-bbccddeeff00</id>
+          <state>active</state>
+          <algorithmRef>crypto/algorithm/ml-kem-1024</algorithmRef>
+          <creationDate>2026-01-01T00:00:00Z</creationDate>
+          <activationDate>2026-01-01T00:00:00Z</activationDate>
+          <size>1568</size>
+          <format>DER</format>
+          <securedBy>
+            <mechanism>HSM</mechanism>
+            <algorithmRef>crypto/algorithm/aes-256-gcm</algorithmRef>
+          </securedBy>
+        </relatedCryptoMaterialProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/key/rsa-3072-pub">
+      <name>rsa-3072-legacy-key</name>
+      <cryptoProperties>
+        <assetType>related-crypto-material</assetType>
+        <relatedCryptoMaterialProperties>
+          <type>public-key</type>
+          <id>aabbccdd-eeff-0011-2233-445566778899</id>
+          <state>active</state>
+          <algorithmRef>crypto/algorithm/rsa-3072</algorithmRef>
+          <creationDate>2025-06-01T00:00:00Z</creationDate>
+          <activationDate>2025-06-01T00:00:00Z</activationDate>
+          <size>3072</size>
+          <format>PEM</format>
+          <securedBy>
+            <mechanism>Software</mechanism>
+          </securedBy>
+        </relatedCryptoMaterialProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/key/deactivated-rsa">
+      <name>rsa-2048-retired-key</name>
+      <description>Previously used RSA-2048 key, now deactivated as part of PQC migration</description>
+      <cryptoProperties>
+        <assetType>related-crypto-material</assetType>
+        <relatedCryptoMaterialProperties>
+          <type>key-pair</type>
+          <id>deadbeef-cafe-babe-dead-beefcafebabe</id>
+          <state>deactivated</state>
+          <algorithmRef>crypto/algorithm/rsa-3072</algorithmRef>
+          <creationDate>2020-01-01T00:00:00Z</creationDate>
+          <activationDate>2020-01-01T00:00:00Z</activationDate>
+          <updateDate>2026-03-01T00:00:00Z</updateDate>
+          <size>2048</size>
+        </relatedCryptoMaterialProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/protocol/tls13-hybrid">
+      <name>TLS 1.3 (Hybrid PQC Transition)</name>
+      <description>TLS 1.3 with both hybrid PQC and classical-only cipher suites for backward compatibility</description>
+      <cryptoProperties>
+        <assetType>protocol</assetType>
+        <protocolProperties>
+          <type>tls</type>
+          <version>1.3</version>
+          <cipherSuites>
+            <cipherSuite>
+              <name>TLS_AES_256_GCM_SHA384_X25519_ML_KEM_768</name>
+              <algorithms>
+                <algorithm>crypto/algorithm/hybrid-x25519-ml-kem-768</algorithm>
+                <algorithm>crypto/algorithm/aes-256-gcm</algorithm>
+                <algorithm>crypto/algorithm/sha-384</algorithm>
+              </algorithms>
+              <identifiers>
+                <identifier>0x13</identifier>
+                <identifier>0x02</identifier>
+              </identifiers>
+            </cipherSuite>
+            <cipherSuite>
+              <name>TLS_AES_256_GCM_SHA384_ECDH_P384_ML_KEM_1024</name>
+              <algorithms>
+                <algorithm>crypto/algorithm/hybrid-ecdh-ml-kem-1024</algorithm>
+                <algorithm>crypto/algorithm/aes-256-gcm</algorithm>
+                <algorithm>crypto/algorithm/sha-384</algorithm>
+              </algorithms>
+              <identifiers>
+                <identifier>0x13</identifier>
+                <identifier>0x02</identifier>
+              </identifiers>
+            </cipherSuite>
+            <cipherSuite>
+              <name>TLS_AES_256_GCM_SHA384 (classical fallback)</name>
+              <algorithms>
+                <algorithm>crypto/algorithm/ecdh-p384</algorithm>
+                <algorithm>crypto/algorithm/aes-256-gcm</algorithm>
+                <algorithm>crypto/algorithm/sha-384</algorithm>
+              </algorithms>
+              <identifiers>
+                <identifier>0x13</identifier>
+                <identifier>0x02</identifier>
+              </identifiers>
+            </cipherSuite>
+          </cipherSuites>
+          <cryptoRef>crypto/certificate/hybrid-cert</cryptoRef>
+          <cryptoRef>crypto/certificate/legacy-compat-cert</cryptoRef>
+        </protocolProperties>
+      </cryptoProperties>
+    </component>
+  </components>
+  <dependencies>
+    <dependency ref="transition-app">
+      <dependency ref="hybrid-crypto-lib"/>
+      <dependency ref="legacy-compat-lib"/>
+      <dependency ref="crypto/protocol/tls13-hybrid"/>
+    </dependency>
+    <dependency ref="hybrid-crypto-lib">
+      <provides ref="crypto/algorithm/hybrid-x25519-ml-kem-768"/>
+      <provides ref="crypto/algorithm/hybrid-ecdh-ml-kem-1024"/>
+      <provides ref="crypto/algorithm/hybrid-ecdsa-ml-dsa"/>
+      <provides ref="crypto/algorithm/ml-kem-1024"/>
+      <provides ref="crypto/algorithm/ml-kem-768"/>
+      <provides ref="crypto/algorithm/ml-dsa-65"/>
+      <provides ref="crypto/algorithm/aes-256-gcm"/>
+      <provides ref="crypto/algorithm/sha-384"/>
+    </dependency>
+    <dependency ref="legacy-compat-lib">
+      <provides ref="crypto/algorithm/x25519"/>
+      <provides ref="crypto/algorithm/ecdh-p384"/>
+      <provides ref="crypto/algorithm/ecdsa-p384"/>
+      <provides ref="crypto/algorithm/rsa-3072"/>
+    </dependency>
+    <dependency ref="crypto/algorithm/hybrid-x25519-ml-kem-768">
+      <dependency ref="crypto/algorithm/x25519"/>
+      <dependency ref="crypto/algorithm/ml-kem-768"/>
+    </dependency>
+    <dependency ref="crypto/algorithm/hybrid-ecdh-ml-kem-1024">
+      <dependency ref="crypto/algorithm/ecdh-p384"/>
+      <dependency ref="crypto/algorithm/ml-kem-1024"/>
+    </dependency>
+    <dependency ref="crypto/algorithm/hybrid-ecdsa-ml-dsa">
+      <dependency ref="crypto/algorithm/ecdsa-p384"/>
+      <dependency ref="crypto/algorithm/ml-dsa-65"/>
+    </dependency>
+    <dependency ref="crypto/protocol/tls13-hybrid">
+      <dependency ref="crypto/certificate/hybrid-cert"/>
+      <dependency ref="crypto/certificate/legacy-compat-cert"/>
+      <dependency ref="crypto/algorithm/hybrid-x25519-ml-kem-768"/>
+      <dependency ref="crypto/algorithm/hybrid-ecdh-ml-kem-1024"/>
+      <dependency ref="crypto/algorithm/ecdh-p384"/>
+      <dependency ref="crypto/algorithm/aes-256-gcm"/>
+      <dependency ref="crypto/algorithm/sha-384"/>
+    </dependency>
+    <dependency ref="crypto/certificate/hybrid-cert">
+      <dependency ref="crypto/key/hybrid-pubkey"/>
+      <dependency ref="crypto/algorithm/hybrid-ecdsa-ml-dsa"/>
+    </dependency>
+    <dependency ref="crypto/certificate/legacy-compat-cert">
+      <dependency ref="crypto/key/rsa-3072-pub"/>
+      <dependency ref="crypto/algorithm/rsa-3072"/>
+    </dependency>
+  </dependencies>
+  <compositions>
+    <composition>
+      <aggregate>complete</aggregate>
+      <assemblies>
+        <assembly ref="transition-app"/>
+        <assembly ref="hybrid-crypto-lib"/>
+        <assembly ref="legacy-compat-lib"/>
+      </assemblies>
+    </composition>
+  </compositions>
+</bom>
