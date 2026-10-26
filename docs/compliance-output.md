@@ -82,7 +82,9 @@ pass-only rules report into `passed`, never into `violations`: a pass has no
 severity and counts toward neither `counts.info` nor the score. `-o sarif`
 reports no pass, so code scanning raises no alert for one;
 `--sarif-include-passes` adds each as a SARIF result of `kind: "pass"` at
-level `none`, under the rule's `sarif_rule_id`. Each entry carries a
+level `none`, under the rule's `sarif_rule_id`, with the location,
+fingerprints and finding identity of a violation's result (see
+[SARIF](#sarif)). Each entry carries a
 violation's identifying and descriptive fields (not `severity`, `category`,
 `counts`, `remediation` or `help_uri`), plus its finding identity:
 
@@ -315,12 +317,14 @@ finding keys of their own, scoped `diff`, `view`, `quality` or
 
 | Where | What |
 |---|---|
+| `runs[0].invocations[0]` | Present only when the run was capped (see below): `executionSuccessful: true` and one `toolExecutionNotifications` warning saying how many results were omitted. |
 | `runs[0].automationDetails.id` | The analysis category, ending in `/`: `sbom-tools/` and the canonical `--standard` values, sorted and joined by `+` (`sbom-tools/cra+ntia/`), or the value of `--sarif-category`. GitHub code scanning keeps one set of alerts per category. |
 | `runs[0].originalUriBaseIds.SRCROOT` | Declared when the SBOM's URI is relative, which is the default: relative to the repository the SBOM file is in, or to `--sarif-base`. It carries a description only, no absolute URI, so the log names no path on the machine that wrote it. |
 | `runs[0].tool.driver.rules[]` | Every rule of every standard checked, one per check and each once, in `--standard` order and registry order within a standard. `id` is the `rule_id`. Each has `shortDescription`, `fullDescription` (with the standard references), `defaultConfiguration.level`, `help.text` and `help.markdown` (the remediation, where the fix goes in each SBOM format, the references) and, where one is known, `helpUri`: the first reference with a URL, else the standard's own page. A `SBOM-<FAMILY>-GENERAL` fallback rule is listed only in a run that has a finding without a registered rule. |
 | `runs[0].properties` | The verdict: `applicable` (with `notApplicableReason` when it is false), `overallScore` and `profile` for one standard; `applicable` and `standards[]`, one summary per standard, for several. |
 | `results[].ruleId`, `ruleIndex` | The violation's `rule_id` and the index of its rule in `rules[]`. |
-| `results[].level` | `error`, `warning` or `note`, from the violation's severity. |
+| `results[].kind` | `pass` for a [passed check](#passed-checks), reported only under `--sarif-include-passes`; absent (SARIF's default, `fail`) for a violation. |
+| `results[].level` | `error`, `warning` or `note`, from the violation's severity; `none` for a pass. A pass-only rule's descriptor keeps `defaultConfiguration.level: note`, the lowest level GitHub accepts there. |
 | `results[].message.text` | The violation's message. |
 | `results[].locations[0].physicalLocation` | The SBOM file (`artifactLocation.uri`, with `uriBaseId: SRCROOT` when relative) and `region.startLine`: the line of the component's `bom-ref`, `SPDXID`, `spdxId` or `@id`, or, for a finding about the document, the line of the CycloneDX `metadata` or the SPDX creation information. A component whose id the text does not state gets line 1, as does every result for a minified, single-line SBOM. |
 | `results[].locations[0].logicalLocations[0]` | For a finding about a component, `name` (its purl, else its `bom-ref`, `SPDXID` or `spdxId`) and `kind: component`. |
@@ -334,16 +338,40 @@ every alert. GitHub code scanning matches alerts between uploads by
 action computes it from the text at the result's line. Computed that way, any
 edit to that text (a version bump on a `bom-ref` line, or any change at all to
 a minified SBOM's single line) would close the alert and open a new one.
-Results inside one run never share a fingerprint for one file. `diff` runs
-point into both SBOMs, so a finding on both sides has the same fingerprint
-once in each file.
+No two results of one run share a fingerprint; a pass's finding key is built
+like a violation's, in the same key space, so no pass shares a violation's.
+
+**Result cap.** GitHub code scanning rejects a SARIF file whose run holds more
+than 25,000 results, and shows only the 5,000 most severe. A run keeps at most
+`--sarif-max-results` results (25,000 by default, `0` for no cap; config key
+`output.sarif_max_results`): beyond it, every error is kept, then warnings,
+notes and passes while room is left, the first in report order within a
+level, and the kept results stay in report order. The run then carries an
+`invocations[0]` notification saying how many results were omitted and to use
+`-o json` for the full list, and the same warning goes to stderr.
+
+**`diff`.** A diff reports into the new SBOM only: a code-scanning alert
+belongs to a file in the repository, and the old SBOM of a diff is usually an
+earlier revision copied outside it.
+A removed component (`SBOM-TOOLS-002`) points at the new SBOM's document line,
+a resolved vulnerability (`SBOM-TOOLS-006`) at its component's line when the
+new SBOM still lists it, else at the document line, and the old SBOM's own CRA
+findings are not results. `diff -o json` and the text reports keep both sides.
+
+**TUI exports.** The TUI's SARIF export (`e`, then `s`) does not keep the SBOM
+file, so its results have no physical location, only the component's logical
+location, and code scanning drops them. Use the CLI to produce SARIF for code
+scanning.
 
 Upgrading from v0.3: SARIF results now carry locations and fingerprints, and
 every check has its own SARIF rule. The first upload after upgrading re-keys
-existing code-scanning alerts. Releases before v0.4.0 put dozens of checks
-under shared rules (`SBOM-CRA-ANNEX-I`, `SBOM-QUALITY-GENERAL`), set no
-`automationDetails`, and gave results no location; code scanning drops a
-result without one.
+existing code-scanning alerts. `diff -o sarif` reports into the new SBOM only:
+the old SBOM's CRA findings are no longer results, and removed components
+point at the new SBOM's document line. A run keeps at most 25,000 results
+unless `--sarif-max-results` says otherwise. Releases before v0.4.0 put
+dozens of checks under shared rules (`SBOM-CRA-ANNEX-I`,
+`SBOM-QUALITY-GENERAL`), set no `automationDetails`, and gave results no
+location; code scanning drops a result without one.
 
 ## Exit codes
 
