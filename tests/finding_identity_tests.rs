@@ -4,10 +4,13 @@
 //! baselines, where two findings with one id would merge distinct alerts.
 //! Every rule therefore reports at most one finding per subject, or tells
 //! its findings on one subject apart by a `finding_detail` (numbered where
-//! the SBOM repeats an entry). This test runs every SBOM under
-//! tests/fixtures at every level — without and with its auto-discovered CRA
-//! sidecar, and the CRA levels under every pinned product class — and fails
-//! on any key or id that repeats within a result. There is no allowlist.
+//! the SBOM repeats an entry). Passed checks share the violations' key
+//! space — OSCAL and SARIF (`--sarif-include-passes`) key both by finding
+//! id — so the keys of a result's violations and passes are checked
+//! together. This test runs every SBOM under tests/fixtures at every level —
+//! without and with its auto-discovered CRA sidecar, and the CRA levels
+//! under every pinned product class — and fails on any key or id that
+//! repeats within a result. There is no allowlist.
 
 #[path = "common/clock.rs"]
 mod clock;
@@ -86,13 +89,21 @@ fn checkers(sidecar: Option<&CraSidecarMetadata>) -> Vec<(String, ComplianceChec
     out
 }
 
-/// The keys that repeat within `result`, one `<label> <key> ×n` line each.
-/// Distinct keys must not share a finding id either.
+/// The keys that repeat within `result`, among its violations and passed
+/// checks together, one `<label> <key> ×n` line each. Distinct keys must not
+/// share a finding id either.
 fn repeated_keys(label: &str, result: &ComplianceResult) -> Vec<String> {
     let mut keys: BTreeMap<String, usize> = BTreeMap::new();
     let mut ids: BTreeMap<String, usize> = BTreeMap::new();
-    for violation in &result.violations {
-        let key = finding_key(result.level, violation);
+    let violation_keys = result
+        .violations
+        .iter()
+        .map(|violation| finding_key(result.level, violation));
+    let pass_keys = result
+        .passed
+        .iter()
+        .map(|pass| finding_key(result.level, pass));
+    for key in violation_keys.chain(pass_keys) {
         *ids.entry(finding_id(&key)).or_default() += 1;
         *keys.entry(key).or_default() += 1;
     }
@@ -123,19 +134,22 @@ fn finding_keys_and_ids_are_unique_within_every_result() {
     assert!(sboms.len() > 50, "fixture walk found {}", sboms.len());
     let mut results = 0usize;
     let mut findings = 0usize;
+    let mut passes = 0usize;
     let mut repeats = Vec::new();
     for (rel, sbom, sidecar) in &sboms {
         for (label, checker) in checkers(sidecar.as_ref()) {
             let result = checker.check(sbom);
             results += 1;
             findings += result.violations.len();
+            passes += result.passed.len();
             repeats.extend(repeated_keys(&format!("{rel} [{label}]"), &result));
         }
     }
     assert_no_repeats(&repeats);
     assert!(
-        results > 2000 && findings > 10_000,
-        "the walk checked only {results} results with {findings} findings"
+        results > 2000 && findings > 10_000 && passes > 50,
+        "the walk checked only {results} results with {findings} findings and \
+         {passes} passed checks"
     );
 }
 

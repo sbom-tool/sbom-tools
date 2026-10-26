@@ -82,17 +82,17 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768
   E SBOM-CNSA2-ALG-008  crypto/algorithm/slh-dsa-shake-256s
   E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-pqc ×2
-[NistPqc] NON-COMPLIANT · E3 W0 I7
+[NistPqc] NON-COMPLIANT · E3 W0 I0 P7
   E SBOM-PQC-001  crypto/algorithm/ecdsa-p521
   E SBOM-PQC-001  crypto/algorithm/x25519
   E SBOM-PQC-PROTO-002  crypto/protocol/tls13-pqc
-  I SBOM-PQC-009  crypto/algorithm/ml-dsa-65
-  I SBOM-PQC-009  crypto/algorithm/ml-dsa-87
-  I SBOM-PQC-009  crypto/algorithm/ml-kem-1024
-  I SBOM-PQC-009  crypto/algorithm/ml-kem-768
-  I SBOM-PQC-009  crypto/algorithm/slh-dsa-shake-256s
-  I SBOM-PQC-009  crypto/algorithm/xmss
-  I SBOM-PQC-010  crypto/algorithm/hybrid-kem
+  P SBOM-PQC-009  crypto/algorithm/ml-dsa-65
+  P SBOM-PQC-009  crypto/algorithm/ml-dsa-87
+  P SBOM-PQC-009  crypto/algorithm/ml-kem-1024
+  P SBOM-PQC-009  crypto/algorithm/ml-kem-768
+  P SBOM-PQC-009  crypto/algorithm/slh-dsa-shake-256s
+  P SBOM-PQC-009  crypto/algorithm/xmss
+  P SBOM-PQC-010  crypto/algorithm/hybrid-kem
 [BsiTr03183_2] NON-COMPLIANT · E3 W2 I0
   E SBOM-BSI-TR-03183-2-5-1  -
   E SBOM-BSI-TR-03183-2-5-4  - (1/3)

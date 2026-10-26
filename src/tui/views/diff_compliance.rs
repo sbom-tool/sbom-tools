@@ -1520,6 +1520,7 @@ mod tests {
             is_compliant: violations.is_empty(),
             level: ComplianceLevel::NtiaMinimum,
             violations,
+            passed: Vec::new(),
             error_count,
             warning_count,
             info_count,

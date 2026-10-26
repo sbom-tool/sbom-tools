@@ -1152,11 +1152,8 @@
           "expect": {
             "compliant": true,
             "errors": 0,
-            "rules_present": [
-              {
-                "rule": "SBOM-PQC-010",
-                "severity": "info"
-              }
+            "rules_passed": [
+              "SBOM-PQC-010"
             ],
             "rules_absent": [
               "SBOM-PQC-ALG-UNKNOWN",
@@ -1204,11 +1201,8 @@
           "expect": {
             "compliant": true,
             "errors": 0,
-            "rules_present": [
-              {
-                "rule": "SBOM-PQC-010",
-                "severity": "info"
-              }
+            "rules_passed": [
+              "SBOM-PQC-010"
             ]
           }
         }
@@ -1236,11 +1230,8 @@
           "expect": {
             "compliant": true,
             "errors": 0,
-            "rules_present": [
-              {
-                "rule": "SBOM-PQC-010",
-                "severity": "info"
-              }
+            "rules_passed": [
+              "SBOM-PQC-010"
             ],
             "rules_absent": [
               "SBOM-PQC-CERT-001",
@@ -1261,11 +1252,8 @@
           "expect": {
             "compliant": true,
             "errors": 0,
-            "rules_present": [
-              {
-                "rule": "SBOM-PQC-010",
-                "severity": "info"
-              }
+            "rules_passed": [
+              "SBOM-PQC-010"
             ]
           }
         },
@@ -1734,11 +1722,8 @@
         {
           "standard": "pqc",
           "expect": {
-            "rules_present": [
-              {
-                "rule": "SBOM-PQC-010",
-                "severity": "info"
-              }
+            "rules_passed": [
+              "SBOM-PQC-010"
             ]
           }
         }

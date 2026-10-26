@@ -6,9 +6,11 @@
 //!
 //! - **Verdict snapshots**, one per fixture: for each of the 19 levels, the
 //!   verdict, the severity counts and every finding as (severity, rule ID,
-//!   subject, counts). Messages are left out so rewording does not churn
-//!   them. Fixtures with an auto-discovered CRA sidecar are also run with it,
-//!   for the levels the CLI feeds a sidecar to.
+//!   subject, counts), then the passed checks as `P` lines (rule ID,
+//!   subject) after a `P<n>` count on the header. Messages are left out so
+//!   rewording does not churn them. Fixtures with an auto-discovered CRA
+//!   sidecar are also run with it, for the levels the CLI feeds a sidecar
+//!   to.
 //! - **Byte snapshots** of the JSON (the v1 result array and the
 //!   `sbom-tools/compliance/v2` envelope), SARIF and OSCAL writers for six
 //!   pinned fixtures, plus a check that each writer is byte-identical across
@@ -129,46 +131,19 @@ fn severity_letter(s: ViolationSeverity) -> char {
     }
 }
 
-/// One verdict block: header line plus one sorted, de-duplicated line per
-/// distinct finding.
-fn render_verdict(out: &mut String, label: &str, result: &ComplianceResult) {
-    let verdict = if !result.is_applicable() {
-        "not applicable"
-    } else if result.is_compliant {
-        "compliant"
-    } else {
-        "NON-COMPLIANT"
-    };
-    let _ = writeln!(
-        out,
-        "[{label}] {verdict} · E{} W{} I{}",
-        result.error_count, result.warning_count, result.info_count
-    );
-    let mut lines: Vec<String> = result
-        .violations
-        .iter()
-        .map(|v| {
-            // An empty canonical ID (review finding V1) prints as "" so the
-            // collision stays visible instead of looking like a blank.
-            let subject = match v.component_id.as_deref().or(v.element.as_deref()) {
-                None => "-",
-                Some("") => "\"\"",
-                Some(s) => s,
-            };
-            let counts = v
-                .counts
-                .as_ref()
-                .map(|c| format!(" ({}/{})", c.affected, c.total))
-                .unwrap_or_default();
-            format!(
-                "{} {}  {}{}",
-                severity_letter(v.severity),
-                v.rule_id,
-                subject,
-                counts
-            )
-        })
-        .collect();
+/// The subject a verdict line names. An empty canonical ID (review finding
+/// V1) prints as "" so the collision stays visible instead of looking like a
+/// blank.
+fn subject<'a>(component_id: Option<&'a str>, element: Option<&'a str>) -> &'a str {
+    match component_id.or(element) {
+        None => "-",
+        Some("") => "\"\"",
+        Some(s) => s,
+    }
+}
+
+/// Write `lines` sorted, one per distinct line, a repeat marked `×n`.
+fn write_sorted(out: &mut String, mut lines: Vec<String>) {
     lines.sort();
     let mut i = 0;
     while i < lines.len() {
@@ -183,6 +158,60 @@ fn render_verdict(out: &mut String, label: &str, result: &ComplianceResult) {
         }
         i += n;
     }
+}
+
+/// One verdict block: header line, one sorted, de-duplicated line per
+/// distinct finding, then one per distinct passed check. A result that
+/// passed checks counts them as `P<n>` on the header.
+fn render_verdict(out: &mut String, label: &str, result: &ComplianceResult) {
+    let verdict = if !result.is_applicable() {
+        "not applicable"
+    } else if result.is_compliant {
+        "compliant"
+    } else {
+        "NON-COMPLIANT"
+    };
+    let passed = if result.passed.is_empty() {
+        String::new()
+    } else {
+        format!(" P{}", result.passed.len())
+    };
+    let _ = writeln!(
+        out,
+        "[{label}] {verdict} · E{} W{} I{}{passed}",
+        result.error_count, result.warning_count, result.info_count
+    );
+    let findings: Vec<String> = result
+        .violations
+        .iter()
+        .map(|v| {
+            let counts = v
+                .counts
+                .as_ref()
+                .map(|c| format!(" ({}/{})", c.affected, c.total))
+                .unwrap_or_default();
+            format!(
+                "{} {}  {}{}",
+                severity_letter(v.severity),
+                v.rule_id,
+                subject(v.component_id.as_deref(), v.element.as_deref()),
+                counts
+            )
+        })
+        .collect();
+    write_sorted(out, findings);
+    let passes: Vec<String> = result
+        .passed
+        .iter()
+        .map(|p| {
+            format!(
+                "P {}  {}",
+                p.rule_id,
+                subject(p.component_id.as_deref(), p.element.as_deref())
+            )
+        })
+        .collect();
+    write_sorted(out, passes);
 }
 
 fn snapshot_name(rel: &str) -> String {
@@ -281,7 +310,17 @@ fn render_outputs(rel: &str, standards: &[&str]) -> [(&'static str, String); 4] 
             check(&sbom, level, sc)
         })
         .collect();
-    let json = serde_json::to_string_pretty(&results).expect("JSON serializes");
+    // The `--json-schema v1` layout predates passed checks and leaves them
+    // out, as `validate` does.
+    let v1: Vec<ComplianceResult> = results
+        .iter()
+        .cloned()
+        .map(|mut result| {
+            result.passed.clear();
+            result
+        })
+        .collect();
+    let json = serde_json::to_string_pretty(&v1).expect("JSON serializes");
     let envelope = generate_compliance_json(&results).expect("envelope serializes");
     let sarif = generate_multi_compliance_sarif(&results).expect("SARIF serializes");
     let oscal = generate_assessment_results_at(

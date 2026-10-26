@@ -53,8 +53,8 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-CNSA2-ALG-003  crypto/kem/x25519mlkem768
   E SBOM-CNSA2-ALG-007  crypto/kem/x25519mlkem768
   E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13
-[NistPqc] compliant · E0 W0 I1
-  I SBOM-PQC-010  crypto/kem/x25519mlkem768
+[NistPqc] compliant · E0 W0 I0 P1
+  P SBOM-PQC-010  crypto/kem/x25519mlkem768
 [BsiTr03183_2] NON-COMPLIANT · E1 W1 I0
   E SBOM-BSI-TR-03183-2-INVENTORY  -
   W SBOM-BSI-TR-03183-2-5-5-COMPLETENESS  -

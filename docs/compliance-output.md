@@ -42,9 +42,13 @@ document instead; see [OSCAL assessment results](#oscal-assessment-results).
 | `not_applicable_reason` | string | Present exactly when `applicable` is `false`. |
 | `compliant` | boolean | No error-severity violation. Stays `true` for a standard that did not apply, so read `applicable` first: N/A is not a pass. |
 | `score` | integer or null | 0–100; `null` exactly when `applicable` is `false`. |
-| `counts` | object | `error`, `warning` and `info`: the number of violations of each severity. |
+| `counts` | object | `error`, `warning` and `info`: the number of violations of each severity. `passed`: the number of passed checks, which no severity count includes. |
 | `violations` | array | The findings, described below. |
+| `passed` | array | The checks the SBOM passed, described [below](#passed-checks). Always present; empty when the standard passed no check or did not apply. |
 | `conformity_summary` | object | CRA Annex VIII checklist (`product_class`, `route`, `evidence[]` of `{label, detail, satisfied}`). Present for the CRA standards once a product class is pinned by `--cra-product-class` or the sidecar. |
+
+A standard that does not apply reports no violation: its verdict is
+`applicable: false` with the reason.
 
 ## Violations
 
@@ -65,6 +69,30 @@ identity.
 | `requirement` | string | The requirement, as text. |
 | `rule_id` | string | Stable internal rule key, e.g. `SBOM-NTIA-SUPPLIER`. |
 | `sarif_rule_id` | string | The rule id `-o sarif` reports for this violation. Several `rule_id`s can share one. |
+| `standard_refs` | array | `{standard, id, help_uri?}` references to the clauses the rule implements. Absent when empty. |
+
+## Passed checks
+
+Some rules affirm what the SBOM gets right rather than report a gap: under
+`pqc`, `SBOM-PQC-009` (an algorithm NIST approves for post-quantum use) and
+`SBOM-PQC-010` (a PQ/T hybrid whose post-quantum part NIST approves). These
+pass-only rules report into `passed`, never into `violations`: a pass has no
+severity, counts toward neither `counts.info` nor the score, and is no SARIF
+result unless `--sarif-include-passes` asks for it. Each entry carries the
+fields a violation has, except the severity-related ones, plus its finding
+identity:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `finding_id` | string | As a violation's; see [Finding identity](#finding-identity). |
+| `finding_key` | string | As a violation's: `<standard>\|<rule_id>\|<subject>`, with an optional `:<finding_detail>`. |
+| `message` | string | What passed, e.g. `'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205)`. |
+| `element` | string or null | Label of the element the check is about (usually a component name). Not unique. |
+| `component_id` | string | Canonical id of the component the check is about. Absent for document-level checks. |
+| `finding_detail` | string | What tells this pass apart from the rule's other passes on the same subject. Absent when the rule passes a subject at most once. |
+| `requirement` | string | The requirement satisfied, as text. |
+| `rule_id` | string | Stable internal key of a pass-only rule. |
+| `sarif_rule_id` | string | The rule id `--sarif-include-passes` reports this pass under. |
 | `standard_refs` | array | `{standard, id, help_uri?}` references to the clauses the rule implements. Absent when empty. |
 
 ## Finding identity
@@ -105,6 +133,11 @@ hex digits of the SHA-256 of the key's UTF-8 bytes. The library computes both
 (`sbom_tools::quality::{finding_key, finding_id}`), so SARIF fingerprints and
 baselines can use the same identity.
 
+A passed check is keyed the same way, from its own `rule_id`,
+`finding_detail` and `component_id`, and shares the violations' key space: a
+rule reports either violations or passed checks, never both, so a pass and a
+violation never share a key.
+
 **What keeps the id.** Rewording the message, changing the severity, the
 element label, the requirement text, the counts or the standard references, the
 order of the findings, and upgrading sbom-tools (unless the release notes say a
@@ -143,8 +176,10 @@ one finding per item on a subject sets `finding_detail` to the item:
 
 When the SBOM itself lists an entry twice (two `vulnerabilities[]` entries
 with one id for the same component, say), both findings are reported, and the
-second one's detail is numbered: `CVE-2024-3094`, then `CVE-2024-3094#2`. The
-test suite checks the guarantee on every fixture at every level.
+second one's detail is numbered: `CVE-2024-3094`, then `CVE-2024-3094#2`.
+Passed checks are numbered the same way. The test suite checks the guarantee,
+over a result's violations and passed checks together, on every fixture at
+every level.
 
 ## Compatibility
 
@@ -154,8 +189,8 @@ promises:
 - **Additive changes keep the schema id.** Later releases add fields without a
   new `schema` value, and the published schema accepts unknown fields. Ignore
   fields you do not know. The schema already declares the optional fields
-  announced for upcoming releases: `passed` (array) and `counts.passed`
-  (integer) on results, `remediation` and `help_uri` (strings) on violations.
+  announced for upcoming releases: `remediation` and `help_uri` (strings) on
+  violations.
 - **A breaking change would get a new schema id** (`sbom-tools/compliance/v3`)
   and a new schema file.
 
@@ -164,7 +199,12 @@ that it is deprecated: a bare result object for one standard, an array of them
 for several, each with `is_compliant`, `level` (e.g. `NtiaMinimum`),
 `error_count`/`warning_count`/`info_count`, `applicability`, `violations`
 (without `finding_id`/`finding_key`) and `conformity_summary` when present.
-To migrate:
+The v1 layout keeps that shape and predates passed checks, so they do not
+appear in it at all: before v0.4.0 they were Info violations
+(`SBOM-PQC-009`, `SBOM-PQC-010`), and a v1 consumer now sees fewer Info
+violations and a lower `info_count`. The not-applicable markers
+`SBOM-AIACT-NA` and `SBOM-BSIAI-NA` are gone from v1 `violations` too:
+`applicability` carries that verdict, as it already did. To migrate:
 
 | v1 | v2 |
 |---|---|
@@ -174,6 +214,7 @@ To migrate:
 | `error_count`, `warning_count`, `info_count` | `counts.error`, `counts.warning`, `counts.info` |
 | `applicability.status`, `applicability.reason` | `applicable`, `not_applicable_reason` |
 | — | `score` |
+| — (Info violations before v0.4.0) | `passed[]`, `counts.passed` |
 
 `--summary` is a separate compact format (the verdict and counts per standard,
 with `standard` holding the display name) and is not affected.

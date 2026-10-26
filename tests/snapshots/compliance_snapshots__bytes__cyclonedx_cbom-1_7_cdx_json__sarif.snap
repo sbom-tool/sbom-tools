@@ -545,101 +545,6 @@ source: tests/compliance_snapshots.rs
           }
         },
         {
-          "ruleId": "SBOM-PQC-009",
-          "level": "note",
-          "message": {
-            "text": "NIST PQC Readiness: 'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205) (Requirement: FIPS 203/204/205: approved) [Element: ML-KEM-1024]"
-          },
-          "locations": [],
-          "properties": {
-            "standardIds": [
-              "NIST-PQC:FIPS 203/204/205",
-              "NIST-PQC:SP 800-208"
-            ],
-            "standardHelpUris": [
-              "https://csrc.nist.gov/projects/post-quantum-cryptography",
-              "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            ],
-            "componentId": "crypto/algorithm/ml-kem-1024"
-          }
-        },
-        {
-          "ruleId": "SBOM-PQC-009",
-          "level": "note",
-          "message": {
-            "text": "NIST PQC Readiness: 'ML-KEM-768' uses NIST-approved PQC algorithm (FIPS 203/204/205) (Requirement: FIPS 203/204/205: approved) [Element: ML-KEM-768]"
-          },
-          "locations": [],
-          "properties": {
-            "standardIds": [
-              "NIST-PQC:FIPS 203/204/205",
-              "NIST-PQC:SP 800-208"
-            ],
-            "standardHelpUris": [
-              "https://csrc.nist.gov/projects/post-quantum-cryptography",
-              "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            ],
-            "componentId": "crypto/algorithm/ml-kem-768"
-          }
-        },
-        {
-          "ruleId": "SBOM-PQC-009",
-          "level": "note",
-          "message": {
-            "text": "NIST PQC Readiness: 'ML-DSA-87' uses NIST-approved PQC algorithm (FIPS 203/204/205) (Requirement: FIPS 203/204/205: approved) [Element: ML-DSA-87]"
-          },
-          "locations": [],
-          "properties": {
-            "standardIds": [
-              "NIST-PQC:FIPS 203/204/205",
-              "NIST-PQC:SP 800-208"
-            ],
-            "standardHelpUris": [
-              "https://csrc.nist.gov/projects/post-quantum-cryptography",
-              "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            ],
-            "componentId": "crypto/algorithm/ml-dsa-87"
-          }
-        },
-        {
-          "ruleId": "SBOM-PQC-009",
-          "level": "note",
-          "message": {
-            "text": "NIST PQC Readiness: 'ML-DSA-65' uses NIST-approved PQC algorithm (FIPS 203/204/205) (Requirement: FIPS 203/204/205: approved) [Element: ML-DSA-65]"
-          },
-          "locations": [],
-          "properties": {
-            "standardIds": [
-              "NIST-PQC:FIPS 203/204/205",
-              "NIST-PQC:SP 800-208"
-            ],
-            "standardHelpUris": [
-              "https://csrc.nist.gov/projects/post-quantum-cryptography",
-              "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            ],
-            "componentId": "crypto/algorithm/ml-dsa-65"
-          }
-        },
-        {
-          "ruleId": "SBOM-PQC-009",
-          "level": "note",
-          "message": {
-            "text": "NIST PQC Readiness: 'SLH-DSA-SHAKE-256s' uses NIST-approved PQC algorithm (FIPS 203/204/205) (Requirement: FIPS 203/204/205: approved) [Element: SLH-DSA-SHAKE-256s]"
-          },
-          "locations": [],
-          "properties": {
-            "standardIds": [
-              "NIST-PQC:FIPS 203/204/205",
-              "NIST-PQC:SP 800-208"
-            ],
-            "standardHelpUris": [
-              "https://csrc.nist.gov/projects/post-quantum-cryptography",
-              "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            ],
-            "componentId": "crypto/algorithm/slh-dsa-shake-256s"
-          }
-        },
-        {
           "ruleId": "SBOM-PQC-001",
           "level": "error",
           "message": {
@@ -659,25 +564,6 @@ source: tests/compliance_snapshots.rs
           }
         },
         {
-          "ruleId": "SBOM-PQC-010",
-          "level": "note",
-          "message": {
-            "text": "NIST PQC Readiness: 'X25519-ML-KEM-768' is a PQ/T hybrid (X25519 + ML-KEM-768) whose post-quantum part is NIST-approved (FIPS 203); SP 800-227 §4.6.2 approves the key combination (Requirement: SP 800-227 / IR 8547: PQ/T hybrid) [Element: X25519-ML-KEM-768]"
-          },
-          "locations": [],
-          "properties": {
-            "standardIds": [
-              "NIST-PQC:SP 800-227",
-              "NIST-PQC:IR 8547 ipd"
-            ],
-            "standardHelpUris": [
-              "https://csrc.nist.gov/projects/post-quantum-cryptography",
-              "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            ],
-            "componentId": "crypto/algorithm/hybrid-kem"
-          }
-        },
-        {
           "ruleId": "SBOM-PQC-001",
           "level": "error",
           "message": {
@@ -694,25 +580,6 @@ source: tests/compliance_snapshots.rs
               "https://csrc.nist.gov/projects/post-quantum-cryptography"
             ],
             "componentId": "crypto/algorithm/ecdsa-p521"
-          }
-        },
-        {
-          "ruleId": "SBOM-PQC-009",
-          "level": "note",
-          "message": {
-            "text": "NIST PQC Readiness: 'XMSS' uses NIST-approved PQC algorithm (SP 800-208 stateful hash-based signature) (Requirement: FIPS 203/204/205: approved) [Element: XMSS]"
-          },
-          "locations": [],
-          "properties": {
-            "standardIds": [
-              "NIST-PQC:FIPS 203/204/205",
-              "NIST-PQC:SP 800-208"
-            ],
-            "standardHelpUris": [
-              "https://csrc.nist.gov/projects/post-quantum-cryptography",
-              "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            ],
-            "componentId": "crypto/algorithm/xmss"
           }
         },
         {

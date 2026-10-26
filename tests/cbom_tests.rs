@@ -846,27 +846,36 @@ fn unclassifiable_refs_fail_instead_of_vacuous_pass() {
 }
 
 #[test]
-fn nist_pqc_hybrid_transition_info() {
+fn nist_pqc_hybrid_transition_passes() {
     let parsed = parse_sbom(&fixture_path("cyclonedx/cbom-pqc-transition.cdx.json")).unwrap();
     let result = checker(ComplianceLevel::NistPqc).check(&parsed);
 
-    // Should have info-level messages about hybrid combiners
-    let infos: Vec<_> = result
-        .violations
-        .iter()
-        .filter(|v| v.severity == ViolationSeverity::Info)
-        .collect();
+    // Approved hybrid combiners are passed checks, not Info violations.
     assert!(
-        infos.iter().any(|v| v.message.contains("hybrid")),
-        "should recognize hybrid PQC combiners as good practice"
+        result
+            .passed
+            .iter()
+            .any(|p| p.rule_id == "SBOM-PQC-010" && p.message.contains("hybrid")),
+        "should recognize hybrid PQC combiners as good practice: {:?}",
+        result.passed
     );
 
-    // Should have info about approved PQC algorithms
+    // So are approved PQC algorithms.
     assert!(
-        infos
+        result
+            .passed
             .iter()
-            .any(|v| v.message.contains("NIST-approved PQC")),
-        "should recognize approved PQC algorithms"
+            .any(|p| p.rule_id == "SBOM-PQC-009" && p.message.contains("NIST-approved PQC")),
+        "should recognize approved PQC algorithms: {:?}",
+        result.passed
+    );
+    assert!(
+        !result
+            .violations
+            .iter()
+            .any(|v| matches!(v.rule_id, "SBOM-PQC-009" | "SBOM-PQC-010")),
+        "an approval is never a violation: {:?}",
+        result.violations
     );
 }
 

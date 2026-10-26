@@ -522,6 +522,40 @@ fn json_schema_v1_keeps_the_pre_0_4_shape() {
         )
     );
 
+    // The v1 layout predates passed checks: they simply stop appearing
+    // there (they used to be Info violations), and no `passed` field joins.
+    let cbom = fixture_path("cyclonedx/cbom-quantum-ready.cdx.json");
+    let cbom_raw = std::fs::read_to_string(&cbom).expect("fixture readable");
+    let cbom_sbom = sbom_tools::parse_sbom_str(&cbom_raw).expect("fixture parses");
+    let mut pqc = ComplianceChecker::new(StandardSelector::Pqc.level())
+        .with_as_of(as_of)
+        .check(&cbom_sbom);
+    assert!(!pqc.passed.is_empty(), "the fixture passes PQC checks");
+    pqc.passed.clear();
+    let cbom = cbom.to_str().expect("utf-8");
+    let pqc_v1 = run(&[
+        "validate",
+        cbom,
+        "--standard",
+        "pqc",
+        "-o",
+        "json",
+        "--json-schema",
+        "v1",
+        "--as-of",
+        AS_OF,
+    ]);
+    assert_eq!(
+        stdout(&pqc_v1),
+        format!(
+            "{}\n",
+            serde_json::to_string_pretty(&pqc).expect("serializes")
+        )
+    );
+    let json: Value = serde_json::from_str(&stdout(&pqc_v1)).expect("v1 is JSON");
+    assert!(json.get("passed").is_none(), "{json}");
+    assert_eq!(json["info_count"], 0, "{json}");
+
     // The deprecation note goes to stderr, never into the JSON.
     let noisy = base_command()
         .env("RUST_LOG", "warn")

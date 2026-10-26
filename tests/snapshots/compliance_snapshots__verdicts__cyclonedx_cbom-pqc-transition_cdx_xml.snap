@@ -90,19 +90,19 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-CNSA2-CERT-001  crypto/certificate/hybrid-cert
   E SBOM-CNSA2-CERT-001  crypto/certificate/legacy-compat-cert
   E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-hybrid ×2
-[NistPqc] NON-COMPLIANT · E6 W0 I6
+[NistPqc] NON-COMPLIANT · E6 W0 I0 P6
   E SBOM-PQC-001  crypto/algorithm/ecdh-p384
   E SBOM-PQC-001  crypto/algorithm/ecdsa-p384
   E SBOM-PQC-001  crypto/algorithm/rsa-3072
   E SBOM-PQC-001  crypto/algorithm/x25519
   E SBOM-PQC-CERT-001  crypto/certificate/legacy-compat-cert
   E SBOM-PQC-PROTO-002  crypto/protocol/tls13-hybrid
-  I SBOM-PQC-009  crypto/algorithm/ml-dsa-65
-  I SBOM-PQC-009  crypto/algorithm/ml-kem-1024
-  I SBOM-PQC-009  crypto/algorithm/ml-kem-768
-  I SBOM-PQC-010  crypto/algorithm/hybrid-ecdh-ml-kem-1024
-  I SBOM-PQC-010  crypto/algorithm/hybrid-ecdsa-ml-dsa
-  I SBOM-PQC-010  crypto/algorithm/hybrid-x25519-ml-kem-768
+  P SBOM-PQC-009  crypto/algorithm/ml-dsa-65
+  P SBOM-PQC-009  crypto/algorithm/ml-kem-1024
+  P SBOM-PQC-009  crypto/algorithm/ml-kem-768
+  P SBOM-PQC-010  crypto/algorithm/hybrid-ecdh-ml-kem-1024
+  P SBOM-PQC-010  crypto/algorithm/hybrid-ecdsa-ml-dsa
+  P SBOM-PQC-010  crypto/algorithm/hybrid-x25519-ml-kem-768
 [BsiTr03183_2] NON-COMPLIANT · E2 W2 I0
   E SBOM-BSI-TR-03183-2-5-1  -
   E SBOM-BSI-TR-03183-2-LICENSE  - (2/3)

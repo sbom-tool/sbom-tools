@@ -8,7 +8,9 @@
 //! structural reorganisation of the previous `match self.level { … }` in
 //! `ComplianceChecker::check`.
 
-use super::{Applicability, ComplianceChecker, ComplianceLevel, NormalizedSbom, Violation};
+use super::{
+    Applicability, ComplianceChecker, ComplianceLevel, NormalizedSbom, PassedCheck, Violation,
+};
 use crate::model::{AttestationDeclarations, AttestationRuleFamily, SupportedRequirement};
 
 /// Read-only context threaded through every [`StandardChecker`].
@@ -72,27 +74,33 @@ impl<'a> ComplianceContext<'a> {
     }
 }
 
-/// What one standard's checks report: the violations found, and whether the
-/// standard applied to the SBOM at all.
+/// What one standard's checks report: the violations found, the checks the
+/// SBOM passed, and whether the standard applied to the SBOM at all.
 ///
-/// A readiness profile that does not apply (the EU AI Act and BSI/G7
-/// SBOM-for-AI profiles on an SBOM without AI/ML content) says so through
-/// [`Findings::not_applicable`] instead of reporting a placeholder violation;
-/// [`ComplianceChecker::check`] copies it to
-/// [`ComplianceResult::applicability`](super::ComplianceResult::applicability).
+/// An affirming check (a pass-only rule, [`RuleKind::Pass`](super::RuleKind))
+/// pushes a [`PassedCheck`] to `passed`, never a violation. A readiness
+/// profile that does not apply (the EU AI Act and BSI/G7 SBOM-for-AI
+/// profiles on an SBOM without AI/ML content) says so through
+/// [`Findings::not_applicable`] instead of reporting a placeholder violation.
+/// [`ComplianceChecker::check`] copies all three into the
+/// [`ComplianceResult`](super::ComplianceResult).
 #[derive(Debug, Default)]
 pub(crate) struct Findings {
     /// The violations the checks found.
     pub(crate) violations: Vec<Violation>,
+    /// The checks the SBOM passed.
+    pub(crate) passed: Vec<PassedCheck>,
     /// Whether the standard evaluated the SBOM.
     pub(crate) applicability: Applicability,
 }
 
 impl Findings {
-    /// The findings of a standard that applied: these violations.
+    /// The findings of a standard that applied and passed no check: these
+    /// violations.
     pub(crate) const fn from_violations(violations: Vec<Violation>) -> Self {
         Self {
             violations,
+            passed: Vec::new(),
             applicability: Applicability::Applicable,
         }
     }
@@ -169,7 +177,8 @@ impl StandardChecker for GenericChecker {
 /// Generates a thin [`StandardChecker`] struct whose `check()` delegates to a
 /// single dedicated method on [`ComplianceChecker`]. The method takes the
 /// violations it pushes to, or, with the trailing `findings`, the whole
-/// [`Findings`] (for a standard that can decide it does not apply).
+/// [`Findings`] (for a standard that reports passed checks or can decide it
+/// does not apply).
 macro_rules! dedicated_checker {
     ($name:ident, $level:expr, $method:ident) => {
         pub(crate) struct $name;
@@ -206,7 +215,12 @@ macro_rules! dedicated_checker {
 dedicated_checker!(NistSsdfChecker, ComplianceLevel::NistSsdf, check_nist_ssdf);
 dedicated_checker!(Eo14028Checker, ComplianceLevel::Eo14028, check_eo14028);
 dedicated_checker!(Cnsa2Checker, ComplianceLevel::Cnsa2, check_cnsa2);
-dedicated_checker!(NistPqcChecker, ComplianceLevel::NistPqc, check_nist_pqc);
+dedicated_checker!(
+    NistPqcChecker,
+    ComplianceLevel::NistPqc,
+    check_nist_pqc,
+    findings
+);
 dedicated_checker!(
     BsiTr03183Checker,
     ComplianceLevel::BsiTr03183_2,

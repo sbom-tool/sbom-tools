@@ -17,7 +17,8 @@ source: tests/compliance_snapshots.rs
       "counts": {
         "error": 0,
         "warning": 1,
-        "info": 3
+        "info": 3,
+        "passed": 0
       },
       "violations": [
         {
@@ -92,6 +93,7 @@ source: tests/compliance_snapshots.rs
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         }
       ],
+      "passed": [],
       "conformity_summary": {
         "product_class": "important-class-1",
         "route": "module-a",
@@ -123,7 +125,8 @@ source: tests/compliance_snapshots.rs
       "counts": {
         "error": 0,
         "warning": 1,
-        "info": 3
+        "info": 3,
+        "passed": 0
       },
       "violations": [
         {
@@ -198,6 +201,7 @@ source: tests/compliance_snapshots.rs
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         }
       ],
+      "passed": [],
       "conformity_summary": {
         "product_class": "important-class-1",
         "route": "module-a",

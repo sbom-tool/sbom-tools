@@ -834,6 +834,7 @@ mod tests {
             warning_count: 0,
             info_count: 0,
             violations,
+            passed: Vec::new(),
             conformity_summary: None,
             applicability: crate::quality::Applicability::Applicable,
         }

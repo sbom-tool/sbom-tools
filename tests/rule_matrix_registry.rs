@@ -6,7 +6,8 @@
 //!
 //! The matrix half (WP 1.2): every compliance level has a rule matrix, and
 //! every registered rule key sits in some `tests/rule_matrix_*.rs` row —
-//! tested, or skipped with a reason that names the bug or limitation.
+//! tested (by firing cases, or passing cases for a pass-only rule), or
+//! skipped with a reason that names the bug or limitation.
 
 use sbom_tools::quality::{
     CISA2026_SARIF_RULE_IDS, CNSA2_SARIF_RULE_IDS, COMPLIANCE_SARIF_RULE_IDS, ComplianceLevel,
@@ -245,13 +246,16 @@ fn matrix_sources() -> Vec<(String, String)> {
     sources
 }
 
-/// The row constructors of tests/common/rule_matrix.rs.
+/// The row constructors of tests/common/rule_matrix.rs: firing rows for
+/// finding rules, passing rows for pass-only rules, skipped rows for both.
 const ROW_CONSTRUCTORS: &[&str] = &[
     "tested",
     "tested_departing",
+    "passing",
     "skipped",
     "key_tested",
     "key_tested_departing",
+    "key_passing",
     "key_skipped",
 ];
 
@@ -328,10 +332,12 @@ fn every_compliance_level_has_a_rule_matrix() {
 
 /// Every registered rule key sits in some matrix: a self-descriptor (its own
 /// SARIF rule) needs a SARIF row, an alias key (one that shares another
-/// key's SARIF rule) needs a per-key row. Either may be `skipped` — the
-/// reason, enforced non-empty by `run_matrix`, names the bug or limitation —
-/// but nothing is left out silently. Rows may not name unregistered ids,
-/// and a per-key row may not name a self-descriptor.
+/// key's SARIF rule) needs a per-key row. A pass-only rule's row is a
+/// `passing` (or `key_passing`) one, which `run_matrix` holds to the rule's
+/// kind. Any row may be `skipped` — the reason, enforced non-empty by
+/// `run_matrix`, names the bug or limitation — but nothing is left out
+/// silently. Rows may not name unregistered ids, and a per-key row may not
+/// name a self-descriptor.
 #[test]
 fn every_registered_rule_sits_in_a_matrix_or_is_skipped_with_a_reason() {
     let rows: Vec<MatrixRow> = matrix_sources()

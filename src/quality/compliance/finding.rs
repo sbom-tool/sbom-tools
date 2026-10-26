@@ -484,6 +484,37 @@ mod tests {
         assert_eq!(keys.len(), repeated.len(), "{keys:?}");
     }
 
+    /// A passed check is keyed exactly like a violation, and its repeats
+    /// are numbered the same way.
+    #[test]
+    fn passed_checks_share_the_key_scheme_and_the_numbering() {
+        use crate::quality::PassedCheck;
+        let pass = |detail: Option<&str>| PassedCheck {
+            rule_id: "SBOM-PQC-009",
+            message: "'ML-KEM-1024' uses NIST-approved PQC algorithm".to_string(),
+            element: Some("ML-KEM-1024".to_string()),
+            component_id: Some("crypto/algorithm/ml-kem-1024".to_string()),
+            finding_detail: detail.map(str::to_string),
+            requirement: "FIPS 203/204/205: approved".to_string(),
+            standard_refs: Vec::new(),
+        };
+        assert_eq!(
+            finding_key(ComplianceLevel::NistPqc, &pass(None)),
+            "pqc|SBOM-PQC-009|crypto/algorithm/ml-kem-1024"
+        );
+        assert_eq!(
+            finding_key(ComplianceLevel::NistPqc, &pass(Some("a:b"))),
+            "pqc|SBOM-PQC-009:a%3Ab|crypto/algorithm/ml-kem-1024"
+        );
+        let mut repeated = vec![pass(Some("a")), pass(Some("a")), pass(None)];
+        number_repeated_details(&mut repeated);
+        let details: Vec<Option<&str>> = repeated
+            .iter()
+            .map(|p| p.finding_detail.as_deref())
+            .collect();
+        assert_eq!(details, [Some("a"), Some("a#2"), None]);
+    }
+
     /// Known answers pin the digest, the truncation and the prefix, so the
     /// ids a baseline stores cannot drift with a refactor.
     #[test]

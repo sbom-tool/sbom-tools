@@ -41,8 +41,8 @@ pub use finding::{
 pub use registry::{
     CISA2026_SARIF_RULE_IDS, CNSA2_SARIF_RULE_IDS, COMPLIANCE_SARIF_RULE_IDS,
     EO14028_SARIF_RULE_IDS, FDA_SARIF_RULE_IDS, FSCT_SARIF_RULE_IDS, FieldAdvice, FormatAdvice,
-    NTIA_SARIF_RULE_IDS, PCIDSS_SARIF_RULE_IDS, PQC_SARIF_RULE_IDS, RemediationFormat, RuleMeta,
-    SSDF_SARIF_RULE_IDS, all_rule_ids, rule_meta,
+    NTIA_SARIF_RULE_IDS, PASS_RULE_IDS, PCIDSS_SARIF_RULE_IDS, PQC_SARIF_RULE_IDS,
+    RemediationFormat, RuleKind, RuleMeta, SSDF_SARIF_RULE_IDS, all_rule_ids, rule_kind, rule_meta,
 };
 use registry::{REMEDIATION_UNREGISTERED, lookup_static_rule_id};
 pub use selector::StandardSelector;
@@ -756,14 +756,7 @@ impl Violation {
     /// directly rather than re-deriving.
     #[must_use]
     pub fn registry_standard_refs(&self) -> Vec<StandardRef> {
-        rule_meta(self.rule_id)
-            .map(|m| {
-                m.refs
-                    .iter()
-                    .map(|(kind, id)| StandardRef::new(*kind, *id))
-                    .collect()
-            })
-            .unwrap_or_default()
+        registry_refs(self.rule_id)
     }
 
     /// Remediation guidance for this violation: the [`Violation::remediation`]
@@ -818,7 +811,183 @@ impl Violation {
     /// the one residual place the two outputs can differ.
     #[must_use]
     pub fn sarif_rule_id(&self) -> &'static str {
-        rule_meta(self.rule_id).map_or("SBOM-CRA-GENERAL", |m| m.sarif_id)
+        registry_sarif_id(self.rule_id)
+    }
+}
+
+/// The harmonised-standard references the registry lists for `rule_id`, in
+/// registry order; empty for an unregistered id.
+fn registry_refs(rule_id: &str) -> Vec<StandardRef> {
+    rule_meta(rule_id)
+        .map(|m| {
+            m.refs
+                .iter()
+                .map(|(kind, id)| StandardRef::new(*kind, *id))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// The externally-visible SARIF rule id of `rule_id`; the generic CRA rule
+/// for an unregistered id.
+fn registry_sarif_id(rule_id: &str) -> &'static str {
+    rule_meta(rule_id).map_or("SBOM-CRA-GENERAL", |m| m.sarif_id)
+}
+
+/// A check the SBOM passed: what a pass-only rule ([`RuleKind::Pass`])
+/// reports, such as SBOM-PQC-009's "uses a NIST-approved PQC algorithm".
+///
+/// A pass is no finding to act on, so it is kept apart from the violations:
+/// it has no severity, counts toward neither `info_count` nor the score, and
+/// is a SARIF result only under `--sarif-include-passes` (then of
+/// `kind: "pass"`). It has a finding key built like a violation's (see
+/// [`finding_key`]), and the two share one key space: a rule reports either
+/// violations or passes, never both.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PassedCheck {
+    /// Stable internal rule key, a [`RuleKind::Pass`] rule of the registry.
+    pub rule_id: &'static str,
+    /// Human-readable statement of what passed.
+    pub message: String,
+    /// Human-readable label of the element the check is about (usually the
+    /// component name). Not unique: [`PassedCheck::component_id`] is the
+    /// join key.
+    pub element: Option<String>,
+    /// Canonical id of the component the check is about; `None` for a
+    /// document-level check.
+    pub component_id: Option<String>,
+    /// What tells this pass apart from the rule's other passes on the same
+    /// subject, like [`Violation::finding_detail`]; `None` for a rule that
+    /// passes a subject at most once.
+    pub finding_detail: Option<String>,
+    /// The requirement the check satisfied, as text.
+    pub requirement: String,
+    /// References to the clauses the rule implements, populated by
+    /// `ComplianceChecker::check()` from the registry.
+    pub standard_refs: Vec<StandardRef>,
+}
+
+impl PassedCheck {
+    /// Structured standard references for this pass, looked up from the rule
+    /// registry by [`PassedCheck::rule_id`] (see
+    /// [`Violation::registry_standard_refs`]).
+    #[must_use]
+    pub fn registry_standard_refs(&self) -> Vec<StandardRef> {
+        registry_refs(self.rule_id)
+    }
+
+    /// Externally-visible SARIF rule id for this pass, looked up from the
+    /// rule registry like [`Violation::sarif_rule_id`].
+    #[must_use]
+    pub fn sarif_rule_id(&self) -> &'static str {
+        registry_sarif_id(self.rule_id)
+    }
+}
+
+impl FindingIdentity for PassedCheck {
+    fn rule_id(&self) -> &'static str {
+        self.rule_id
+    }
+
+    fn finding_detail(&self) -> Option<&str> {
+        self.finding_detail.as_deref()
+    }
+
+    fn component_id(&self) -> Option<&str> {
+        self.component_id.as_deref()
+    }
+}
+
+impl finding::NumberedDetail for PassedCheck {
+    fn set_finding_detail(&mut self, detail: String) {
+        self.finding_detail = Some(detail);
+    }
+}
+
+/// Owned mirror of [`PassedCheck`] for deserialization, for the reason
+/// [`ViolationPayload`] gives.
+#[derive(Deserialize)]
+struct PassedCheckPayload {
+    message: String,
+    #[serde(default)]
+    element: Option<String>,
+    #[serde(default)]
+    component_id: Option<String>,
+    #[serde(default)]
+    finding_detail: Option<String>,
+    #[serde(default)]
+    requirement: String,
+    #[serde(default)]
+    rule_id: Option<String>,
+    #[serde(default)]
+    standard_refs: Vec<StandardRef>,
+}
+
+impl<'de> Deserialize<'de> for PassedCheck {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let payload = PassedCheckPayload::deserialize(deserializer)?;
+        Ok(Self {
+            // Like a violation's: an unknown id collapses to the generic
+            // default rather than failing deserialization, and the derived
+            // `sarif_rule_id` is ignored.
+            rule_id: payload
+                .rule_id
+                .as_deref()
+                .and_then(lookup_static_rule_id)
+                .unwrap_or_else(default_rule_id),
+            message: payload.message,
+            element: payload.element,
+            component_id: payload.component_id,
+            finding_detail: payload.finding_detail,
+            requirement: payload.requirement,
+            standard_refs: payload.standard_refs,
+        })
+    }
+}
+
+impl Serialize for PassedCheck {
+    /// Manual impl, like [`Violation`]'s, so the JSON carries the derived
+    /// `sarif_rule_id` beside the `rule_id`. Fields follow the violation's
+    /// order; `component_id` and `finding_detail` are skipped when `None`,
+    /// and `standard_refs` when empty.
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let has_component_id = self.component_id.is_some();
+        let has_finding_detail = self.finding_detail.is_some();
+        let has_refs = !self.standard_refs.is_empty();
+        let mut state = serializer.serialize_struct(
+            "PassedCheck",
+            5 + usize::from(has_component_id)
+                + usize::from(has_finding_detail)
+                + usize::from(has_refs),
+        )?;
+        state.serialize_field("message", &self.message)?;
+        state.serialize_field("element", &self.element)?;
+        if has_component_id {
+            state.serialize_field("component_id", &self.component_id)?;
+        } else {
+            state.skip_field("component_id")?;
+        }
+        if has_finding_detail {
+            state.serialize_field("finding_detail", &self.finding_detail)?;
+        } else {
+            state.skip_field("finding_detail")?;
+        }
+        state.serialize_field("requirement", &self.requirement)?;
+        state.serialize_field("rule_id", self.rule_id)?;
+        state.serialize_field("sarif_rule_id", self.sarif_rule_id())?;
+        if has_refs {
+            state.serialize_field("standard_refs", &self.standard_refs)?;
+        } else {
+            state.skip_field("standard_refs")?;
+        }
+        state.end()
     }
 }
 
@@ -977,11 +1146,19 @@ pub struct ComplianceResult {
     pub level: ComplianceLevel,
     /// All violations found
     pub violations: Vec<Violation>,
+    /// The checks the SBOM passed (see [`PassedCheck`]), in report order.
+    /// They are not violations: no severity count includes them.
+    ///
+    /// Serialized as `passed`, omitted when empty; old payloads without the
+    /// field deserialize to an empty list.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub passed: Vec<PassedCheck>,
     /// Error count
     pub error_count: usize,
     /// Warning count
     pub warning_count: usize,
-    /// Info count
+    /// Number of Info-severity violations. Passed checks are not counted:
+    /// see [`ComplianceResult::passed`].
     pub info_count: usize,
     /// CRA Annex VIII conformity-assessment summary (CRA-P4.3). Populated
     /// only when the level is a CRA profile *and* a product class has been
@@ -1024,7 +1201,8 @@ pub struct ConformityEvidence {
 
 impl ComplianceResult {
     /// Create the result of a standard that evaluated the SBOM and found
-    /// `violations`.
+    /// `violations` (and passed no check; see
+    /// [`ComplianceResult::with_passed`]).
     #[must_use]
     pub fn new(level: ComplianceLevel, violations: Vec<Violation>) -> Self {
         let error_count = violations
@@ -1044,12 +1222,21 @@ impl ComplianceResult {
             is_compliant: error_count == 0,
             level,
             violations,
+            passed: Vec::new(),
             conformity_summary: None,
             applicability: Applicability::Applicable,
             error_count,
             warning_count,
             info_count,
         }
+    }
+
+    /// This result with `passed` as its passed checks. Passes move no count
+    /// and no verdict.
+    #[must_use]
+    pub fn with_passed(mut self, passed: Vec<PassedCheck>) -> Self {
+        self.passed = passed;
+        self
     }
 
     /// Create the result of a standard that does not apply to the SBOM, for
@@ -1310,12 +1497,13 @@ impl ComplianceChecker {
     ///
     /// Selects the [`StandardChecker`] for the configured level (the
     /// dedicated profiles get their own checker; the rest take the generic
-    /// path), runs it, then back-fills harmonised-standard references and the
-    /// remediation for the SBOM's format from the rule registry, numbers the
-    /// finding details of entries the SBOM repeats (so every finding keeps a
-    /// key of its own, see [`finding_key`]), records whether the standard
-    /// applied, and attaches the CRA Annex VIII conformity summary when a
-    /// product class has been pinned on a CRA profile.
+    /// path), runs it, then back-fills harmonised-standard references (and,
+    /// for violations, the remediation for the SBOM's format) from the rule
+    /// registry, numbers the finding details of entries the SBOM repeats (so
+    /// every violation and every passed check keeps a key of its own, see
+    /// [`finding_key`]), records whether the standard applied, and attaches
+    /// the CRA Annex VIII conformity summary when a product class has been
+    /// pinned on a CRA profile.
     #[must_use]
     pub fn check(&self, sbom: &NormalizedSbom) -> ComplianceResult {
         let ctx = ComplianceContext::new(self, sbom);
@@ -1327,8 +1515,21 @@ impl ComplianceChecker {
         );
         let Findings {
             mut violations,
+            mut passed,
             applicability,
         } = checker.check(&ctx);
+        debug_assert!(
+            violations
+                .iter()
+                .all(|v| rule_kind(v.rule_id) != Some(RuleKind::Pass)),
+            "a pass-only rule must report a PassedCheck, never a violation"
+        );
+        debug_assert!(
+            passed
+                .iter()
+                .all(|p| rule_kind(p.rule_id) == Some(RuleKind::Pass)),
+            "a passed check must come from a registered pass-only rule"
+        );
 
         // Populate harmonised-standard references and the remediation,
         // phrased for the input format, from the rule registry.
@@ -1341,11 +1542,18 @@ impl ComplianceChecker {
                 v.remediation = Some(v.registry_remediation(format));
             }
         }
+        for p in &mut passed {
+            if p.standard_refs.is_empty() {
+                p.standard_refs = p.registry_standard_refs();
+            }
+        }
         // Every finding keeps a key of its own, also where the SBOM lists
-        // one entry twice.
+        // one entry twice. Violations and passes never share a rule, so
+        // numbering each list keeps their keys apart too.
         finding::number_repeated_details(&mut violations);
+        finding::number_repeated_details(&mut passed);
 
-        let mut result = ComplianceResult::new(self.level, violations);
+        let mut result = ComplianceResult::new(self.level, violations).with_passed(passed);
         result.applicability = applicability;
         // Attach the CRA Annex VIII conformity summary when a product class
         // has been pinned and the level is a CRA profile.
@@ -2442,6 +2650,57 @@ mod tests {
         assert_eq!(back.applicability, Applicability::Applicable);
     }
 
+    fn passed_check() -> PassedCheck {
+        PassedCheck {
+            rule_id: "SBOM-PQC-009",
+            message: "'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205)"
+                .to_string(),
+            element: Some("ML-KEM-1024".to_string()),
+            component_id: Some("crypto/algorithm/ml-kem-1024".to_string()),
+            finding_detail: None,
+            requirement: "FIPS 203/204/205: approved".to_string(),
+            standard_refs: registry_refs("SBOM-PQC-009"),
+        }
+    }
+
+    /// A result serializes `passed` only when it passed a check, and
+    /// payloads without the field deserialize to no passes.
+    #[test]
+    fn passed_is_written_only_when_set_and_round_trips() {
+        let none = ComplianceResult::new(ComplianceLevel::NistPqc, Vec::new());
+        let json = serde_json::to_value(&none).expect("serializes");
+        assert!(json.get("passed").is_none(), "{json}");
+        let back: ComplianceResult = serde_json::from_value(json).expect("deserializes");
+        assert!(back.passed.is_empty());
+
+        let one = none.with_passed(vec![passed_check()]);
+        assert_eq!(one.info_count, 0, "a pass moves no count");
+        assert!(one.is_compliant);
+        let json = serde_json::to_value(&one).expect("serializes");
+        assert_eq!(json["passed"][0]["rule_id"], "SBOM-PQC-009");
+        assert_eq!(json["passed"][0]["sarif_rule_id"], "SBOM-PQC-009");
+        assert!(json["passed"][0].get("finding_detail").is_none());
+        assert!(
+            json["passed"][0].get("severity").is_none(),
+            "a pass has none"
+        );
+        let back: ComplianceResult = serde_json::from_value(json).expect("deserializes");
+        assert_eq!(back.passed, vec![passed_check()]);
+    }
+
+    /// The not-applicable constructor carries the reason and nothing else.
+    #[test]
+    fn not_applicable_constructor_has_no_findings() {
+        let r = ComplianceResult::not_applicable(ComplianceLevel::BsiSbomForAi, "no ML content");
+        assert_eq!(
+            r.applicability,
+            Applicability::NotApplicable("no ML content".to_string())
+        );
+        assert!(r.violations.is_empty() && r.passed.is_empty());
+        assert!(r.is_compliant, "the N/A is_compliant contract is preserved");
+        assert_eq!(r.score(), None);
+    }
+
     /// The evaluation instant the remediation tests pin the checker to.
     fn remediation_test_clock() -> chrono::DateTime<chrono::Utc> {
         chrono::DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
@@ -3004,16 +3263,31 @@ mod tests {
     }
 
     #[test]
-    fn test_pqc_approved_algorithm_info() {
+    fn test_pqc_approved_algorithm_is_a_passed_check() {
         let sbom = make_crypto_sbom(&[("ML-DSA-65", "ML-DSA", Some("65"), Some(3))]);
         let checker = checker(ComplianceLevel::NistPqc);
         let result = checker.check(&sbom);
         assert!(
             result
+                .passed
+                .iter()
+                .any(|p| p.rule_id == "SBOM-PQC-009" && p.message.contains("approved")),
+            "PQC should report ML-DSA-65 as approved: {:?}",
+            result.passed
+        );
+        assert_eq!(result.info_count, 0, "an approval is no Info violation");
+        assert!(
+            !result
                 .violations
                 .iter()
-                .any(|v| v.severity == ViolationSeverity::Info && v.message.contains("approved")),
-            "PQC should report ML-DSA-65 as approved"
+                .any(|v| v.rule_id == "SBOM-PQC-009"),
+            "{:?}",
+            result.violations
+        );
+        let pass = &result.passed[0];
+        assert!(
+            !pass.standard_refs.is_empty(),
+            "check() back-fills the registry references of a pass"
         );
     }
 

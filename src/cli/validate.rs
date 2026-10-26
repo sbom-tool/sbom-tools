@@ -217,7 +217,7 @@ fn write_compliance_output(
     let content = match output {
         ReportFormat::Json => match json_schema {
             ValidateJsonSchema::V2 => generate_compliance_json(std::slice::from_ref(result))?,
-            ValidateJsonSchema::V1 => serde_json::to_string_pretty(result)
+            ValidateJsonSchema::V1 => serde_json::to_string_pretty(&v1_result(result))
                 .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
         },
         ReportFormat::Sarif => generate_compliance_sarif(result)?,
@@ -232,6 +232,16 @@ fn write_compliance_output(
 
     write_output(&content, &target, false)?;
     Ok(())
+}
+
+/// `result` as the deprecated `--json-schema v1` layout prints it: the
+/// result's own serialization without the passed checks, which that layout
+/// predates. A passed check simply does not appear there (it used to be an
+/// Info violation).
+fn v1_result(result: &ComplianceResult) -> ComplianceResult {
+    let mut v1 = result.clone();
+    v1.passed.clear();
+    v1
 }
 
 /// Compact summary for CI badge generation
@@ -289,8 +299,11 @@ fn write_multi_compliance_output(
     let content = match output {
         ReportFormat::Json => match json_schema {
             ValidateJsonSchema::V2 => generate_compliance_json(results)?,
-            ValidateJsonSchema::V1 => serde_json::to_string_pretty(results)
-                .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
+            ValidateJsonSchema::V1 => {
+                let v1: Vec<ComplianceResult> = results.iter().map(v1_result).collect();
+                serde_json::to_string_pretty(&v1)
+                    .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?
+            }
         },
         ReportFormat::Sarif => crate::reports::generate_multi_compliance_sarif(results)?,
         ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results_at(

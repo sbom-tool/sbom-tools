@@ -3504,7 +3504,8 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // A PQ/T hybrid (hybrid key exchange or composite signature) whose
         // post-quantum part NIST approves: an approved combination (SP
         // 800-227 §4.6.2 key combiners, IR 8547 ipd §3.2.2 composite
-        // signatures). Informational, as every check site emits it.
+        // signatures). A pass-only rule (`PASS_RULE_IDS`): its Info default
+        // is the SARIF catalogue's `note`; the check site reports a pass.
         "SBOM-PQC-010" => RuleMeta {
             sarif_id: "SBOM-PQC-010",
             name: "PqcHybridCombiner",
@@ -3532,6 +3533,8 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: REMEDIATION_PQC,
             advice: None,
         },
+        // An algorithm NIST approves for post-quantum use. A pass-only rule
+        // (`PASS_RULE_IDS`), like SBOM-PQC-010.
         "SBOM-PQC-009" => RuleMeta {
             sarif_id: "SBOM-PQC-009",
             name: "PqcApprovedAlgorithm",
@@ -4476,6 +4479,38 @@ pub fn all_rule_ids() -> &'static [&'static str] {
     ALL_RULE_IDS
 }
 
+/// What a rule reports.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum RuleKind {
+    /// A gap or an advisory: a [`Violation`](super::Violation) at a
+    /// severity.
+    Finding,
+    /// A check the SBOM passed: a [`PassedCheck`](super::PassedCheck), never
+    /// a violation.
+    Pass,
+}
+
+/// The pass-only rules ([`RuleKind::Pass`]): each only ever affirms a check
+/// the SBOM passed. Every other registered rule is a [`RuleKind::Finding`].
+///
+/// A pass-only rule keeps the registry's `Info` default severity by
+/// convention: the SARIF rule catalogue declares it at `note` as before,
+/// while its results (emitted only under `--sarif-include-passes`) carry
+/// `kind: "pass"` and level `none`. It shares its SARIF identity with no
+/// finding rule.
+pub const PASS_RULE_IDS: &[&str] = &["SBOM-PQC-009", "SBOM-PQC-010"];
+
+/// The kind of the registered rule `rule_id`; `None` for an unregistered id.
+#[must_use]
+pub fn rule_kind(rule_id: &str) -> Option<RuleKind> {
+    rule_meta(rule_id)?;
+    Some(if PASS_RULE_IDS.contains(&rule_id) {
+        RuleKind::Pass
+    } else {
+        RuleKind::Finding
+    })
+}
+
 /// Map an owned rule-id string back to the registry's `&'static str` key.
 /// Used when deserializing payloads that carry a serialized `rule_id`, so a
 /// round-tripped violation keeps its registry identity instead of collapsing
@@ -4744,6 +4779,30 @@ pub const FSCT_SARIF_RULE_IDS: &[&str] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Pass-only rules are registered, keep the `Info` default the SARIF
+    /// catalogue declares as `note`, and share their SARIF identity with no
+    /// finding rule, so a SARIF rule is never both a pass and a finding.
+    #[test]
+    fn pass_rules_are_info_rules_with_a_sarif_identity_of_their_own() {
+        for id in PASS_RULE_IDS {
+            let meta = rule_meta(id).unwrap_or_else(|| panic!("{id} is registered"));
+            assert_eq!(meta.default_severity, ViolationSeverity::Info, "{id}");
+            assert_eq!(rule_kind(id), Some(RuleKind::Pass), "{id}");
+            for other in ALL_RULE_IDS {
+                let other_meta = rule_meta(other).expect("listed ids resolve");
+                if other_meta.sarif_id == meta.sarif_id {
+                    assert_eq!(
+                        rule_kind(other),
+                        Some(RuleKind::Pass),
+                        "{other} shares the SARIF rule of pass-only {id}"
+                    );
+                }
+            }
+        }
+        assert_eq!(rule_kind("SBOM-NTIA-AUTHOR"), Some(RuleKind::Finding));
+        assert_eq!(rule_kind("SBOM-NO-SUCH-RULE"), None);
+    }
 
     /// `ALL_RULE_IDS` and the `rule_meta` match arms must stay in lockstep:
     /// every listed id resolves, every match arm is listed, no duplicates.
