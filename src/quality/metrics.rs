@@ -1881,6 +1881,9 @@ impl CryptographyMetrics {
                     // algorithm (RSA-1024, …) is counted as weak below, not
                     // here as well: counting it twice inflated the
                     // quantum-vulnerable figure past what `validate` reports.
+                    // A PQ/T hybrid counts by its post-quantum part, as the
+                    // NIST PQC check judges it.
+                    let quantum = cls.hybrid_parts().map_or(&cls, |h| &h.post_quantum);
                     if cls.class != AlgorithmClass::Broken
                         && (cls.class == AlgorithmClass::ClassicalQuantumVulnerable
                             || algo.is_some_and(|a| {
@@ -1889,7 +1892,7 @@ impl CryptographyMetrics {
                             }))
                     {
                         m.quantum_vulnerable_count += 1;
-                    } else if matches!(cls.class, AlgorithmClass::PostQuantum(_))
+                    } else if matches!(quantum.class, AlgorithmClass::PostQuantum(_))
                         || algo.is_some_and(|a| a.is_quantum_safe())
                     {
                         m.quantum_safe_count += 1;

@@ -69,8 +69,10 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-EO14028-SUPPLIER  - (3/3)
   W SBOM-EO14028-DISCLOSURE  -
   W SBOM-EO14028-INTEGRITY  - (3/3)
-[Cnsa2] NON-COMPLIANT · E19 W0 I0
+[Cnsa2] NON-COMPLIANT · E16 W0 I0
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/hybrid-x25519-ml-kem-768
   E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-768
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/hybrid-ecdsa-ml-dsa
   E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-65
   E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p384
   E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p384
@@ -80,28 +82,22 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-CNSA2-ALG-007  crypto/algorithm/hybrid-x25519-ml-kem-768
   E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-65
   E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768
-  E SBOM-CNSA2-ALG-UNKNOWN  crypto/algorithm/hybrid-ecdh-ml-kem-1024
-  E SBOM-CNSA2-ALG-UNKNOWN  crypto/algorithm/hybrid-ecdsa-ml-dsa
-  E SBOM-CNSA2-ALG-UNKNOWN  crypto/algorithm/hybrid-x25519-ml-kem-768
+  E SBOM-CNSA2-CERT-001  crypto/certificate/hybrid-cert
   E SBOM-CNSA2-CERT-001  crypto/certificate/legacy-compat-cert
-  E SBOM-CNSA2-CERT-UNKNOWN  crypto/certificate/hybrid-cert
-  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-hybrid ×3
-  E SBOM-CNSA2-PROTO-UNKNOWN  crypto/protocol/tls13-hybrid
-[NistPqc] NON-COMPLIANT · E8 W2 I6
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-hybrid ×2
+[NistPqc] NON-COMPLIANT · E6 W0 I6
   E SBOM-PQC-001  crypto/algorithm/ecdh-p384
   E SBOM-PQC-001  crypto/algorithm/ecdsa-p384
   E SBOM-PQC-001  crypto/algorithm/rsa-3072
   E SBOM-PQC-001  crypto/algorithm/x25519
   E SBOM-PQC-CERT-001  crypto/certificate/legacy-compat-cert
-  E SBOM-PQC-PROTO-002  crypto/protocol/tls13-hybrid ×3
+  E SBOM-PQC-PROTO-002  crypto/protocol/tls13-hybrid
   I SBOM-PQC-009  crypto/algorithm/ml-dsa-65
   I SBOM-PQC-009  crypto/algorithm/ml-kem-1024
   I SBOM-PQC-009  crypto/algorithm/ml-kem-768
   I SBOM-PQC-010  crypto/algorithm/hybrid-ecdh-ml-kem-1024
   I SBOM-PQC-010  crypto/algorithm/hybrid-ecdsa-ml-dsa
   I SBOM-PQC-010  crypto/algorithm/hybrid-x25519-ml-kem-768
-  W SBOM-PQC-CERT-UNKNOWN  crypto/certificate/hybrid-cert
-  W SBOM-PQC-PROTO-UNKNOWN  crypto/protocol/tls13-hybrid
 [BsiTr03183_2] NON-COMPLIANT · E2 W2 I0
   E SBOM-BSI-TR-03183-2-5-1  -
   E SBOM-BSI-TR-03183-2-LICENSE  - (2/3)

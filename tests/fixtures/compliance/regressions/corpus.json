@@ -859,6 +859,254 @@
       ]
     },
     {
+      "id": "v8-ikev2-rfc9370-p384-mlkem1024",
+      "review_id": "V8",
+      "fixture": "v8-ikev2-rfc9370-p384-mlkem1024.cdx.json",
+      "note": "NSA's CNSA 2.0 IPsec profile: an ECDH P-384 key exchange then ML-KEM-1024 as RFC 9370 additional key exchange 1. The ADDKE transform was dropped and P-384 failed both profiles as quantum-vulnerable; the pair is now one hybrid and passes both.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": true,
+            "errors": 0
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-PQC-PROTO-002",
+              "SBOM-PQC-PROTO-UNKNOWN"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v8-ikev2-optional-addke",
+      "review_id": "V8",
+      "fixture": "v8-ikev2-optional-addke.cdx.json",
+      "note": "The ML-KEM-1024 additional key exchange also offers NONE, so an SA may run on P-384 alone (RFC 9370 §2.2.2): not a guaranteed hybrid, and it fails both profiles.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-CNSA2-PROTO-002",
+                "severity": "error"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-PROTO-002",
+                "severity": "error"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v8-tls-x25519mlkem768",
+      "review_id": "V8",
+      "fixture": "v8-tls-x25519mlkem768.cdx.json",
+      "note": "The TLS hybrid group X25519MLKEM768 was unclassifiable. NIST PQC now accepts it on its approved ML-KEM-768 part (SP 800-227 §4.6.2); CNSA 2.0 rejects it because ML-KEM-768 is not ML-KEM-1024 and X25519 is not a CNSA 1.0 algorithm.",
+      "checks": [
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-010",
+                "severity": "info"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-PQC-ALG-UNKNOWN",
+              "SBOM-PQC-PROTO-UNKNOWN"
+            ]
+          }
+        },
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-CNSA2-ALG-003",
+                "severity": "error"
+              },
+              {
+                "rule": "SBOM-CNSA2-PROTO-002",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-CNSA2-ALG-UNKNOWN",
+              "SBOM-CNSA2-PROTO-UNKNOWN"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v8-tls-secp384r1mlkem1024",
+      "review_id": "V8",
+      "fixture": "v8-tls-secp384r1mlkem1024.cdx.json",
+      "note": "SecP384r1MLKEM1024 pairs ML-KEM-1024 with ECDH P-384 and passes both profiles as an algorithm. NSA's CNSA 2.0 TLS profile negotiates ML-KEM-1024 alone; protocol-profile conformance is not judged here.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": true,
+            "errors": 0
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-010",
+                "severity": "info"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v8-composite-mldsa87-ecdsa-p384",
+      "review_id": "V8",
+      "fixture": "v8-composite-mldsa87-ecdsa-p384.cdx.json",
+      "note": "Composite ML-DSA-87 with ECDSA P-384 (OID 1.3.6.1.5.5.7.6.49, draft-ietf-lamps-pq-composite-sigs-19) and a certificate it signs were unclassifiable; both pass both profiles.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-CNSA2-CERT-001",
+              "SBOM-CNSA2-CERT-UNKNOWN"
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-010",
+                "severity": "info"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-PQC-CERT-001",
+              "SBOM-PQC-CERT-UNKNOWN"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v8-ssh-hybrid-kex",
+      "review_id": "V8",
+      "fixture": "v8-ssh-hybrid-kex.cdx.json",
+      "note": "The SSH hybrid methods of RFC 10042: NIST PQC accepts both; CNSA 2.0 accepts mlkem1024nistp384-sha384 and rejects mlkem768x25519-sha256 on its ML-KEM-768 and X25519.",
+      "checks": [
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-010",
+                "severity": "info"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-CNSA2-ALG-003",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-CNSA2-ALG-UNKNOWN"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v8-hybrid-unknown-pq",
+      "review_id": "V8",
+      "fixture": "v8-hybrid-unknown-pq.cdx.json",
+      "note": "Hybrids whose post-quantum part is not recognized — sntrup761x25519-sha512 (RFC 9941) and an IKEv2 additional key exchange in a private-use group — are judged by that part: NIST PQC warns that it cannot verify them instead of failing X25519 or P-384 as quantum-vulnerable. CNSA 2.0 fails the first on X25519 and cannot verify the second.",
+      "checks": [
+        {
+          "standard": "pqc",
+          "expect": {
+            "errors": 0,
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-ALG-UNKNOWN",
+                "severity": "warning"
+              },
+              {
+                "rule": "SBOM-PQC-PROTO-UNKNOWN",
+                "severity": "warning"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-PQC-001",
+              "SBOM-PQC-010",
+              "SBOM-PQC-PROTO-002"
+            ]
+          }
+        },
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-CNSA2-ALG-003",
+                "severity": "error"
+              },
+              {
+                "rule": "SBOM-CNSA2-PROTO-UNKNOWN",
+                "severity": "error"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": "v13-cra-sidecar-support-end",
       "review_id": "V13",
       "fixture": "../../cra/cra-compliant.cdx.json",

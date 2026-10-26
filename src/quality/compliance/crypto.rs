@@ -11,13 +11,21 @@
 //! (TLS version, cipher suites, IKEv2 transforms, crypto references) are
 //! evaluated under both standards by resolving bom-refs through the SBOM
 //! index and word-boundary-scanning cipher-suite names.
+//!
+//! A PQ/T hybrid (X25519MLKEM768, an RFC 9370 IKEv2 additional key
+//! exchange, composite ML-DSA) is judged by its parts, not by the weaker
+//! one: NIST PQC by its post-quantum part ([`pqc_subject`]), CNSA 2.0 by
+//! both ([`cnsa2_hybrid_verdict`]).
+
+use std::collections::BTreeMap;
 
 use super::*;
 use crate::model::{
-    AlgorithmClass, AlgorithmClassification, CertificateProperties, Component, CryptoAssetType,
-    Ikev2Transform, NormalizedSbomIndex, PqcKind, ProtocolProperties, ProtocolType,
-    classify_algorithm, classify_algorithm_names, classify_algorithm_names_guarded,
-    ikev2_key_exchange_group, worst_classification,
+    AlgorithmClass, AlgorithmClassification, AlgorithmProperties, CertificateProperties, Component,
+    CryptoAssetType, HybridParts, Ikev2Transform, Ikev2TransformKind, Ikev2TransformTypes,
+    NormalizedSbomIndex, PqcKind, ProtocolProperties, ProtocolType, classify_algorithm,
+    classify_algorithm_names, classify_algorithm_names_guarded, ikev2_key_exchange_group,
+    worst_classification,
 };
 
 /// Outcome of checking one classified algorithm against the CNSA 2.0
@@ -36,16 +44,49 @@ enum CnsaVerdict {
 }
 
 /// Classify the algorithm identity of a crypto-asset component.
+///
+/// A declared hybrid combiner (`primitive: combiner`) whose identity names
+/// no hybrid takes the one its name names, when the two agree: the family
+/// "Hybrid-KEM" (no CycloneDX family) or "ML-KEM" (one of its parts) with
+/// the name "X25519-ML-KEM-768" is that hybrid. A declared part keeps its
+/// declared parameter set, as a declared family always does.
 fn classify_crypto_component(comp: &Component) -> AlgorithmClassification {
     let cp = comp.crypto_properties.as_ref();
     let algo = cp.and_then(|c| c.algorithm_properties.as_ref());
-    classify_algorithm(
+    let cls = classify_algorithm(
         algo.and_then(|a| a.algorithm_family.as_deref()),
         Some(&comp.name),
         cp.and_then(|c| c.oid.as_deref()),
         algo.and_then(|a| a.parameter_set_identifier.as_deref()),
         algo.and_then(|a| a.elliptic_curve.as_deref()),
-    )
+    );
+    if cls.class == AlgorithmClass::Hybrid || !algo.is_some_and(AlgorithmProperties::is_hybrid_pqc)
+    {
+        return cls;
+    }
+    let named = classify_algorithm_names_guarded(&comp.name)
+        .into_iter()
+        .find_map(|m| m.hybrid.map(|parts| *parts));
+    let Some(HybridParts {
+        mut classical,
+        mut post_quantum,
+    }) = named
+    else {
+        return cls;
+    };
+    if cls.class != AlgorithmClass::Unknown {
+        let declared = if cls.family == post_quantum.family {
+            &mut post_quantum
+        } else if cls.family == classical.family {
+            &mut classical
+        } else {
+            return cls;
+        };
+        if cls.parameter.is_some() {
+            declared.parameter = cls.parameter;
+        }
+    }
+    AlgorithmClassification::hybrid(classical, post_quantum)
 }
 
 /// The declared `classicalSecurityLevel` of a component's algorithm
@@ -92,10 +133,20 @@ fn classify_ike_transform(
     index: &NormalizedSbomIndex,
 ) -> Result<(AlgorithmClassification, Option<u32>), String> {
     // The declared key length sizes an otherwise unsized family, so it is
-    // both judged and reported ("AES-128", not "AES").
+    // both judged and reported ("AES-128", not "AES"), and so does the IANA
+    // group of a key exchange of the group's own family (an unsized ECDH
+    // asset in group 20 is ECDH over secp384r1) — the curve or modulus
+    // decides the classical half of an RFC 9370 hybrid under CNSA 2.0.
+    let group = t.group.and_then(ikev2_key_exchange_group);
     let sized = |mut cls: AlgorithmClassification| {
         if cls.parameter.is_none() {
             cls.parameter = t.key_length.map(|k| k.to_string());
+        }
+        if cls.parameter.is_none()
+            && let Some((family, Some(parameter))) = group
+            && cls.family.as_deref() == Some(family)
+        {
+            cls.parameter = Some(parameter.to_string());
         }
         cls
     };
@@ -111,7 +162,7 @@ fn classify_ike_transform(
     {
         return Ok((sized(cls), t.key_length));
     }
-    if let Some((family, param)) = t.group.and_then(ikev2_key_exchange_group) {
+    if let Some((family, param)) = group {
         return Ok((
             classify_algorithm(Some(family), None, None, param, None),
             None,
@@ -123,6 +174,108 @@ fn classify_ike_transform(
         .or_else(|| t.name.clone())
         .or_else(|| t.group.map(|g| format!("IKEv2 group {g}")))
         .unwrap_or_else(|| "(unidentified IKEv2 transform)".to_string()))
+}
+
+/// One IKEv2 transform (or RFC 9370 hybrid) to judge: its classification
+/// and declared key size, or the label to report as unverifiable.
+type IkeJudged = Result<(AlgorithmClassification, Option<u32>), String>;
+
+/// Whether an IKEv2 transform is Transform ID NONE (0), which in an
+/// additional key exchange type makes that exchange optional (RFC 9370
+/// §2.2.2).
+fn is_none_transform(t: &Ikev2Transform) -> bool {
+    t.algorithm_ref.is_none()
+        && (t.group == Some(0)
+            || t.name
+                .as_deref()
+                .is_some_and(|n| n.trim().eq_ignore_ascii_case("NONE")))
+}
+
+/// The transforms of an IKEv2 SA to judge, each classified by
+/// [`classify_ike_transform`] — except that a key exchange method
+/// (Transform Type 4) and the RFC 9370 additional key exchanges
+/// (ADDKE1–ADDKE7) are judged together. Every SA performs one KE method in
+/// IKE_SA_INIT and then one method of each proposed ADDKE type
+/// (RFC 9370 §2.2.2), so a classical KE method followed by a post-quantum
+/// additional exchange is a PQ/T hybrid: NSA's CNSA 2.0 IPsec profile is
+/// P-384 (or a 3072/4096-bit MODP group) then ML-KEM-1024
+/// (draft-guthrie-cnsa2-ipsec-profile-04 §4, §6.2). Each KE method is also
+/// judged alone when every ADDKE type offers NONE, since the SA may then
+/// skip them all.
+fn ike_judged_transforms(
+    ike: &Ikev2TransformTypes,
+    sbom: &NormalizedSbom,
+    index: &NormalizedSbomIndex,
+) -> Vec<IkeJudged> {
+    let mut judged = Vec::new();
+    let mut key_exchanges = Vec::new();
+    // Per ADDKE round: its methods other than NONE, and whether NONE is one.
+    let mut additional: BTreeMap<u8, (Vec<IkeJudged>, bool)> = BTreeMap::new();
+    for t in ike.judged_transforms() {
+        if let Some(round) = t.kind.additional_key_exchange() {
+            let (methods, optional) = additional.entry(round).or_default();
+            if is_none_transform(&t) {
+                *optional = true;
+            } else {
+                methods.push(classify_ike_transform(&t, sbom, index));
+            }
+        } else if t.kind == Ikev2TransformKind::Ke {
+            key_exchanges.push(classify_ike_transform(&t, sbom, index));
+        } else {
+            judged.push(classify_ike_transform(&t, sbom, index));
+        }
+    }
+    let skippable = additional.values().all(|(_, optional)| *optional);
+    let added: Vec<IkeJudged> = additional
+        .into_values()
+        .flat_map(|(methods, _)| methods)
+        .collect();
+    if key_exchanges.is_empty() {
+        judged.extend(added);
+        return judged;
+    }
+    for ke in &key_exchanges {
+        if skippable {
+            judged.push(ke.clone());
+        }
+        for add in &added {
+            judged.extend(paired_key_exchanges(ke, add));
+        }
+    }
+    judged
+}
+
+/// What a KE method and an additional key exchange performed after it are
+/// judged as: their hybrid when one is classical and the other
+/// post-quantum, else each on its own. An exchange that cannot be
+/// identified beside a classical KE method (or a post-quantum additional
+/// exchange) is the hybrid's unidentified part, named by its label.
+fn paired_key_exchanges(ke: &IkeJudged, add: &IkeJudged) -> Vec<IkeJudged> {
+    use AlgorithmClass as C;
+    let unidentified = |label: &str| AlgorithmClassification {
+        family: Some(label.to_string()),
+        ..AlgorithmClassification::unknown()
+    };
+    let hybrid = |classical: AlgorithmClassification, post_quantum: AlgorithmClassification| {
+        vec![Ok((
+            AlgorithmClassification::hybrid(classical, post_quantum),
+            None,
+        ))]
+    };
+    match (ke, add) {
+        (Ok((k, _)), Ok((a, _))) => match (k.class, a.class) {
+            (C::ClassicalQuantumVulnerable, C::PostQuantum(_)) => hybrid(k.clone(), a.clone()),
+            (C::PostQuantum(_), C::ClassicalQuantumVulnerable) => hybrid(a.clone(), k.clone()),
+            _ => vec![ke.clone(), add.clone()],
+        },
+        (Ok((k, _)), Err(label)) if k.class == C::ClassicalQuantumVulnerable => {
+            hybrid(k.clone(), unidentified(label))
+        }
+        (Err(label), Ok((a, _))) if matches!(a.class, C::PostQuantum(_)) => {
+            hybrid(unidentified(label), a.clone())
+        }
+        _ => vec![ke.clone(), add.clone()],
+    }
 }
 
 /// Resolve a bom-ref to the referenced component, if it exists.
@@ -272,8 +425,142 @@ fn cnsa2_verdict(cls: &AlgorithmClassification, classical_bits: Option<u32>) -> 
                     .to_string(),
             },
         },
+        C::Hybrid => cls.hybrid_parts().map_or(CnsaVerdict::Unknown, |parts| {
+            cnsa2_hybrid_verdict(cls, parts)
+        }),
         C::Unknown => CnsaVerdict::Unknown,
     }
+}
+
+/// CNSA 2.0 verdict on a PQ/T hybrid. CNSA 2.0 admits hybrids without
+/// requiring them — NSA "will not require NSS developers to use hybrid
+/// certified products for security purposes" (CNSA 2.0 FAQ, Dec 2024) — and
+/// its IPsec profile is one: an RFC 9370 additional ML-KEM-1024 exchange
+/// after a CNSA 1.0 key exchange, ECDH P-384 or a 3072/4096-bit MODP group
+/// (draft-guthrie-cnsa2-ipsec-profile-04 §4, §6.2). So a hybrid is
+/// approved when its post-quantum part is on the CNSA 2.0 allowlist
+/// (ML-KEM-1024, ML-DSA-87, …) and its classical part is a CNSA 1.0
+/// algorithm ([`cnsa1_acceptable`]); otherwise the verdict names the parts
+/// that fail. A part that cannot be identified leaves the verdict unknown
+/// unless the other part already fails.
+///
+/// This judges algorithms, not conformance to a protocol profile: NSA's
+/// TLS 1.3 and SSH profiles negotiate ML-KEM-1024 alone
+/// (draft-becker-cnsa2-tls-profile-05 §7.2, draft-becker-cnsa2-ssh-profile-05
+/// §5.1), so SecP384r1MLKEM1024 passes here as an algorithm while a
+/// profile-conformant TLS server would not offer it.
+fn cnsa2_hybrid_verdict(cls: &AlgorithmClassification, parts: &HybridParts) -> CnsaVerdict {
+    use AlgorithmClass as C;
+    let (classical, pq) = (&parts.classical, &parts.post_quantum);
+    let (pq_rule, pq_problem) = match cnsa2_verdict(pq, None) {
+        CnsaVerdict::Approved => (None, None),
+        CnsaVerdict::NotApproved { rule_id, .. } => {
+            (Some(rule_id), Some(cnsa2_hybrid_pq_problem(pq)))
+        }
+        CnsaVerdict::Unknown => (
+            None,
+            Some(format!(
+                "{} is not a recognized post-quantum algorithm",
+                pq.label()
+            )),
+        ),
+    };
+    let classical_ok = cnsa1_acceptable(classical);
+    let classical_fails = !classical_ok && classical.class != C::Unknown;
+    if pq_problem.is_none() && classical_ok {
+        return CnsaVerdict::Approved;
+    }
+    // Nothing that is known fails, yet a part cannot be identified.
+    if !classical_fails && (pq_problem.is_none() || pq.class == C::Unknown) {
+        return CnsaVerdict::Unknown;
+    }
+    let mut problems: Vec<String> = pq_problem.into_iter().collect();
+    if !classical_ok {
+        problems.push(if classical.class == C::Unknown {
+            format!("{} cannot be identified", classical.label())
+        } else {
+            format!(
+                "{} is not a CNSA 1.0 algorithm (ECDH or ECDSA over P-384, or RSA or DH of \
+                 3072 bits or more)",
+                classical.label()
+            )
+        });
+    }
+    CnsaVerdict::NotApproved {
+        rule_id: pq_rule.unwrap_or_else(|| cnsa2_hybrid_rule(parts)),
+        detail: format!(
+            "uses the hybrid {}, which CNSA 2.0 does not approve: {}",
+            cls.label(),
+            problems.join(", and ")
+        ),
+    }
+}
+
+/// Why a recognized post-quantum part keeps a hybrid off the CNSA 2.0
+/// allowlist.
+fn cnsa2_hybrid_pq_problem(pq: &AlgorithmClassification) -> String {
+    let (required, family) = match pq.class {
+        AlgorithmClass::PostQuantum(PqcKind::MlKem) => ("ML-KEM-1024", "ML-KEM"),
+        AlgorithmClass::PostQuantum(PqcKind::MlDsa) => ("ML-DSA-87", "ML-DSA"),
+        _ => return format!("{} is not a CNSA 2.0 algorithm", pq.label()),
+    };
+    match pq.parameter.as_deref() {
+        Some(_) => format!("{} is not {required}", pq.label()),
+        None => format!("{family} of an unspecified parameter set is not shown to be {required}"),
+    }
+}
+
+/// The rule a hybrid fails when its post-quantum part passes or cannot be
+/// identified: the key-establishment rule for a KEM hybrid, the signature
+/// rule for a composite signature (by the post-quantum part, else the
+/// classical one), and the general rule when neither tells.
+fn cnsa2_hybrid_rule(parts: &HybridParts) -> &'static str {
+    match parts.post_quantum.class {
+        AlgorithmClass::PostQuantum(PqcKind::MlKem) => "SBOM-CNSA2-ALG-003",
+        AlgorithmClass::PostQuantum(_) => "SBOM-CNSA2-ALG-004",
+        _ => match parts.classical.family.as_deref() {
+            Some("ECDH" | "X25519" | "X448" | "DH" | "MQV" | "ECMQV") => "SBOM-CNSA2-ALG-003",
+            Some("ECDSA" | "EDDSA" | "ED25519" | "ED448" | "DSA") => "SBOM-CNSA2-ALG-004",
+            _ => "SBOM-CNSA2-ALG-008",
+        },
+    }
+}
+
+/// Whether the classical part of a hybrid is a CNSA 1.0 algorithm — what
+/// NSA's IPsec profile pairs with ML-KEM-1024 (ECDH P-384, DH with a
+/// 3072/4096-bit MODP group) and CNSA 1.0's signatures (ECDSA P-384, RSA
+/// of 3072 bits or more). CNSA 1.0 sets RSA and DH at a 3072-bit minimum,
+/// so larger moduli pass too; P-521, brainpool, X25519/X448 and EdDSA were
+/// never CNSA. AES-256 and SHA-384/512 complete the CNSA 1.0 list.
+fn cnsa1_acceptable(classical: &AlgorithmClassification) -> bool {
+    match classical.family.as_deref() {
+        Some("ECDH" | "ECDSA" | "EC") => classical.parameter.as_deref().is_some_and(|curve| {
+            let curve = curve.rsplit('/').next().unwrap_or(curve);
+            ["P-384", "P384", "secp384r1", "nistp384", "ansip384r1"]
+                .iter()
+                .any(|p384| curve.eq_ignore_ascii_case(p384))
+        }),
+        Some("RSA" | "DH") => classical.parameter_bits().is_some_and(|bits| bits >= 3072),
+        _ => {
+            matches!(
+                classical.class,
+                AlgorithmClass::Symmetric | AlgorithmClass::Sha2
+            ) && matches!(cnsa2_verdict(classical, None), CnsaVerdict::Approved)
+        }
+    }
+}
+
+/// What NIST PQC readiness judges a classification by: a PQ/T hybrid by
+/// its post-quantum part, anything else by itself. NIST approves the
+/// combination when one part is approved — SP 800-227 §4.6.2 approves key
+/// combiners when at least one shared secret comes from an approved KEM
+/// such as ML-KEM, and NIST IR 8547 ipd §3.2.2 accommodates composite
+/// signatures with at least one NIST-approved component — while the
+/// quantum resistance is the post-quantum part's alone. So a hybrid whose
+/// post-quantum part is approved passes, and one whose post-quantum part is
+/// not approved or not recognized is no better than that part.
+fn pqc_subject(cls: &AlgorithmClassification) -> &AlgorithmClassification {
+    cls.hybrid_parts().map_or(cls, |parts| &parts.post_quantum)
 }
 
 /// CNSA 2.0 verdict on a keyed construction that names no primitive: it
@@ -602,10 +889,23 @@ impl ComplianceChecker {
                         .algorithm_properties
                         .as_ref()
                         .is_some_and(crate::model::AlgorithmProperties::is_hybrid_pqc);
-                    let what = if hybrid {
+                    let what = if let Some(parts) = cls.hybrid_parts() {
+                        let unidentified = if parts.post_quantum.class == AlgorithmClass::Unknown {
+                            &parts.post_quantum
+                        } else {
+                            &parts.classical
+                        };
+                        format!(
+                            "is a hybrid ({}) whose part {} cannot be identified",
+                            cls.label(),
+                            unidentified.label()
+                        )
+                    } else if hybrid {
                         "is a hybrid combiner whose component algorithms cannot be identified"
+                            .to_string()
                     } else {
                         "cannot be classified (no recognizable algorithm family, OID, or name)"
+                            .to_string()
                     };
                     violations.push(Violation {
                         severity: ViolationSeverity::Error,
@@ -717,12 +1017,20 @@ impl ComplianceChecker {
         let mut unverifiable: Vec<String> = Vec::new();
         // How many algorithms the classifier could identify, approved or not.
         let judged = std::cell::Cell::new(0usize);
+        // Hybrids with a part that cannot be identified, and no known part
+        // that fails: unverifiable, like an opaque reference.
+        let unidentified_hybrids = std::cell::RefCell::new(Vec::new());
         let record =
             |cls: &AlgorithmClassification, bits: Option<u32>, offenders: &mut Vec<String>| {
+                let verdict = cnsa2_verdict(cls, bits);
+                if cls.class == AlgorithmClass::Hybrid && matches!(verdict, CnsaVerdict::Unknown) {
+                    unidentified_hybrids.borrow_mut().push(cls.label());
+                    return;
+                }
                 if cls.class != AlgorithmClass::Unknown {
                     judged.set(judged.get() + 1);
                 }
-                if let CnsaVerdict::NotApproved { .. } = cnsa2_verdict(cls, bits) {
+                if let CnsaVerdict::NotApproved { .. } = verdict {
                     let label = cls.label();
                     if !offenders.contains(&label) {
                         offenders.push(label);
@@ -758,11 +1066,12 @@ impl ComplianceChecker {
             );
         }
 
-        // PROTO-002: IKEv2 transform types.
+        // PROTO-002: IKEv2 transform types, with RFC 9370 additional key
+        // exchanges judged as hybrids with the key exchange method.
         if let Some(ike) = &proto.ikev2_transform_types {
             let mut offenders = Vec::new();
-            for t in ike.judged_transforms() {
-                match classify_ike_transform(&t, sbom, index) {
+            for judged_transform in ike_judged_transforms(ike, sbom, index) {
+                match judged_transform {
                     Ok((cls, bits)) => record(&cls, bits, &mut offenders),
                     Err(label) => unverifiable.push(label),
                 }
@@ -799,6 +1108,7 @@ impl ComplianceChecker {
             }
         }
         push_proto_violation("references".to_string(), offenders);
+        unverifiable.extend(unidentified_hybrids.take());
 
         // Fail closed when the protocol's algorithms cannot be verified:
         // opaque references, or nothing the classifier can name at all (a
@@ -902,8 +1212,11 @@ impl ComplianceChecker {
                     let mut judged = false;
                     for sig_ref in sig_refs {
                         let (cls, _) = classify_bom_ref(sig_ref, sbom, &index);
-                        judged |= cls.class != AlgorithmClass::Unknown;
-                        let problem = match cls.class {
+                        // A composite signature is judged by its
+                        // post-quantum part.
+                        let subject = pqc_subject(&cls);
+                        judged |= subject.class != AlgorithmClass::Unknown;
+                        let problem = match subject.class {
                             AlgorithmClass::Broken => Some("broken algorithm (SP 800-131A)"),
                             AlgorithmClass::ClassicalQuantumVulnerable => {
                                 Some("quantum-vulnerable algorithm, must migrate to PQC (IR 8547)")
@@ -927,7 +1240,7 @@ impl ComplianceChecker {
                                 standard_refs: Vec::new(),
                                 remediation: None,
                             });
-                        } else if cls.class == AlgorithmClass::Unknown {
+                        } else if subject.class == AlgorithmClass::Unknown {
                             // An unclassifiable signature ref must warn, never
                             // silently pass — mirrors SBOM-CNSA2-ALG-UNKNOWN
                             // (previously a certificate-only CBOM whose sig
@@ -1035,22 +1348,33 @@ impl ComplianceChecker {
         let algo = cp.algorithm_properties.as_ref();
         let cls = classify_crypto_component(comp);
         let ql = algo.and_then(|a| a.nist_quantum_security_level);
+        // A PQ/T hybrid is judged by its post-quantum part.
+        let subject = pqc_subject(&cls);
 
         // PQC-ALG-UNKNOWN: an algorithm the classifier cannot name used to
         // pass silently whenever it declared a quantum level. It cannot be
         // verified, so it warns and does not count as inventory. A declared
-        // level 0 is judged by PQC-001 below instead, and a declared hybrid
-        // combiner by PQC-010.
-        let hybrid = algo.is_some_and(crate::model::AlgorithmProperties::is_hybrid_pqc);
-        if cls.class == AlgorithmClass::Unknown && ql != Some(0) && !hybrid {
+        // level 0 is judged by PQC-001 below instead. A hybrid whose
+        // post-quantum part is not recognized is as unverifiable, and so is
+        // a declared hybrid combiner whose parts cannot be identified.
+        let combiner = algo.is_some_and(AlgorithmProperties::is_hybrid_pqc);
+        if subject.class == AlgorithmClass::Unknown && ql != Some(0) {
+            let what = if cls.class == AlgorithmClass::Hybrid {
+                format!(
+                    "is a hybrid ({}) whose post-quantum part {} is not a recognized \
+                     post-quantum algorithm",
+                    cls.label(),
+                    subject.label()
+                )
+            } else if combiner {
+                "is a hybrid combiner whose component algorithms cannot be identified".to_string()
+            } else {
+                "cannot be classified (no recognizable algorithm family, OID, or name)".to_string()
+            };
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::CryptographyInfo,
-                message: format!(
-                    "'{}' cannot be classified (no recognizable algorithm family, OID, or \
-                     name); unable to verify PQC readiness",
-                    comp.name
-                ),
+                message: format!("'{}' {what}; unable to verify PQC readiness", comp.name),
                 element: Some(comp.name.clone()),
                 requirement: "IR 8547: algorithm identification".to_string(),
                 rule_id: "SBOM-PQC-ALG-UNKNOWN",
@@ -1179,17 +1503,49 @@ impl ComplianceChecker {
             }
         }
 
-        // PQC-010: hybrid PQC combiner (informational)
-        if algo.is_some_and(|a| a.is_hybrid_pqc()) {
+        // PQC-010: a PQ/T hybrid whose post-quantum part NIST approves is an
+        // approved combination (informational) — SP 800-227 §4.6.2 for key
+        // establishment, IR 8547 ipd §3.2.2 for composite signatures — and
+        // so is a declared combiner classified as an approved post-quantum
+        // algorithm. A hybrid whose post-quantum part is not approved gets
+        // no approval, like that part alone.
+        let approval = match subject.class {
+            AlgorithmClass::PostQuantum(PqcKind::MlKem) => Some("FIPS 203"),
+            AlgorithmClass::PostQuantum(PqcKind::MlDsa) => Some("FIPS 204"),
+            AlgorithmClass::PostQuantum(PqcKind::SlhDsa) => Some("FIPS 205"),
+            AlgorithmClass::PostQuantum(PqcKind::Lms | PqcKind::Xmss | PqcKind::Hss) => {
+                Some("SP 800-208")
+            }
+            _ => None,
+        };
+        if let Some(approval) = approval
+            && (cls.class == AlgorithmClass::Hybrid || combiner)
+        {
+            let message = if cls.class == AlgorithmClass::Hybrid {
+                let combination = if subject.class == AlgorithmClass::PostQuantum(PqcKind::MlKem) {
+                    "SP 800-227 §4.6.2 approves the key combination"
+                } else {
+                    "IR 8547 ipd §3.2.2 accepts the composite signature"
+                };
+                format!(
+                    "'{}' is a PQ/T hybrid ({}) whose post-quantum part is NIST-approved \
+                     ({approval}); {combination}",
+                    comp.name,
+                    cls.label()
+                )
+            } else {
+                format!(
+                    "'{}' is a hybrid PQC combiner with a NIST-approved post-quantum part \
+                     ({approval}) — good migration practice",
+                    comp.name
+                )
+            };
             violations.push(Violation {
                 severity: ViolationSeverity::Info,
                 category: ViolationCategory::CryptographyInfo,
-                message: format!(
-                    "'{}' is a hybrid PQC combiner — good migration practice",
-                    comp.name
-                ),
+                message,
                 element: Some(comp.name.clone()),
-                requirement: "IR 8547: recommended transition".to_string(),
+                requirement: "SP 800-227 / IR 8547: PQ/T hybrid".to_string(),
                 rule_id: "SBOM-PQC-010",
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
@@ -1197,7 +1553,7 @@ impl ComplianceChecker {
                 remediation: None,
             });
         }
-        cls.class != AlgorithmClass::Unknown || ql == Some(0) || hybrid
+        subject.class != AlgorithmClass::Unknown || ql == Some(0)
     }
 
     /// Evaluate a protocol asset for PQC readiness: no SSL / TLS below 1.2,
@@ -1291,11 +1647,20 @@ impl ComplianceChecker {
         };
         // How many algorithms the classifier could identify, ready or not.
         let judged = std::cell::Cell::new(0usize);
+        // Hybrids whose post-quantum part is not recognized: unverifiable,
+        // like an opaque reference.
+        let unidentified_hybrids = std::cell::RefCell::new(Vec::new());
         let record = |cls: &AlgorithmClassification, offenders: &mut Vec<String>| {
+            // A PQ/T hybrid is judged by its post-quantum part.
+            let subject = pqc_subject(cls);
+            if cls.class == AlgorithmClass::Hybrid && subject.class == AlgorithmClass::Unknown {
+                unidentified_hybrids.borrow_mut().push(cls.label());
+                return;
+            }
             if cls.class != AlgorithmClass::Unknown {
                 judged.set(judged.get() + 1);
             }
-            let tag = match cls.class {
+            let tag = match subject.class {
                 AlgorithmClass::Broken => Some("broken"),
                 AlgorithmClass::ClassicalQuantumVulnerable => Some("quantum-vulnerable"),
                 _ => None,
@@ -1334,8 +1699,8 @@ impl ComplianceChecker {
 
         if let Some(ike) = &proto.ikev2_transform_types {
             let mut offenders = Vec::new();
-            for t in ike.judged_transforms() {
-                match classify_ike_transform(&t, sbom, index) {
+            for judged_transform in ike_judged_transforms(ike, sbom, index) {
+                match judged_transform {
                     Ok((cls, _)) => record(&cls, &mut offenders),
                     Err(label) => unverifiable.push(label),
                 }
@@ -1365,6 +1730,7 @@ impl ComplianceChecker {
             }
         }
         push_proto_violation("references".to_string(), offenders);
+        unverifiable.extend(unidentified_hybrids.take());
 
         // A protocol whose evidence is all opaque, or that documents nothing
         // evaluable at all, must warn rather than silently satisfying the

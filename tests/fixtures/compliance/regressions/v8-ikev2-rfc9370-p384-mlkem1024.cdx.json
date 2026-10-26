@@ -1,0 +1,59 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:e10a435a-9aae-46d6-9f4c-b0d6ca3d06fc",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T00:00:00Z",
+    "authors": [
+      {
+        "name": "Example Corp",
+        "email": "sbom@example.com"
+      }
+    ],
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "crypto-scanner",
+          "version": "1.0.0"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/alg/ml-dsa-87",
+      "name": "ML-DSA-87",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "algorithmFamily": "ML-DSA",
+          "parameterSetIdentifier": "87",
+          "nistQuantumSecurityLevel": 5
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/protocol/ipsec-cnsa2",
+      "name": "IKEv2 CNSA 2.0 tunnel",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "ikev2",
+          "version": "2",
+          "ikev2TransformTypes": {
+            "encr": [{ "name": "ENCR_AES_GCM_16", "keyLength": 256 }],
+            "prf": [{ "name": "PRF_HMAC_SHA2_384" }],
+            "ke": [{ "group": 20 }],
+            "addke1": [{ "group": 37 }],
+            "auth": [{ "name": "Digital Signature", "algorithm": "crypto/alg/ml-dsa-87" }]
+          }
+        }
+      }
+    }
+  ]
+}
