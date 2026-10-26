@@ -14,6 +14,8 @@ sbom-tools validate sbom.json --standard ntia,cra -o json |
 
 `-o oscal-json` prints the same results as an OSCAL assessment-results
 document instead; see [OSCAL assessment results](#oscal-assessment-results).
+`-o sarif` prints them as a SARIF 2.1.0 log for code scanning; see
+[SARIF](#sarif).
 
 ## Envelope
 
@@ -101,9 +103,10 @@ contains neither, so the key splits unambiguously: the standard is everything
 before the first `|`, the rule id runs to the next `:` or `|`, the detail (if
 any) runs from that `:` to the second `|`, and the subject is everything after
 the second `|`. The `finding_id` is `sbomtools:v1:` followed by the first 16
-hex digits of the SHA-256 of the key's UTF-8 bytes. The library computes both
-(`sbom_tools::quality::{finding_key, finding_id}`), so SARIF fingerprints and
-baselines can use the same identity.
+hex digits of the SHA-256 of the key's UTF-8 bytes. The library computes
+both, and the full 64-digit hash (`sbom_tools::quality::{finding_key,
+finding_id, finding_fingerprint}`), so baselines can use the same identity;
+`-o sarif` fingerprints its results with the full hash (see [SARIF](#sarif)).
 
 **What keeps the id.** Rewording the message, changing the severity, the
 element label, the requirement text, the counts or the standard references, the
@@ -249,6 +252,49 @@ should note:
   with the SHA-256) when that id is a URI.
 - UUIDs and timestamps are reproducible, as described above; earlier
   releases drew random UUIDs and stamped the wall clock.
+
+## SARIF
+
+`sbom-tools validate -o sarif` prints a
+[SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/sarif-v2.1.0-errata01-os-complete.html)
+log with one run for all the standards checked. The test suite validates the
+output for every fixture and standard against the OASIS schema, vendored
+under `tests/fixtures/schemas/sarif/2.1.0/`. `diff`, `view` and `quality`
+write the same shape; their results that are not compliance findings have
+finding keys of their own, scoped `diff`, `view`, `quality` or
+`ai-readiness` in place of a standard.
+
+| Where | What |
+|---|---|
+| `runs[0].automationDetails.id` | The analysis category, ending in `/`: `sbom-tools/` and the canonical `--standard` values, sorted and joined by `+` (`sbom-tools/cra+ntia/`), or the value of `--sarif-category`. GitHub code scanning keeps one set of alerts per category. |
+| `runs[0].originalUriBaseIds.SRCROOT` | Declared when the SBOM's URI is relative, which is the default: relative to the repository the SBOM file is in, or to `--sarif-base`. It carries a description only, no absolute URI, so the log names no path on the machine that wrote it. |
+| `runs[0].tool.driver.rules[]` | Every rule of every standard checked, one per check and each once, in `--standard` order and registry order within a standard. `id` is the `rule_id`. Each has `shortDescription`, `fullDescription` (with the standard references), `defaultConfiguration.level`, `help.text` and `help.markdown` (the remediation, where the fix goes in each SBOM format, the references) and, where one is known, `helpUri`: the first reference with a URL, else the standard's own page. A `SBOM-<FAMILY>-GENERAL` fallback rule is listed only in a run that has a finding without a registered rule. |
+| `runs[0].properties` | The verdict: `applicable` (with `notApplicableReason` when it is false), `overallScore` and `profile` for one standard; `applicable` and `standards[]`, one summary per standard, for several. |
+| `results[].ruleId`, `ruleIndex` | The violation's `rule_id` and the index of its rule in `rules[]`. |
+| `results[].level` | `error`, `warning` or `note`, from the violation's severity. |
+| `results[].message.text` | The violation's message. |
+| `results[].locations[0].physicalLocation` | The SBOM file (`artifactLocation.uri`, with `uriBaseId: SRCROOT` when relative) and `region.startLine`: the line of the component's `bom-ref`, `SPDXID`, `spdxId` or `@id`, or, for a finding about the document, the line of the CycloneDX `metadata` or the SPDX creation information. A component whose id the text does not state gets line 1, as does every result for a minified, single-line SBOM. |
+| `results[].locations[0].logicalLocations[0]` | For a finding about a component, `name` (its purl, else its `bom-ref`, `SPDXID` or `spdxId`) and `kind: component`. |
+| `results[].partialFingerprints` | `sbomToolsFinding/v1`: the full SHA-256 of the `finding_key` (64 hex digits). `primaryLocationLineHash`: its first 16 hex digits and `:1`. |
+| `results[].properties` | `findingKey` and `findingId` as in `-o json`, then `standardIds`, `standardHelpUris`, `componentId` for a component finding, and `affected` and `total` when the violation counts items. |
+
+Both fingerprints depend on the finding identity alone, never on a line
+number or the message, so moving, reformatting or reordering the SBOM keeps
+every alert. GitHub code scanning matches alerts between uploads by
+`primaryLocationLineHash`, and when a SARIF file omits it, GitHub's upload
+action computes it from the text at the result's line. Computed that way, any
+edit to that text (a version bump on a `bom-ref` line, or any change at all to
+a minified SBOM's single line) would close the alert and open a new one.
+Results inside one run never share a fingerprint for one file. `diff` runs
+point into both SBOMs, so a finding on both sides has the same fingerprint
+once in each file.
+
+Upgrading from v0.3: SARIF results now carry locations and fingerprints, and
+every check has its own SARIF rule. The first upload after upgrading re-keys
+existing code-scanning alerts. Releases before v0.4.0 put dozens of checks
+under shared rules (`SBOM-CRA-ANNEX-I`, `SBOM-QUALITY-GENERAL`), set no
+`automationDetails`, and gave results no location; code scanning drops a
+result without one.
 
 ## Exit codes
 
