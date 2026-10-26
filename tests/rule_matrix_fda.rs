@@ -48,6 +48,7 @@ fn base() -> SbomFixture {
             vec!["ref-libalpha".to_string(), "ref-libbeta".to_string()],
         )],
         vulnerabilities: Vec::new(),
+        ..SbomFixture::default()
     }
 }
 
@@ -232,6 +233,14 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 // not count as a real component name.
                 s.component_mut("libalpha").name = "unknown".to_string();
             }),
+        ),
+        // Per-key: the document-name site's own key (SARIF identity
+        // SBOM-FDA-GENERAL, shared with the component-name site above).
+        RuleEntry::key_tested(
+            "SBOM-FDA-NAME",
+            Sev::Warning,
+            broken(|s| s.primary = None),
+            base(),
         ),
     ];
 

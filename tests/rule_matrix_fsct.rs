@@ -64,6 +64,7 @@ fn base() -> SbomFixture {
             ("ref-liba".to_string(), vec!["ref-libb".to_string()]),
         ],
         vulnerabilities: Vec::new(),
+        ..SbomFixture::default()
     }
 }
 
