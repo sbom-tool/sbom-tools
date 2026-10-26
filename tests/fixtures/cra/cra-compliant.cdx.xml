@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:fc1234ab-cdef-4567-89ab-cdef01234567" version="1">
+  <metadata>
+    <timestamp>2026-01-15T09:00:00Z</timestamp>
+    <tools>
+      <components>
+        <component type="application">
+          <name>sbom-tools</name>
+          <version>0.1.20</version>
+        </component>
+      </components>
+    </tools>
+    <component type="application" bom-ref="primary">
+      <supplier>
+        <name>ExampleCorp</name>
+      </supplier>
+      <name>example-app</name>
+      <version>1.0.0</version>
+      <hashes>
+        <hash alg="SHA-512">11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111</hash>
+      </hashes>
+      <licenses>
+        <license>
+          <id>Apache-2.0</id>
+        </license>
+      </licenses>
+      <purl>pkg:cargo/example-app@1.0.0</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/example/example-app</url>
+        </reference>
+        <reference type="issue-tracker">
+          <url>https://github.com/example/example-app/issues</url>
+        </reference>
+        <reference type="advisories">
+          <url>https://example.com/security/advisories</url>
+        </reference>
+        <reference type="security-contact">
+          <url>mailto:security@example.com</url>
+        </reference>
+        <reference type="attestation">
+          <url>https://example.com/doc.pdf</url>
+        </reference>
+      </externalReferences>
+    </component>
+    <manufacturer>
+      <name>ExampleCorp</name>
+      <contact>
+        <email>legal@example.com</email>
+      </contact>
+    </manufacturer>
+    <supplier>
+      <name>ExampleCorp</name>
+      <url>https://example.com</url>
+      <contact>
+        <name>Security</name>
+        <email>security@example.com</email>
+      </contact>
+    </supplier>
+  </metadata>
+  <components>
+    <component type="library" bom-ref="lib-a">
+      <supplier>
+        <name>LibAVendor</name>
+      </supplier>
+      <name>lib-a</name>
+      <version>2.3.4</version>
+      <hashes>
+        <hash alg="SHA-512">22222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222</hash>
+      </hashes>
+      <licenses>
+        <license>
+          <id>Apache-2.0</id>
+        </license>
+      </licenses>
+      <purl>pkg:cargo/lib-a@2.3.4</purl>
+    </component>
+    <component type="library" bom-ref="lib-b">
+      <supplier>
+        <name>LibBVendor</name>
+      </supplier>
+      <name>lib-b</name>
+      <version>0.9.1</version>
+      <hashes>
+        <hash alg="SHA-512">33333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333</hash>
+      </hashes>
+      <licenses>
+        <license>
+          <id>MIT</id>
+        </license>
+      </licenses>
+      <purl>pkg:cargo/lib-b@0.9.1</purl>
+    </component>
+  </components>
+  <dependencies>
+    <dependency ref="primary">
+      <dependency ref="lib-a"/>
+      <dependency ref="lib-b"/>
+    </dependency>
+  </dependencies>
+</bom>

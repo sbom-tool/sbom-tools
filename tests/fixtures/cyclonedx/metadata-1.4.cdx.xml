@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.4" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" serialNumber="urn:uuid:5a1e7c2d-0b3f-4e68-9d14-2f6b8a9c0e31" version="1">
+  <metadata>
+    <timestamp>2026-09-14T08:00:00Z</timestamp>
+    <tools>
+      <tool>
+        <vendor>Example Org</vendor>
+        <name>example-sbom-gen</name>
+        <version>4.2.0</version>
+      </tool>
+    </tools>
+    <authors>
+      <author>
+        <name>Release Engineering</name>
+        <email>release@example.org</email>
+      </author>
+    </authors>
+    <component type="application" bom-ref="gateway">
+      <supplier>
+        <name>Example Org</name>
+      </supplier>
+      <name>gateway</name>
+      <version>3.1.0</version>
+      <hashes>
+        <hash alg="SHA-512">a41c209ce979138183b0804c86b84478e3679c4022e4a0a03885263c3a467a17d53eefbd5489d912d8ee033215e933fbdf2d31ac3edf4bbbfaae45cdc61c36a0</hash>
+      </hashes>
+      <licenses>
+        <license>
+          <id>Apache-2.0</id>
+        </license>
+      </licenses>
+      <copyright>Copyright 2026 Example Org</copyright>
+      <purl>pkg:generic/example/gateway@3.1.0</purl>
+    </component>
+    <manufacture>
+      <name>Example Org</name>
+      <url>https://example.org</url>
+      <contact>
+        <name>SBOM desk</name>
+        <email>sbom@example.org</email>
+      </contact>
+    </manufacture>
+  </metadata>
+  <components>
+    <component type="library" bom-ref="zlib">
+      <supplier>
+        <name>zlib authors</name>
+      </supplier>
+      <name>zlib</name>
+      <version>1.3.1</version>
+      <hashes>
+        <hash alg="SHA-512">60426024c0107b30aa2dfefffa580eaebec850e1f97905be15db6a5365ec5f649f4dbd8dca0088674f74fc04a3470c22cfce6dbd175b806f889ed5bd7cedb046</hash>
+      </hashes>
+      <licenses>
+        <license>
+          <id>Zlib</id>
+        </license>
+      </licenses>
+      <copyright>Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler</copyright>
+      <purl>pkg:generic/zlib@1.3.1</purl>
+    </component>
+    <component type="library" bom-ref="libyaml">
+      <supplier>
+        <name>YAML project</name>
+      </supplier>
+      <name>libyaml</name>
+      <version>0.2.5</version>
+      <hashes>
+        <hash alg="SHA-512">17c6b9ad971e5937275d79cf36fbf230737815590f4d5bd57b9de96c5897461587c7ee483b637acc84d6768ff342c835c87634c9e0ec00204247cb0d1d4899a4</hash>
+      </hashes>
+      <licenses>
+        <license>
+          <id>MIT</id>
+        </license>
+      </licenses>
+      <copyright>Copyright (c) 2006-2016 Kirill Simonov</copyright>
+      <purl>pkg:generic/libyaml@0.2.5</purl>
+    </component>
+  </components>
+  <dependencies>
+    <dependency ref="gateway">
+      <dependency ref="zlib"/>
+      <dependency ref="libyaml"/>
+    </dependency>
+    <dependency ref="zlib"/>
+    <dependency ref="libyaml"/>
+  </dependencies>
+  <compositions>
+    <composition>
+      <aggregate>complete</aggregate>
+      <assemblies>
+        <assembly ref="gateway"/>
+        <assembly ref="zlib"/>
+        <assembly ref="libyaml"/>
+      </assemblies>
+    </composition>
+  </compositions>
+  <ds:Signature>
+    <ds:SignedInfo>
+      <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+      <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+      <ds:Reference URI="">
+        <ds:Transforms>
+          <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+        </ds:Transforms>
+        <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+        <ds:DigestValue>fflaxuPP5OLdSuNqJLYA0/UwEqdlqoQ8p64qhhFVsRs=</ds:DigestValue>
+      </ds:Reference>
+    </ds:SignedInfo>
+    <ds:SignatureValue>MQ/qtwicBYHjC2m7U1U33s0K69aCkCloN2m/UjAhBlbA/KWEfbBHppCIqNyQdljrsD274hspA7qw0h7e8SCaVD8fhDcgHY54J04TYnP3D78=</ds:SignatureValue>
+  </ds:Signature>
+</bom>

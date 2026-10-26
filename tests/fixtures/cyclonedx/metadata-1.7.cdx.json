@@ -1,0 +1,90 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:2e4f6a8c-0d1e-4f3a-b5c7-d9e1f3a5b7c9",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T06:30:00Z",
+    "lifecycles": [
+      {
+        "name": "nightly-integration",
+        "description": "Assembled by the nightly integration pipeline"
+      }
+    ],
+    "tools": {
+      "components": [
+        { "type": "application", "name": "example-sbom-gen", "version": "5.0.1" }
+      ]
+    },
+    "authors": [
+      { "name": "Supply Chain Office", "email": "sco@example.org" }
+    ],
+    "component": {
+      "type": "application",
+      "bom-ref": "console",
+      "supplier": { "name": "Example Org" },
+      "name": "console",
+      "version": "5.0.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c3e77f9801f7a0c77b439c759145c696a435a77a3284934f07b544a64b8b60152e88b3f9bc2f9c3e732aa7d0990e3536aacda2c83b20896c1c52bb6ca8e6c150"
+        }
+      ],
+      "licenses": [{ "license": { "id": "Apache-2.0" } }],
+      "copyright": "Copyright 2026 Example Org",
+      "purl": "pkg:generic/example/console@5.0.0"
+    },
+    "manufacturer": {
+      "name": "Example Org",
+      "url": ["https://example.org/sbom"]
+    },
+    "distributionConstraints": { "tlp": "GREEN" }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "sqlite",
+      "supplier": { "name": "SQLite Consortium" },
+      "name": "sqlite",
+      "version": "3.46.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "1c9280a22b27825e3b65f24cea7640fd9297c054c9288664ce9bf449357cc84547ad42e60d2ce741fa21da6fa9c70a5df95fa168d76bd5613d20c4a3b4773a68"
+        }
+      ],
+      "licenses": [{ "license": { "name": "Public Domain" } }],
+      "copyright": "The author disclaims copyright to this source code",
+      "purl": "pkg:generic/sqlite@3.46.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "curl",
+      "supplier": { "name": "curl project" },
+      "name": "curl",
+      "version": "8.10.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "2b45bce26f71ad23f89a82331eae834331dd78fe9a92d5dcac02fd9d2480a78fc1649034d10a3455f9d23211ae34bf067763d41402e5333d768c23a643045a47"
+        }
+      ],
+      "licenses": [{ "license": { "id": "curl" } }],
+      "copyright": "Copyright (c) 1996-2024 Daniel Stenberg",
+      "purl": "pkg:generic/curl@8.10.1"
+    }
+  ],
+  "dependencies": [
+    { "ref": "console", "dependsOn": ["sqlite", "curl"] },
+    { "ref": "sqlite", "dependsOn": [] },
+    { "ref": "curl", "dependsOn": [] }
+  ],
+  "compositions": [
+    { "aggregate": "complete", "assemblies": ["console", "sqlite", "curl"] }
+  ],
+  "signature": {
+    "algorithm": "http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384",
+    "value": "O4mI+mFtfd74DAoiqGM4IFwqQ7GqimLqFZ8bLl5Khf6JnLXIvalvJNKBmA9ksBrUcUvLy7kTvpkKKN2NgHc9c7BHaH/RiMB4VbyTL0N4b+Q6LaP6fN9+tlPfL9nnlVwx"
+  }
+}

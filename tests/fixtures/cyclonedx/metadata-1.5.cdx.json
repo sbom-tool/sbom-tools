@@ -1,0 +1,86 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:9c3d5e7f-1a2b-4c6d-8e0f-a1b2c3d4e5f6",
+  "version": 2,
+  "metadata": {
+    "timestamp": "2026-09-21T16:45:00Z",
+    "lifecycles": [{ "phase": "build" }],
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "group": "org.example",
+          "name": "example-sbom-gen",
+          "version": "4.3.0"
+        }
+      ],
+      "services": [
+        { "name": "example-enrichment-api", "version": "2026.09" }
+      ]
+    },
+    "authors": [
+      { "name": "Platform Team", "email": "platform@example.org" }
+    ],
+    "component": {
+      "type": "application",
+      "bom-ref": "ledger",
+      "supplier": { "name": "Example Org" },
+      "name": "ledger",
+      "version": "2.4.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "be3d60841149486aa79a0133eadff4371885760f350e793c63109eadf4ed3c12fb32ed8a6cfd351c95e3e8331b60b78e4df8ebff59a27b80559ad5c7293148f2"
+        }
+      ],
+      "licenses": [{ "license": { "id": "Apache-2.0" } }],
+      "copyright": "Copyright 2026 Example Org",
+      "purl": "pkg:generic/example/ledger@2.4.0"
+    },
+    "manufacture": {
+      "name": "Example Org",
+      "contact": [{ "email": "sbom@example.org" }]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "openssl",
+      "supplier": { "name": "OpenSSL Foundation" },
+      "name": "openssl",
+      "version": "3.0.15",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "dfbc695fa1aa3a3de3fc308c063ee18f906227fc66df810903b38702a484368ca0089c1ebcb8fb8183a6d29e84e68a652b5adc488679c9141dd76f6dc06da4c7"
+        }
+      ],
+      "licenses": [{ "license": { "id": "Apache-2.0" } }],
+      "copyright": "Copyright (c) 1998-2024 The OpenSSL Project Authors",
+      "purl": "pkg:generic/openssl@3.0.15"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pcre2",
+      "supplier": { "name": "PCRE2 project" },
+      "name": "pcre2",
+      "version": "10.44",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b0d50a8c76687bb4d0c4716aa10d6320436c08db63229a508d7fe6bd6e103a0c48f8d44aa1b0c5560bb5d5675af3e2cf708e8f3b67bfcb0353c2783196ecd719"
+        }
+      ],
+      "licenses": [{ "license": { "id": "BSD-3-Clause" } }],
+      "copyright": "Copyright (c) 1997-2024 University of Cambridge",
+      "purl": "pkg:generic/pcre2@10.44"
+    }
+  ],
+  "dependencies": [
+    { "ref": "ledger", "dependsOn": ["openssl", "pcre2"] },
+    { "ref": "openssl", "dependsOn": [] },
+    { "ref": "pcre2", "dependsOn": [] }
+  ],
+  "compositions": [{ "aggregate": "complete" }]
+}

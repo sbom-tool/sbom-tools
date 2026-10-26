@@ -1,0 +1,137 @@
+---
+source: tests/compliance_snapshots.rs
+---
+fixture: cra/bsi-compliant.cdx.xml
+as_of: 2026-10-12T00:00:00Z
+
+[Minimum] compliant · E0 W0 I3
+  I SBOM-QUALITY-GENERAL  pkg:cargo/demo-app@1.0.0
+  I SBOM-QUALITY-GENERAL  pkg:cargo/serde@1.0.197
+  I SBOM-QUALITY-GENERAL  pkg:cargo/tokio@1.40.0
+[Standard] compliant · E0 W0 I3
+  I SBOM-QUALITY-GENERAL  pkg:cargo/demo-app@1.0.0
+  I SBOM-QUALITY-GENERAL  pkg:cargo/serde@1.0.197
+  I SBOM-QUALITY-GENERAL  pkg:cargo/tokio@1.40.0
+[NtiaMinimum] compliant · E0 W0 I3
+  I SBOM-NTIA-GENERAL  pkg:cargo/demo-app@1.0.0
+  I SBOM-NTIA-GENERAL  pkg:cargo/serde@1.0.197
+  I SBOM-NTIA-GENERAL  pkg:cargo/tokio@1.40.0
+[CraPhase1] compliant · E0 W6 I6
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-GENERAL  pkg:cargo/demo-app@1.0.0
+  I SBOM-CRA-GENERAL  pkg:cargo/serde@1.0.197
+  I SBOM-CRA-GENERAL  pkg:cargo/tokio@1.40.0
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ART-13-16  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-SBOM-FRESHNESS  -
+[CraPhase2] compliant · E0 W8 I8
+  I SBOM-CRA-ANNEX-V  -
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-GENERAL  pkg:cargo/demo-app@1.0.0
+  I SBOM-CRA-GENERAL  pkg:cargo/serde@1.0.197
+  I SBOM-CRA-GENERAL  pkg:cargo/tokio@1.40.0
+  I SBOM-CRA-LIFECYCLE  -
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ART-13-16  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-13-2  -
+  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-CVD-POLICY  -
+  W SBOM-CRA-SBOM-FRESHNESS  -
+[FdaMedicalDevice] compliant · E0 W3 I3
+  I SBOM-FDA-GENERAL  pkg:cargo/demo-app@1.0.0
+  I SBOM-FDA-GENERAL  pkg:cargo/serde@1.0.197
+  I SBOM-FDA-GENERAL  pkg:cargo/tokio@1.40.0
+  W SBOM-FDA-SUPPLIER  -
+  W SBOM-FDA-SUPPORT  - ×2
+[NistSsdf] compliant · E0 W1 I2
+  I SBOM-SSDF-PO3  -
+  I SBOM-SSDF-PW6  -
+  W SBOM-SSDF-PO1  -
+[Eo14028] compliant · E0 W1 I0
+  W SBOM-EO14028-DISCLOSURE  -
+[Cnsa2] NON-COMPLIANT · E1 W0 I0
+  E SBOM-CNSA2-000  -
+[NistPqc] NON-COMPLIANT · E1 W0 I0
+  E SBOM-PQC-000  -
+[BsiTr03183_2] NON-COMPLIANT · E1 W1 I0
+  E SBOM-BSI-TR-03183-2-5-1  -
+  W SBOM-BSI-TR-03183-2-5-5-COMPLETENESS  -
+[CraOssSteward] NON-COMPLIANT · E1 W1 I3
+  E SBOM-CRA-ART-24  -
+  I SBOM-CRA-GENERAL  pkg:cargo/demo-app@1.0.0
+  I SBOM-CRA-GENERAL  pkg:cargo/serde@1.0.197
+  I SBOM-CRA-GENERAL  pkg:cargo/tokio@1.40.0
+  W SBOM-CRA-CVD-POLICY  -
+[EuccSubstantial] NON-COMPLIANT · E4 W1 I0
+  E SBOM-EUCC-ITSEF  -
+  E SBOM-EUCC-PP  -
+  E SBOM-EUCC-TOE  -
+  E SBOM-EUCC-VALIDITY  -
+  W SBOM-EUCC-CERTREF  -
+[EuAiAct] not applicable · E0 W0 I1
+  I SBOM-AIACT-NA  -
+[BsiSbomForAi] not applicable · E0 W0 I1
+  I SBOM-BSIAI-NA  -
+[Cisa2026] NON-COMPLIANT · E1 W3 I0
+  E SBOM-CISA2026-AUTHOR  -
+  W SBOM-CISA2026-COVERAGE  -
+  W SBOM-CISA2026-GENERATION-CONTEXT  -
+  W SBOM-CISA2026-SIGNATURE  -
+[PciDss632] compliant · E0 W0 I2
+  I SBOM-PCI-6-3-2-COMPLETENESS  -
+  I SBOM-PCI-6-3-2-VULN-EVIDENCE  -
+[Fsct] NON-COMPLIANT · E2 W5 I3
+  E SBOM-FSCT-AUTHOR  -
+  E SBOM-FSCT-COPYRIGHT-PRIMARY  pkg:cargo/demo-app@1.0.0
+  I SBOM-FSCT-COPYRIGHT-ALL  - (3/3)
+  I SBOM-FSCT-SBOM-TYPE  -
+  I SBOM-FSCT-SIGNATURE  -
+  W SBOM-FSCT-COMPLETENESS  -
+  W SBOM-FSCT-COPYRIGHT-COVERAGE  - (0/3)
+  W SBOM-FSCT-IDENTIFIER-MULTI  - (3/3)
+  W SBOM-FSCT-TRANSITIVE-DEPS  -
+  W SBOM-FSCT-UPSTREAM-SBOM  -
+[Comprehensive] compliant · E0 W0 I3
+  I SBOM-QUALITY-GENERAL  pkg:cargo/demo-app@1.0.0
+  I SBOM-QUALITY-GENERAL  pkg:cargo/serde@1.0.197
+  I SBOM-QUALITY-GENERAL  pkg:cargo/tokio@1.40.0
+
+with auto-discovered CRA sidecar:
+[CraPhase1 + sidecar] compliant · E0 W1 I7
+  I SBOM-CRA-ART-13-16  -
+  I SBOM-CRA-ART-13-17-CONTACT  -
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-GENERAL  pkg:cargo/demo-app@1.0.0
+  I SBOM-CRA-GENERAL  pkg:cargo/serde@1.0.197
+  I SBOM-CRA-GENERAL  pkg:cargo/tokio@1.40.0
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-SBOM-FRESHNESS  -
+[CraPhase2 + sidecar] compliant · E0 W1 I10
+  I SBOM-CRA-ANNEX-V  -
+  I SBOM-CRA-ART-13-16  -
+  I SBOM-CRA-ART-13-17-CONTACT  -
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-CVD-POLICY  -
+  I SBOM-CRA-GENERAL  pkg:cargo/demo-app@1.0.0
+  I SBOM-CRA-GENERAL  pkg:cargo/serde@1.0.197
+  I SBOM-CRA-GENERAL  pkg:cargo/tokio@1.40.0
+  I SBOM-CRA-LIFECYCLE  -
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-SBOM-FRESHNESS  -
+[CraOssSteward + sidecar] compliant · E0 W0 I3
+  I SBOM-CRA-GENERAL  pkg:cargo/demo-app@1.0.0
+  I SBOM-CRA-GENERAL  pkg:cargo/serde@1.0.197
+  I SBOM-CRA-GENERAL  pkg:cargo/tokio@1.40.0
+[EuccSubstantial + sidecar] NON-COMPLIANT · E4 W1 I0
+  E SBOM-EUCC-ITSEF  -
+  E SBOM-EUCC-PP  -
+  E SBOM-EUCC-TOE  -
+  E SBOM-EUCC-VALIDITY  -
+  W SBOM-EUCC-CERTREF  -
+[EuAiAct + sidecar] not applicable · E0 W0 I1
+  I SBOM-AIACT-NA  -
