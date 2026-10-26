@@ -571,6 +571,11 @@ pub struct OutputConfig {
     /// nearest ancestor with a `.git` entry), else the current directory.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sarif_base: Option<PathBuf>,
+    /// Code-scanning category of `-o sarif` output, its
+    /// `automationDetails.id` (`--sarif-category`). When unset, one per
+    /// command and standard set or profile (`sbom-tools/cra/`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sarif_category: Option<String>,
 }
 
 impl Default for OutputConfig {
@@ -583,6 +588,7 @@ impl Default for OutputConfig {
             streaming: StreamingConfig::default(),
             export_template: None,
             sarif_base: None,
+            sarif_category: None,
         }
     }
 }

@@ -40,6 +40,7 @@ pub const SARIF_SCHEMA_URI: &str =
 #[derive(Debug, Clone, Default)]
 pub struct SarifOptions {
     artifact: Option<SarifArtifact>,
+    category: Option<String>,
 }
 
 impl SarifOptions {
@@ -57,10 +58,33 @@ impl SarifOptions {
         self
     }
 
+    /// Report the run under the code-scanning category `category` instead of
+    /// the default one, which names only the kind of run and its standards
+    /// or profile (`sbom-tools/cra+ntia/`, `sbom-tools/quality/security/`).
+    ///
+    /// The category is the run's `automationDetails.id`, with a `/`
+    /// appended when `category` does not end in one, as GitHub's
+    /// `upload-sarif` action does with its own `category` input. That input
+    /// never replaces an id the SARIF already carries, so a workflow that
+    /// uploads results for several SBOMs checked against the same standards
+    /// gives each SBOM its category here. A blank `category` keeps the
+    /// default.
+    #[must_use]
+    pub fn with_category(mut self, category: impl Into<String>) -> Self {
+        self.category = Some(category.into());
+        self
+    }
+
     /// The SBOM file results point into.
     #[must_use]
     pub const fn artifact(&self) -> Option<&SarifArtifact> {
         self.artifact.as_ref()
+    }
+
+    /// The category given with [`Self::with_category`].
+    #[must_use]
+    pub fn category(&self) -> Option<&str> {
+        self.category.as_deref()
     }
 }
 
@@ -357,7 +381,10 @@ impl ReportGenerator for SarifReporter {
         // predates rules like SBOM-CRA-CYCLES) and descriptor ids are unique.
         let rules = rules::complete_rule_catalogue(rules::diff_rules(), &results);
         render_log(
-            format!("sbom-tools/{DIFF_SCOPE}/"),
+            automation_id(
+                config.sarif_category.as_deref(),
+                format!("sbom-tools/{DIFF_SCOPE}/"),
+            ),
             rules,
             results,
             uses_srcroot([old, new]),
@@ -416,7 +443,10 @@ impl ReportGenerator for SarifReporter {
         // Same descriptor guarantee as the diff path (see above).
         let rules = rules::complete_rule_catalogue(rules::view_rules(), &results);
         render_log(
-            format!("sbom-tools/{VIEW_SCOPE}/"),
+            automation_id(
+                config.sarif_category.as_deref(),
+                format!("sbom-tools/{VIEW_SCOPE}/"),
+            ),
             rules,
             results,
             uses_srcroot([artifact]),
@@ -512,7 +542,7 @@ pub fn generate_ai_readiness_sarif_with(
         standards: Vec::new(),
     };
     render_log(
-        quality_category(profile),
+        automation_id(options.category(), quality_category(profile)),
         rules::aibom_rules(),
         results,
         uses_srcroot([artifact]),
@@ -552,7 +582,10 @@ pub fn generate_compliance_sarif_with(
     };
     let rules = rules::complete_rule_catalogue(rules::rules_for_standard(result.level), &results);
     render_log(
-        standards_category(std::iter::once(result.level)),
+        automation_id(
+            options.category(),
+            standards_category(std::iter::once(result.level)),
+        ),
         rules,
         results,
         uses_srcroot([artifact]),
@@ -610,7 +643,10 @@ pub fn generate_multi_compliance_sarif_with(
             .collect(),
     };
     render_log(
-        standards_category(results.iter().map(|r| r.level)),
+        automation_id(
+            options.category(),
+            standards_category(results.iter().map(|r| r.level)),
+        ),
         all_rules,
         all_results,
         uses_srcroot([artifact]),
@@ -705,7 +741,7 @@ pub fn generate_quality_sarif_with(
         standards: Vec::new(),
     };
     render_log(
-        quality_category(profile),
+        automation_id(options.category(), quality_category(profile)),
         catalogue,
         results,
         uses_srcroot([artifact]),
@@ -789,6 +825,18 @@ fn standards_category(levels: impl Iterator<Item = ComplianceLevel>) -> String {
 /// The analysis category of a `quality` run: its scoring profile.
 fn quality_category(profile: &str) -> String {
     format!("sbom-tools/quality/{}/", profile.replace('/', "-"))
+}
+
+/// A run's `automationDetails.id`: the caller's `category`, ending in `/`
+/// (see [`SarifOptions::with_category`]), else `default`, the category of
+/// its kind of run.
+fn automation_id(category: Option<&str>, default: String) -> String {
+    match category {
+        Some(category) if category.trim().is_empty() => default,
+        Some(category) if category.ends_with('/') => category.to_string(),
+        Some(category) => format!("{category}/"),
+        None => default,
+    }
 }
 
 /// Whether any of `artifacts` has a URI relative to the source root, so the
@@ -1432,6 +1480,18 @@ mod tests {
             "sbom-tools/compliance/"
         );
         assert_eq!(quality_category("cra"), "sbom-tools/quality/cra/");
+    }
+
+    #[test]
+    fn a_given_category_replaces_the_default_and_ends_in_a_slash() {
+        let default = || "sbom-tools/cra/".to_string();
+        assert_eq!(automation_id(None, default()), "sbom-tools/cra/");
+        assert_eq!(
+            automation_id(Some("services/api/cra"), default()),
+            "services/api/cra/"
+        );
+        assert_eq!(automation_id(Some("sbom-api/"), default()), "sbom-api/");
+        assert_eq!(automation_id(Some(" "), default()), "sbom-tools/cra/");
     }
 
     #[test]

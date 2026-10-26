@@ -554,6 +554,94 @@ fn cli_rejects_a_sarif_base_that_is_not_a_directory() {
     }
 }
 
+fn automation_id(stdout: &[u8]) -> String {
+    let doc: Value = serde_json::from_slice(stdout).expect("SARIF JSON");
+    doc["runs"][0]["automationDetails"]["id"]
+        .as_str()
+        .expect("automationDetails.id")
+        .to_string()
+}
+
+/// GitHub's upload action only fills in `automationDetails.id` when the
+/// SARIF has none, so `--sarif-category` is how a workflow that uploads
+/// results for several SBOMs checked the same way keeps them apart.
+#[test]
+fn cli_sarif_category_replaces_the_default_category() {
+    let repo = repository();
+    let sbom = repo.path().join("sboms/app.cdx.json");
+    let old = repo.path().join("sboms/old.cdx.json");
+    std::fs::copy(
+        Path::new(sbom_fixtures::FIXTURES_DIR).join("demo-old.cdx.json"),
+        &old,
+    )
+    .expect("copy");
+    let cases: [(Vec<&Path>, Vec<&str>, &str); 5] = [
+        (
+            vec![&sbom],
+            vec!["validate", "--standard", "cra"],
+            "sbom-tools/cra/",
+        ),
+        (
+            vec![&sbom],
+            vec!["validate", "--standard", "ntia,cra"],
+            "sbom-tools/cra+ntia/",
+        ),
+        (
+            vec![&sbom],
+            vec!["quality", "--profile", "security"],
+            "sbom-tools/quality/security/",
+        ),
+        (vec![&sbom], vec!["view"], "sbom-tools/view/"),
+        (vec![&old, &sbom], vec!["diff"], "sbom-tools/diff/"),
+    ];
+    for (paths, command, default) in cases {
+        let output = sbom_tools()
+            .args(&command)
+            .args(["-o", "sarif"])
+            .args(&paths)
+            .output()
+            .expect("runs");
+        assert_eq!(automation_id(&output.stdout), default, "{command:?}");
+
+        for (given, id) in [("services/app", "services/app/"), ("app/", "app/")] {
+            let output = sbom_tools()
+                .args(&command)
+                .args(["-o", "sarif", "--sarif-category", given])
+                .args(&paths)
+                .output()
+                .expect("runs");
+            assert_eq!(automation_id(&output.stdout), id, "{command:?} {given}");
+        }
+    }
+}
+
+#[test]
+fn cli_rejects_a_blank_sarif_category_only_for_sarif_output() {
+    let repo = repository();
+    let sbom = repo.path().join("sboms/app.cdx.json");
+    for command in [vec!["validate"], vec!["quality"], vec!["view"]] {
+        let output = sbom_tools()
+            .args(&command)
+            .args(["-o", "sarif", "--sarif-category", " "])
+            .arg(&sbom)
+            .output()
+            .expect("runs");
+        assert_eq!(output.status.code(), Some(3), "{command:?}: {output:?}");
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("--sarif-category"),
+            "{command:?}"
+        );
+
+        let output = sbom_tools()
+            .args(&command)
+            .args(["-o", "json", "--sarif-category", " "])
+            .arg(&sbom)
+            .output()
+            .expect("runs");
+        assert_ne!(output.status.code(), Some(3), "{command:?}: {output:?}");
+    }
+}
+
 #[test]
 fn cli_sarif_output_matches_the_schema() {
     let schema: Value = serde_json::from_str(

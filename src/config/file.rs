@@ -241,6 +241,11 @@ impl AppConfig {
         if other.output.sarif_base.is_some() {
             self.output.sarif_base.clone_from(&other.output.sarif_base);
         }
+        if other.output.sarif_category.is_some() {
+            self.output
+                .sarif_category
+                .clone_from(&other.output.sarif_category);
+        }
 
         // Filtering config
         if other.filtering.only_changes {

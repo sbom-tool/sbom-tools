@@ -54,6 +54,9 @@ pub struct QualityConfig {
     /// Directory the SBOM path in `-o sarif` output is relative to
     /// (`--sarif-base`); the SBOM's repository root when `None`.
     pub sarif_base: Option<PathBuf>,
+    /// Code-scanning category of `-o sarif` output (`--sarif-category`);
+    /// `sbom-tools/quality/<profile>/` when `None`.
+    pub sarif_category: Option<String>,
 }
 
 /// Run the quality command, returning the desired exit code.
@@ -80,6 +83,7 @@ pub fn run_quality(
     as_of: Option<String>,
     enrichment: EnrichmentConfig,
     sarif_base: Option<PathBuf>,
+    sarif_category: Option<String>,
 ) -> Result<i32> {
     let config = QualityConfig {
         sbom_path,
@@ -96,6 +100,7 @@ pub fn run_quality(
         as_of,
         enrichment,
         sarif_base,
+        sarif_category,
     };
 
     run_quality_impl(config)
@@ -103,7 +108,11 @@ pub fn run_quality(
 
 fn run_quality_impl(config: QualityConfig) -> Result<i32> {
     super::ensure_output_format_supported("quality", config.output, QUALITY_OUTPUT_FORMATS)?;
-    super::check_sarif_base(config.output, config.sarif_base.as_deref())?;
+    super::check_sarif_flags(
+        config.output,
+        config.sarif_base.as_deref(),
+        config.sarif_category.as_deref(),
+    )?;
 
     // Pinned evaluation clock for deadline-sensitive compliance checks
     // (shared parser with `validate --as-of`). Parsed up front so a bad
@@ -193,11 +202,11 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
                 parsed.sbom(),
                 parsed.raw_content(),
             )?;
-            format_quality_sarif(
-                &report,
-                &config,
-                &crate::reports::SarifOptions::new().with_artifact(artifact),
-            )
+            let mut options = crate::reports::SarifOptions::new().with_artifact(artifact);
+            if let Some(category) = &config.sarif_category {
+                options = options.with_category(category.clone());
+            }
+            format_quality_sarif(&report, &config, &options)
         }
         ReportFormat::SbomqsJson => crate::reports::sbomqs_compat::render_json(&sbomqs_input),
         _ => {
@@ -726,6 +735,7 @@ mod tests {
                 None,
                 EnrichmentConfig::default(),
                 None,
+                None,
             )
             .expect_err("unsupported format must be rejected");
             let msg = err.to_string();
@@ -766,6 +776,7 @@ mod tests {
             None,
             None,
             EnrichmentConfig::default(),
+            None,
             None,
         )
         .expect("sbomqs-json run must succeed");
@@ -810,6 +821,7 @@ mod tests {
             None,
             EnrichmentConfig::default(),
             None,
+            None,
         )
         .expect("summary run must succeed");
         assert_eq!(code, exit_codes::SUCCESS);
@@ -848,6 +860,7 @@ mod tests {
             None,
             EnrichmentConfig::default(),
             None,
+            None,
         )
         .expect_err("broken explicit sidecar must be a hard error");
         assert!(err.to_string().contains("Failed to load CRA sidecar"));
@@ -885,6 +898,7 @@ mod tests {
             None,
             EnrichmentConfig::default(),
             None,
+            None,
         )
         .expect("an N/A AI-readiness run must not error");
         assert_eq!(
@@ -915,6 +929,7 @@ mod tests {
             None,
             EnrichmentConfig::default(),
             None,
+            None,
         )
         .expect("the run itself must succeed");
         assert_eq!(code, exit_codes::COMPLIANCE_ERRORS);
@@ -940,6 +955,7 @@ mod tests {
             Some("critcal".to_string()),
             None,
             EnrichmentConfig::default(),
+            None,
             None,
         )
         .expect_err("typo'd --cra-product-class must be a hard error");
@@ -967,6 +983,7 @@ mod tests {
             None,
             Some("not-a-date".to_string()),
             EnrichmentConfig::default(),
+            None,
             None,
         )
         .expect_err("invalid --as-of must be rejected");
@@ -1001,6 +1018,7 @@ mod tests {
             None,
             EnrichmentConfig::default(),
             None,
+            None,
         )
         .expect_err("a discovered-but-broken sidecar must hard-error");
         assert!(
@@ -1025,6 +1043,7 @@ mod tests {
             as_of: None,
             enrichment: EnrichmentConfig::default(),
             sarif_base: None,
+            sarif_category: None,
         }
     }
 

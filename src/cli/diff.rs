@@ -42,7 +42,11 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
         );
     }
 
-    super::check_sarif_base(config.output.format, config.output.sarif_base.as_deref())?;
+    super::check_sarif_flags(
+        config.output.format,
+        config.output.sarif_base.as_deref(),
+        config.output.sarif_category.as_deref(),
+    )?;
 
     // Stdin can only be consumed once, so a diff can read at most one side from "-".
     if is_stdin_path(&config.paths.old) && is_stdin_path(&config.paths.new) {

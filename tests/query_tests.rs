@@ -22,6 +22,7 @@ fn base_config(paths: Vec<PathBuf>) -> QueryConfig {
             streaming: StreamingConfig::default(),
             export_template: None,
             sarif_base: None,
+            sarif_category: None,
         },
         enrichment: EnrichmentConfig::default(),
         limit: None,

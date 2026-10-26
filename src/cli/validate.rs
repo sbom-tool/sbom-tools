@@ -72,12 +72,13 @@ pub fn run_validate(
     require_applicable: bool,
     json_schema: ValidateJsonSchema,
     sarif_base: Option<PathBuf>,
+    sarif_category: Option<String>,
 ) -> Result<i32> {
     // `--summary` overrides `--output` (documented on the flag), so the
     // requested format is never rendered and must not be gated.
     if !summary {
         super::ensure_output_format_supported("validate", output, VALIDATE_OUTPUT_FORMATS)?;
-        super::check_sarif_base(output, sarif_base.as_deref())?;
+        super::check_sarif_flags(output, sarif_base.as_deref(), sarif_category.as_deref())?;
     }
     // Pinned evaluation clock for deadline-sensitive checks (shared parser
     // with `quality --as-of`).
@@ -148,16 +149,18 @@ pub fn run_validate(
     // from the SBOM digest and stamps the --as-of instant. It also describes
     // the SBOM document and the components its findings are about.
     // SARIF results point at the SBOM lines of their components.
-    let sarif = if !summary && output == ReportFormat::Sarif {
-        SarifOptions::new().with_artifact(super::sarif_artifact(
+    let mut sarif = SarifOptions::new();
+    if !summary && output == ReportFormat::Sarif {
+        sarif = sarif.with_artifact(super::sarif_artifact(
             &sbom_path,
             sarif_base.as_deref(),
             parsed.sbom(),
             parsed.raw_content(),
-        )?)
-    } else {
-        SarifOptions::new()
-    };
+        )?);
+        if let Some(category) = sarif_category {
+            sarif = sarif.with_category(category);
+        }
+    }
     let provenance = OutputProvenance {
         sbom: parsed.sbom(),
         sbom_digest: sha256_hex(parsed.raw_content.as_bytes()),
@@ -465,6 +468,7 @@ mod tests {
                 false,
                 ValidateJsonSchema::V2,
                 None,
+                None,
             )
             .expect_err("unsupported format must be rejected");
             let msg = err.to_string();
@@ -493,6 +497,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            None,
             None,
         )
         .expect_err("empty standard list must be rejected");
@@ -523,6 +528,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            None,
             None,
         )
         .expect("--summary must override -o html instead of hard-erroring");
@@ -555,6 +561,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            None,
             None,
         )
         .expect_err("typo'd --cra-product-class must be a hard error");
@@ -590,6 +597,7 @@ mod tests {
             false,
             ValidateJsonSchema::V2,
             None,
+            None,
         )
         .expect("offset-less --as-of datetime must parse (assumed UTC)");
     }
@@ -617,6 +625,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            None,
             None,
         )
         .expect_err("broken explicit sidecar must be a hard error");

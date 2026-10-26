@@ -80,6 +80,7 @@ pub fn output_report_with_sarif(
         },
         old_cra_compliance: old_cra,
         new_cra_compliance: new_cra,
+        sarif_category: config.output.sarif_category.clone(),
         ..Default::default()
     };
     if let Some((old_artifact, new_artifact)) = sarif {

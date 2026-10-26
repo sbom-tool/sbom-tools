@@ -377,6 +377,14 @@ struct DiffArgs {
     #[arg(long, value_name = "DIR")]
     sarif_base: Option<PathBuf>,
 
+    /// Code-scanning category of `-o sarif` output (its
+    /// `automationDetails.id`). Defaults to one per command and standard set
+    /// or profile, such as `sbom-tools/cra+ntia/`; give each SBOM its own
+    /// when one workflow uploads results for several SBOMs checked the same
+    /// way. Only `-o sarif` reads it
+    #[arg(long, value_name = "CATEGORY")]
+    sarif_category: Option<String>,
+
     /// Report types to include
     #[arg(long, default_value = "all")]
     reports: ReportType,
@@ -504,6 +512,14 @@ struct ViewArgs {
     #[arg(long, value_name = "DIR")]
     sarif_base: Option<PathBuf>,
 
+    /// Code-scanning category of `-o sarif` output (its
+    /// `automationDetails.id`). Defaults to one per command and standard set
+    /// or profile, such as `sbom-tools/cra+ntia/`; give each SBOM its own
+    /// when one workflow uploads results for several SBOMs checked the same
+    /// way. Only `-o sarif` reads it
+    #[arg(long, value_name = "CATEGORY")]
+    sarif_category: Option<String>,
+
     /// Validate against NTIA minimum elements
     #[arg(long)]
     validate_ntia: bool,
@@ -610,6 +626,14 @@ struct ValidateArgs {
     /// `.git`), else the current directory. Only `-o sarif` reads it
     #[arg(long, value_name = "DIR")]
     sarif_base: Option<PathBuf>,
+
+    /// Code-scanning category of `-o sarif` output (its
+    /// `automationDetails.id`). Defaults to one per command and standard set
+    /// or profile, such as `sbom-tools/cra+ntia/`; give each SBOM its own
+    /// when one workflow uploads results for several SBOMs checked the same
+    /// way. Only `-o sarif` reads it
+    #[arg(long, value_name = "CATEGORY")]
+    sarif_category: Option<String>,
 
     /// Exit with non-zero code when warnings are found (not just errors)
     #[arg(long)]
@@ -939,6 +963,14 @@ struct QualityArgs {
     /// `.git`), else the current directory. Only `-o sarif` reads it
     #[arg(long, value_name = "DIR")]
     sarif_base: Option<PathBuf>,
+
+    /// Code-scanning category of `-o sarif` output (its
+    /// `automationDetails.id`). Defaults to one per command and standard set
+    /// or profile, such as `sbom-tools/cra+ntia/`; give each SBOM its own
+    /// when one workflow uploads results for several SBOMs checked the same
+    /// way. Only `-o sarif` reads it
+    #[arg(long, value_name = "CATEGORY")]
+    sarif_category: Option<String>,
 
     /// Show detailed recommendations
     #[arg(long)]
@@ -1968,6 +2000,9 @@ fn run() -> Result<()> {
                     },
                     export_template: cli.export_template.clone(),
                     sarif_base: args.sarif_base.or_else(|| app.output.sarif_base.clone()),
+                    sarif_category: args
+                        .sarif_category
+                        .or_else(|| app.output.sarif_category.clone()),
                 },
                 matching: MatchingConfig {
                     fuzzy_preset: resolve(
@@ -2070,6 +2105,9 @@ fn run() -> Result<()> {
                     streaming: sbom_tools::config::StreamingConfig::default(),
                     export_template: cli.export_template.clone(),
                     sarif_base: args.sarif_base.or_else(|| app.output.sarif_base.clone()),
+                    sarif_category: args
+                        .sarif_category
+                        .or_else(|| app.output.sarif_category.clone()),
                 },
                 validate_ntia: args.validate_ntia,
                 min_severity: args.severity.or_else(|| app.filtering.min_severity.clone()),
@@ -2139,6 +2177,8 @@ fn run() -> Result<()> {
                 args.require_applicable,
                 args.json_schema,
                 args.sarif_base.or_else(|| app.output.sarif_base.clone()),
+                args.sarif_category
+                    .or_else(|| app.output.sarif_category.clone()),
             )?;
             if exit_code != 0 {
                 std::process::exit(exit_code);
@@ -2162,6 +2202,7 @@ fn run() -> Result<()> {
                     no_color: resolve_bool(cli.no_color, app.output.no_color),
                     export_template: cli.export_template.clone(),
                     sarif_base: None,
+                    sarif_category: None,
                     ..Default::default()
                 },
                 matching: MatchingConfig {
@@ -2240,6 +2281,7 @@ fn run() -> Result<()> {
                     no_color: resolve_bool(cli.no_color, app.output.no_color),
                     export_template: cli.export_template.clone(),
                     sarif_base: None,
+                    sarif_category: None,
                     ..Default::default()
                 },
                 matching: MatchingConfig {
@@ -2315,6 +2357,7 @@ fn run() -> Result<()> {
                     no_color: resolve_bool(cli.no_color, app.output.no_color),
                     export_template: cli.export_template.clone(),
                     sarif_base: None,
+                    sarif_category: None,
                     ..Default::default()
                 },
                 matching: MatchingConfig {
@@ -2421,6 +2464,8 @@ fn run() -> Result<()> {
                 args.as_of,
                 enrichment,
                 args.sarif_base.or_else(|| app.output.sarif_base.clone()),
+                args.sarif_category
+                    .or_else(|| app.output.sarif_category.clone()),
             )?;
             if exit_code != 0 {
                 std::process::exit(exit_code);
@@ -2480,6 +2525,7 @@ fn run() -> Result<()> {
                     streaming: sbom_tools::config::StreamingConfig::default(),
                     export_template: None,
                     sarif_base: None,
+                    sarif_category: None,
                 },
                 enrichment,
                 limit: args.limit,
@@ -2587,6 +2633,7 @@ fn run() -> Result<()> {
                     streaming: sbom_tools::config::StreamingConfig::default(),
                     export_template: None,
                     sarif_base: None,
+                    sarif_category: None,
                 },
                 enrichment,
                 webhook_url: args.webhook,

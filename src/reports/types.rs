@@ -172,6 +172,11 @@ pub struct ReportConfig {
     /// The SBOM file of a view, which `-o sarif` results point into.
     #[serde(skip)]
     pub view_sarif_artifact: Option<crate::reports::SarifArtifact>,
+    /// The code-scanning category of `-o sarif` output (`--sarif-category`),
+    /// instead of `sbom-tools/diff/` or `sbom-tools/view/`; see
+    /// [`crate::reports::SarifOptions::with_category`].
+    #[serde(skip)]
+    pub sarif_category: Option<String>,
 }
 
 impl Default for ReportConfig {
@@ -190,6 +195,7 @@ impl Default for ReportConfig {
             old_sarif_artifact: None,
             new_sarif_artifact: None,
             view_sarif_artifact: None,
+            sarif_category: None,
         }
     }
 }

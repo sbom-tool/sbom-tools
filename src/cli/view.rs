@@ -33,7 +33,11 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
         );
     }
 
-    super::check_sarif_base(config.output.format, config.output.sarif_base.as_deref())?;
+    super::check_sarif_flags(
+        config.output.format,
+        config.output.sarif_base.as_deref(),
+        config.output.sarif_category.as_deref(),
+    )?;
 
     // Validate --severity before any parsing or (network) enrichment work so
     // a typo fails fast instead of after expensive I/O.
@@ -424,6 +428,7 @@ fn output_view_report(
         },
         view_cra_compliance: Some(cra_result),
         view_sarif_artifact: sarif_artifact,
+        sarif_category: config.output.sarif_category.clone(),
         ..Default::default()
     };
 
@@ -494,6 +499,7 @@ mod tests {
                 streaming: crate::config::StreamingConfig::default(),
                 export_template: None,
                 sarif_base: None,
+                sarif_category: None,
             },
             validate_ntia: false,
             min_severity: min_severity.map(str::to_string),

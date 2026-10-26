@@ -114,17 +114,24 @@ pub(crate) fn parse_cra_product_class(
         .transpose()
 }
 
-/// Check an `--sarif-base` value before any SBOM is read: it must name a
-/// directory. Only `-o sarif` reads it, so other formats skip the check.
-pub(crate) fn check_sarif_base(
+/// Check the `--sarif-base` and `--sarif-category` values before any SBOM is
+/// read: the base must name a directory and the category must not be blank.
+/// Only `-o sarif` reads them, so other formats skip the check.
+pub(crate) fn check_sarif_flags(
     output: crate::reports::ReportFormat,
     base: Option<&std::path::Path>,
+    category: Option<&str>,
 ) -> anyhow::Result<()> {
-    if output == crate::reports::ReportFormat::Sarif
-        && let Some(base) = base
+    if output != crate::reports::ReportFormat::Sarif {
+        return Ok(());
+    }
+    if let Some(base) = base
         && !base.is_dir()
     {
         anyhow::bail!("invalid --sarif-base {}: not a directory", base.display());
+    }
+    if category.is_some_and(|c| c.trim().is_empty()) {
+        anyhow::bail!("invalid --sarif-category: must not be blank");
     }
     Ok(())
 }
