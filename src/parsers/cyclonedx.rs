@@ -113,8 +113,9 @@ impl CycloneDxParser {
             // JSON carries one JSF signature object; XML may append several
             // enveloped signatures, and the first stands for the document.
             signature: cdx.signatures.into_iter().next().map(Into::into),
-            // 1.7 `<citations>` are not read from XML yet.
-            citations: None,
+            citations: cdx
+                .citations
+                .map(|c| c.citation.into_iter().map(Into::into).collect()),
             // CDXA declarations exist in the 1.6 XML schema too, but their
             // XML normalization is deferred: phase 1 ingests JSON only.
             declarations: None,
@@ -3503,6 +3504,8 @@ struct CycloneDxBomXml {
     vulnerabilities: Option<CdxVulnerabilitiesXml>,
     /// Compositions wrapper element
     compositions: Option<CdxCompositionsXml>,
+    /// Citations wrapper element (1.7+)
+    citations: Option<CdxCitationsXml>,
     /// Enveloped XML Signatures: CycloneDX XML is signed with XML-DSig
     /// (`<ds:Signature>`, admitted by the root's `##other` extension point),
     /// where JSON uses JSF. Element names match on their local name, so any
@@ -3617,6 +3620,57 @@ impl From<CdxCompositionXml> for CdxComposition {
         Self {
             aggregate: xml.aggregate,
             assemblies: None,
+        }
+    }
+}
+
+/// Citations wrapper element for XML format (1.7+)
+#[derive(Debug, Deserialize)]
+struct CdxCitationsXml {
+    #[serde(rename = "citation", default)]
+    citation: Vec<CdxCitationXml>,
+}
+
+/// Citation element for XML format: the bom-ref is an attribute, and the
+/// JSON Pointers and path expressions are wrapped (`<pointers><pointer>`,
+/// `<expressions><expression>`).
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CdxCitationXml {
+    #[serde(rename = "@bom-ref")]
+    bom_ref: Option<String>,
+    pointers: Option<CdxCitationPointersXml>,
+    expressions: Option<CdxCitationExpressionsXml>,
+    timestamp: Option<String>,
+    attributed_to: Option<String>,
+    process: Option<String>,
+    note: Option<String>,
+}
+
+/// `<pointers>` wrapper element of an XML citation
+#[derive(Debug, Deserialize)]
+struct CdxCitationPointersXml {
+    #[serde(rename = "pointer", default)]
+    pointer: Vec<String>,
+}
+
+/// `<expressions>` wrapper element of an XML citation
+#[derive(Debug, Deserialize)]
+struct CdxCitationExpressionsXml {
+    #[serde(rename = "expression", default)]
+    expression: Vec<String>,
+}
+
+impl From<CdxCitationXml> for CdxCitation {
+    fn from(xml: CdxCitationXml) -> Self {
+        Self {
+            bom_ref: xml.bom_ref,
+            pointers: xml.pointers.map(|w| w.pointer),
+            expressions: xml.expressions.map(|w| w.expression),
+            timestamp: xml.timestamp,
+            attributed_to: xml.attributed_to,
+            process: xml.process,
+            note: xml.note,
         }
     }
 }
@@ -4835,6 +4889,41 @@ mod tests {
             sbom.document.completeness_declaration,
             CompletenessDeclaration::Complete
         );
+    }
+
+    /// 1.7 `<citations>` read as in JSON: pointers and expressions unwrap,
+    /// and the document keeps the same citations and citation count.
+    #[test]
+    fn xml_citations_match_the_json_citations() {
+        let xml = parse(
+            r#"<bom xmlns="http://cyclonedx.org/schema/bom/1.7" version="1">
+  <citations>
+    <citation bom-ref="c1">
+      <pointers><pointer>/components</pointer><pointer>/metadata/component</pointer></pointers>
+      <timestamp>2026-04-01T14:00:00Z</timestamp>
+      <attributedTo>app</attributedTo>
+      <note>Inventory by scanner</note>
+    </citation>
+    <citation>
+      <expressions><expression>/bom/components/component[1]</expression></expressions>
+      <timestamp>2026-04-01T15:00:00Z</timestamp>
+      <process>workflow</process>
+    </citation>
+  </citations>
+</bom>"#,
+        );
+        let json = parse_json(
+            r#"{"bomFormat":"CycloneDX","specVersion":"1.7","version":1,"citations":[
+                {"bom-ref":"c1","pointers":["/components","/metadata/component"],
+                 "timestamp":"2026-04-01T14:00:00Z","attributedTo":"app",
+                 "note":"Inventory by scanner"},
+                {"expressions":["/bom/components/component[1]"],
+                 "timestamp":"2026-04-01T15:00:00Z","process":"workflow"}]}"#,
+        );
+        assert_eq!(xml.document.citations_count, 2);
+        assert_eq!(xml.document.citations_count, json.document.citations_count);
+        assert!(xml.extensions.cyclonedx.is_some());
+        assert_eq!(xml.extensions.cyclonedx, json.extensions.cyclonedx);
     }
 
     #[test]
