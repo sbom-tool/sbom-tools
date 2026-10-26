@@ -383,7 +383,7 @@ fn art_14_severities(result: &ComplianceResult) -> Vec<ViolationSeverity> {
     result
         .violations
         .iter()
-        .filter(|v| v.rule_id == "SBOM-CRA-ART-14")
+        .filter(|v| v.rule_id.starts_with("SBOM-CRA-ART-14-"))
         .map(|v| v.severity)
         .collect()
 }
@@ -406,7 +406,7 @@ fn art_14_findings_escalate_on_2026_09_11() {
             assert_eq!(
                 art_14_severities(&result),
                 [expected; 3],
-                "{level:?} at {at}: one SBOM-CRA-ART-14 finding per missing channel"
+                "{level:?} at {at}: one SBOM-CRA-ART-14-* finding per missing channel"
             );
             assert!(
                 result.is_compliant,
@@ -442,7 +442,12 @@ fn art_14_gate_flips_the_important_class_2_verdict() {
             "{level:?} the day after: not compliant"
         );
         assert_eq!(
-            errors, ["SBOM-CRA-ART-14"; 3],
+            errors,
+            [
+                "SBOM-CRA-ART-14-PSIRT",
+                "SBOM-CRA-ART-14-EARLY-WARNING",
+                "SBOM-CRA-ART-14-NOTIFICATION",
+            ],
             "{level:?} the day after: the missing channels are the only Errors"
         );
     }

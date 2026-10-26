@@ -47,9 +47,9 @@ expression: "render(&JsonReporter::new())"
           "message": "SBOM must have creator/tool information",
           "element": null,
           "requirement": "Document creator identification",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-CREATOR",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Identify who created the SBOM: a person, organization or tool. CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools."
         },
         {
           "severity": "Warning",
@@ -127,7 +127,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Declare when security updates end (Art. 13(8) / 13(19)): set supportEndDate in the CRA sidecar, or record the date in the SBOM. Components the end-of-life data marks as no longer supported need upgrading or replacing. CycloneDX: add a metadata.component.properties[] entry named end-of-support whose value is the date (RFC 3339 or YYYY-MM-DD).",
+          "remediation": "Declare when security updates end (Art. 13(8) / 13(19)): set supportEndDate in the CRA sidecar, or record the date in the SBOM. CycloneDX: add a metadata.component.properties[] entry named end-of-support whose value is the date (RFC 3339 or YYYY-MM-DD).",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -200,7 +200,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Record component lifecycle or end-of-support status (Art. 13(8) / Annex II (7)); supportEndDate in the CRA sidecar counts too. Plan replacements for components approaching end-of-life. CycloneDX: add an eol, lifecycle or end-of-support entry to components[].properties[] (or an end-of-support date to metadata.component.properties[]).",
+          "remediation": "Record component lifecycle or end-of-support status (Art. 13(8) / Annex II (7)); supportEndDate in the CRA sidecar counts too. CycloneDX: add an eol, lifecycle or end-of-support entry to components[].properties[] (or an end-of-support date to metadata.component.properties[]).",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -227,9 +227,9 @@ expression: "render(&JsonReporter::new())"
           "message": "SBOM should have a serial number/unique identifier",
           "element": null,
           "requirement": "Document unique identification",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-SERIAL",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give the SBOM a unique document identifier. CycloneDX: set serialNumber (urn:uuid:…)."
         },
         {
           "severity": "Error",
@@ -648,7 +648,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Add dependency relationships between components, and identify the primary product component when the graph has several roots. CycloneDX: add dependencies[] entries (ref plus dependsOn[]) and set metadata.component to the product.",
+          "remediation": "Add dependency relationships between components: connect the primary component to its direct dependencies and keep most components inside the dependency graph. CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -658,9 +658,9 @@ expression: "render(&JsonReporter::new())"
           "element": "acme-webapp",
           "component_id": "acme-webapp",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -669,9 +669,9 @@ expression: "render(&JsonReporter::new())"
           "element": "lodash",
           "component_id": "pkg:npm/lodash@4.17.20",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -680,9 +680,9 @@ expression: "render(&JsonReporter::new())"
           "element": "express",
           "component_id": "pkg:npm/express@4.17.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -691,9 +691,9 @@ expression: "render(&JsonReporter::new())"
           "element": "moment",
           "component_id": "pkg:npm/moment@2.29.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -702,9 +702,9 @@ expression: "render(&JsonReporter::new())"
           "element": "request",
           "component_id": "pkg:npm/request@2.88.2",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -713,9 +713,9 @@ expression: "render(&JsonReporter::new())"
           "element": "axios",
           "component_id": "pkg:npm/axios@0.21.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -724,9 +724,9 @@ expression: "render(&JsonReporter::new())"
           "element": "underscore",
           "component_id": "pkg:npm/underscore@1.12.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -735,9 +735,9 @@ expression: "render(&JsonReporter::new())"
           "element": "jquery",
           "component_id": "pkg:npm/jquery@3.5.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -746,9 +746,9 @@ expression: "render(&JsonReporter::new())"
           "element": "react",
           "component_id": "pkg:npm/react@17.0.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Warning",
@@ -805,7 +805,7 @@ expression: "render(&JsonReporter::new())"
             "total": 9
           },
           "requirement": "CRA Annex I Part II / prEN 40000-1-3 [PRE-7-RQ-03]: Transitive dependency supplier (recommended)",
-          "rule_id": "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
+          "rule_id": "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
           "sarif_rule_id": "SBOM-CRA-ANNEX-I",
           "standard_refs": [
             {
@@ -822,7 +822,7 @@ expression: "render(&JsonReporter::new())"
               "id": "PRE-7-RQ-03"
             }
           ],
-          "remediation": "Identify each component's supplier, starting with direct dependencies (mandatory under PRE-7-RQ-03; transitive dependencies are recommended). CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "remediation": "Identify the suppliers of transitive dependencies as well (recommended under PRE-7-RQ-03). CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -867,7 +867,7 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14] PSIRT URL missing — [ART14]",
           "element": null,
           "requirement": "CRA Art. 14: PSIRT contact for external vulnerability reports",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-PSIRT",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
@@ -876,7 +876,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -885,16 +885,21 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14(2)(a)] 24-hour early-warning channel missing — document the ENISA/CSIRT contact before 2026-09-11",
           "element": null,
           "requirement": "CRA Art. 14(2)(a): 24-hour early-warning channel",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-EARLY-WARNING",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
               "standard": "CraArticle",
-              "id": "Art. 14",
+              "id": "Art. 14(2)(a)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "CraArticle",
+              "id": "Art. 14(4)(a)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Document the channel for the 24-hour early warning of an actively exploited vulnerability or a severe incident (Art. 14(2)(a) / 14(4)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -903,16 +908,21 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14(2)(b) / 14(4)(b)] 72-hour notification channel missing — document this contact before 2026-09-11",
           "element": null,
           "requirement": "CRA Art. 14(2)(b): 72-hour notification channel",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-NOTIFICATION",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
               "standard": "CraArticle",
-              "id": "Art. 14",
+              "id": "Art. 14(2)(b)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "CraArticle",
+              "id": "Art. 14(4)(b)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -921,16 +931,16 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14(7)] No ENISA single reporting platform identifier — track ENISA publication and add `enisaReportingPlatformId` to the CRA sidecar when available",
           "element": null,
           "requirement": "CRA Art. 14(7): ENISA single reporting platform",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-ENISA",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
               "standard": "CraArticle",
-              "id": "Art. 14",
+              "id": "Art. 14(7)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Record the manufacturer's identifier on the ENISA single reporting platform (Art. 14(7)) once ENISA publishes it: set enisaReportingPlatformId in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         }
       ],
@@ -962,9 +972,9 @@ expression: "render(&JsonReporter::new())"
           "message": "SBOM must have creator/tool information",
           "element": null,
           "requirement": "Document creator identification",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-CREATOR",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Identify who created the SBOM: a person, organization or tool. CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools."
         },
         {
           "severity": "Warning",
@@ -1042,7 +1052,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Declare when security updates end (Art. 13(8) / 13(19)): set supportEndDate in the CRA sidecar, or record the date in the SBOM. Components the end-of-life data marks as no longer supported need upgrading or replacing. CycloneDX: add a metadata.component.properties[] entry named end-of-support whose value is the date (RFC 3339 or YYYY-MM-DD).",
+          "remediation": "Declare when security updates end (Art. 13(8) / 13(19)): set supportEndDate in the CRA sidecar, or record the date in the SBOM. CycloneDX: add a metadata.component.properties[] entry named end-of-support whose value is the date (RFC 3339 or YYYY-MM-DD).",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1115,7 +1125,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Record component lifecycle or end-of-support status (Art. 13(8) / Annex II (7)); supportEndDate in the CRA sidecar counts too. Plan replacements for components approaching end-of-life. CycloneDX: add an eol, lifecycle or end-of-support entry to components[].properties[] (or an end-of-support date to metadata.component.properties[]).",
+          "remediation": "Record component lifecycle or end-of-support status (Art. 13(8) / Annex II (7)); supportEndDate in the CRA sidecar counts too. CycloneDX: add an eol, lifecycle or end-of-support entry to components[].properties[] (or an end-of-support date to metadata.component.properties[]).",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1142,9 +1152,9 @@ expression: "render(&JsonReporter::new())"
           "message": "SBOM should have a serial number/unique identifier",
           "element": null,
           "requirement": "Document unique identification",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-SERIAL",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give the SBOM a unique document identifier. CycloneDX: set serialNumber (urn:uuid:…)."
         },
         {
           "severity": "Error",
@@ -1563,7 +1573,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Add dependency relationships between components, and identify the primary product component when the graph has several roots. CycloneDX: add dependencies[] entries (ref plus dependsOn[]) and set metadata.component to the product.",
+          "remediation": "Add dependency relationships between components: connect the primary component to its direct dependencies and keep most components inside the dependency graph. CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1573,9 +1583,9 @@ expression: "render(&JsonReporter::new())"
           "element": "acme-webapp",
           "component_id": "acme-webapp",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -1584,9 +1594,9 @@ expression: "render(&JsonReporter::new())"
           "element": "lodash",
           "component_id": "pkg:npm/lodash@4.17.21",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -1595,9 +1605,9 @@ expression: "render(&JsonReporter::new())"
           "element": "express",
           "component_id": "pkg:npm/express@4.18.2",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -1606,9 +1616,9 @@ expression: "render(&JsonReporter::new())"
           "element": "dayjs",
           "component_id": "pkg:npm/dayjs@1.11.7",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -1617,9 +1627,9 @@ expression: "render(&JsonReporter::new())"
           "element": "axios",
           "component_id": "pkg:npm/axios@1.4.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -1628,9 +1638,9 @@ expression: "render(&JsonReporter::new())"
           "element": "react",
           "component_id": "pkg:npm/react@18.2.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -1639,9 +1649,9 @@ expression: "render(&JsonReporter::new())"
           "element": "typescript",
           "component_id": "pkg:npm/typescript@5.0.4",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -1650,9 +1660,9 @@ expression: "render(&JsonReporter::new())"
           "element": "zod",
           "component_id": "pkg:npm/zod@3.21.4",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Info",
@@ -1661,9 +1671,9 @@ expression: "render(&JsonReporter::new())"
           "element": "prisma",
           "component_id": "pkg:npm/prisma@4.15.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
-          "rule_id": "SBOM-CRA-GENERAL",
+          "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
-          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
           "severity": "Warning",
@@ -1720,7 +1730,7 @@ expression: "render(&JsonReporter::new())"
             "total": 9
           },
           "requirement": "CRA Annex I Part II / prEN 40000-1-3 [PRE-7-RQ-03]: Transitive dependency supplier (recommended)",
-          "rule_id": "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
+          "rule_id": "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
           "sarif_rule_id": "SBOM-CRA-ANNEX-I",
           "standard_refs": [
             {
@@ -1737,7 +1747,7 @@ expression: "render(&JsonReporter::new())"
               "id": "PRE-7-RQ-03"
             }
           ],
-          "remediation": "Identify each component's supplier, starting with direct dependencies (mandatory under PRE-7-RQ-03; transitive dependencies are recommended). CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "remediation": "Identify the suppliers of transitive dependencies as well (recommended under PRE-7-RQ-03). CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1782,7 +1792,7 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14] PSIRT URL missing — [ART14]",
           "element": null,
           "requirement": "CRA Art. 14: PSIRT contact for external vulnerability reports",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-PSIRT",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
@@ -1791,7 +1801,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1800,16 +1810,21 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14(2)(a)] 24-hour early-warning channel missing — document the ENISA/CSIRT contact before 2026-09-11",
           "element": null,
           "requirement": "CRA Art. 14(2)(a): 24-hour early-warning channel",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-EARLY-WARNING",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
               "standard": "CraArticle",
-              "id": "Art. 14",
+              "id": "Art. 14(2)(a)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "CraArticle",
+              "id": "Art. 14(4)(a)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Document the channel for the 24-hour early warning of an actively exploited vulnerability or a severe incident (Art. 14(2)(a) / 14(4)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1818,16 +1833,21 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14(2)(b) / 14(4)(b)] 72-hour notification channel missing — document this contact before 2026-09-11",
           "element": null,
           "requirement": "CRA Art. 14(2)(b): 72-hour notification channel",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-NOTIFICATION",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
               "standard": "CraArticle",
-              "id": "Art. 14",
+              "id": "Art. 14(2)(b)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "CraArticle",
+              "id": "Art. 14(4)(b)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1836,16 +1856,16 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14(7)] No ENISA single reporting platform identifier — track ENISA publication and add `enisaReportingPlatformId` to the CRA sidecar when available",
           "element": null,
           "requirement": "CRA Art. 14(7): ENISA single reporting platform",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-ENISA",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
               "standard": "CraArticle",
-              "id": "Art. 14",
+              "id": "Art. 14(7)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Record the manufacturer's identifier on the ENISA single reporting platform (Art. 14(7)) once ENISA publishes it: set enisaReportingPlatformId in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         }
       ],

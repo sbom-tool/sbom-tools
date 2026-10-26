@@ -5,6 +5,65 @@
 
 use super::*;
 
+/// One format-level check's rule id per profile family. The generic path
+/// runs the spec-version and element-identifier checks for the quality
+/// profiles, NTIA, the CRA profiles and FDA, and each family reports every
+/// check under an id of its own, so two checks on one subject never share a
+/// finding key.
+struct FamilyRuleIds {
+    /// Minimum, Standard and Comprehensive.
+    quality: &'static str,
+    ntia: &'static str,
+    /// CRA Phase 1, Phase 2 and the Art. 24 steward profile.
+    cra: &'static str,
+    fda: &'static str,
+}
+
+impl FamilyRuleIds {
+    /// The id `level` reports the check under. A level outside the four
+    /// families falls back to its family's generic rule.
+    const fn get(&self, level: ComplianceLevel) -> &'static str {
+        match level {
+            ComplianceLevel::Minimum
+            | ComplianceLevel::Standard
+            | ComplianceLevel::Comprehensive => self.quality,
+            ComplianceLevel::NtiaMinimum => self.ntia,
+            ComplianceLevel::CraPhase1
+            | ComplianceLevel::CraPhase2
+            | ComplianceLevel::CraOssSteward => self.cra,
+            ComplianceLevel::FdaMedicalDevice => self.fda,
+            _ => generic_rule_id_for_level(level),
+        }
+    }
+}
+
+/// A spec version outside the range sbom-tools reads: CycloneDX older than
+/// 1.4 or newer than 1.7, SPDX newer than 3.0.
+const SPEC_VERSION_RULES: FamilyRuleIds = FamilyRuleIds {
+    quality: "SBOM-QUALITY-SPEC-VERSION",
+    ntia: "SBOM-NTIA-SPEC-VERSION",
+    cra: "SBOM-CRA-SPEC-VERSION",
+    fda: "SBOM-FDA-SPEC-VERSION",
+};
+
+/// An SPDX version that is neither 2.x nor 3.x (an SPDX 4.0 document is
+/// also newer than sbom-tools reads, a second finding on the document).
+const SPEC_VERSION_UNKNOWN_RULES: FamilyRuleIds = FamilyRuleIds {
+    quality: "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
+    ntia: "SBOM-NTIA-SPEC-VERSION-UNKNOWN",
+    cra: "SBOM-CRA-SPEC-VERSION-UNKNOWN",
+    fda: "SBOM-FDA-SPEC-VERSION-UNKNOWN",
+};
+
+/// A component without a well-formed format identifier (CycloneDX bom-ref,
+/// SPDX SPDXID or spdxId).
+const ELEMENT_ID_RULES: FamilyRuleIds = FamilyRuleIds {
+    quality: "SBOM-QUALITY-ELEMENT-ID",
+    ntia: "SBOM-NTIA-ELEMENT-ID",
+    cra: "SBOM-CRA-ELEMENT-ID",
+    fda: "SBOM-FDA-ELEMENT-ID",
+};
+
 impl ComplianceChecker {
     pub(crate) fn check_document_metadata(
         &self,
@@ -26,7 +85,11 @@ impl ComplianceChecker {
                 ),
                 _ => (
                     "Document creator identification".to_string(),
-                    generic_rule_id_for_level(self.level),
+                    if self.level.is_cra() {
+                        "SBOM-CRA-CREATOR"
+                    } else {
+                        "SBOM-QUALITY-CREATOR"
+                    },
                 ),
             };
             violations.push(Violation {
@@ -43,6 +106,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -72,6 +136,7 @@ impl ComplianceChecker {
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 } else {
                     violations.push(Violation {
@@ -87,11 +152,13 @@ impl ComplianceChecker {
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 }
             }
 
-            // Validate manufacturer email format if present
+            // Validate manufacturer email format if present: one finding per
+            // invalid address, told apart by the address itself.
             for creator in &sbom.document.creators {
                 if creator.creator_type == CreatorType::Organization
                     && let Some(email) = &creator.email
@@ -110,6 +177,7 @@ impl ComplianceChecker {
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: Some(email.clone()),
                     });
                 }
             }
@@ -131,6 +199,7 @@ impl ComplianceChecker {
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 } else {
                     violations.push(Violation {
@@ -145,6 +214,7 @@ impl ComplianceChecker {
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 }
             }
@@ -186,6 +256,7 @@ impl ComplianceChecker {
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 } else {
                     violations.push(Violation {
@@ -200,6 +271,7 @@ impl ComplianceChecker {
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 }
             }
@@ -217,6 +289,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -242,6 +315,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -278,6 +352,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -303,6 +378,7 @@ impl ComplianceChecker {
                             counts: None,
                             standard_refs: Vec::new(),
                             remediation: None,
+                            finding_detail: None,
                         });
             }
         }
@@ -337,6 +413,7 @@ impl ComplianceChecker {
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 } else {
                     violations.push(Violation {
@@ -350,6 +427,7 @@ impl ComplianceChecker {
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 }
             }
@@ -370,6 +448,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -406,6 +485,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
         }
@@ -430,6 +510,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -442,11 +523,12 @@ impl ComplianceChecker {
                     message: "FDA: SBOM creators should include contact email".to_string(),
                     element: None,
                     requirement: "FDA: Contact information".to_string(),
-                    rule_id: "SBOM-FDA-SUPPORT",
+                    rule_id: "SBOM-FDA-CONTACT",
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -463,6 +545,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -488,6 +571,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
         }
@@ -522,6 +606,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -537,8 +622,10 @@ impl ComplianceChecker {
         {
             let rule_id = if self.level == ComplianceLevel::FdaMedicalDevice {
                 "SBOM-FDA-NAMESPACE"
+            } else if self.level.is_cra() {
+                "SBOM-CRA-SERIAL"
             } else {
-                generic_rule_id_for_level(self.level)
+                "SBOM-QUALITY-SERIAL"
             };
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
@@ -551,6 +638,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
     }
@@ -602,7 +690,7 @@ impl ComplianceChecker {
                 "CRA Annex I Part II (1): SBOM of the product's components",
                 "SBOM-CRA-INVENTORY",
             ),
-            level => ("Component inventory", generic_rule_id_for_level(level)),
+            _ => ("Component inventory", "SBOM-QUALITY-INVENTORY"),
         };
         violations.extend(inventory_absent_violation(
             sbom,
@@ -625,11 +713,15 @@ impl ComplianceChecker {
                     ),
                     ComplianceLevel::FdaMedicalDevice => (
                         "FDA: Component name (required)".to_string(),
-                        "SBOM-FDA-GENERAL",
+                        "SBOM-FDA-COMPONENT-NAME",
                     ),
                     _ => (
                         "Component name (required)".to_string(),
-                        generic_rule_id_for_level(self.level),
+                        if self.level.is_cra() {
+                            "SBOM-CRA-COMPONENT-NAME"
+                        } else {
+                            "SBOM-QUALITY-NAME"
+                        },
                     ),
                 };
                 violations.push(Violation {
@@ -643,6 +735,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -703,6 +796,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -766,7 +860,7 @@ impl ComplianceChecker {
                             comp.name
                         ),
                         "Standard identifier (PURL/CPE/SWHID)".to_string(),
-                        generic_rule_id_for_level(self.level),
+                        "SBOM-QUALITY-IDENTIFIER",
                     ),
                 };
                 violations.push(Violation {
@@ -780,6 +874,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -846,6 +941,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -862,11 +958,12 @@ impl ComplianceChecker {
                     message: format!("Component '{}' should have license information", comp.name),
                     element: Some(comp.name.clone()),
                     requirement: "License declaration".to_string(),
-                    rule_id: generic_rule_id_for_level(self.level),
+                    rule_id: "SBOM-QUALITY-LICENSE",
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
 
@@ -893,12 +990,13 @@ impl ComplianceChecker {
                         rule_id: if self.level == ComplianceLevel::FdaMedicalDevice {
                             "SBOM-FDA-HASH"
                         } else {
-                            generic_rule_id_for_level(self.level)
+                            "SBOM-QUALITY-HASH"
                         },
                         component_id: Some(comp.canonical_id.value().to_string()),
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 } else if self.level == ComplianceLevel::FdaMedicalDevice {
                     // FDA: Check for strong hash algorithm (SHA-256 or better)
@@ -935,6 +1033,7 @@ impl ComplianceChecker {
                             counts: None,
                             standard_refs: Vec::new(),
                             remediation: None,
+                            finding_detail: None,
                         });
                     }
                 }
@@ -957,6 +1056,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
         }
@@ -1017,6 +1117,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             } else if has_multiple_components {
                 // Edges exist — check the graph is more than a token gesture.
@@ -1062,6 +1163,7 @@ impl ComplianceChecker {
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 }
 
@@ -1101,6 +1203,7 @@ impl ComplianceChecker {
                         }),
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 }
             }
@@ -1131,6 +1234,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
         }
@@ -1160,11 +1264,12 @@ impl ComplianceChecker {
                     message: "[CRA Annex I] SBOM appears to have multiple root components; identify a primary product component for top-level dependencies".to_string(),
                     element: None,
                     requirement: "CRA Annex I: Top-level dependency clarity".to_string(),
-                    rule_id: "SBOM-CRA-ANNEX-I-DEPENDENCY",
+                    rule_id: "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS",
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
         }
@@ -1209,6 +1314,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
         }
@@ -1217,6 +1323,8 @@ impl ComplianceChecker {
             return;
         }
 
+        // One finding per vulnerability of a component: the vulnerability id
+        // tells a component's findings apart.
         for (comp, vuln) in sbom.all_vulnerabilities() {
             if vuln.severity.is_none() && vuln.cvss.is_empty() {
                 violations.push(Violation {
@@ -1234,6 +1342,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: Some(vuln.id.clone()),
                 });
             }
 
@@ -1261,11 +1370,12 @@ impl ComplianceChecker {
                         ),
                         element: Some(comp.name.clone()),
                         requirement: "CRA Annex I Part II (4): Remediation detail".to_string(),
-                        rule_id: "SBOM-CRA-VULN-METADATA",
+                        rule_id: "SBOM-CRA-VULN-METADATA-REMEDIATION",
                         component_id: Some(comp.canonical_id.value().to_string()),
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: Some(vuln.id.clone()),
                     });
             }
         }
@@ -1305,11 +1415,12 @@ impl ComplianceChecker {
                     message: format!("CycloneDX {version} is outdated, consider upgrading to 1.7+"),
                     element: None,
                     requirement: "Current CycloneDX version".to_string(),
-                    rule_id: generic_rule_id_for_level(self.level),
+                    rule_id: SPEC_VERSION_RULES.get(self.level),
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
             // A version newer than any this tool reads (CycloneDX 2.0 is
@@ -1324,11 +1435,12 @@ impl ComplianceChecker {
                     ),
                     element: None,
                     requirement: "Supported CycloneDX version".to_string(),
-                    rule_id: generic_rule_id_for_level(self.level),
+                    rule_id: SPEC_VERSION_RULES.get(self.level),
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
             _ => {}
@@ -1345,11 +1457,12 @@ impl ComplianceChecker {
                     message: format!("Component '{}' may be missing bom-ref", comp.name),
                     element: Some(comp.name.clone()),
                     requirement: "CycloneDX: bom-ref for dependency tracking".to_string(),
-                    rule_id: generic_rule_id_for_level(self.level),
+                    rule_id: ELEMENT_ID_RULES.get(self.level),
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
         }
@@ -1377,11 +1490,12 @@ impl ComplianceChecker {
                 ),
                 element: None,
                 requirement: "Supported SPDX version".to_string(),
-                rule_id: generic_rule_id_for_level(self.level),
+                rule_id: SPEC_VERSION_RULES.get(self.level),
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -1393,11 +1507,12 @@ impl ComplianceChecker {
                 message: format!("Unknown SPDX version: {version}"),
                 element: None,
                 requirement: "Valid SPDX version".to_string(),
-                rule_id: generic_rule_id_for_level(self.level),
+                rule_id: SPEC_VERSION_UNKNOWN_RULES.get(self.level),
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -1427,11 +1542,12 @@ impl ComplianceChecker {
                     ),
                     element: Some(comp.name.clone()),
                     requirement: expected.to_string(),
-                    rule_id: generic_rule_id_for_level(self.level),
+                    rule_id: ELEMENT_ID_RULES.get(self.level),
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
         }

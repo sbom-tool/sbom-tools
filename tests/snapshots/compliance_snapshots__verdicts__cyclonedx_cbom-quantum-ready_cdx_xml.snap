@@ -6,21 +6,23 @@ as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I0
 [Standard] compliant · E0 W1 I0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/fully-quantum-safe-app@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/fully-quantum-safe-app@1.0.0
 [NtiaMinimum] NON-COMPLIANT · E2 W0 I0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/fully-quantum-safe-app@1.0.0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/pqc-crypto-suite@2.0.0
 [CraPhase1] compliant · E0 W9 I6
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/fully-quantum-safe-app@1.0.0
-  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/2)
+  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/2)
   I SBOM-CRA-ART-13-5  - (1/2)
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/fully-quantum-safe-app@1.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/pqc-crypto-suite@2.0.0
   W SBOM-CRA-SBOM-FRESHNESS  -
@@ -30,14 +32,16 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-5  - (1/2)
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
-  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/2)
+  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/2)
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/fully-quantum-safe-app@1.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/pqc-crypto-suite@2.0.0
   W SBOM-CRA-CVD-POLICY  -
@@ -46,8 +50,9 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-HASH  pkg:cargo/fully-quantum-safe-app@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:cargo/fully-quantum-safe-app@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:cargo/pqc-crypto-suite@2.0.0
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] compliant · E0 W3 I2
   I SBOM-SSDF-PO3  -
   I SBOM-SSDF-PW6  -
@@ -124,4 +129,5 @@ as_of: 2026-10-12T00:00:00Z
 [Comprehensive] NON-COMPLIANT · E2 W2 I0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/fully-quantum-safe-app@1.0.0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/pqc-crypto-suite@2.0.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/fully-quantum-safe-app@1.0.0 ×2
+  W SBOM-QUALITY-HASH  pkg:cargo/fully-quantum-safe-app@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/fully-quantum-safe-app@1.0.0

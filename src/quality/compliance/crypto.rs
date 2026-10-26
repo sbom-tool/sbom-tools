@@ -21,11 +21,11 @@ use std::collections::BTreeMap;
 
 use super::*;
 use crate::model::{
-    AlgorithmClass, AlgorithmClassification, AlgorithmProperties, CertificateProperties, Component,
-    CryptoAssetType, HybridParts, Ikev2Transform, Ikev2TransformKind, Ikev2TransformTypes,
-    NormalizedSbomIndex, PqcKind, ProtocolProperties, ProtocolType, classify_algorithm,
-    classify_algorithm_names, classify_algorithm_names_guarded, ikev2_key_exchange_group,
-    worst_classification,
+    AlgorithmClass, AlgorithmClassification, AlgorithmProperties, CertificateProperties,
+    CipherSuite, Component, CryptoAssetType, HybridParts, Ikev2Transform, Ikev2TransformKind,
+    Ikev2TransformTypes, NormalizedSbomIndex, PqcKind, ProtocolProperties, ProtocolType,
+    classify_algorithm, classify_algorithm_names, classify_algorithm_names_guarded,
+    ikev2_key_exchange_group, worst_classification,
 };
 
 /// Outcome of checking one classified algorithm against the CNSA 2.0
@@ -653,6 +653,23 @@ fn is_ssl_protocol(proto: &ProtocolProperties) -> bool {
     matches!(&proto.protocol_type, ProtocolType::Other(s) if s.to_lowercase().contains("ssl"))
 }
 
+/// Finding detail of a PROTO-002 finding about one cipher suite, so a
+/// protocol's suites keep a finding key each: what the SBOM calls the suite
+/// — its name, else its IANA identifiers, else its algorithm references.
+fn cipher_suite_detail(suite: &CipherSuite) -> String {
+    match suite.name.as_deref().map(str::trim) {
+        Some(name) if !name.is_empty() => name.to_string(),
+        _ if !suite.identifiers.is_empty() => suite.identifiers.join(","),
+        _ => suite.algorithms.join(","),
+    }
+}
+
+/// Finding details of the PROTO-002 findings that judge a protocol's IKEv2
+/// transforms and its crypto references as a whole (one each per protocol,
+/// beside one per cipher suite).
+const IKEV2_TRANSFORMS_DETAIL: &str = "ikev2-transforms";
+const CRYPTO_REFS_DETAIL: &str = "crypto-refs";
+
 impl ComplianceChecker {
     // ════════════════════════════════════════════════════════════════════
     // CNSA 2.0 compliance checks
@@ -719,6 +736,7 @@ impl ComplianceChecker {
                                     counts: None,
                                     standard_refs: Vec::new(),
                                     remediation: None,
+                                    finding_detail: Some(sig_ref.to_string()),
                                 });
                             }
                             // An unclassifiable signature ref fails closed —
@@ -742,6 +760,7 @@ impl ComplianceChecker {
                                     counts: None,
                                     standard_refs: Vec::new(),
                                     remediation: None,
+                                    finding_detail: Some(sig_ref.to_string()),
                                 });
                             }
                         }
@@ -782,6 +801,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
     }
@@ -830,6 +850,7 @@ impl ComplianceChecker {
                             counts: None,
                             standard_refs: Vec::new(),
                             remediation: None,
+                            finding_detail: None,
                         });
                     }
                 } else {
@@ -847,6 +868,7 @@ impl ComplianceChecker {
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 }
             }
@@ -875,6 +897,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
                 true
             }
@@ -921,6 +944,7 @@ impl ComplianceChecker {
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 }
                 declared_vulnerable
@@ -957,6 +981,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         } else if matches!(proto.protocol_type, ProtocolType::Tls | ProtocolType::Dtls)
             && proto.version.as_deref().and_then(parse_tls_version) != Some((1, 3))
@@ -985,12 +1010,14 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
         let version_rejected = violations.len() > violations_before;
 
         // Collect non-allowlisted algorithms per source, deduplicated by label.
-        let mut push_proto_violation = |context: String, offenders: Vec<String>| {
+        // One finding per source on the protocol, which `detail` names.
+        let mut push_proto_violation = |context: String, detail: String, offenders: Vec<String>| {
             if offenders.is_empty() {
                 return;
             }
@@ -1009,6 +1036,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: Some(detail),
             });
         };
         // References that resolve nowhere and carry no recognizable token
@@ -1062,6 +1090,7 @@ impl ComplianceChecker {
                     "cipher suite '{}' includes",
                     suite.name.as_deref().unwrap_or("(unnamed)")
                 ),
+                cipher_suite_detail(suite),
                 offenders,
             );
         }
@@ -1076,7 +1105,11 @@ impl ComplianceChecker {
                     Err(label) => unverifiable.push(label),
                 }
             }
-            push_proto_violation("IKEv2 transforms include".to_string(), offenders);
+            push_proto_violation(
+                "IKEv2 transforms include".to_string(),
+                IKEV2_TRANSFORMS_DETAIL.to_string(),
+                offenders,
+            );
         }
 
         // PROTO-002: crypto reference array. Only algorithm assets are judged
@@ -1107,7 +1140,11 @@ impl ComplianceChecker {
                 }
             }
         }
-        push_proto_violation("references".to_string(), offenders);
+        push_proto_violation(
+            "references".to_string(),
+            CRYPTO_REFS_DETAIL.to_string(),
+            offenders,
+        );
         unverifiable.extend(unidentified_hybrids.take());
 
         // Fail closed when the protocol's algorithms cannot be verified:
@@ -1137,6 +1174,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         } else if judged == 0 && !version_rejected {
             let detail = if substantive {
@@ -1161,6 +1199,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
         version_rejected || judged > 0
@@ -1239,6 +1278,7 @@ impl ComplianceChecker {
                                 counts: None,
                                 standard_refs: Vec::new(),
                                 remediation: None,
+                                finding_detail: Some(sig_ref.to_string()),
                             });
                         } else if subject.class == AlgorithmClass::Unknown {
                             // An unclassifiable signature ref must warn, never
@@ -1262,6 +1302,7 @@ impl ComplianceChecker {
                                 counts: None,
                                 standard_refs: Vec::new(),
                                 remediation: None,
+                                finding_detail: Some(sig_ref.to_string()),
                             });
                         }
                     }
@@ -1305,6 +1346,7 @@ impl ComplianceChecker {
                                     counts: None,
                                     standard_refs: Vec::new(),
                                     remediation: None,
+                                    finding_detail: None,
                                 });
                             }
                         }
@@ -1333,6 +1375,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
     }
@@ -1382,6 +1425,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -1412,6 +1456,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -1428,6 +1473,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -1450,6 +1496,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -1469,6 +1516,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -1499,6 +1547,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
         }
@@ -1551,6 +1600,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
         subject.class != AlgorithmClass::Unknown || ql == Some(0)
@@ -1588,6 +1638,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         } else if matches!(proto.protocol_type, ProtocolType::Tls | ProtocolType::Dtls)
             && let Some(version) = proto.version.as_deref()
@@ -1609,6 +1660,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
         let version_rejected = violations.len() > violations_before;
@@ -1624,7 +1676,8 @@ impl ComplianceChecker {
             unverifiable.push(format!("version '{version}'"));
         }
 
-        let mut push_proto_violation = |context: String, offenders: Vec<String>| {
+        // One finding per source on the protocol, which `detail` names.
+        let mut push_proto_violation = |context: String, detail: String, offenders: Vec<String>| {
             if offenders.is_empty() {
                 return;
             }
@@ -1643,6 +1696,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: Some(detail),
             });
         };
         // How many algorithms the classifier could identify, ready or not.
@@ -1693,6 +1747,7 @@ impl ComplianceChecker {
                     "cipher suite '{}' includes",
                     suite.name.as_deref().unwrap_or("(unnamed)")
                 ),
+                cipher_suite_detail(suite),
                 offenders,
             );
         }
@@ -1705,7 +1760,11 @@ impl ComplianceChecker {
                     Err(label) => unverifiable.push(label),
                 }
             }
-            push_proto_violation("IKEv2 transforms include".to_string(), offenders);
+            push_proto_violation(
+                "IKEv2 transforms include".to_string(),
+                IKEV2_TRANSFORMS_DETAIL.to_string(),
+                offenders,
+            );
         }
 
         let mut offenders = Vec::new();
@@ -1729,7 +1788,11 @@ impl ComplianceChecker {
                 }
             }
         }
-        push_proto_violation("references".to_string(), offenders);
+        push_proto_violation(
+            "references".to_string(),
+            CRYPTO_REFS_DETAIL.to_string(),
+            offenders,
+        );
         unverifiable.extend(unidentified_hybrids.take());
 
         // A protocol whose evidence is all opaque, or that documents nothing
@@ -1764,6 +1827,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         } else if judged.get() == 0 && !version_rejected {
             // Nothing the classifier can name: a TLS 1.3 asset whose suites
@@ -1788,6 +1852,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
         version_rejected || judged.get() > 0

@@ -6,21 +6,23 @@ as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I0
 [Standard] compliant · E0 W4 I0
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/edge-router-firmware@2.4.0-build312
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/edge-router@2.4.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/wifi-driver@1.2.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/wifi-radio@rev-3
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/edge-router-firmware@2.4.0-build312
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/edge-router@2.4.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/wifi-driver@1.2.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/wifi-radio@rev-3
 [NtiaMinimum] compliant · E0 W0 I0
 [CraPhase1] compliant · E0 W7 I6
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/acme/edge-router@2.4.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/acme/wifi-driver@1.2.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/acme/wifi-radio@rev-3
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (4/4)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-PRE-7-RQ-07-RE  - (1/4)
   W SBOM-CRA-SBOM-FRESHNESS  -
 [CraPhase2] NON-COMPLIANT · E1 W8 I8
@@ -30,13 +32,15 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/acme/wifi-radio@rev-3
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-13-5  - (4/4)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-CVD-POLICY  -
   W SBOM-CRA-SBOM-FRESHNESS  -
 [FdaMedicalDevice] NON-COMPLIANT · E3 W1 I0
@@ -107,7 +111,10 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-TRANSITIVE-DEPS  -
   W SBOM-FSCT-UPSTREAM-SBOM  -
 [Comprehensive] compliant · E0 W7 I0
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/edge-router-firmware@2.4.0-build312
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/edge-router@2.4.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/wifi-driver@1.2.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:generic/acme/wifi-radio@rev-3 ×2
+  W SBOM-QUALITY-HASH  pkg:generic/acme/edge-router@2.4.0
+  W SBOM-QUALITY-HASH  pkg:generic/acme/wifi-driver@1.2.0
+  W SBOM-QUALITY-HASH  pkg:generic/acme/wifi-radio@rev-3
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/edge-router-firmware@2.4.0-build312
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/edge-router@2.4.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/wifi-driver@1.2.0
+  W SBOM-QUALITY-LICENSE  pkg:generic/acme/wifi-radio@rev-3

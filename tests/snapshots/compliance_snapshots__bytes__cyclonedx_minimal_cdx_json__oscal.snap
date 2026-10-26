@@ -124,10 +124,10 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "sbom-ntia-general",
+              "target-id": "sbom-ntia-element-id",
               "type": "objective-id"
             },
-            "title": "SBOM-NTIA-GENERAL",
+            "title": "SBOM-NTIA-ELEMENT-ID",
             "uuid": "35e7c5e3-94cd-5f27-8736-51c6386bf8c5"
           }
         ],
@@ -347,7 +347,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-NTIA-GENERAL"
+                "value": "SBOM-NTIA-ELEMENT-ID"
               },
               {
                 "name": "sarif-rule-id",
@@ -360,7 +360,7 @@ source: tests/compliance_snapshots.rs
                 "value": "test-app"
               }
             ],
-            "title": "SBOM-NTIA-GENERAL",
+            "title": "SBOM-NTIA-ELEMENT-ID",
             "types": [
               "finding"
             ],

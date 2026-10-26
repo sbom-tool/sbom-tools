@@ -5,52 +5,56 @@ fixture: cra/cra-noncompliant-no-manufacturer.cdx.json
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W1 I2
-  I SBOM-QUALITY-GENERAL  pkg:cargo/anon-app@1.0.0
-  I SBOM-QUALITY-GENERAL  pkg:cargo/lib-a@1.0.0
-  W SBOM-QUALITY-GENERAL  -
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/anon-app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/lib-a@1.0.0
+  W SBOM-QUALITY-CREATOR  -
 [Standard] NON-COMPLIANT · E1 W2 I2
-  E SBOM-QUALITY-GENERAL  -
-  I SBOM-QUALITY-GENERAL  pkg:cargo/anon-app@1.0.0
-  I SBOM-QUALITY-GENERAL  pkg:cargo/lib-a@1.0.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/anon-app@1.0.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/lib-a@1.0.0
+  E SBOM-QUALITY-CREATOR  -
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/anon-app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/lib-a@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/anon-app@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/lib-a@1.0.0
 [NtiaMinimum] NON-COMPLIANT · E4 W0 I2
   E SBOM-NTIA-AUTHOR  -
   E SBOM-NTIA-DEPENDENCY  -
   E SBOM-NTIA-SUPPLIER  pkg:cargo/anon-app@1.0.0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/lib-a@1.0.0
-  I SBOM-NTIA-GENERAL  pkg:cargo/anon-app@1.0.0
-  I SBOM-NTIA-GENERAL  pkg:cargo/lib-a@1.0.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:cargo/anon-app@1.0.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:cargo/lib-a@1.0.0
 [CraPhase1] NON-COMPLIANT · E2 W9 I5
   E SBOM-CRA-ANNEX-I-DEPENDENCY  -
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
-  I SBOM-CRA-GENERAL  pkg:cargo/anon-app@1.0.0
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-a@1.0.0
+  I SBOM-CRA-ART-14-ENISA  -
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/anon-app@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-a@1.0.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (2/2)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/anon-app@1.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/lib-a@1.0.0
   W SBOM-CRA-SBOM-FRESHNESS  -
 [CraPhase2] NON-COMPLIANT · E2 W11 I7
   E SBOM-CRA-ANNEX-I-DEPENDENCY  -
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
-  I SBOM-CRA-GENERAL  pkg:cargo/anon-app@1.0.0
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-a@1.0.0
+  I SBOM-CRA-ART-14-ENISA  -
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/anon-app@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-a@1.0.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-13-5  - (2/2)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/anon-app@1.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/lib-a@1.0.0
   W SBOM-CRA-CVD-POLICY  -
@@ -60,17 +64,18 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-DEPENDENCY  -
   E SBOM-FDA-SUPPLIER  pkg:cargo/anon-app@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:cargo/lib-a@1.0.0
-  I SBOM-FDA-GENERAL  pkg:cargo/anon-app@1.0.0
-  I SBOM-FDA-GENERAL  pkg:cargo/lib-a@1.0.0
+  I SBOM-FDA-ELEMENT-ID  pkg:cargo/anon-app@1.0.0
+  I SBOM-FDA-ELEMENT-ID  pkg:cargo/lib-a@1.0.0
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E2 W3 I2
   E SBOM-SSDF-PS1  -
   E SBOM-SSDF-PW4  -
   I SBOM-SSDF-PO3  -
   I SBOM-SSDF-PW6  -
   W SBOM-SSDF-PO1  -
-  W SBOM-SSDF-PS1  -
+  W SBOM-SSDF-PS1-TOOL  -
   W SBOM-SSDF-PS3  - (2/2)
 [Eo14028] NON-COMPLIANT · E3 W2 I0
   E SBOM-EO14028-CREATOR  -
@@ -92,8 +97,8 @@ as_of: 2026-10-12T00:00:00Z
 [CraOssSteward] NON-COMPLIANT · E2 W3 I2
   E SBOM-CRA-ANNEX-I-DEPENDENCY  -
   E SBOM-CRA-ART-24  -
-  I SBOM-CRA-GENERAL  pkg:cargo/anon-app@1.0.0
-  I SBOM-CRA-GENERAL  pkg:cargo/lib-a@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/anon-app@1.0.0
+  I SBOM-CRA-ELEMENT-ID  pkg:cargo/lib-a@1.0.0
   W SBOM-CRA-ART-24-SUPPLIER  pkg:cargo/anon-app@1.0.0
   W SBOM-CRA-ART-24-SUPPLIER  pkg:cargo/lib-a@1.0.0
   W SBOM-CRA-CVD-POLICY  -
@@ -141,8 +146,8 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-DEPENDENCY  -
   E SBOM-NTIA-SUPPLIER  pkg:cargo/anon-app@1.0.0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/lib-a@1.0.0
-  E SBOM-QUALITY-GENERAL  -
-  I SBOM-QUALITY-GENERAL  pkg:cargo/anon-app@1.0.0
-  I SBOM-QUALITY-GENERAL  pkg:cargo/lib-a@1.0.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/anon-app@1.0.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/lib-a@1.0.0
+  E SBOM-QUALITY-CREATOR  -
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/anon-app@1.0.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/lib-a@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/anon-app@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:cargo/lib-a@1.0.0

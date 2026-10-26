@@ -187,6 +187,7 @@ pub(crate) fn push_untyped_ml_warning(
         counts: None,
         standard_refs: Vec::new(),
         remediation: None,
+        finding_detail: None,
     });
 }
 

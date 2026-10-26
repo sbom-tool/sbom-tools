@@ -6,23 +6,25 @@ as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I0
 [Standard] compliant · E0 W2 I0
-  W SBOM-QUALITY-GENERAL  pkg:npm/legacy-insecure-app@1.0.0
-  W SBOM-QUALITY-GENERAL  pkg:npm/old-crypto@0.2.0
+  W SBOM-QUALITY-LICENSE  pkg:npm/legacy-insecure-app@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:npm/old-crypto@0.2.0
 [NtiaMinimum] NON-COMPLIANT · E2 W0 I0
   E SBOM-NTIA-SUPPLIER  pkg:npm/legacy-insecure-app@1.0.0
   E SBOM-NTIA-SUPPLIER  pkg:npm/old-crypto@0.2.0
 [CraPhase1] compliant · E0 W10 I6
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/legacy-insecure-app@1.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/old-crypto@0.2.0
-  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/2)
+  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/2)
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (2/2)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/legacy-insecure-app@1.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/old-crypto@0.2.0
   W SBOM-CRA-SBOM-FRESHNESS  -
@@ -32,15 +34,17 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/old-crypto@0.2.0
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
-  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/2)
+  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/2)
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-13-5  - (2/2)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/legacy-insecure-app@1.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/old-crypto@0.2.0
   W SBOM-CRA-CVD-POLICY  -
@@ -50,8 +54,9 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-HASH  pkg:npm/old-crypto@0.2.0
   E SBOM-FDA-SUPPLIER  pkg:npm/legacy-insecure-app@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:npm/old-crypto@0.2.0
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E1 W2 I2
   E SBOM-SSDF-PS2  - (2/2)
   I SBOM-SSDF-PO3  -
@@ -147,5 +152,7 @@ as_of: 2026-10-12T00:00:00Z
 [Comprehensive] NON-COMPLIANT · E2 W4 I0
   E SBOM-NTIA-SUPPLIER  pkg:npm/legacy-insecure-app@1.0.0
   E SBOM-NTIA-SUPPLIER  pkg:npm/old-crypto@0.2.0
-  W SBOM-QUALITY-GENERAL  pkg:npm/legacy-insecure-app@1.0.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:npm/old-crypto@0.2.0 ×2
+  W SBOM-QUALITY-HASH  pkg:npm/legacy-insecure-app@1.0.0
+  W SBOM-QUALITY-HASH  pkg:npm/old-crypto@0.2.0
+  W SBOM-QUALITY-LICENSE  pkg:npm/legacy-insecure-app@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:npm/old-crypto@0.2.0

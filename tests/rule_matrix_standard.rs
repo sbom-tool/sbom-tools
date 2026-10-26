@@ -16,12 +16,13 @@ use sbom_tools::quality::{ComplianceLevel, ViolationSeverity as Sev};
 
 const LEVEL: ComplianceLevel = ComplianceLevel::Standard;
 
-/// Every rule id the Standard profile can emit (generic.rs):
+/// Every SARIF rule id the Standard profile can emit (generic.rs):
 /// * `SBOM-NTIA-VERSION` — missing component version (Error);
-/// * `SBOM-QUALITY-GENERAL` — the quality-family generic id stamped by every
-///   other Standard-level site: document creator (Error), serial number
-///   (Warning), component name (Error), unique identifier (Warning), license
-///   (Warning), and the CycloneDX/SPDX format-specific Infos.
+/// * `SBOM-QUALITY-GENERAL` — the quality-family SARIF rule of every other
+///   Standard-level check, each under its own `SBOM-QUALITY-*` id: document
+///   creator (Error), serial number (Warning), component name (Error),
+///   unique identifier (Warning), license (Warning), and the CycloneDX/SPDX
+///   format-specific Infos.
 const STANDARD_RULE_UNIVERSE: &[&str] = &["SBOM-NTIA-VERSION", "SBOM-QUALITY-GENERAL"];
 
 /// A component that also satisfies the Standard-level license check.

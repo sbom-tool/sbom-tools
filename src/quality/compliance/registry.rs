@@ -179,6 +179,33 @@ const REMEDIATION_EO14028: &str = "Follow EO 14028 Section 4(e) requirements: us
 /// software components it describes.
 const REMEDIATION_INVENTORY: &str = "List the software components the product is made of. A document with no components, or with only files, snippets or cryptographic assets, is not a software inventory; validate a CBOM with --standard cnsa2 or pqc instead.";
 
+/// Remediation for the generic path's document-creator checks
+/// (SBOM-QUALITY-CREATOR, SBOM-CRA-CREATOR).
+const REMEDIATION_CREATOR: &str = "Identify who created the SBOM: a person, organization or tool.";
+
+/// Remediation for the generic path's document-identifier checks
+/// (SBOM-QUALITY-SERIAL, SBOM-CRA-SERIAL).
+const REMEDIATION_SERIAL: &str = "Give the SBOM a unique document identifier.";
+
+/// Remediation for the generic path's component-name checks
+/// (SBOM-QUALITY-NAME, SBOM-CRA-COMPONENT-NAME).
+const REMEDIATION_COMPONENT_NAME: &str =
+    "Give every component a name; empty names and placeholders such as NOASSERTION do not count.";
+
+/// Remediation for the generic path's spec-version range checks
+/// (SBOM-{QUALITY,NTIA,CRA,FDA}-SPEC-VERSION).
+const REMEDIATION_SPEC_VERSION: &str = "Use a spec version sbom-tools reads: CycloneDX 1.4–1.7, SPDX 2.x or 3.0. An older version lacks fields the checks read, and what a newer version adds is not evaluated.";
+
+/// Remediation for the generic path's unknown-SPDX-version checks
+/// (SBOM-{QUALITY,NTIA,CRA,FDA}-SPEC-VERSION-UNKNOWN).
+const REMEDIATION_SPEC_VERSION_UNKNOWN: &str =
+    "Declare a valid SPDX version, 2.x or 3.0, so the document is read as the version it is.";
+
+/// Remediation for the generic path's element-identifier checks
+/// (SBOM-{QUALITY,NTIA,CRA,FDA}-ELEMENT-ID).
+const REMEDIATION_ELEMENT_ID: &str =
+    "Give every element its own well-formed identifier, the one dependency relationships refer to.";
+
 const REMEDIATION_AIACT_NA: &str = "EU AI Act Annex IV readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components to enable the assessment.";
 
 /// BSI/G7 SBOM-for-AI not-applicable remediation.
@@ -356,34 +383,34 @@ const ADVICE_LICENSE: FormatAdvice = FormatAdvice {
     },
 };
 
-/// CRA Art. 13(5) licence evidence, plus the SPDX 3.0 SimpleLicensing profile declaration the same rule checks.
-const ADVICE_CRA_LICENSE: FormatAdvice = FormatAdvice {
+/// SPDX 3.0 SimpleLicensing profile declaration; the check runs on SPDX 3.0 only.
+const ADVICE_LICENSING_PROFILE: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).",
-        field: Some("components[].licenses[]"),
+        text: "the check does not run on CycloneDX input.",
+        field: None,
     },
     spdx2: FieldAdvice {
-        text: "set packages[].licenseDeclared (PackageLicenseDeclared) or packages[].licenseConcluded; NOASSERTION and NONE are read as absent.",
-        field: Some("packages[].licenseDeclared"),
+        text: "the check does not run on SPDX 2.x input.",
+        field: None,
     },
     spdx3: FieldAdvice {
-        text: "add a hasDeclaredLicense (or hasConcludedLicense) Relationship from each package to a simplelicensing_LicenseExpression element, and list simpleLicensing in the SpdxDocument's profileConformance.",
-        field: Some("hasDeclaredLicense"),
+        text: "list simpleLicensing in the SpdxDocument's profileConformance.",
+        field: Some("profileConformance"),
     },
 };
 
-/// Licence on every component plus a concluded-licence attestation (FSCT §2.2.2.7 aspirational tier).
-const ADVICE_LICENSE_ALL: FormatAdvice = FormatAdvice {
+/// Concluded-licence attestation (FSCT §2.2.2.7 aspirational tier); the check runs on SPDX input only.
+const ADVICE_LICENSE_CONCLUDED: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "add components[].licenses[] entries to every component; licenses[].acknowledgement is not read, so the concluded-licence prong applies to SPDX input only.",
-        field: Some("components[].licenses[]"),
+        text: "licenses[].acknowledgement is not read, so the check does not run on CycloneDX input.",
+        field: None,
     },
     spdx2: FieldAdvice {
-        text: "set packages[].licenseDeclared on every package, and record a concluded licence in packages[].licenseConcluded (PackageLicenseConcluded).",
+        text: "record a concluded licence in packages[].licenseConcluded (PackageLicenseConcluded).",
         field: Some("packages[].licenseConcluded"),
     },
     spdx3: FieldAdvice {
-        text: "add a hasDeclaredLicense Relationship for every package, and a hasConcludedLicense Relationship recording the concluded licence.",
+        text: "add a hasConcludedLicense Relationship recording the concluded licence.",
         field: Some("hasConcludedLicense"),
     },
 };
@@ -416,22 +443,6 @@ const ADVICE_DEPENDENCIES: FormatAdvice = FormatAdvice {
     },
     spdx3: FieldAdvice {
         text: "add Relationship elements with relationshipType dependsOn (or contains) between the packages.",
-        field: Some("relationshipType"),
-    },
-};
-
-/// Dependency relationships plus the primary component (CRA Annex I dependency findings).
-const ADVICE_CRA_DEPENDENCY: FormatAdvice = FormatAdvice {
-    cyclonedx: FieldAdvice {
-        text: "add dependencies[] entries (ref plus dependsOn[]) and set metadata.component to the product.",
-        field: Some("dependencies[]"),
-    },
-    spdx2: FieldAdvice {
-        text: "add DEPENDS_ON (or CONTAINS) relationships[] entries and name the product package in documentDescribes.",
-        field: Some("relationships[]"),
-    },
-    spdx3: FieldAdvice {
-        text: "add Relationship elements with relationshipType dependsOn (or contains), and set the SpdxDocument's rootElement to the product package.",
         field: Some("relationshipType"),
     },
 };
@@ -692,18 +703,34 @@ const ADVICE_LIFECYCLE: FormatAdvice = FormatAdvice {
     },
 };
 
-/// FDA contact email and level-of-support evidence (both SBOM-FDA-SUPPORT findings).
+/// FDA level-of-support / end-of-support evidence.
 const ADVICE_FDA_SUPPORT: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "add metadata.authors[].email (or a metadata.manufacturer contact[].email), and an end-of-support date in metadata.component.properties[] or eol / lifecycle entries in components[].properties[].",
+        text: "add an end-of-support date to metadata.component.properties[], or eol / lifecycle entries to components[].properties[].",
+        field: Some("components[].properties[]"),
+    },
+    spdx2: FieldAdvice {
+        text: "set packages[].validUntilDate (ValidUntilDate) on the described package as an RFC 3339 date-time.",
+        field: Some("packages[].validUntilDate"),
+    },
+    spdx3: FieldAdvice {
+        text: "validUntilTime is not read from SPDX 3.0, so this check cannot be satisfied from the document.",
+        field: None,
+    },
+};
+
+/// FDA SBOM creator contact email.
+const ADVICE_FDA_CONTACT: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "add metadata.authors[].email (or a metadata.manufacturer contact[].email).",
         field: Some("metadata.authors[].email"),
     },
     spdx2: FieldAdvice {
-        text: "append the email to a creationInfo.creators[] entry (\"Organization: Name (email)\"), and set validUntilDate on the described package as an RFC 3339 date-time.",
+        text: "append the email to a creationInfo.creators[] entry (\"Organization: Name (email)\").",
         field: Some("creationInfo.creators[]"),
     },
     spdx3: FieldAdvice {
-        text: "creator emails and validUntilTime are not read from SPDX 3.0, so neither part of this check can be satisfied from the document.",
+        text: "creator emails are not read from SPDX 3.0, so this check cannot be satisfied from the document.",
         field: None,
     },
 };
@@ -788,19 +815,35 @@ const ADVICE_VULN_SEVERITY: FormatAdvice = FormatAdvice {
     },
 };
 
-/// CRA vulnerability metadata, plus the SPDX 3.0 Security profile declaration the same rule checks.
-const ADVICE_CRA_VULN_METADATA: FormatAdvice = FormatAdvice {
+/// A fixed version or fix description on each vulnerability remediation.
+const ADVICE_VULN_REMEDIATION: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "set vulnerabilities[].ratings[] on each entry with a severity or CVSS score, and a recommendation describing the fix.",
-        field: Some("vulnerabilities[].ratings[]"),
+        text: "set vulnerabilities[].recommendation on each entry to the fix (a fixed version or the steps to take).",
+        field: Some("vulnerabilities[].recommendation"),
     },
     spdx2: FieldAdvice {
         text: "documents in this format carry no vulnerability data, so these entries were attached by enrichment.",
         field: None,
     },
     spdx3: FieldAdvice {
-        text: "add a security_CvssV3VulnAssessmentRelationship (security_score, security_vectorString) for each vulnerability, and list security in the SpdxDocument's profileConformance.",
-        field: Some("security_score"),
+        text: "remediations are not read from this format, so these entries were attached by enrichment.",
+        field: None,
+    },
+};
+
+/// SPDX 3.0 Security profile declaration; the check runs on SPDX 3.0 only.
+const ADVICE_SECURITY_PROFILE: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "the check does not run on CycloneDX input.",
+        field: None,
+    },
+    spdx2: FieldAdvice {
+        text: "the check does not run on SPDX 2.x input.",
+        field: None,
+    },
+    spdx3: FieldAdvice {
+        text: "list security in the SpdxDocument's profileConformance.",
+        field: Some("profileConformance"),
     },
 };
 
@@ -913,6 +956,22 @@ const ADVICE_HARDWARE: FormatAdvice = FormatAdvice {
     spdx3: FieldAdvice {
         text: "on packages whose software_primaryPurpose is device or firmware set suppliedBy, software_packageUrl (or a cpe23 externalIdentifier[] entry) and software_packageVersion; a dependsOn Relationship links a device to its firmware.",
         field: Some("suppliedBy"),
+    },
+};
+
+/// A device's version, or its dependency on the firmware it runs.
+const ADVICE_DEVICE_FIRMWARE: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "set components[].version on the device, or add a dependencies[] entry from the device to its firmware component.",
+        field: Some("components[].version"),
+    },
+    spdx2: FieldAdvice {
+        text: "set packages[].versionInfo on the device package, or add a DEPENDS_ON relationships[] entry from it to its firmware package.",
+        field: Some("packages[].versionInfo"),
+    },
+    spdx3: FieldAdvice {
+        text: "set software_packageVersion on the device package, or add a dependsOn Relationship from it to its firmware package.",
+        field: Some("software_packageVersion"),
     },
 };
 
@@ -1321,6 +1380,38 @@ const ADVICE_FORMAT_GENERAL: FormatAdvice = FormatAdvice {
         field: Some("creationInfo.specVersion"),
     },
 };
+
+/// Document spec version.
+const ADVICE_SPEC_VERSION: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "set specVersion 1.4–1.7.",
+        field: Some("specVersion"),
+    },
+    spdx2: FieldAdvice {
+        text: "set spdxVersion SPDX-2.x.",
+        field: Some("spdxVersion"),
+    },
+    spdx3: FieldAdvice {
+        text: "set creationInfo.specVersion 3.0.x.",
+        field: Some("creationInfo.specVersion"),
+    },
+};
+
+/// Per-element format identifier (bom-ref, SPDXID, spdxId).
+const ADVICE_ELEMENT_ID: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "set a bom-ref on every component, one that differs from the component's name.",
+        field: Some("bom-ref"),
+    },
+    spdx2: FieldAdvice {
+        text: "give every element an SPDXID that starts with SPDXRef-.",
+        field: Some("SPDXID"),
+    },
+    spdx3: FieldAdvice {
+        text: "give every element an IRI spdxId.",
+        field: Some("spdxId"),
+    },
+};
 /// Look up the static [`RuleMeta`] for a stable internal rule key.
 ///
 /// The key is the [`Violation::rule_id`] set at each check site. Returns
@@ -1380,7 +1471,18 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 13(5)")],
             remediation: "Record license information for every component to support the Art. 13(5) due diligence on integrated third-party components.",
-            advice: Some(&ADVICE_CRA_LICENSE),
+            advice: Some(&ADVICE_LICENSE),
+        },
+        // The SPDX 3.0 SimpleLicensing profile declaration, a document-level
+        // check apart from the licence coverage above.
+        "SBOM-CRA-ART-13-5-PROFILE" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-5",
+            name: "CraLicensedComponentTracking",
+            short_description: "CRA Art. 13(5): Third-party due diligence — license information for all components",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(CRA, "Art. 13(5)")],
+            remediation: "Declare SPDX 3.0 SimpleLicensing profile conformance when the document carries license data, so its Art. 13(5) licence evidence is conveyed completely.",
+            advice: Some(&ADVICE_LICENSING_PROFILE),
         },
         // Single point of contact for vulnerability reporting. Formerly
         // cited Art. 13(6), which is the manufacturer's duty to report
@@ -1403,14 +1505,35 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // Vulnerability severity/remediation metadata. Anchored to the
         // Annex I Part II (4) duty to share information about fixed
         // vulnerabilities (description, impacts, severity, remediation).
+        // One finding per vulnerability of a component, told apart by the
+        // vulnerability id (`finding_detail`). The remediation-detail and
+        // SPDX 3.0 profile checks report under their own ids below.
         "SBOM-CRA-VULN-METADATA" => RuleMeta {
             sarif_id: "SBOM-CRA-VULN-METADATA",
             name: "CraVulnerabilityMetadata",
             short_description: "CRA Annex I Part II (4): Vulnerability severity and remediation metadata completeness",
             default_severity: ViolationSeverity::Warning,
             refs: &[(ANNEX, "Annex I Part II (4)")],
-            remediation: "Give every vulnerability entry a severity or CVSS score, and give each remediation a fixed version or a description (Annex I Part II (4)).",
-            advice: Some(&ADVICE_CRA_VULN_METADATA),
+            remediation: "Give every vulnerability entry a severity or CVSS score (Annex I Part II (4)).",
+            advice: Some(&ADVICE_VULN_SEVERITY),
+        },
+        "SBOM-CRA-VULN-METADATA-REMEDIATION" => RuleMeta {
+            sarif_id: "SBOM-CRA-VULN-METADATA",
+            name: "CraVulnerabilityMetadata",
+            short_description: "CRA Annex I Part II (4): Vulnerability severity and remediation metadata completeness",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(ANNEX, "Annex I Part II (4)")],
+            remediation: "Give every vulnerability remediation a fixed version or a description of the fix (Annex I Part II (4)).",
+            advice: Some(&ADVICE_VULN_REMEDIATION),
+        },
+        "SBOM-CRA-VULN-METADATA-PROFILE" => RuleMeta {
+            sarif_id: "SBOM-CRA-VULN-METADATA",
+            name: "CraVulnerabilityMetadata",
+            short_description: "CRA Annex I Part II (4): Vulnerability severity and remediation metadata completeness",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(ANNEX, "Annex I Part II (4)")],
+            remediation: "Declare SPDX 3.0 Security profile conformance when the document carries vulnerabilities, so the vulnerability information it conveys is complete (Annex I Part II (4)).",
+            advice: Some(&ADVICE_SECURITY_PROFILE),
         },
         // Coordinated vulnerability disclosure policy. Formerly cited
         // Art. 13(7) (systematic documentation); the CVD-policy duty is
@@ -1438,8 +1561,19 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
                 (CRA, "Art. 13(19)"),
                 (ANNEX, "Annex II (7)"),
             ],
-            remediation: "Declare when security updates end (Art. 13(8) / 13(19)): set supportEndDate in the CRA sidecar, or record the date in the SBOM. Components the end-of-life data marks as no longer supported need upgrading or replacing.",
+            remediation: "Declare when security updates end (Art. 13(8) / 13(19)): set supportEndDate in the CRA sidecar, or record the date in the SBOM.",
             advice: Some(&ADVICE_SUPPORT_END),
+        },
+        // Components the end-of-life data marks as no longer supported: a
+        // document-level count apart from the missing support end date.
+        "SBOM-CRA-ART-13-8-EOL" => RuleMeta {
+            sarif_id: "SBOM-CRA-ART-13-8",
+            name: "CraSupportPeriod",
+            short_description: "CRA Art. 13(8) / 13(19): Support period and security update end date (Annex II (7))",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(CRA, "Art. 13(8)")],
+            remediation: "Upgrade or replace the components the end-of-life data marks as no longer supported: they receive no more security updates (Art. 13(8)).",
+            advice: None,
         },
         // Documented vulnerability information. Formerly cited Art. 13(9),
         // which is actually the 10-year availability of issued security
@@ -1463,8 +1597,20 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Art. 13(8) / Annex II (7): Component lifecycle and end-of-support status",
             default_severity: ViolationSeverity::Info,
             refs: &[(CRA, "Art. 13(8)"), (ANNEX, "Annex II (7)")],
-            remediation: "Record component lifecycle or end-of-support status (Art. 13(8) / Annex II (7)); supportEndDate in the CRA sidecar counts too. Plan replacements for components approaching end-of-life.",
+            remediation: "Record component lifecycle or end-of-support status (Art. 13(8) / Annex II (7)); supportEndDate in the CRA sidecar counts too.",
             advice: Some(&ADVICE_LIFECYCLE),
+        },
+        // Components the end-of-life data shows reaching end-of-life within
+        // six months: a document-level count apart from the missing
+        // lifecycle evidence.
+        "SBOM-CRA-LIFECYCLE-APPROACHING-EOL" => RuleMeta {
+            sarif_id: "SBOM-CRA-LIFECYCLE",
+            name: "CraComponentLifecycle",
+            short_description: "CRA Art. 13(8) / Annex II (7): Component lifecycle and end-of-support status",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(CRA, "Art. 13(8)"), (ANNEX, "Annex II (7)")],
+            remediation: "Plan replacements for the components the end-of-life data shows reaching end-of-life within six months (Art. 13(8) / Annex II (7)).",
+            advice: None,
         },
         // Product identification. Formerly cited Art. 13(12) (technical
         // documentation + conformity assessment + DoC + CE marking); product
@@ -1532,13 +1678,43 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Identify each component's supplier; placeholders such as NOASSERTION do not count.",
             advice: Some(&ADVICE_PRODUCER),
         },
-        "SBOM-CRA-ART-14" => RuleMeta {
+        // Art. 14 reporting readiness: one rule per channel, each read from
+        // the CRA sidecar only. Formerly one SBOM-CRA-ART-14 rule whose four
+        // findings on the document shared a finding key.
+        "SBOM-CRA-ART-14-PSIRT" => RuleMeta {
             sarif_id: "SBOM-CRA-GENERAL",
             name: "CraGeneralRequirement",
             short_description: "CRA general SBOM readiness requirement",
             default_severity: ViolationSeverity::Info,
             refs: &[(CRA, "Art. 14")],
-            remediation: "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+            remediation: "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar.",
+            advice: None,
+        },
+        "SBOM-CRA-ART-14-EARLY-WARNING" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(CRA, "Art. 14(2)(a)"), (CRA, "Art. 14(4)(a)")],
+            remediation: "Document the channel for the 24-hour early warning of an actively exploited vulnerability or a severe incident (Art. 14(2)(a) / 14(4)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar.",
+            advice: None,
+        },
+        "SBOM-CRA-ART-14-NOTIFICATION" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(CRA, "Art. 14(2)(b)"), (CRA, "Art. 14(4)(b)")],
+            remediation: "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar.",
+            advice: None,
+        },
+        "SBOM-CRA-ART-14-ENISA" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(CRA, "Art. 14(7)")],
+            remediation: "Record the manufacturer's identifier on the ENISA single reporting platform (Art. 14(7)) once ENISA publishes it: set enisaReportingPlatformId in the CRA sidecar. This check reads only the sidecar.",
             advice: None,
         },
         // The steward's vulnerability-handling floor is the one Art. 24
@@ -1605,10 +1781,25 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
                 (PREN, "PRE-7-RQ-01"),
                 (PREN, "PRE-7-RQ-03"),
             ],
-            // Emitted only by the supplier checks in cra.rs (direct = mandatory,
-            // transitive = recommended); the guidance must talk about suppliers,
-            // not dependency relationships (#347).
-            remediation: "Identify each component's supplier, starting with direct dependencies (mandatory under PRE-7-RQ-03; transitive dependencies are recommended).",
+            // Emitted only by the direct-dependency supplier check in cra.rs
+            // (mandatory); the guidance must talk about suppliers, not
+            // dependency relationships (#347).
+            remediation: "Identify the supplier of every direct dependency, one hop from the primary component or, when none is declared, from a root of the dependency graph (mandatory under PRE-7-RQ-03).",
+            advice: Some(&ADVICE_PRODUCER),
+        },
+        // The transitive-dependency supplier check (recommended), a second
+        // document-level finding beside the direct one.
+        "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE" => RuleMeta {
+            sarif_id: "SBOM-CRA-ANNEX-I",
+            name: "CraTechnicalDocumentation",
+            short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
+            default_severity: ViolationSeverity::Info,
+            refs: &[
+                (ANNEX, "Annex I Part II"),
+                (PREN, "PRE-7-RQ-01"),
+                (PREN, "PRE-7-RQ-03"),
+            ],
+            remediation: "Identify the suppliers of transitive dependencies as well (recommended under PRE-7-RQ-03).",
             advice: Some(&ADVICE_PRODUCER),
         },
         "SBOM-CRA-ANNEX-I-INTEGRITY" => RuleMeta {
@@ -1626,8 +1817,19 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
             default_severity: ViolationSeverity::Error,
             refs: &[(ANNEX, "Annex I")],
-            remediation: "Add dependency relationships between components, and identify the primary product component when the graph has several roots.",
-            advice: Some(&ADVICE_CRA_DEPENDENCY),
+            remediation: "Add dependency relationships between components: connect the primary component to its direct dependencies and keep most components inside the dependency graph.",
+            advice: Some(&ADVICE_DEPENDENCIES),
+        },
+        // Several roots and no primary component: a document-level finding
+        // beside the relationship gaps above.
+        "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS" => RuleMeta {
+            sarif_id: "SBOM-CRA-ANNEX-I",
+            name: "CraTechnicalDocumentation",
+            short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(ANNEX, "Annex I")],
+            remediation: "Identify the primary product component when the dependency graph has several roots, so the product's top-level dependencies are unambiguous.",
+            advice: Some(&ADVICE_PRIMARY),
         },
         "SBOM-CRA-ANNEX-I-PRIMARY" => RuleMeta {
             sarif_id: "SBOM-CRA-ANNEX-I",
@@ -1710,6 +1912,46 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Inventory every hardware component — device, firmware or device driver — with its producer, a unique identifier (PURL, CPE, SWHID or SWID) and, for firmware, the firmware version; give a device either a version or a dependency on its firmware component.",
             advice: Some(&ADVICE_HARDWARE),
         },
+        // The four [PRE-8-RQ-02] checks on a hardware component, one id each
+        // so several gaps on one component never share a finding key. They
+        // alias the SBOM-CRA-PRE-8-RQ-02 SARIF rule above, which no check
+        // site emits any more.
+        "SBOM-CRA-PRE-8-RQ-02-PRODUCER" => RuleMeta {
+            sarif_id: "SBOM-CRA-PRE-8-RQ-02",
+            name: "CraHardwareInventory",
+            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware components must be inventoried with producer, name, identifier, and firmware version",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(PREN, "PRE-8-RQ-02")],
+            remediation: "Name the producer (supplier or author) of every hardware component: device, firmware or device driver.",
+            advice: Some(&ADVICE_PRODUCER),
+        },
+        "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER" => RuleMeta {
+            sarif_id: "SBOM-CRA-PRE-8-RQ-02",
+            name: "CraHardwareInventory",
+            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware components must be inventoried with producer, name, identifier, and firmware version",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(PREN, "PRE-8-RQ-02")],
+            remediation: "Give every hardware component a unique identifier: a PURL, CPE, SWHID or SWID.",
+            advice: Some(&ADVICE_IDENTIFIER),
+        },
+        "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION" => RuleMeta {
+            sarif_id: "SBOM-CRA-PRE-8-RQ-02",
+            name: "CraHardwareInventory",
+            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware components must be inventoried with producer, name, identifier, and firmware version",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(PREN, "PRE-8-RQ-02")],
+            remediation: "Give every firmware component its firmware version.",
+            advice: Some(&ADVICE_VERSION),
+        },
+        "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE" => RuleMeta {
+            sarif_id: "SBOM-CRA-PRE-8-RQ-02",
+            name: "CraHardwareInventory",
+            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware components must be inventoried with producer, name, identifier, and firmware version",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(PREN, "PRE-8-RQ-02")],
+            remediation: "Give every device a version, or a dependency on the firmware component it runs.",
+            advice: Some(&ADVICE_DEVICE_FIRMWARE),
+        },
         "SBOM-CRA-PRE-7-RQ-07-RE" => RuleMeta {
             sarif_id: "SBOM-CRA-PRE-7-RQ-07-RE",
             name: "CraVendorHashCarryThrough",
@@ -1733,10 +1975,67 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers.",
             advice: Some(&ADVICE_CRA_GENERAL),
         },
-        // Generic bucket for quality-profile (Minimum/Standard/Comprehensive)
-        // findings whose check site has no specific registry mapping. The
-        // SARIF renderer re-buckets the `SBOM-CRA-GENERAL` fallback onto this
-        // rule for quality runs so they never surface under a CRA identity.
+        // The generic path's checks under the CRA profiles, one id each so
+        // that two of them on one subject never share a finding key. All
+        // alias the SBOM-CRA-GENERAL SARIF rule they reported as before.
+        "SBOM-CRA-CREATOR" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: REMEDIATION_CREATOR,
+            advice: Some(&ADVICE_CREATORS),
+        },
+        "SBOM-CRA-SERIAL" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_SERIAL,
+            advice: Some(&ADVICE_SERIAL),
+        },
+        "SBOM-CRA-COMPONENT-NAME" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: REMEDIATION_COMPONENT_NAME,
+            advice: Some(&ADVICE_NAME),
+        },
+        "SBOM-CRA-SPEC-VERSION" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_SPEC_VERSION,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-CRA-SPEC-VERSION-UNKNOWN" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_SPEC_VERSION_UNKNOWN,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-CRA-ELEMENT-ID" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Info,
+            refs: &[],
+            remediation: REMEDIATION_ELEMENT_ID,
+            advice: Some(&ADVICE_ELEMENT_ID),
+        },
+        // SARIF rule of the quality profiles (Minimum/Standard/Comprehensive):
+        // the SBOM-QUALITY-* checks below alias it, and the SARIF renderer
+        // re-buckets the `SBOM-CRA-GENERAL` fallback onto it for quality runs
+        // so they never surface under a CRA identity.
         "SBOM-QUALITY-GENERAL" => RuleMeta {
             sarif_id: "SBOM-QUALITY-GENERAL",
             name: "QualityGeneralRequirement",
@@ -1745,6 +2044,96 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             refs: &[],
             remediation: "Fix the element the finding names. The quality profiles' generic checks look for the SBOM's creator, a document serial number, a component inventory, a name, unique identifier (PURL, CPE, SWHID or SWID), license and hash on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers.",
             advice: Some(&ADVICE_QUALITY_GENERAL),
+        },
+        "SBOM-QUALITY-CREATOR" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: REMEDIATION_CREATOR,
+            advice: Some(&ADVICE_CREATORS),
+        },
+        "SBOM-QUALITY-SERIAL" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_SERIAL,
+            advice: Some(&ADVICE_SERIAL),
+        },
+        "SBOM-QUALITY-INVENTORY" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: REMEDIATION_INVENTORY,
+            advice: Some(&ADVICE_INVENTORY),
+        },
+        "SBOM-QUALITY-NAME" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: REMEDIATION_COMPONENT_NAME,
+            advice: Some(&ADVICE_NAME),
+        },
+        "SBOM-QUALITY-IDENTIFIER" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: "Give every component a unique identifier: a PURL, CPE, SWHID or SWID.",
+            advice: Some(&ADVICE_IDENTIFIER),
+        },
+        "SBOM-QUALITY-LICENSE" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: "Record every component's license, declared or concluded.",
+            advice: Some(&ADVICE_LICENSE),
+        },
+        "SBOM-QUALITY-HASH" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: "Give every component a cryptographic hash, preferably SHA-256 or stronger.",
+            advice: Some(&ADVICE_HASH),
+        },
+        "SBOM-QUALITY-SPEC-VERSION" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_SPEC_VERSION,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-QUALITY-SPEC-VERSION-UNKNOWN" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[],
+            remediation: REMEDIATION_SPEC_VERSION_UNKNOWN,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-QUALITY-ELEMENT-ID" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-GENERAL",
+            name: "QualityGeneralRequirement",
+            short_description: "SBOM quality: general quality-profile requirement",
+            default_severity: ViolationSeverity::Info,
+            refs: &[],
+            remediation: REMEDIATION_ELEMENT_ID,
+            advice: Some(&ADVICE_ELEMENT_ID),
         },
         // ---- EUCC Substantial (reference-only profile) -------------------
         "SBOM-EUCC-PP" => RuleMeta {
@@ -2347,8 +2736,19 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "FDA Medical Device: Component support/contact information",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
-            remediation: "Give the SBOM creator a contact email, and state the components' level of support and end-of-support date (FD&C §524B); the support information may also accompany the SBOM.",
+            remediation: "State the components' level of support and end-of-support date (FD&C §524B); the information may also accompany the SBOM.",
             advice: Some(&ADVICE_FDA_SUPPORT),
+        },
+        // The creator contact-email check, a second document-level finding
+        // beside the support information above.
+        "SBOM-FDA-CONTACT" => RuleMeta {
+            sarif_id: "SBOM-FDA-SUPPORT",
+            name: "FdaSupport",
+            short_description: "FDA Medical Device: Component support/contact information",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: "Give the SBOM creator a contact email (FDA premarket guidance).",
+            advice: Some(&ADVICE_FDA_CONTACT),
         },
         "SBOM-FDA-NAME" => RuleMeta {
             sarif_id: "SBOM-FDA-GENERAL",
@@ -2444,6 +2844,44 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Fix the element the finding names: give every component a name (an NTIA baseline element the FDA guidance incorporates), use a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0), and give every element a well-formed identifier.",
             advice: Some(&ADVICE_FDA_GENERAL),
         },
+        // The generic path's checks under FDA that have no FDA rule of their
+        // own, one id each; all alias the SBOM-FDA-GENERAL SARIF rule.
+        "SBOM-FDA-COMPONENT-NAME" => RuleMeta {
+            sarif_id: "SBOM-FDA-GENERAL",
+            name: "FdaGeneralRequirement",
+            short_description: "FDA Medical Device: General SBOM requirement",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: "Give every component a name (an NTIA baseline element the FDA guidance incorporates); empty names and placeholders such as NOASSERTION do not count.",
+            advice: Some(&ADVICE_NAME),
+        },
+        "SBOM-FDA-SPEC-VERSION" => RuleMeta {
+            sarif_id: "SBOM-FDA-GENERAL",
+            name: "FdaGeneralRequirement",
+            short_description: "FDA Medical Device: General SBOM requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_SPEC_VERSION,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-FDA-SPEC-VERSION-UNKNOWN" => RuleMeta {
+            sarif_id: "SBOM-FDA-GENERAL",
+            name: "FdaGeneralRequirement",
+            short_description: "FDA Medical Device: General SBOM requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_SPEC_VERSION_UNKNOWN,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-FDA-ELEMENT-ID" => RuleMeta {
+            sarif_id: "SBOM-FDA-GENERAL",
+            name: "FdaGeneralRequirement",
+            short_description: "FDA Medical Device: General SBOM requirement",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_ELEMENT_ID,
+            advice: Some(&ADVICE_ELEMENT_ID),
+        },
         // NTIA rules emitted by the `validate` fast-path.
         "SBOM-NTIA-AUTHOR" => RuleMeta {
             sarif_id: "SBOM-NTIA-AUTHOR",
@@ -2490,6 +2928,35 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Fix the format-level issue the finding names: use a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and give every element a well-formed identifier.",
             advice: Some(&ADVICE_FORMAT_GENERAL),
         },
+        // The generic path's format-level checks under NTIA, one id each;
+        // all alias the SBOM-NTIA-GENERAL SARIF rule.
+        "SBOM-NTIA-SPEC-VERSION" => RuleMeta {
+            sarif_id: "SBOM-NTIA-GENERAL",
+            name: "NtiaGeneralRequirement",
+            short_description: "NTIA Minimum Elements: General requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
+            remediation: REMEDIATION_SPEC_VERSION,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-NTIA-SPEC-VERSION-UNKNOWN" => RuleMeta {
+            sarif_id: "SBOM-NTIA-GENERAL",
+            name: "NtiaGeneralRequirement",
+            short_description: "NTIA Minimum Elements: General requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
+            remediation: REMEDIATION_SPEC_VERSION_UNKNOWN,
+            advice: Some(&ADVICE_SPEC_VERSION),
+        },
+        "SBOM-NTIA-ELEMENT-ID" => RuleMeta {
+            sarif_id: "SBOM-NTIA-GENERAL",
+            name: "NtiaGeneralRequirement",
+            short_description: "NTIA Minimum Elements: General requirement",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
+            remediation: REMEDIATION_ELEMENT_ID,
+            advice: Some(&ADVICE_ELEMENT_ID),
+        },
         // Catch-all rule keys for the SSDF / EO 14028 profiles; not currently
         // emitted by any check site but kept so the registry mirrors the full
         // SARIF rule catalogue.
@@ -2520,6 +2987,17 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             refs: &[(K::NistSsdf, "PS.1")],
             remediation: REMEDIATION_SSDF,
             advice: Some(&ADVICE_CREATORS),
+        },
+        // The PS.1 generation-tool check, a second document-level finding
+        // beside the creator check above.
+        "SBOM-SSDF-PS1-TOOL" => RuleMeta {
+            sarif_id: "SBOM-SSDF-PS1",
+            name: "SsdfProvenance",
+            short_description: "NIST SSDF PS.1: Provenance and creator identification",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::NistSsdf, "PS.1")],
+            remediation: "Identify the tool that generated the SBOM, so its provenance shows how it was produced (NIST SSDF PS.1).",
+            advice: Some(&ADVICE_TOOL),
         },
         "SBOM-SSDF-PS2" => RuleMeta {
             sarif_id: "SBOM-SSDF-PS2",
@@ -3652,8 +4130,19 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CISA FSCT 3e §2.2.2.7 (Aspirational): license information incl. concluded-license attestation for ALL components",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::CisaFsct, "§2.2.2.7")],
-            remediation: "Provide license information for all listed components, including a concluded-license attestation.",
-            advice: Some(&ADVICE_LICENSE_ALL),
+            remediation: "Provide license information for all listed components.",
+            advice: Some(&ADVICE_LICENSE),
+        },
+        // The concluded-licence attestation, a second document-level finding
+        // beside the all-components coverage above.
+        "SBOM-FSCT-LICENSE-CONCLUDED" => RuleMeta {
+            sarif_id: "SBOM-FSCT-LICENSE-ALL",
+            name: "FsctLicenseAll",
+            short_description: "CISA FSCT 3e §2.2.2.7 (Aspirational): license information incl. concluded-license attestation for ALL components",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::CisaFsct, "§2.2.2.7")],
+            remediation: "Record a concluded-license attestation for the listed components, alongside their declared license information.",
+            advice: Some(&ADVICE_LICENSE_CONCLUDED),
         },
         "SBOM-FSCT-COPYRIGHT-PRIMARY" => RuleMeta {
             sarif_id: "SBOM-FSCT-COPYRIGHT-PRIMARY",
@@ -3733,27 +4222,37 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-CRA-SBOM-FRESHNESS",
     "SBOM-CRA-MACHINE-READABLE",
     "SBOM-CRA-ART-13-5",
+    "SBOM-CRA-ART-13-5-PROFILE",
     "SBOM-CRA-ART-13-17-CONTACT",
     "SBOM-CRA-VULN-METADATA",
+    "SBOM-CRA-VULN-METADATA-REMEDIATION",
+    "SBOM-CRA-VULN-METADATA-PROFILE",
     "SBOM-CRA-CVD-POLICY",
     "SBOM-CRA-ART-13-8",
+    "SBOM-CRA-ART-13-8-EOL",
     "SBOM-CRA-VULN-STATEMENT",
     "SBOM-CRA-LIFECYCLE",
+    "SBOM-CRA-LIFECYCLE-APPROACHING-EOL",
     "SBOM-CRA-ART-13-15-PRODUCT",
     "SBOM-CRA-COMPONENT-VERSION",
     "SBOM-CRA-ART-24-SUPPLIER",
     "SBOM-CRA-ART-13-16",
     "SBOM-CRA-ART-13-16-EMAIL",
     "SBOM-CRA-COMPONENT-SUPPLIER",
-    "SBOM-CRA-ART-14",
+    "SBOM-CRA-ART-14-PSIRT",
+    "SBOM-CRA-ART-14-EARLY-WARNING",
+    "SBOM-CRA-ART-14-NOTIFICATION",
+    "SBOM-CRA-ART-14-ENISA",
     "SBOM-CRA-ART-24",
     "SBOM-CRA-ANNEX-I",
     "SBOM-CRA-ANNEX-I-IDENTIFIER",
     "SBOM-CRA-ANNEX-I-TRACEABILITY",
     "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
+    "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
     "SBOM-CRA-INVENTORY",
     "SBOM-CRA-ANNEX-I-INTEGRITY",
     "SBOM-CRA-ANNEX-I-DEPENDENCY",
+    "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS",
     "SBOM-CRA-ANNEX-I-PRIMARY",
     "SBOM-CRA-ANNEX-I-CONTROLS",
     "SBOM-CRA-DOC-INTEGRITY",
@@ -3762,9 +4261,29 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-CRA-CYCLES",
     "SBOM-CRA-ANNEX-VIII",
     "SBOM-CRA-PRE-8-RQ-02",
+    "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
+    "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
+    "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
+    "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
     "SBOM-CRA-PRE-7-RQ-07-RE",
     "SBOM-CRA-GENERAL",
+    "SBOM-CRA-CREATOR",
+    "SBOM-CRA-SERIAL",
+    "SBOM-CRA-COMPONENT-NAME",
+    "SBOM-CRA-SPEC-VERSION",
+    "SBOM-CRA-SPEC-VERSION-UNKNOWN",
+    "SBOM-CRA-ELEMENT-ID",
     "SBOM-QUALITY-GENERAL",
+    "SBOM-QUALITY-CREATOR",
+    "SBOM-QUALITY-SERIAL",
+    "SBOM-QUALITY-INVENTORY",
+    "SBOM-QUALITY-NAME",
+    "SBOM-QUALITY-IDENTIFIER",
+    "SBOM-QUALITY-LICENSE",
+    "SBOM-QUALITY-HASH",
+    "SBOM-QUALITY-SPEC-VERSION",
+    "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
+    "SBOM-QUALITY-ELEMENT-ID",
     "SBOM-EUCC-PP",
     "SBOM-EUCC-TOE",
     "SBOM-EUCC-ITSEF",
@@ -3829,6 +4348,7 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-NTIA-DEPENDENCY",
     "SBOM-FDA-SUPPLIER",
     "SBOM-FDA-SUPPORT",
+    "SBOM-FDA-CONTACT",
     "SBOM-FDA-NAME",
     "SBOM-FDA-VERSION",
     "SBOM-FDA-IDENTIFIER",
@@ -3839,14 +4359,22 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-FDA-DEPENDENCY",
     "SBOM-FDA-SECURITY",
     "SBOM-FDA-GENERAL",
+    "SBOM-FDA-COMPONENT-NAME",
+    "SBOM-FDA-SPEC-VERSION",
+    "SBOM-FDA-SPEC-VERSION-UNKNOWN",
+    "SBOM-FDA-ELEMENT-ID",
     "SBOM-NTIA-AUTHOR",
     "SBOM-NTIA-INVENTORY",
     "SBOM-NTIA-NAME",
     "SBOM-NTIA-IDENTIFIER",
     "SBOM-NTIA-GENERAL",
+    "SBOM-NTIA-SPEC-VERSION",
+    "SBOM-NTIA-SPEC-VERSION-UNKNOWN",
+    "SBOM-NTIA-ELEMENT-ID",
     "SBOM-SSDF-GENERAL",
     "SBOM-EO14028-GENERAL",
     "SBOM-SSDF-PS1",
+    "SBOM-SSDF-PS1-TOOL",
     "SBOM-SSDF-PS2",
     "SBOM-SSDF-PS3",
     "SBOM-SSDF-INVENTORY",
@@ -3966,6 +4494,7 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-FSCT-LICENSE-PRIMARY",
     "SBOM-FSCT-LICENSE-COVERAGE",
     "SBOM-FSCT-LICENSE-ALL",
+    "SBOM-FSCT-LICENSE-CONCLUDED",
     "SBOM-FSCT-COPYRIGHT-PRIMARY",
     "SBOM-FSCT-COPYRIGHT-COVERAGE",
     "SBOM-FSCT-COPYRIGHT-ALL",
@@ -4414,15 +4943,10 @@ mod tests {
     fn cited_sidecar_keys_load() {
         const CITED: &[(&str, &[&str])] = &[
             ("SBOM-CRA-ART-13-2", &["riskAssessmentUrl"]),
-            (
-                "SBOM-CRA-ART-14",
-                &[
-                    "psirtUrl",
-                    "earlyWarningContact",
-                    "incidentReportContact",
-                    "enisaReportingPlatformId",
-                ],
-            ),
+            ("SBOM-CRA-ART-14-PSIRT", &["psirtUrl"]),
+            ("SBOM-CRA-ART-14-EARLY-WARNING", &["earlyWarningContact"]),
+            ("SBOM-CRA-ART-14-NOTIFICATION", &["incidentReportContact"]),
+            ("SBOM-CRA-ART-14-ENISA", &["enisaReportingPlatformId"]),
             (
                 "SBOM-CRA-ART-24",
                 &["psirtUrl", "vulnerabilityDisclosureUrl"],
@@ -4594,7 +5118,9 @@ mod tests {
     /// rule family (same guarantee as the CNSA 2.0 / PQC test above): the
     /// parallel checker wave adds check sites but may not touch this file,
     /// so a family rule missing from its slice would silently fall off the
-    /// upfront-declared SARIF catalogue.
+    /// upfront-declared SARIF catalogue. A family id that aliases another
+    /// family rule (SBOM-FSCT-LICENSE-CONCLUDED reports as
+    /// SBOM-FSCT-LICENSE-ALL) is covered by the rule it aliases.
     #[test]
     fn p4_profile_slices_cover_their_rule_families() {
         for (prefix, slice) in [
@@ -4606,6 +5132,7 @@ mod tests {
                 .iter()
                 .copied()
                 .filter(|id| id.starts_with(prefix))
+                .map(|id| rule_meta(id).expect("listed id resolves").sarif_id)
                 .collect();
             let actual: std::collections::BTreeSet<&str> = slice.iter().copied().collect();
             assert_eq!(

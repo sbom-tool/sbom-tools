@@ -5,29 +5,30 @@ fixture: demo-new.cdx.json
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W1 I9
-  I SBOM-QUALITY-GENERAL  acme-webapp
-  I SBOM-QUALITY-GENERAL  pkg:npm/axios@1.4.0
-  I SBOM-QUALITY-GENERAL  pkg:npm/dayjs@1.11.7
-  I SBOM-QUALITY-GENERAL  pkg:npm/express@4.18.2
-  I SBOM-QUALITY-GENERAL  pkg:npm/lodash@4.17.21
-  I SBOM-QUALITY-GENERAL  pkg:npm/prisma@4.15.0
-  I SBOM-QUALITY-GENERAL  pkg:npm/react@18.2.0
-  I SBOM-QUALITY-GENERAL  pkg:npm/typescript@5.0.4
-  I SBOM-QUALITY-GENERAL  pkg:npm/zod@3.21.4
-  W SBOM-QUALITY-GENERAL  -
+  I SBOM-QUALITY-ELEMENT-ID  acme-webapp
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/axios@1.4.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/dayjs@1.11.7
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/express@4.18.2
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/lodash@4.17.21
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/prisma@4.15.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/react@18.2.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/typescript@5.0.4
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/zod@3.21.4
+  W SBOM-QUALITY-CREATOR  -
 [Standard] NON-COMPLIANT · E1 W3 I9
-  E SBOM-QUALITY-GENERAL  -
-  I SBOM-QUALITY-GENERAL  acme-webapp
-  I SBOM-QUALITY-GENERAL  pkg:npm/axios@1.4.0
-  I SBOM-QUALITY-GENERAL  pkg:npm/dayjs@1.11.7
-  I SBOM-QUALITY-GENERAL  pkg:npm/express@4.18.2
-  I SBOM-QUALITY-GENERAL  pkg:npm/lodash@4.17.21
-  I SBOM-QUALITY-GENERAL  pkg:npm/prisma@4.15.0
-  I SBOM-QUALITY-GENERAL  pkg:npm/react@18.2.0
-  I SBOM-QUALITY-GENERAL  pkg:npm/typescript@5.0.4
-  I SBOM-QUALITY-GENERAL  pkg:npm/zod@3.21.4
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  acme-webapp ×2
+  E SBOM-QUALITY-CREATOR  -
+  I SBOM-QUALITY-ELEMENT-ID  acme-webapp
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/axios@1.4.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/dayjs@1.11.7
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/express@4.18.2
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/lodash@4.17.21
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/prisma@4.15.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/react@18.2.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/typescript@5.0.4
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/zod@3.21.4
+  W SBOM-QUALITY-IDENTIFIER  acme-webapp
+  W SBOM-QUALITY-LICENSE  acme-webapp
+  W SBOM-QUALITY-SERIAL  -
 [NtiaMinimum] NON-COMPLIANT · E11 W1 I9
   E SBOM-NTIA-AUTHOR  -
   E SBOM-NTIA-IDENTIFIER  acme-webapp
@@ -40,19 +41,19 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  pkg:npm/react@18.2.0
   E SBOM-NTIA-SUPPLIER  pkg:npm/typescript@5.0.4
   E SBOM-NTIA-SUPPLIER  pkg:npm/zod@3.21.4
-  I SBOM-NTIA-GENERAL  acme-webapp
-  I SBOM-NTIA-GENERAL  pkg:npm/axios@1.4.0
-  I SBOM-NTIA-GENERAL  pkg:npm/dayjs@1.11.7
-  I SBOM-NTIA-GENERAL  pkg:npm/express@4.18.2
-  I SBOM-NTIA-GENERAL  pkg:npm/lodash@4.17.21
-  I SBOM-NTIA-GENERAL  pkg:npm/prisma@4.15.0
-  I SBOM-NTIA-GENERAL  pkg:npm/react@18.2.0
-  I SBOM-NTIA-GENERAL  pkg:npm/typescript@5.0.4
-  I SBOM-NTIA-GENERAL  pkg:npm/zod@3.21.4
+  I SBOM-NTIA-ELEMENT-ID  acme-webapp
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/axios@1.4.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/dayjs@1.11.7
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/express@4.18.2
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/lodash@4.17.21
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/prisma@4.15.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/react@18.2.0
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/typescript@5.0.4
+  I SBOM-NTIA-ELEMENT-ID  pkg:npm/zod@3.21.4
   W SBOM-NTIA-DEPENDENCY  acme-webapp
 [CraPhase1] NON-COMPLIANT · E2 W18 I23
   E SBOM-CRA-ANNEX-I-IDENTIFIER  acme-webapp
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  acme-webapp
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/axios@1.4.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/dayjs@1.11.7
@@ -62,25 +63,27 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/react@18.2.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/typescript@5.0.4
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/zod@3.21.4
-  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (9/9)
+  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (9/9)
   I SBOM-CRA-ART-13-5  - (1/9)
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-DOC-INTEGRITY  -
-  I SBOM-CRA-GENERAL  acme-webapp
-  I SBOM-CRA-GENERAL  pkg:npm/axios@1.4.0
-  I SBOM-CRA-GENERAL  pkg:npm/dayjs@1.11.7
-  I SBOM-CRA-GENERAL  pkg:npm/express@4.18.2
-  I SBOM-CRA-GENERAL  pkg:npm/lodash@4.17.21
-  I SBOM-CRA-GENERAL  pkg:npm/prisma@4.15.0
-  I SBOM-CRA-GENERAL  pkg:npm/react@18.2.0
-  I SBOM-CRA-GENERAL  pkg:npm/typescript@5.0.4
-  I SBOM-CRA-GENERAL  pkg:npm/zod@3.21.4
+  I SBOM-CRA-ELEMENT-ID  acme-webapp
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/axios@1.4.0
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/dayjs@1.11.7
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/express@4.18.2
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/lodash@4.17.21
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/prisma@4.15.0
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/react@18.2.0
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/typescript@5.0.4
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/zod@3.21.4
   W SBOM-CRA-ANNEX-I-DEPENDENCY  acme-webapp
   W SBOM-CRA-ANNEX-I-TRACEABILITY  acme-webapp
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  acme-webapp
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/axios@1.4.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/dayjs@1.11.7
@@ -90,11 +93,11 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/react@18.2.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/typescript@5.0.4
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/zod@3.21.4
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [CraPhase2] NON-COMPLIANT · E2 W21 I24
   E SBOM-CRA-ANNEX-I-IDENTIFIER  acme-webapp
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  acme-webapp
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/axios@1.4.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/dayjs@1.11.7
@@ -107,25 +110,27 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-5  - (1/9)
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-DOC-INTEGRITY  -
-  I SBOM-CRA-GENERAL  acme-webapp
-  I SBOM-CRA-GENERAL  pkg:npm/axios@1.4.0
-  I SBOM-CRA-GENERAL  pkg:npm/dayjs@1.11.7
-  I SBOM-CRA-GENERAL  pkg:npm/express@4.18.2
-  I SBOM-CRA-GENERAL  pkg:npm/lodash@4.17.21
-  I SBOM-CRA-GENERAL  pkg:npm/prisma@4.15.0
-  I SBOM-CRA-GENERAL  pkg:npm/react@18.2.0
-  I SBOM-CRA-GENERAL  pkg:npm/typescript@5.0.4
-  I SBOM-CRA-GENERAL  pkg:npm/zod@3.21.4
+  I SBOM-CRA-ELEMENT-ID  acme-webapp
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/axios@1.4.0
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/dayjs@1.11.7
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/express@4.18.2
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/lodash@4.17.21
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/prisma@4.15.0
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/react@18.2.0
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/typescript@5.0.4
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/zod@3.21.4
   I SBOM-CRA-LIFECYCLE  -
   W SBOM-CRA-ANNEX-I-DEPENDENCY  acme-webapp
-  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (9/9)
+  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (9/9)
   W SBOM-CRA-ANNEX-I-TRACEABILITY  acme-webapp
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  acme-webapp
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/axios@1.4.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/dayjs@1.11.7
@@ -136,8 +141,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/typescript@5.0.4
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/zod@3.21.4
   W SBOM-CRA-CVD-POLICY  -
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [FdaMedicalDevice] NON-COMPLIANT · E20 W7 I9
   E SBOM-FDA-CREATOR  -
   E SBOM-FDA-HASH  acme-webapp
@@ -159,27 +164,28 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-SUPPLIER  pkg:npm/react@18.2.0
   E SBOM-FDA-SUPPLIER  pkg:npm/typescript@5.0.4
   E SBOM-FDA-SUPPLIER  pkg:npm/zod@3.21.4
-  I SBOM-FDA-GENERAL  acme-webapp
-  I SBOM-FDA-GENERAL  pkg:npm/axios@1.4.0
-  I SBOM-FDA-GENERAL  pkg:npm/dayjs@1.11.7
-  I SBOM-FDA-GENERAL  pkg:npm/express@4.18.2
-  I SBOM-FDA-GENERAL  pkg:npm/lodash@4.17.21
-  I SBOM-FDA-GENERAL  pkg:npm/prisma@4.15.0
-  I SBOM-FDA-GENERAL  pkg:npm/react@18.2.0
-  I SBOM-FDA-GENERAL  pkg:npm/typescript@5.0.4
-  I SBOM-FDA-GENERAL  pkg:npm/zod@3.21.4
+  I SBOM-FDA-ELEMENT-ID  acme-webapp
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/axios@1.4.0
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/dayjs@1.11.7
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/express@4.18.2
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/lodash@4.17.21
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/prisma@4.15.0
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/react@18.2.0
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/typescript@5.0.4
+  I SBOM-FDA-ELEMENT-ID  pkg:npm/zod@3.21.4
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-DEPENDENCY  - (2/9)
   W SBOM-FDA-DEPENDENCY  acme-webapp
   W SBOM-FDA-NAMESPACE  -
   W SBOM-FDA-SECURITY  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E2 W4 I1
   E SBOM-SSDF-PS1  -
   E SBOM-SSDF-PS2  - (9/9)
   I SBOM-SSDF-PO3  -
   W SBOM-SSDF-PO1  -
-  W SBOM-SSDF-PS1  -
+  W SBOM-SSDF-PS1-TOOL  -
   W SBOM-SSDF-PS3  - (9/9)
   W SBOM-SSDF-RV1  - (1/9)
 [Eo14028] NON-COMPLIANT · E3 W3 I0
@@ -214,15 +220,15 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/react@18.2.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/typescript@5.0.4
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/zod@3.21.4
-  I SBOM-CRA-GENERAL  acme-webapp
-  I SBOM-CRA-GENERAL  pkg:npm/axios@1.4.0
-  I SBOM-CRA-GENERAL  pkg:npm/dayjs@1.11.7
-  I SBOM-CRA-GENERAL  pkg:npm/express@4.18.2
-  I SBOM-CRA-GENERAL  pkg:npm/lodash@4.17.21
-  I SBOM-CRA-GENERAL  pkg:npm/prisma@4.15.0
-  I SBOM-CRA-GENERAL  pkg:npm/react@18.2.0
-  I SBOM-CRA-GENERAL  pkg:npm/typescript@5.0.4
-  I SBOM-CRA-GENERAL  pkg:npm/zod@3.21.4
+  I SBOM-CRA-ELEMENT-ID  acme-webapp
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/axios@1.4.0
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/dayjs@1.11.7
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/express@4.18.2
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/lodash@4.17.21
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/prisma@4.15.0
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/react@18.2.0
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/typescript@5.0.4
+  I SBOM-CRA-ELEMENT-ID  pkg:npm/zod@3.21.4
   W SBOM-CRA-ANNEX-I-DEPENDENCY  acme-webapp
   W SBOM-CRA-ART-24-SUPPLIER  acme-webapp
   W SBOM-CRA-ART-24-SUPPLIER  pkg:npm/axios@1.4.0
@@ -303,24 +309,26 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  pkg:npm/react@18.2.0
   E SBOM-NTIA-SUPPLIER  pkg:npm/typescript@5.0.4
   E SBOM-NTIA-SUPPLIER  pkg:npm/zod@3.21.4
-  E SBOM-QUALITY-GENERAL  -
-  I SBOM-QUALITY-GENERAL  acme-webapp
-  I SBOM-QUALITY-GENERAL  pkg:npm/axios@1.4.0
-  I SBOM-QUALITY-GENERAL  pkg:npm/dayjs@1.11.7
-  I SBOM-QUALITY-GENERAL  pkg:npm/express@4.18.2
-  I SBOM-QUALITY-GENERAL  pkg:npm/lodash@4.17.21
-  I SBOM-QUALITY-GENERAL  pkg:npm/prisma@4.15.0
-  I SBOM-QUALITY-GENERAL  pkg:npm/react@18.2.0
-  I SBOM-QUALITY-GENERAL  pkg:npm/typescript@5.0.4
-  I SBOM-QUALITY-GENERAL  pkg:npm/zod@3.21.4
+  E SBOM-QUALITY-CREATOR  -
+  I SBOM-QUALITY-ELEMENT-ID  acme-webapp
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/axios@1.4.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/dayjs@1.11.7
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/express@4.18.2
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/lodash@4.17.21
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/prisma@4.15.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/react@18.2.0
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/typescript@5.0.4
+  I SBOM-QUALITY-ELEMENT-ID  pkg:npm/zod@3.21.4
   W SBOM-NTIA-DEPENDENCY  acme-webapp
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  acme-webapp ×3
-  W SBOM-QUALITY-GENERAL  pkg:npm/axios@1.4.0
-  W SBOM-QUALITY-GENERAL  pkg:npm/dayjs@1.11.7
-  W SBOM-QUALITY-GENERAL  pkg:npm/express@4.18.2
-  W SBOM-QUALITY-GENERAL  pkg:npm/lodash@4.17.21
-  W SBOM-QUALITY-GENERAL  pkg:npm/prisma@4.15.0
-  W SBOM-QUALITY-GENERAL  pkg:npm/react@18.2.0
-  W SBOM-QUALITY-GENERAL  pkg:npm/typescript@5.0.4
-  W SBOM-QUALITY-GENERAL  pkg:npm/zod@3.21.4
+  W SBOM-QUALITY-HASH  acme-webapp
+  W SBOM-QUALITY-HASH  pkg:npm/axios@1.4.0
+  W SBOM-QUALITY-HASH  pkg:npm/dayjs@1.11.7
+  W SBOM-QUALITY-HASH  pkg:npm/express@4.18.2
+  W SBOM-QUALITY-HASH  pkg:npm/lodash@4.17.21
+  W SBOM-QUALITY-HASH  pkg:npm/prisma@4.15.0
+  W SBOM-QUALITY-HASH  pkg:npm/react@18.2.0
+  W SBOM-QUALITY-HASH  pkg:npm/typescript@5.0.4
+  W SBOM-QUALITY-HASH  pkg:npm/zod@3.21.4
+  W SBOM-QUALITY-IDENTIFIER  acme-webapp
+  W SBOM-QUALITY-LICENSE  acme-webapp
+  W SBOM-QUALITY-SERIAL  -

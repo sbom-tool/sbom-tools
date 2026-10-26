@@ -296,6 +296,7 @@ mod tests {
             counts: None,
             standard_refs: Vec::new(),
             remediation: None,
+            finding_detail: None,
         }
     }
 
@@ -423,6 +424,7 @@ mod tests {
             counts: None,
             standard_refs: Vec::new(),
             remediation: None,
+            finding_detail: None,
         }
     }
 
@@ -508,6 +510,7 @@ mod tests {
             counts: None,
             standard_refs: Vec::new(),
             remediation: None,
+            finding_detail: None,
         };
         let document = build(&[result(vec![
             with_severity("info finding", ViolationSeverity::Info),

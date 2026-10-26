@@ -6,9 +6,10 @@ as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I0
 [Standard] compliant · E0 W4 I0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/libtokenizer@2.1.0
-  W SBOM-QUALITY-GENERAL  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
-  W SBOM-QUALITY-GENERAL  urn:spdx:pkg:training-dataset-v1 ×2
+  W SBOM-QUALITY-IDENTIFIER  urn:spdx:pkg:training-dataset-v1
+  W SBOM-QUALITY-LICENSE  pkg:cargo/libtokenizer@2.1.0
+  W SBOM-QUALITY-LICENSE  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
+  W SBOM-QUALITY-LICENSE  urn:spdx:pkg:training-dataset-v1
 [NtiaMinimum] NON-COMPLIANT · E2 W0 I0
   E SBOM-NTIA-IDENTIFIER  urn:spdx:pkg:training-dataset-v1
   E SBOM-NTIA-SUPPLIER  pkg:cargo/libtokenizer@2.1.0
@@ -17,11 +18,13 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/libtokenizer@2.1.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  urn:spdx:pkg:training-dataset-v1
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
   W SBOM-CRA-ART-13-5  - (3/3)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/libtokenizer@2.1.0
   W SBOM-CRA-SBOM-FRESHNESS  -
 [CraPhase2] NON-COMPLIANT · E2 W7 I7
@@ -31,12 +34,14 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  urn:spdx:pkg:training-dataset-v1
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-13-5  - (3/3)
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/libtokenizer@2.1.0
   W SBOM-CRA-SBOM-FRESHNESS  -
 [FdaMedicalDevice] NON-COMPLIANT · E4 W3 I0
@@ -44,8 +49,9 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-HASH  urn:spdx:pkg:training-dataset-v1
   E SBOM-FDA-IDENTIFIER  urn:spdx:pkg:training-dataset-v1
   E SBOM-FDA-SUPPLIER  pkg:cargo/libtokenizer@2.1.0
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-DEPENDENCY  - (1/3)
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E1 W3 I1
   E SBOM-SSDF-PS2  - (2/3)
   I SBOM-SSDF-PO3  -
@@ -112,8 +118,8 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FSCT-SUPPLIER  - (1/3)
   I SBOM-FSCT-COPYRIGHT-ALL  - (3/3)
   I SBOM-FSCT-DYNAMIC-DEPS  -
-  I SBOM-FSCT-LICENSE-ALL  -
   I SBOM-FSCT-LICENSE-ALL  - (3/3)
+  I SBOM-FSCT-LICENSE-CONCLUDED  -
   W SBOM-FSCT-COMPLETENESS  -
   W SBOM-FSCT-COPYRIGHT-COVERAGE  - (0/3)
   W SBOM-FSCT-IDENTIFIER-MULTI  - (3/3)
@@ -123,6 +129,9 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-UPSTREAM-SBOM  -
 [Comprehensive] NON-COMPLIANT · E1 W6 I0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/libtokenizer@2.1.0
-  W SBOM-QUALITY-GENERAL  pkg:cargo/libtokenizer@2.1.0 ×2
-  W SBOM-QUALITY-GENERAL  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
-  W SBOM-QUALITY-GENERAL  urn:spdx:pkg:training-dataset-v1 ×3
+  W SBOM-QUALITY-HASH  pkg:cargo/libtokenizer@2.1.0
+  W SBOM-QUALITY-HASH  urn:spdx:pkg:training-dataset-v1
+  W SBOM-QUALITY-IDENTIFIER  urn:spdx:pkg:training-dataset-v1
+  W SBOM-QUALITY-LICENSE  pkg:cargo/libtokenizer@2.1.0
+  W SBOM-QUALITY-LICENSE  pkg:huggingface/google-bert/bert-base-uncased@1.0.0
+  W SBOM-QUALITY-LICENSE  urn:spdx:pkg:training-dataset-v1

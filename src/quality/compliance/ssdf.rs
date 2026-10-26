@@ -251,6 +251,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -277,11 +278,12 @@ impl ComplianceChecker {
                 message,
                 element: None,
                 requirement: "NIST SSDF PS.1: Provenance — tool identification".to_string(),
-                rule_id: "SBOM-SSDF-PS1",
+                rule_id: "SBOM-SSDF-PS1-TOOL",
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -313,6 +315,7 @@ impl ComplianceChecker {
                 }),
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -335,6 +338,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -373,6 +377,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -391,6 +396,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -437,6 +443,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -465,6 +472,7 @@ impl ComplianceChecker {
                 }),
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -488,6 +496,7 @@ impl ComplianceChecker {
                 }),
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
     }

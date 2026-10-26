@@ -5,10 +5,10 @@ fixture: showcase/license-risk.cdx.json
 as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W1 I0
-  W SBOM-QUALITY-GENERAL  -
+  W SBOM-QUALITY-CREATOR  -
 [Standard] NON-COMPLIANT · E1 W1 I0
-  E SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  -
+  E SBOM-QUALITY-CREATOR  -
+  W SBOM-QUALITY-SERIAL  -
 [NtiaMinimum] NON-COMPLIANT · E5 W0 I0
   E SBOM-NTIA-AUTHOR  -
   E SBOM-NTIA-SUPPLIER  pkg:generic/analytics-agent@4.1.0
@@ -16,14 +16,14 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  pkg:generic/product-suite@1.0.0
   E SBOM-NTIA-SUPPLIER  pkg:generic/reporting-core@2.4.0
 [CraPhase1] NON-COMPLIANT · E1 W14 I9
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/analytics-agent@4.1.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/charting-engine@3.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/product-suite@1.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/reporting-core@2.4.0
-  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (2/4)
+  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (2/4)
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-PRIMARY  -
@@ -31,40 +31,44 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-13-15-PRODUCT  -
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:generic/analytics-agent@4.1.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:generic/charting-engine@3.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:generic/product-suite@1.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:generic/reporting-core@2.4.0
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [CraPhase2] NON-COMPLIANT · E2 W16 I10
   E SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (2/2)
-  E SBOM-CRA-GENERAL  -
+  E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/analytics-agent@4.1.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/charting-engine@3.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/product-suite@1.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/reporting-core@2.4.0
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-PRIMARY  -
-  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (2/4)
+  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (2/4)
   W SBOM-CRA-ART-13-15-PRODUCT  -
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:generic/analytics-agent@4.1.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:generic/charting-engine@3.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:generic/product-suite@1.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:generic/reporting-core@2.4.0
   W SBOM-CRA-CVD-POLICY  -
-  W SBOM-CRA-GENERAL  -
   W SBOM-CRA-SBOM-FRESHNESS  -
+  W SBOM-CRA-SERIAL  -
 [FdaMedicalDevice] NON-COMPLIANT · E9 W5 I0
   E SBOM-FDA-CREATOR  -
   E SBOM-FDA-HASH  pkg:generic/analytics-agent@4.1.0
@@ -75,17 +79,18 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-SUPPLIER  pkg:generic/charting-engine@3.0.0
   E SBOM-FDA-SUPPLIER  pkg:generic/product-suite@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:generic/reporting-core@2.4.0
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-NAME  -
   W SBOM-FDA-NAMESPACE  -
   W SBOM-FDA-SUPPLIER  -
-  W SBOM-FDA-SUPPORT  - ×2
+  W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E2 W3 I2
   E SBOM-SSDF-PS1  -
   E SBOM-SSDF-PS2  - (4/4)
   I SBOM-SSDF-PO3  -
   I SBOM-SSDF-PW6  -
   W SBOM-SSDF-PO1  -
-  W SBOM-SSDF-PS1  -
+  W SBOM-SSDF-PS1-TOOL  -
   W SBOM-SSDF-PS3  - (4/4)
 [Eo14028] NON-COMPLIANT · E2 W3 I0
   E SBOM-EO14028-CREATOR  -
@@ -159,9 +164,9 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  pkg:generic/charting-engine@3.0.0
   E SBOM-NTIA-SUPPLIER  pkg:generic/product-suite@1.0.0
   E SBOM-NTIA-SUPPLIER  pkg:generic/reporting-core@2.4.0
-  E SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  -
-  W SBOM-QUALITY-GENERAL  pkg:generic/analytics-agent@4.1.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/charting-engine@3.0.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/product-suite@1.0.0
-  W SBOM-QUALITY-GENERAL  pkg:generic/reporting-core@2.4.0
+  E SBOM-QUALITY-CREATOR  -
+  W SBOM-QUALITY-HASH  pkg:generic/analytics-agent@4.1.0
+  W SBOM-QUALITY-HASH  pkg:generic/charting-engine@3.0.0
+  W SBOM-QUALITY-HASH  pkg:generic/product-suite@1.0.0
+  W SBOM-QUALITY-HASH  pkg:generic/reporting-core@2.4.0
+  W SBOM-QUALITY-SERIAL  -

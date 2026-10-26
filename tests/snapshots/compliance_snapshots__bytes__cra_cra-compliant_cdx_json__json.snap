@@ -13,9 +13,9 @@ source: tests/compliance_snapshots.rs
         "element": "lib-a",
         "component_id": "pkg:cargo/lib-a@2.3.4",
         "requirement": "CycloneDX: bom-ref for dependency tracking",
-        "rule_id": "SBOM-CRA-GENERAL",
+        "rule_id": "SBOM-CRA-ELEMENT-ID",
         "sarif_rule_id": "SBOM-CRA-GENERAL",
-        "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+        "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
       },
       {
         "severity": "Info",
@@ -24,9 +24,9 @@ source: tests/compliance_snapshots.rs
         "element": "lib-b",
         "component_id": "pkg:cargo/lib-b@0.9.1",
         "requirement": "CycloneDX: bom-ref for dependency tracking",
-        "rule_id": "SBOM-CRA-GENERAL",
+        "rule_id": "SBOM-CRA-ELEMENT-ID",
         "sarif_rule_id": "SBOM-CRA-GENERAL",
-        "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+        "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
       },
       {
         "severity": "Warning",
@@ -109,9 +109,9 @@ source: tests/compliance_snapshots.rs
         "element": "lib-a",
         "component_id": "pkg:cargo/lib-a@2.3.4",
         "requirement": "CycloneDX: bom-ref for dependency tracking",
-        "rule_id": "SBOM-CRA-GENERAL",
+        "rule_id": "SBOM-CRA-ELEMENT-ID",
         "sarif_rule_id": "SBOM-CRA-GENERAL",
-        "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+        "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
       },
       {
         "severity": "Info",
@@ -120,9 +120,9 @@ source: tests/compliance_snapshots.rs
         "element": "lib-b",
         "component_id": "pkg:cargo/lib-b@0.9.1",
         "requirement": "CycloneDX: bom-ref for dependency tracking",
-        "rule_id": "SBOM-CRA-GENERAL",
+        "rule_id": "SBOM-CRA-ELEMENT-ID",
         "sarif_rule_id": "SBOM-CRA-GENERAL",
-        "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
+        "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
       },
       {
         "severity": "Warning",
