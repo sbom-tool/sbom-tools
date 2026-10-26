@@ -541,13 +541,14 @@ impl Spdx3Parser {
         // Extract profile conformance
         let profile_conformance = doc.profile_conformance.as_ref().map(|ps| ps.join(", "));
 
-        // Signature from document if present
+        // Signature from document if present. An empty value is no value,
+        // as for the CycloneDX JSF and XML-DSig signatures.
         let signature = doc.verified_using.as_ref().and_then(|methods| {
             methods.iter().find_map(|m| {
                 if m.method_type.as_deref() == Some("signature") {
                     Some(SignatureInfo {
                         algorithm: m.algorithm.clone().unwrap_or_else(|| "unknown".to_string()),
-                        has_value: m.hash_value.is_some(),
+                        has_value: m.hash_value.as_deref().is_some_and(|v| !v.is_empty()),
                     })
                 } else {
                     None
@@ -3279,5 +3280,35 @@ mod tests {
                 "tag {tag} must map to the Bom collection variant"
             );
         }
+    }
+
+    /// A signature entry whose hashValue is empty carries no signature
+    /// value, as an empty CycloneDX JSF `value` or XML-DSig
+    /// `<SignatureValue>` does not: the rule-matrix format axis found CISA
+    /// 2026 accepting the empty SPDX 3 value as signature evidence.
+    #[test]
+    fn spdx3_empty_signature_value_is_no_value() {
+        let signature = |value: &str| {
+            let doc = format!(
+                r#"{{
+                  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+                  "type": "SpdxDocument", "spdxId": "urn:doc",
+                  "verifiedUsing": [
+                    {{"type": "signature", "algorithm": "ES256", "hashValue": "{value}"}}
+                  ],
+                  "element": []
+                }}"#
+            );
+            Spdx3Parser::new()
+                .parse_str(&doc)
+                .expect("parse")
+                .document
+                .signature
+                .expect("a signature entry")
+        };
+        assert!(signature("c2lnbmF0dXJl").has_value);
+        let empty = signature("");
+        assert_eq!(empty.algorithm, "ES256");
+        assert!(!empty.has_value, "an empty hashValue is no signature value");
     }
 }
