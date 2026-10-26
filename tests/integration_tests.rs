@@ -1764,19 +1764,21 @@ mod cross_format_tests {
             "Should have impact statement"
         );
 
-        // The AFFECTS relationship attaches CVE-2025-0002 and the VEX
-        // assessment assesses it: one record, carrying the VEX status.
-        assert_eq!(
-            crypto_lib.vulnerabilities.len(),
-            1,
-            "crypto-lib should have one record for CVE-2025-0002"
-        );
-        let record = &crypto_lib.vulnerabilities[0];
-        assert_eq!(record.id, "CVE-2025-0002");
-        let record_vex = record
-            .vex_status
-            .as_ref()
-            .expect("the record should carry the assessment's VEX status");
+        // The AFFECTS relationship says CVE-2025-0002 affects crypto-lib and
+        // the VEX assessment says it does not: the two contradict each other,
+        // so each keeps its record. The AFFECTS record carries no VEX status.
+        let records: Vec<_> = crypto_lib
+            .vulnerabilities
+            .iter()
+            .map(|v| (v.id.as_str(), v.vex_status.as_ref()))
+            .collect();
+        assert_eq!(records.len(), 2, "{records:?}");
+        assert_eq!(records[0].0, "CVE-2025-0002");
+        assert!(records[0].1.is_none(), "{records:?}");
+        assert_eq!(records[1].0, "CVE-2025-0002");
+        let record_vex = records[1]
+            .1
+            .expect("the assessment's record should carry its VEX status");
         assert_eq!(record_vex.status, sbom_tools::model::VexState::NotAffected);
         assert!(record_vex.justification.is_some());
         assert!(record_vex.impact_statement.is_some());

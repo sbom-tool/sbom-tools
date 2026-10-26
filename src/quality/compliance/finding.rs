@@ -223,13 +223,15 @@ pub(crate) fn compose_finding_key(
 /// detail are left alone.
 ///
 /// A repeat means the SBOM lists one entry twice — two CycloneDX
-/// `vulnerabilities[]` entries with the same id for one component, or two
+/// `vulnerabilities[]` entries with the same id for one component, two
 /// SPDX 3.0 Vulnerability elements with the same id attached to one
-/// component — and both entries are reported. (An SPDX 3.0 vulnerability
-/// that an `AFFECTS` relationship attaches and an assessment assesses is one
-/// entry: the parser merges the two.) Numbering keeps a finding key per
-/// finding, and the first occurrence keeps the plain detail.
-/// `ComplianceChecker::check()` runs this on every result.
+/// component, or SPDX 3.0 statements about one vulnerability and component
+/// that contradict each other (an `AFFECTS` relationship and a
+/// `not_affected` assessment) — and both entries are reported. (Statements
+/// that agree, such as an `AFFECTS` relationship and an `affected` or CVSS
+/// assessment, are one entry: the parser merges them.) Numbering keeps a
+/// finding key per finding, and the first occurrence keeps the plain
+/// detail. `ComplianceChecker::check()` runs this on every result.
 pub(crate) fn number_repeated_details<F: NumberedDetail>(findings: &mut [F]) {
     use std::collections::HashSet;
     // Rule, subject and detail as the finding key spells them.

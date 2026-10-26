@@ -368,53 +368,99 @@ fn numbered_details(result: &ComplianceResult) -> Vec<String> {
     numbered
 }
 
-/// Numbering is for entries the SBOM itself repeats. The SPDX 3.0 parser
-/// attached a vulnerability twice when an AFFECTS relationship and an
-/// assessment both named it, so spdx3/security-profile.spdx3.json reported
-/// CVE-2025-0002 on crypto-lib as `CVE-2025-0002` and `CVE-2025-0002#2`.
-/// That is one entry, reported once, and no finding of the document is
-/// numbered at any level. The CycloneDX fixture that lists four
-/// vulnerabilities twice for one component keeps its numbering.
-#[test]
-fn only_entries_the_sbom_repeats_are_numbered() {
-    let parse = |rel: &str| {
-        let path = Path::new(FIXTURES_DIR).join(rel);
-        parse_sbom_str(&std::fs::read_to_string(path).expect("fixture readable"))
-            .unwrap_or_else(|e| panic!("{rel} parses: {e}"))
-    };
-
-    let spdx3 = parse("spdx3/security-profile.spdx3.json");
-    let mut numbered = Vec::new();
+/// Check `sbom` at every level: the numbered details are `numbered` at CRA
+/// Phase 2 and none elsewhere, and SBOM-CRA-VULN-METADATA reports `metadata`
+/// at CRA Phase 2, as (subject, detail).
+fn assert_numbering(
+    name: &str,
+    sbom: &NormalizedSbom,
+    numbered: &[&str],
+    metadata: &[(&str, &str)],
+) {
     for (label, checker) in checkers(None) {
-        let result = checker.check(&spdx3);
-        numbered.extend(
-            numbered_details(&result)
-                .into_iter()
-                .map(|d| format!("[{label}] {d}")),
+        let result = checker.check(sbom);
+        let expected: &[&str] = if result.level == ComplianceLevel::CraPhase2 {
+            numbered
+        } else {
+            &[]
+        };
+        assert_eq!(
+            numbered_details(&result),
+            expected,
+            "{name} [{label}]: numbered details"
         );
         if label == "CraPhase2" {
-            let metadata: Vec<(Option<&str>, Option<&str>)> = result
+            let found: Vec<(&str, &str)> = result
                 .violations
                 .iter()
                 .filter(|v| v.rule_id == "SBOM-CRA-VULN-METADATA")
-                .map(|v| (v.component_id.as_deref(), v.finding_detail.as_deref()))
+                .map(|v| {
+                    (
+                        v.component_id.as_deref().unwrap_or("-"),
+                        v.finding_detail.as_deref().unwrap_or("-"),
+                    )
+                })
                 .collect();
-            assert_eq!(
-                metadata,
-                [(Some("pkg:npm/crypto-lib@3.0.1"), Some("CVE-2025-0002"))],
-                "CVE-2025-0002 lacks a severity on crypto-lib and is reported once"
-            );
+            assert_eq!(found, metadata, "{name}: SBOM-CRA-VULN-METADATA");
         }
     }
-    assert!(
-        numbered.is_empty(),
-        "spdx3/security-profile.spdx3.json repeats no entry, yet findings are numbered:\n{}",
-        numbered.join("\n")
+}
+
+/// Numbering is for entries the SBOM itself repeats, and in SPDX 3.0 for
+/// statements that contradict each other.
+///
+/// spdx3/security-profile.spdx3.json attaches CVE-2025-0001 to logging-lib
+/// by an AFFECTS relationship and scores it by a CVSS assessment: one entry
+/// that carries the score, so SBOM-CRA-VULN-METADATA does not report it. It
+/// attaches CVE-2025-0002 to crypto-lib by an AFFECTS relationship and
+/// assesses it `not_affected`: the two contradict each other and stay two
+/// entries, `CVE-2025-0002` and `CVE-2025-0002#2`. Made an `affected`
+/// assessment, it agrees with the relationship: one entry, and nothing in
+/// the document is numbered at any level. The CycloneDX fixture that lists
+/// four vulnerabilities twice for one component keeps its numbering.
+#[test]
+fn only_entries_the_sbom_repeats_are_numbered() {
+    const CRYPTO_LIB: &str = "pkg:npm/crypto-lib@3.0.1";
+    let read = |rel: &str| {
+        std::fs::read_to_string(Path::new(FIXTURES_DIR).join(rel)).expect("fixture readable")
+    };
+
+    let fixture = read("spdx3/security-profile.spdx3.json");
+    let as_is = parse_sbom_str(&fixture).expect("fixture parses");
+    assert_numbering(
+        "security-profile",
+        &as_is,
+        &["SBOM-CRA-VULN-METADATA CVE-2025-0002#2"],
+        &[
+            (CRYPTO_LIB, "CVE-2025-0002"),
+            (CRYPTO_LIB, "CVE-2025-0002#2"),
+        ],
     );
 
-    let cdx = parse(
-        "cyclonedx/sbom-cyclone-dx-json-01-kef-56-j-7-wc-3-hbket-0-rqa-1-qgbm-01-kef-58-v-9-j-8-smskdv-5-yb-7-qje-6-v.json",
+    let mut affected: serde_json::Value = serde_json::from_str(&fixture).expect("fixture is JSON");
+    let assessment = affected["element"]
+        .as_array_mut()
+        .expect("element array")
+        .iter_mut()
+        .find(|e| e["spdxId"] == "urn:spdx:assessment:vex-vuln2")
+        .expect("the crypto-lib VEX assessment");
+    assessment["type"] = "security_VexAffectedVulnAssessmentRelationship".into();
+    assessment
+        .as_object_mut()
+        .expect("assessment object")
+        .remove("justification");
+    let affected = parse_sbom_str(&affected.to_string()).expect("variant parses");
+    assert_numbering(
+        "security-profile, crypto-lib assessed affected",
+        &affected,
+        &[],
+        &[(CRYPTO_LIB, "CVE-2025-0002")],
     );
+
+    let cdx = parse_sbom_str(&read(
+        "cyclonedx/sbom-cyclone-dx-json-01-kef-56-j-7-wc-3-hbket-0-rqa-1-qgbm-01-kef-58-v-9-j-8-smskdv-5-yb-7-qje-6-v.json",
+    ))
+    .expect("fixture parses");
     assert_eq!(
         numbered_details(&clock::checker(ComplianceLevel::CraPhase2).check(&cdx)),
         [

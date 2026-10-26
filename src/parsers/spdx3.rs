@@ -370,8 +370,8 @@ impl Spdx3Parser {
         }
 
         // The AFFECTS and FIXED_IN relationships and the assessments that
-        // name one vulnerability and one component all add to one record
-        // (see `attach_vulnerability`).
+        // name one vulnerability and one component add to one record while
+        // they agree (see `attach_vulnerability`).
         let mut vuln_records = VulnRecords::new();
 
         // Process relationships
@@ -914,9 +914,10 @@ impl Spdx3Parser {
     ///
     /// Maps CVSS scores, VEX status, justifications, and action statements
     /// from VulnAssessment relationship elements to the affected components.
-    /// The assessment adds to the record an AFFECTS or FIXED_IN relationship
-    /// or an earlier assessment attached for the same vulnerability and
-    /// component (see `attach_vulnerability`).
+    /// The assessment adds to the record that an AFFECTS or FIXED_IN
+    /// relationship or an earlier assessment attached for the same
+    /// vulnerability and component, when their statements agree (see
+    /// `attach_vulnerability`).
     fn process_vuln_assessment(
         &self,
         assessment: &Spdx3VulnAssessment,
@@ -1045,7 +1046,13 @@ impl Spdx3Parser {
                 // Set VEX status on the vulnerability ref
                 vuln_ref.vex_status = vex_status.clone();
 
-                attach_vulnerability(sbom, vuln_records, vuln_id, canonical_id, &vuln_ref);
+                let statement = VulnStatement {
+                    vuln_id,
+                    source: assessment.spdx_id.as_deref(),
+                    record: &vuln_ref,
+                    affects: false,
+                };
+                attach_vulnerability(sbom, vuln_records, canonical_id, &statement);
                 if let Some(vs) = vex_status
                     && let Some(comp) = sbom.components.get_mut(canonical_id)
                 {
@@ -1227,18 +1234,18 @@ impl Spdx3Parser {
                     // attacker-controlled description — a memory-amplification
                     // DoS from one relationship with a huge `to` array.
                     let vuln_ref = self.convert_vulnerability(vuln);
+                    let statement = VulnStatement {
+                        vuln_id: from_ref,
+                        source: rel.spdx_id.as_deref(),
+                        record: &vuln_ref,
+                        affects: true,
+                    };
                     let mut seen: HashSet<&CanonicalId> = HashSet::new();
                     for to_ref in to_refs {
                         if let Some(canonical_id) = id_map.get(to_ref)
                             && seen.insert(canonical_id)
                         {
-                            attach_vulnerability(
-                                sbom,
-                                vuln_records,
-                                from_ref,
-                                canonical_id,
-                                &vuln_ref,
-                            );
+                            attach_vulnerability(sbom, vuln_records, canonical_id, &statement);
                         }
                     }
                 }
@@ -1252,12 +1259,18 @@ impl Spdx3Parser {
                 {
                     let mut base = self.convert_vulnerability(vuln);
                     base.vex_status = Some(VexStatus::new(VexState::Fixed));
+                    let statement = VulnStatement {
+                        vuln_id: from_ref,
+                        source: rel.spdx_id.as_deref(),
+                        record: &base,
+                        affects: false,
+                    };
                     let mut seen: HashSet<&CanonicalId> = HashSet::new();
                     for to_ref in to_refs {
                         if let Some(canonical_id) = id_map.get(to_ref)
                             && seen.insert(canonical_id)
                         {
-                            attach_vulnerability(sbom, vuln_records, from_ref, canonical_id, &base);
+                            attach_vulnerability(sbom, vuln_records, canonical_id, &statement);
                             if let Some(comp) = sbom.components.get_mut(canonical_id) {
                                 comp.vex_status = Some(VexStatus::new(VexState::Fixed));
                             }
@@ -1500,25 +1513,70 @@ impl Spdx3Parser {
 }
 
 /// The vulnerability records attached so far, keyed by the `spdxId` of the
-/// Vulnerability element and the component: the positions of the pair's
-/// records in the component's `vulnerabilities`. A pair has one record
-/// unless the document makes VEX statements about it that contradict each
-/// other (see [`attach_vulnerability`]).
-type VulnRecords = HashMap<(String, CanonicalId), Vec<usize>>;
+/// Vulnerability element and the component. A pair has one record unless
+/// its statements contradict each other (see [`attach_vulnerability`]).
+type VulnRecords = HashMap<(String, CanonicalId), Vec<AttachedRecord>>;
 
-/// Attach `record`, what one AFFECTS or FIXED_IN relationship or one
-/// assessment states about the vulnerability `vuln_id` (the `spdxId` of its
-/// Vulnerability element), to the component `canonical_id`.
+/// One record of a (Vulnerability element, component) pair.
+struct AttachedRecord {
+    /// Where the record sits in the component's `vulnerabilities`.
+    position: usize,
+    /// The `spdxId`s of the relationships and assessments merged into it.
+    sources: Vec<String>,
+    /// Whether a plain AFFECTS relationship is among them: an `affected`
+    /// claim that the record's VEX status does not spell out.
+    affects: bool,
+}
+
+/// What one AFFECTS or FIXED_IN relationship, or one assessment, states
+/// about a vulnerability on a component.
+struct VulnStatement<'a> {
+    /// The `spdxId` of the Vulnerability element.
+    vuln_id: &'a str,
+    /// The `spdxId` of the relationship or assessment, when it has one.
+    source: Option<&'a str>,
+    /// The record the statement gives: the vulnerability, with the
+    /// assessment's CVSS score and VEX status when it has them.
+    record: &'a VulnerabilityRef,
+    /// Whether the statement is a plain AFFECTS relationship, which claims
+    /// `affected` without giving a VEX status.
+    affects: bool,
+}
+
+/// The claim of a plain AFFECTS relationship. It decides agreement only:
+/// the relationship gives no VEX status, so none is written for it.
+static AFFECTED: VexStatus = VexStatus::new(VexState::Affected);
+
+/// The VEX claim of a record or statement whose VEX status is `vex`: that
+/// status, else `affected` for a plain AFFECTS relationship. A CVSS, EPSS
+/// or SSVC assessment claims nothing.
+fn vex_claim(vex: Option<&VexStatus>, affects: bool) -> Option<&VexStatus> {
+    vex.or_else(|| affects.then_some(&AFFECTED))
+}
+
+/// Attach `statement` to the component `canonical_id`.
 ///
-/// The first statement about a pair creates its record and later ones add
-/// to it, so a vulnerability that an AFFECTS relationship attaches and an
-/// assessment then scores or assesses is one record, carrying the
-/// assessment's CVSS score and VEX status. Nothing a statement carries is
-/// dropped: scores and other data the record lacks are added to it, the
-/// more severe severity wins, and a VEX statement fills the VEX fields the
-/// record leaves unset. A VEX statement that contradicts the record's
-/// (another state, or a field set to another value) gets a record of its
-/// own instead: a copy of the pair's record with that statement.
+/// The first statement about a pair starts its record. A later one joins a
+/// record when it is the same element read again (one relationship or
+/// assessment met through two paths) and its VEX status fits the record's,
+/// or when their VEX claims agree: one of them claims nothing (a CVSS, EPSS
+/// or SSVC assessment), or both claim the same state and set no field to
+/// different values. A plain AFFECTS relationship claims `affected` without
+/// giving a VEX status; FIXED_IN claims and gives `fixed`, as it always
+/// has. So an AFFECTS relationship and an `affected`
+/// assessment are one record, and so are FIXED_IN and a `fixed` one, while
+/// AFFECTS and FIXED_IN, or AFFECTS and a `not_affected`, `fixed` or
+/// `under_investigation` assessment of another element, keep a record
+/// each: the document contradicts itself, and merging would settle the
+/// vulnerability on the word of one side. A statement that joins no record
+/// starts its own, a copy of the pair's record with the statement's VEX
+/// status.
+///
+/// Nothing a statement carries is dropped. Its scores and other data reach
+/// every record of the pair, since they describe the vulnerability, not its
+/// status, and the more severe severity wins. Its VEX status fills the VEX
+/// fields the record it joins leaves unset. A record carries only the VEX
+/// status its statements give; AFFECTS's `affected` is never written out.
 ///
 /// Two Vulnerability elements with one CVE id are two pairs and keep two
 /// records: the document lists the vulnerability twice, as a CycloneDX
@@ -1526,38 +1584,62 @@ type VulnRecords = HashMap<(String, CanonicalId), Vec<usize>>;
 fn attach_vulnerability(
     sbom: &mut NormalizedSbom,
     records: &mut VulnRecords,
-    vuln_id: &str,
     canonical_id: &CanonicalId,
-    record: &VulnerabilityRef,
+    statement: &VulnStatement<'_>,
 ) {
     let Some(comp) = sbom.components.get_mut(canonical_id) else {
         return;
     };
-    let positions = records
-        .entry((vuln_id.to_string(), canonical_id.clone()))
+    let attached = records
+        .entry((statement.vuln_id.to_string(), canonical_id.clone()))
         .or_default();
-    if positions.is_empty() {
-        positions.push(comp.vulnerabilities.len());
-        comp.vulnerabilities.push(record.clone());
-        return;
+    let vex = statement.record.vex_status.as_ref();
+    for entry in attached.iter() {
+        merge_vulnerability_data(&mut comp.vulnerabilities[entry.position], statement.record);
     }
-    for &i in positions.iter() {
-        merge_vulnerability_data(&mut comp.vulnerabilities[i], record);
-    }
-    let Some(vex) = &record.vex_status else {
-        return;
+    let vulnerabilities = &comp.vulnerabilities;
+    let current = |entry: &AttachedRecord| vulnerabilities[entry.position].vex_status.as_ref();
+    let same_element = |entry: &AttachedRecord| {
+        statement
+            .source
+            .is_some_and(|source| entry.sources.iter().any(|known| known == source))
     };
-    if let Some(&i) = positions
+    let joined = attached
         .iter()
-        .find(|&&i| vex_agrees(comp.vulnerabilities[i].vex_status.as_ref(), vex))
-    {
-        merge_vex(&mut comp.vulnerabilities[i].vex_status, vex);
-    } else {
-        let mut own = comp.vulnerabilities[positions[0]].clone();
-        own.vex_status = Some(vex.clone());
-        positions.push(comp.vulnerabilities.len());
-        comp.vulnerabilities.push(own);
+        .position(|entry| same_element(entry) && vex_agrees(current(entry), vex))
+        .or_else(|| {
+            let claim = vex_claim(vex, statement.affects);
+            attached
+                .iter()
+                .position(|entry| vex_agrees(vex_claim(current(entry), entry.affects), claim))
+        });
+    if let Some(i) = joined {
+        let entry = &mut attached[i];
+        if let Some(vex) = vex {
+            merge_vex(&mut comp.vulnerabilities[entry.position].vex_status, vex);
+        }
+        entry.affects |= statement.affects;
+        if let Some(source) = statement.source
+            && !entry.sources.iter().any(|known| known == source)
+        {
+            entry.sources.push(source.to_string());
+        }
+        return;
     }
+    let own = match attached.first() {
+        Some(first) => {
+            let mut own = comp.vulnerabilities[first.position].clone();
+            own.vex_status = statement.record.vex_status.clone();
+            own
+        }
+        None => statement.record.clone(),
+    };
+    attached.push(AttachedRecord {
+        position: comp.vulnerabilities.len(),
+        sources: statement.source.map(str::to_string).into_iter().collect(),
+        affects: statement.affects,
+    });
+    comp.vulnerabilities.push(own);
 }
 
 /// Add to `record` what `incoming`, a later statement about the same
@@ -1633,29 +1715,20 @@ fn same_cvss(a: &CvssScore, b: &CvssScore) -> bool {
         && bits(*impact_score) == bits(b.impact_score)
 }
 
-/// Whether the VEX statement `incoming` can join `current`, the one a record
-/// carries: the record has none, or one with the same state that sets no
-/// field to another value.
-fn vex_agrees(current: Option<&VexStatus>, incoming: &VexStatus) -> bool {
+/// Whether two VEX statements agree: one of them is absent, or both have the
+/// same state and set no field to different values.
+fn vex_agrees(a: Option<&VexStatus>, b: Option<&VexStatus>) -> bool {
     fn agree<T: PartialEq>(a: Option<&T>, b: Option<&T>) -> bool {
         a.is_none() || b.is_none() || a == b
     }
-    current.is_none_or(|current| {
-        current.status == incoming.status
-            && agree(
-                current.justification.as_ref(),
-                incoming.justification.as_ref(),
-            )
-            && agree(
-                current.action_statement.as_ref(),
-                incoming.action_statement.as_ref(),
-            )
-            && agree(
-                current.impact_statement.as_ref(),
-                incoming.impact_statement.as_ref(),
-            )
-            && agree(current.detail.as_ref(), incoming.detail.as_ref())
-    })
+    let (Some(a), Some(b)) = (a, b) else {
+        return true;
+    };
+    a.status == b.status
+        && agree(a.justification.as_ref(), b.justification.as_ref())
+        && agree(a.action_statement.as_ref(), b.action_statement.as_ref())
+        && agree(a.impact_statement.as_ref(), b.impact_statement.as_ref())
+        && agree(a.detail.as_ref(), b.detail.as_ref())
 }
 
 /// Fold the VEX statement `incoming` into `slot`, which holds none or one
@@ -2945,23 +3018,33 @@ mod tests {
         }
     }
 
-    /// An AFFECTS relationship and a VEX assessment of one vulnerability and
-    /// one component are one record: the vulnerability the relationship
-    /// attaches, with the assessment's VEX status. They were two, so every
-    /// per-vulnerability finding counted the vulnerability twice. Document
-    /// order does not matter.
+    /// The plain AFFECTS relationship that attaches CVE-2025-9999 to lib.
+    const AFFECTS: &str = r#"{"type": "Relationship", "spdxId": "urn:rel:affects",
+        "relationshipType": "AFFECTS", "from": "urn:vuln:cve", "to": ["urn:pkg:lib"]}"#;
+
+    /// The VEX states of lib's records, in order.
+    fn vex_states(sbom: &NormalizedSbom) -> Vec<Option<VexState>> {
+        spdx3_component(sbom, "lib")
+            .vulnerabilities
+            .iter()
+            .map(|v| v.vex_status.as_ref().map(|s| s.status.clone()))
+            .collect()
+    }
+
+    /// An AFFECTS relationship and an `affected` assessment of one
+    /// vulnerability and one component agree, so they are one record: the
+    /// vulnerability the relationship attaches, with the assessment's VEX
+    /// status. They were two, and every per-vulnerability finding counted
+    /// the vulnerability twice. Document order does not matter.
     #[test]
-    fn spdx3_affects_and_vex_assessment_attach_one_record() {
-        let affects = r#"{"type": "Relationship", "spdxId": "urn:rel:affects",
-            "relationshipType": "AFFECTS", "from": "urn:vuln:cve", "to": ["urn:pkg:lib"]}"#;
-        let assessment = r#"{"type": "security_VexNotAffectedVulnAssessmentRelationship",
+    fn spdx3_affects_and_affected_assessment_attach_one_record() {
+        let assessment = r#"{"type": "security_VexAffectedVulnAssessmentRelationship",
             "spdxId": "urn:assess:vex", "from": "urn:vuln:cve",
-            "assessedElement": "urn:pkg:lib",
-            "justification": "vulnerable_code_not_in_execute_path",
-            "impactStatement": "not reachable", "statusNotes": "audited"}"#;
+            "assessedElement": "urn:pkg:lib", "actionStatement": "Upgrade to 2.0",
+            "impactStatement": "remote code execution", "statusNotes": "triaged"}"#;
         for elements in [
-            format!("{affects}, {assessment}"),
-            format!("{assessment}, {affects}"),
+            format!("{AFFECTS}, {assessment}"),
+            format!("{assessment}, {AFFECTS}"),
         ] {
             let sbom = spdx3_lib(&elements);
             let lib = spdx3_component(&sbom, "lib");
@@ -2975,23 +3058,101 @@ mod tests {
             assert_eq!(record.id, "CVE-2025-9999");
             assert_eq!(record.description.as_deref(), Some("boom"));
             let vex = record.vex_status.as_ref().expect("the assessment's VEX");
-            assert_eq!(vex.status, VexState::NotAffected);
+            assert_eq!(vex.status, VexState::Affected);
+            assert_eq!(vex.action_statement.as_deref(), Some("Upgrade to 2.0"));
             assert_eq!(
-                vex.justification,
-                Some(VexJustification::VulnerableCodeNotInExecutePath)
+                vex.impact_statement.as_deref(),
+                Some("remote code execution")
             );
-            assert_eq!(vex.impact_statement.as_deref(), Some("not reachable"));
-            assert_eq!(vex.detail.as_deref(), Some("audited"));
-            assert_eq!(
-                lib.vex_status.as_ref().map(|v| &v.status),
-                Some(&VexState::NotAffected)
-            );
+            assert_eq!(vex.detail.as_deref(), Some("triaged"));
+            assert_eq!(vex.responses, [VexResponse::Update]);
         }
     }
 
-    /// Every assessment of one vulnerability and one component adds to the
-    /// record: both CVSS scores, the more severe severity, and the VEX
-    /// statement with its action.
+    /// An AFFECTS relationship and a `not_affected` assessment of another
+    /// element contradict each other, so each keeps its record: merging
+    /// would close the vulnerability on the assessment's word alone. The
+    /// AFFECTS record gets no VEX status: `affected` decides agreement and
+    /// is not written out.
+    #[test]
+    fn spdx3_affects_and_not_affected_assessment_keep_two_records() {
+        let sbom = spdx3_lib(&format!(
+            r#"{AFFECTS},
+               {{"type": "security_VexNotAffectedVulnAssessmentRelationship",
+                "spdxId": "urn:assess:vex", "from": "urn:vuln:cve",
+                "assessedElement": "urn:pkg:lib",
+                "justification": "vulnerable_code_not_in_execute_path",
+                "impactStatement": "not reachable", "statusNotes": "audited"}}"#
+        ));
+        assert_eq!(vex_states(&sbom), [None, Some(VexState::NotAffected)]);
+        let lib = spdx3_component(&sbom, "lib");
+        let vex = lib.vulnerabilities[1].vex_status.as_ref().expect("VEX");
+        assert_eq!(
+            vex.justification,
+            Some(VexJustification::VulnerableCodeNotInExecutePath)
+        );
+        assert_eq!(vex.impact_statement.as_deref(), Some("not reachable"));
+        assert_eq!(vex.detail.as_deref(), Some("audited"));
+        assert_eq!(
+            lib.vex_status.as_ref().map(|v| &v.status),
+            Some(&VexState::NotAffected)
+        );
+    }
+
+    /// AFFECTS claims `affected` and FIXED_IN `fixed`: one vulnerability and
+    /// component named by both keep a record each, in either order.
+    #[test]
+    fn spdx3_affects_and_fixed_in_keep_two_records() {
+        let fixed_in = r#"{"type": "Relationship", "spdxId": "urn:rel:fixed",
+            "relationshipType": "fixedIn", "from": "urn:vuln:cve", "to": ["urn:pkg:lib"]}"#;
+        assert_eq!(
+            vex_states(&spdx3_lib(&format!("{AFFECTS}, {fixed_in}"))),
+            [None, Some(VexState::Fixed)]
+        );
+        assert_eq!(
+            vex_states(&spdx3_lib(&format!("{fixed_in}, {AFFECTS}"))),
+            [Some(VexState::Fixed), None]
+        );
+    }
+
+    /// A relationship and an assessment that are one element (one `spdxId`
+    /// met through two paths) are one statement and one record, although
+    /// AFFECTS's `affected` and the assessment's `not_affected` would not
+    /// agree as two elements.
+    #[test]
+    fn spdx3_one_element_met_twice_is_one_record() {
+        let sbom = spdx3_lib(&format!(
+            r#"{AFFECTS},
+               {{"type": "security_VexNotAffectedVulnAssessmentRelationship",
+                "spdxId": "urn:rel:affects", "from": "urn:vuln:cve",
+                "assessedElement": "urn:pkg:lib",
+                "justification": "component_not_present"}}"#
+        ));
+        assert_eq!(vex_states(&sbom), [Some(VexState::NotAffected)]);
+    }
+
+    /// A CVSS assessment claims no VEX state, so it joins the record of a VEX
+    /// statement about the same pair, whatever that statement claims.
+    #[test]
+    fn spdx3_score_joins_the_vex_record() {
+        let sbom = spdx3_lib(
+            r#"{"type": "security_CvssV3VulnAssessmentRelationship",
+                "spdxId": "urn:assess:cvss", "from": "urn:vuln:cve",
+                "assessedElement": "urn:pkg:lib", "score": 7.5},
+               {"type": "security_VexNotAffectedVulnAssessmentRelationship",
+                "spdxId": "urn:assess:vex", "from": "urn:vuln:cve",
+                "assessedElement": "urn:pkg:lib",
+                "justification": "component_not_present"}"#,
+        );
+        assert_eq!(vex_states(&sbom), [Some(VexState::NotAffected)]);
+        let record = &spdx3_component(&sbom, "lib").vulnerabilities[0];
+        assert_eq!(record.cvss.len(), 1, "{record:?}");
+        assert_eq!(record.severity, Some(Severity::High));
+    }
+
+    /// Assessments that agree with the AFFECTS relationship add to its
+    /// record: both CVSS scores (which claim no VEX state), the more severe
+    /// severity, and the `affected` statement with its action.
     #[test]
     fn spdx3_assessments_of_one_pair_share_its_record() {
         let sbom = spdx3_lib(
@@ -3039,38 +3200,33 @@ mod tests {
         assert_eq!(vex.detail.as_deref(), Some("fixed in 1.0"));
     }
 
-    /// VEX statements of one pair that contradict each other are not merged,
-    /// so neither is lost: each keeps a record, and the pair's score reaches
-    /// both.
+    /// Statements of one pair that contradict each other are not merged, so
+    /// none is lost: AFFECTS (`affected`), an `under_investigation` and a
+    /// `not_affected` assessment keep a record each, and the pair's score
+    /// reaches all three.
     #[test]
     fn spdx3_contradicting_vex_statements_keep_a_record_each() {
-        let sbom = spdx3_lib(
-            r#"{"type": "Relationship", "spdxId": "urn:rel:affects",
-                "relationshipType": "AFFECTS", "from": "urn:vuln:cve", "to": ["urn:pkg:lib"]},
-               {"type": "security_VexUnderInvestigationVulnAssessmentRelationship",
+        let sbom = spdx3_lib(&format!(
+            r#"{AFFECTS},
+               {{"type": "security_VexUnderInvestigationVulnAssessmentRelationship",
                 "spdxId": "urn:assess:investigating", "from": "urn:vuln:cve",
-                "assessedElement": "urn:pkg:lib"},
-               {"type": "security_VexNotAffectedVulnAssessmentRelationship",
+                "assessedElement": "urn:pkg:lib"}},
+               {{"type": "security_VexNotAffectedVulnAssessmentRelationship",
                 "spdxId": "urn:assess:not-affected", "from": "urn:vuln:cve",
-                "assessedElement": "urn:pkg:lib", "justification": "component_not_present"},
-               {"type": "security_CvssV3VulnAssessmentRelationship",
+                "assessedElement": "urn:pkg:lib", "justification": "component_not_present"}},
+               {{"type": "security_CvssV3VulnAssessmentRelationship",
                 "spdxId": "urn:assess:cvss", "from": "urn:vuln:cve",
-                "assessedElement": "urn:pkg:lib", "score": 7.5}"#,
-        );
-        let lib = spdx3_component(&sbom, "lib");
-        let states: Vec<Option<&VexState>> = lib
-            .vulnerabilities
-            .iter()
-            .map(|v| v.vex_status.as_ref().map(|s| &s.status))
-            .collect();
+                "assessedElement": "urn:pkg:lib", "score": 7.5}}"#
+        ));
         assert_eq!(
-            states,
+            vex_states(&sbom),
             [
-                Some(&VexState::UnderInvestigation),
-                Some(&VexState::NotAffected)
+                None,
+                Some(VexState::UnderInvestigation),
+                Some(VexState::NotAffected)
             ]
         );
-        for record in &lib.vulnerabilities {
+        for record in &spdx3_component(&sbom, "lib").vulnerabilities {
             assert_eq!(record.id, "CVE-2025-9999");
             assert_eq!(record.cvss.len(), 1, "{record:?}");
             assert_eq!(record.severity, Some(Severity::High));

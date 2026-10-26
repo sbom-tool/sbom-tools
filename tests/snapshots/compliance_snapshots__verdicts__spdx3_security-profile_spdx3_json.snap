@@ -26,7 +26,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/crypto-lib@3.0.1
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/logging-lib@1.5.2
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2] NON-COMPLIANT · E1 W12 I6
+[CraPhase2] NON-COMPLIANT · E1 W13 I6
   E SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (2/2)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/crypto-lib@3.0.1
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/logging-lib@1.5.2
@@ -45,7 +45,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/logging-lib@1.5.2
   W SBOM-CRA-CVD-POLICY  -
   W SBOM-CRA-SBOM-FRESHNESS  -
-  W SBOM-CRA-VULN-METADATA  pkg:npm/crypto-lib@3.0.1
+  W SBOM-CRA-VULN-METADATA  pkg:npm/crypto-lib@3.0.1 ×2
 [FdaMedicalDevice] NON-COMPLIANT · E4 W4 I0
   E SBOM-FDA-HASH  pkg:npm/crypto-lib@3.0.1
   E SBOM-FDA-HASH  pkg:npm/logging-lib@1.5.2
@@ -105,7 +105,7 @@ as_of: 2026-10-12T00:00:00Z
 [PciDss632] compliant · E0 W1 I2
   I SBOM-PCI-6-3-2-COMPLETENESS  -
   I SBOM-PCI-6-3-2-FRESHNESS  -
-  W SBOM-PCI-11-3-1-1-SEVERITY  - (1/2)
+  W SBOM-PCI-11-3-1-1-SEVERITY  - (2/3)
 [Fsct] NON-COMPLIANT · E4 W6 I4
   E SBOM-FSCT-AUTHOR  -
   E SBOM-FSCT-COPYRIGHT-PRIMARY  pkg:npm/webapp@2.1.0
