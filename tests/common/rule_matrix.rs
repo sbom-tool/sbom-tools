@@ -1,16 +1,30 @@
 //! Registry-driven per-rule compliance test harness (audit P3).
 //!
-//! Provides three things to the `tests/rule_matrix_*.rs` integration tests:
+//! Provides four things to the `tests/rule_matrix_*.rs` integration tests:
 //!
 //! 1. **A minimal fixture DSL** ([`SbomFixture`] / [`ComponentFixture`] /
-//!    [`CryptoAssetFixture`]) that renders a small CycloneDX JSON document
-//!    and feeds it through the *real* parser (`parse_sbom_str`), so every
-//!    matrix case exercises the same normalization path a production
-//!    `validate` run does — not a hand-built `NormalizedSbom` that may drift
-//!    from what parsers actually produce. A fixture can also carry a CRA
-//!    sidecar, attached to the checker like `--cra-sidecar`.
+//!    [`CryptoAssetFixture`]) that renders a small SBOM and feeds it through
+//!    the *real* parser (`parse_sbom_str`), so every matrix case exercises
+//!    the same normalization path a production `validate` run does — not a
+//!    hand-built `NormalizedSbom` that may drift from what parsers actually
+//!    produce. A fixture can also carry a CRA sidecar, attached to the
+//!    checker like `--cra-sidecar`.
 //!
-//! 2. **A table-driven matrix runner** ([`run_matrix`]): every SARIF rule id
+//! 2. **A format axis** ([`Encoding`], tests/common/rule_matrix_encodings.rs):
+//!    one fixture renders as CycloneDX JSON, CycloneDX XML, SPDX 2.3 JSON and
+//!    SPDX 3.0.1 JSON-LD, each field written where its format keeps it and
+//!    the parsers read it. Every matrix case runs in all four encodings and
+//!    must reach the same outcome in each — the same rule at the same
+//!    severity, silence, or a pass — unless its entry declares otherwise
+//!    with a reason: [`RuleEntry::only`] or [`RuleEntry::case_only`] when an
+//!    encoding cannot carry what the case is about (or a named bug blocks
+//!    it), [`RuleEntry::case_differs`] when a format legitimately reaches a
+//!    different outcome (a check evidence-gated to SPDX, say), which the
+//!    runner then asserts. An omission must be load-bearing: a case that
+//!    renders without dropping a field and holds in an omitted encoding
+//!    fails as a stale omission.
+//!
+//! 3. **A table-driven matrix runner** ([`run_matrix`]): every SARIF rule id
 //!    in a standard's rule universe gets at least one *firing* case (a
 //!    minimal SBOM that must surface the rule, with the expected severity)
 //!    and one *silent* case (a minimal SBOM that must not surface it), or an
@@ -21,11 +35,11 @@
 //!    and the declared universe differ. Every check is its own SARIF rule, so
 //!    a row matches one check.
 //!
-//! 3. **A universe sweep**: every violation and every passed check emitted
-//!    by every fixture in a matrix must map (via its registry SARIF identity)
-//!    into the standard's declared rule universe — a new check site that
-//!    emits a new rule id forces the matrix to be extended instead of
-//!    silently escaping it.
+//! 4. **A universe sweep**: every violation and every passed check emitted
+//!    by every fixture in a matrix, in every encoding it runs in, must map
+//!    (via its registry SARIF identity) into the standard's declared rule
+//!    universe — a new check site that emits a new rule id forces the matrix
+//!    to be extended instead of silently escaping it.
 
 // Each per-standard matrix binary uses a subset of the DSL (mirrors the
 // existing tests/common/ffi_helpers.rs posture).
@@ -37,8 +51,13 @@ pub mod clock;
 #[path = "info_classification.rs"]
 pub mod info_classification;
 
+#[path = "rule_matrix_encodings.rs"]
+mod encodings;
+
+pub use encodings::{Encoding, Rendered};
+
 use sbom_tools::model::{CraSidecarMetadata, EolInfo, EolStatus, NormalizedSbom};
-use sbom_tools::parsers::parse_sbom_str;
+use sbom_tools::parsers::{FormatDetector, parse_sbom_str};
 use sbom_tools::quality::{
     ComplianceLevel, ComplianceResult, PassedCheck, RuleKind, Violation, ViolationSeverity,
     rule_kind, rule_meta,
@@ -55,23 +74,69 @@ pub const SHA512_FILLER: &str = "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715d
 /// Filler MD5 digest (32 hex chars) for weak-hash cases.
 pub const MD5_FILLER: &str = "d41d8cd98f00b204e9800998ecf8427e";
 
-/// One component of a [`SbomFixture`], rendered into the CycloneDX
-/// `components[]` array (or `metadata.component` for the primary).
+// ── Encoding omissions and differences shared by several matrices ─────────
+
+/// A case about a CycloneDX specVersion runs in CycloneDX only.
+pub const CYCLONEDX_VERSION_CASE: &str = "the case is about a CycloneDX specVersion, which SPDX \
+     documents do not carry: the SPDX encodings write their own version";
+/// A case about an SPDX version runs in SPDX only.
+pub const SPDX_VERSION_CASE: &str =
+    "the case is about an SPDX version, which CycloneDX documents do not carry";
+/// A CBOM row runs in CycloneDX only.
+pub const CBOM_IS_CYCLONEDX: &str = "SPDX 2.3 and SPDX 3.0 have no cryptographic-asset model: a \
+     CBOM is CycloneDX 1.6+ only";
+/// An AI-profile row runs in every encoding but SPDX 2.3.
+pub const SPDX23_HAS_NO_AI_PROFILE: &str = "SPDX 2.3 has no AI or dataset profile (no model \
+     type, model card or dataset evidence), so no SPDX 2.3 document is an AI-BOM";
+/// A case about embedded vulnerability data cannot be written in SPDX 2.3.
+pub const SPDX23_HAS_NO_VULNERABILITIES: &str = "SPDX 2.3 documents carry no vulnerability data";
+/// SPDX 2.3 cannot declare completeness.
+pub const SPDX23_HAS_NO_COMPLETENESS: &str = "SPDX 2.3 has no completeness declaration, so no \
+     SPDX 2.3 document declares its inventory or dependency enumeration complete";
+/// A case about the hash of a referenced document runs in CycloneDX only.
+pub const SPDX_REFERENCES_CARRY_NO_HASH: &str = "SPDX external references carry no hash of the \
+     referenced document";
+/// The SPDX 3 parser reads no agent email.
+pub const SPDX3_AGENT_EMAILS_NOT_READ: &str = "open gap: the SPDX 3 parser reads no agent email \
+     (the Person or Organization externalIdentifier of type email), as the registry advice \
+     says, so no SPDX 3 creator carries one";
+/// The SPDX 3 parser does not read `validUntilTime`.
+pub const SPDX3_VALID_UNTIL_NOT_READ: &str = "open gap: the SPDX 3 parser does not read the \
+     primary package's validUntilTime, as the registry advice says, so no SPDX 3 document \
+     states an end of support";
+/// The SPDX 3 parser does not read `software_sbomType`.
+pub const SPDX3_SBOM_TYPE_NOT_READ: &str = "open gap: the SPDX 3 parser does not read \
+     software_sbomType, as the registry advice says, so no SPDX 3 document declares a \
+     lifecycle phase";
+/// WP 1.8c: the SPDX 3 parser attaches a vulnerability twice.
+pub const SPDX3_VULNERABILITY_ATTACHED_TWICE: &str = "bug (WP 1.8c fixes it): the SPDX 3 parser \
+     attaches a vulnerability once for its affects relationship and again for its CVSS \
+     assessment, so a rated vulnerability gains an unrated twin";
+
+/// One component of a [`SbomFixture`]: a CycloneDX `components[]` entry
+/// (or `metadata.component` for the primary), an SPDX package.
 #[derive(Debug, Clone)]
 pub struct ComponentFixture {
-    /// CycloneDX `bom-ref`. Kept distinct from `name` so the generic
-    /// "may be missing bom-ref" Info check stays silent unless a case
-    /// deliberately collapses the two.
+    /// CycloneDX `bom-ref`; the SPDX element id derives from it. Kept
+    /// distinct from `name` so the generic "may be missing bom-ref" Info
+    /// check stays silent unless a case deliberately collapses the two —
+    /// which every encoding then writes as a component without an
+    /// identifier of its own.
     pub bom_ref: String,
     /// CycloneDX component `type` (`library` unless a case changes it).
     pub component_type: String,
     pub name: String,
     pub version: Option<String>,
     pub purl: Option<String>,
+    /// CycloneDX `cpe` (an SPDX `cpe23Type` reference / `cpe23` external
+    /// identifier).
+    pub cpe: Option<String>,
     /// `supplier.name`.
     pub supplier: Option<String>,
     /// `description`.
     pub description: Option<String>,
+    /// `copyright` (SPDX `copyrightText`).
+    pub copyright: Option<String>,
     /// `(alg, content)` pairs, e.g. `("SHA-256", SHA256_FILLER)`.
     pub hashes: Vec<(String, String)>,
     /// `(type, url)` external references, e.g. `("vcs", "https://…")`.
@@ -79,9 +144,17 @@ pub struct ComponentFixture {
     /// External references that carry `hashes[]`, rendered after
     /// [`Self::external_refs`]: `(type, url, (alg, content) pairs)`.
     pub hashed_external_refs: Vec<(String, String, Vec<(String, String)>)>,
-    /// SPDX license ids rendered as `{"license": {"id": …}}` entries.
+    /// SPDX license ids rendered as `{"license": {"id": …}}` entries (the
+    /// SPDX declared licence).
     pub licenses: Vec<String>,
-    /// `(name, value)` CycloneDX properties.
+    /// The concluded licence (SPDX `licenseConcluded` /
+    /// `hasConcludedLicense`).
+    pub concluded_license: Option<String>,
+    /// End of support, `YYYY-MM-DD`: the CycloneDX `endOfSupport` property
+    /// the parser lifts from the primary component, SPDX 2.3
+    /// `validUntilDate`, SPDX 3 `validUntilTime`.
+    pub support_end: Option<String>,
+    /// Other `(name, value)` CycloneDX properties.
     pub properties: Vec<(String, String)>,
     /// `modelCard` (CycloneDX 1.5+ AI/ML-BOM).
     pub model_card: Option<ModelCardFixture>,
@@ -106,12 +179,16 @@ impl ComponentFixture {
             name: name.to_string(),
             version: Some("1.2.3".to_string()),
             purl: Some(format!("pkg:npm/{name}@1.2.3")),
+            cpe: None,
             supplier: Some("Acme Components Ltd".to_string()),
             description: None,
+            copyright: None,
             hashes: vec![("SHA-256".to_string(), SHA256_FILLER.to_string())],
             external_refs: Vec::new(),
             hashed_external_refs: Vec::new(),
             licenses: Vec::new(),
+            concluded_license: None,
+            support_end: None,
             properties: Vec::new(),
             model_card: None,
             dataset: None,
@@ -160,79 +237,6 @@ impl ComponentFixture {
             .as_mut()
             .unwrap_or_else(|| panic!("component {name:?} has no dataset evidence"))
     }
-
-    fn to_json(&self) -> serde_json::Value {
-        let mut obj = serde_json::Map::new();
-        obj.insert("type".into(), serde_json::json!(self.component_type));
-        obj.insert("bom-ref".into(), serde_json::json!(self.bom_ref));
-        obj.insert("name".into(), serde_json::json!(self.name));
-        if let Some(version) = &self.version {
-            obj.insert("version".into(), serde_json::json!(version));
-        }
-        if let Some(purl) = &self.purl {
-            obj.insert("purl".into(), serde_json::json!(purl));
-        }
-        if let Some(supplier) = &self.supplier {
-            obj.insert("supplier".into(), serde_json::json!({ "name": supplier }));
-        }
-        if let Some(description) = &self.description {
-            obj.insert("description".into(), serde_json::json!(description));
-        }
-        if !self.hashes.is_empty() {
-            let hashes: Vec<_> = self
-                .hashes
-                .iter()
-                .map(|(alg, content)| serde_json::json!({ "alg": alg, "content": content }))
-                .collect();
-            obj.insert("hashes".into(), serde_json::json!(hashes));
-        }
-        if !self.external_refs.is_empty() || !self.hashed_external_refs.is_empty() {
-            let hashed = self
-                .hashed_external_refs
-                .iter()
-                .map(|(ref_type, url, hashes)| {
-                    let hashes: Vec<_> = hashes
-                        .iter()
-                        .map(|(alg, content)| serde_json::json!({ "alg": alg, "content": content }))
-                        .collect();
-                    serde_json::json!({ "type": ref_type, "url": url, "hashes": hashes })
-                });
-            let refs: Vec<_> = self
-                .external_refs
-                .iter()
-                .map(|(ref_type, url)| serde_json::json!({ "type": ref_type, "url": url }))
-                .chain(hashed)
-                .collect();
-            obj.insert("externalReferences".into(), serde_json::json!(refs));
-        }
-        if !self.licenses.is_empty() {
-            let licenses: Vec<_> = self
-                .licenses
-                .iter()
-                .map(|id| serde_json::json!({ "license": { "id": id } }))
-                .collect();
-            obj.insert("licenses".into(), serde_json::json!(licenses));
-        }
-        if !self.properties.is_empty() {
-            let props: Vec<_> = self
-                .properties
-                .iter()
-                .map(|(name, value)| serde_json::json!({ "name": name, "value": value }))
-                .collect();
-            obj.insert("properties".into(), serde_json::json!(props));
-        }
-        if let Some(card) = &self.model_card {
-            obj.insert("modelCard".into(), card.to_json());
-        }
-        if let Some(dataset) = &self.dataset {
-            obj.insert("data".into(), serde_json::json!([dataset.to_json()]));
-        }
-        if !self.children.is_empty() {
-            let children: Vec<_> = self.children.iter().map(Self::to_json).collect();
-            obj.insert("components".into(), serde_json::json!(children));
-        }
-        serde_json::Value::Object(obj)
-    }
 }
 
 /// A CycloneDX `modelCard`. Every field is optional in the schema; an empty
@@ -271,69 +275,6 @@ impl ModelCardFixture {
             training_energy_kwh: Some(1200.0),
         }
     }
-
-    fn to_json(&self) -> serde_json::Value {
-        let mut params = serde_json::Map::new();
-        if let Some(family) = &self.architecture_family {
-            params.insert("architectureFamily".into(), serde_json::json!(family));
-        }
-        if let Some(architecture) = &self.model_architecture {
-            params.insert("modelArchitecture".into(), serde_json::json!(architecture));
-        }
-        if !self.datasets.is_empty() {
-            let datasets: Vec<_> = self
-                .datasets
-                .iter()
-                .map(|r| serde_json::json!({ "ref": r }))
-                .collect();
-            params.insert("datasets".into(), serde_json::json!(datasets));
-        }
-
-        let mut considerations = serde_json::Map::new();
-        if !self.use_cases.is_empty() {
-            considerations.insert("useCases".into(), serde_json::json!(self.use_cases));
-        }
-        if !self.technical_limitations.is_empty() {
-            considerations.insert(
-                "technicalLimitations".into(),
-                serde_json::json!(self.technical_limitations),
-            );
-        }
-        if let Some(kwh) = self.training_energy_kwh {
-            considerations.insert(
-                "environmentalConsiderations".into(),
-                serde_json::json!({
-                    "energyConsumptions": [{
-                        "activity": "training",
-                        "activityEnergyCost": { "value": kwh, "unit": "kWh" },
-                    }],
-                }),
-            );
-        }
-
-        let mut card = serde_json::Map::new();
-        if !params.is_empty() {
-            card.insert("modelParameters".into(), serde_json::Value::Object(params));
-        }
-        if !considerations.is_empty() {
-            card.insert(
-                "considerations".into(),
-                serde_json::Value::Object(considerations),
-            );
-        }
-        if !self.performance_metrics.is_empty() {
-            let metrics: Vec<_> = self
-                .performance_metrics
-                .iter()
-                .map(|(metric, value)| serde_json::json!({ "type": metric, "value": value }))
-                .collect();
-            card.insert(
-                "quantitativeAnalysis".into(),
-                serde_json::json!({ "performanceMetrics": metrics }),
-            );
-        }
-        serde_json::Value::Object(card)
-    }
 }
 
 /// A CycloneDX `componentData` entry (`component.data[0]`): the dataset
@@ -358,26 +299,6 @@ impl DatasetFixture {
             sensitive_data: vec!["public".to_string()],
             governance_owners: vec!["Acme Data Office".to_string()],
         }
-    }
-
-    fn to_json(&self) -> serde_json::Value {
-        let mut obj = serde_json::Map::new();
-        obj.insert("type".into(), serde_json::json!(self.data_type));
-        if !self.sensitive_data.is_empty() {
-            obj.insert(
-                "sensitiveData".into(),
-                serde_json::json!(self.sensitive_data),
-            );
-        }
-        if !self.governance_owners.is_empty() {
-            let owners: Vec<_> = self
-                .governance_owners
-                .iter()
-                .map(|name| serde_json::json!({ "organization": { "name": name } }))
-                .collect();
-            obj.insert("governance".into(), serde_json::json!({ "owners": owners }));
-        }
-        serde_json::Value::Object(obj)
     }
 }
 
@@ -428,7 +349,7 @@ pub struct CipherSuiteFixture {
 /// A CycloneDX 1.6+ `cryptographic-asset` component: an algorithm, a
 /// certificate, key material, or a protocol. Rendered into `components[]`
 /// after the [`SbomFixture::components`]; reference other assets by
-/// `bom_ref`.
+/// `bom_ref`. No SPDX version can carry one.
 #[derive(Debug, Clone)]
 pub struct CryptoAssetFixture {
     pub bom_ref: String,
@@ -620,109 +541,48 @@ impl CryptoAssetFixture {
         self.protocol_mut().crypto_refs.push(bom_ref.to_string());
         self
     }
-
-    fn to_json(&self) -> serde_json::Value {
-        let mut crypto = serde_json::Map::new();
-        crypto.insert("assetType".into(), serde_json::json!(self.asset_type));
-        if let Some(oid) = &self.oid {
-            crypto.insert("oid".into(), serde_json::json!(oid));
-        }
-        if let Some(algo) = &self.algorithm {
-            let mut props = serde_json::json!({
-                "primitive": algo.primitive,
-                "algorithmFamily": algo.family,
-                "parameterSetIdentifier": algo.parameter_set,
-                "mode": algo.mode,
-                "ellipticCurve": algo.curve,
-                "classicalSecurityLevel": algo.classical_level,
-                "nistQuantumSecurityLevel": algo.quantum_level,
-            });
-            // Unset properties are omitted, not rendered as null.
-            props
-                .as_object_mut()
-                .expect("algorithm properties are an object")
-                .retain(|_, v| !v.is_null());
-            crypto.insert("algorithmProperties".into(), props);
-        }
-        if let Some(sig_ref) = &self.signature_algorithm_ref {
-            crypto.insert(
-                "certificateProperties".into(),
-                serde_json::json!({
-                    "subjectName": format!("CN={}", self.name),
-                    "signatureAlgorithmRef": sig_ref,
-                }),
-            );
-        }
-        if let Some((material_type, size)) = &self.material {
-            let mut mat = serde_json::Map::new();
-            mat.insert("type".into(), serde_json::json!(material_type));
-            if let Some(size) = size {
-                mat.insert("size".into(), serde_json::json!(size));
-            }
-            crypto.insert(
-                "relatedCryptoMaterialProperties".into(),
-                serde_json::Value::Object(mat),
-            );
-        }
-        if let Some(proto) = &self.protocol {
-            let mut props = serde_json::Map::new();
-            props.insert("type".into(), serde_json::json!(proto.protocol_type));
-            if let Some(version) = &proto.version {
-                props.insert("version".into(), serde_json::json!(version));
-            }
-            if !proto.cipher_suites.is_empty() {
-                let suites: Vec<_> = proto
-                    .cipher_suites
-                    .iter()
-                    .map(|suite| {
-                        let mut s = serde_json::json!({
-                            "name": suite.name,
-                            "algorithms": suite.algorithms,
-                        });
-                        if !suite.tls_groups.is_empty() {
-                            s["tlsGroups"] = serde_json::json!(suite.tls_groups);
-                        }
-                        if !suite.tls_signature_schemes.is_empty() {
-                            s["tlsSignatureSchemes"] =
-                                serde_json::json!(suite.tls_signature_schemes);
-                        }
-                        s
-                    })
-                    .collect();
-                props.insert("cipherSuites".into(), serde_json::json!(suites));
-            }
-            if !proto.crypto_refs.is_empty() {
-                props.insert(
-                    "cryptoRefArray".into(),
-                    serde_json::json!(proto.crypto_refs),
-                );
-            }
-            crypto.insert(
-                "protocolProperties".into(),
-                serde_json::Value::Object(props),
-            );
-        }
-        serde_json::json!({
-            "type": "cryptographic-asset",
-            "bom-ref": self.bom_ref,
-            "name": self.name,
-            "cryptoProperties": serde_json::Value::Object(crypto),
-        })
-    }
 }
 
-/// A minimal CycloneDX document, rendered to JSON and parsed through the real
+/// The VEX analysis of an embedded vulnerability: CycloneDX
+/// `analysis.state` and `analysis.response[]`, and the `recommendation` and
+/// `workaround` texts.
+#[derive(Debug, Clone, Default)]
+pub struct VulnAnalysisFixture {
+    /// `analysis.state` (e.g. `exploitable`).
+    pub state: Option<String>,
+    /// `analysis.response[]` (e.g. `update`, `workaround_available`).
+    pub responses: Vec<String>,
+    /// `recommendation`.
+    pub recommendation: Option<String>,
+    /// `workaround`.
+    pub workaround: Option<String>,
+}
+
+/// A minimal SBOM, rendered in any [`Encoding`] and parsed through the real
 /// parser. All fields are public so a test can clone a conforming baseline
 /// and break exactly one aspect per case. `SbomFixture::default()` is an
 /// empty CycloneDX 1.6 document; baselines spell out the fields they rely
 /// on and take the rest from it (`..SbomFixture::default()`).
 #[derive(Debug, Clone)]
 pub struct SbomFixture {
+    /// CycloneDX `specVersion`. The SPDX encodings write their own version
+    /// ([`Self::spdx_version`]); a CycloneDX version outside 1.4–1.7 has no
+    /// SPDX counterpart.
     pub spec_version: String,
+    /// The SPDX version the SPDX encodings write (`SPDX-<v>` in SPDX 2.3,
+    /// `creationInfo.specVersion` in SPDX 3); `None` → 2.3 and 3.0.1.
+    pub spdx_version: Option<String>,
+    /// Top-level `version`, the BOM revision (`None` omits it; SPDX has no
+    /// revision counter).
+    pub doc_version: Option<u32>,
     /// RFC 3339 `metadata.timestamp`; `None` → the parser stores the
     /// UNIX-epoch "unknown" sentinel (`has_known_timestamp() == false`).
     pub timestamp: Option<String>,
-    /// Top-level `serialNumber`.
+    /// `metadata.lifecycles[]` phases (or lifecycle names), SPDX 3
+    /// `software_sbomType`.
+    pub lifecycles: Vec<String>,
+    /// Top-level `serialNumber` (SPDX 2.3 `documentNamespace`, the SPDX 3
+    /// document's `spdxId`).
     pub serial_number: Option<String>,
     /// `metadata.tools` entries `(name, version)` → `CreatorType::Tool`.
     pub tools: Vec<(String, String)>,
@@ -740,17 +600,27 @@ pub struct SbomFixture {
     pub crypto_assets: Vec<CryptoAssetFixture>,
     /// `dependencies[]` entries: `(ref, dependsOn refs)`.
     pub dependencies: Vec<(String, Vec<String>)>,
+    /// Dynamic links `(from ref, to ref)`: SPDX 2.3 `DYNAMIC_LINK`, SPDX 3
+    /// `hasDynamicLink` relationships (CycloneDX dependencies have no link
+    /// type).
+    pub dynamic_links: Vec<(String, String)>,
     /// Document `vulnerabilities[]`: `(id, rating severity, affected
     /// bom-ref)`. An empty severity renders no `ratings` at all (an unrated
     /// vulnerability).
     pub vulnerabilities: Vec<(String, String, String)>,
-    /// Extra members merged into the rendered `vulnerabilities[]` entry with
-    /// the given id, e.g. `("CVE-…", json!({ "recommendation": "…" }))`.
-    pub vulnerability_extras: Vec<(String, serde_json::Value)>,
-    /// `compositions[0].aggregate` (e.g. `complete`, `incomplete`).
+    /// The analysis of the embedded vulnerability with the given id.
+    pub vulnerability_analyses: Vec<(String, VulnAnalysisFixture)>,
+    /// `compositions[0].aggregate` (e.g. `complete`, `incomplete`); SPDX 3
+    /// relationship `completeness`.
     pub completeness: Option<String>,
-    /// Top-level JSF `signature` as `(algorithm, value)`.
+    /// Top-level JSF `signature` as `(algorithm, value)` (an enveloped
+    /// XML-DSig signature in XML, a `verifiedUsing` signature on the SPDX 3
+    /// document).
     pub signature: Option<(String, String)>,
+    /// SPDX 3 profiles the document uses but leaves out of its
+    /// `profileConformance` (the SPDX 3 renderer declares every profile its
+    /// elements use).
+    pub undeclared_spdx3_profiles: Vec<String>,
     /// CRA sidecar metadata, attached to the checker by [`check`] the way
     /// `validate --cra-sidecar` attaches it.
     pub sidecar: Option<CraSidecarMetadata>,
@@ -760,7 +630,10 @@ impl Default for SbomFixture {
     fn default() -> Self {
         Self {
             spec_version: "1.6".to_string(),
+            spdx_version: None,
+            doc_version: Some(1),
             timestamp: None,
+            lifecycles: Vec::new(),
             serial_number: None,
             tools: Vec::new(),
             authors: Vec::new(),
@@ -769,10 +642,12 @@ impl Default for SbomFixture {
             components: Vec::new(),
             crypto_assets: Vec::new(),
             dependencies: Vec::new(),
+            dynamic_links: Vec::new(),
             vulnerabilities: Vec::new(),
-            vulnerability_extras: Vec::new(),
+            vulnerability_analyses: Vec::new(),
             completeness: None,
             signature: None,
+            undeclared_spdx3_profiles: Vec::new(),
             sidecar: None,
         }
     }
@@ -808,145 +683,53 @@ impl SbomFixture {
         self.sidecar.as_mut().expect("fixture has no CRA sidecar")
     }
 
-    /// Render the CycloneDX JSON document.
-    pub fn to_json_string(&self) -> String {
-        let mut doc = serde_json::Map::new();
-        doc.insert("bomFormat".into(), serde_json::json!("CycloneDX"));
-        doc.insert("specVersion".into(), serde_json::json!(self.spec_version));
-        doc.insert("version".into(), serde_json::json!(1));
-        if let Some(serial) = &self.serial_number {
-            doc.insert("serialNumber".into(), serde_json::json!(serial));
-        }
-
-        let mut metadata = serde_json::Map::new();
-        if let Some(ts) = &self.timestamp {
-            metadata.insert("timestamp".into(), serde_json::json!(ts));
-        }
-        if !self.tools.is_empty() {
-            let tools: Vec<_> = self
-                .tools
-                .iter()
-                .map(|(name, version)| serde_json::json!({ "name": name, "version": version }))
-                .collect();
-            metadata.insert("tools".into(), serde_json::json!(tools));
-        }
-        if !self.authors.is_empty() {
-            let authors: Vec<_> = self
-                .authors
-                .iter()
-                .map(|(name, email)| {
-                    let mut a = serde_json::Map::new();
-                    a.insert("name".into(), serde_json::json!(name));
-                    if let Some(email) = email {
-                        a.insert("email".into(), serde_json::json!(email));
-                    }
-                    serde_json::Value::Object(a)
-                })
-                .collect();
-            metadata.insert("authors".into(), serde_json::json!(authors));
-        }
-        if let Some((name, email)) = &self.manufacturer {
-            let mut m = serde_json::Map::new();
-            m.insert("name".into(), serde_json::json!(name));
-            if let Some(email) = email {
-                m.insert("contact".into(), serde_json::json!([{ "email": email }]));
-            }
-            metadata.insert("manufacturer".into(), serde_json::Value::Object(m));
-        }
-        if let Some(primary) = &self.primary {
-            metadata.insert("component".into(), primary.to_json());
-        }
-        if !metadata.is_empty() {
-            doc.insert("metadata".into(), serde_json::Value::Object(metadata));
-        }
-
-        let components: Vec<_> = self
-            .components
-            .iter()
-            .map(ComponentFixture::to_json)
-            .chain(self.crypto_assets.iter().map(CryptoAssetFixture::to_json))
-            .collect();
-        doc.insert("components".into(), serde_json::json!(components));
-
-        if !self.dependencies.is_empty() {
-            let deps: Vec<_> = self
-                .dependencies
-                .iter()
-                .map(|(from, depends_on)| {
-                    serde_json::json!({ "ref": from, "dependsOn": depends_on })
-                })
-                .collect();
-            doc.insert("dependencies".into(), serde_json::json!(deps));
-        }
-
-        if !self.vulnerabilities.is_empty() {
-            let vulns: Vec<_> = self
-                .vulnerabilities
-                .iter()
-                .map(|(id, severity, affected_ref)| {
-                    let mut v = serde_json::Map::new();
-                    v.insert("id".into(), serde_json::json!(id));
-                    if !severity.is_empty() {
-                        v.insert(
-                            "ratings".into(),
-                            serde_json::json!([{ "severity": severity }]),
-                        );
-                    }
-                    v.insert(
-                        "affects".into(),
-                        serde_json::json!([{ "ref": affected_ref }]),
-                    );
-                    for (extra_id, extra) in &self.vulnerability_extras {
-                        if extra_id != id {
-                            continue;
-                        }
-                        let members = extra
-                            .as_object()
-                            .expect("vulnerability extras are JSON objects");
-                        for (key, value) in members {
-                            v.insert(key.clone(), value.clone());
-                        }
-                    }
-                    serde_json::Value::Object(v)
-                })
-                .collect();
-            doc.insert("vulnerabilities".into(), serde_json::json!(vulns));
-        }
-
-        if let Some(aggregate) = &self.completeness {
-            doc.insert(
-                "compositions".into(),
-                serde_json::json!([{ "aggregate": aggregate }]),
-            );
-        }
-
-        if let Some((algorithm, value)) = &self.signature {
-            doc.insert(
-                "signature".into(),
-                serde_json::json!({ "algorithm": algorithm, "value": value }),
-            );
-        }
-
-        serde_json::to_string_pretty(&serde_json::Value::Object(doc))
-            .expect("fixture JSON must serialize")
+    /// Parse the CycloneDX JSON rendering through the real parser (see
+    /// [`Self::parse_in`]).
+    pub fn parse(&self) -> NormalizedSbom {
+        self.parse_in(Encoding::CycloneDxJson)
     }
 
-    /// Parse the rendered document through the real CycloneDX parser, then
-    /// attach the EOL status of every component that declares one (what EOL
-    /// enrichment would add after parsing).
-    pub fn parse(&self) -> NormalizedSbom {
-        let json = self.to_json_string();
-        let mut sbom = parse_sbom_str(&json)
-            .unwrap_or_else(|e| panic!("fixture must parse as CycloneDX: {e}\n{json}"));
-        for fixture in self.primary.iter().chain(&self.components) {
+    /// Render the fixture in `encoding` and parse it through the real
+    /// parser, which must be the one `encoding` names, then attach the EOL
+    /// status of every component that declares one (what EOL enrichment
+    /// would add after parsing).
+    pub fn parse_in(&self, encoding: Encoding) -> NormalizedSbom {
+        self.parse_rendered(&self.render(encoding))
+            .unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    fn parse_rendered(&self, rendered: &Rendered) -> Result<NormalizedSbom, String> {
+        let encoding = rendered.encoding;
+        let detection = FormatDetector::new().detect_from_content(&rendered.text);
+        let (parser, variant) = encoding.expected_detection();
+        if detection.parser != Some(parser) || detection.variant.as_deref() != Some(variant) {
+            return Err(format!(
+                "the {} rendering was detected as {:?} {:?}, not {parser:?} {variant:?}:\n{}",
+                encoding.name(),
+                detection.parser,
+                detection.variant,
+                rendered.text
+            ));
+        }
+        let mut sbom = parse_sbom_str(&rendered.text).map_err(|e| {
+            format!(
+                "the {} rendering must parse: {e}\n{}",
+                encoding.name(),
+                rendered.text
+            )
+        })?;
+        for fixture in self.all_components() {
             let Some(status) = fixture.eol else {
                 continue;
             };
+            let id = self.element_id(encoding, &fixture.bom_ref);
             let comp = sbom
                 .components
                 .values_mut()
-                .find(|c| c.identifiers.format_id == fixture.bom_ref)
-                .unwrap_or_else(|| panic!("parsed SBOM lost component {:?}", fixture.bom_ref));
+                .find(|c| c.identifiers.format_id == id)
+                .ok_or_else(|| {
+                    format!("the parsed {} SBOM lost component {id:?}", encoding.name())
+                })?;
             comp.eol = Some(EolInfo {
                 status,
                 product: fixture.name.clone(),
@@ -959,18 +742,37 @@ impl SbomFixture {
                 days_until_eol: None,
             });
         }
-        sbom
+        Ok(sbom)
     }
 }
 
-/// Run one compliance standard over a fixture (real parser → real checker),
-/// at the pinned test clock, with the fixture's CRA sidecar attached.
+/// Run one compliance standard over the CycloneDX JSON rendering of a
+/// fixture (see [`check_in`]).
 pub fn check(level: ComplianceLevel, fixture: &SbomFixture) -> ComplianceResult {
+    check_in(level, fixture, Encoding::CycloneDxJson)
+}
+
+/// Run one compliance standard over a fixture rendered in `encoding` (real
+/// parser → real checker), at the pinned test clock, with the fixture's CRA
+/// sidecar attached.
+pub fn check_in(
+    level: ComplianceLevel,
+    fixture: &SbomFixture,
+    encoding: Encoding,
+) -> ComplianceResult {
+    check_sbom(level, fixture, &fixture.parse_in(encoding))
+}
+
+fn check_sbom(
+    level: ComplianceLevel,
+    fixture: &SbomFixture,
+    sbom: &NormalizedSbom,
+) -> ComplianceResult {
     let mut checker = clock::checker(level);
     if let Some(sidecar) = &fixture.sidecar {
         checker = checker.with_sidecar(sidecar.clone());
     }
-    checker.check(&fixture.parse())
+    checker.check(sbom)
 }
 
 /// Render a result's violations, then its passed checks, for assertion
@@ -1001,8 +803,8 @@ pub fn render_violations(result: &ComplianceResult) -> String {
 
 /// A minimal SPDX tag-value document whose `SPDXVersion` line reads
 /// `SPDX-{version}`: one named, versioned, supplier-attributed package. The
-/// fixture DSL renders CycloneDX only, so the format checks that read only
-/// SPDX input are asserted through this document instead.
+/// matrix renders SPDX as JSON and JSON-LD; this document covers the
+/// tag-value encoding of the SPDX-only version check.
 pub fn spdx_tag_value(version: &str) -> String {
     format!(
         "SPDXVersion: SPDX-{version}\n\
@@ -1026,9 +828,10 @@ pub fn spdx_tag_value(version: &str) -> String {
 }
 
 /// Assert that `key`, a family's `SBOM-*-SPEC-VERSION-UNKNOWN` id, fires at
-/// `level` once, as a Warning, on an SPDX document claiming version 4.0
-/// (neither 2.x nor 3.x), and stays silent on SPDX 2.3. Both documents go
-/// through the real parser and the checker at the pinned clock.
+/// `level` once, as a Warning, on an SPDX tag-value document claiming
+/// version 4.0 (neither 2.x nor 3.x), and stays silent on SPDX 2.3. Both
+/// documents go through the real parser and the checker at the pinned
+/// clock.
 pub fn assert_spdx_version_unknown(level: ComplianceLevel, key: &str) {
     let run = |version: &str| {
         let sbom = parse_sbom_str(&spdx_tag_value(version))
@@ -1058,16 +861,30 @@ pub fn assert_spdx_version_unknown(level: ComplianceLevel, key: &str) {
     );
 }
 
-/// Assert a fully-conforming fixture yields a clean, compliant verdict.
+/// Assert a fully-conforming fixture yields a clean, compliant verdict in
+/// CycloneDX JSON.
 pub fn assert_no_violations(level: ComplianceLevel, fixture: &SbomFixture) {
-    let result = check(level, fixture);
-    assert!(
-        result.violations.is_empty() && result.is_compliant,
-        "[{level:?}] conforming fixture must pass with zero violations; got \
-         is_compliant={compliant}:\n{violations}",
-        compliant = result.is_compliant,
-        violations = render_violations(&result)
-    );
+    assert_no_violations_in(level, fixture, &[Encoding::CycloneDxJson]);
+}
+
+/// Assert a fully-conforming fixture yields a clean, compliant verdict in
+/// every encoding of `encodings`.
+pub fn assert_no_violations_in(
+    level: ComplianceLevel,
+    fixture: &SbomFixture,
+    encodings: &[Encoding],
+) {
+    for &encoding in encodings {
+        let result = check_in(level, fixture, encoding);
+        assert!(
+            result.violations.is_empty() && result.is_compliant,
+            "[{level:?}] conforming fixture must pass with zero violations in {}; got \
+             is_compliant={compliant}:\n{violations}",
+            encoding.name(),
+            compliant = result.is_compliant,
+            violations = render_violations(&result)
+        );
+    }
 }
 
 /// One firing case: a minimal fixture that must surface the rule at the
@@ -1132,15 +949,74 @@ pub enum RuleCoverage {
     Skipped { reason: &'static str },
 }
 
+/// What a case must do in an encoding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Outcome {
+    /// Report the row's rule as a violation at this severity.
+    Fires(ViolationSeverity),
+    /// Surface the row's rule nowhere: no violation, no passed check.
+    Silent,
+    /// Report the row's rule among the passed checks, never as a violation.
+    Passes,
+}
+
+/// A case-level departure from running in every encoding of the entry with
+/// the case's own outcome.
+struct Departure {
+    label: &'static str,
+    encodings: Vec<Encoding>,
+    change: Change,
+    reason: &'static str,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Change {
+    /// The case does not run in these encodings.
+    Omit,
+    /// The case reaches this outcome in these encodings.
+    Expect(Outcome),
+}
+
 /// One row of the per-standard matrix.
 pub struct RuleEntry {
     /// The SARIF rule id (`Violation::sarif_rule_id`) the row covers. Every
     /// check is its own SARIF rule, so this names exactly one check.
     pub id: &'static str,
     pub coverage: RuleCoverage,
+    /// The encodings the entry runs in when [`Self::only`] narrows them,
+    /// with the reason; all four otherwise.
+    scope: Option<(Vec<Encoding>, &'static str)>,
+    /// Per-case omissions and declared differences.
+    departures: Vec<Departure>,
+}
+
+/// One case of a row, with the outcome it must reach wherever it runs
+/// unchanged.
+struct Case<'a> {
+    label: &'static str,
+    outcome: Outcome,
+    fixture: &'a SbomFixture,
+}
+
+/// How a case runs in one encoding.
+enum Plan {
+    /// Run it; the outcome to assert, and the reason when a declared
+    /// difference replaces the case's own outcome.
+    Run(Outcome, Option<&'static str>),
+    /// Leave it out, for this reason.
+    Omit(&'static str),
 }
 
 impl RuleEntry {
+    fn new(id: &'static str, coverage: RuleCoverage) -> Self {
+        Self {
+            id,
+            coverage,
+            scope: None,
+            departures: Vec::new(),
+        }
+    }
+
     fn tested_case(
         id: &'static str,
         severity: ViolationSeverity,
@@ -1148,9 +1024,9 @@ impl RuleEntry {
         firing: SbomFixture,
         silent: SbomFixture,
     ) -> Self {
-        Self {
+        Self::new(
             id,
-            coverage: RuleCoverage::Tested {
+            RuleCoverage::Tested {
                 firing: vec![FiringCase {
                     label: "firing",
                     severity,
@@ -1161,7 +1037,7 @@ impl RuleEntry {
                 extra_silent: Vec::new(),
                 skipped_cases: Vec::new(),
             },
-        }
+        )
     }
 
     /// Rule with a firing case at the registry's default severity plus a
@@ -1187,9 +1063,9 @@ impl RuleEntry {
     }
 
     fn passing_case(id: &'static str, passing: SbomFixture, silent: SbomFixture) -> Self {
-        Self {
+        Self::new(
             id,
-            coverage: RuleCoverage::Passing {
+            RuleCoverage::Passing {
                 passing: vec![PassingCase {
                     label: "passing",
                     fixture: passing,
@@ -1197,7 +1073,7 @@ impl RuleEntry {
                 silent: Box::new(silent),
                 extra_silent: Vec::new(),
             },
-        }
+        )
     }
 
     /// Pass-only rule (`RuleKind::Pass`): a passing case, whose SBOM passes
@@ -1285,6 +1161,75 @@ impl RuleEntry {
         self
     }
 
+    /// Run the whole entry only in `encodings`: the others cannot carry what
+    /// the row is about (or a bug blocks it), which `reason` names.
+    #[must_use]
+    pub fn only(mut self, encodings: &[Encoding], reason: &'static str) -> Self {
+        self.assert_not_skipped("only");
+        assert!(
+            self.scope.is_none(),
+            "{}: declare the encodings of an entry with one only()",
+            self.id
+        );
+        self.scope = Some((encodings.to_vec(), reason));
+        self
+    }
+
+    /// Run the case `label` only in `encodings` (of those the entry runs
+    /// in): the others cannot carry what the case is about, or a bug blocks
+    /// it, which `reason` names.
+    #[must_use]
+    pub fn case_only(
+        mut self,
+        label: &'static str,
+        encodings: &[Encoding],
+        reason: &'static str,
+    ) -> Self {
+        self.assert_not_skipped("case_only");
+        let omitted = Encoding::ALL
+            .iter()
+            .copied()
+            .filter(|e| !encodings.contains(e))
+            .collect();
+        self.departures.push(Departure {
+            label,
+            encodings: omitted,
+            change: Change::Omit,
+            reason,
+        });
+        self
+    }
+
+    /// In `encodings`, the case `label` legitimately reaches `outcome`
+    /// instead of its own (a check evidence-gated to one format, say), for
+    /// the format difference `reason` names. The runner asserts `outcome`
+    /// there, and fails when the case's own outcome holds as well.
+    #[must_use]
+    pub fn case_differs(
+        mut self,
+        label: &'static str,
+        encodings: &[Encoding],
+        outcome: Outcome,
+        reason: &'static str,
+    ) -> Self {
+        self.assert_not_skipped("case_differs");
+        self.departures.push(Departure {
+            label,
+            encodings: encodings.to_vec(),
+            change: Change::Expect(outcome),
+            reason,
+        });
+        self
+    }
+
+    fn assert_not_skipped(&self, what: &str) {
+        assert!(
+            !matches!(self.coverage, RuleCoverage::Skipped { .. }),
+            "{what}() on skipped rule {}: a skipped row runs in no encoding",
+            self.id
+        );
+    }
+
     fn push_firing(&mut self, case: FiringCase) {
         match &mut self.coverage {
             RuleCoverage::Tested { firing, .. } => firing.push(case),
@@ -1302,10 +1247,7 @@ impl RuleEntry {
 
     /// Explicit skip-with-reason entry (counted by the exhaustiveness gate).
     pub fn skipped(sarif_id: &'static str, reason: &'static str) -> Self {
-        Self {
-            id: sarif_id,
-            coverage: RuleCoverage::Skipped { reason },
-        }
+        Self::new(sarif_id, RuleCoverage::Skipped { reason })
     }
 
     /// Whether `v` carries this row's identity.
@@ -1317,20 +1259,214 @@ impl RuleEntry {
     fn matches_pass(&self, p: &PassedCheck) -> bool {
         p.sarif_rule_id() == self.id
     }
+
+    /// The row's cases with their own outcomes: firing, then silent; or
+    /// passing, then silent.
+    fn cases(&self) -> Vec<Case<'_>> {
+        fn silent_cases<'a>(silent: &'a SbomFixture, extra: &'a [SilentCase]) -> Vec<Case<'a>> {
+            let main = Case {
+                label: "silent",
+                outcome: Outcome::Silent,
+                fixture: silent,
+            };
+            std::iter::once(main)
+                .chain(extra.iter().map(|c| Case {
+                    label: c.label,
+                    outcome: Outcome::Silent,
+                    fixture: &c.fixture,
+                }))
+                .collect()
+        }
+        match &self.coverage {
+            RuleCoverage::Tested {
+                firing,
+                silent,
+                extra_silent,
+                ..
+            } => firing
+                .iter()
+                .map(|c| Case {
+                    label: c.label,
+                    outcome: Outcome::Fires(c.severity),
+                    fixture: &c.fixture,
+                })
+                .chain(silent_cases(silent, extra_silent))
+                .collect(),
+            RuleCoverage::Passing {
+                passing,
+                silent,
+                extra_silent,
+            } => passing
+                .iter()
+                .map(|c| Case {
+                    label: c.label,
+                    outcome: Outcome::Passes,
+                    fixture: &c.fixture,
+                })
+                .chain(silent_cases(silent, extra_silent))
+                .collect(),
+            RuleCoverage::Skipped { .. } => Vec::new(),
+        }
+    }
+
+    /// The encodings the entry runs in.
+    fn encodings(&self) -> Vec<Encoding> {
+        self.scope.as_ref().map_or_else(
+            || Encoding::ALL.to_vec(),
+            |(encodings, _)| encodings.clone(),
+        )
+    }
+
+    /// How `case` runs in `encoding`.
+    fn plan(&self, case: &Case<'_>, encoding: Encoding) -> Plan {
+        if let Some((encodings, reason)) = &self.scope
+            && !encodings.contains(&encoding)
+        {
+            return Plan::Omit(reason);
+        }
+        for d in &self.departures {
+            if d.label == case.label && d.encodings.contains(&encoding) {
+                return match d.change {
+                    Change::Omit => Plan::Omit(d.reason),
+                    Change::Expect(outcome) => Plan::Run(outcome, Some(d.reason)),
+                };
+            }
+        }
+        Plan::Run(case.outcome, None)
+    }
+
+    /// Whether `result` reaches `outcome` for this row, or why not.
+    fn reaches(&self, result: &ComplianceResult, outcome: Outcome) -> Result<(), &'static str> {
+        let violations: Vec<&Violation> = result
+            .violations
+            .iter()
+            .filter(|v| self.matches(v))
+            .collect();
+        let passed = result.passed.iter().any(|p| self.matches_pass(p));
+        match outcome {
+            Outcome::Fires(severity) => {
+                if violations.is_empty() {
+                    Err("the violating fixture must fire this rule")
+                } else if !violations.iter().any(|v| v.severity == severity) {
+                    Err("the rule fired, but not at the expected severity")
+                } else {
+                    Ok(())
+                }
+            }
+            Outcome::Silent if !violations.is_empty() || passed => {
+                Err("the silent fixture must not surface this rule")
+            }
+            Outcome::Silent => Ok(()),
+            Outcome::Passes if !passed => Err("the passing fixture must pass this check"),
+            Outcome::Passes if !violations.is_empty() => {
+                Err("a pass-only rule must never report a violation")
+            }
+            Outcome::Passes => Ok(()),
+        }
+    }
+
+    /// Hold the entry's encodings and departures to their rules.
+    fn validate_encodings(&self, level: ComplianceLevel) {
+        let id = self.id;
+        if let Some((encodings, reason)) = &self.scope {
+            let unique: BTreeSet<_> = encodings.iter().collect();
+            assert!(
+                !encodings.is_empty() && unique.len() == encodings.len(),
+                "[{level:?}] {id}: only() names each encoding at most once, and at least one"
+            );
+            assert!(
+                encodings.len() < Encoding::ALL.len(),
+                "[{level:?}] {id}: only() with every encoding narrows nothing; drop it"
+            );
+            assert!(
+                !reason.trim().is_empty(),
+                "[{level:?}] {id}: only() needs a reason"
+            );
+        }
+        let cases = self.cases();
+        let mut labels = BTreeSet::new();
+        for case in &cases {
+            assert!(
+                labels.insert(case.label),
+                "[{level:?}] {id}: two cases share the label {:?}",
+                case.label
+            );
+        }
+        let entry_encodings = self.encodings();
+        let mut addressed = BTreeSet::new();
+        for d in &self.departures {
+            let case = cases
+                .iter()
+                .find(|c| c.label == d.label)
+                .unwrap_or_else(|| panic!("[{level:?}] {id}: no case is labelled {:?}", d.label));
+            assert!(
+                !d.reason.trim().is_empty(),
+                "[{level:?}] {id} ({}): a departure needs a reason",
+                d.label
+            );
+            assert!(
+                !d.encodings.is_empty(),
+                "[{level:?}] {id} ({}): a departure names at least one encoding",
+                d.label
+            );
+            for encoding in &d.encodings {
+                assert!(
+                    entry_encodings.contains(encoding) || matches!(d.change, Change::Omit),
+                    "[{level:?}] {id} ({}): the entry does not run in {}",
+                    d.label,
+                    encoding.name()
+                );
+                assert!(
+                    addressed.insert((d.label, *encoding)),
+                    "[{level:?}] {id} ({}): {} is addressed by two departures",
+                    d.label,
+                    encoding.name()
+                );
+            }
+            match d.change {
+                Change::Omit => assert!(
+                    entry_encodings.iter().any(|e| !d.encodings.contains(e)),
+                    "[{level:?}] {id} ({}): case_only() leaves the case no encoding to run in",
+                    d.label
+                ),
+                Change::Expect(outcome) => {
+                    assert_ne!(
+                        outcome, case.outcome,
+                        "[{level:?}] {id} ({}): case_differs() repeats the case's own outcome",
+                        d.label
+                    );
+                    let pass_row = matches!(self.coverage, RuleCoverage::Passing { .. });
+                    assert!(
+                        pass_row || outcome != Outcome::Passes,
+                        "[{level:?}] {id} ({}): a finding rule never passes",
+                        d.label
+                    );
+                    assert!(
+                        !pass_row || !matches!(outcome, Outcome::Fires(_)),
+                        "[{level:?}] {id} ({}): a pass-only rule never fires",
+                        d.label
+                    );
+                }
+            }
+        }
+    }
 }
 
 /// Run a per-standard rule matrix:
 ///
 /// 1. exhaustiveness — the rows must cover `universe` exactly (every rule id
 ///    tested or explicitly skipped, no duplicates, no strays);
-/// 2. per rule — each firing fixture surfaces the row's id at the expected
-///    severity (with registry-default consistency enforced), each passing
-///    fixture of a pass-only row reports the row's id among its passed
-///    checks and never as a violation, and each silent fixture stays silent
-///    for that id (no violation, no pass);
-/// 3. sweep — every violation and every passed check any fixture emits maps
-///    into `universe`, and every Info violation is a rule classified in
-///    tests/common/info_classification.rs.
+/// 2. per rule and per encoding — each firing fixture surfaces the row's id
+///    at the expected severity (with registry-default consistency
+///    enforced), each passing fixture of a pass-only row reports the row's
+///    id among its passed checks and never as a violation, and each silent
+///    fixture stays silent for that id (no violation, no pass), in every
+///    encoding the row runs the case in; a declared difference replaces the
+///    outcome in its encodings, and an omission is held to being
+///    load-bearing;
+/// 3. sweep — every violation and every passed check any fixture emits, in
+///    any encoding, maps into `universe`, and every Info violation is a rule
+///    classified in tests/common/info_classification.rs.
 ///
 /// The registry default severity is what the SARIF rule catalogue
 /// advertises, so a finding row needs a firing case at it (WP 1.2 finding
@@ -1373,6 +1509,7 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
             }
             RuleCoverage::Passing { .. } => {}
         }
+        entry.validate_encodings(level);
     }
     assert_eq!(
         covered, universe_set,
@@ -1381,194 +1518,101 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
          (left = matrix entries, right = universe)"
     );
 
+    // Every case in every encoding: the failures are collected, so one run
+    // shows each mismatch.
+    let mut failures: Vec<String> = Vec::new();
     for entry in entries {
-        let (firing, silent, extra_silent) = match &entry.coverage {
-            RuleCoverage::Tested {
-                firing,
-                silent,
-                extra_silent,
-                ..
-            } => (firing, silent, extra_silent),
-            RuleCoverage::Passing {
-                passing,
-                silent,
-                extra_silent,
-            } => {
-                check_passing_row(level, entry, passing, silent, extra_silent);
-                continue;
-            }
+        match &entry.coverage {
+            RuleCoverage::Tested { firing, .. } => check_finding_row(level, entry, firing),
+            RuleCoverage::Passing { passing, .. } => check_passing_row(level, entry, passing),
             // Skip-with-reason rows carry their justification inline.
             RuleCoverage::Skipped { .. } => continue,
-        };
-        let id = entry.id;
-        let meta = rule_meta(id)
-            .unwrap_or_else(|| panic!("[{level:?}] {id} does not resolve in the rule registry"));
-        assert_eq!(
-            rule_kind(id),
-            Some(RuleKind::Finding),
-            "[{level:?}] {id} is a pass-only rule: give it a RuleEntry::passing row"
-        );
-
-        assert!(!firing.is_empty(), "[{level:?}] {id} has no firing case");
-        // The registry default is what the SARIF rule catalogue advertises,
-        // so some check must emit it: a rule whose severity is not context-
-        // dependent emits only its default, and one that escalates or relaxes
-        // by product class, phase or context still emits its default in its
-        // most common case. A row whose every firing case departs from the
-        // default documents a level no check emits (WP 1.2 finding B6).
-        assert!(
-            firing
-                .iter()
-                .any(|case| !case.departs_from_registry_default),
-            "[{level:?}] {id}: no firing case is at the registry default severity \
-             {default:?} (emitted: {emitted:?}) — the SARIF catalogue would advertise a \
-             level no check emits; align the registry default with the emitted severity \
-             (the most common one when it depends on context) and document the escalation",
-            default = meta.default_severity,
-            emitted = firing.iter().map(|case| case.severity).collect::<Vec<_>>(),
-        );
-        for case in firing {
-            // The flag keeps severity expectations honest against the
-            // registry: an expectation that silently matches (or silently
-            // departs from) the documented default fails here.
-            assert_eq!(
-                case.severity == meta.default_severity,
-                !case.departs_from_registry_default,
-                "[{level:?}] {id} ({label}): expected severity {expected:?} vs registry \
-                 default {default:?} — update the departs_from_registry_default flag \
-                 (or the expectation) so the deviation is explicit",
-                label = case.label,
-                expected = case.severity,
-                default = meta.default_severity,
-            );
-
-            let result = check(level, &case.fixture);
-            let hits: Vec<_> = result
-                .violations
-                .iter()
-                .filter(|v| entry.matches(v))
-                .collect();
-            assert!(
-                !hits.is_empty(),
-                "[{level:?}] {id} ({label}): the violating fixture must fire this rule; \
-                 emitted:\n{violations}",
-                label = case.label,
-                violations = render_violations(&result)
-            );
-            assert!(
-                hits.iter().any(|v| v.severity == case.severity),
-                "[{level:?}] {id} ({label}): rule fired but not at {expected:?}; \
-                 emitted:\n{violations}",
-                label = case.label,
-                expected = case.severity,
-                violations = render_violations(&result)
-            );
         }
-
-        assert_silent(level, entry, silent, extra_silent);
-    }
-
-    // Universe sweep: no fixture in this matrix may emit a rule outside the
-    // declared universe, or an unregistered rule. A new check site for this
-    // standard must extend the universe (and therefore the matrix) instead
-    // of escaping it.
-    for entry in entries {
-        let fixtures: Vec<(&str, &SbomFixture)> = match &entry.coverage {
-            RuleCoverage::Tested {
-                firing,
-                silent,
-                extra_silent,
-                ..
-            } => firing
-                .iter()
-                .map(|c| (c.label, &c.fixture))
-                .chain(std::iter::once(("silent", silent.as_ref())))
-                .chain(extra_silent.iter().map(|c| (c.label, &c.fixture)))
-                .collect(),
-            RuleCoverage::Passing {
-                passing,
-                silent,
-                extra_silent,
-            } => passing
-                .iter()
-                .map(|c| (c.label, &c.fixture))
-                .chain(std::iter::once(("silent", silent.as_ref())))
-                .chain(extra_silent.iter().map(|c| (c.label, &c.fixture)))
-                .collect(),
-            RuleCoverage::Skipped { .. } => continue,
-        };
-        for (label, fixture) in fixtures {
-            let result = check(level, fixture);
-            // An Info violation is a reviewed gap or advice; an affirmation
-            // would be a passed check instead.
-            for v in &result.violations {
-                assert!(
-                    v.severity != ViolationSeverity::Info
-                        || info_classification::info_finding_reason(v.rule_id).is_some(),
-                    "[{level:?}] fixture for {id} ({label}) reported {rule} at Info, which \
-                     tests/common/info_classification.rs does not classify: list it with the \
-                     reason it stays a violation, or make it a pass-only rule",
-                    id = entry.id,
-                    rule = v.rule_id,
-                );
-            }
-            let emitted = result
-                .violations
-                .iter()
-                .map(|v| (v.rule_id, v.sarif_rule_id()))
-                .chain(result.passed.iter().map(|p| (p.rule_id, p.sarif_rule_id())));
-            for (rule, sarif) in emitted {
-                assert!(
-                    universe_set.contains(sarif),
-                    "[{level:?}] fixture for {id} ({label}) emitted rule {rule} \
-                     (sarif {sarif}) outside the declared rule universe {universe_set:?} — \
-                     new check site? extend the universe and the matrix",
-                    id = entry.id,
-                );
-                assert!(
-                    rule_meta(rule).is_some(),
-                    "[{level:?}] fixture for {id} ({label}) emitted unregistered rule {rule}",
-                    id = entry.id,
-                );
+        for case in entry.cases() {
+            for &encoding in Encoding::ALL {
+                match entry.plan(&case, encoding) {
+                    Plan::Run(outcome, difference) => run_case(
+                        level,
+                        &universe_set,
+                        entry,
+                        &case,
+                        encoding,
+                        outcome,
+                        difference,
+                        &mut failures,
+                    ),
+                    Plan::Omit(reason) => check_omission_load_bearing(
+                        level,
+                        entry,
+                        &case,
+                        encoding,
+                        reason,
+                        &mut failures,
+                    ),
+                }
             }
         }
     }
+    assert!(
+        failures.is_empty(),
+        "[{level:?}] {count} matrix failure(s):\n\n{all}",
+        count = failures.len(),
+        all = failures.join("\n\n")
+    );
 }
 
-/// The silent cases of a row: none may surface the row's rule, as a
-/// violation or as a passed check.
-fn assert_silent(
-    level: ComplianceLevel,
-    entry: &RuleEntry,
-    silent: &SbomFixture,
-    extra_silent: &[SilentCase],
-) {
+/// The registry side of a finding row: the rule resolves, is a finding rule,
+/// and some firing case fires at the default severity the SARIF catalogue
+/// advertises, every other one departing from it explicitly.
+fn check_finding_row(level: ComplianceLevel, entry: &RuleEntry, firing: &[FiringCase]) {
     let id = entry.id;
-    let silent_cases = std::iter::once(("silent", silent))
-        .chain(extra_silent.iter().map(|c| (c.label, &c.fixture)));
-    for (label, fixture) in silent_cases {
-        let result = check(level, fixture);
-        assert!(
-            result.violations.iter().all(|v| !entry.matches(v))
-                && result.passed.iter().all(|p| !entry.matches_pass(p)),
-            "[{level:?}] {id} ({label}): the silent fixture must not surface this rule; \
-             emitted:\n{violations}",
-            violations = render_violations(&result)
+    let meta = rule_meta(id)
+        .unwrap_or_else(|| panic!("[{level:?}] {id} does not resolve in the rule registry"));
+    assert_eq!(
+        rule_kind(id),
+        Some(RuleKind::Finding),
+        "[{level:?}] {id} is a pass-only rule: give it a RuleEntry::passing row"
+    );
+
+    assert!(!firing.is_empty(), "[{level:?}] {id} has no firing case");
+    // The registry default is what the SARIF rule catalogue advertises,
+    // so some check must emit it: a rule whose severity is not context-
+    // dependent emits only its default, and one that escalates or relaxes
+    // by product class, phase or context still emits its default in its
+    // most common case. A row whose every firing case departs from the
+    // default documents a level no check emits (WP 1.2 finding B6).
+    assert!(
+        firing
+            .iter()
+            .any(|case| !case.departs_from_registry_default),
+        "[{level:?}] {id}: no firing case is at the registry default severity \
+         {default:?} (emitted: {emitted:?}) — the SARIF catalogue would advertise a \
+         level no check emits; align the registry default with the emitted severity \
+         (the most common one when it depends on context) and document the escalation",
+        default = meta.default_severity,
+        emitted = firing.iter().map(|case| case.severity).collect::<Vec<_>>(),
+    );
+    for case in firing {
+        // The flag keeps severity expectations honest against the
+        // registry: an expectation that silently matches (or silently
+        // departs from) the documented default fails here.
+        assert_eq!(
+            case.severity == meta.default_severity,
+            !case.departs_from_registry_default,
+            "[{level:?}] {id} ({label}): expected severity {expected:?} vs registry \
+             default {default:?} — update the departs_from_registry_default flag \
+             (or the expectation) so the deviation is explicit",
+            label = case.label,
+            expected = case.severity,
+            default = meta.default_severity,
         );
     }
 }
 
-/// A pass-only row: the rule is a registered pass-only rule declared at the
-/// `Info` default (see [`run_matrix`]), every passing fixture reports it
-/// among its passed checks and never as a violation, and the silent
-/// fixtures surface it nowhere.
-fn check_passing_row(
-    level: ComplianceLevel,
-    entry: &RuleEntry,
-    passing: &[PassingCase],
-    silent: &SbomFixture,
-    extra_silent: &[SilentCase],
-) {
+/// The registry side of a pass-only row: the rule is a registered pass-only
+/// rule declared at the `Info` default (see [`run_matrix`]), with a passing
+/// case.
+fn check_passing_row(level: ComplianceLevel, entry: &RuleEntry, passing: &[PassingCase]) {
     let id = entry.id;
     let meta = rule_meta(id)
         .unwrap_or_else(|| panic!("[{level:?}] {id} does not resolve in the rule registry"));
@@ -1584,22 +1628,136 @@ fn check_passing_row(
          SARIF catalogue declares as `note`"
     );
     assert!(!passing.is_empty(), "[{level:?}] {id} has no passing case");
-    for case in passing {
-        let result = check(level, &case.fixture);
-        assert!(
-            result.passed.iter().any(|p| entry.matches_pass(p)),
-            "[{level:?}] {id} ({label}): the passing fixture must pass this check; \
-             emitted:\n{violations}",
-            label = case.label,
+}
+
+/// Run one case in one encoding: check its outcome, then sweep everything
+/// the result reports into the universe and the Info classification.
+#[allow(clippy::too_many_arguments)]
+fn run_case(
+    level: ComplianceLevel,
+    universe: &BTreeSet<&str>,
+    entry: &RuleEntry,
+    case: &Case<'_>,
+    encoding: Encoding,
+    outcome: Outcome,
+    difference: Option<&'static str>,
+    failures: &mut Vec<String>,
+) {
+    let id = entry.id;
+    let label = case.label;
+    let enc = encoding.name();
+    let rendered = case.fixture.render(encoding);
+    let sbom = match case.fixture.parse_rendered(&rendered) {
+        Ok(sbom) => sbom,
+        Err(e) => {
+            failures.push(format!("[{level:?}] {id} ({label}) in {enc}: {e}"));
+            return;
+        }
+    };
+    let result = check_sbom(level, case.fixture, &sbom);
+    let dropped = if rendered.dropped.is_empty() {
+        String::new()
+    } else {
+        format!("\n  {enc} has no counterpart for: {:?}", rendered.dropped)
+    };
+    if let Err(why) = entry.reaches(&result, outcome) {
+        let declared = difference.map_or_else(String::new, |reason| {
+            format!(" (declared difference: {reason})")
+        });
+        failures.push(format!(
+            "[{level:?}] {id} ({label}) in {enc}: {why}; expected {outcome:?}{declared}\
+             {dropped}; emitted:\n{violations}",
             violations = render_violations(&result)
-        );
-        assert!(
-            result.violations.iter().all(|v| !entry.matches(v)),
-            "[{level:?}] {id} ({label}): a pass-only rule must never report a violation; \
-             emitted:\n{violations}",
-            label = case.label,
-            violations = render_violations(&result)
-        );
+        ));
+    } else if let Some(reason) = difference
+        && entry.reaches(&result, case.outcome).is_ok()
+    {
+        failures.push(format!(
+            "[{level:?}] {id} ({label}) in {enc}: the case also reaches its own outcome \
+             {own:?}, so the declared difference ({reason}) is stale; drop it",
+            own = case.outcome,
+        ));
     }
-    assert_silent(level, entry, silent, extra_silent);
+    sweep(level, universe, entry, label, encoding, &result, failures);
+}
+
+/// An omission must be load-bearing: a case that renders in the omitted
+/// encoding without dropping a field, and reaches its own outcome there,
+/// needs no omission.
+fn check_omission_load_bearing(
+    level: ComplianceLevel,
+    entry: &RuleEntry,
+    case: &Case<'_>,
+    encoding: Encoding,
+    reason: &'static str,
+    failures: &mut Vec<String>,
+) {
+    let rendered = case.fixture.render(encoding);
+    if !rendered.dropped.is_empty() {
+        return;
+    }
+    let Ok(sbom) = case.fixture.parse_rendered(&rendered) else {
+        return;
+    };
+    let result = check_sbom(level, case.fixture, &sbom);
+    if entry.reaches(&result, case.outcome).is_ok() {
+        failures.push(format!(
+            "[{level:?}] {id} ({label}): the case renders in {enc} with nothing dropped and \
+             reaches {outcome:?} there, so its omission ({reason}) is stale; run it in {enc}",
+            id = entry.id,
+            label = case.label,
+            enc = encoding.name(),
+            outcome = case.outcome,
+        ));
+    }
+}
+
+/// Universe sweep: no fixture in this matrix may emit a rule outside the
+/// declared universe, or an unregistered rule, in any encoding. A new check
+/// site for this standard must extend the universe (and therefore the
+/// matrix) instead of escaping it. An Info violation is a reviewed gap or
+/// advice; an affirmation would be a passed check instead.
+fn sweep(
+    level: ComplianceLevel,
+    universe: &BTreeSet<&str>,
+    entry: &RuleEntry,
+    label: &str,
+    encoding: Encoding,
+    result: &ComplianceResult,
+    failures: &mut Vec<String>,
+) {
+    let id = entry.id;
+    let enc = encoding.name();
+    for v in &result.violations {
+        if v.severity == ViolationSeverity::Info
+            && info_classification::info_finding_reason(v.rule_id).is_none()
+        {
+            failures.push(format!(
+                "[{level:?}] fixture for {id} ({label}) in {enc} reported {rule} at Info, which \
+                 tests/common/info_classification.rs does not classify: list it with the \
+                 reason it stays a violation, or make it a pass-only rule",
+                rule = v.rule_id,
+            ));
+        }
+    }
+    let emitted = result
+        .violations
+        .iter()
+        .map(|v| (v.rule_id, v.sarif_rule_id()))
+        .chain(result.passed.iter().map(|p| (p.rule_id, p.sarif_rule_id())));
+    for (rule, sarif) in emitted {
+        if !universe.contains(sarif) {
+            failures.push(format!(
+                "[{level:?}] fixture for {id} ({label}) in {enc} emitted rule {rule} \
+                 (sarif {sarif}) outside the declared rule universe {universe:?} — \
+                 new check site? extend the universe and the matrix",
+            ));
+        }
+        if rule_meta(rule).is_none() {
+            failures.push(format!(
+                "[{level:?}] fixture for {id} ({label}) in {enc} emitted unregistered rule \
+                 {rule}",
+            ));
+        }
+    }
 }

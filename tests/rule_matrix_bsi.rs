@@ -5,15 +5,17 @@
 //! BSI shares the CRA-family `COMPLIANCE_SARIF_RULE_IDS` catalogue, so its
 //! universe is that slice's `SBOM-BSI-TR-03183-2-*` ids: a BSI rule added to
 //! the slice cannot land without a row here. Every id gets a firing fixture
-//! and a silent fixture (real CycloneDX JSON through the real parser), or an
-//! explicit skip-with-reason.
+//! and a silent fixture (rendered in each of the four encodings and run
+//! through the real parser), or an explicit skip-with-reason. §4 admits SPDX
+//! from 3.0.1 only, so every SPDX 2.3 rendering also fails SBOM-BSI-TR-03183-2-4.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
 use rule_matrix::{
-    ComponentFixture, RuleEntry, SHA256_FILLER, SHA512_FILLER, SbomFixture, assert_no_violations,
-    run_matrix,
+    ComponentFixture, Encoding, Outcome, RuleEntry, SHA256_FILLER, SHA512_FILLER,
+    SPDX_VERSION_CASE, SPDX3_AGENT_EMAILS_NOT_READ, SPDX23_HAS_NO_COMPLETENESS,
+    SPDX23_HAS_NO_VULNERABILITIES, SbomFixture, assert_no_violations_in, run_matrix,
 };
 use sbom_tools::quality::{COMPLIANCE_SARIF_RULE_IDS, ComplianceLevel, ViolationSeverity as Sev};
 
@@ -65,22 +67,47 @@ fn broken(mutate: impl FnOnce(&mut SbomFixture)) -> SbomFixture {
     fixture
 }
 
-/// The conforming BSI fixture must pass with a clean verdict.
+/// The conforming BSI fixture must pass with a clean verdict, in CycloneDX:
+/// SPDX 2.3 is no eligible format and cannot declare completeness, and the
+/// SPDX 3 parser reads no creator email (the §4, §5.2.2 completeness and
+/// §5.2.1 contact rows).
 #[test]
 fn bsi_conforming_fixture_is_compliant_with_zero_violations() {
-    assert_no_violations(LEVEL, &base());
+    assert_no_violations_in(LEVEL, &base(), Encoding::CYCLONEDX);
 }
 
 #[test]
 fn bsi_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     let entries = vec![
-        // §4: CycloneDX >= 1.6 for newly generated SBOMs (the §7 grace for
-        // 1.5 ended 2026-02-20).
+        // §4: CycloneDX >= 1.6 or SPDX >= 3.0.1 for newly generated SBOMs
+        // (the §7 grace for CycloneDX 1.5 / SPDX 2.2.1 ended 2026-02-20).
         RuleEntry::tested(
             "SBOM-BSI-TR-03183-2-4",
             Sev::Error,
             broken(|s| s.spec_version = "1.5".to_string()),
             base(),
+        )
+        .with_firing(
+            "SPDX 3.0 predates the eligible 3.0.1",
+            Sev::Error,
+            broken(|s| s.spdx_version = Some("3.0".to_string())),
+        )
+        .case_only(
+            "firing",
+            Encoding::ALL_BUT_SPDX3,
+            "the case is about the CycloneDX 1.6 floor, which an SPDX 3.0.1 rendering does not \
+             meet or miss (an SPDX 2.3 rendering fails the SPDX floor, as the silent case shows)",
+        )
+        .case_only(
+            "SPDX 3.0 predates the eligible 3.0.1",
+            Encoding::SPDX,
+            SPDX_VERSION_CASE,
+        )
+        .case_differs(
+            "silent",
+            &[Encoding::Spdx23Json],
+            Outcome::Fires(Sev::Error),
+            "§4 admits SPDX from 3.0.1 only, so an SPDX 2.3 document is no eligible format",
         ),
         // §5.2.1: tools do not satisfy "Creator of the SBOM" — a tools-only
         // document has no creator in the TR's sense.
@@ -96,6 +123,11 @@ fn bsi_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Warning,
             broken(|s| s.authors = vec![("Dana Author".to_string(), None)]),
             base(),
+        )
+        .case_only(
+            "silent",
+            Encoding::ALL_BUT_SPDX3,
+            SPDX3_AGENT_EMAILS_NOT_READ,
         ),
         RuleEntry::tested(
             "SBOM-BSI-TR-03183-2-5-2",
@@ -183,6 +215,12 @@ fn bsi_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "compositions aggregate not_specified",
             Sev::Warning,
             broken(|s| s.completeness = Some("not_specified".to_string())),
+        )
+        .case_differs(
+            "silent",
+            &[Encoding::Spdx23Json],
+            Outcome::Fires(Sev::Warning),
+            SPDX23_HAS_NO_COMPLETENESS,
         ),
         // §5.2.4 additional tier: identifiers MUST be given when they exist,
         // which the document cannot prove — a Warning.
@@ -204,6 +242,11 @@ fn bsi_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 )];
             }),
             base(),
+        )
+        .case_only(
+            "firing",
+            Encoding::ALL_BUT_SPDX23,
+            SPDX23_HAS_NO_VULNERABILITIES,
         ),
     ];
 

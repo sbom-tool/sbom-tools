@@ -4440,6 +4440,63 @@ mod tests {
         );
     }
 
+    /// An SPDX 2.x document always has a DocumentName; an empty (or
+    /// placeholder) one names neither the document nor the product. The
+    /// rule-matrix format axis found FDA and CRA accepting it: an SPDX 2.3
+    /// document with no name passed the checks its CycloneDX twin, which has
+    /// no `metadata.component`, fails.
+    #[test]
+    fn empty_document_name_is_no_name() {
+        let spdx = |name: &str| {
+            crate::parsers::parse_sbom_str(&format!(
+                r#"{{
+                  "spdxVersion": "SPDX-2.3", "dataLicense": "CC0-1.0",
+                  "SPDXID": "SPDXRef-DOCUMENT", "name": "{name}",
+                  "documentNamespace": "https://acme.example/spdx/doc",
+                  "creationInfo": {{
+                    "created": "2026-01-15T10:00:00Z",
+                    "creators": ["Tool: acme-sbom-tool-1.0.0"]
+                  }},
+                  "packages": []
+                }}"#
+            ))
+            .expect("SPDX 2.3 document parses")
+        };
+        let fired = |sbom: &NormalizedSbom, level: ComplianceLevel, rule: &str| {
+            checker(level)
+                .check(sbom)
+                .violations
+                .iter()
+                .any(|v| v.rule_id == rule)
+        };
+        for name in ["", "  ", "NOASSERTION"] {
+            let sbom = spdx(name);
+            assert!(
+                fired(&sbom, ComplianceLevel::FdaMedicalDevice, "SBOM-FDA-NAME"),
+                "document name {name:?} must fire SBOM-FDA-NAME"
+            );
+            assert!(
+                fired(
+                    &sbom,
+                    ComplianceLevel::CraPhase2,
+                    "SBOM-CRA-ART-13-15-PRODUCT"
+                ),
+                "document name {name:?} must fire SBOM-CRA-ART-13-15-PRODUCT"
+            );
+        }
+        let named = spdx("acme-router-os");
+        assert!(!fired(
+            &named,
+            ComplianceLevel::FdaMedicalDevice,
+            "SBOM-FDA-NAME"
+        ));
+        assert!(!fired(
+            &named,
+            ComplianceLevel::CraPhase2,
+            "SBOM-CRA-ART-13-15-PRODUCT"
+        ));
+    }
+
     #[test]
     fn sidecar_supplies_manufacturer_downgrades_art_13_16() {
         use crate::model::CraSidecarMetadata;

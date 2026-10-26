@@ -6,13 +6,17 @@
 //! element the profile checks. A declared high-risk system (CRA sidecar
 //! `isHighRiskAi`) escalates every documentation gap; those escalations are
 //! the departing firing cases.
+//!
+//! Every row runs in CycloneDX JSON, CycloneDX XML and SPDX 3. SPDX 2.3 has
+//! no AI or dataset profile, so it runs one case only: an untyped
+//! HuggingFace package as the sole AI content.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
 use rule_matrix::{
-    ComponentFixture, RuleEntry, SbomFixture, assert_no_violations, check, render_violations,
-    run_matrix,
+    ComponentFixture, Encoding, RuleEntry, SPDX23_HAS_NO_AI_PROFILE, SbomFixture,
+    assert_no_violations_in, check_in, render_violations, run_matrix,
 };
 use sbom_tools::model::CraSidecarMetadata;
 use sbom_tools::quality::{COMPLIANCE_SARIF_RULE_IDS, ComplianceLevel, ViolationSeverity as Sev};
@@ -131,22 +135,26 @@ fn untyped_hf_model() -> ComponentFixture {
     c
 }
 
-/// The complete AI-BOM must pass with a clean verdict.
+/// The complete AI-BOM must pass with a clean verdict in every encoding with
+/// an AI profile.
 #[test]
 fn ai_act_conforming_fixture_is_compliant_with_zero_violations() {
-    assert_no_violations(LEVEL, &base());
+    assert_no_violations_in(LEVEL, &base(), Encoding::ALL_BUT_SPDX23);
 }
 
 /// A plain software SBOM is out of scope: the result says N/A and reports
-/// no finding, never a failure.
+/// no finding, never a failure, in every encoding.
 #[test]
 fn ai_act_non_ai_sbom_is_not_applicable() {
-    let result = check(LEVEL, &non_ai());
-    assert!(
-        !result.is_applicable() && result.is_compliant && result.violations.is_empty(),
-        "[{LEVEL:?}] a non-AI SBOM must be N/A with no finding:\n{}",
-        render_violations(&result)
-    );
+    for &encoding in Encoding::ALL {
+        let result = check_in(LEVEL, &non_ai(), encoding);
+        assert!(
+            !result.is_applicable() && result.is_compliant && result.violations.is_empty(),
+            "[{LEVEL:?}] a non-AI SBOM must be N/A with no finding in {}:\n{}",
+            encoding.name(),
+            render_violations(&result)
+        );
+    }
 }
 
 #[test]
@@ -154,7 +162,8 @@ fn ai_act_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     let entries = vec![
         // ── Typing ───────────────────────────────────────────────────────
         // Untyping a model cannot dodge the assessment: the ML content is
-        // surfaced, and alone it keeps the profile applicable.
+        // surfaced, and alone it keeps the profile applicable — in SPDX 2.3
+        // too, where a HuggingFace package is the only AI content there is.
         RuleEntry::tested(
             "SBOM-AIACT-UNTYPED-ML",
             Sev::Warning,
@@ -171,7 +180,9 @@ fn ai_act_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     vec!["ref-bert-base".to_string()],
                 )];
             }),
-        ),
+        )
+        .case_only("firing", Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_AI_PROFILE)
+        .case_only("silent", Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_AI_PROFILE),
         // ── The Annex IV elements ──────────────────────────────────────────
         // A model-card reference alone is a general description (silent).
         RuleEntry::tested(
@@ -329,5 +340,15 @@ fn ai_act_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
     ];
 
+    // SPDX 2.3 has no AI profile: every row runs in the other three
+    // encodings, but for the HuggingFace case of SBOM-AIACT-UNTYPED-ML (its
+    // own row says so).
+    let entries: Vec<RuleEntry> = entries
+        .into_iter()
+        .map(|entry| match entry.id {
+            "SBOM-AIACT-UNTYPED-ML" => entry,
+            _ => entry.only(Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_AI_PROFILE),
+        })
+        .collect();
     run_matrix(LEVEL, &ai_act_universe(), &entries);
 }

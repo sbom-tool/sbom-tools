@@ -2,17 +2,19 @@
 //! (audit P3: the FDA framework previously had zero behavioral tests).
 //!
 //! Every rule id in `FDA_SARIF_RULE_IDS` gets a firing fixture (a minimal
-//! CycloneDX document, parsed through the real parser, that must surface the
-//! rule) and a silent fixture (one that must not), or an explicit
-//! skip-with-reason. The runner enforces exhaustiveness against the
-//! registry's FDA SARIF slice, so a new FDA rule cannot land untested.
+//! SBOM, rendered in each of the four encodings and parsed through the real
+//! parser, that must surface the rule) and a silent fixture (one that must
+//! not), or an explicit skip-with-reason. The runner enforces exhaustiveness
+//! against the registry's FDA SARIF slice, so a new FDA rule cannot land
+//! untested.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
 use rule_matrix::{
-    ComponentFixture, MD5_FILLER, RuleEntry, SbomFixture, assert_no_violations,
-    assert_spdx_version_unknown, run_matrix,
+    CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, MD5_FILLER, RuleEntry, SPDX_VERSION_CASE,
+    SPDX3_AGENT_EMAILS_NOT_READ, SPDX3_VALID_UNTIL_NOT_READ, SPDX23_HAS_NO_VULNERABILITIES,
+    SbomFixture, assert_no_violations_in, assert_spdx_version_unknown, run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, FDA_SARIF_RULE_IDS, ViolationSeverity as Sev};
 
@@ -24,11 +26,9 @@ const LEVEL: ComplianceLevel = ComplianceLevel::FdaMedicalDevice;
 /// attributed/hashed/connected components.
 fn base() -> SbomFixture {
     let mut primary = ComponentFixture::conforming("acme-device");
-    // Level-of-support evidence: the parser lifts this primary-component
-    // property into document.support_end_date.
-    primary
-        .properties
-        .push(("endOfSupport".to_string(), "2030-01-01".to_string()));
+    // Level-of-support evidence: the parsers lift the primary component's
+    // end of support into document.support_end_date.
+    primary.support_end = Some("2030-01-01".to_string());
     SbomFixture {
         spec_version: "1.5".to_string(),
         timestamp: Some("2026-01-15T10:00:00Z".to_string()),
@@ -61,10 +61,12 @@ fn broken(mutate: impl FnOnce(&mut SbomFixture)) -> SbomFixture {
 }
 
 /// The conforming FDA fixture must pass with a clean verdict — no test in the
-/// repo previously observed `is_compliant == true` for FdaMedicalDevice.
+/// repo previously observed `is_compliant == true` for FdaMedicalDevice. In
+/// SPDX 3 the parser reads neither the creators' emails nor the end of
+/// support (the SBOM-FDA-CONTACT and SBOM-FDA-SUPPORT rows).
 #[test]
 fn fda_conforming_fixture_is_compliant_with_zero_violations() {
-    assert_no_violations(LEVEL, &base());
+    assert_no_violations_in(LEVEL, &base(), Encoding::ALL_BUT_SPDX3);
 }
 
 #[test]
@@ -184,10 +186,15 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Warning,
             broken(|s| {
                 if let Some(primary) = &mut s.primary {
-                    primary.properties.clear();
+                    primary.support_end = None;
                 }
             }),
             base(),
+        )
+        .case_only(
+            "silent",
+            Encoding::ALL_BUT_SPDX3,
+            SPDX3_VALID_UNTIL_NOT_READ,
         ),
         // Fires on unresolved critical/high vulnerabilities; medium ones must
         // stay silent.
@@ -208,7 +215,8 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     "ref-libalpha".to_string(),
                 )];
             }),
-        ),
+        )
+        .only(Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_VULNERABILITIES),
         // A missing document name (no primary component to lift it from).
         RuleEntry::tested(
             "SBOM-FDA-NAME",
@@ -224,8 +232,9 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.component_mut("libalpha").name = "unknown".to_string()),
             base(),
         ),
-        // A CycloneDX version newer than any this tool reads warns; an
-        // outdated version is an Info.
+        // A CycloneDX or SPDX version newer than any this tool reads warns;
+        // an outdated CycloneDX version is an Info. Each version case runs
+        // in the format whose version it sets.
         RuleEntry::tested(
             "SBOM-FDA-SPEC-VERSION",
             Sev::Warning,
@@ -236,13 +245,31 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "CycloneDX 1.3 is outdated",
             Sev::Info,
             broken(|s| s.spec_version = "1.3".to_string()),
+        )
+        .with_firing(
+            "SPDX 3.1 is newer than any version read",
+            Sev::Warning,
+            broken(|s| s.spdx_version = Some("3.1".to_string())),
+        )
+        .case_only("firing", Encoding::CYCLONEDX, CYCLONEDX_VERSION_CASE)
+        .case_only(
+            "CycloneDX 1.3 is outdated",
+            Encoding::CYCLONEDX,
+            CYCLONEDX_VERSION_CASE,
+        )
+        .case_only(
+            "SPDX 3.1 is newer than any version read",
+            Encoding::SPDX,
+            SPDX_VERSION_CASE,
         ),
-        RuleEntry::skipped(
+        // An SPDX version that is neither 2.x nor 3.x.
+        RuleEntry::tested(
             "SBOM-FDA-SPEC-VERSION-UNKNOWN",
-            "an SPDX version that is neither 2.x nor 3.x is an SPDX-only check, out of \
-             the CycloneDX-only DSL's reach; fda_spec_version_unknown_reads_only_spdx \
-             below fires it on SPDX 4.0 and keeps it silent on SPDX 2.3",
-        ),
+            Sev::Warning,
+            broken(|s| s.spdx_version = Some("4.0".to_string())),
+            base(),
+        )
+        .case_only("firing", Encoding::SPDX, SPDX_VERSION_CASE),
         // A component whose bom-ref collapses to its name.
         RuleEntry::tested(
             "SBOM-FDA-ELEMENT-ID",
@@ -276,14 +303,24 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     Some("dana@acme.example".to_string()),
                 )];
             }),
+        )
+        .case_only(
+            "silent",
+            Encoding::ALL_BUT_SPDX3,
+            SPDX3_AGENT_EMAILS_NOT_READ,
+        )
+        .case_only(
+            "contact email on a person author only",
+            Encoding::ALL_BUT_SPDX3,
+            SPDX3_AGENT_EMAILS_NOT_READ,
         ),
     ];
 
     run_matrix(LEVEL, FDA_SARIF_RULE_IDS, &entries);
 }
 
-/// SBOM-FDA-SPEC-VERSION-UNKNOWN reads only SPDX input, so its matrix row
-/// is skipped.
+/// SBOM-FDA-SPEC-VERSION-UNKNOWN reads only SPDX input: its matrix row
+/// fires it in SPDX 2.3 JSON and SPDX 3; this pins SPDX tag-value.
 #[test]
 fn fda_spec_version_unknown_reads_only_spdx() {
     assert_spdx_version_unknown(LEVEL, "SBOM-FDA-SPEC-VERSION-UNKNOWN");
