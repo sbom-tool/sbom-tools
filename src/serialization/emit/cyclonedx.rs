@@ -309,6 +309,9 @@ fn emit_external_refs(component: &Component) -> Option<Value> {
             if let Some(comment) = &r.comment {
                 o["comment"] = json!(comment);
             }
+            if let Some(hashes) = emit_hashes(&r.hashes) {
+                o["hashes"] = hashes;
+            }
             o
         })
         .collect();
@@ -696,6 +699,28 @@ mod tests {
         // root (primary) + lodash
         assert_eq!(reparsed.components.len(), 2);
         assert_eq!(reparsed.document.format_version, "1.7");
+    }
+
+    /// An external reference keeps its type and the hashes of the referenced
+    /// content through parse and re-emit.
+    #[test]
+    fn external_reference_type_and_hashes_round_trip() {
+        let cdx = r#"{
+            "bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
+            "components": [{"type": "application", "bom-ref": "app", "name": "app",
+                "externalReferences": [{"type": "attestation",
+                    "url": "https://example.com/eu-doc.pdf",
+                    "hashes": [{"alg": "SHA-256", "content": "e3b0c44298fc1c149afbf4c8996fb924"}]}]}]
+        }"#;
+        let sbom = parse_sbom_str(cdx).unwrap();
+        let (json, _report) = emit_cyclonedx(&sbom).unwrap();
+        let emitted: Value = serde_json::from_str(&json).unwrap();
+        let reference = &emitted["components"][0]["externalReferences"][0];
+        assert_eq!(reference["type"], "attestation");
+        assert_eq!(
+            reference["hashes"],
+            json!([{"alg": "SHA-256", "content": "e3b0c44298fc1c149afbf4c8996fb924"}])
+        );
     }
 
     /// SPDX input with a resolved LicenseRef (hasExtractedLicensingInfos), an

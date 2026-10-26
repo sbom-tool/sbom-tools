@@ -650,40 +650,16 @@ impl CycloneDxParser {
         }
 
         // Set hashes
-        if let Some(hashes) = &cdx.hashes {
-            for h in hashes {
-                let algorithm = match h.alg.to_uppercase().as_str() {
-                    "MD5" => HashAlgorithm::Md5,
-                    "SHA-1" => HashAlgorithm::Sha1,
-                    "SHA-256" => HashAlgorithm::Sha256,
-                    "SHA-384" => HashAlgorithm::Sha384,
-                    "SHA-512" => HashAlgorithm::Sha512,
-                    "SHA3-256" => HashAlgorithm::Sha3_256,
-                    "SHA3-384" => HashAlgorithm::Sha3_384,
-                    "SHA3-512" => HashAlgorithm::Sha3_512,
-                    "BLAKE2B-256" => HashAlgorithm::Blake2b256,
-                    "BLAKE2B-384" => HashAlgorithm::Blake2b384,
-                    "BLAKE2B-512" => HashAlgorithm::Blake2b512,
-                    "BLAKE3" => HashAlgorithm::Blake3,
-                    "STREEBOG-256" => HashAlgorithm::Streebog256,
-                    "STREEBOG-512" => HashAlgorithm::Streebog512,
-                    other => HashAlgorithm::Other(other.to_string()),
-                };
-                comp.hashes.push(Hash::new(algorithm, h.content.clone()));
-            }
-        }
+        comp.hashes
+            .extend(convert_cdx_hashes(cdx.hashes.as_deref()));
 
         // Set external references
-        if let Some(ext_refs) = &cdx.external_references {
-            for ext_ref in ext_refs {
-                comp.external_refs.push(ExternalReference {
-                    ref_type: map_cdx_external_ref_type(&ext_ref.ref_type),
-                    url: ext_ref.url.clone(),
-                    comment: ext_ref.comment.clone(),
-                    hashes: Vec::new(),
-                });
-            }
-        }
+        comp.external_refs.extend(
+            cdx.external_references
+                .iter()
+                .flatten()
+                .map(convert_cdx_external_reference),
+        );
 
         // Set properties as extensions. Both fields are optional in the
         // schema: value-less properties keep their name; name-less ones
@@ -1287,16 +1263,12 @@ impl CycloneDxParser {
                 hashes: Vec::new(),
             });
         }
-        if let Some(ext_refs) = &svc.external_references {
-            for ext_ref in ext_refs {
-                comp.external_refs.push(ExternalReference {
-                    ref_type: map_cdx_external_ref_type(&ext_ref.ref_type),
-                    url: ext_ref.url.clone(),
-                    comment: ext_ref.comment.clone(),
-                    hashes: Vec::new(),
-                });
-            }
-        }
+        comp.external_refs.extend(
+            svc.external_references
+                .iter()
+                .flatten()
+                .map(convert_cdx_external_reference),
+        );
         if let Some(props) = &svc.properties {
             for prop in props {
                 let Some(name) = prop.name.clone() else {
@@ -1580,6 +1552,49 @@ fn xml_depth_within_limit(content: &str) -> Result<(), ParseError> {
             Ok(quick_xml::events::Event::Eof) | Err(_) => return Ok(()),
             Ok(_) => {}
         }
+    }
+}
+
+/// Convert CycloneDX `hashes[]` entries (`{alg, content}`) to the model.
+/// Shared by components and external references, JSON and XML alike.
+fn convert_cdx_hashes(hashes: Option<&[CdxHash]>) -> Vec<Hash> {
+    hashes
+        .unwrap_or_default()
+        .iter()
+        .map(|h| {
+            let algorithm = match h.alg.to_uppercase().as_str() {
+                "MD5" => HashAlgorithm::Md5,
+                "SHA-1" => HashAlgorithm::Sha1,
+                "SHA-256" => HashAlgorithm::Sha256,
+                "SHA-384" => HashAlgorithm::Sha384,
+                "SHA-512" => HashAlgorithm::Sha512,
+                "SHA3-256" => HashAlgorithm::Sha3_256,
+                "SHA3-384" => HashAlgorithm::Sha3_384,
+                "SHA3-512" => HashAlgorithm::Sha3_512,
+                "BLAKE2B-256" => HashAlgorithm::Blake2b256,
+                "BLAKE2B-384" => HashAlgorithm::Blake2b384,
+                "BLAKE2B-512" => HashAlgorithm::Blake2b512,
+                "BLAKE3" => HashAlgorithm::Blake3,
+                "STREEBOG-256" => HashAlgorithm::Streebog256,
+                "STREEBOG-512" => HashAlgorithm::Streebog512,
+                other => HashAlgorithm::Other(other.to_string()),
+            };
+            Hash::new(algorithm, h.content.clone())
+        })
+        .collect()
+}
+
+/// Convert one CycloneDX `externalReferences[]` entry: its type, URL and
+/// comment, and the hashes of the referenced content
+/// (`externalReference.hashes`, in every schema version from 1.4 to 1.7),
+/// which the CRA document-integrity check reads on attestation and
+/// certification references.
+fn convert_cdx_external_reference(r: &CdxExternalReference) -> ExternalReference {
+    ExternalReference {
+        ref_type: map_cdx_external_ref_type(&r.ref_type),
+        url: r.url.clone(),
+        comment: r.comment.clone(),
+        hashes: convert_cdx_hashes(r.hashes.as_deref()),
     }
 }
 
@@ -2223,12 +2238,7 @@ fn convert_declarations(
         organization.contacts = o.contact.iter().flatten().map(contact).collect();
         organization
     };
-    let ext_ref = |r: &CdxExternalReference| ExternalReference {
-        ref_type: map_cdx_external_ref_type(&r.ref_type),
-        url: r.url.clone(),
-        comment: r.comment.clone(),
-        hashes: Vec::new(),
-    };
+    let ext_ref = convert_cdx_external_reference;
     let ext_refs = |list: &Option<Vec<CdxExternalReference>>| -> Vec<ExternalReference> {
         list.iter().flatten().map(ext_ref).collect()
     };
@@ -2688,12 +2698,13 @@ struct CdxHash {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 struct CdxExternalReference {
     #[serde(rename = "type")]
     ref_type: String,
     url: String,
     comment: Option<String>,
+    /// Hashes of the referenced content.
+    hashes: Option<Vec<CdxHash>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -3856,11 +3867,7 @@ impl From<CdxComponentXml> for CdxComponent {
             wrapper
                 .reference
                 .into_iter()
-                .map(|r| CdxExternalReference {
-                    ref_type: r.ref_type,
-                    url: r.url,
-                    comment: r.comment,
-                })
+                .map(CdxExternalReference::from)
                 .collect()
         });
 
@@ -3963,6 +3970,28 @@ struct CdxExternalReferenceXml {
     ref_type: String,
     url: String,
     comment: Option<String>,
+    /// `<hashes><hash alg="…">…</hash></hashes>` of the referenced content.
+    hashes: Option<CdxHashesXml>,
+}
+
+impl From<CdxExternalReferenceXml> for CdxExternalReference {
+    fn from(xml: CdxExternalReferenceXml) -> Self {
+        Self {
+            ref_type: xml.ref_type,
+            url: xml.url,
+            comment: xml.comment,
+            hashes: xml.hashes.map(|wrapper| {
+                wrapper
+                    .hash
+                    .into_iter()
+                    .map(|h| CdxHash {
+                        alg: h.alg,
+                        content: h.content,
+                    })
+                    .collect()
+            }),
+        }
+    }
 }
 
 /// Properties wrapper element for XML format
@@ -4434,11 +4463,7 @@ impl From<CdxServiceXml> for CdxService {
                 wrapper
                     .reference
                     .into_iter()
-                    .map(|r| CdxExternalReference {
-                        ref_type: r.ref_type,
-                        url: r.url,
-                        comment: r.comment,
-                    })
+                    .map(CdxExternalReference::from)
                     .collect()
             }),
             properties: xml.properties.map(|wrapper| {
@@ -6498,6 +6523,81 @@ mod tests {
             ("build-system", ExternalRefType::BuildSystem),
         ] {
             assert_eq!(map_cdx_external_ref_type(value), expected);
+        }
+    }
+
+    /// `externalReferences[].hashes` are kept, from JSON and XML, on
+    /// components and services alike (they were dropped until v0.4.0).
+    #[test]
+    fn external_reference_hashes_are_kept() {
+        let digest = "9a3f2c1b8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a3928170f6e5d4c";
+        let json = format!(
+            r#"{{
+              "bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
+              "components": [{{"type": "application", "bom-ref": "app", "name": "app",
+                "externalReferences": [{{"type": "attestation",
+                  "url": "https://example.com/eu-doc.pdf",
+                  "hashes": [{{"alg": "SHA-256", "content": "{digest}"}},
+                             {{"alg": "SHA-512", "content": "{digest}{digest}"}}]}},
+                  {{"type": "vcs", "url": "https://example.com/app.git"}}]}}],
+              "services": [{{"bom-ref": "svc", "name": "api",
+                "externalReferences": [{{"type": "certification-report",
+                  "url": "https://example.com/cert.pdf",
+                  "hashes": [{{"alg": "SHA-256", "content": "{digest}"}}]}}]}}]
+            }}"#
+        );
+        let xml = format!(
+            r#"<?xml version="1.0"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" version="1">
+  <components>
+    <component type="application" bom-ref="app">
+      <name>app</name>
+      <externalReferences>
+        <reference type="attestation">
+          <url>https://example.com/eu-doc.pdf</url>
+          <hashes><hash alg="SHA-256">{digest}</hash><hash alg="SHA-512">{digest}{digest}</hash></hashes>
+        </reference>
+        <reference type="vcs"><url>https://example.com/app.git</url></reference>
+      </externalReferences>
+    </component>
+  </components>
+  <services>
+    <service bom-ref="svc">
+      <name>api</name>
+      <externalReferences>
+        <reference type="certification-report">
+          <url>https://example.com/cert.pdf</url>
+          <hashes><hash alg="SHA-256">{digest}</hash></hashes>
+        </reference>
+      </externalReferences>
+    </service>
+  </services>
+</bom>"#
+        );
+        let from_json = CycloneDxParser::new()
+            .parse_str(&json)
+            .expect("JSON should parse");
+        let from_xml = parse(&xml);
+        let digest512 = format!("{digest}{digest}");
+        for (label, sbom) in [("JSON", &from_json), ("XML", &from_xml)] {
+            let refs = &component(sbom, "app").external_refs;
+            assert_eq!(refs[0].ref_type, ExternalRefType::Attestation, "{label}");
+            assert_eq!(
+                refs[0]
+                    .hashes
+                    .iter()
+                    .map(|h| (h.algorithm.clone(), h.value.as_str()))
+                    .collect::<Vec<_>>(),
+                vec![
+                    (HashAlgorithm::Sha256, digest),
+                    (HashAlgorithm::Sha512, digest512.as_str()),
+                ],
+                "{label}: attestation hashes"
+            );
+            assert!(refs[1].hashes.is_empty(), "{label}: a hash-less reference");
+            let service_refs = &component(sbom, "api").external_refs;
+            assert_eq!(service_refs[0].ref_type, ExternalRefType::Certification);
+            assert_eq!(service_refs[0].hashes.len(), 1, "{label}: service hashes");
         }
     }
 

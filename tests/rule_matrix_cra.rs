@@ -22,7 +22,8 @@ mod rule_matrix;
 
 use rule_matrix::clock::{as_of, checker};
 use rule_matrix::{
-    ComponentFixture, RuleEntry, SbomFixture, assert_no_violations, render_violations, run_matrix,
+    ComponentFixture, RuleEntry, SHA256_FILLER, SbomFixture, assert_no_violations,
+    render_violations, run_matrix,
 };
 use sbom_tools::model::{
     ConformityRoute, ControlAssertion, CraProductClass, CraSidecarMetadata, EolStatus,
@@ -270,6 +271,16 @@ fn with_product_ref(s: &mut SbomFixture, ref_type: &str, url: &str) {
         .push((ref_type.to_string(), url.to_string()));
 }
 
+/// Add an external reference of `ref_type` carrying the SHA-256 of the
+/// referenced document to the product component.
+fn with_hashed_product_ref(s: &mut SbomFixture, ref_type: &str, url: &str) {
+    s.primary_mut().hashed_external_refs.push((
+        ref_type.to_string(),
+        url.to_string(),
+        vec![("SHA-256".to_string(), SHA256_FILLER.to_string())],
+    ));
+}
+
 /// Rows whose behaviour is identical under CRA Phase 1 and Phase 2.
 fn manufacturer_rows() -> Vec<RuleEntry> {
     vec![
@@ -459,17 +470,44 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             }),
             base(),
         ),
+        // Without a serial number, an attestation or certification
+        // reference that carries the hash of the referenced document is the
+        // integrity metadata; the same reference without a hash is not.
         RuleEntry::tested(
             "SBOM-CRA-DOC-INTEGRITY",
             Sev::Info,
             broken(|s| s.serial_number = None),
             base(),
         )
-        .with_skipped_case(
-            "attestation / certification externalReference with a hash (silent)",
-            "bug: the CycloneDX parser drops externalReferences hashes \
-             (convert_component always sets hashes: Vec::new()), so only the \
-             serial number can satisfy this rule",
+        .with_firing(
+            "attestation reference without a hash",
+            Sev::Info,
+            broken(|s| {
+                s.serial_number = None;
+                with_product_ref(s, "attestation", "https://acme.example/eu-doc-2026-001.pdf");
+            }),
+        )
+        .with_silent(
+            "attestation reference with a hash",
+            broken(|s| {
+                s.serial_number = None;
+                with_hashed_product_ref(
+                    s,
+                    "attestation",
+                    "https://acme.example/eu-doc-2026-001.pdf",
+                );
+            }),
+        )
+        .with_silent(
+            "certification-report reference with a hash",
+            broken(|s| {
+                s.serial_number = None;
+                with_hashed_product_ref(
+                    s,
+                    "certification-report",
+                    "https://notified-body.example/certificates/eu-type-0815.pdf",
+                );
+            }),
         ),
         // The CRA generic bucket: serial number (Warning), no creator at all
         // (Error), a placeholder component name (Error), and the format notes

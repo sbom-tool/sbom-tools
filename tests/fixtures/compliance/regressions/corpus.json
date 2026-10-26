@@ -1074,6 +1074,30 @@
           }
         }
       ]
+    },
+    {
+      "id": "b2-hashed-attestation",
+      "review_id": "B2",
+      "fixture": "b2-hashed-attestation.cdx.json",
+      "note": "No serial number, but the product's attestation reference carries the SHA-256 of the referenced declaration. The parser dropped externalReferences[].hashes, so the CRA document-integrity Info fired although the attestation-with-hash evidence it names is present.",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "rules_absent": [
+              "SBOM-CRA-DOC-INTEGRITY"
+            ]
+          }
+        },
+        {
+          "standard": "cra-phase1",
+          "expect": {
+            "rules_absent": [
+              "SBOM-CRA-DOC-INTEGRITY"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

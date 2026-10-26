@@ -69,6 +69,9 @@ pub struct ComponentFixture {
     pub hashes: Vec<(String, String)>,
     /// `(type, url)` external references, e.g. `("vcs", "https://…")`.
     pub external_refs: Vec<(String, String)>,
+    /// External references that carry `hashes[]`, rendered after
+    /// [`Self::external_refs`]: `(type, url, (alg, content) pairs)`.
+    pub hashed_external_refs: Vec<(String, String, Vec<(String, String)>)>,
     /// SPDX license ids rendered as `{"license": {"id": …}}` entries.
     pub licenses: Vec<String>,
     /// `(name, value)` CycloneDX properties.
@@ -100,6 +103,7 @@ impl ComponentFixture {
             description: None,
             hashes: vec![("SHA-256".to_string(), SHA256_FILLER.to_string())],
             external_refs: Vec::new(),
+            hashed_external_refs: Vec::new(),
             licenses: Vec::new(),
             properties: Vec::new(),
             model_card: None,
@@ -175,11 +179,22 @@ impl ComponentFixture {
                 .collect();
             obj.insert("hashes".into(), serde_json::json!(hashes));
         }
-        if !self.external_refs.is_empty() {
+        if !self.external_refs.is_empty() || !self.hashed_external_refs.is_empty() {
+            let hashed = self
+                .hashed_external_refs
+                .iter()
+                .map(|(ref_type, url, hashes)| {
+                    let hashes: Vec<_> = hashes
+                        .iter()
+                        .map(|(alg, content)| serde_json::json!({ "alg": alg, "content": content }))
+                        .collect();
+                    serde_json::json!({ "type": ref_type, "url": url, "hashes": hashes })
+                });
             let refs: Vec<_> = self
                 .external_refs
                 .iter()
                 .map(|(ref_type, url)| serde_json::json!({ "type": ref_type, "url": url }))
+                .chain(hashed)
                 .collect();
             obj.insert("externalReferences".into(), serde_json::json!(refs));
         }
