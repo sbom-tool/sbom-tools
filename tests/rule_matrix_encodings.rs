@@ -28,6 +28,8 @@ fn software() -> SbomFixture {
     )];
     let mut liba = ComponentFixture::conforming("liba");
     liba.licenses = vec!["MIT".to_string()];
+    liba.cpe = Some("cpe:2.3:a:acme:liba:1.2.3:*:*:*:*:*:*:*".to_string());
+    liba.copyright = Some("Copyright (c) 2026 Acme Components Ltd".to_string());
     liba.description = Some("A library".to_string());
     let mut libb = ComponentFixture::conforming("libb");
     libb.hashes
@@ -52,8 +54,13 @@ fn software() -> SbomFixture {
 fn everything() -> SbomFixture {
     let mut s = software();
     s.spec_version = String::new();
+    s.spdx_version = Some("2.3".to_string());
+    s.doc_version = Some(2);
+    s.lifecycles = vec!["build".to_string()];
     s.completeness = Some("complete".to_string());
     s.signature = Some(("ES256".to_string(), "c2lnbmF0dXJl".to_string()));
+    s.undeclared_spdx3_profiles = vec!["security".to_string()];
+    s.dynamic_links = vec![("ref-acme-app".to_string(), "ref-libb".to_string())];
     s.vulnerabilities = vec![(
         "CVE-2026-0001".to_string(),
         "unknown".to_string(),
@@ -69,6 +76,7 @@ fn everything() -> SbomFixture {
     )];
     s.crypto_assets = vec![CryptoAssetFixture::algorithm("algo-aes", "AES")];
     let liba = s.component_mut("liba");
+    liba.concluded_license = Some("MIT".to_string());
     liba.properties = vec![("acme:build".to_string(), "42".to_string())];
     liba.hashed_external_refs = vec![(
         "attestation".to_string(),

@@ -13,7 +13,7 @@
 mod rule_matrix;
 
 use rule_matrix::{
-    CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, RuleEntry, SbomFixture,
+    CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, RuleEntry, SPDX_VERSION_CASE, SbomFixture,
     assert_no_violations_in, assert_spdx_version_unknown, run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, NTIA_SARIF_RULE_IDS, ViolationSeverity as Sev};
@@ -141,9 +141,9 @@ fn ntia_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.timestamp = None),
             base(),
         ),
-        // A CycloneDX version newer than any this tool reads warns; an
-        // outdated version is an Info. Both cases are about a CycloneDX
-        // version.
+        // A CycloneDX or SPDX version newer than any this tool reads warns;
+        // an outdated CycloneDX version is an Info. Each version case runs
+        // in the format whose version it sets.
         RuleEntry::tested(
             "SBOM-NTIA-SPEC-VERSION",
             Sev::Warning,
@@ -155,18 +155,30 @@ fn ntia_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Info,
             broken(|s| s.spec_version = "1.3".to_string()),
         )
+        .with_firing(
+            "SPDX 3.1 is newer than any version read",
+            Sev::Warning,
+            broken(|s| s.spdx_version = Some("3.1".to_string())),
+        )
         .case_only("firing", Encoding::CYCLONEDX, CYCLONEDX_VERSION_CASE)
         .case_only(
             "CycloneDX 1.3 is outdated",
             Encoding::CYCLONEDX,
             CYCLONEDX_VERSION_CASE,
+        )
+        .case_only(
+            "SPDX 3.1 is newer than any version read",
+            Encoding::SPDX,
+            SPDX_VERSION_CASE,
         ),
-        RuleEntry::skipped(
+        // An SPDX version that is neither 2.x nor 3.x.
+        RuleEntry::tested(
             "SBOM-NTIA-SPEC-VERSION-UNKNOWN",
-            "an SPDX version that is neither 2.x nor 3.x is an SPDX-only check, out of \
-             the DSL's reach (it sets no SPDX version); ntia_spec_version_unknown_reads_only_spdx \
-             below fires it on SPDX 4.0 and keeps it silent on SPDX 2.3",
-        ),
+            Sev::Warning,
+            broken(|s| s.spdx_version = Some("4.0".to_string())),
+            base(),
+        )
+        .case_only("firing", Encoding::SPDX, SPDX_VERSION_CASE),
         // A component whose bom-ref collapses to its name.
         RuleEntry::tested(
             "SBOM-NTIA-ELEMENT-ID",
@@ -182,8 +194,8 @@ fn ntia_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     run_matrix(LEVEL, NTIA_SARIF_RULE_IDS, &entries);
 }
 
-/// SBOM-NTIA-SPEC-VERSION-UNKNOWN reads only SPDX input, of a version the
-/// DSL cannot set, so its matrix row is skipped.
+/// SBOM-NTIA-SPEC-VERSION-UNKNOWN reads only SPDX input: its matrix row
+/// fires it in SPDX 2.3 JSON and SPDX 3; this pins SPDX tag-value.
 #[test]
 fn ntia_spec_version_unknown_reads_only_spdx() {
     assert_spdx_version_unknown(LEVEL, "SBOM-NTIA-SPEC-VERSION-UNKNOWN");

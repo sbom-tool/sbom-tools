@@ -14,8 +14,8 @@ mod rule_matrix;
 
 use rule_matrix::{
     ComponentFixture, Encoding, Outcome, RuleEntry, SHA256_FILLER, SHA512_FILLER,
-    SPDX3_AGENT_EMAILS_NOT_READ, SPDX23_HAS_NO_COMPLETENESS, SPDX23_HAS_NO_VULNERABILITIES,
-    SbomFixture, assert_no_violations_in, run_matrix,
+    SPDX_VERSION_CASE, SPDX3_AGENT_EMAILS_NOT_READ, SPDX23_HAS_NO_COMPLETENESS,
+    SPDX23_HAS_NO_VULNERABILITIES, SbomFixture, assert_no_violations_in, run_matrix,
 };
 use sbom_tools::quality::{COMPLIANCE_SARIF_RULE_IDS, ComplianceLevel, ViolationSeverity as Sev};
 
@@ -87,11 +87,21 @@ fn bsi_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.spec_version = "1.5".to_string()),
             base(),
         )
+        .with_firing(
+            "SPDX 3.0 predates the eligible 3.0.1",
+            Sev::Error,
+            broken(|s| s.spdx_version = Some("3.0".to_string())),
+        )
         .case_only(
             "firing",
             Encoding::ALL_BUT_SPDX3,
             "the case is about the CycloneDX 1.6 floor, which an SPDX 3.0.1 rendering does not \
              meet or miss (an SPDX 2.3 rendering fails the SPDX floor, as the silent case shows)",
+        )
+        .case_only(
+            "SPDX 3.0 predates the eligible 3.0.1",
+            Encoding::SPDX,
+            SPDX_VERSION_CASE,
         )
         .case_differs(
             "silent",

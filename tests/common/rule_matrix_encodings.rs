@@ -5,9 +5,11 @@
 //! it, named and shaped the way the parsers in `src/parsers/` read it, so a
 //! verdict that differs between two encodings of one fixture is either a
 //! format difference a matrix row declares or a bug. Where a format has a
-//! field the parser does not read (SPDX 3 agent emails and
-//! `validUntilTime`), the renderer still writes it: a parser gap must show
-//! up as a failing case, never as a field the renderer quietly left out.
+//! field the parser does not read (SPDX 3 `software_sbomType`, agent emails,
+//! `validUntilTime`, `hasDynamicLink`; CycloneDX
+//! `licenses[].acknowledgement`), the renderer still writes it: a parser gap
+//! must show up as a failing case, never as a field the renderer quietly
+//! left out.
 //!
 //! A field the format has no counterpart for at all is left out and reported
 //! in [`Rendered::dropped`]. [`Encoding::no_counterpart`] lists every such
@@ -88,18 +90,51 @@ impl Encoding {
     }
 }
 
-const CYCLONEDX_JSON_GAPS: &[(&str, &str)] = &[];
+const SPDX_VERSION_GAP: (&str, &str) = (
+    "spdx_version",
+    "CycloneDX documents carry a CycloneDX specVersion, not an SPDX version",
+);
+const PROFILES_GAP: (&str, &str) = (
+    "undeclared_spdx3_profiles",
+    "only SPDX 3 documents declare profile conformance",
+);
+const DYNAMIC_LINKS_GAP: (&str, &str) = (
+    "dynamic_links",
+    "CycloneDX dependencies carry no link type; dynamic links are SPDX relationships",
+);
+const CONCLUDED_LICENSE_GAP: (&str, &str) = (
+    "component.concluded_license",
+    "a concluded licence before CycloneDX 1.6, which introduced licenses[].acknowledgement \
+     (the parser reads it as no more than a licence, as it reads every CycloneDX licence)",
+);
 
-const CYCLONEDX_XML_GAPS: &[(&str, &str)] = &[(
-    "spec_version",
-    "an empty specVersion: XML carries the version in the bom namespace, and a namespace \
-     without one reads as 1.4",
-)];
+const CYCLONEDX_JSON_GAPS: &[(&str, &str)] = &[
+    SPDX_VERSION_GAP,
+    PROFILES_GAP,
+    DYNAMIC_LINKS_GAP,
+    CONCLUDED_LICENSE_GAP,
+];
+
+const CYCLONEDX_XML_GAPS: &[(&str, &str)] = &[
+    (
+        "spec_version",
+        "an empty specVersion: XML carries the version in the bom namespace, and a namespace \
+         without one reads as 1.4",
+    ),
+    SPDX_VERSION_GAP,
+    PROFILES_GAP,
+    DYNAMIC_LINKS_GAP,
+    CONCLUDED_LICENSE_GAP,
+];
 
 const SPDX_SPEC_VERSION_GAP: (&str, &str) = (
     "spec_version",
     "a CycloneDX specVersion outside 1.4-1.7 (the versions no CycloneDX note or floor singles \
-     out): SPDX documents carry their own version",
+     out): SPDX documents carry their own version, set by spdx_version",
+);
+const SPDX_DOC_VERSION_GAP: (&str, &str) = (
+    "doc_version",
+    "a document revision other than 1: SPDX has no document revision counter",
 );
 const SPDX_CRYPTO_GAP: (&str, &str) = (
     "crypto_assets",
@@ -116,6 +151,11 @@ const SPDX_REF_HASHES_GAP: (&str, &str) = (
 
 const SPDX23_GAPS: &[(&str, &str)] = &[
     SPDX_SPEC_VERSION_GAP,
+    SPDX_DOC_VERSION_GAP,
+    (
+        "lifecycles",
+        "SPDX 2.3 has no lifecycle phase field (CISA 2026 and FSCT ask none of SPDX 2.x)",
+    ),
     ("completeness", "SPDX 2.3 has no completeness declaration"),
     ("signature", "SPDX 2.3 has no in-document signature"),
     (
@@ -127,6 +167,7 @@ const SPDX23_GAPS: &[(&str, &str)] = &[
         "SPDX 2.3 documents carry no vulnerability data",
     ),
     SPDX_CRYPTO_GAP,
+    PROFILES_GAP,
     (
         "component.type",
         "a component type no SPDX 2.3 primaryPackagePurpose names (machine-learning-model, \
@@ -140,6 +181,7 @@ const SPDX23_GAPS: &[(&str, &str)] = &[
 
 const SPDX3_GAPS: &[(&str, &str)] = &[
     SPDX_SPEC_VERSION_GAP,
+    SPDX_DOC_VERSION_GAP,
     (
         "completeness",
         "SPDX 3 states completeness on relationships, and a document without packages has none \
@@ -287,9 +329,30 @@ impl SbomFixture {
             drops.encoding,
             Encoding::CycloneDxJson | Encoding::CycloneDxXml
         );
-        if !cdx {
+        if cdx {
+            if self.spdx_version.is_some() {
+                drops.drop_field("spdx_version");
+            }
+            if !self.undeclared_spdx3_profiles.is_empty() {
+                drops.drop_field("undeclared_spdx3_profiles");
+            }
+            if !self.dynamic_links.is_empty() {
+                drops.drop_field("dynamic_links");
+            }
+            if !self.has_license_acknowledgement()
+                && self
+                    .all_components()
+                    .iter()
+                    .any(|c| c.concluded_license.is_some())
+            {
+                drops.drop_field("component.concluded_license");
+            }
+        } else {
             if !NEUTRAL_CDX_VERSIONS.contains(&self.spec_version.as_str()) {
                 drops.drop_field("spec_version");
+            }
+            if self.doc_version.is_some_and(|v| v != 1) {
+                drops.drop_field("doc_version");
             }
             if !self.crypto_assets.is_empty() {
                 drops.drop_field("crypto_assets");
@@ -310,12 +373,41 @@ impl SbomFixture {
             }
         }
     }
+
+    /// Whether the CycloneDX version has `licenses[].acknowledgement`
+    /// (1.6+), the counterpart of a concluded licence.
+    fn has_license_acknowledgement(&self) -> bool {
+        let mut parts = self.spec_version.split('.').map(str::parse::<u32>);
+        matches!(
+            (parts.next(), parts.next()),
+            (Some(Ok(major)), Some(Ok(minor))) if (major, minor) >= (1, 6)
+        )
+    }
 }
 
 /// CycloneDX versions that no CycloneDX format note, version floor or
 /// version gate singles out; the SPDX renderers write their own version for
 /// these, and report any other as dropped.
 const NEUTRAL_CDX_VERSIONS: &[&str] = &["1.4", "1.5", "1.6", "1.7"];
+
+/// The CycloneDX 1.5+ lifecycle phases (anything else is a named lifecycle).
+const CDX_LIFECYCLE_PHASES: &[&str] = &[
+    "design",
+    "pre-build",
+    "build",
+    "post-build",
+    "operations",
+    "discovery",
+    "decommission",
+];
+
+fn cdx_lifecycle_json(lifecycle: &str) -> serde_json::Value {
+    if CDX_LIFECYCLE_PHASES.contains(&lifecycle) {
+        serde_json::json!({ "phase": lifecycle })
+    } else {
+        serde_json::json!({ "name": lifecycle })
+    }
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 // CycloneDX JSON
@@ -327,7 +419,9 @@ impl SbomFixture {
         let mut doc = serde_json::Map::new();
         doc.insert("bomFormat".into(), serde_json::json!("CycloneDX"));
         doc.insert("specVersion".into(), serde_json::json!(self.spec_version));
-        doc.insert("version".into(), serde_json::json!(1));
+        if let Some(version) = self.doc_version {
+            doc.insert("version".into(), serde_json::json!(version));
+        }
         if let Some(serial) = &self.serial_number {
             doc.insert("serialNumber".into(), serde_json::json!(serial));
         }
@@ -335,6 +429,14 @@ impl SbomFixture {
         let mut metadata = serde_json::Map::new();
         if let Some(ts) = &self.timestamp {
             metadata.insert("timestamp".into(), serde_json::json!(ts));
+        }
+        if !self.lifecycles.is_empty() {
+            let lifecycles: Vec<_> = self
+                .lifecycles
+                .iter()
+                .map(|l| cdx_lifecycle_json(l))
+                .collect();
+            metadata.insert("lifecycles".into(), serde_json::json!(lifecycles));
         }
         if !self.tools.is_empty() {
             let tools: Vec<_> = self
@@ -367,8 +469,9 @@ impl SbomFixture {
             }
             metadata.insert("manufacturer".into(), serde_json::Value::Object(m));
         }
+        let acknowledgement = self.has_license_acknowledgement();
         if let Some(primary) = &self.primary {
-            metadata.insert("component".into(), primary.cyclonedx_json());
+            metadata.insert("component".into(), primary.cyclonedx_json(acknowledgement));
         }
         if !metadata.is_empty() {
             doc.insert("metadata".into(), serde_json::Value::Object(metadata));
@@ -377,7 +480,7 @@ impl SbomFixture {
         let components: Vec<_> = self
             .components
             .iter()
-            .map(ComponentFixture::cyclonedx_json)
+            .map(|c| c.cyclonedx_json(acknowledgement))
             .chain(
                 self.crypto_assets
                     .iter()
@@ -466,7 +569,9 @@ impl SbomFixture {
 }
 
 impl ComponentFixture {
-    fn cyclonedx_json(&self) -> serde_json::Value {
+    /// The component; `acknowledgement` says whether the CycloneDX version
+    /// can mark a licence concluded (1.6+).
+    fn cyclonedx_json(&self, acknowledgement: bool) -> serde_json::Value {
         let mut obj = serde_json::Map::new();
         obj.insert("type".into(), serde_json::json!(self.component_type));
         obj.insert("bom-ref".into(), serde_json::json!(self.bom_ref));
@@ -477,11 +582,17 @@ impl ComponentFixture {
         if let Some(purl) = &self.purl {
             obj.insert("purl".into(), serde_json::json!(purl));
         }
+        if let Some(cpe) = &self.cpe {
+            obj.insert("cpe".into(), serde_json::json!(cpe));
+        }
         if let Some(supplier) = &self.supplier {
             obj.insert("supplier".into(), serde_json::json!({ "name": supplier }));
         }
         if let Some(description) = &self.description {
             obj.insert("description".into(), serde_json::json!(description));
+        }
+        if let Some(copyright) = &self.copyright {
+            obj.insert("copyright".into(), serde_json::json!(copyright));
         }
         if !self.hashes.is_empty() {
             obj.insert("hashes".into(), cdx_hashes_json(&self.hashes));
@@ -501,11 +612,15 @@ impl ComponentFixture {
                 .collect();
             obj.insert("externalReferences".into(), serde_json::json!(refs));
         }
-        if !self.licenses.is_empty() {
+        let concluded = self.concluded_license.iter().filter(|_| acknowledgement);
+        if !self.licenses.is_empty() || concluded.clone().next().is_some() {
             let licenses: Vec<_> = self
                 .licenses
                 .iter()
                 .map(|id| serde_json::json!({ "license": { "id": id } }))
+                .chain(concluded.map(|id| {
+                    serde_json::json!({ "license": { "id": id, "acknowledgement": "concluded" } })
+                }))
                 .collect();
             obj.insert("licenses".into(), serde_json::json!(licenses));
         }
@@ -524,7 +639,11 @@ impl ComponentFixture {
             obj.insert("data".into(), serde_json::json!([dataset.cyclonedx_json()]));
         }
         if !self.children.is_empty() {
-            let children: Vec<_> = self.children.iter().map(Self::cyclonedx_json).collect();
+            let children: Vec<_> = self
+                .children
+                .iter()
+                .map(|c| c.cyclonedx_json(acknowledgement))
+                .collect();
             obj.insert("components".into(), serde_json::json!(children));
         }
         serde_json::Value::Object(obj)
@@ -839,14 +958,18 @@ impl SbomFixture {
         }
         let mut x = Xml::new();
         let xmlns = format!("http://cyclonedx.org/schema/bom/{}", self.spec_version);
+        let version = self.doc_version.map(|v| v.to_string());
         let mut attrs: Vec<(&str, &str)> = vec![("xmlns", &xmlns)];
         if let Some(serial) = &self.serial_number {
             attrs.push(("serialNumber", serial));
         }
-        attrs.push(("version", "1"));
+        if let Some(version) = &version {
+            attrs.push(("version", version));
+        }
         x.open("bom", &attrs);
 
         let has_metadata = self.timestamp.is_some()
+            || !self.lifecycles.is_empty()
             || !self.tools.is_empty()
             || !self.authors.is_empty()
             || self.primary.is_some()
@@ -854,6 +977,20 @@ impl SbomFixture {
         if has_metadata {
             x.open("metadata", &[]);
             x.opt("timestamp", self.timestamp.as_deref());
+            if !self.lifecycles.is_empty() {
+                x.open("lifecycles", &[]);
+                for lifecycle in &self.lifecycles {
+                    x.open("lifecycle", &[]);
+                    let tag = if CDX_LIFECYCLE_PHASES.contains(&lifecycle.as_str()) {
+                        "phase"
+                    } else {
+                        "name"
+                    };
+                    x.text(tag, lifecycle);
+                    x.close("lifecycle");
+                }
+                x.close("lifecycles");
+            }
             if !self.tools.is_empty() {
                 x.open("tools", &[]);
                 for (name, version) in &self.tools {
@@ -875,7 +1012,7 @@ impl SbomFixture {
                 x.close("authors");
             }
             if let Some(primary) = &self.primary {
-                primary.cyclonedx_xml(&mut x);
+                primary.cyclonedx_xml(&mut x, self.has_license_acknowledgement());
             }
             if let Some((name, email)) = &self.manufacturer {
                 x.open("manufacturer", &[]);
@@ -892,7 +1029,7 @@ impl SbomFixture {
 
         x.open("components", &[]);
         for c in &self.components {
-            c.cyclonedx_xml(&mut x);
+            c.cyclonedx_xml(&mut x, self.has_license_acknowledgement());
         }
         for asset in &self.crypto_assets {
             asset.cyclonedx_xml(&mut x);
@@ -976,7 +1113,9 @@ impl SbomFixture {
 }
 
 impl ComponentFixture {
-    fn cyclonedx_xml(&self, x: &mut Xml) {
+    /// The component; `acknowledgement` says whether the CycloneDX version
+    /// can mark a licence concluded (1.6+).
+    fn cyclonedx_xml(&self, x: &mut Xml, acknowledgement: bool) {
         x.open(
             "component",
             &[("type", &self.component_type), ("bom-ref", &self.bom_ref)],
@@ -992,15 +1131,23 @@ impl ComponentFixture {
         if !self.hashes.is_empty() {
             cdx_hashes_xml(x, &self.hashes);
         }
-        if !self.licenses.is_empty() {
+        let concluded = self.concluded_license.iter().filter(|_| acknowledgement);
+        if !self.licenses.is_empty() || concluded.clone().next().is_some() {
             x.open("licenses", &[]);
             for id in &self.licenses {
                 x.open("license", &[]);
                 x.text("id", id);
                 x.close("license");
             }
+            for id in concluded {
+                x.open("license", &[("acknowledgement", "concluded")]);
+                x.text("id", id);
+                x.close("license");
+            }
             x.close("licenses");
         }
+        x.opt("copyright", self.copyright.as_deref());
+        x.opt("cpe", self.cpe.as_deref());
         x.opt("purl", self.purl.as_deref());
         if !self.external_refs.is_empty() || !self.hashed_external_refs.is_empty() {
             x.open("externalReferences", &[]);
@@ -1028,7 +1175,7 @@ impl ComponentFixture {
         if !self.children.is_empty() {
             x.open("components", &[]);
             for child in &self.children {
-                child.cyclonedx_xml(x);
+                child.cyclonedx_xml(x, acknowledgement);
             }
             x.close("components");
         }
@@ -1302,6 +1449,9 @@ fn spdx2_purpose(component_type: &str) -> Option<&'static str> {
 impl SbomFixture {
     fn spdx23_json(&self, drops: &mut Drops) -> String {
         self.drop_neutral_fields(drops);
+        if !self.lifecycles.is_empty() {
+            drops.drop_field("lifecycles");
+        }
         if self.completeness.is_some() {
             drops.drop_field("completeness");
         }
@@ -1313,6 +1463,9 @@ impl SbomFixture {
         }
         if !self.vulnerability_analyses.is_empty() {
             drops.drop_field("vulnerability_analyses");
+        }
+        if !self.undeclared_spdx3_profiles.is_empty() {
+            drops.drop_field("undeclared_spdx3_profiles");
         }
 
         let id = |bom_ref: &str| self.element_id(Encoding::Spdx23Json, bom_ref);
@@ -1377,9 +1530,16 @@ impl SbomFixture {
                 relationships.push(rel(id(from), "DEPENDS_ON", id(to)));
             }
         }
+        for (from, to) in &self.dynamic_links {
+            relationships.push(rel(id(from), "DYNAMIC_LINK", id(to)));
+        }
 
         let mut doc = serde_json::Map::new();
-        doc.insert("spdxVersion".into(), serde_json::json!("SPDX-2.3"));
+        let version = self.spdx_version.as_deref().unwrap_or("2.3");
+        doc.insert(
+            "spdxVersion".into(),
+            serde_json::json!(format!("SPDX-{version}")),
+        );
         doc.insert("dataLicense".into(), serde_json::json!("CC0-1.0"));
         doc.insert("SPDXID".into(), serde_json::json!("SPDXRef-DOCUMENT"));
         // The name is mandatory in SPDX 2.3; a document without a primary
@@ -1450,6 +1610,13 @@ impl ComponentFixture {
                 "referenceLocator": purl,
             }));
         }
+        if let Some(cpe) = &self.cpe {
+            refs.push(serde_json::json!({
+                "referenceCategory": "SECURITY",
+                "referenceType": "cpe23Type",
+                "referenceLocator": cpe,
+            }));
+        }
         let all_refs = self.external_refs.iter().cloned().chain(
             self.hashed_external_refs
                 .iter()
@@ -1476,6 +1643,12 @@ impl ComponentFixture {
                 "licenseDeclared".into(),
                 serde_json::json!(self.licenses.join(" AND ")),
             );
+        }
+        if let Some(concluded) = &self.concluded_license {
+            pkg.insert("licenseConcluded".into(), serde_json::json!(concluded));
+        }
+        if let Some(copyright) = &self.copyright {
+            pkg.insert("copyrightText".into(), serde_json::json!(copyright));
         }
         if let Some(description) = &self.description {
             pkg.insert("description".into(), serde_json::json!(description));
@@ -1551,6 +1724,18 @@ fn spdx3_purpose(component_type: &str) -> Option<&'static str> {
         "platform" => "platform",
         _ => return None,
     })
+}
+
+/// The SPDX 3.0.1 `software_sbomType` of a CycloneDX lifecycle phase (the
+/// CISA "Types of SBOM" mapping); a named lifecycle keeps its name.
+fn spdx3_sbom_type(lifecycle: &str) -> String {
+    match lifecycle {
+        "pre-build" => "source".to_string(),
+        "post-build" => "analyzed".to_string(),
+        "operations" => "deployed".to_string(),
+        "discovery" => "runtime".to_string(),
+        other => other.to_string(),
+    }
 }
 
 /// The SPDX 3 relationship completeness of a CycloneDX composition
@@ -1701,7 +1886,13 @@ impl SbomFixture {
             uses_dataset |= kind == "dataset_DatasetPackage";
             g.element(node);
             let pkg = id(&c.bom_ref);
-            for license in &c.licenses {
+            for (license, relationship) in
+                c.licenses.iter().map(|l| (l, "hasDeclaredLicense")).chain(
+                    c.concluded_license
+                        .iter()
+                        .map(|l| (l, "hasConcludedLicense")),
+                )
+            {
                 licenses += 1;
                 let expression = format!("{SPDX3_NS}license/{licenses}");
                 g.element(serde_json::json!({
@@ -1709,7 +1900,7 @@ impl SbomFixture {
                     "spdxId": expression,
                     "simplelicensing_licenseExpression": license,
                 }));
-                g.relationship(&pkg, "hasDeclaredLicense", vec![expression], None);
+                g.relationship(&pkg, relationship, vec![expression], None);
             }
             for child in &c.children {
                 g.relationship(&pkg, "contains", vec![id(&child.bom_ref)], None);
@@ -1745,6 +1936,9 @@ impl SbomFixture {
                 ),
                 None => drops.drop_field("completeness"),
             }
+        }
+        for (from, to) in &self.dynamic_links {
+            g.relationship(&id(from), "hasDynamicLink", vec![id(to)], None);
         }
 
         // ── Vulnerabilities ─────────────────────────────────────────────
@@ -1803,6 +1997,7 @@ impl SbomFixture {
         if uses_dataset {
             profiles.push("dataset");
         }
+        profiles.retain(|p| !self.undeclared_spdx3_profiles.iter().any(|u| u == p));
 
         let data_license = format!("{SPDX3_NS}license/data");
         g.element(serde_json::json!({
@@ -1812,12 +2007,16 @@ impl SbomFixture {
         }));
 
         let sbom = format!("{SPDX3_NS}sbom");
-        let sbom_node = serde_json::json!({
+        let mut sbom_node = serde_json::json!({
             "type": "software_Sbom",
             "spdxId": sbom,
             "rootElement": self.primary.iter().map(|p| id(&p.bom_ref)).collect::<Vec<_>>(),
             "element": g.ids.clone(),
         });
+        if !self.lifecycles.is_empty() {
+            let types: Vec<_> = self.lifecycles.iter().map(|l| spdx3_sbom_type(l)).collect();
+            sbom_node["software_sbomType"] = serde_json::json!(types);
+        }
         g.element(sbom_node);
 
         let mut document = serde_json::json!({
@@ -1846,7 +2045,7 @@ impl SbomFixture {
         let mut creation_info = serde_json::json!({
             "type": "CreationInfo",
             "@id": "_:creationinfo",
-            "specVersion": "3.0.1",
+            "specVersion": self.spdx_version.as_deref().unwrap_or("3.0.1"),
             "createdBy": created_by,
             "createdUsing": created_using,
         });
@@ -1895,6 +2094,13 @@ impl ComponentFixture {
         if let Some(purl) = &self.purl {
             pkg["software_packageUrl"] = serde_json::json!(purl);
         }
+        if let Some(cpe) = &self.cpe {
+            pkg["externalIdentifier"] = serde_json::json!([{
+                "type": "ExternalIdentifier",
+                "externalIdentifierType": "cpe23",
+                "identifier": cpe,
+            }]);
+        }
         if let Some(supplier) = &self.supplier {
             let agent = if supplier == "NOASSERTION" {
                 SPDX3_NO_ASSERTION_ELEMENT.to_string()
@@ -1935,6 +2141,9 @@ impl ComponentFixture {
         }
         if !refs.is_empty() {
             pkg["externalRef"] = serde_json::json!(refs);
+        }
+        if let Some(copyright) = &self.copyright {
+            pkg["software_copyrightText"] = serde_json::json!(copyright);
         }
         if let Some(description) = &self.description {
             pkg["description"] = serde_json::json!(description);

@@ -79,6 +79,9 @@ pub const MD5_FILLER: &str = "d41d8cd98f00b204e9800998ecf8427e";
 /// A case about a CycloneDX specVersion runs in CycloneDX only.
 pub const CYCLONEDX_VERSION_CASE: &str = "the case is about a CycloneDX specVersion, which SPDX \
      documents do not carry: the SPDX encodings write their own version";
+/// A case about an SPDX version runs in SPDX only.
+pub const SPDX_VERSION_CASE: &str =
+    "the case is about an SPDX version, which CycloneDX documents do not carry";
 /// A CBOM row runs in CycloneDX only.
 pub const CBOM_IS_CYCLONEDX: &str = "SPDX 2.3 and SPDX 3.0 have no cryptographic-asset model: a \
      CBOM is CycloneDX 1.6+ only";
@@ -101,6 +104,10 @@ pub const SPDX3_AGENT_EMAILS_NOT_READ: &str = "open gap: the SPDX 3 parser reads
 pub const SPDX3_VALID_UNTIL_NOT_READ: &str = "open gap: the SPDX 3 parser does not read the \
      primary package's validUntilTime, as the registry advice says, so no SPDX 3 document \
      states an end of support";
+/// The SPDX 3 parser does not read `software_sbomType`.
+pub const SPDX3_SBOM_TYPE_NOT_READ: &str = "open gap: the SPDX 3 parser does not read \
+     software_sbomType, as the registry advice says, so no SPDX 3 document declares a \
+     lifecycle phase";
 /// WP 1.8c: the SPDX 3 parser attaches a vulnerability twice.
 pub const SPDX3_VULNERABILITY_ATTACHED_TWICE: &str = "bug (WP 1.8c fixes it): the SPDX 3 parser \
      attaches a vulnerability once for its affects relationship and again for its CVSS \
@@ -121,10 +128,15 @@ pub struct ComponentFixture {
     pub name: String,
     pub version: Option<String>,
     pub purl: Option<String>,
+    /// CycloneDX `cpe` (an SPDX `cpe23Type` reference / `cpe23` external
+    /// identifier).
+    pub cpe: Option<String>,
     /// `supplier.name`.
     pub supplier: Option<String>,
     /// `description`.
     pub description: Option<String>,
+    /// `copyright` (SPDX `copyrightText`).
+    pub copyright: Option<String>,
     /// `(alg, content)` pairs, e.g. `("SHA-256", SHA256_FILLER)`.
     pub hashes: Vec<(String, String)>,
     /// `(type, url)` external references, e.g. `("vcs", "https://…")`.
@@ -135,6 +147,9 @@ pub struct ComponentFixture {
     /// SPDX license ids rendered as `{"license": {"id": …}}` entries (the
     /// SPDX declared licence).
     pub licenses: Vec<String>,
+    /// The concluded licence (SPDX `licenseConcluded` /
+    /// `hasConcludedLicense`).
+    pub concluded_license: Option<String>,
     /// End of support, `YYYY-MM-DD`: the CycloneDX `endOfSupport` property
     /// the parser lifts from the primary component, SPDX 2.3
     /// `validUntilDate`, SPDX 3 `validUntilTime`.
@@ -164,12 +179,15 @@ impl ComponentFixture {
             name: name.to_string(),
             version: Some("1.2.3".to_string()),
             purl: Some(format!("pkg:npm/{name}@1.2.3")),
+            cpe: None,
             supplier: Some("Acme Components Ltd".to_string()),
             description: None,
+            copyright: None,
             hashes: vec![("SHA-256".to_string(), SHA256_FILLER.to_string())],
             external_refs: Vec::new(),
             hashed_external_refs: Vec::new(),
             licenses: Vec::new(),
+            concluded_license: None,
             support_end: None,
             properties: Vec::new(),
             model_card: None,
@@ -548,12 +566,21 @@ pub struct VulnAnalysisFixture {
 #[derive(Debug, Clone)]
 pub struct SbomFixture {
     /// CycloneDX `specVersion`. The SPDX encodings write their own version
-    /// (SPDX-2.3, 3.0.1); a CycloneDX version outside 1.4–1.7 has no SPDX
-    /// counterpart.
+    /// ([`Self::spdx_version`]); a CycloneDX version outside 1.4–1.7 has no
+    /// SPDX counterpart.
     pub spec_version: String,
+    /// The SPDX version the SPDX encodings write (`SPDX-<v>` in SPDX 2.3,
+    /// `creationInfo.specVersion` in SPDX 3); `None` → 2.3 and 3.0.1.
+    pub spdx_version: Option<String>,
+    /// Top-level `version`, the BOM revision (`None` omits it; SPDX has no
+    /// revision counter).
+    pub doc_version: Option<u32>,
     /// RFC 3339 `metadata.timestamp`; `None` → the parser stores the
     /// UNIX-epoch "unknown" sentinel (`has_known_timestamp() == false`).
     pub timestamp: Option<String>,
+    /// `metadata.lifecycles[]` phases (or lifecycle names), SPDX 3
+    /// `software_sbomType`.
+    pub lifecycles: Vec<String>,
     /// Top-level `serialNumber` (SPDX 2.3 `documentNamespace`, the SPDX 3
     /// document's `spdxId`).
     pub serial_number: Option<String>,
@@ -573,6 +600,10 @@ pub struct SbomFixture {
     pub crypto_assets: Vec<CryptoAssetFixture>,
     /// `dependencies[]` entries: `(ref, dependsOn refs)`.
     pub dependencies: Vec<(String, Vec<String>)>,
+    /// Dynamic links `(from ref, to ref)`: SPDX 2.3 `DYNAMIC_LINK`, SPDX 3
+    /// `hasDynamicLink` relationships (CycloneDX dependencies have no link
+    /// type).
+    pub dynamic_links: Vec<(String, String)>,
     /// Document `vulnerabilities[]`: `(id, rating severity, affected
     /// bom-ref)`. An empty severity renders no `ratings` at all (an unrated
     /// vulnerability).
@@ -586,6 +617,10 @@ pub struct SbomFixture {
     /// XML-DSig signature in XML, a `verifiedUsing` signature on the SPDX 3
     /// document).
     pub signature: Option<(String, String)>,
+    /// SPDX 3 profiles the document uses but leaves out of its
+    /// `profileConformance` (the SPDX 3 renderer declares every profile its
+    /// elements use).
+    pub undeclared_spdx3_profiles: Vec<String>,
     /// CRA sidecar metadata, attached to the checker by [`check`] the way
     /// `validate --cra-sidecar` attaches it.
     pub sidecar: Option<CraSidecarMetadata>,
@@ -595,7 +630,10 @@ impl Default for SbomFixture {
     fn default() -> Self {
         Self {
             spec_version: "1.6".to_string(),
+            spdx_version: None,
+            doc_version: Some(1),
             timestamp: None,
+            lifecycles: Vec::new(),
             serial_number: None,
             tools: Vec::new(),
             authors: Vec::new(),
@@ -604,10 +642,12 @@ impl Default for SbomFixture {
             components: Vec::new(),
             crypto_assets: Vec::new(),
             dependencies: Vec::new(),
+            dynamic_links: Vec::new(),
             vulnerabilities: Vec::new(),
             vulnerability_analyses: Vec::new(),
             completeness: None,
             signature: None,
+            undeclared_spdx3_profiles: Vec::new(),
             sidecar: None,
         }
     }

@@ -11,7 +11,7 @@
 mod rule_matrix;
 
 use rule_matrix::{
-    CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, RuleEntry, SbomFixture,
+    CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, RuleEntry, SPDX_VERSION_CASE, SbomFixture,
     assert_no_violations_in, run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, EO14028_SARIF_RULE_IDS, ViolationSeverity as Sev};
@@ -89,14 +89,25 @@ fn eo14028_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.component_mut("libalpha").name = "unknown".to_string()),
             base(),
         ),
-        // The §4(e) machine-readable gate: CycloneDX <= 1.3 must fail.
+        // The §4(e) machine-readable gate: CycloneDX <= 1.3 and SPDX
+        // before 2.2 must fail.
         RuleEntry::tested(
             "SBOM-EO14028-FORMAT",
             Sev::Error,
             broken(|s| s.spec_version = "1.3".to_string()),
             base(),
         )
-        .case_only("firing", Encoding::CYCLONEDX, CYCLONEDX_VERSION_CASE),
+        .with_firing(
+            "SPDX 2.1 is below the SPDX 2.2 floor",
+            Sev::Error,
+            broken(|s| s.spdx_version = Some("2.1".to_string())),
+        )
+        .case_only("firing", Encoding::CYCLONEDX, CYCLONEDX_VERSION_CASE)
+        .case_only(
+            "SPDX 2.1 is below the SPDX 2.2 floor",
+            Encoding::SPDX,
+            SPDX_VERSION_CASE,
+        ),
         RuleEntry::tested(
             "SBOM-EO14028-AUTOGEN",
             Sev::Warning,

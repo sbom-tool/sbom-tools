@@ -29,9 +29,9 @@ mod rule_matrix;
 use rule_matrix::clock::{as_of, checker};
 use rule_matrix::{
     CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, Outcome, RuleEntry, SHA256_FILLER,
-    SPDX_REFERENCES_CARRY_NO_HASH, SPDX3_AGENT_EMAILS_NOT_READ, SPDX3_VALID_UNTIL_NOT_READ,
-    SPDX3_VULNERABILITY_ATTACHED_TWICE, SPDX23_HAS_NO_VULNERABILITIES, SbomFixture,
-    VulnAnalysisFixture, assert_no_violations_in, assert_spdx_version_unknown, check,
+    SPDX_REFERENCES_CARRY_NO_HASH, SPDX_VERSION_CASE, SPDX3_AGENT_EMAILS_NOT_READ,
+    SPDX3_VALID_UNTIL_NOT_READ, SPDX3_VULNERABILITY_ATTACHED_TWICE, SPDX23_HAS_NO_VULNERABILITIES,
+    SbomFixture, VulnAnalysisFixture, assert_no_violations_in, assert_spdx_version_unknown, check,
     render_violations, run_matrix,
 };
 use sbom_tools::model::{
@@ -404,11 +404,8 @@ const SPDX23_NO_REFERENCE_TYPE: &str = "SPDX 2.3 has no reference category for a
 /// SPDX 2.3 cannot state the vulnerability information.
 const SPDX23_NO_VULNERABILITY_STATEMENT: &str = "SPDX 2.3 carries no vulnerability data and \
      names no VDR or VEX reference, so it cannot state the vulnerability information";
-/// Skip reason of the SPDX-only spec-version row in the three CRA matrices.
-const SPEC_VERSION_UNKNOWN_SKIP: &str = "an SPDX version that is neither 2.x nor 3.x is an \
-     SPDX-only check, out of the DSL's reach (it sets no SPDX version); \
-     cra_spec_version_unknown_reads_only_spdx below fires it on SPDX 4.0 and keeps it silent \
-     on SPDX 2.3 at all three CRA levels";
+/// Only SPDX 3 declares profile conformance.
+const SPDX3_PROFILES: &str = "only SPDX 3 documents declare profile conformance";
 /// SPDX 3 states no VEX response.
 const SPDX3_NO_VEX_RESPONSE: &str = "the case is about a VEX response: SPDX 3 has no response \
      field (the parser infers one from the action statement text and builds no remediation \
@@ -436,14 +433,24 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             Sev::Info,
             broken(|s| s.timestamp = Some(days_before_clock(41))),
         ),
-        // Tool policy floor: CycloneDX 1.4+.
+        // Tool policy floor: CycloneDX 1.4+ / SPDX 2.3+.
         RuleEntry::tested(
             "SBOM-CRA-MACHINE-READABLE",
             Sev::Warning,
             broken(|s| s.spec_version = "1.3".to_string()),
             base(),
         )
-        .case_only("firing", Encoding::CYCLONEDX, CYCLONEDX_VERSION_CASE),
+        .with_firing(
+            "SPDX 2.2 is below the SPDX 2.3 floor",
+            Sev::Warning,
+            broken(|s| s.spdx_version = Some("2.2".to_string())),
+        )
+        .case_only("firing", Encoding::CYCLONEDX, CYCLONEDX_VERSION_CASE)
+        .case_only(
+            "SPDX 2.2 is below the SPDX 2.3 floor",
+            Encoding::SPDX,
+            SPDX_VERSION_CASE,
+        ),
         // Only manufacturer-scope references count; the sidecar fallback
         // relaxes to an Info.
         RuleEntry::tested(
@@ -791,9 +798,10 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             broken(|s| s.component_mut("libalpha").name = "unknown".to_string()),
             base(),
         ),
-        // CycloneDX format notes: a version newer than any this tool reads
-        // warns, an outdated one is an Info (SBOM-CRA-MACHINE-READABLE
-        // reports the 1.3 floor beside it).
+        // Format notes: a CycloneDX or SPDX version newer than any this tool
+        // reads warns, an outdated CycloneDX one is an Info
+        // (SBOM-CRA-MACHINE-READABLE reports the 1.3 floor beside it), and an
+        // SPDX version that is neither 2.x nor 3.x warns.
         RuleEntry::tested(
             "SBOM-CRA-SPEC-VERSION",
             Sev::Warning,
@@ -805,13 +813,29 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             Sev::Info,
             broken(|s| s.spec_version = "1.3".to_string()),
         )
+        .with_firing(
+            "SPDX 3.1 is newer than any version read",
+            Sev::Warning,
+            broken(|s| s.spdx_version = Some("3.1".to_string())),
+        )
         .case_only("firing", Encoding::CYCLONEDX, CYCLONEDX_VERSION_CASE)
         .case_only(
             "CycloneDX 1.3 is outdated",
             Encoding::CYCLONEDX,
             CYCLONEDX_VERSION_CASE,
+        )
+        .case_only(
+            "SPDX 3.1 is newer than any version read",
+            Encoding::SPDX,
+            SPDX_VERSION_CASE,
         ),
-        RuleEntry::skipped("SBOM-CRA-SPEC-VERSION-UNKNOWN", SPEC_VERSION_UNKNOWN_SKIP),
+        RuleEntry::tested(
+            "SBOM-CRA-SPEC-VERSION-UNKNOWN",
+            Sev::Warning,
+            broken(|s| s.spdx_version = Some("4.0".to_string())),
+            base(),
+        )
+        .case_only("firing", Encoding::SPDX, SPDX_VERSION_CASE),
         RuleEntry::tested(
             "SBOM-CRA-ELEMENT-ID",
             Sev::Info,
@@ -964,21 +988,23 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             "end-of-life component",
             broken(|s| s.component_mut("libalpha").eol = Some(EolStatus::EndOfLife)),
         ),
-        // SPDX 3.0 profile-conformance notes.
-        RuleEntry::skipped(
+        // SPDX 3.0 profile-conformance notes: a document that tracks
+        // licences without declaring the SimpleLicensing profile, and one
+        // that carries vulnerabilities without declaring the Security one.
+        RuleEntry::tested(
             "SBOM-CRA-ART-13-5-PROFILE",
-            "SPDX 3.0-only note (a document that tracks licences without declaring the \
-             SimpleLicensing profile), out of the DSL's reach (its SPDX 3 rendering declares \
-             every profile it uses); cra_spdx3_profile_notes_fire_without_their_profile below \
-             fires it and keeps it silent at both phases",
-        ),
-        RuleEntry::skipped(
+            Sev::Info,
+            broken(|s| s.undeclared_spdx3_profiles = vec!["simpleLicensing".to_string()]),
+            base(),
+        )
+        .case_only("firing", &[Encoding::Spdx3JsonLd], SPDX3_PROFILES),
+        RuleEntry::tested(
             "SBOM-CRA-VULN-METADATA-PROFILE",
-            "SPDX 3.0-only note (a document that carries vulnerabilities without declaring \
-             the Security profile), out of the DSL's reach (its SPDX 3 rendering declares \
-             every profile it uses); cra_spdx3_profile_notes_fire_without_their_profile below \
-             fires it and keeps it silent at both phases",
-        ),
+            Sev::Info,
+            broken(|s| s.undeclared_spdx3_profiles = vec!["security".to_string()]),
+            base(),
+        )
+        .case_only("firing", &[Encoding::Spdx3JsonLd], SPDX3_PROFILES),
         RuleEntry::tested(
             "SBOM-CRA-ANNEX-I-IDENTIFIER",
             Sev::Error,
@@ -1157,7 +1183,7 @@ fn cra_phase1_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "at Phase 1 no check emits SBOM-CRA-VULN-METADATA: the severity and \
              remediation checks run only at Phase 2, and the one Phase 1 site, the \
              SPDX 3.0 Security-profile note, reports SBOM-CRA-VULN-METADATA-PROFILE \
-             (its row is skipped: the DSL cannot reach it)",
+             (its own row)",
         ),
         RuleEntry::skipped(
             "SBOM-CRA-LIFECYCLE",
@@ -1576,13 +1602,29 @@ fn cra_oss_steward_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Info,
             steward_broken(|s| s.spec_version = "1.3".to_string()),
         )
+        .with_firing(
+            "SPDX 3.1 is newer than any version read",
+            Sev::Warning,
+            steward_broken(|s| s.spdx_version = Some("3.1".to_string())),
+        )
         .case_only("firing", Encoding::CYCLONEDX, CYCLONEDX_VERSION_CASE)
         .case_only(
             "CycloneDX 1.3 is outdated",
             Encoding::CYCLONEDX,
             CYCLONEDX_VERSION_CASE,
+        )
+        .case_only(
+            "SPDX 3.1 is newer than any version read",
+            Encoding::SPDX,
+            SPDX_VERSION_CASE,
         ),
-        RuleEntry::skipped("SBOM-CRA-SPEC-VERSION-UNKNOWN", SPEC_VERSION_UNKNOWN_SKIP),
+        RuleEntry::tested(
+            "SBOM-CRA-SPEC-VERSION-UNKNOWN",
+            Sev::Warning,
+            steward_broken(|s| s.spdx_version = Some("4.0".to_string())),
+            steward_base(),
+        )
+        .case_only("firing", Encoding::SPDX, SPDX_VERSION_CASE),
         RuleEntry::tested(
             "SBOM-CRA-ELEMENT-ID",
             Sev::Info,
@@ -1674,13 +1716,14 @@ fn cra_universes_cover_the_cra_slice() {
     );
 }
 
-/// Two CRA notes read only SPDX 3.0 input, out of the DSL's reach: a
-/// document that carries vulnerabilities without declaring the Security
-/// profile (SBOM-CRA-VULN-METADATA-PROFILE, at Phase 1 the only
+/// Two CRA notes read only SPDX 3.0 input: a document that carries
+/// vulnerabilities without declaring the Security profile
+/// (SBOM-CRA-VULN-METADATA-PROFILE, at Phase 1 the only
 /// SBOM-CRA-VULN-METADATA site) and one that tracks licences without
 /// declaring the SimpleLicensing profile (SBOM-CRA-ART-13-5-PROFILE). Both
-/// manufacturer phases run them. The fixture carries vulnerabilities and a
-/// declared licence and declares both profiles (silent); dropping one
+/// manufacturer phases run them; their matrix rows cover the DSL rendering,
+/// and this pins the corpus fixture. The fixture carries vulnerabilities and
+/// a declared licence and declares both profiles (silent); dropping one
 /// profile fires its note, and only that one, as an Info.
 #[test]
 fn cra_spdx3_profile_notes_fire_without_their_profile() {
@@ -1776,8 +1819,8 @@ fn cra_phase2_direct_dependency_supplier_gap_is_an_error() {
 }
 
 /// SBOM-CRA-SPEC-VERSION-UNKNOWN reads only SPDX input (a version that is
-/// neither 2.x nor 3.x), a version the DSL cannot set, so its
-/// matrix rows are skipped; every CRA level runs the format checks.
+/// neither 2.x nor 3.x): its matrix rows fire it in SPDX 2.3 JSON and SPDX
+/// 3; this pins SPDX tag-value at every CRA level.
 #[test]
 fn cra_spec_version_unknown_reads_only_spdx() {
     for level in [PHASE1, PHASE2, STEWARD] {
