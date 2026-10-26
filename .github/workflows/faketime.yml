@@ -55,7 +55,7 @@ jobs:
           sudo apt-get install -y -q faketime
       # Compile on the real clock, so only the test run sees the fake one.
       - name: Build test binaries
-        run: cargo test --locked --all-features --no-run
+        run: cargo test --locked --all-features --tests --no-run
       - name: Run tests at ${{ matrix.date }}
         env:
           FAKE_DATE: ${{ matrix.date }}
@@ -70,10 +70,17 @@ jobs:
           offset=$(printf '%+d' $(( $(date -u -d "$FAKE_DATE" +%s) - $(date -u +%s) )))
           faketime -f "$offset" date -u
           # --offline: under the fake clock TLS certificates read as expired.
+          # --tests: no doc-tests. rustdoc compiles them at run time, under
+          # the fake clock, and stalls there until the job times out; they
+          # hold no dates anyway.
           # --skip: the enrichment cache TTL tests compare file mtimes with
           # the clock. libfaketime does not intercept statx, which Rust's std
           # uses for file metadata on Linux, so mtimes stay real while the
           # clock moves and every fresh entry reads as expired. That is an
           # artifact of the fake clock, not a date that passed.
-          faketime -f "$offset" cargo test --locked --offline --all-features --no-fail-fast -- \
-            --skip enrichment::cache::tests --skip enrichment::source::tests
+          faketime -f "$offset" cargo test --locked --offline --all-features --tests --no-fail-fast -- \
+            --skip enrichment::cache::tests --skip enrichment::source::tests \
+            --skip cached_component_results_skip_network \
+            --skip shared_vulnerability_details_fetched_once \
+            --skip offline_run_serves_warm_cache_without_network \
+            --skip expired_entry_served_stale_when_offline
