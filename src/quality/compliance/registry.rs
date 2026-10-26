@@ -1625,8 +1625,8 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // findings on the document shared a finding key. A missing PSIRT,
         // early-warning or notification channel is a Warning since the
         // 2026-09-11 deadline (an Info before it), escalated to Error for
-        // important class II and critical products; the ENISA platform id
-        // stays an Info.
+        // important class II and critical products; the ENISA platform
+        // finding follows the same dates but is never escalated.
         "SBOM-CRA-ART-14-PSIRT" => RuleMeta {
             sarif_id: "SBOM-CRA-ART-14-PSIRT",
             name: "CraPsirtUrl",
