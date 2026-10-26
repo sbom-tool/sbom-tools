@@ -2033,6 +2033,9 @@ impl SbomFixture {
         if let Some(name) = self.document_name() {
             document["name"] = serde_json::json!(name);
         }
+        // SPDX 3.0.1 defines no signature integrity method; the parser (and
+        // the registry advice) read a verifiedUsing entry of type signature
+        // on the SpdxDocument as the document's signature.
         if let Some((algorithm, value)) = &self.signature {
             document["verifiedUsing"] = serde_json::json!([{
                 "type": "signature",
