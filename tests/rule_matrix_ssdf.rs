@@ -3,13 +3,19 @@
 //! produced a passing SSDF verdict).
 //!
 //! Every rule id in `SSDF_SARIF_RULE_IDS` gets a firing fixture and a silent
-//! fixture (real CycloneDX JSON through the real parser), or an explicit
-//! skip-with-reason; exhaustiveness is enforced against the registry slice.
+//! fixture (rendered in each of the four encodings and run through the real
+//! parser), or an explicit skip-with-reason; exhaustiveness is enforced
+//! against the registry slice. SPDX 2.3 names no VCS, build-metadata or VDR
+//! reference type, so the PO.1, PO.3 and PW.6 references that silence those
+//! rules elsewhere leave them firing there.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
-use rule_matrix::{ComponentFixture, RuleEntry, SbomFixture, assert_no_violations, run_matrix};
+use rule_matrix::{
+    ComponentFixture, Encoding, Outcome, RuleEntry, SbomFixture, assert_no_violations_in,
+    run_matrix,
+};
 use sbom_tools::quality::{ComplianceLevel, SSDF_SARIF_RULE_IDS, ViolationSeverity as Sev};
 
 const LEVEL: ComplianceLevel = ComplianceLevel::NistSsdf;
@@ -56,11 +62,25 @@ fn broken(mutate: impl FnOnce(&mut SbomFixture)) -> SbomFixture {
 }
 
 /// The conforming SSDF fixture must pass with a clean verdict — previously a
-/// checker that always errored would have kept the suite green.
+/// checker that always errored would have kept the suite green. SPDX 2.3
+/// cannot carry its VCS and build-metadata references (the PO.1 and PO.3
+/// rows).
 #[test]
 fn ssdf_conforming_fixture_is_compliant_with_zero_violations() {
-    assert_no_violations(LEVEL, &base());
+    assert_no_violations_in(LEVEL, &base(), Encoding::ALL_BUT_SPDX23);
 }
+
+/// SPDX 2.3 reads a VCS reference nowhere: the download location is a
+/// source distribution, and an OTHER `vcs` reference is no reference type
+/// the parser knows.
+const SPDX23_NO_VCS_REFERENCE: &str = "SPDX 2.3 has no VCS reference type: the parser reads \
+     downloadLocation as a source distribution and an OTHER vcs reference as unrecognized";
+/// SPDX 2.3 reads no build-metadata reference.
+const SPDX23_NO_BUILD_REFERENCE: &str = "SPDX 2.3 has no build-metadata or build-system \
+     reference type: an OTHER build-meta reference is unrecognized";
+/// SPDX 2.3 names no VDR.
+const SPDX23_NO_VDR_REFERENCE: &str = "SPDX 2.3 has no reference category for a VDR or VEX: an \
+     OTHER vulnerability-assertion reference is unrecognized";
 
 #[test]
 fn ssdf_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
@@ -126,6 +146,12 @@ fn ssdf_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     .retain(|(t, _)| t != "vcs");
             }),
             base(),
+        )
+        .case_differs(
+            "silent",
+            &[Encoding::Spdx23Json],
+            Outcome::Fires(Sev::Warning),
+            SPDX23_NO_VCS_REFERENCE,
         ),
         RuleEntry::tested(
             "SBOM-SSDF-PO3",
@@ -147,6 +173,18 @@ fn ssdf_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     "https://ci.acme.example/pipelines/libalpha".to_string(),
                 ));
             }),
+        )
+        .case_differs(
+            "silent",
+            &[Encoding::Spdx23Json],
+            Outcome::Fires(Sev::Info),
+            SPDX23_NO_BUILD_REFERENCE,
+        )
+        .case_differs(
+            "build-system reference instead of build-meta",
+            &[Encoding::Spdx23Json],
+            Outcome::Fires(Sev::Info),
+            SPDX23_NO_BUILD_REFERENCE,
         ),
         RuleEntry::tested(
             "SBOM-SSDF-PW4",
@@ -174,6 +212,12 @@ fn ssdf_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     "https://acme.example/security/vdr.json".to_string(),
                 ));
             }),
+        )
+        .case_differs(
+            "vulnerability-assertion (VDR) reference instead of advisories",
+            &[Encoding::Spdx23Json],
+            Outcome::Fires(Sev::Info),
+            SPDX23_NO_VDR_REFERENCE,
         ),
         RuleEntry::tested(
             "SBOM-SSDF-RV1",
