@@ -867,7 +867,7 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14] PSIRT URL missing — [ART14]",
           "element": null,
           "requirement": "CRA Art. 14: PSIRT contact for external vulnerability reports",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-PSIRT",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
@@ -876,7 +876,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -885,16 +885,16 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14(2)(a)] 24-hour early-warning channel missing — document the ENISA/CSIRT contact before 2026-09-11",
           "element": null,
           "requirement": "CRA Art. 14(2)(a): 24-hour early-warning channel",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-EARLY-WARNING",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
               "standard": "CraArticle",
-              "id": "Art. 14",
+              "id": "Art. 14(2)(a)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Document the channel for the 24-hour early warning of an actively exploited vulnerability (Art. 14(2)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -903,16 +903,21 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14(2)(b) / 14(4)(b)] 72-hour notification channel missing — document this contact before 2026-09-11",
           "element": null,
           "requirement": "CRA Art. 14(2)(b): 72-hour notification channel",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-NOTIFICATION",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
               "standard": "CraArticle",
-              "id": "Art. 14",
+              "id": "Art. 14(2)(b)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "CraArticle",
+              "id": "Art. 14(4)(b)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -921,16 +926,16 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14(7)] No ENISA single reporting platform identifier — track ENISA publication and add `enisaReportingPlatformId` to the CRA sidecar when available",
           "element": null,
           "requirement": "CRA Art. 14(7): ENISA single reporting platform",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-ENISA",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
               "standard": "CraArticle",
-              "id": "Art. 14",
+              "id": "Art. 14(7)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Record the manufacturer's identifier on the ENISA single reporting platform (Art. 14(7)) once ENISA publishes it: set enisaReportingPlatformId in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         }
       ],
@@ -1782,7 +1787,7 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14] PSIRT URL missing — [ART14]",
           "element": null,
           "requirement": "CRA Art. 14: PSIRT contact for external vulnerability reports",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-PSIRT",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
@@ -1791,7 +1796,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1800,16 +1805,16 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14(2)(a)] 24-hour early-warning channel missing — document the ENISA/CSIRT contact before 2026-09-11",
           "element": null,
           "requirement": "CRA Art. 14(2)(a): 24-hour early-warning channel",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-EARLY-WARNING",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
               "standard": "CraArticle",
-              "id": "Art. 14",
+              "id": "Art. 14(2)(a)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Document the channel for the 24-hour early warning of an actively exploited vulnerability (Art. 14(2)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1818,16 +1823,21 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14(2)(b) / 14(4)(b)] 72-hour notification channel missing — document this contact before 2026-09-11",
           "element": null,
           "requirement": "CRA Art. 14(2)(b): 72-hour notification channel",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-NOTIFICATION",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
               "standard": "CraArticle",
-              "id": "Art. 14",
+              "id": "Art. 14(2)(b)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "CraArticle",
+              "id": "Art. 14(4)(b)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1836,16 +1846,16 @@ expression: "render(&JsonReporter::new())"
           "message": "[CRA Art. 14(7)] No ENISA single reporting platform identifier — track ENISA publication and add `enisaReportingPlatformId` to the CRA sidecar when available",
           "element": null,
           "requirement": "CRA Art. 14(7): ENISA single reporting platform",
-          "rule_id": "SBOM-CRA-ART-14",
+          "rule_id": "SBOM-CRA-ART-14-ENISA",
           "sarif_rule_id": "SBOM-CRA-GENERAL",
           "standard_refs": [
             {
               "standard": "CraArticle",
-              "id": "Art. 14",
+              "id": "Art. 14(7)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "remediation": "Record the manufacturer's identifier on the ENISA single reporting platform (Art. 14(7)) once ENISA publishes it: set enisaReportingPlatformId in the CRA sidecar. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         }
       ],

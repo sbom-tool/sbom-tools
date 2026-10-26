@@ -18,17 +18,19 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-NTIA-GENERAL  pkg:generic/sqlite@3.46.1
 [CraPhase1] compliant · E0 W4 I6
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-GENERAL  pkg:generic/curl@8.10.1
   I SBOM-CRA-GENERAL  pkg:generic/example/console@5.0.0
   I SBOM-CRA-GENERAL  pkg:generic/sqlite@3.46.1
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-17-CONTACT  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
 [CraPhase2] compliant · E0 W6 I8
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-GENERAL  pkg:generic/curl@8.10.1
   I SBOM-CRA-GENERAL  pkg:generic/example/console@5.0.0
   I SBOM-CRA-GENERAL  pkg:generic/sqlite@3.46.1
@@ -36,7 +38,9 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
-  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-NOTIFICATION  -
+  W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-CVD-POLICY  -
 [FdaMedicalDevice] compliant · E0 W1 I3
   I SBOM-FDA-GENERAL  pkg:generic/curl@8.10.1

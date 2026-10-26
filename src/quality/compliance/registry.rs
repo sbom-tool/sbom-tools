@@ -1494,13 +1494,43 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Identify each component's supplier; placeholders such as NOASSERTION do not count.",
             advice: Some(&ADVICE_PRODUCER),
         },
-        "SBOM-CRA-ART-14" => RuleMeta {
+        // Art. 14 reporting readiness: one rule per channel, each read from
+        // the CRA sidecar only. Formerly one SBOM-CRA-ART-14 rule whose four
+        // findings on the document shared a finding key.
+        "SBOM-CRA-ART-14-PSIRT" => RuleMeta {
             sarif_id: "SBOM-CRA-GENERAL",
             name: "CraGeneralRequirement",
             short_description: "CRA general SBOM readiness requirement",
             default_severity: ViolationSeverity::Info,
             refs: &[(CRA, "Art. 14")],
-            remediation: "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+            remediation: "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar.",
+            advice: None,
+        },
+        "SBOM-CRA-ART-14-EARLY-WARNING" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(CRA, "Art. 14(2)(a)")],
+            remediation: "Document the channel for the 24-hour early warning of an actively exploited vulnerability (Art. 14(2)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar.",
+            advice: None,
+        },
+        "SBOM-CRA-ART-14-NOTIFICATION" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(CRA, "Art. 14(2)(b)"), (CRA, "Art. 14(4)(b)")],
+            remediation: "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar.",
+            advice: None,
+        },
+        "SBOM-CRA-ART-14-ENISA" => RuleMeta {
+            sarif_id: "SBOM-CRA-GENERAL",
+            name: "CraGeneralRequirement",
+            short_description: "CRA general SBOM readiness requirement",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(CRA, "Art. 14(7)")],
+            remediation: "Record the manufacturer's identifier on the ENISA single reporting platform (Art. 14(7)) once ENISA publishes it: set enisaReportingPlatformId in the CRA sidecar. This check reads only the sidecar.",
             advice: None,
         },
         "SBOM-CRA-ART-24" => RuleMeta {
@@ -3693,7 +3723,10 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-CRA-ART-13-16",
     "SBOM-CRA-ART-13-16-EMAIL",
     "SBOM-CRA-COMPONENT-SUPPLIER",
-    "SBOM-CRA-ART-14",
+    "SBOM-CRA-ART-14-PSIRT",
+    "SBOM-CRA-ART-14-EARLY-WARNING",
+    "SBOM-CRA-ART-14-NOTIFICATION",
+    "SBOM-CRA-ART-14-ENISA",
     "SBOM-CRA-ART-24",
     "SBOM-CRA-ANNEX-I",
     "SBOM-CRA-ANNEX-I-IDENTIFIER",
@@ -4362,15 +4395,10 @@ mod tests {
     fn cited_sidecar_keys_load() {
         const CITED: &[(&str, &[&str])] = &[
             ("SBOM-CRA-ART-13-2", &["riskAssessmentUrl"]),
-            (
-                "SBOM-CRA-ART-14",
-                &[
-                    "psirtUrl",
-                    "earlyWarningContact",
-                    "incidentReportContact",
-                    "enisaReportingPlatformId",
-                ],
-            ),
+            ("SBOM-CRA-ART-14-PSIRT", &["psirtUrl"]),
+            ("SBOM-CRA-ART-14-EARLY-WARNING", &["earlyWarningContact"]),
+            ("SBOM-CRA-ART-14-NOTIFICATION", &["incidentReportContact"]),
+            ("SBOM-CRA-ART-14-ENISA", &["enisaReportingPlatformId"]),
             (
                 "SBOM-CRA-ART-24",
                 &["psirtUrl", "vulnerabilityDisclosureUrl"],
