@@ -52,10 +52,11 @@ pub enum PipelineError {
 /// Exit codes for CI/CD integration
 ///
 /// Contract: `0` = success / gate passed, `1` = gate/verdict failure,
-/// `2` = clap usage errors, `3` = ANY operational error (I/O, parse, config,
-/// unsupported output format, invalid flag values) — routed centrally in
-/// `main()` by mapping every `anyhow` error to [`ERROR`]. Command-specific
-/// gates keep their documented codes (diff/view `--fail-on-vuln` = 2,
+/// `3` = ANY usage or operational error (clap usage errors, I/O, parse,
+/// config, unsupported output format, invalid flag values) — routed
+/// centrally in `main()` by mapping every clap usage error and every
+/// `anyhow` error to [`ERROR`]. Command-specific gates keep their documented
+/// codes (diff/view `--fail-on-vuln` and validate `--fail-on-warning` = 2,
 /// `--fail-on-vex-gap` = 4, license-check denial = 5, `--fail-on-kev` = 6,
 /// diff ML regression = 7). Command handlers must return errors (or exit
 /// codes) to `main()` rather than calling `process::exit` on error paths, so
@@ -67,8 +68,9 @@ pub mod exit_codes {
     pub const CHANGES_DETECTED: i32 = 1;
     /// Vulnerabilities were introduced
     pub const VULNS_INTRODUCED: i32 = 2;
-    /// An operational error occurred (I/O, parse, config, invalid flag
-    /// values). `main()` maps every `anyhow` error to this code.
+    /// A usage or operational error occurred (unknown flag or value, missing
+    /// argument, I/O, parse, config, invalid flag values). `main()` maps
+    /// every clap usage error and every `anyhow` error to this code.
     pub const ERROR: i32 = 3;
     /// Introduced vulnerabilities lack VEX statements (--fail-on-vex-gap)
     pub const VEX_GAPS_FOUND: i32 = 4;

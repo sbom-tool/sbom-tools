@@ -1,0 +1,229 @@
+---
+source: tests/compliance_snapshots.rs
+---
+{
+  "schema": "sbom-tools/compliance/v2",
+  "tool": {
+    "name": "sbom-tools",
+    "version": "[VERSION]"
+  },
+  "results": [
+    {
+      "standard": "ntia",
+      "name": "NTIA Minimum Elements",
+      "applicable": true,
+      "compliant": false,
+      "score": 33,
+      "counts": {
+        "error": 2,
+        "warning": 0,
+        "info": 0
+      },
+      "violations": [
+        {
+          "finding_id": "sbomtools:v1:f863b422f8675d3b",
+          "finding_key": "ntia|SBOM-NTIA-SUPPLIER|pkg:npm/lodash@4.17.21",
+          "severity": "Error",
+          "category": "SupplierInfo",
+          "message": "Component 'lodash' missing supplier/manufacturer",
+          "element": "lodash",
+          "component_id": "pkg:npm/lodash@4.17.21",
+          "requirement": "NTIA: Supplier information",
+          "rule_id": "SBOM-NTIA-SUPPLIER",
+          "sarif_rule_id": "SBOM-NTIA-SUPPLIER",
+          "standard_refs": [
+            {
+              "standard": "NtiaMinimum",
+              "id": "NTIA Minimum Elements",
+              "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+            }
+          ],
+          "remediation": "Name the supplier of every component, the entity that creates, defines and identifies it (an NTIA minimum data field); placeholders such as NOASSERTION do not count. SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.",
+          "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+        },
+        {
+          "finding_id": "sbomtools:v1:3ac7f51e13b33edf",
+          "finding_key": "ntia|SBOM-NTIA-SUPPLIER|pkg:npm/express@4.18.2",
+          "severity": "Error",
+          "category": "SupplierInfo",
+          "message": "Component 'express' missing supplier/manufacturer",
+          "element": "express",
+          "component_id": "pkg:npm/express@4.18.2",
+          "requirement": "NTIA: Supplier information",
+          "rule_id": "SBOM-NTIA-SUPPLIER",
+          "sarif_rule_id": "SBOM-NTIA-SUPPLIER",
+          "standard_refs": [
+            {
+              "standard": "NtiaMinimum",
+              "id": "NTIA Minimum Elements",
+              "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+            }
+          ],
+          "remediation": "Name the supplier of every component, the entity that creates, defines and identifies it (an NTIA minimum data field); placeholders such as NOASSERTION do not count. SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.",
+          "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+        }
+      ]
+    },
+    {
+      "standard": "fsct",
+      "name": "CISA Framing Software Component Transparency (3rd ed.)",
+      "applicable": true,
+      "compliant": false,
+      "score": 16,
+      "counts": {
+        "error": 3,
+        "warning": 2,
+        "info": 1
+      },
+      "violations": [
+        {
+          "finding_id": "sbomtools:v1:7b4c886ebbfb65d0",
+          "finding_key": "fsct|SBOM-FSCT-DIRECT-DEPS|document",
+          "severity": "Error",
+          "category": "DependencyInfo",
+          "message": "[CISA FSCT 3e §2.2.2/§2.3.3] No direct dependencies of the Primary Component are identified, and no completeness declaration covers their absence — identify all static direct dependencies or declare the enumeration's completeness",
+          "element": null,
+          "requirement": "CISA FSCT 3e §2.2.2/§2.3.3: Direct dependencies (Minimum Expected)",
+          "rule_id": "SBOM-FSCT-DIRECT-DEPS",
+          "sarif_rule_id": "SBOM-FSCT-DIRECT-DEPS",
+          "standard_refs": [
+            {
+              "standard": "CisaFsct",
+              "id": "§2.2.2",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+            },
+            {
+              "standard": "CisaFsct",
+              "id": "§2.3.3",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+            }
+          ],
+          "remediation": "Identify all static, direct dependencies of the Primary Component (or carry an explicit completeness declaration covering their absence), and indicate when the dependency list is incomplete. 'All' is not verifiable from the document alone — the check uses dependency edges from the primary plus the completeness declaration as its evidence. SPDX 2.x: add relationships[] entries such as DEPENDS_ON (or DEPENDENCY_OF, CONTAINS) between the packages.",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+        },
+        {
+          "finding_id": "sbomtools:v1:d012930a8be22ac4",
+          "finding_key": "fsct|SBOM-FSCT-SUPPLIER|document",
+          "severity": "Error",
+          "category": "SupplierInfo",
+          "message": "[CISA FSCT 3e §2.2.2.3] 2/2 component(s) declare no Supplier Name (an explicit 'unknown' is a permitted last resort; silent absence is not): lodash, express",
+          "element": null,
+          "counts": {
+            "affected": 2,
+            "total": 2
+          },
+          "requirement": "CISA FSCT 3e §2.2.2.3: Supplier Name (Minimum Expected)",
+          "rule_id": "SBOM-FSCT-SUPPLIER",
+          "sarif_rule_id": "SBOM-FSCT-SUPPLIER",
+          "standard_refs": [
+            {
+              "standard": "CisaFsct",
+              "id": "§2.2.2.3",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+            }
+          ],
+          "remediation": "Declare the Supplier Name for all components: the upstream supplier's legal-entity name (commercial) or project name (OSS); the domain URL / PURL namespace or an explicit 'unknown' are permitted last resorts. Silent absence fails; an explicit 'unknown' declaration satisfies the letter of the clause. SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\"; a NOASSERTION value is read as absent, so write an unknown supplier as \"Organization: unknown\".",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+        },
+        {
+          "finding_id": "sbomtools:v1:36df4e88c1e15649",
+          "finding_key": "fsct|SBOM-FSCT-HASH|document",
+          "severity": "Error",
+          "category": "IntegrityInfo",
+          "message": "[CISA FSCT 3e §2.2.2.5] 1/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): express",
+          "element": null,
+          "counts": {
+            "affected": 1,
+            "total": 2
+          },
+          "requirement": "CISA FSCT 3e §2.2.2.5: Cryptographic Hash (Minimum Expected)",
+          "rule_id": "SBOM-FSCT-HASH",
+          "sarif_rule_id": "SBOM-FSCT-HASH",
+          "standard_refs": [
+            {
+              "standard": "CisaFsct",
+              "id": "§2.2.2.5",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+            }
+          ],
+          "remediation": "Provide a hash (with its algorithm, for reproducibility) for any component whose hash was provided or can be generated; otherwise indicate it as unknown. Accepted at this tier: MD5, SHA1, and SHA2 families — MD5/SHA1 are no longer recommended and are formally discontinued in 2030. Only author-provided hashes count; tool-enriched hashes are not author evidence. SPDX 2.x: add packages[].checksums[] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+        },
+        {
+          "finding_id": "sbomtools:v1:df83bce274c1f9fd",
+          "finding_key": "fsct|SBOM-FSCT-IDENTIFIER-MULTI|document",
+          "severity": "Warning",
+          "category": "ComponentIdentification",
+          "message": "[CISA FSCT 3e §2.2.2.4] 2/2 component(s) declare fewer than two globally unique identifier kinds (PURL/CPE/SWHID/SWID) — list as many as are available (heuristic threshold; profile policy): lodash, express",
+          "element": null,
+          "counts": {
+            "affected": 2,
+            "total": 2
+          },
+          "requirement": "CISA FSCT 3e §2.2.2.4: Unique Identifier multiplicity (Recommended Practice)",
+          "rule_id": "SBOM-FSCT-IDENTIFIER-MULTI",
+          "sarif_rule_id": "SBOM-FSCT-IDENTIFIER-MULTI",
+          "standard_refs": [
+            {
+              "standard": "CisaFsct",
+              "id": "§2.2.2.4",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+            }
+          ],
+          "remediation": "List as many globally unique identifiers as are available for the component. Heuristic: the >=2-distinct-identifier-kinds (PURL/CPE/SWHID/SWID) threshold is profile policy — 'as available' is unverifiable from the document alone. SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+        },
+        {
+          "finding_id": "sbomtools:v1:bb72efb8c507e7b7",
+          "finding_key": "fsct|SBOM-FSCT-COMPLETENESS|document",
+          "severity": "Warning",
+          "category": "DependencyInfo",
+          "message": "[CISA FSCT 3e §2.2.2.6.4] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate)",
+          "element": null,
+          "requirement": "CISA FSCT 3e §2.2.2.6.4: Relationship completeness (supplemental, optional)",
+          "rule_id": "SBOM-FSCT-COMPLETENESS",
+          "sarif_rule_id": "SBOM-FSCT-COMPLETENESS",
+          "standard_refs": [
+            {
+              "standard": "CisaFsct",
+              "id": "§2.2.2.6.4",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+            },
+            {
+              "standard": "CisaFsct",
+              "id": "§2.3.3",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+            }
+          ],
+          "remediation": "Record a relationship-completeness assertion (Unknown/None/Partial/Known) — mapped to the document-level completeness declaration. Warning, not Error: the document labels the attribute supplemental and optional, with Unknown as the open-world default. SPDX 2.x: no field records completeness.",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+        },
+        {
+          "finding_id": "sbomtools:v1:d2ef39d647919153",
+          "finding_key": "fsct|SBOM-FSCT-DYNAMIC-DEPS|document",
+          "severity": "Info",
+          "category": "DependencyInfo",
+          "message": "[CISA FSCT 3e §2.2.2/§2.2.2.6] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC_LINK / RUNTIME_DEPENDENCY_OF / PROVIDED_DEPENDENCY_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies",
+          "element": null,
+          "requirement": "CISA FSCT 3e §2.2.2/§2.2.2.6: Dynamic and remote dependencies (Aspirational Goal)",
+          "rule_id": "SBOM-FSCT-DYNAMIC-DEPS",
+          "sarif_rule_id": "SBOM-FSCT-DYNAMIC-DEPS",
+          "standard_refs": [
+            {
+              "standard": "CisaFsct",
+              "id": "§2.2.2",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+            },
+            {
+              "standard": "CisaFsct",
+              "id": "§2.2.2.6",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+            }
+          ],
+          "remediation": "Make efforts to uniquely and unambiguously identify dependencies that are dynamic and/or remote. The check runs on SPDX input only (CycloneDX's parsed model cannot express the signal); absence surfaces as an informational readiness note, never a failure. SPDX 2.x: add relationships[] entries of type DYNAMIC_LINK, RUNTIME_DEPENDENCY_OF or PROVIDED_DEPENDENCY_OF.",
+          "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+        }
+      ]
+    }
+  ]
+}

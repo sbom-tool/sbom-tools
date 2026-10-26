@@ -1,0 +1,93 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:4e6a8c0d-2f3b-4c5e-87a9-1b3d5f7a9c1e",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T00:00:00Z",
+    "authors": [
+      {
+        "name": "Example Corp",
+        "email": "sbom@example.com"
+      }
+    ],
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "crypto-scanner",
+          "version": "1.0.0"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/alg/mqv",
+      "name": "MQV",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "algorithmFamily": "MQV"
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/alg/ecmqv",
+      "name": "ECMQV",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree"
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/alg/spake2",
+      "name": "SPAKE2",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree"
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/alg/srp-6a",
+      "name": "SRP-6a",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree"
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/alg/cpace",
+      "name": "CPace",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree"
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/alg/ec-jpake",
+      "name": "EC-JPAKE",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree"
+        }
+      }
+    }
+  ]
+}

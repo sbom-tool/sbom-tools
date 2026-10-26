@@ -40,7 +40,7 @@ pub use multi::{run_diff_multi, run_matrix, run_timeline};
 pub use quality::{QUALITY_OUTPUT_FORMATS, run_quality};
 pub use query::{QueryFilter, run_query};
 pub use tailor::run_tailor;
-pub use validate::{VALIDATE_OUTPUT_FORMATS, run_validate};
+pub use validate::{VALIDATE_OUTPUT_FORMATS, ValidateJsonSchema, run_validate};
 pub use verify::{VerifyAction, run_verify};
 pub use vex::{VexAction, VexExportFormat, run_vex};
 pub use view::run_view;

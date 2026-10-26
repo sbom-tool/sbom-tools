@@ -70,6 +70,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -109,6 +110,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         } else {
             let has_contact = non_tool_creators.iter().any(|c| {
@@ -130,6 +132,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
@@ -149,6 +152,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -264,6 +268,7 @@ impl ComplianceChecker {
                     total,
                 }),
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -289,6 +294,7 @@ impl ComplianceChecker {
                     total: package_total,
                 }),
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -312,6 +318,7 @@ impl ComplianceChecker {
                     total: package_total,
                 }),
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -336,6 +343,7 @@ impl ComplianceChecker {
                     total: package_total,
                 }),
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -358,6 +366,7 @@ impl ComplianceChecker {
                     total: package_total,
                 }),
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -383,6 +392,7 @@ impl ComplianceChecker {
                     total: package_total,
                 }),
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
         // No hash at all: §3.2.1 legitimately allows omitting even required
@@ -408,6 +418,7 @@ impl ComplianceChecker {
                     total: package_total,
                 }),
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -426,6 +437,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -453,6 +465,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -480,6 +493,7 @@ impl ComplianceChecker {
                     total: package_total,
                 }),
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -510,6 +524,7 @@ impl ComplianceChecker {
                     total,
                 }),
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
     }

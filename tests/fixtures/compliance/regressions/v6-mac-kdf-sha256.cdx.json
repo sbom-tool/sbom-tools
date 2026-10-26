@@ -1,0 +1,65 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:8c0e2a4b-6d7f-4a9c-bbed-5f7b9d1f3a5c",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T00:00:00Z",
+    "authors": [
+      {
+        "name": "Example Corp",
+        "email": "sbom@example.com"
+      }
+    ],
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "crypto-scanner",
+          "version": "1.0.0"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/alg/hmac-sha256",
+      "name": "HMAC-SHA256",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "mac",
+          "algorithmFamily": "HMAC",
+          "parameterSetIdentifier": "256",
+          "nistQuantumSecurityLevel": 1
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/alg/hkdf-sha256",
+      "name": "HKDF-SHA256",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "kdf",
+          "algorithmFamily": "HKDF",
+          "nistQuantumSecurityLevel": 1
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/alg/pbkdf2withhmacsha256",
+      "name": "PBKDF2WithHmacSHA256",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "kdf",
+          "nistQuantumSecurityLevel": 1
+        }
+      }
+    }
+  ]
+}

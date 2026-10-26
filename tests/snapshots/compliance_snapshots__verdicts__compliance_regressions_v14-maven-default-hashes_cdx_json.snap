@@ -1,0 +1,69 @@
+---
+source: tests/compliance_snapshots.rs
+---
+fixture: compliance/regressions/v14-maven-default-hashes.cdx.json
+as_of: 2026-10-12T00:00:00Z
+
+[Minimum] compliant · E0 W0 I0
+[Standard] compliant · E0 W0 I0
+[NtiaMinimum] compliant · E0 W0 I0
+[CraPhase1] compliant · E0 W5 I3
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ART-13-16  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-14  - ×3
+[CraPhase2] compliant · E0 W7 I5
+  I SBOM-CRA-ANNEX-V  -
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-LIFECYCLE  -
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ART-13-16  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-13-2  -
+  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-CVD-POLICY  -
+[FdaMedicalDevice] compliant · E0 W2 I0
+  W SBOM-FDA-SUPPLIER  -
+  W SBOM-FDA-SUPPORT  -
+[NistSsdf] compliant · E0 W1 I2
+  I SBOM-SSDF-PO3  -
+  I SBOM-SSDF-PW6  -
+  W SBOM-SSDF-PO1  -
+[Eo14028] compliant · E0 W1 I0
+  W SBOM-EO14028-DISCLOSURE  -
+[Cnsa2] NON-COMPLIANT · E1 W0 I0
+  E SBOM-CNSA2-000  -
+[NistPqc] NON-COMPLIANT · E1 W0 I0
+  E SBOM-PQC-000  -
+[BsiTr03183_2] compliant · E0 W1 I0
+  W SBOM-BSI-TR-03183-2-5-5-COMPLETENESS  -
+[CraOssSteward] NON-COMPLIANT · E1 W1 I0
+  E SBOM-CRA-ART-24  -
+  W SBOM-CRA-CVD-POLICY  -
+[EuccSubstantial] NON-COMPLIANT · E4 W1 I0
+  E SBOM-EUCC-ITSEF  -
+  E SBOM-EUCC-PP  -
+  E SBOM-EUCC-TOE  -
+  E SBOM-EUCC-VALIDITY  -
+  W SBOM-EUCC-CERTREF  -
+[EuAiAct] not applicable · E0 W0 I1
+  I SBOM-AIACT-NA  -
+[BsiSbomForAi] not applicable · E0 W0 I1
+  I SBOM-BSIAI-NA  -
+[Cisa2026] compliant · E0 W2 I0
+  W SBOM-CISA2026-COVERAGE  -
+  W SBOM-CISA2026-SIGNATURE  -
+[PciDss632] compliant · E0 W0 I2
+  I SBOM-PCI-6-3-2-COMPLETENESS  -
+  I SBOM-PCI-6-3-2-VULN-EVIDENCE  -
+[Fsct] NON-COMPLIANT · E1 W3 I2
+  E SBOM-FSCT-COPYRIGHT-PRIMARY  pkg:maven/com.example/acme-billing@2.4.0?type=jar
+  I SBOM-FSCT-COPYRIGHT-ALL  - (3/3)
+  I SBOM-FSCT-SIGNATURE  -
+  W SBOM-FSCT-COMPLETENESS  -
+  W SBOM-FSCT-COPYRIGHT-COVERAGE  - (0/3)
+  W SBOM-FSCT-IDENTIFIER-MULTI  - (3/3)
+[Comprehensive] compliant · E0 W0 I0

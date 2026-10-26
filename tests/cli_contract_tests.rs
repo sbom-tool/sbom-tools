@@ -1,8 +1,13 @@
 //! CLI contract tests: per-command exit codes, typed value-enum parse
-//! validation, and NDJSON output wiring.
+//! validation, NDJSON output wiring, and the `validate -o json` envelope.
+
+#[path = "common/json_schema.rs"]
+mod json_schema;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+
+use serde_json::Value;
 
 const FIXTURES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
@@ -114,6 +119,434 @@ fn query_match_returns_exit_code_0() {
     assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
 }
 
+// ---------------------------------------------------------------------------
+// Usage errors exit 3 in every command; --help and --version exit 0
+// ---------------------------------------------------------------------------
+
+fn run(args: &[&str]) -> Output {
+    base_command()
+        .args(args)
+        .output()
+        .expect("sbom-tools should run")
+}
+
+fn fixture_arg(name: &str) -> String {
+    fixture_path(name)
+        .to_str()
+        .expect("fixture paths are UTF-8")
+        .to_string()
+}
+
+fn assert_usage_error(args: &[&str], output: &Output) {
+    assert_eq!(
+        output.status.code(),
+        Some(3),
+        "{args:?} must be a usage error (exit 3): {}",
+        stderr(output)
+    );
+    assert!(stdout(output).is_empty(), "{args:?} wrote to stdout");
+    assert!(
+        stderr(output).starts_with("error:") || stderr(output).contains("Usage:"),
+        "{args:?} must keep clap's message: {}",
+        stderr(output)
+    );
+}
+
+/// Exit 2 used to mean both "warnings found" and "clap rejected the command
+/// line", so a pipeline that tolerated warnings also passed a mistyped
+/// standard.
+#[test]
+fn mistyped_standard_or_flag_value_exits_3_in_validate_and_diff() {
+    let new = fixture_arg("demo-new.cdx.json");
+    let old = fixture_arg("demo-old.cdx.json");
+    let (new, old) = (new.as_str(), old.as_str());
+    let cases = [
+        vec!["validate", new, "--standard", "ntai"],
+        vec!["validate", new, "--standard", "ntai", "--fail-on-warning"],
+        vec!["validate", new, "--standard", "ntia,cra-phase3"],
+        vec!["validate", new, "--json-schema", "v3"],
+        // `diff` takes no --standard, so passing one is an unknown argument.
+        vec!["diff", old, new, "--standard", "ntia"],
+        vec!["diff", old, new, "--fuzzy-preset", "balancd"],
+        vec!["diff", old, new, "--graph-impact-threshold", "hgh"],
+    ];
+    for args in &cases {
+        assert_usage_error(args, &run(args));
+    }
+}
+
+#[test]
+fn unknown_flag_exits_3_in_every_command() {
+    let sbom = fixture_arg("demo-new.cdx.json");
+    let sbom = sbom.as_str();
+    let commands = [
+        vec![],
+        vec!["validate", sbom],
+        vec!["diff", sbom, sbom],
+        vec!["view", sbom],
+        vec!["quality", sbom],
+        vec!["query", "lodash", sbom],
+        vec!["diff-multi", sbom, sbom],
+        vec!["timeline", sbom, sbom],
+        vec!["matrix", sbom, sbom],
+        vec!["license-check", sbom],
+        vec!["vex", "status", sbom],
+        vec!["verify", "hash", sbom],
+        vec!["merge", sbom, sbom],
+        vec!["convert", sbom, "--to", "spdx"],
+        vec!["tailor", sbom],
+        vec!["cra-docs", sbom],
+        vec!["cra-standards-watch"],
+        vec!["watch", "--dir", "."],
+        vec!["config", "show"],
+        vec!["config-schema"],
+        vec!["completions", "bash"],
+        vec!["man"],
+    ];
+    for command in commands {
+        let mut args = command;
+        args.push("--no-such-flag");
+        let output = run(&args);
+        assert_usage_error(&args, &output);
+        assert!(
+            stderr(&output).contains("unexpected argument '--no-such-flag'"),
+            "{args:?}: {}",
+            stderr(&output)
+        );
+    }
+}
+
+#[test]
+fn help_and_version_exit_0_on_stdout() {
+    for args in [
+        vec!["--help"],
+        vec!["-h"],
+        vec!["--version"],
+        vec!["-V"],
+        vec!["help"],
+        vec!["help", "validate"],
+        vec!["validate", "--help"],
+        vec!["diff", "-h"],
+        vec!["vex", "help", "status"],
+    ] {
+        let output = run(&args);
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{args:?}: {}",
+            stderr(&output)
+        );
+        assert!(
+            !stdout(&output).trim().is_empty(),
+            "{args:?} printed nothing"
+        );
+        assert!(stderr(&output).is_empty(), "{args:?}: {}", stderr(&output));
+    }
+}
+
+/// Help printed because a required argument or subcommand is missing is a
+/// usage error, not a help request.
+#[test]
+fn missing_arguments_exit_3_even_when_clap_prints_help() {
+    let old = fixture_arg("demo-old.cdx.json");
+    for args in [
+        vec![],
+        vec!["vex"],
+        vec!["verify"],
+        vec!["validate"],
+        vec!["diff", old.as_str()],
+        vec!["query"],
+    ] {
+        assert_usage_error(&args, &run(&args));
+    }
+    // With no argument at all (not even the `--no-color` every other run
+    // passes), clap prints the full help, to stderr, and it still fails.
+    let bare = Command::new(env!("CARGO_BIN_EXE_sbom-tools"))
+        .output()
+        .expect("sbom-tools should run");
+    assert_usage_error(&[], &bare);
+    assert!(
+        stderr(&bare).contains("Commands:"),
+        "a bare invocation still shows the help: {}",
+        stderr(&bare)
+    );
+}
+
+// ---------------------------------------------------------------------------
+// validate --require-applicable
+// ---------------------------------------------------------------------------
+
+#[test]
+fn require_applicable_makes_a_not_applicable_standard_exit_1() {
+    // demo-new has no ML components, so both AI readiness profiles are N/A.
+    let plain = fixture_arg("demo-new.cdx.json");
+    let plain = plain.as_str();
+    for standard in ["ai-act", "bsi-ai"] {
+        let args = ["validate", plain, "--standard", standard, "--summary"];
+        let without = run(&args);
+        assert_eq!(
+            without.status.code(),
+            Some(0),
+            "{standard}: N/A exits 0 by default: {}",
+            stderr(&without)
+        );
+        let json: Value = serde_json::from_str(stdout(&without).trim()).expect("summary JSON");
+        assert_eq!(
+            json["applicable"], false,
+            "{standard} must be N/A for this fixture: {json}"
+        );
+
+        let with = run(&[&args[..], &["--require-applicable"][..]].concat());
+        assert_eq!(
+            with.status.code(),
+            Some(1),
+            "{standard}: N/A is non-compliant under --require-applicable: {}",
+            stderr(&with)
+        );
+        assert_eq!(
+            stdout(&with),
+            stdout(&without),
+            "the flag changes the exit code, not the report"
+        );
+    }
+
+    // With several standards, one N/A standard is enough; ntia alone only
+    // has warnings here, so it passes without --fail-on-warning.
+    let warnings_only = fixture_arg("cyclonedx/ntia-warnings-only.cdx.json");
+    let warnings_only = warnings_only.as_str();
+    let both = [
+        "validate",
+        warnings_only,
+        "--standard",
+        "ntia,ai-act",
+        "--summary",
+    ];
+    assert_eq!(run(&both).status.code(), Some(0));
+    assert_eq!(
+        run(&[&both[..], &["--require-applicable"][..]].concat())
+            .status
+            .code(),
+        Some(1)
+    );
+    // An applicable standard is unaffected by the flag.
+    let ntia = [
+        "validate",
+        warnings_only,
+        "--standard",
+        "ntia",
+        "--require-applicable",
+    ];
+    assert_eq!(run(&ntia).status.code(), Some(0));
+}
+
+// ---------------------------------------------------------------------------
+// validate -o json: envelope v2 and --json-schema v1
+// ---------------------------------------------------------------------------
+
+/// Pinned evaluation instant, so every run sees the same deadlines.
+const AS_OF: &str = "2026-10-12T00:00:00Z";
+
+const CANONICAL_STANDARDS: [&str; 16] = [
+    "ntia",
+    "fda",
+    "cra",
+    "cra-phase1",
+    "ssdf",
+    "eo14028",
+    "cnsa2",
+    "pqc",
+    "bsi",
+    "oss-steward",
+    "eucc",
+    "ai-act",
+    "bsi-ai",
+    "cisa-2026",
+    "pci-dss",
+    "fsct",
+];
+
+fn compliance_schema() -> Value {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/schemas/compliance/v2.schema.json"
+    );
+    serde_json::from_str(&std::fs::read_to_string(path).expect("schema readable"))
+        .expect("schema is JSON")
+}
+
+/// `stdout` of a `validate -o json` run, validated against the published
+/// schema and against a strict copy that rejects undeclared fields.
+fn validated_envelope(args: &[&str]) -> Value {
+    let output = run(args);
+    assert!(
+        matches!(output.status.code(), Some(0 | 1)),
+        "{args:?} must complete a validation: {}",
+        stderr(&output)
+    );
+    let json: Value = serde_json::from_str(&stdout(&output))
+        .unwrap_or_else(|e| panic!("{args:?}: stdout is not JSON: {e}"));
+    let schema = compliance_schema();
+    for (kind, schema) in [
+        ("schema", schema.clone()),
+        ("strict schema", json_schema::strict_copy(&schema)),
+    ] {
+        if let Err(errors) = json_schema::validate(&schema, &json) {
+            panic!("{args:?} violates the {kind}:\n{}", errors.join("\n"));
+        }
+    }
+    json
+}
+
+fn standards_of(json: &Value) -> Vec<String> {
+    json["results"]
+        .as_array()
+        .expect("results array")
+        .iter()
+        .map(|r| r["standard"].as_str().unwrap_or_default().to_string())
+        .collect()
+}
+
+#[test]
+fn validate_json_is_one_schema_valid_envelope_for_every_standard() {
+    let plain = fixture_arg("demo-new.cdx.json");
+    for standard in CANONICAL_STANDARDS {
+        let json = validated_envelope(&[
+            "validate",
+            plain.as_str(),
+            "--standard",
+            standard,
+            "-o",
+            "json",
+            "--as-of",
+            AS_OF,
+        ]);
+        assert_eq!(json["schema"], "sbom-tools/compliance/v2");
+        assert_eq!(standards_of(&json), [standard], "{standard}");
+    }
+
+    let all = CANONICAL_STANDARDS.join(",");
+    for fixture in [
+        "demo-new.cdx.json",
+        "cyclonedx/aibom-complete.cdx.json",
+        "cyclonedx/cbom-1.7.cdx.json",
+        "spdx/minimal.spdx.json",
+        // Auto-discovers a sidecar that pins a product class, so the CRA
+        // results carry `conformity_summary`.
+        "cra/cra-compliant.cdx.json",
+    ] {
+        let path = fixture_arg(fixture);
+        let json = validated_envelope(&[
+            "validate",
+            path.as_str(),
+            "--standard",
+            all.as_str(),
+            "-o",
+            "json",
+            "--as-of",
+            AS_OF,
+        ]);
+        assert_eq!(standards_of(&json), CANONICAL_STANDARDS, "{fixture}");
+        if fixture.starts_with("cra/") {
+            assert!(
+                json["results"][2]["conformity_summary"].is_object(),
+                "{fixture}: cra must carry the conformity summary"
+            );
+        }
+    }
+
+    // SBOM text with line breaks and control characters stays valid JSON.
+    let dir = tempfile::tempdir().expect("tempdir");
+    let (_, hostile) = write_hostile_pair(dir.path());
+    let hostile = hostile.to_str().expect("utf-8");
+    validated_envelope(&[
+        "validate",
+        hostile,
+        "--standard",
+        all.as_str(),
+        "-o",
+        "json",
+    ]);
+}
+
+/// `--json-schema v1` prints exactly what `validate -o json` printed before
+/// v0.4: the bare result for one standard, a bare array for several.
+#[test]
+fn json_schema_v1_keeps_the_pre_0_4_shape() {
+    use sbom_tools::quality::{ComplianceChecker, ComplianceResult, StandardSelector};
+
+    let path = fixture_path("demo-new.cdx.json");
+    let raw = std::fs::read_to_string(&path).expect("fixture readable");
+    let sbom = sbom_tools::parse_sbom_str(&raw).expect("fixture parses");
+    let as_of = chrono::DateTime::parse_from_rfc3339(AS_OF)
+        .expect("valid instant")
+        .with_timezone(&chrono::Utc);
+    let check = |standard: &str| -> ComplianceResult {
+        let level = standard
+            .parse::<StandardSelector>()
+            .expect("known standard")
+            .level();
+        ComplianceChecker::new(level).with_as_of(as_of).check(&sbom)
+    };
+    let path = path.to_str().expect("utf-8");
+    let v1 = |standards: &str| {
+        run(&[
+            "validate",
+            path,
+            "--standard",
+            standards,
+            "-o",
+            "json",
+            "--json-schema",
+            "v1",
+            "--as-of",
+            AS_OF,
+        ])
+    };
+
+    let single = v1("ntia");
+    assert_eq!(single.status.code(), Some(1), "{}", stderr(&single));
+    assert_eq!(
+        stdout(&single),
+        format!(
+            "{}\n",
+            serde_json::to_string_pretty(&check("ntia")).expect("serializes")
+        )
+    );
+
+    let multi = v1("ntia,ai-act");
+    assert_eq!(
+        stdout(&multi),
+        format!(
+            "{}\n",
+            serde_json::to_string_pretty(&[check("ntia"), check("ai-act")]).expect("serializes")
+        )
+    );
+
+    // The deprecation note goes to stderr, never into the JSON.
+    let noisy = base_command()
+        .env("RUST_LOG", "warn")
+        .args([
+            "validate",
+            path,
+            "--standard",
+            "ntia",
+            "-o",
+            "json",
+            "--json-schema",
+            "v1",
+            "--as-of",
+            AS_OF,
+        ])
+        .output()
+        .expect("validate should run");
+    assert!(
+        stderr(&noisy).contains("--json-schema v1 is deprecated"),
+        "{}",
+        stderr(&noisy)
+    );
+    assert_eq!(stdout(&noisy), stdout(&single));
+}
+
 #[test]
 fn invalid_fuzzy_preset_is_rejected_at_parse() {
     let output = base_command()
@@ -124,8 +557,8 @@ fn invalid_fuzzy_preset_is_rejected_at_parse() {
         .output()
         .expect("diff command should run");
 
-    // clap exits with code 2 on argument parse errors.
-    assert_eq!(output.status.code(), Some(2), "{}", stdout(&output));
+    // Argument parse errors are usage errors: exit 3, never a gate code.
+    assert_eq!(output.status.code(), Some(3), "{}", stdout(&output));
     let err = stderr(&output);
     assert!(
         err.contains("invalid value 'not-a-preset'"),
@@ -147,7 +580,7 @@ fn invalid_merge_dedup_strategy_is_rejected_at_parse() {
         .output()
         .expect("merge command should run");
 
-    assert_eq!(output.status.code(), Some(2), "{}", stdout(&output));
+    assert_eq!(output.status.code(), Some(3), "{}", stdout(&output));
     let err = stderr(&output);
     assert!(
         err.contains("invalid value 'not-a-strategy'"),
@@ -274,8 +707,8 @@ fn invalid_standard_is_rejected_at_parse_with_possible_values() {
         .output()
         .expect("validate command should run");
 
-    // clap exits with code 2 on argument parse errors.
-    assert_eq!(output.status.code(), Some(2), "{}", stdout(&output));
+    // A usage error, not the warnings gate (2) a pipeline may tolerate.
+    assert_eq!(output.status.code(), Some(3), "{}", stdout(&output));
     let err = stderr(&output);
     assert!(
         err.contains("invalid value 'not-a-standard'"),
@@ -296,7 +729,7 @@ fn invalid_profile_is_rejected_at_parse_with_possible_values() {
         .output()
         .expect("quality command should run");
 
-    assert_eq!(output.status.code(), Some(2), "{}", stdout(&output));
+    assert_eq!(output.status.code(), Some(3), "{}", stdout(&output));
     let err = stderr(&output);
     assert!(
         err.contains("invalid value 'not-a-profile'"),
@@ -360,8 +793,7 @@ fn validate_standard_aliases_parse_through_clap() {
 
 /// Regression: the pre-typed hand parser split on ',' and trimmed, so quoted
 /// lists with spaces (`--standard "ntia, cra"`) parsed. The typed parser must
-/// keep accepting them instead of exiting 2 (which the documented contract
-/// reads as "warnings found").
+/// keep accepting them instead of failing with a usage error.
 #[test]
 fn validate_standard_list_with_spaces_after_commas_parses() {
     let output = base_command()
@@ -374,7 +806,7 @@ fn validate_standard_list_with_spaces_after_commas_parses() {
     let err = stderr(&output);
     assert_ne!(
         output.status.code(),
-        Some(2),
+        Some(3),
         "'ntia, cra' must not be a usage error: {err}"
     );
     let json: serde_json::Value =
@@ -1064,6 +1496,7 @@ fn every_text_output_neutralizes_sbom_text() {
         runs.push(vec!["diff", old, new, "-o", format]);
         runs.push(vec!["view", new, "-o", format]);
     }
+    runs.push(vec!["view", new, "--validate-ntia", "-o", "summary"]);
     runs.push(vec!["quality", new]);
     runs.push(vec!["quality", new, "--profile", "cbom"]);
     for format in ["summary", "table", "csv"] {
@@ -1100,6 +1533,99 @@ fn every_text_output_neutralizes_sbom_text() {
         assert!(!out.trim().is_empty(), "{label}: printed nothing");
         assert_neutralized(&label, "stdout", &out);
         assert_neutralized(&label, "stderr", &stderr(&output));
+        // The remediation line under each finding goes through the same
+        // sanitizer; it must be present for every finding.
+        if args[0] == "validate" {
+            assert_fix_line_per_finding(&label, &out, &["[ERROR] ", "[WARN] ", "[INFO] "], 2);
+        } else if args.contains(&"--validate-ntia") {
+            assert_fix_line_per_finding(&label, &out, &["  - "], 1);
+        }
+    }
+}
+
+/// Every finding line (one starting with a `markers` prefix) is followed,
+/// `offset` lines later, by a non-empty `fix:` line with its remediation.
+fn assert_fix_line_per_finding(label: &str, text: &str, markers: &[&str], offset: usize) {
+    let lines: Vec<&str> = text.lines().collect();
+    let findings: Vec<usize> = lines
+        .iter()
+        .enumerate()
+        .filter(|(_, line)| markers.iter().any(|m| line.starts_with(m)))
+        .map(|(i, _)| i)
+        .collect();
+    assert!(
+        !findings.is_empty(),
+        "{label}: no findings printed:\n{text}"
+    );
+    for i in findings {
+        let fix = lines.get(i + offset).map_or("", |l| l.trim_start());
+        assert!(
+            fix.strip_prefix("fix: ")
+                .is_some_and(|r| !r.trim().is_empty()),
+            "{label}: finding {:?} has no fix line (got {fix:?})",
+            lines[i]
+        );
+    }
+}
+
+/// `validate` gives every violation a remediation in JSON and a `fix:` line
+/// in text, phrased for the input format: SPDX documents get SPDX field
+/// paths, never CycloneDX ones.
+#[test]
+fn validate_remediation_follows_the_input_format() {
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    for (rel, standard, expected) in [
+        (
+            "spdx/minimal.spdx.json",
+            "ntia",
+            "SPDX 2.x: set packages[].supplier",
+        ),
+        (
+            "spdx3/minimal.spdx3.json",
+            "bsi",
+            "SPDX 3.0: add a hasDeclaredLicense",
+        ),
+    ] {
+        let sbom = fixtures.join(rel);
+        let text = stdout(
+            &base_command()
+                .arg("validate")
+                .arg(&sbom)
+                .args(["--standard", standard])
+                .output()
+                .expect("validate should run"),
+        );
+        assert_fix_line_per_finding(rel, &text, &["[ERROR] ", "[WARN] ", "[INFO] "], 2);
+        assert!(
+            text.contains(expected),
+            "{rel}: expected {expected:?}:\n{text}"
+        );
+        for cyclonedx_field in ["components[]", "metadata.component", "externalReferences"] {
+            assert!(
+                !text.contains(cyclonedx_field),
+                "{rel}: CycloneDX field {cyclonedx_field:?} in SPDX remediation:\n{text}"
+            );
+        }
+
+        let json: serde_json::Value = serde_json::from_str(&stdout(
+            &base_command()
+                .arg("validate")
+                .arg(&sbom)
+                .args(["--standard", standard, "-o", "json"])
+                .output()
+                .expect("validate -o json should run"),
+        ))
+        .expect("validate -o json is JSON");
+        let violations = json["results"][0]["violations"]
+            .as_array()
+            .expect("violations array in the v2 envelope");
+        assert!(!violations.is_empty(), "{rel}: expected violations");
+        for v in violations {
+            assert!(
+                v["remediation"].as_str().is_some_and(|r| !r.is_empty()),
+                "{rel}: violation without remediation: {v}"
+            );
+        }
     }
 }
 

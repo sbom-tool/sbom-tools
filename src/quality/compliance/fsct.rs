@@ -490,6 +490,7 @@ fn fsct_minimum_expected(
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -509,6 +510,7 @@ fn fsct_minimum_expected(
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -529,6 +531,7 @@ fn fsct_minimum_expected(
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -557,6 +560,7 @@ fn fsct_minimum_expected(
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
     // Direct-dependency edges whose target is not in the inventory: the
@@ -578,6 +582,7 @@ fn fsct_minimum_expected(
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -600,6 +605,7 @@ fn fsct_minimum_expected(
                 total,
             }),
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -625,6 +631,7 @@ fn fsct_minimum_expected(
                 total: pkg_total,
             }),
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -650,6 +657,7 @@ fn fsct_minimum_expected(
                 total: pkg_total,
             }),
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -678,6 +686,7 @@ fn fsct_minimum_expected(
                 total: pkg_total,
             }),
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -705,6 +714,7 @@ fn fsct_minimum_expected(
                 total: pkg_total,
             }),
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -733,6 +743,7 @@ fn fsct_minimum_expected(
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -755,6 +766,7 @@ fn fsct_minimum_expected(
                 component_id: Some(primary.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -776,6 +788,7 @@ fn fsct_minimum_expected(
                 component_id: Some(primary.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
     }
@@ -806,6 +819,7 @@ fn fsct_minimum_expected(
                 total: pkg_total,
             }),
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 }
@@ -852,6 +866,7 @@ fn fsct_recommended_practice(
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     } else if !tool_creators
         .iter()
@@ -871,6 +886,7 @@ fn fsct_recommended_practice(
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -899,6 +915,7 @@ fn fsct_recommended_practice(
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -926,6 +943,7 @@ fn fsct_recommended_practice(
                 total: pkg_total,
             }),
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -952,6 +970,7 @@ fn fsct_recommended_practice(
                 component_id: Some(primary.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
     }
@@ -979,6 +998,7 @@ fn fsct_recommended_practice(
                 total: pkg_total,
             }),
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -1008,6 +1028,7 @@ fn fsct_recommended_practice(
                 total: evidence.pkg_total,
             }),
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -1032,6 +1053,7 @@ fn fsct_recommended_practice(
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -1057,6 +1079,7 @@ fn fsct_recommended_practice(
                 total: pkg_total,
             }),
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -1082,6 +1105,7 @@ fn fsct_recommended_practice(
                 total: pkg_total,
             }),
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -1109,6 +1133,7 @@ fn fsct_recommended_practice(
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 }
@@ -1152,6 +1177,7 @@ fn fsct_aspirational_goals(
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -1176,6 +1202,7 @@ fn fsct_aspirational_goals(
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -1201,6 +1228,7 @@ fn fsct_aspirational_goals(
                 total: pkg_total,
             }),
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
     // …including concluded-license attestation. Evidence-gated to SPDX
@@ -1223,6 +1251,7 @@ fn fsct_aspirational_goals(
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -1248,6 +1277,7 @@ fn fsct_aspirational_goals(
                 total: pkg_total,
             }),
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -1275,6 +1305,7 @@ fn fsct_aspirational_goals(
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 }

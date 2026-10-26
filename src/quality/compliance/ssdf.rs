@@ -250,6 +250,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -280,6 +281,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -310,6 +312,7 @@ impl ComplianceChecker {
                     total,
                 }),
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -331,6 +334,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -368,6 +372,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -385,6 +390,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -430,6 +436,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -457,6 +464,7 @@ impl ComplianceChecker {
                     total,
                 }),
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -479,6 +487,7 @@ impl ComplianceChecker {
                     total,
                 }),
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
     }

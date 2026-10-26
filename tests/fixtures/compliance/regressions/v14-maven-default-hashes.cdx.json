@@ -1,0 +1,157 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:2a7c9e1b-4d3f-4b8a-a6c5-8e0f1d2c3b4a",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T00:00:00Z",
+    "lifecycles": [
+      {
+        "phase": "build"
+      }
+    ],
+    "authors": [
+      {
+        "name": "Example Corp",
+        "email": "sbom@example.com"
+      }
+    ],
+    "tools": {
+      "components": [
+        {
+          "type": "library",
+          "group": "org.cyclonedx",
+          "name": "cyclonedx-maven-plugin",
+          "version": "2.9.1"
+        }
+      ]
+    },
+    "component": {
+      "type": "application",
+      "bom-ref": "pkg:maven/com.example/acme-billing@2.4.0?type=jar",
+      "group": "com.example",
+      "name": "acme-billing",
+      "version": "2.4.0",
+      "purl": "pkg:maven/com.example/acme-billing@2.4.0?type=jar",
+      "supplier": {
+        "name": "Example Corp"
+      },
+      "hashes": [
+        {
+          "alg": "MD5",
+          "content": "e4c8f472fd177b78884c80c3356d0e4c"
+        },
+        {
+          "alg": "SHA-1",
+          "content": "560fc9ad14508468dac08d7ad419fa25e3f94aa8"
+        },
+        {
+          "alg": "SHA-256",
+          "content": "c0e2e89098ebe7b1a11eea188135e3f1e9557822887452c4f64500e32f34ce73"
+        },
+        {
+          "alg": "SHA-512",
+          "content": "457c8e606d99e542f9e34573dd048f9ba0f9447bf7cec541b00fc847e43c1d8f2485a6315bd490f0a928038a88a110e520235c51b713386d47c4d8bfda0f9a72"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "pkg:maven/org.apache.commons/commons-lang3@3.14.0?type=jar",
+      "group": "org.apache.commons",
+      "name": "commons-lang3",
+      "version": "3.14.0",
+      "purl": "pkg:maven/org.apache.commons/commons-lang3@3.14.0?type=jar",
+      "supplier": {
+        "name": "The Apache Software Foundation"
+      },
+      "hashes": [
+        {
+          "alg": "MD5",
+          "content": "2a529e459845f8c90a758a216bb025b4"
+        },
+        {
+          "alg": "SHA-1",
+          "content": "0a2198630d2cc9b849f236f06188d9556637f794"
+        },
+        {
+          "alg": "SHA-256",
+          "content": "b8e6609d7b96271f69908cf8a2a715007aa21ecef9e6e00e0df028c36f5f0a42"
+        },
+        {
+          "alg": "SHA-512",
+          "content": "97140259bd0b2262d5c7f920d15efdc9cbe2dfc20b09011dee5bbb0d6fa29d69c222d23494a21fa93a07604b566f41dc8d0cf9fec2526d11ef1a3973fb393dc9"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+      "group": "com.google.guava",
+      "name": "guava",
+      "version": "33.0.0-jre",
+      "purl": "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+      "supplier": {
+        "name": "Google LLC"
+      },
+      "hashes": [
+        {
+          "alg": "MD5",
+          "content": "2eca6f8a51614a5368cf261670d4bb2c"
+        },
+        {
+          "alg": "SHA-1",
+          "content": "7c1ddfd3ccb1a4311bcff22ed3b9651ea02d1978"
+        },
+        {
+          "alg": "SHA-256",
+          "content": "80ac9746eb004bcb21e24708bb0a5ddb07894700806d119a8eda5ef99c8c28ce"
+        },
+        {
+          "alg": "SHA-512",
+          "content": "a792d36242208338eecc6fff44aff18034a3851ea8bd637f0fa2bda484dfafc6130eab81d3858231d18d1ad87a03a0cc02c5fbcf0bc5b2bacaa2fdd21076100a"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:maven/com.example/acme-billing@2.4.0?type=jar",
+      "dependsOn": [
+        "pkg:maven/org.apache.commons/commons-lang3@3.14.0?type=jar",
+        "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar"
+      ]
+    },
+    {
+      "ref": "pkg:maven/org.apache.commons/commons-lang3@3.14.0?type=jar",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+      "dependsOn": []
+    }
+  ]
+}
