@@ -1,0 +1,128 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:2a4c6e8f-1b3d-4f5a-9c7e-8d0b2f4a6c8e",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T00:00:00Z",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "example-generator",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    "authors": [
+      {
+        "name": "Dana Author",
+        "email": "dana@example.com"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "bom-ref": "assistant",
+      "name": "assistant",
+      "version": "1.0.0",
+      "purl": "pkg:generic/example/assistant@1.0.0",
+      "supplier": {
+        "name": "Example Corp"
+      }
+    }
+  },
+  "components": [
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "model",
+      "name": "TBD",
+      "version": "N/A",
+      "purl": "pkg:huggingface/example/sentiment-model@1.2.3",
+      "supplier": {
+        "name": "Example Corp"
+      },
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "name": "NOASSERTION"
+          }
+        }
+      ],
+      "modelCard": {
+        "modelParameters": {
+          "architectureFamily": "transformer",
+          "datasets": [
+            {
+              "ref": "dataset"
+            }
+          ]
+        },
+        "considerations": {
+          "useCases": [
+            "sentiment-analysis"
+          ],
+          "technicalLimitations": [
+            "English-language input only"
+          ]
+        }
+      }
+    },
+    {
+      "type": "data",
+      "bom-ref": "dataset",
+      "name": "NOASSERTION",
+      "version": "2026.1",
+      "purl": "pkg:huggingface/datasets/example/reviews@2026.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "name": "TBD"
+          }
+        }
+      ],
+      "data": [
+        {
+          "type": "dataset",
+          "sensitiveData": [
+            "public"
+          ],
+          "governance": {
+            "owners": [
+              {
+                "organization": {
+                  "name": "Example Data Office"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "assistant",
+      "dependsOn": [
+        "model"
+      ]
+    },
+    {
+      "ref": "model",
+      "dependsOn": [
+        "dataset"
+      ]
+    }
+  ]
+}

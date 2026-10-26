@@ -669,14 +669,7 @@ impl Spdx3Parser {
             for ext_ref in ext_refs {
                 let ref_type = ext_ref.external_ref_type.as_deref().map_or(
                     ExternalRefType::Other("unknown".to_string()),
-                    |t| match t.to_lowercase().as_str() {
-                        "securityadvisory" | "advisories" => ExternalRefType::Advisories,
-                        "documentation" => ExternalRefType::Documentation,
-                        "vcs" => ExternalRefType::Vcs,
-                        "issuetracker" | "issue-tracker" => ExternalRefType::IssueTracker,
-                        "bom" => ExternalRefType::Bom,
-                        other => ExternalRefType::Other(other.to_string()),
-                    },
+                    map_spdx3_external_ref_type,
                 );
                 if let Some(locators) = &ext_ref.locator {
                     for url in locators {
@@ -1580,6 +1573,80 @@ fn derive_completeness_declaration(
         CompletenessDeclaration::NotSpecified
     } else {
         CompletenessDeclaration::Unknown
+    }
+}
+
+/// Map an SPDX 3.0 `externalRefType` to the normalized enum, whose variants
+/// follow the CycloneDX vocabulary.
+///
+/// The vocabulary is SPDX 3.0.1 `Core/ExternalRefType`
+/// (<https://spdx.org/rdf/3.0.1/terms/Core/ExternalRefType>, 46 values). A
+/// value may be the compact term (`securityAdvisory`) or the full vocabulary
+/// IRI; matching ignores case. A term maps to a variant only where its
+/// definition matches the CycloneDX type the variant stands for:
+///
+/// | SPDX 3.0.1 term                         | CycloneDX type             |
+/// |-----------------------------------------|----------------------------|
+/// | `vcs`, `issueTracker`, `documentation`  | same name                  |
+/// | `securityAdvisory`                      | `advisories`               |
+/// | `buildMeta`, `buildSystem`              | `build-meta`, `build-system` |
+/// | `certificationReport`                   | `certification-report`     |
+/// | `riskAssessment`                        | `risk-assessment`          |
+/// | `secureSoftwareAttestation`             | `attestation`              |
+/// | `vulnerabilityDisclosureReport` (VDR)   | `vulnerability-assertion`  |
+/// | `vulnerabilityExploitabilityAssessment` (VEX) | `exploitability-statement` |
+/// | `securityPolicy` (how to report vulnerabilities) | `security-contact` |
+/// | `securityThreatModel`, `securityAdversaryModel` | `threat-model`, `adversary-model` |
+/// | `securityPenTestReport`                 | `pentest-report`           |
+/// | `staticAnalysisReport`, `dynamicAnalysisReport`, `runtimeAnalysisReport`, `componentAnalysisReport` | the `*-analysis-report` types |
+/// | `metrics`, `qualityAssessmentReport`    | `quality-metrics`          |
+/// | `releaseNotes`, `license`, `support`, `chat`, `mailingList`, `socialMedia` | `release-notes`, `license`, `support`, `chat`, `mailing-list`, `social` |
+///
+/// The other terms have no counterpart and stay `Other`, keeping the term:
+/// the package-manager locators (`bower`, `mavenCentral`, `npm`, `nuget`),
+/// `cwe`, `securityFix`, `securityOther`, `eolNotice`, `funding`,
+/// `exportControlAssessment`, `privacyAssessment`, `purchaseOrder`,
+/// `productMetadata`, `releaseHistory`, `binaryArtifact`, `sourceArtifact`
+/// and `other`. `altDownloadLocation` and `altWebPage` are alternatives the
+/// model has no slot for; as `SourceDistribution` or `Website` the SPDX
+/// writer would promote them to a package's download location.
+///
+/// `advisories`, `issue-tracker` and `bom` are not SPDX 3.0 terms; they are
+/// accepted for producers that write the CycloneDX names.
+fn map_spdx3_external_ref_type(value: &str) -> ExternalRefType {
+    const VOCABULARY: &str = "/ExternalRefType/";
+    let term = value
+        .rfind(VOCABULARY)
+        .map_or(value, |at| &value[at + VOCABULARY.len()..]);
+    match term.to_ascii_lowercase().as_str() {
+        "vcs" => ExternalRefType::Vcs,
+        "issuetracker" | "issue-tracker" => ExternalRefType::IssueTracker,
+        "documentation" => ExternalRefType::Documentation,
+        "securityadvisory" | "advisories" => ExternalRefType::Advisories,
+        "bom" => ExternalRefType::Bom,
+        "buildmeta" => ExternalRefType::BuildMeta,
+        "buildsystem" => ExternalRefType::BuildSystem,
+        "certificationreport" => ExternalRefType::Certification,
+        "riskassessment" => ExternalRefType::RiskAssessment,
+        "securesoftwareattestation" => ExternalRefType::Attestation,
+        "vulnerabilitydisclosurereport" => ExternalRefType::VulnerabilityAssertion,
+        "vulnerabilityexploitabilityassessment" => ExternalRefType::ExploitabilityStatement,
+        "securitypolicy" => ExternalRefType::SecurityContact,
+        "securitythreatmodel" => ExternalRefType::ThreatModel,
+        "securityadversarymodel" => ExternalRefType::AdversaryModel,
+        "securitypentestreport" => ExternalRefType::Pentest,
+        "staticanalysisreport" => ExternalRefType::StaticAnalysis,
+        "dynamicanalysisreport" => ExternalRefType::DynamicAnalysis,
+        "runtimeanalysisreport" => ExternalRefType::RuntimeAnalysis,
+        "componentanalysisreport" => ExternalRefType::ComponentAnalysis,
+        "metrics" | "qualityassessmentreport" => ExternalRefType::QualityMetrics,
+        "releasenotes" => ExternalRefType::ReleaseNotes,
+        "license" => ExternalRefType::License,
+        "support" => ExternalRefType::Support,
+        "chat" => ExternalRefType::Chat,
+        "mailinglist" => ExternalRefType::MailingList,
+        "socialmedia" => ExternalRefType::Social,
+        _ => ExternalRefType::Other(term.to_string()),
     }
 }
 
@@ -3030,6 +3097,171 @@ mod tests {
             cvss.base_score
         );
         assert!(matches!(cvss.version, CvssVersion::V31));
+    }
+
+    /// The 46 terms of SPDX 3.0.1 `Core/ExternalRefType`
+    /// (spdx.org/rdf/3.0.1/terms/Core/ExternalRefType) with the variant
+    /// each maps to; `None` keeps the term in `Other`.
+    const SPDX3_EXTERNAL_REF_TYPES: &[(&str, Option<ExternalRefType>)] = &[
+        ("altDownloadLocation", None),
+        ("altWebPage", None),
+        ("binaryArtifact", None),
+        ("bower", None),
+        ("buildMeta", Some(ExternalRefType::BuildMeta)),
+        ("buildSystem", Some(ExternalRefType::BuildSystem)),
+        ("certificationReport", Some(ExternalRefType::Certification)),
+        ("chat", Some(ExternalRefType::Chat)),
+        (
+            "componentAnalysisReport",
+            Some(ExternalRefType::ComponentAnalysis),
+        ),
+        ("cwe", None),
+        ("documentation", Some(ExternalRefType::Documentation)),
+        (
+            "dynamicAnalysisReport",
+            Some(ExternalRefType::DynamicAnalysis),
+        ),
+        ("eolNotice", None),
+        ("exportControlAssessment", None),
+        ("funding", None),
+        ("issueTracker", Some(ExternalRefType::IssueTracker)),
+        ("license", Some(ExternalRefType::License)),
+        ("mailingList", Some(ExternalRefType::MailingList)),
+        ("mavenCentral", None),
+        ("metrics", Some(ExternalRefType::QualityMetrics)),
+        ("npm", None),
+        ("nuget", None),
+        ("other", None),
+        ("privacyAssessment", None),
+        ("productMetadata", None),
+        ("purchaseOrder", None),
+        (
+            "qualityAssessmentReport",
+            Some(ExternalRefType::QualityMetrics),
+        ),
+        ("releaseHistory", None),
+        ("releaseNotes", Some(ExternalRefType::ReleaseNotes)),
+        ("riskAssessment", Some(ExternalRefType::RiskAssessment)),
+        (
+            "runtimeAnalysisReport",
+            Some(ExternalRefType::RuntimeAnalysis),
+        ),
+        (
+            "secureSoftwareAttestation",
+            Some(ExternalRefType::Attestation),
+        ),
+        (
+            "securityAdversaryModel",
+            Some(ExternalRefType::AdversaryModel),
+        ),
+        ("securityAdvisory", Some(ExternalRefType::Advisories)),
+        ("securityFix", None),
+        ("securityOther", None),
+        ("securityPenTestReport", Some(ExternalRefType::Pentest)),
+        ("securityPolicy", Some(ExternalRefType::SecurityContact)),
+        ("securityThreatModel", Some(ExternalRefType::ThreatModel)),
+        ("socialMedia", Some(ExternalRefType::Social)),
+        ("sourceArtifact", None),
+        (
+            "staticAnalysisReport",
+            Some(ExternalRefType::StaticAnalysis),
+        ),
+        ("support", Some(ExternalRefType::Support)),
+        ("vcs", Some(ExternalRefType::Vcs)),
+        (
+            "vulnerabilityDisclosureReport",
+            Some(ExternalRefType::VulnerabilityAssertion),
+        ),
+        (
+            "vulnerabilityExploitabilityAssessment",
+            Some(ExternalRefType::ExploitabilityStatement),
+        ),
+    ];
+
+    /// Every SPDX 3.0.1 external-reference term maps to its CycloneDX
+    /// counterpart or stays `Other` with the term as written; the compact
+    /// term, the vocabulary IRI and any letter case read alike.
+    #[test]
+    fn every_spdx3_external_ref_type_maps_or_stays_other() {
+        assert_eq!(
+            SPDX3_EXTERNAL_REF_TYPES.len(),
+            46,
+            "SPDX 3.0.1 has 46 terms"
+        );
+        for (term, expected) in SPDX3_EXTERNAL_REF_TYPES {
+            let expected = expected
+                .clone()
+                .unwrap_or_else(|| ExternalRefType::Other((*term).to_string()));
+            let iri = format!("https://spdx.org/rdf/3.0.1/terms/Core/ExternalRefType/{term}");
+            assert_eq!(map_spdx3_external_ref_type(term), expected, "{term}");
+            assert_eq!(map_spdx3_external_ref_type(&iri), expected, "{iri}");
+            if !matches!(expected, ExternalRefType::Other(_)) {
+                assert_eq!(
+                    map_spdx3_external_ref_type(&term.to_ascii_uppercase()),
+                    expected,
+                    "{term} in upper case"
+                );
+            }
+        }
+    }
+
+    /// The SPDX 3.0 evidence references reach the component model, one
+    /// reference per locator.
+    #[test]
+    fn spdx3_evidence_external_refs_reach_the_component() {
+        let sbom = spdx3_lib(
+            r#"{"type": "software_Package", "spdxId": "urn:pkg:app", "name": "app",
+               "software_packageUrl": "pkg:npm/app@1.0",
+               "externalRef": [
+                 {"externalRefType": "certificationReport",
+                  "locator": ["https://certs.example/eucc/app-1.0.pdf"]},
+                 {"externalRefType": "riskAssessment",
+                  "locator": ["https://acme.example/ra.pdf"]},
+                 {"externalRefType": "secureSoftwareAttestation",
+                  "locator": ["https://acme.example/attestation.pdf"]},
+                 {"externalRefType": "vulnerabilityDisclosureReport",
+                  "locator": ["https://acme.example/vdr.json"]},
+                 {"externalRefType": "vulnerabilityExploitabilityAssessment",
+                  "locator": ["https://acme.example/vex-1.json", "https://acme.example/vex-2.json"]},
+                 {"externalRefType": "buildSystem",
+                  "locator": ["https://ci.acme.example/app"]}
+               ]}"#,
+        );
+        let refs: Vec<(ExternalRefType, &str)> = spdx3_component(&sbom, "app")
+            .external_refs
+            .iter()
+            .map(|r| (r.ref_type.clone(), r.url.as_str()))
+            .collect();
+        assert_eq!(
+            refs,
+            vec![
+                (
+                    ExternalRefType::Certification,
+                    "https://certs.example/eucc/app-1.0.pdf"
+                ),
+                (
+                    ExternalRefType::RiskAssessment,
+                    "https://acme.example/ra.pdf"
+                ),
+                (
+                    ExternalRefType::Attestation,
+                    "https://acme.example/attestation.pdf"
+                ),
+                (
+                    ExternalRefType::VulnerabilityAssertion,
+                    "https://acme.example/vdr.json"
+                ),
+                (
+                    ExternalRefType::ExploitabilityStatement,
+                    "https://acme.example/vex-1.json"
+                ),
+                (
+                    ExternalRefType::ExploitabilityStatement,
+                    "https://acme.example/vex-2.json"
+                ),
+                (ExternalRefType::BuildSystem, "https://ci.acme.example/app"),
+            ]
+        );
     }
 
     /// Guard against alias typos routing Sbom containers to Unknown (the

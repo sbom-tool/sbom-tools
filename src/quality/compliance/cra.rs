@@ -1255,5 +1255,10 @@ impl ComplianceChecker {
         // - Article 14 reporting channels (24h / 72h / ENISA)
         // - Hardware component requirements
         // - Vendor-hash carry-through threshold
+        // - Document metadata (check_document_metadata): the SBOM creator,
+        //   timestamp and serial number, like the Art. 13 product
+        //   identification it bundles, are manufacturer documentation duties;
+        //   pinned by steward_profile_runs_no_document_metadata_check in
+        //   tests/rule_matrix_cra.rs
     }
 }

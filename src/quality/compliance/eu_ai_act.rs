@@ -92,6 +92,7 @@ impl ComplianceChecker {
 
         self.check_ai_act_general_description(&ml_components, missing_severity, violations);
         self.check_ai_act_training_data(
+            sbom,
             &ml_components,
             &dataset_components,
             missing_severity,
@@ -189,19 +190,20 @@ impl ComplianceChecker {
     /// was trained on, and whether datasets carry sensitivity classifications.
     fn check_ai_act_training_data(
         &self,
+        sbom: &NormalizedSbom,
         ml_components: &[&crate::model::Component],
         dataset_components: &[&crate::model::Component],
         missing_severity: ViolationSeverity,
         violations: &mut Vec<Violation>,
     ) {
-        // Every model should reference the dataset(s) it was trained on.
+        // Every model should reference the dataset(s) it was trained on:
+        // modelCard.modelParameters.datasets (SPDX 3.0 trainedOn), or
+        // dataset-evidenced components nested under the model. The shared
+        // predicate keeps this rule, SBOM-BSIAI-MODEL-DATASETS and quality
+        // check AI-003 in agreement on what counts.
         let mut without_datasets = Vec::new();
         for c in ml_components {
-            let has_datasets = c
-                .ml_model
-                .as_ref()
-                .is_some_and(|m| !m.training_datasets.is_empty());
-            if !has_datasets {
+            if !super::ai_shared::declares_training_datasets(sbom, c) {
                 without_datasets.push(c.name.clone());
             }
         }

@@ -488,9 +488,12 @@ impl CraSidecarMetadata {
 
     /// Whether the sidecar carries live EUCC evidence: a non-empty
     /// Protection-Profile / Target-of-Evaluation / ITSEF identifier, or a
-    /// certificate validity date that has not expired. Empty strings and
-    /// expired certificates must not satisfy the Critical-class Annex IV
-    /// gate (mirrors the dedicated EUCC profile's semantics).
+    /// certificate validity date that has not expired — and no validity
+    /// date that has. Empty strings and expired certificates must not
+    /// satisfy the Critical-class Annex IV gate (mirrors the dedicated EUCC
+    /// profile, which reports an expired certificate as an Error): the
+    /// identifiers of an expired certificate describe one that no longer
+    /// holds.
     #[must_use]
     pub fn has_live_eucc_evidence(&self) -> bool {
         self.has_live_eucc_evidence_at(Utc::now())
@@ -500,11 +503,14 @@ impl CraSidecarMetadata {
     /// (reproducible compliance runs; see `ComplianceChecker::with_as_of`).
     #[must_use]
     pub fn has_live_eucc_evidence_at(&self, now: DateTime<Utc>) -> bool {
+        if self.eucc_valid_until.is_some_and(|d| d <= now) {
+            return false;
+        }
         let live = |v: &Option<String>| v.as_deref().is_some_and(|s| !s.trim().is_empty());
         live(&self.eucc_protection_profile_id)
             || live(&self.eucc_target_of_evaluation)
             || live(&self.eucc_itsef_identifier)
-            || self.eucc_valid_until.is_some_and(|d| d > now)
+            || self.eucc_valid_until.is_some()
     }
 
     /// Check if any CRA-relevant fields are populated
@@ -849,5 +855,46 @@ mod tests {
             Some(ConformityRoute::Eucc)
         );
         assert_eq!(ConformityRoute::parse_cli("module-z"), None);
+    }
+
+    /// Live EUCC evidence: a non-blank identifier or an unexpired validity
+    /// date, and never an expired one — an expired certificate voids the
+    /// identifiers that describe it.
+    #[test]
+    fn live_eucc_evidence_requires_an_unexpired_certificate() {
+        let now = DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
+            .expect("valid instant")
+            .with_timezone(&Utc);
+        let day = chrono::Duration::days(1);
+        let sidecar = |pp: Option<&str>, valid_until: Option<DateTime<Utc>>| CraSidecarMetadata {
+            eucc_protection_profile_id: pp.map(str::to_string),
+            eucc_valid_until: valid_until,
+            ..CraSidecarMetadata::default()
+        };
+        let cases = [
+            (sidecar(None, None), false, "nothing declared"),
+            (sidecar(Some(" "), None), false, "blank identifier"),
+            (sidecar(Some("PP-01"), None), true, "identifier, no date"),
+            (sidecar(None, Some(now + day)), true, "unexpired date alone"),
+            (
+                sidecar(Some("PP-01"), Some(now + day)),
+                true,
+                "identifier, unexpired",
+            ),
+            (sidecar(None, Some(now - day)), false, "expired date alone"),
+            (
+                sidecar(Some("PP-01"), Some(now - day)),
+                false,
+                "identifier, expired",
+            ),
+            (
+                sidecar(Some("PP-01"), Some(now)),
+                false,
+                "identifier, expiring now",
+            ),
+        ];
+        for (sidecar, live, label) in cases {
+            assert_eq!(sidecar.has_live_eucc_evidence_at(now), live, "{label}");
+        }
     }
 }

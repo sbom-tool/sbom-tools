@@ -14,6 +14,7 @@ use sbom_tools::model::{
     Component, ConformityRoute, CraProductClass, CraSidecarMetadata, ExternalRefType,
     ExternalReference, NormalizedSbom,
 };
+use sbom_tools::parsers::parse_sbom_str;
 use sbom_tools::quality::ComplianceLevel;
 
 #[test]
@@ -162,6 +163,72 @@ fn eucc_evidence_satisfied_by_certification_with_eucc_url() {
         .find(|e| e.label.contains("EUCC"))
         .unwrap();
     assert!(eucc.satisfied, "EUCC URL must satisfy EUCC evidence row");
+}
+
+/// A CycloneDX document whose product carries `externalReferences` of the
+/// given `(type, url)` pairs.
+fn cyclonedx_with_refs(refs: &[(&str, &str)]) -> NormalizedSbom {
+    let refs: Vec<serde_json::Value> = refs
+        .iter()
+        .map(|(ref_type, url)| serde_json::json!({ "type": ref_type, "url": url }))
+        .collect();
+    let doc = serde_json::json!({
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.6",
+        "version": 1,
+        "metadata": {
+            "component": {
+                "type": "application",
+                "bom-ref": "app",
+                "name": "app",
+                "externalReferences": refs,
+            },
+        },
+        "components": [],
+    });
+    parse_sbom_str(&doc.to_string()).expect("CycloneDX parses")
+}
+
+/// The model-built tests above, through the CycloneDX parser: the
+/// `attestation` and `certification-report` reference types reach the
+/// summary (until v0.4.0 the parser mapped both to `Other`). Every format
+/// and route is covered in tests/external_ref_evidence_tests.rs.
+#[test]
+fn parsed_cyclonedx_references_satisfy_the_summary_rows() {
+    let row = |sbom: &NormalizedSbom, class: CraProductClass, label: &str| {
+        checker(ComplianceLevel::CraPhase2)
+            .with_product_class(class)
+            .check(sbom)
+            .conformity_summary
+            .expect("summary")
+            .evidence
+            .into_iter()
+            .find(|e| e.label == label)
+            .unwrap_or_else(|| panic!("row {label:?}"))
+            .satisfied
+    };
+    let doc = "EU Declaration of Conformity";
+    let eucc = "EUCC / Common Criteria certificate";
+    assert!(!row(
+        &cyclonedx_with_refs(&[]),
+        CraProductClass::Default,
+        doc
+    ));
+    assert!(row(
+        &cyclonedx_with_refs(&[("attestation", "https://example.com/doc")]),
+        CraProductClass::Default,
+        doc
+    ));
+    assert!(!row(
+        &cyclonedx_with_refs(&[]),
+        CraProductClass::Critical,
+        eucc
+    ));
+    assert!(row(
+        &cyclonedx_with_refs(&[("certification-report", "https://eucc.eu/cert/abc")]),
+        CraProductClass::Critical,
+        eucc
+    ));
 }
 
 #[test]

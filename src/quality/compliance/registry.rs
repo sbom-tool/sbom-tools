@@ -804,18 +804,18 @@ const ADVICE_CRA_VULN_METADATA: FormatAdvice = FormatAdvice {
     },
 };
 
-/// Embedded vulnerability data.
+/// Embedded vulnerability data, or a reference to a published VDR / VEX.
 const ADVICE_VULN_DATA: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "list them in vulnerabilities[] with affects[].ref pointing at the affected components; a vulnerability-assertion externalReference is not yet recognized.",
+        text: "list them in vulnerabilities[] with affects[].ref pointing at the affected components, or reference the published VDR or VEX from an externalReferences[] entry of type vulnerability-assertion or exploitability-statement.",
         field: Some("vulnerabilities[]"),
     },
     spdx2: FieldAdvice {
-        text: "no field carries vulnerability data.",
+        text: "no field carries vulnerability data, and no external reference category names a VDR or VEX.",
         field: None,
     },
     spdx3: FieldAdvice {
-        text: "add security_Vulnerability elements linked to the affected packages by affects Relationships.",
+        text: "add security_Vulnerability elements linked to the affected packages by affects Relationships, or reference the published VDR or VEX from an externalRef[] entry with externalRefType vulnerabilityDisclosureReport or vulnerabilityExploitabilityAssessment.",
         field: Some("security_Vulnerability"),
     },
 };
@@ -855,7 +855,7 @@ const ADVICE_VCS: FormatAdvice = FormatAdvice {
 /// Build metadata reference.
 const ADVICE_BUILD: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "add a components[].externalReferences[] entry of type build-meta (build-system is not yet recognized), or a CycloneDX 1.6+ attestation of SSDF practice PO.3.",
+        text: "add a components[].externalReferences[] entry of type build-meta or build-system, or a CycloneDX 1.6+ attestation of SSDF practice PO.3.",
         field: Some("components[].externalReferences[]"),
     },
     spdx2: FieldAdvice {
@@ -863,8 +863,8 @@ const ADVICE_BUILD: FormatAdvice = FormatAdvice {
         field: None,
     },
     spdx3: FieldAdvice {
-        text: "buildMeta and buildSystem references are not yet recognized, so no field satisfies this check.",
-        field: None,
+        text: "add an externalRef[] entry with externalRefType buildMeta or buildSystem.",
+        field: Some("externalRef[]"),
     },
 };
 
@@ -916,51 +916,87 @@ const ADVICE_HARDWARE: FormatAdvice = FormatAdvice {
     },
 };
 
-/// EU Declaration of Conformity reference; only SPDX 2.x has an in-SBOM path the check reads.
+/// EU Declaration of Conformity reference: an attestation or certification
+/// external reference, or (SPDX 2.x) an OTHER reference naming the DoC.
 const ADVICE_DOC_REF: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "no CycloneDX external reference type is read as a DoC reference yet, so use the sidecar key.",
-        field: None,
+        text: "a metadata.component.externalReferences[] entry of type attestation or certification-report pointing at the DoC also counts.",
+        field: Some("metadata.component.externalReferences[]"),
     },
     spdx2: FieldAdvice {
         text: "a packages[].externalRefs[] entry with referenceCategory OTHER and referenceType declaration-of-conformity also counts.",
         field: Some("packages[].externalRefs[]"),
     },
     spdx3: FieldAdvice {
-        text: "no SPDX 3.0 external reference type is read as a DoC reference yet, so use the sidecar key.",
-        field: None,
+        text: "no reference type names a Declaration of Conformity, but an externalRef[] entry with externalRefType certificationReport or secureSoftwareAttestation pointing at the DoC also counts.",
+        field: Some("externalRef[]"),
     },
 };
 
-/// CDXA alternative to the sidecar EUCC evidence (CRA Annex IV).
+/// In-SBOM alternatives to the sidecar EUCC evidence (CRA Annex IV): a
+/// certification or attestation reference whose URL names EUCC, or (CycloneDX
+/// 1.6+) a CDXA attestation.
 const ADVICE_EUCC_ALT: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "a fresh, fully conformant attestation in declarations (CycloneDX 1.6+) of a CRA standard that names EUCC or Common Criteria is also accepted.",
-        field: Some("declarations"),
+        text: "an externalReferences[] entry of type certification-report or attestation whose URL contains eucc, common-criteria or commoncriteria is also accepted, as is a fresh, fully conformant attestation in declarations (CycloneDX 1.6+) of a CRA standard that names EUCC or Common Criteria.",
+        field: Some("externalReferences[]"),
     },
     spdx2: FieldAdvice {
         text: "no field is recognized as an EUCC reference, so use the sidecar keys.",
         field: None,
     },
     spdx3: FieldAdvice {
-        text: "no field is recognized as an EUCC reference, so use the sidecar keys.",
-        field: None,
+        text: "an externalRef[] entry with externalRefType certificationReport or secureSoftwareAttestation whose locator contains eucc, common-criteria or commoncriteria is also accepted.",
+        field: Some("externalRef[]"),
     },
 };
 
-/// In-SBOM EUCC certificate reference; only CycloneDX attestations are recognized.
+/// In-SBOM EUCC certificate reference: a certification or attestation
+/// reference whose URL names EUCC, or (CycloneDX 1.6+) a CDXA attestation.
 const ADVICE_EUCC_CERTREF: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "add a fresh, fully conformant attestation in declarations (CycloneDX 1.6+) of a CRA standard that names EUCC or Common Criteria; certification-report and attestation external references are not yet recognized.",
-        field: Some("declarations"),
+        text: "add an externalReferences[] entry of type certification-report (or attestation) whose URL contains eucc or common-criteria, or a fresh, fully conformant attestation in declarations (CycloneDX 1.6+) of a CRA standard that names EUCC or Common Criteria.",
+        field: Some("externalReferences[]"),
     },
     spdx2: FieldAdvice {
         text: "no field is recognized as an EUCC certificate reference.",
         field: None,
     },
     spdx3: FieldAdvice {
-        text: "no field is recognized as an EUCC certificate reference.",
+        text: "add an externalRef[] entry with externalRefType certificationReport (or secureSoftwareAttestation) whose locator contains eucc or common-criteria.",
+        field: Some("externalRef[]"),
+    },
+};
+
+/// Documented risk-assessment reference (CRA Art. 13(2)).
+const ADVICE_RISK_ASSESSMENT: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "a metadata.component.externalReferences[] entry of type risk-assessment pointing at it also counts.",
+        field: Some("metadata.component.externalReferences[]"),
+    },
+    spdx2: FieldAdvice {
+        text: "no external reference category names a risk assessment, so use the sidecar key.",
         field: None,
+    },
+    spdx3: FieldAdvice {
+        text: "an externalRef[] entry with externalRefType riskAssessment pointing at it also counts.",
+        field: Some("externalRef[]"),
+    },
+};
+
+/// Notified-body evidence for the conformity-assessment route (CRA Annex VIII).
+const ADVICE_CONFORMITY_EVIDENCE: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "add a metadata.component.externalReferences[] entry of type certification-report or attestation.",
+        field: Some("metadata.component.externalReferences[]"),
+    },
+    spdx2: FieldAdvice {
+        text: "no external reference category names a certificate or an attestation, so the check cannot be satisfied from the document.",
+        field: None,
+    },
+    spdx3: FieldAdvice {
+        text: "add an externalRef[] entry with externalRefType certificationReport or secureSoftwareAttestation to the root package.",
+        field: Some("externalRef[]"),
     },
 };
 
@@ -1303,8 +1339,8 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA general SBOM readiness requirement",
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 13(2)")],
-            remediation: "Reference the documented cybersecurity risk assessment Art. 13(2) requires: set riskAssessmentUrl in the CRA sidecar to its URL or document reference. sbom-tools does not yet read a risk-assessment external reference from the SBOM, so the sidecar key is how to satisfy this check.",
-            advice: None,
+            remediation: "Reference the documented cybersecurity risk assessment Art. 13(2) requires: set riskAssessmentUrl in the CRA sidecar to its URL or document reference.",
+            advice: Some(&ADVICE_RISK_ASSESSMENT),
         },
         // SBOM freshness. Formerly cited Art. 13(3), which is the risk-
         // assessment documentation paragraph; keeping the SBOM current is
@@ -1412,7 +1448,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Annex I Part II (1): Documented vulnerability information — vulnerability data or assertion",
             default_severity: ViolationSeverity::Info,
             refs: &[(ANNEX, "Annex I Part II (1)")],
-            remediation: "Include the product's known vulnerabilities in the SBOM (Annex I Part II (1)).",
+            remediation: "Include the product's known vulnerabilities in the SBOM, or reference the vulnerability disclosure report (VDR) or VEX that states them (Annex I Part II (1)).",
             advice: Some(&ADVICE_VULN_DATA),
         },
         // Component lifecycle / end-of-support. Formerly cited Art. 13(11),
@@ -1503,11 +1539,13 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
             advice: None,
         },
+        // The steward's vulnerability-handling floor is the one Art. 24
+        // obligation the profile gates on: always an Error.
         "SBOM-CRA-ART-24" => RuleMeta {
             sarif_id: "SBOM-CRA-GENERAL",
             name: "CraGeneralRequirement",
             short_description: "CRA general SBOM readiness requirement",
-            default_severity: ViolationSeverity::Warning,
+            default_severity: ViolationSeverity::Error,
             refs: &[],
             remediation: "Show the open-source steward's vulnerability-handling process (Art. 24): reference a security contact or vulnerability-disclosure URL from the product component, or set psirtUrl or vulnerabilityDisclosureUrl in the CRA sidecar.",
             advice: Some(&ADVICE_SECURITY_CONTACT),
@@ -1526,11 +1564,13 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Complete the Annex I technical documentation in the SBOM: a unique identifier (PURL, CPE, SWHID or SWID) on every component, the supplier of every direct dependency, component hashes, dependency relationships and the primary product component, plus an evidenceUrl for every Annex I Part I control the CRA sidecar claims satisfied. Each SBOM-CRA-ANNEX-I-* finding names the element it lacks.",
             advice: None,
         },
+        // Every CRA profile (both phases and the steward) emits a missing
+        // component identifier as an Error.
         "SBOM-CRA-ANNEX-I-IDENTIFIER" => RuleMeta {
             sarif_id: "SBOM-CRA-ANNEX-I",
             name: "CraTechnicalDocumentation",
             short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
-            default_severity: ViolationSeverity::Warning,
+            default_severity: ViolationSeverity::Error,
             refs: &[(ANNEX, "Annex I"), (PREN, "PRE-7-RQ-07")],
             remediation: "Add a PURL, CPE, SWHID or SWID to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21).",
             advice: Some(&ADVICE_IDENTIFIER),
@@ -1624,7 +1664,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA general SBOM readiness requirement",
             default_severity: ViolationSeverity::Info,
             refs: &[(ANNEX, "Annex IV")],
-            remediation: "Reference the EUCC (Common Criteria) certification the product class requires: set euccProtectionProfileId, euccTargetOfEvaluation, euccItsefIdentifier or an unexpired euccValidUntil in the CRA sidecar.",
+            remediation: "Reference the EUCC (Common Criteria) certification the product class requires: set euccProtectionProfileId, euccTargetOfEvaluation, euccItsefIdentifier or an unexpired euccValidUntil in the CRA sidecar. Once euccValidUntil has passed, the certificate is expired and none of these keys counts.",
             advice: Some(&ADVICE_EUCC_ALT),
         },
         "SBOM-CRA-ANNEX-V" => RuleMeta {
@@ -1645,14 +1685,17 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Resolve cyclic dependency declarations so the SBOM's dependency graph is a directed acyclic inventory of the product's components.",
             advice: None,
         },
+        // Fires only for a pinned class whose route goes beyond Module A:
+        // Warning for important class I (the default here), escalated to
+        // Error for important class II and critical products.
         "SBOM-CRA-ANNEX-VIII" => RuleMeta {
             sarif_id: "SBOM-CRA-ANNEX-VIII",
             name: "CraConformityAssessment",
             short_description: "CRA Annex VIII: Conformity-assessment evidence for the resolved assessment route",
-            default_severity: ViolationSeverity::Info,
+            default_severity: ViolationSeverity::Warning,
             refs: &[(ANNEX, "Annex VIII")],
-            remediation: "Reference the notified-body evidence the conformity-assessment route requires — the EU-type examination certificate (Module B+C), the quality-system certification (Module H) or the EUCC certificate — as an attestation or certification external reference on the product component. sbom-tools does not yet map attestation or certification-report external references from CycloneDX or SPDX documents, so it cannot verify this reference yet.",
-            advice: None,
+            remediation: "Reference the notified-body evidence the conformity-assessment route requires — the EU-type examination certificate (Module B+C), the quality-system certification (Module H) or the EUCC certificate — as a certification or attestation external reference on the product component.",
+            advice: Some(&ADVICE_CONFORMITY_EVIDENCE),
         },
         "SBOM-CRA-PRE-8-RQ-02" => RuleMeta {
             sarif_id: "SBOM-CRA-PRE-8-RQ-02",
@@ -2342,11 +2385,12 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // FDA rules emitted by the `validate` NTIA/FDA fast-path
         // (`cli::validate`), which builds violations directly without
         // populating `standard_refs`.
+        // The creator gate emits a creator-less FDA SBOM as an Error.
         "SBOM-FDA-CREATOR" => RuleMeta {
             sarif_id: "SBOM-FDA-CREATOR",
             name: "FdaCreator",
             short_description: "FDA Medical Device: SBOM creator/manufacturer information",
-            default_severity: ViolationSeverity::Warning,
+            default_severity: ViolationSeverity::Error,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
             remediation: "Identify who created the SBOM, the device manufacturer or the tool that generated it (FDA premarket guidance).",
             advice: Some(&ADVICE_CREATORS),

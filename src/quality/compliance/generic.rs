@@ -1237,6 +1237,17 @@ impl ComplianceChecker {
                 });
             }
 
+            // A remediation declared without a fixed version or any text that
+            // tells users how to apply it (Annex I Part II (4) asks for
+            // information that helps them remediate). CycloneDX reaches this
+            // through an analysis.response of update / workaround_available
+            // with neither a recommendation nor a workaround (see the
+            // parser's cdx_remediation). The other sources cannot, by
+            // construction: SPDX 2.x carries no vulnerability data; the
+            // SPDX 3.0 parser builds no remediation record (a VEX
+            // actionStatement stays in the VEX status); the CSAF, OpenVEX and
+            // CycloneDX VEX overlays set VEX status only; and OSV enrichment
+            // always records both a fixed version and a description.
             if let Some(remediation) = &vuln.remediation
                 && remediation.fixed_version.is_none()
                 && remediation.description.is_none()

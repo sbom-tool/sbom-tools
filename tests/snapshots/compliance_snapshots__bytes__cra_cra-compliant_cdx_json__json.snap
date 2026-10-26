@@ -66,7 +66,7 @@ source: tests/compliance_snapshots.rs
             "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         ],
-        "remediation": "Include the product's known vulnerabilities in the SBOM (Annex I Part II (1)). CycloneDX: list them in vulnerabilities[] with affects[].ref pointing at the affected components; a vulnerability-assertion externalReference is not yet recognized.",
+        "remediation": "Include the product's known vulnerabilities in the SBOM, or reference the vulnerability disclosure report (VDR) or VEX that states them (Annex I Part II (1)). CycloneDX: list them in vulnerabilities[] with affects[].ref pointing at the affected components, or reference the published VDR or VEX from an externalReferences[] entry of type vulnerability-assertion or exploitability-statement.",
         "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
       }
     ],
@@ -162,7 +162,7 @@ source: tests/compliance_snapshots.rs
             "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         ],
-        "remediation": "Include the product's known vulnerabilities in the SBOM (Annex I Part II (1)). CycloneDX: list them in vulnerabilities[] with affects[].ref pointing at the affected components; a vulnerability-assertion externalReference is not yet recognized.",
+        "remediation": "Include the product's known vulnerabilities in the SBOM, or reference the vulnerability disclosure report (VDR) or VEX that states them (Annex I Part II (1)). CycloneDX: list them in vulnerabilities[] with affects[].ref pointing at the affected components, or reference the published VDR or VEX from an externalReferences[] entry of type vulnerability-assertion or exploitability-statement.",
         "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
       }
     ],

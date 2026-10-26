@@ -1,5 +1,5 @@
 {
-  "description": "False-pass regression corpus from the v0.3.0 compliance review. Each check names the verdict a standard must reach. A check with \"xfail\" is a known defect, still reproduced: the runner asserts its expectation does NOT hold yet, and the work package named in \"xfail\" must remove the marker when it fixes it. Paths are relative to this directory. Evaluated at as_of 2026-10-12T00:00:00Z.",
+  "description": "False-pass regression corpus from the v0.3.0 compliance review (review ids V*) and the v0.4.0 rule matrices (WP 1.2 findings B*). Each check names the verdict a standard must reach. A check with \"xfail\" is a known defect, still reproduced: the runner asserts its expectation does NOT hold yet, and the work package named in \"xfail\" must remove the marker when it fixes it. Paths are relative to this directory. Evaluated at as_of 2026-10-12T00:00:00Z.",
   "entries": [
     {
       "id": "v1-empty-purl-collision",
@@ -1240,6 +1240,333 @@
               "SBOM-CISA2026-SIGNATURE",
               "SBOM-CISA2026-GENERATION-CONTEXT",
               "SBOM-CISA2026-COVERAGE"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "b1-evidence-references",
+      "review_id": "B1",
+      "fixture": "b1-evidence-references.cdx.json",
+      "note": "The product's evidence is all external references: an attestation (the EU DoC), an EUCC certification report, a risk assessment, a VDR (vulnerability-assertion) and a build system. The CycloneDX parser mapped these types to Other, so the CRA, EUCC, SSDF and PCI DSS checks asking for them fired anyway.",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "rules_absent": [
+              "SBOM-CRA-ANNEX-V",
+              "SBOM-CRA-ART-13-2",
+              "SBOM-CRA-VULN-STATEMENT"
+            ]
+          }
+        },
+        {
+          "standard": "cra-phase1",
+          "expect": {
+            "rules_absent": [
+              "SBOM-CRA-VULN-STATEMENT"
+            ]
+          }
+        },
+        {
+          "standard": "oss-steward",
+          "expect": {
+            "rules_absent": [
+              "SBOM-CRA-ART-24"
+            ]
+          }
+        },
+        {
+          "standard": "eucc",
+          "expect": {
+            "rules_absent": [
+              "SBOM-EUCC-CERTREF"
+            ]
+          }
+        },
+        {
+          "standard": "ssdf",
+          "expect": {
+            "rules_absent": [
+              "SBOM-SSDF-PO3",
+              "SBOM-SSDF-PW6"
+            ]
+          }
+        },
+        {
+          "standard": "pci-dss",
+          "expect": {
+            "rules_absent": [
+              "SBOM-PCI-6-3-2-VULN-EVIDENCE"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "b1-evidence-references-critical",
+      "review_id": "B1",
+      "fixture": "b1-evidence-references.cdx.json",
+      "sidecar": "b1-evidence-references.cra.json",
+      "note": "The same product pinned to the critical class (EUCC route): the certification report is both the Annex VIII route evidence and, its URL naming the EUCC scheme, the Annex IV reference.",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "rules_absent": [
+              "SBOM-CRA-ANNEX-IV",
+              "SBOM-CRA-ANNEX-V",
+              "SBOM-CRA-ANNEX-VIII"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "b2-hashed-attestation",
+      "review_id": "B2",
+      "fixture": "b2-hashed-attestation.cdx.json",
+      "note": "No serial number, but the product's attestation reference carries the SHA-256 of the referenced declaration. The parser dropped externalReferences[].hashes, so the CRA document-integrity Info fired although the attestation-with-hash evidence it names is present.",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "rules_absent": [
+              "SBOM-CRA-DOC-INTEGRITY"
+            ]
+          }
+        },
+        {
+          "standard": "cra-phase1",
+          "expect": {
+            "rules_absent": [
+              "SBOM-CRA-DOC-INTEGRITY"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "b3-nested-training-dataset",
+      "review_id": "B3",
+      "fixture": "b3-nested-training-dataset.cdx.json",
+      "note": "The model declares its training data as a nested dataset component with data[] evidence, not through modelParameters.datasets. BSI/G7 SBOM-for-AI and quality check AI-003 accept that shape; the EU AI Act Annex IV §2(d) check read only modelParameters.datasets and reported the datasets missing.",
+      "checks": [
+        {
+          "standard": "ai-act",
+          "expect": {
+            "rules_absent": [
+              "SBOM-AIACT-ANNEX-IV-2D-DATASETS"
+            ]
+          }
+        },
+        {
+          "standard": "bsi-ai",
+          "expect": {
+            "rules_absent": [
+              "SBOM-BSIAI-MODEL-DATASETS"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "b4-placeholder-model",
+      "review_id": "B4",
+      "fixture": "b4-placeholder-model.cdx.json",
+      "note": "A model named TBD with version N/A and licence NOASSERTION, and a dataset named NOASSERTION with licence TBD. The BSI/G7 SBOM-for-AI model and dataset clusters tested raw emptiness, so these values declaring nothing satisfied five elements the other profiles' presence checks reject.",
+      "checks": [
+        {
+          "standard": "bsi-ai",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-BSIAI-MODEL-NAME",
+                "severity": "error"
+              },
+              {
+                "rule": "SBOM-BSIAI-MODEL-VERSION",
+                "severity": "error"
+              },
+              {
+                "rule": "SBOM-BSIAI-MODEL-LICENSE",
+                "severity": "warning"
+              },
+              {
+                "rule": "SBOM-BSIAI-DATASET-NAME",
+                "severity": "error"
+              },
+              {
+                "rule": "SBOM-BSIAI-DATASET-LICENSE",
+                "severity": "warning"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "b5-remediation-without-details",
+      "review_id": "B5",
+      "fixture": "b5-remediation-without-details.cdx.json",
+      "note": "The vulnerability declares the response update but gives no recommendation or workaround, so users learn neither the fixed version nor how to remediate. The parser built remediation records only from recommendation text, which made the CRA Phase 2 remediation-detail Info unreachable from CycloneDX.",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-VULN-METADATA",
+                "severity": "info"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "b6-registry-severities",
+      "review_id": "B6",
+      "fixture": "b6-registry-severities.cdx.json",
+      "note": "Pins the severities these checks emit, which the rule registry and so the SARIF rule catalogue now advertise: a creator-less SBOM (SBOM-FDA-CREATOR), a component without an identifier (SBOM-CRA-ANNEX-I-IDENTIFIER), a steward product without a vulnerability-handling reference (SBOM-CRA-ART-24) and a hybrid PQC combiner (SBOM-PQC-010). The registry documented a Warning default for all four, though the first three are emitted as Errors and the last as an Info.",
+      "checks": [
+        {
+          "standard": "fda",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-FDA-CREATOR",
+                "severity": "error"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "cra",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-ANNEX-I-IDENTIFIER",
+                "severity": "error"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "oss-steward",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-ART-24",
+                "severity": "error"
+              },
+              {
+                "rule": "SBOM-CRA-ANNEX-I-IDENTIFIER",
+                "severity": "error"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-010",
+                "severity": "info"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "b6-registry-severities-class-1",
+      "review_id": "B6",
+      "fixture": "b6-registry-severities.cdx.json",
+      "sidecar": "b6-registry-severities.cra.json",
+      "note": "The same product as an important class I product on the Module B+C route: SBOM-CRA-ANNEX-VIII is a Warning, the registry default (it escalates to Error for class II and critical products); the registry documented Info, which no class emits.",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-ANNEX-VIII",
+                "severity": "warning"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "i3-expired-eucc-certificate",
+      "review_id": "I3",
+      "fixture": "i3-expired-eucc-certificate.cdx.json",
+      "sidecar": "i3-expired-eucc-certificate.cra.json",
+      "note": "A critical product whose sidecar names a Protection Profile, a Target of Evaluation and an ITSEF for an EUCC certificate that expired on 2026-06-30. Any single non-empty identifier counted as live EUCC evidence, so the expired certificate satisfied the Annex IV reference that EUCC itself reports as expired.",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-ANNEX-IV",
+                "severity": "error"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "eucc",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-EUCC-VALIDITY",
+                "severity": "error"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "i4-noassertion-vendor-hash",
+      "review_id": "I4",
+      "fixture": "v4-noassertion-supplier.cdx.json",
+      "note": "libfoo's supplier is NOASSERTION. The vendor-hash metric used the raw producer test, so libfoo counted as a vendor-supplied component and its hash lifted the PRE-7-RQ-07-RE coverage to 1/2. It names no vendor, like a missing supplier: the only vendor component, app, carries no hash (0/1).",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "rule_counts": [
+              {
+                "rule": "SBOM-CRA-PRE-7-RQ-07-RE",
+                "severity": "error",
+                "affected": 0,
+                "total": 1
+              }
+            ]
+          }
+        },
+        {
+          "standard": "cra-phase1",
+          "expect": {
+            "rule_counts": [
+              {
+                "rule": "SBOM-CRA-PRE-7-RQ-07-RE",
+                "severity": "warning",
+                "affected": 0,
+                "total": 1
+              }
             ]
           }
         }

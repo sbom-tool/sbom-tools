@@ -237,8 +237,9 @@ pub struct HashQualityMetrics {
     pub algorithm_distribution: BTreeMap<String, usize>,
     /// Total hash entries across all components
     pub total_hashes: usize,
-    /// Vendor-supplied components — supplier or author set AND a non-synthetic
-    /// canonical identifier (PURL/CPE/SWHID/SWID).
+    /// Vendor-supplied components — a known supplier, manufacturer or author
+    /// (a `NOASSERTION` or placeholder name names no vendor) AND a
+    /// non-synthetic canonical identifier (PURL/CPE/SWHID/SWID).
     /// Tracks how many such "upstream" components exist, used to verify
     /// CRA prEN 40000-1-3 `[PRE-7-RQ-07-RE]` (carry-through of vendor hashes).
     pub vendor_components_total: usize,
@@ -262,8 +263,10 @@ impl HashQualityMetrics {
         let mut vendor_with_strong = 0;
 
         for comp in sbom.components.values() {
-            // Vendor-component classification (independent of hash presence)
-            let is_vendor = (comp.has_producer())
+            // Vendor-component classification (independent of hash presence),
+            // with the sentinel-aware producer test: a NOASSERTION or
+            // placeholder supplier names no vendor, exactly like an absent one.
+            let is_vendor = crate::quality::compliance::has_known_producer(comp)
                 && !matches!(
                     comp.canonical_id.source(),
                     crate::model::IdSource::Synthetic

@@ -1,0 +1,43 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T00:00:00Z",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "example-generator",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    "manufacturer": {
+      "name": "Example Corp"
+    },
+    "component": {
+      "type": "application",
+      "bom-ref": "gateway",
+      "name": "gateway",
+      "version": "3.1.0",
+      "purl": "pkg:generic/example/gateway@3.1.0",
+      "supplier": {
+        "name": "Example Corp"
+      },
+      "externalReferences": [
+        {
+          "type": "attestation",
+          "url": "https://example.com/compliance/eu-declaration-of-conformity-2026-001.pdf",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "3b7d4bc1e6a8f2d0c9e5a7b3f1d8c6e4a2b0f9d7c5e3a1b8f6d4c2e0a9b7d5c3"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "components": []
+}
