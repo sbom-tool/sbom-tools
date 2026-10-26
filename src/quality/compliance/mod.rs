@@ -246,7 +246,7 @@ impl ComplianceLevel {
                 "Secure Software Development Framework — provenance, build integrity, VCS references"
             }
             Self::Eo14028 => {
-                "Executive Order 14028 — machine-readable SBOM, auto-generation, supply chain security"
+                "Executive Order 14028 §4 SBOM practice (not a federal mandate since OMB M-26-05 rescinded M-22-18 and M-23-16) — machine-readable SBOM, auto-generation, supply chain security"
             }
             Self::Cnsa2 => {
                 "CNSA 2.0 — AES-256, SHA-384+, ML-KEM-1024, ML-DSA-87, quantum security level 5"
@@ -1814,7 +1814,7 @@ mod tests {
         );
     }
 
-    /// EO 14028 §4(e) mandates the NTIA minimum elements, which include the
+    /// The EO 14028 §4(e) practice incorporates the NTIA minimum elements, which include the
     /// creation timestamp.
     #[test]
     fn eo14028_gates_on_missing_timestamp() {

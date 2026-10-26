@@ -1,5 +1,6 @@
 ---
 source: tests/compliance_snapshots.rs
+
 ---
 {
   "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
@@ -1942,208 +1943,208 @@ source: tests/compliance_snapshots.rs
               "id": "SBOM-EO14028-TIMESTAMP",
               "name": "Eo14028Timestamp",
               "shortDescription": {
-                "text": "EO 14028 Sec 4(e): SBOM creation timestamp (NTIA baseline)"
+                "text": "EO 14028 §4(e) practice: SBOM creation timestamp (NTIA baseline)"
               },
               "fullDescription": {
-                "text": "EO 14028 Sec 4(e): SBOM creation timestamp (NTIA baseline). References: EO 14028 §4; NTIA: Timestamp."
+                "text": "EO 14028 §4(e) practice: SBOM creation timestamp (NTIA baseline). References: EO 14028 §4; NTIA: Timestamp."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://www.federalregister.gov/d/2021-10460",
               "help": {
-                "text": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\nWhere the fix goes:\n- CycloneDX: set metadata.timestamp (RFC 3339, e.g. 2026-01-15T10:00:00Z).\n- SPDX 2.x: set creationInfo.created (Created).\n- SPDX 3.0: set creationInfo.created on the SpdxDocument.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)\n- NTIA: Timestamp (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
-                "markdown": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\n**Where the fix goes**\n\n- **CycloneDX:** set metadata.timestamp (RFC 3339, e.g. 2026-01-15T10:00:00Z).\n- **SPDX 2.x:** set creationInfo.created (Created).\n- **SPDX 3.0:** set creationInfo.created on the SpdxDocument.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)\n- [NTIA: Timestamp](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
+                "text": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\nWhere the fix goes:\n- CycloneDX: set metadata.timestamp (RFC 3339, e.g. 2026-01-15T10:00:00Z).\n- SPDX 2.x: set creationInfo.created (Created).\n- SPDX 3.0: set creationInfo.created on the SpdxDocument.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)\n- NTIA: Timestamp (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
+                "markdown": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\n**Where the fix goes**\n\n- **CycloneDX:** set metadata.timestamp (RFC 3339, e.g. 2026-01-15T10:00:00Z).\n- **SPDX 2.x:** set creationInfo.created (Created).\n- **SPDX 3.0:** set creationInfo.created on the SpdxDocument.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)\n- [NTIA: Timestamp](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
               }
             },
             {
               "id": "SBOM-EO14028-NAME",
               "name": "Eo14028ComponentName",
               "shortDescription": {
-                "text": "EO 14028 Sec 4(e): Component name (NTIA baseline)"
+                "text": "EO 14028 §4(e) practice: Component name (NTIA baseline)"
               },
               "fullDescription": {
-                "text": "EO 14028 Sec 4(e): Component name (NTIA baseline). References: EO 14028 §4; NTIA: Component Name."
+                "text": "EO 14028 §4(e) practice: Component name (NTIA baseline). References: EO 14028 §4; NTIA: Component Name."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://www.federalregister.gov/d/2021-10460",
               "help": {
-                "text": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\nWhere the fix goes:\n- CycloneDX: set components[].name.\n- SPDX 2.x: set packages[].name (PackageName), or files[].fileName for files.\n- SPDX 3.0: set name on the element.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)\n- NTIA: Component Name (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
-                "markdown": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].name.\n- **SPDX 2.x:** set packages\\[\\].name (PackageName), or files\\[\\].fileName for files.\n- **SPDX 3.0:** set name on the element.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)\n- [NTIA: Component Name](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
+                "text": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\nWhere the fix goes:\n- CycloneDX: set components[].name.\n- SPDX 2.x: set packages[].name (PackageName), or files[].fileName for files.\n- SPDX 3.0: set name on the element.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)\n- NTIA: Component Name (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
+                "markdown": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].name.\n- **SPDX 2.x:** set packages\\[\\].name (PackageName), or files\\[\\].fileName for files.\n- **SPDX 3.0:** set name on the element.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)\n- [NTIA: Component Name](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
               }
             },
             {
               "id": "SBOM-EO14028-FORMAT",
               "name": "Eo14028MachineReadable",
               "shortDescription": {
-                "text": "EO 14028 Sec 4(e): Machine-readable SBOM format requirement"
+                "text": "EO 14028 §4(e) practice: Machine-readable SBOM format"
               },
               "fullDescription": {
-                "text": "EO 14028 Sec 4(e): Machine-readable SBOM format requirement. References: EO 14028 §4."
+                "text": "EO 14028 §4(e) practice: Machine-readable SBOM format. References: EO 14028 §4."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://www.federalregister.gov/d/2021-10460",
               "help": {
-                "text": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
-                "markdown": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
+                "text": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
+                "markdown": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
               }
             },
             {
               "id": "SBOM-EO14028-AUTOGEN",
               "name": "Eo14028AutoGeneration",
               "shortDescription": {
-                "text": "EO 14028 Sec 4(e): Automated SBOM generation"
+                "text": "EO 14028 §4(e) practice: Automated SBOM generation"
               },
               "fullDescription": {
-                "text": "EO 14028 Sec 4(e): Automated SBOM generation. References: EO 14028 §4."
+                "text": "EO 14028 §4(e) practice: Automated SBOM generation. References: EO 14028 §4."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
               "helpUri": "https://www.federalregister.gov/d/2021-10460",
               "help": {
-                "text": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\nWhere the fix goes:\n- CycloneDX: add metadata.tools with the tool's name and version.\n- SPDX 2.x: add a creationInfo.creators[] entry \"Tool: <name>-<version>\".\n- SPDX 3.0: set creationInfo.createdUsing to a Tool element whose name includes the version.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
-                "markdown": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\n**Where the fix goes**\n\n- **CycloneDX:** add metadata.tools with the tool's name and version.\n- **SPDX 2.x:** add a creationInfo.creators\\[\\] entry \"Tool: \\<name\\>-\\<version\\>\".\n- **SPDX 3.0:** set creationInfo.createdUsing to a Tool element whose name includes the version.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
+                "text": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\nWhere the fix goes:\n- CycloneDX: add metadata.tools with the tool's name and version.\n- SPDX 2.x: add a creationInfo.creators[] entry \"Tool: <name>-<version>\".\n- SPDX 3.0: set creationInfo.createdUsing to a Tool element whose name includes the version.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
+                "markdown": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\n**Where the fix goes**\n\n- **CycloneDX:** add metadata.tools with the tool's name and version.\n- **SPDX 2.x:** add a creationInfo.creators\\[\\] entry \"Tool: \\<name\\>-\\<version\\>\".\n- **SPDX 3.0:** set creationInfo.createdUsing to a Tool element whose name includes the version.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
               }
             },
             {
               "id": "SBOM-EO14028-CREATOR",
               "name": "Eo14028Creator",
               "shortDescription": {
-                "text": "EO 14028 Sec 4(e): SBOM creator identification"
+                "text": "EO 14028 §4(e) practice: SBOM creator identification"
               },
               "fullDescription": {
-                "text": "EO 14028 Sec 4(e): SBOM creator identification. References: EO 14028 §4."
+                "text": "EO 14028 §4(e) practice: SBOM creator identification. References: EO 14028 §4."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://www.federalregister.gov/d/2021-10460",
               "help": {
-                "text": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\nWhere the fix goes:\n- CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools.\n- SPDX 2.x: add creationInfo.creators[] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- SPDX 3.0: set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
-                "markdown": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\n**Where the fix goes**\n\n- **CycloneDX:** add metadata.authors\\[\\] (name, email), metadata.manufacturer or metadata.tools.\n- **SPDX 2.x:** add creationInfo.creators\\[\\] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- **SPDX 3.0:** set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
+                "text": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\nWhere the fix goes:\n- CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools.\n- SPDX 2.x: add creationInfo.creators[] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- SPDX 3.0: set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
+                "markdown": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\n**Where the fix goes**\n\n- **CycloneDX:** add metadata.authors\\[\\] (name, email), metadata.manufacturer or metadata.tools.\n- **SPDX 2.x:** add creationInfo.creators\\[\\] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- **SPDX 3.0:** set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
               }
             },
             {
               "id": "SBOM-EO14028-IDENTIFIER",
               "name": "Eo14028Identifier",
               "shortDescription": {
-                "text": "EO 14028 Sec 4(e): Component unique identification"
+                "text": "EO 14028 §4(e) practice: Component unique identification"
               },
               "fullDescription": {
-                "text": "EO 14028 Sec 4(e): Component unique identification. References: EO 14028 §4."
+                "text": "EO 14028 §4(e) practice: Component unique identification. References: EO 14028 §4."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://www.federalregister.gov/d/2021-10460",
               "help": {
-                "text": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\nWhere the fix goes:\n- CycloneDX: set components[].purl (or cpe, or swhid[]).\n- SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
-                "markdown": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].purl (or cpe, or swhid\\[\\]).\n- **SPDX 2.x:** add a packages\\[\\].externalRefs\\[\\] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- **SPDX 3.0:** set software\\_packageUrl, or add an externalIdentifier\\[\\] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
+                "text": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\nWhere the fix goes:\n- CycloneDX: set components[].purl (or cpe, or swhid[]).\n- SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
+                "markdown": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].purl (or cpe, or swhid\\[\\]).\n- **SPDX 2.x:** add a packages\\[\\].externalRefs\\[\\] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- **SPDX 3.0:** set software\\_packageUrl, or add an externalIdentifier\\[\\] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
               }
             },
             {
               "id": "SBOM-EO14028-DEPENDENCY",
               "name": "Eo14028Dependency",
               "shortDescription": {
-                "text": "EO 14028 Sec 4(e): Dependency relationship information"
+                "text": "EO 14028 §4(e) practice: Dependency relationship information"
               },
               "fullDescription": {
-                "text": "EO 14028 Sec 4(e): Dependency relationship information. References: EO 14028 §4."
+                "text": "EO 14028 §4(e) practice: Dependency relationship information. References: EO 14028 §4."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://www.federalregister.gov/d/2021-10460",
               "help": {
-                "text": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\nWhere the fix goes:\n- CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.\n- SPDX 2.x: add relationships[] entries such as DEPENDS_ON (or DEPENDENCY_OF, CONTAINS) between the packages.\n- SPDX 3.0: add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
-                "markdown": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\n**Where the fix goes**\n\n- **CycloneDX:** add dependencies\\[\\] entries (ref plus dependsOn\\[\\]); an entry with an empty dependsOn records a component that has no dependencies.\n- **SPDX 2.x:** add relationships\\[\\] entries such as DEPENDS\\_ON (or DEPENDENCY\\_OF, CONTAINS) between the packages.\n- **SPDX 3.0:** add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
+                "text": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\nWhere the fix goes:\n- CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.\n- SPDX 2.x: add relationships[] entries such as DEPENDS_ON (or DEPENDENCY_OF, CONTAINS) between the packages.\n- SPDX 3.0: add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
+                "markdown": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\n**Where the fix goes**\n\n- **CycloneDX:** add dependencies\\[\\] entries (ref plus dependsOn\\[\\]); an entry with an empty dependsOn records a component that has no dependencies.\n- **SPDX 2.x:** add relationships\\[\\] entries such as DEPENDS\\_ON (or DEPENDENCY\\_OF, CONTAINS) between the packages.\n- **SPDX 3.0:** add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
               }
             },
             {
               "id": "SBOM-EO14028-VERSION",
               "name": "Eo14028Version",
               "shortDescription": {
-                "text": "EO 14028 Sec 4(e): Component version information"
+                "text": "EO 14028 §4(e) practice: Component version information"
               },
               "fullDescription": {
-                "text": "EO 14028 Sec 4(e): Component version information. References: EO 14028 §4."
+                "text": "EO 14028 §4(e) practice: Component version information. References: EO 14028 §4."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://www.federalregister.gov/d/2021-10460",
               "help": {
-                "text": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\nWhere the fix goes:\n- CycloneDX: set components[].version.\n- SPDX 2.x: set packages[].versionInfo (PackageVersion).\n- SPDX 3.0: set software_packageVersion on the package.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
-                "markdown": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].version.\n- **SPDX 2.x:** set packages\\[\\].versionInfo (PackageVersion).\n- **SPDX 3.0:** set software\\_packageVersion on the package.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
+                "text": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\nWhere the fix goes:\n- CycloneDX: set components[].version.\n- SPDX 2.x: set packages[].versionInfo (PackageVersion).\n- SPDX 3.0: set software_packageVersion on the package.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
+                "markdown": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].version.\n- **SPDX 2.x:** set packages\\[\\].versionInfo (PackageVersion).\n- **SPDX 3.0:** set software\\_packageVersion on the package.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
               }
             },
             {
               "id": "SBOM-EO14028-INTEGRITY",
               "name": "Eo14028Integrity",
               "shortDescription": {
-                "text": "EO 14028 Sec 4(e): Component integrity verification (hashes)"
+                "text": "EO 14028 §4(e) practice: Component integrity verification (hashes)"
               },
               "fullDescription": {
-                "text": "EO 14028 Sec 4(e): Component integrity verification (hashes). References: EO 14028 §4."
+                "text": "EO 14028 §4(e) practice: Component integrity verification (hashes). References: EO 14028 §4."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
               "helpUri": "https://www.federalregister.gov/d/2021-10460",
               "help": {
-                "text": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\nWhere the fix goes:\n- CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- SPDX 2.x: add packages[].checksums[] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- SPDX 3.0: add verifiedUsing[] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
-                "markdown": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].hashes\\[\\] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- **SPDX 2.x:** add packages\\[\\].checksums\\[\\] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- **SPDX 3.0:** add verifiedUsing\\[\\] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
+                "text": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\nWhere the fix goes:\n- CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- SPDX 2.x: add packages[].checksums[] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- SPDX 3.0: add verifiedUsing[] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
+                "markdown": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].hashes\\[\\] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- **SPDX 2.x:** add packages\\[\\].checksums\\[\\] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- **SPDX 3.0:** add verifiedUsing\\[\\] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
               }
             },
             {
               "id": "SBOM-EO14028-DISCLOSURE",
               "name": "Eo14028Disclosure",
               "shortDescription": {
-                "text": "EO 14028 Sec 4(g): Vulnerability disclosure process"
+                "text": "EO 14028 §4(e)(viii) practice: Vulnerability disclosure program"
               },
               "fullDescription": {
-                "text": "EO 14028 Sec 4(g): Vulnerability disclosure process. References: EO 14028 §4."
+                "text": "EO 14028 §4(e)(viii) practice: Vulnerability disclosure program. References: EO 14028 §4."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
               "helpUri": "https://www.federalregister.gov/d/2021-10460",
               "help": {
-                "text": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\nWhere the fix goes:\n- CycloneDX: add a metadata.component.externalReferences[] entry of type security-contact (or advisories).\n- SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory SECURITY and referenceType advisory (or url) to the described package.\n- SPDX 3.0: add an externalRef[] entry with externalRefType securityAdvisory to the root package.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
-                "markdown": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\n**Where the fix goes**\n\n- **CycloneDX:** add a metadata.component.externalReferences\\[\\] entry of type security-contact (or advisories).\n- **SPDX 2.x:** add a packages\\[\\].externalRefs\\[\\] entry with referenceCategory SECURITY and referenceType advisory (or url) to the described package.\n- **SPDX 3.0:** add an externalRef\\[\\] entry with externalRefType securityAdvisory to the root package.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
+                "text": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\nWhere the fix goes:\n- CycloneDX: add a metadata.component.externalReferences[] entry of type security-contact (or advisories).\n- SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory SECURITY and referenceType advisory (or url) to the described package.\n- SPDX 3.0: add an externalRef[] entry with externalRefType securityAdvisory to the root package.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
+                "markdown": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\n**Where the fix goes**\n\n- **CycloneDX:** add a metadata.component.externalReferences\\[\\] entry of type security-contact (or advisories).\n- **SPDX 2.x:** add a packages\\[\\].externalRefs\\[\\] entry with referenceCategory SECURITY and referenceType advisory (or url) to the described package.\n- **SPDX 3.0:** add an externalRef\\[\\] entry with externalRefType securityAdvisory to the root package.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
               }
             },
             {
               "id": "SBOM-EO14028-SUPPLIER",
               "name": "Eo14028Supplier",
               "shortDescription": {
-                "text": "EO 14028 Sec 4(e): Supplier identification"
+                "text": "EO 14028 §4(e) practice: Supplier identification"
               },
               "fullDescription": {
-                "text": "EO 14028 Sec 4(e): Supplier identification. References: EO 14028 §4."
+                "text": "EO 14028 §4(e) practice: Supplier identification. References: EO 14028 §4."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://www.federalregister.gov/d/2021-10460",
               "help": {
-                "text": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\nWhere the fix goes:\n- CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).\n- SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
-                "markdown": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).\n- **SPDX 2.x:** set packages\\[\\].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages\\[\\].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- **SPDX 3.0:** set suppliedBy on the package to the spdxId of an Organization or Person element.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
+                "text": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\nWhere the fix goes:\n- CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).\n- SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.\n\nReferences:\n- EO 14028 §4 (https://www.federalregister.gov/d/2021-10460)",
+                "markdown": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).\n- **SPDX 2.x:** set packages\\[\\].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages\\[\\].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- **SPDX 3.0:** set suppliedBy on the package to the spdxId of an Organization or Person element.\n\n**References**\n\n- [EO 14028 §4](<https://www.federalregister.gov/d/2021-10460>)"
               }
             },
             {
               "id": "SBOM-EO14028-INVENTORY",
               "name": "Eo14028Inventory",
               "shortDescription": {
-                "text": "EO 14028 Sec 4(e): SBOM lists the software's components"
+                "text": "EO 14028 §4(e) practice: SBOM lists the software's components"
               },
               "fullDescription": {
-                "text": "EO 14028 Sec 4(e): SBOM lists the software's components. References: EO 14028 §4."
+                "text": "EO 14028 §4(e) practice: SBOM lists the software's components. References: EO 14028 §4."
               },
               "defaultConfiguration": {
                 "level": "error"
@@ -2469,7 +2470,7 @@ source: tests/compliance_snapshots.rs
           "ruleIndex": 112,
           "level": "error",
           "message": {
-            "text": "EO 14028 Section 4: 1/3 components missing unique identifier (PURL/CPE/SWHID/SWID) (Requirement: EO 14028 Sec 4(e): Component unique identification) [Element: unknown]"
+            "text": "EO 14028 Section 4: 1/3 components missing unique identifier (PURL/CPE/SWHID/SWID) (Requirement: EO 14028 §4(e) practice: Component unique identification) [Element: unknown]"
           },
           "locations": [
             {
@@ -2506,7 +2507,7 @@ source: tests/compliance_snapshots.rs
           "ruleIndex": 115,
           "level": "warning",
           "message": {
-            "text": "EO 14028 Section 4: 1/3 components missing cryptographic hashes (Requirement: EO 14028 Sec 4(e): Component integrity verification) [Element: unknown]"
+            "text": "EO 14028 Section 4: 1/3 components missing cryptographic hashes (Requirement: EO 14028 §4(e) practice: Component integrity verification) [Element: unknown]"
           },
           "locations": [
             {
@@ -2543,7 +2544,7 @@ source: tests/compliance_snapshots.rs
           "ruleIndex": 116,
           "level": "warning",
           "message": {
-            "text": "EO 14028 Section 4: No security contact or vulnerability disclosure reference found (Requirement: EO 14028 Sec 4(g): Vulnerability disclosure process) [Element: unknown]"
+            "text": "EO 14028 Section 4: No security contact or vulnerability disclosure reference found (Requirement: EO 14028 §4(e)(viii) practice: Vulnerability disclosure program) [Element: unknown]"
           },
           "locations": [
             {
@@ -2578,7 +2579,7 @@ source: tests/compliance_snapshots.rs
           "ruleIndex": 117,
           "level": "error",
           "message": {
-            "text": "EO 14028 Section 4: 2/3 components (66%) missing supplier information (Requirement: EO 14028 Sec 4(e): Supplier identification) [Element: unknown]"
+            "text": "EO 14028 Section 4: 2/3 components (66%) missing supplier information (Requirement: EO 14028 §4(e) practice: Supplier identification) [Element: unknown]"
           },
           "locations": [
             {

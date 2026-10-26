@@ -177,8 +177,10 @@ pub(crate) const REMEDIATION_UNREGISTERED: &str = "This finding's rule is not in
 /// SSDF practices share one remediation paragraph.
 const REMEDIATION_SSDF: &str = "Follow NIST SP 800-218 SSDF practices: include tool provenance, source VCS references, build metadata, and cryptographic hashes for all components.";
 
-/// EO 14028 §4 requirements share one remediation paragraph.
-const REMEDIATION_EO14028: &str = "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.";
+/// The EO 14028 §4 SBOM practice rules share one remediation paragraph.
+/// The profile follows EO 14028 practice: OMB M-26-05 (2026-01-23)
+/// rescinded the M-22-18 / M-23-16 attestation mandate built on it.
+const REMEDIATION_EO14028: &str = "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.";
 
 /// Remediation for every `*-INVENTORY` rule: the document must list the
 /// software components it describes.
@@ -2778,7 +2780,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-GENERAL" => RuleMeta {
             sarif_id: "SBOM-EO14028-GENERAL",
             name: "Eo14028GeneralRequirement",
-            short_description: "EO 14028: General SBOM requirement",
+            short_description: "EO 14028: General SBOM practice",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2881,7 +2883,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-FORMAT" => RuleMeta {
             sarif_id: "SBOM-EO14028-FORMAT",
             name: "Eo14028MachineReadable",
-            short_description: "EO 14028 Sec 4(e): Machine-readable SBOM format requirement",
+            short_description: "EO 14028 §4(e) practice: Machine-readable SBOM format",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2890,7 +2892,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-AUTOGEN" => RuleMeta {
             sarif_id: "SBOM-EO14028-AUTOGEN",
             name: "Eo14028AutoGeneration",
-            short_description: "EO 14028 Sec 4(e): Automated SBOM generation",
+            short_description: "EO 14028 §4(e) practice: Automated SBOM generation",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2899,7 +2901,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-CREATOR" => RuleMeta {
             sarif_id: "SBOM-EO14028-CREATOR",
             name: "Eo14028Creator",
-            short_description: "EO 14028 Sec 4(e): SBOM creator identification",
+            short_description: "EO 14028 §4(e) practice: SBOM creator identification",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2908,7 +2910,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-IDENTIFIER" => RuleMeta {
             sarif_id: "SBOM-EO14028-IDENTIFIER",
             name: "Eo14028Identifier",
-            short_description: "EO 14028 Sec 4(e): Component unique identification",
+            short_description: "EO 14028 §4(e) practice: Component unique identification",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2917,7 +2919,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-DEPENDENCY" => RuleMeta {
             sarif_id: "SBOM-EO14028-DEPENDENCY",
             name: "Eo14028Dependency",
-            short_description: "EO 14028 Sec 4(e): Dependency relationship information",
+            short_description: "EO 14028 §4(e) practice: Dependency relationship information",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2926,7 +2928,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-INVENTORY" => RuleMeta {
             sarif_id: "SBOM-EO14028-INVENTORY",
             name: "Eo14028Inventory",
-            short_description: "EO 14028 Sec 4(e): SBOM lists the software's components",
+            short_description: "EO 14028 §4(e) practice: SBOM lists the software's components",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_INVENTORY,
@@ -2935,7 +2937,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-VERSION" => RuleMeta {
             sarif_id: "SBOM-EO14028-VERSION",
             name: "Eo14028Version",
-            short_description: "EO 14028 Sec 4(e): Component version information",
+            short_description: "EO 14028 §4(e) practice: Component version information",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2944,7 +2946,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-INTEGRITY" => RuleMeta {
             sarif_id: "SBOM-EO14028-INTEGRITY",
             name: "Eo14028Integrity",
-            short_description: "EO 14028 Sec 4(e): Component integrity verification (hashes)",
+            short_description: "EO 14028 §4(e) practice: Component integrity verification (hashes)",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2953,7 +2955,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-DISCLOSURE" => RuleMeta {
             sarif_id: "SBOM-EO14028-DISCLOSURE",
             name: "Eo14028Disclosure",
-            short_description: "EO 14028 Sec 4(g): Vulnerability disclosure process",
+            short_description: "EO 14028 §4(e)(viii) practice: Vulnerability disclosure program",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2962,7 +2964,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-SUPPLIER" => RuleMeta {
             sarif_id: "SBOM-EO14028-SUPPLIER",
             name: "Eo14028Supplier",
-            short_description: "EO 14028 Sec 4(e): Supplier identification",
+            short_description: "EO 14028 §4(e) practice: Supplier identification",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2971,7 +2973,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-TIMESTAMP" => RuleMeta {
             sarif_id: "SBOM-EO14028-TIMESTAMP",
             name: "Eo14028Timestamp",
-            short_description: "EO 14028 Sec 4(e): SBOM creation timestamp (NTIA baseline)",
+            short_description: "EO 14028 §4(e) practice: SBOM creation timestamp (NTIA baseline)",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4"), (K::NtiaMinimum, "Timestamp")],
             remediation: REMEDIATION_EO14028,
@@ -2980,7 +2982,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-NAME" => RuleMeta {
             sarif_id: "SBOM-EO14028-NAME",
             name: "Eo14028ComponentName",
-            short_description: "EO 14028 Sec 4(e): Component name (NTIA baseline)",
+            short_description: "EO 14028 §4(e) practice: Component name (NTIA baseline)",
             default_severity: ViolationSeverity::Error,
             refs: &[
                 (K::Eo14028, "EO 14028 §4"),
