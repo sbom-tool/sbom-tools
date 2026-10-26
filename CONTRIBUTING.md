@@ -39,5 +39,6 @@ You do not need to sign off each commit, but by submitting a pull request you ag
 
 - Keep PRs focused on a single change
 - Include tests for new functionality
+- Tests must not depend on today's date: build compliance checkers with `checker(level)` from `tests/common/clock.rs`, or pin an explicit instant with `.with_as_of(...)` (enforced by `tests/pinned_clock_tests.rs`)
 - Update documentation if behavior changes
 - PRs are squash-merged by default

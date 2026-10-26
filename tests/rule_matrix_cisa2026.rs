@@ -15,13 +15,13 @@
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
+use rule_matrix::clock::checker;
 use rule_matrix::{
     ComponentFixture, MD5_FILLER, RuleEntry, SbomFixture, check, render_violations, run_matrix,
 };
 use sbom_tools::parsers::parse_sbom_str;
 use sbom_tools::quality::{
-    CISA2026_SARIF_RULE_IDS, ComplianceChecker, ComplianceLevel, ComplianceResult,
-    ViolationSeverity as Sev,
+    CISA2026_SARIF_RULE_IDS, ComplianceLevel, ComplianceResult, ViolationSeverity as Sev,
 };
 
 const LEVEL: ComplianceLevel = ComplianceLevel::Cisa2026;
@@ -298,7 +298,7 @@ fn conforming_json() -> serde_json::Value {
 fn check_json(doc: &serde_json::Value) -> ComplianceResult {
     let json = doc.to_string();
     let sbom = parse_sbom_str(&json).unwrap_or_else(|e| panic!("fixture must parse: {e}\n{json}"));
-    ComplianceChecker::new(LEVEL).check(&sbom)
+    checker(LEVEL).check(&sbom)
 }
 
 /// Assert the rule fired at the given severity.

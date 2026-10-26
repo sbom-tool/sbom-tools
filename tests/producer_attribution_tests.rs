@@ -4,10 +4,14 @@
 //! standard, exactly like `supplier` or `author` — previously both were
 //! dropped by the parser and such components false-failed.
 
+#[path = "common/clock.rs"]
+mod clock;
+
+use clock::checker;
 use sbom_tools::{
     model::NormalizedSbom,
     parsers::parse_sbom,
-    quality::{ComplianceChecker, ComplianceLevel, ViolationCategory},
+    quality::{ComplianceLevel, ViolationCategory},
 };
 use std::path::Path;
 
@@ -68,7 +72,7 @@ fn manufacturer_or_authors_satisfy_supplier_element_across_standards() {
         ComplianceLevel::NistSsdf,
         ComplianceLevel::BsiTr03183_2,
     ] {
-        let supplier_findings: Vec<_> = ComplianceChecker::new(level)
+        let supplier_findings: Vec<_> = checker(level)
             .check(&sbom)
             .violations
             .into_iter()

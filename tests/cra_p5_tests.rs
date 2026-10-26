@@ -1,8 +1,12 @@
 //! Combined integration tests for CRA-P5.4 (EuccSubstantial),
 //! P5.5 (controls-assertion sidecar block), and P5.7 (TUI presets).
 
+#[path = "common/clock.rs"]
+mod clock;
+
+use clock::{as_of, checker};
 use sbom_tools::model::{ControlAssertion, CraSidecarMetadata};
-use sbom_tools::quality::{ComplianceChecker, ComplianceLevel, StandardKind, ViolationSeverity};
+use sbom_tools::quality::{ComplianceLevel, StandardKind, ViolationSeverity};
 use std::collections::BTreeMap;
 
 // ============================================================================
@@ -22,7 +26,7 @@ fn eucc_substantial_short_name_fits_compact_label() {
 #[test]
 fn eucc_substantial_without_sidecar_fires_all_four_must_haves() {
     let sbom = sbom_tools::model::NormalizedSbom::default();
-    let result = ComplianceChecker::new(ComplianceLevel::EuccSubstantial).check(&sbom);
+    let result = checker(ComplianceLevel::EuccSubstantial).check(&sbom);
     let requirements: Vec<&String> = result.violations.iter().map(|v| &v.requirement).collect();
     assert!(
         requirements
@@ -52,7 +56,7 @@ fn eucc_substantial_with_complete_sidecar_only_warns() {
         ..Default::default()
     };
     let sbom = sbom_tools::model::NormalizedSbom::default();
-    let result = ComplianceChecker::new(ComplianceLevel::EuccSubstantial)
+    let result = checker(ComplianceLevel::EuccSubstantial)
         .with_sidecar(sidecar)
         .check(&sbom);
     let errors: Vec<_> = result
@@ -80,7 +84,7 @@ fn eucc_substantial_expired_certificate_is_error() {
         ..Default::default()
     };
     let sbom = sbom_tools::model::NormalizedSbom::default();
-    let result = ComplianceChecker::new(ComplianceLevel::EuccSubstantial)
+    let result = checker(ComplianceLevel::EuccSubstantial)
         .with_sidecar(sidecar)
         .check(&sbom);
     assert!(
@@ -93,7 +97,7 @@ fn eucc_substantial_expired_certificate_is_error() {
 
 #[test]
 fn eucc_substantial_near_expiry_is_warning() {
-    let near = chrono::Utc::now() + chrono::Duration::days(60);
+    let near = as_of() + chrono::Duration::days(60);
     let sidecar = CraSidecarMetadata {
         eucc_protection_profile_id: Some("PP".to_string()),
         eucc_target_of_evaluation: Some("toe".to_string()),
@@ -102,7 +106,7 @@ fn eucc_substantial_near_expiry_is_warning() {
         ..Default::default()
     };
     let sbom = sbom_tools::model::NormalizedSbom::default();
-    let result = ComplianceChecker::new(ComplianceLevel::EuccSubstantial)
+    let result = checker(ComplianceLevel::EuccSubstantial)
         .with_sidecar(sidecar)
         .check(&sbom);
     assert!(
@@ -117,7 +121,7 @@ fn eucc_substantial_near_expiry_is_warning() {
 #[test]
 fn eucc_substantial_checks_fire_under_their_own_rule_ids() {
     let sbom = sbom_tools::model::NormalizedSbom::default();
-    let result = ComplianceChecker::new(ComplianceLevel::EuccSubstantial).check(&sbom);
+    let result = checker(ComplianceLevel::EuccSubstantial).check(&sbom);
     for (requirement, rule_id) in [
         ("Protection Profile reference", "SBOM-EUCC-PP"),
         ("Target of Evaluation reference", "SBOM-EUCC-TOE"),
@@ -151,7 +155,7 @@ fn eucc_validity_variants_share_the_validity_rule_id() {
         ..Default::default()
     };
     let sbom = sbom_tools::model::NormalizedSbom::default();
-    let result = ComplianceChecker::new(ComplianceLevel::EuccSubstantial)
+    let result = checker(ComplianceLevel::EuccSubstantial)
         .with_sidecar(expired)
         .check(&sbom);
     let v = result
@@ -166,10 +170,10 @@ fn eucc_validity_variants_share_the_validity_rule_id() {
         eucc_protection_profile_id: Some("PP".to_string()),
         eucc_target_of_evaluation: Some("toe".to_string()),
         eucc_itsef_identifier: Some("itsef".to_string()),
-        eucc_valid_until: Some(chrono::Utc::now() + chrono::Duration::days(60)),
+        eucc_valid_until: Some(as_of() + chrono::Duration::days(60)),
         ..Default::default()
     };
-    let result = ComplianceChecker::new(ComplianceLevel::EuccSubstantial)
+    let result = checker(ComplianceLevel::EuccSubstantial)
         .with_sidecar(near_expiry)
         .check(&sbom);
     let v = result
@@ -184,7 +188,7 @@ fn eucc_validity_variants_share_the_validity_rule_id() {
 #[test]
 fn eucc_violations_carry_eucc_standard_refs_with_2024_482_url() {
     let sbom = sbom_tools::model::NormalizedSbom::default();
-    let result = ComplianceChecker::new(ComplianceLevel::EuccSubstantial).check(&sbom);
+    let result = checker(ComplianceLevel::EuccSubstantial).check(&sbom);
     let eucc_violations: Vec<_> = result
         .violations
         .iter()
@@ -229,7 +233,7 @@ fn controls_assertion_satisfied_with_evidence_clears_check() {
         ..Default::default()
     };
     let sbom = sbom_tools::model::NormalizedSbom::default();
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let result = checker(ComplianceLevel::CraPhase2)
         .with_sidecar(sidecar)
         .check(&sbom);
     assert!(
@@ -258,7 +262,7 @@ fn controls_assertion_satisfied_without_evidence_fires_warning() {
         ..Default::default()
     };
     let sbom = sbom_tools::model::NormalizedSbom::default();
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let result = checker(ComplianceLevel::CraPhase2)
         .with_sidecar(sidecar)
         .check(&sbom);
     let v = result
@@ -286,7 +290,7 @@ fn controls_assertion_unsatisfied_does_not_fire() {
         ..Default::default()
     };
     let sbom = sbom_tools::model::NormalizedSbom::default();
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let result = checker(ComplianceLevel::CraPhase2)
         .with_sidecar(sidecar)
         .check(&sbom);
     assert!(

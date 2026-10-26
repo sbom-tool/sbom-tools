@@ -19,21 +19,19 @@
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
+use rule_matrix::clock::{as_of, checker};
 use rule_matrix::{ComponentFixture, RuleEntry, SbomFixture, render_violations, run_matrix};
 use sbom_tools::parsers::parse_sbom_str;
 use sbom_tools::quality::{
-    ComplianceChecker, ComplianceLevel, ComplianceResult, PCIDSS_SARIF_RULE_IDS,
-    ViolationSeverity as Sev,
+    ComplianceLevel, ComplianceResult, PCIDSS_SARIF_RULE_IDS, ViolationSeverity as Sev,
 };
 
 const LEVEL: ComplianceLevel = ComplianceLevel::PciDss632;
 
-/// A recent (wall-clock-relative) RFC 3339 timestamp, so the tool-policy
-/// staleness advisory can never trip the fixtures as the calendar advances
-/// (the repo's known wall-clock snapshot gotcha).
+/// A recent RFC 3339 timestamp (the day before the pinned test clock), so
+/// the tool-policy staleness advisory never trips the fixtures.
 fn recent_timestamp() -> String {
-    (chrono::Utc::now() - chrono::Duration::days(1))
-        .to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+    (as_of() - chrono::Duration::days(1)).to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
 }
 
 /// A fixture that satisfies every PCI DSS 6.3.2 element the engine checks —
@@ -86,7 +84,7 @@ fn json_with_compositions(fixture: &SbomFixture, aggregate: &str) -> String {
 /// Run the PCI profile over raw CycloneDX JSON through the real parser.
 fn check_json(json: &str) -> ComplianceResult {
     let sbom = parse_sbom_str(json).expect("raw fixture must parse as CycloneDX");
-    ComplianceChecker::new(LEVEL).check(&sbom)
+    checker(LEVEL).check(&sbom)
 }
 
 /// The conforming PCI fixture must pass with a clean verdict. It declares
@@ -194,9 +192,8 @@ fn pci_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
              src/quality/compliance/pci_dss.rs",
         ),
         // Missing timestamp (epoch sentinel) warns; the stale-timestamp Info
-        // advisory is pinned-clock-tested in pci_dss.rs unit tests (the
-        // matrix runner uses the wall clock, and fixtures stay fresh by
-        // construction).
+        // advisory is pinned-clock-tested in pci_dss.rs unit tests (fixtures
+        // here are dated the day before the runner's pinned clock).
         RuleEntry::tested(
             "SBOM-PCI-6-3-2-FRESHNESS",
             Sev::Warning,
