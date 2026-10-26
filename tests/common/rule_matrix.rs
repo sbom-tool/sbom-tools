@@ -37,6 +37,9 @@
 #[path = "clock.rs"]
 pub mod clock;
 
+#[path = "info_classification.rs"]
+pub mod info_classification;
+
 use sbom_tools::model::{CraSidecarMetadata, EolInfo, EolStatus, NormalizedSbom};
 use sbom_tools::parsers::parse_sbom_str;
 use sbom_tools::quality::{
@@ -1397,8 +1400,9 @@ impl RuleEntry {
 ///    checks and never as a violation, and each silent fixture stays silent
 ///    for that id (no violation, no pass);
 /// 3. sweep — every violation and every passed check any fixture emits maps
-///    into `universe`, and every alias key a fixture emits has its own
-///    per-key row.
+///    into `universe`, every alias key a fixture emits has its own per-key
+///    row, and every Info violation is a rule classified in
+///    tests/common/info_classification.rs.
 ///
 /// The registry default severity is what the SARIF rule catalogue
 /// advertises, so a finding row needs a firing case at it (WP 1.2 finding
@@ -1594,6 +1598,19 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
         };
         for (label, fixture) in fixtures {
             let result = check(level, fixture);
+            // An Info violation is a reviewed gap or advice; an affirmation
+            // would be a passed check instead.
+            for v in &result.violations {
+                assert!(
+                    v.severity != ViolationSeverity::Info
+                        || info_classification::info_finding_reason(v.rule_id).is_some(),
+                    "[{level:?}] fixture for {id} ({label}) reported {rule} at Info, which \
+                     tests/common/info_classification.rs does not classify: list it with the \
+                     reason it stays a violation, or make it a pass-only rule",
+                    id = entry.id,
+                    rule = v.rule_id,
+                );
+            }
             let emitted = result
                 .violations
                 .iter()
