@@ -707,6 +707,14 @@ mod tests {
         Component, DatasetInfo, DatasetRef, Hash, HashAlgorithm, MlModelInfo, Organization,
     };
 
+    /// Pinned to the shared test clock (tests/common/clock.rs).
+    fn checker(level: ComplianceLevel) -> ComplianceChecker {
+        let as_of = chrono::DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
+            .expect("valid instant")
+            .with_timezone(&chrono::Utc);
+        ComplianceChecker::new(level).with_as_of(as_of)
+    }
+
     fn full_ml_component(name: &str) -> Component {
         let mut c = Component::new(name.to_string(), name.to_string())
             .with_version("1.0.0".to_string())
@@ -776,7 +784,7 @@ mod tests {
         sw.component_type = ComponentType::Library;
         add(&mut sbom, sw);
 
-        let result = ComplianceChecker::new(ComplianceLevel::BsiSbomForAi).check(&sbom);
+        let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
         assert!(result.is_compliant, "non-AI SBOM must not fail BSI-AI");
         assert_eq!(result.error_count, 0);
         assert_eq!(
@@ -812,7 +820,7 @@ mod tests {
             DependencyType::DependsOn,
         ));
 
-        let result = ComplianceChecker::new(ComplianceLevel::BsiSbomForAi).check(&sbom);
+        let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
         // No Error-severity (MUST) findings on a well-documented AI-BOM.
         assert!(
             result.is_compliant,
@@ -843,7 +851,7 @@ mod tests {
         let mut sbom = NormalizedSbom::default();
         add(&mut sbom, bare_ml_component("model-a"));
 
-        let result = ComplianceChecker::new(ComplianceLevel::BsiSbomForAi).check(&sbom);
+        let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
         let ids: Vec<_> = result.violations.iter().map(|v| v.rule_id).collect();
         // Bare model has no version, identifier, hash, model card, architecture,
         // datasets, limitations, or license.
@@ -871,7 +879,7 @@ mod tests {
             .push(Hash::new(HashAlgorithm::Md5, "abc".to_string()));
         add(&mut sbom, c);
 
-        let result = ComplianceChecker::new(ComplianceLevel::BsiSbomForAi).check(&sbom);
+        let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
         let ids: Vec<_> = result.violations.iter().map(|v| v.rule_id).collect();
         assert!(
             ids.contains(&"SBOM-BSIAI-MODEL-HASH-ALGO"),
@@ -895,7 +903,7 @@ mod tests {
         });
         add(&mut sbom, c);
 
-        let result = ComplianceChecker::new(ComplianceLevel::BsiSbomForAi).check(&sbom);
+        let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
         assert!(
             !result
                 .violations
@@ -919,7 +927,7 @@ mod tests {
         cfg.component_type = ComponentType::Data;
         add(&mut sbom, cfg);
 
-        let result = ComplianceChecker::new(ComplianceLevel::BsiSbomForAi).check(&sbom);
+        let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
         assert!(
             result.is_compliant,
             "web app with config data component must not fail BSI-AI; got {:?}",
@@ -944,7 +952,7 @@ mod tests {
         });
         add(&mut sbom, c);
 
-        let result = ComplianceChecker::new(ComplianceLevel::BsiSbomForAi).check(&sbom);
+        let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
         let ids: Vec<_> = result.violations.iter().map(|v| v.rule_id).collect();
         assert!(
             !ids.contains(&"SBOM-BSIAI-NA"),
@@ -975,7 +983,7 @@ mod tests {
         });
         add(&mut sbom, c);
 
-        let result = ComplianceChecker::new(ComplianceLevel::BsiSbomForAi).check(&sbom);
+        let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
         assert!(
             !result
                 .violations
@@ -994,7 +1002,7 @@ mod tests {
             .with_purl("pkg:huggingface/google-bert/bert-base-uncased@1.0.0".to_string());
         add(&mut sbom, c);
 
-        let result = ComplianceChecker::new(ComplianceLevel::BsiSbomForAi).check(&sbom);
+        let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
         assert!(
             !result
                 .violations
@@ -1021,7 +1029,7 @@ mod tests {
             c.dataset = Some(DatasetInfo::default());
             c
         });
-        let result = ComplianceChecker::new(ComplianceLevel::BsiSbomForAi).check(&sbom);
+        let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
         for v in &result.violations {
             assert!(
                 super::super::rule_meta(v.rule_id).is_some(),

@@ -485,6 +485,14 @@ mod tests {
         MlModelInfo,
     };
 
+    /// Pinned to the shared test clock (tests/common/clock.rs).
+    fn checker(level: ComplianceLevel) -> ComplianceChecker {
+        let as_of = chrono::DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
+            .expect("valid instant")
+            .with_timezone(&chrono::Utc);
+        ComplianceChecker::new(level).with_as_of(as_of)
+    }
+
     fn full_ml_component(name: &str) -> Component {
         let mut c =
             Component::new(name.to_string(), name.to_string()).with_version("1.0.0".to_string());
@@ -543,7 +551,7 @@ mod tests {
         sw.component_type = ComponentType::Library;
         add(&mut sbom, sw);
 
-        let result = ComplianceChecker::new(ComplianceLevel::EuAiAct).check(&sbom);
+        let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
         assert!(result.is_compliant, "non-AI SBOM must not fail AI-Act");
         assert_eq!(result.error_count, 0);
         assert_eq!(
@@ -562,7 +570,7 @@ mod tests {
         add(&mut sbom, full_ml_component("model-a"));
         add(&mut sbom, dataset_component("data-1", &["none"]));
 
-        let result = ComplianceChecker::new(ComplianceLevel::EuAiAct).check(&sbom);
+        let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
         assert!(result.is_compliant);
         assert_eq!(
             result.warning_count, 0,
@@ -576,7 +584,7 @@ mod tests {
         let mut sbom = NormalizedSbom::default();
         add(&mut sbom, bare_ml_component("model-a"));
 
-        let result = ComplianceChecker::new(ComplianceLevel::EuAiAct).check(&sbom);
+        let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
         let ids: Vec<_> = result.violations.iter().map(|v| v.rule_id).collect();
         assert!(ids.contains(&"SBOM-AIACT-ANNEX-IV-1-DESCRIPTION"));
         assert!(ids.contains(&"SBOM-AIACT-ANNEX-IV-1-PURPOSE"));
@@ -591,7 +599,7 @@ mod tests {
         add(&mut sbom, bare_ml_component("model-a"));
 
         // Without the flag: §1/§2 gaps are Warnings (not blocking).
-        let baseline = ComplianceChecker::new(ComplianceLevel::EuAiAct).check(&sbom);
+        let baseline = checker(ComplianceLevel::EuAiAct).check(&sbom);
         assert!(baseline.is_compliant, "non-high-risk gaps are advisory");
         assert!(baseline.warning_count > 0);
 
@@ -600,7 +608,7 @@ mod tests {
             is_high_risk_ai: true,
             ..Default::default()
         };
-        let escalated = ComplianceChecker::new(ComplianceLevel::EuAiAct)
+        let escalated = checker(ComplianceLevel::EuAiAct)
             .with_sidecar(sidecar)
             .check(&sbom);
         assert!(
@@ -624,7 +632,7 @@ mod tests {
         add(&mut sbom, full_ml_component("model-a"));
         add(&mut sbom, dataset_component("data-1", &["pii"]));
 
-        let result = ComplianceChecker::new(ComplianceLevel::EuAiAct).check(&sbom);
+        let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
         assert!(
             result
                 .violations
@@ -649,7 +657,7 @@ mod tests {
         }));
         add(&mut sbom, c);
 
-        let result = ComplianceChecker::new(ComplianceLevel::EuAiAct).check(&sbom);
+        let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
         assert!(
             !result
                 .violations
@@ -672,7 +680,7 @@ mod tests {
         cfg.component_type = ComponentType::Data;
         add(&mut sbom, cfg);
 
-        let result = ComplianceChecker::new(ComplianceLevel::EuAiAct).check(&sbom);
+        let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
         assert!(result.is_compliant);
         assert_eq!(result.error_count, 0);
         assert_eq!(result.violations.len(), 1, "single N/A finding expected");
@@ -693,7 +701,7 @@ mod tests {
         });
         add(&mut sbom, c);
 
-        let result = ComplianceChecker::new(ComplianceLevel::EuAiAct).check(&sbom);
+        let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
         assert!(
             !result
                 .violations
@@ -723,7 +731,7 @@ mod tests {
         c.description = Some("Transformer encoder for English text classification".to_string());
         add(&mut sbom, c);
 
-        let result = ComplianceChecker::new(ComplianceLevel::EuAiAct).check(&sbom);
+        let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
         assert!(
             !result
                 .violations
@@ -742,7 +750,7 @@ mod tests {
             .with_purl("pkg:huggingface/google-bert/bert-base-uncased@1.0.0".to_string());
         add(&mut sbom, c);
 
-        let result = ComplianceChecker::new(ComplianceLevel::EuAiAct).check(&sbom);
+        let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
         assert!(
             !result
                 .violations
@@ -766,7 +774,7 @@ mod tests {
         let mut sbom = NormalizedSbom::default();
         add(&mut sbom, dataset_component("data-1", &["none"]));
 
-        let result = ComplianceChecker::new(ComplianceLevel::EuAiAct).check(&sbom);
+        let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
         assert!(
             !result
                 .violations
@@ -789,7 +797,7 @@ mod tests {
         let mut sbom = NormalizedSbom::default();
         add(&mut sbom, bare_ml_component("model-a"));
         add(&mut sbom, dataset_component("data-1", &[]));
-        let result = ComplianceChecker::new(ComplianceLevel::EuAiAct).check(&sbom);
+        let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
         for v in &result.violations {
             assert!(
                 super::rule_meta(v.rule_id).is_some(),

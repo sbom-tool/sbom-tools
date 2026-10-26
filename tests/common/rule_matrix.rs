@@ -24,11 +24,12 @@
 // existing tests/common/ffi_helpers.rs posture).
 #![allow(dead_code)]
 
+#[path = "clock.rs"]
+pub mod clock;
+
 use sbom_tools::model::NormalizedSbom;
 use sbom_tools::parsers::parse_sbom_str;
-use sbom_tools::quality::{
-    ComplianceChecker, ComplianceLevel, ComplianceResult, ViolationSeverity, rule_meta,
-};
+use sbom_tools::quality::{ComplianceLevel, ComplianceResult, ViolationSeverity, rule_meta};
 use std::collections::BTreeSet;
 
 /// Filler SHA-256 digest (64 hex chars) for conforming components.
@@ -263,9 +264,10 @@ impl SbomFixture {
     }
 }
 
-/// Run one compliance standard over a fixture (real parser → real checker).
+/// Run one compliance standard over a fixture (real parser → real checker),
+/// at the pinned test clock.
 pub fn check(level: ComplianceLevel, fixture: &SbomFixture) -> ComplianceResult {
-    ComplianceChecker::new(level).check(&fixture.parse())
+    clock::checker(level).check(&fixture.parse())
 }
 
 /// Render a result's violations for assertion messages.

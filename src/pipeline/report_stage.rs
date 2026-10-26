@@ -216,9 +216,13 @@ mod tests {
         let old_sbom = NormalizedSbom::default();
         let new_sbom = NormalizedSbom::default();
 
+        // The shared test clock (tests/common/clock.rs).
+        let as_of = chrono::DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
+            .expect("valid instant")
+            .with_timezone(&chrono::Utc);
         let make_config = |with_compliance: bool| {
             let (old_cra, new_cra) = if with_compliance {
-                let checker = ComplianceChecker::new(ComplianceLevel::CraPhase2);
+                let checker = ComplianceChecker::new(ComplianceLevel::CraPhase2).with_as_of(as_of);
                 (
                     Some(checker.check(&old_sbom)),
                     Some(checker.check(&new_sbom)),
