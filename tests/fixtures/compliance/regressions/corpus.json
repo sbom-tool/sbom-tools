@@ -1459,7 +1459,7 @@
           "expect": {
             "rules_present": [
               {
-                "rule": "SBOM-CRA-VULN-METADATA",
+                "rule": "SBOM-CRA-VULN-METADATA-REMEDIATION",
                 "severity": "info"
               }
             ]
