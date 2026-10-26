@@ -77,10 +77,11 @@ Some rules affirm what the SBOM gets right rather than report a gap: under
 `pqc`, `SBOM-PQC-009` (an algorithm NIST approves for post-quantum use) and
 `SBOM-PQC-010` (a PQ/T hybrid whose post-quantum part NIST approves). These
 pass-only rules report into `passed`, never into `violations`: a pass has no
-severity, counts toward neither `counts.info` nor the score, and is no SARIF
-result unless `--sarif-include-passes` asks for it. Each entry carries the
-fields a violation has, except the severity-related ones, plus its finding
-identity:
+severity and counts toward neither `counts.info` nor the score. `-o sarif`
+reports no pass, so code scanning raises no alert for one;
+`--sarif-include-passes` adds each as a SARIF result of `kind: "pass"` at
+level `none`, under the rule's `sarif_rule_id`. Each entry carries the fields
+a violation has, except the severity-related ones, plus its finding identity:
 
 | Field | Type | Meaning |
 |---|---|---|

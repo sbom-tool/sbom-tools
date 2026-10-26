@@ -8,7 +8,9 @@ use crate::quality::{
     ComplianceChecker, ComplianceLevel, ComplianceResult, StandardSelector, ViolationSeverity,
 };
 use crate::reports::escape::sanitize_line;
-use crate::reports::{ReportFormat, generate_compliance_json, generate_compliance_sarif};
+use crate::reports::{
+    ComplianceSarifOptions, ReportFormat, generate_compliance_json, generate_compliance_sarif_with,
+};
 use anyhow::Result;
 use std::path::PathBuf;
 
@@ -69,6 +71,7 @@ pub fn run_validate(
     as_of: Option<&str>,
     require_applicable: bool,
     json_schema: ValidateJsonSchema,
+    sarif_include_passes: bool,
 ) -> Result<i32> {
     // `--summary` overrides `--output` (documented on the flag), so the
     // requested format is never rendered and must not be gated.
@@ -147,6 +150,9 @@ pub fn run_validate(
         sbom: parsed.sbom(),
         sbom_digest: sha256_hex(parsed.raw_content.as_bytes()),
         as_of,
+        sarif: ComplianceSarifOptions {
+            include_passes: sarif_include_passes,
+        },
     };
 
     if !summary && output == ReportFormat::Json && json_schema == ValidateJsonSchema::V1 {
@@ -195,6 +201,8 @@ struct OutputProvenance<'a> {
     sbom_digest: String,
     /// The pinned evaluation instant (`--as-of`), if any.
     as_of: Option<chrono::DateTime<chrono::Utc>>,
+    /// How `-o sarif` renders the results (`--sarif-include-passes`).
+    sarif: ComplianceSarifOptions,
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {
@@ -220,7 +228,7 @@ fn write_compliance_output(
             ValidateJsonSchema::V1 => serde_json::to_string_pretty(&v1_result(result))
                 .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
         },
-        ReportFormat::Sarif => generate_compliance_sarif(result)?,
+        ReportFormat::Sarif => generate_compliance_sarif_with(result, provenance.sarif)?,
         ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results_at(
             std::slice::from_ref(result),
             provenance.sbom,
@@ -305,7 +313,9 @@ fn write_multi_compliance_output(
                     .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?
             }
         },
-        ReportFormat::Sarif => crate::reports::generate_multi_compliance_sarif(results)?,
+        ReportFormat::Sarif => {
+            crate::reports::generate_multi_compliance_sarif_with(results, provenance.sarif)?
+        }
         ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results_at(
             results,
             provenance.sbom,
@@ -457,6 +467,7 @@ mod tests {
                 None,
                 false,
                 ValidateJsonSchema::V2,
+                false,
             )
             .expect_err("unsupported format must be rejected");
             let msg = err.to_string();
@@ -485,6 +496,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            false,
         )
         .expect_err("empty standard list must be rejected");
         assert!(err.to_string().contains("no compliance standard selected"));
@@ -514,6 +526,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            false,
         )
         .expect("--summary must override -o html instead of hard-erroring");
         let content = std::fs::read_to_string(out).unwrap();
@@ -545,6 +558,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            false,
         )
         .expect_err("typo'd --cra-product-class must be a hard error");
         let msg = err.to_string();
@@ -578,6 +592,7 @@ mod tests {
             Some("2027-01-01T00:00:00"),
             false,
             ValidateJsonSchema::V2,
+            false,
         )
         .expect("offset-less --as-of datetime must parse (assumed UTC)");
     }
@@ -605,6 +620,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            false,
         )
         .expect_err("broken explicit sidecar must be a hard error");
         assert!(err.to_string().contains("Failed to load CRA sidecar"));

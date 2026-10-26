@@ -39,8 +39,9 @@ pub use json::JsonReporter;
 pub use markdown::MarkdownReporter;
 pub use sarif::SarifReporter;
 pub use sarif::{
-    generate_ai_readiness_sarif, generate_compliance_sarif, generate_multi_compliance_sarif,
-    generate_quality_sarif,
+    ComplianceSarifOptions, generate_ai_readiness_sarif, generate_compliance_sarif,
+    generate_compliance_sarif_with, generate_multi_compliance_sarif,
+    generate_multi_compliance_sarif_with, generate_quality_sarif,
 };
 pub use sidebyside::SideBySideReporter;
 pub use streaming::{
