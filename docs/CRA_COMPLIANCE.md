@@ -40,7 +40,7 @@ ENISA / industry guidance. Use it to:
 The `--cra-product-class` flag (or sidecar `productClass`) drives the
 [CRA-P3.2 calibration table](#cra-p32-product-class-severity-calibration)
 that scales severity for vendor-hash, EOL, cycles, DoC, EUCC, PSIRT,
-and module-attestation checks.
+and module-certificate checks.
 
 ## Reverse map
 
@@ -109,7 +109,7 @@ exists.
 | `CRA Annex IV: EUCC reference (Common Criteria certificate)`| Annex IV                 | —                   | sidecar EUCC evidence fields, a `Certification`/`Attestation` external ref with `eucc`/`common-criteria` URL, or a [CDXA attestation](#attestation-evidence-cyclonedx-16-declarations) naming EUCC / Common Criteria |
 | `CRA Annex VII: Technical documentation`                    | Annex VII                | —                   | run `sbom-tools cra-docs <sbom> --output dossier/`     |
 | `CRA Annex V: EU Declaration of Conformity reference`       | Annex V                  | —                   | `Attestation`/`Certification` external ref OR `ceMarkingReference` |
-| `CRA Annex VIII: <Module> attestation reference`            | Annex VIII (Module B+C/H/EUCC) | —             | Module-specific `Attestation`/`Certification` external ref |
+| `CRA Annex VIII: <Module> certificate reference`            | Annex VIII (Module B+C/H/EUCC) | —             | `Certification` external ref (the notified-body or certification-body certificate; an `Attestation` ref does not count) |
 | `CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware component inventory` | Annex I Part II   | PRE-8-RQ-02         | producer + identifier + firmware version on hardware    |
 
 External-reference types. The `Attestation`, `Certification`,
@@ -125,6 +125,16 @@ category for any of them (its OTHER category with a
 Before v0.4.0 the parsers did not map these types, so only the sidecar keys
 and CDXA attestations could satisfy the checks.
 
+Annex VIII is stricter than Annex V. A route beyond Module A rests on
+notified-body or certification-body evidence — the EU-type examination
+certificate (Module B+C), the quality-system approval (Module H) or the EUCC
+certificate — so `SBOM-CRA-ANNEX-VIII` and the `conformity_summary` Module B
+and Module H rows accept only a `Certification` reference
+(`certification-report`, SPDX 3.0 `certificationReport`). An `Attestation`
+reference may be a self-attestation: it still serves as the Annex V
+Declaration of Conformity reference (and the Module C production-conformity
+statement), but not as the route's certificate.
+
 ### Article 24 — open-source software steward floor
 
 | Requirement string                                          | CRA reference  | Cleared by                                            |
@@ -133,7 +143,7 @@ and CDXA attestations could satisfy the checks.
 | `CRA Annex I Part II (5): Coordinated vulnerability disclosure policy` (relaxed to Warning under steward) | Annex I Part II (5) | `Advisories` external ref OR `coordinatedDisclosurePolicyUrl` |
 
 Article 24 *suppresses* manufacturer-only checks (Art. 13(16) email,
-Annex V DoC, Annex VIII attestation, Article 14 channels, hardware
+Annex V DoC, Annex VIII certificate, Article 14 channels, hardware
 [PRE-8-RQ-02], vendor-hash carry-through).
 
 ## CRA-P3.2 product-class severity calibration
@@ -152,7 +162,7 @@ overridable via sidecar `conformityAssessmentRoute`.
 | Annex V DoC reference          | Info    | Warning     | Error       | Error    |
 | EUCC reference                 | n/a     | n/a         | Info        | Error    |
 | PSIRT documented               | Warning | Warning     | Error       | Error    |
-| Module attestation reference   | n/a     | Warning (B+C) | Error (B+C/H) | Error (EUCC) |
+| Module certificate reference   | n/a     | Warning (B+C) | Error (B+C/H) | Error (EUCC) |
 
 Default conformity routes per class:
 
@@ -186,10 +196,10 @@ violation messages.
 | `SBOM-CRA-ANNEX-IV` — EUCC / Common Criteria reference (only fires at Important-2 / Critical) | yes | CRA-family standard that also names EUCC / Common Criteria |
 | `SBOM-EUCC-CERTREF` (under `--standard eucc`)                      | yes                 | same as above                                       |
 | `conformity_summary` → "EU Declaration of Conformity" row          | yes                 | any CRA-family attestation                          |
-| `conformity_summary` → Module B / Module C / Module H rows          | yes                 | any CRA-family attestation                          |
+| `conformity_summary` → Module B / Module C / Module H rows          | yes                 | any CRA-family attestation (the external-reference fallback: a `Certification` ref for Module B and H, an `Attestation` or `Certification` ref for Module C) |
 | `conformity_summary` → EUCC certificate + Target-of-Evaluation rows | yes                 | CRA-family standard that also names EUCC / Common Criteria |
 | `SBOM-CRA-ANNEX-V` — Annex V DoC violation                         | no                  | `Attestation`/`Certification` external ref or sidecar `ceMarkingReference` |
-| `SBOM-CRA-ANNEX-VIII` — module attestation violation               | no                  | `Attestation`/`Certification` external ref          |
+| `SBOM-CRA-ANNEX-VIII` — module certificate violation               | no                  | `Certification` external ref (an `Attestation` ref does not count) |
 | `SBOM-EUCC-PP` / `-TOE` / `-ITSEF` / `-VALIDITY`                   | no                  | dedicated sidecar EUCC fields                       |
 | `SBOM-CRA-ART-14` channels + the `conformity_summary` PSIRT row     | no                  | sidecar fields                                      |
 

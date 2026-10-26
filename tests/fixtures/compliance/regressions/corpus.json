@@ -1324,6 +1324,40 @@
       ]
     },
     {
+      "id": "b1-attestation-only",
+      "review_id": "B1",
+      "fixture": "b1-attestation-only.cdx.json",
+      "sidecar": "b1-attestation-only.cra.json",
+      "note": "An important class I product on the Module B+C route whose only reference is an attestation. It is the Annex V Declaration of Conformity reference, but not the Annex VIII evidence: that route needs the notified-body EU-type examination certificate, a certification-report reference, and an attestation may be a self-attestation.",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-ANNEX-VIII",
+                "severity": "warning"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-CRA-ANNEX-V"
+            ]
+          }
+        },
+        {
+          "standard": "cra-phase1",
+          "expect": {
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-ANNEX-VIII",
+                "severity": "warning"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": "b2-hashed-attestation",
       "review_id": "B2",
       "fixture": "b2-hashed-attestation.cdx.json",

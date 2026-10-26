@@ -984,18 +984,20 @@ const ADVICE_RISK_ASSESSMENT: FormatAdvice = FormatAdvice {
     },
 };
 
-/// Notified-body evidence for the conformity-assessment route (CRA Annex VIII).
+/// Notified-body evidence for the conformity-assessment route (CRA Annex
+/// VIII): a certification reference only, since an attestation may be a
+/// self-attestation.
 const ADVICE_CONFORMITY_EVIDENCE: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "add a metadata.component.externalReferences[] entry of type certification-report or attestation.",
+        text: "add a metadata.component.externalReferences[] entry of type certification-report; an attestation entry does not count.",
         field: Some("metadata.component.externalReferences[]"),
     },
     spdx2: FieldAdvice {
-        text: "no external reference category names a certificate or an attestation, so the check cannot be satisfied from the document.",
+        text: "no external reference category names a certificate, so the check cannot be satisfied from the document.",
         field: None,
     },
     spdx3: FieldAdvice {
-        text: "add an externalRef[] entry with externalRefType certificationReport or secureSoftwareAttestation to the root package.",
+        text: "add an externalRef[] entry with externalRefType certificationReport to the root package; secureSoftwareAttestation does not count.",
         field: Some("externalRef[]"),
     },
 };
@@ -1687,14 +1689,16 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         },
         // Fires only for a pinned class whose route goes beyond Module A:
         // Warning for important class I (the default here), escalated to
-        // Error for important class II and critical products.
+        // Error for important class II and critical products. Only a
+        // certification reference counts: an attestation may be a
+        // self-attestation (it still serves as the Annex V DoC reference).
         "SBOM-CRA-ANNEX-VIII" => RuleMeta {
             sarif_id: "SBOM-CRA-ANNEX-VIII",
             name: "CraConformityAssessment",
             short_description: "CRA Annex VIII: Conformity-assessment evidence for the resolved assessment route",
             default_severity: ViolationSeverity::Warning,
             refs: &[(ANNEX, "Annex VIII")],
-            remediation: "Reference the notified-body evidence the conformity-assessment route requires — the EU-type examination certificate (Module B+C), the quality-system certification (Module H) or the EUCC certificate — as a certification or attestation external reference on the product component.",
+            remediation: "Reference the notified-body or certification-body certificate the conformity-assessment route requires — the EU-type examination certificate (Module B+C), the quality-system approval (Module H) or the EUCC certificate — as a certification external reference on the product component. An attestation reference does not count here, since it may be a self-attestation; it still serves as the Annex V Declaration of Conformity reference.",
             advice: Some(&ADVICE_CONFORMITY_EVIDENCE),
         },
         "SBOM-CRA-PRE-8-RQ-02" => RuleMeta {

@@ -68,14 +68,22 @@ impl ComplianceChecker {
             })
         };
 
+        // Annex V (and the Module C statement): the manufacturer's own
+        // declaration, so an attestation counts as well as a certification
+        // reference or the sidecar CE-marking reference.
         let doc_or_ce = any_ext(&[ExternalRefType::Attestation, ExternalRefType::Certification])
             || self
                 .sidecar
                 .as_ref()
                 .is_some_and(|s| s.ce_marking_reference.is_some());
 
-        let attestation_present =
-            any_ext(&[ExternalRefType::Attestation, ExternalRefType::Certification]);
+        // Annex VIII routes beyond Module A rest on notified-body or
+        // certification-body evidence: only a certification reference
+        // (CycloneDX certification-report, SPDX 3.0 certificationReport)
+        // shows it. An attestation may be a self-attestation, so it does not
+        // count here; the same predicate gates SBOM-CRA-ANNEX-VIII
+        // (check_class_module_attestation).
+        let certificate_present = any_ext(&[ExternalRefType::Certification]);
 
         let eucc_present = self
             .sidecar
@@ -112,9 +120,9 @@ impl ComplianceChecker {
             }
             ConformityRoute::ModuleBC => {
                 let (satisfied, detail) = cdxa(
-                    attestation_present,
+                    certificate_present,
                     cdxa_level,
-                    "Notified-body certificate of EU-type examination — Attestation/Certification external ref.",
+                    "Notified-body certificate of EU-type examination — Certification external ref (an attestation does not count).",
                 );
                 evidence.push(ConformityEvidence {
                     label: "EU-type examination certificate (Module B)".to_string(),
@@ -134,9 +142,9 @@ impl ComplianceChecker {
             }
             ConformityRoute::ModuleH => {
                 let (satisfied, detail) = cdxa(
-                    attestation_present,
+                    certificate_present,
                     cdxa_level,
-                    "Notified-body QMS certification (typically ISO 9001 / ISO/IEC 27001 family) — Certification external ref.",
+                    "Notified-body QMS certification (typically ISO 9001 / ISO/IEC 27001 family) — Certification external ref (an attestation does not count).",
                 );
                 evidence.push(ConformityEvidence {
                     label: "Quality-management-system certification (Module H)".to_string(),
@@ -144,9 +152,9 @@ impl ComplianceChecker {
                     satisfied,
                 });
                 let (satisfied, detail) = cdxa(
-                    attestation_present,
+                    certificate_present,
                     cdxa_level,
-                    "Notified-body surveillance / re-assessment record — referenced via Attestation external ref.",
+                    "Notified-body surveillance / re-assessment record — Certification external ref (an attestation does not count).",
                 );
                 evidence.push(ConformityEvidence {
                     label: "QMS surveillance plan".to_string(),
@@ -849,11 +857,17 @@ impl ComplianceChecker {
         }
     }
 
-    /// Conformity-assessment-module attestation reference.
+    /// Conformity-assessment-module certificate reference.
     ///
-    /// Module B+C / H / EUCC routes require an attestation external reference
-    /// (notified-body certificate, QA-system certification, EUCC certificate).
-    /// Module A (self-assessment) is skipped. Severity scales with class.
+    /// Module B+C / H / EUCC routes rest on notified-body or
+    /// certification-body evidence — the EU-type examination certificate,
+    /// the quality-system approval or the EUCC certificate — so they require
+    /// a certification external reference (CycloneDX `certification-report`,
+    /// SPDX 3.0 `certificationReport`). An attestation reference (CycloneDX
+    /// `attestation`, SPDX 3.0 `secureSoftwareAttestation`) may be a
+    /// self-attestation and does not count here, though it still serves as
+    /// the Annex V DoC reference. Module A (self-assessment) is skipped.
+    /// Severity scales with class.
     pub(crate) fn check_class_module_attestation(
         &self,
         sbom: &NormalizedSbom,
@@ -867,27 +881,23 @@ impl ComplianceChecker {
         if matches!(route, R::ModuleA) {
             return; // Module A self-assessment doesn't require external attestation
         }
-        let has_attestation = sbom.components.values().any(|comp| {
-            comp.external_refs.iter().any(|r| {
-                matches!(
-                    r.ref_type,
-                    crate::model::ExternalRefType::Attestation
-                        | crate::model::ExternalRefType::Certification
-                )
-            })
+        let has_certificate = sbom.components.values().any(|comp| {
+            comp.external_refs
+                .iter()
+                .any(|r| matches!(r.ref_type, crate::model::ExternalRefType::Certification))
         });
-        if !has_attestation {
+        if !has_certificate {
             violations.push(Violation {
                 severity,
                 category: ViolationCategory::DocumentMetadata,
                 message: format!(
-                    "[CRA Annex VIII / {}] No attestation or certification external reference found — required for the {} conformity route",
+                    "[CRA Annex VIII / {}] No certification external reference found — the {} conformity route needs the notified-body or certification-body certificate; an attestation reference does not count",
                     route.label(),
                     route.label()
                 ),
                 element: None,
                 requirement: format!(
-                    "CRA Annex VIII: {} attestation reference",
+                    "CRA Annex VIII: {} certificate reference",
                     route.label()
                 ),
                 rule_id: "SBOM-CRA-ANNEX-VIII",

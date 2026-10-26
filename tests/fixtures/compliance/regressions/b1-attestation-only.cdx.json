@@ -1,0 +1,38 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:4d6f8a0c-2e4a-4c6e-8a0c-6e8a0c2e4a6c",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T00:00:00Z",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "example-generator",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    "manufacturer": {
+      "name": "Example Corp"
+    },
+    "component": {
+      "type": "application",
+      "bom-ref": "gateway",
+      "name": "gateway",
+      "version": "3.1.0",
+      "purl": "pkg:generic/example/gateway@3.1.0",
+      "supplier": {
+        "name": "Example Corp"
+      },
+      "externalReferences": [
+        {
+          "type": "attestation",
+          "url": "https://example.com/compliance/eu-type-examination-self-assessment.pdf"
+        }
+      ]
+    }
+  },
+  "components": []
+}
