@@ -550,7 +550,7 @@ struct ViewArgs {
 
 JSON OUTPUT:
     -o json emits the sbom-tools/compliance/v2 envelope (one object for any
-    number of standards; schema: schemas/compliance-v2.schema.json). The
+    number of standards; schema: schemas/compliance/v2.schema.json). The
     pre-0.4 layout stays available with --json-schema v1 until v0.5.0.
 
 EXAMPLES:

@@ -3,7 +3,7 @@
 `sbom-tools validate -o json` prints one JSON object, the
 `sbom-tools/compliance/v2` envelope, whatever the number of standards checked.
 The schema is published at
-[`schemas/compliance-v2.schema.json`](../schemas/compliance-v2.schema.json)
+[`schemas/compliance/v2.schema.json`](../schemas/compliance/v2.schema.json)
 (JSON Schema draft 2020-12), and the test suite validates every `-o json`
 output against it.
 

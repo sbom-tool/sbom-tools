@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "sbom-tools/compliance/v2",
+  "$id": "compliance/v2",
   "title": "ComplianceEnvelope",
   "description": "Output of `sbom-tools validate -o json`: one object whatever the number of standards checked. Later releases may add fields without changing `schema`, so consumers must ignore fields they do not know. Field reference: docs/compliance-output.md.",
   "type": "object",

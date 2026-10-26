@@ -2,7 +2,7 @@
 //!
 //! One object whatever the number of standards checked, with one `results[]`
 //! entry per standard. The schema is published at
-//! `schemas/compliance-v2.schema.json`; docs/compliance-output.md describes
+//! `schemas/compliance/v2.schema.json`; docs/compliance-output.md describes
 //! every field.
 //!
 //! Each violation is the [`Violation`]'s own serialization plus its finding

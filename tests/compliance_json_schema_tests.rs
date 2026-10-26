@@ -1,7 +1,7 @@
 //! The `sbom-tools/compliance/v2` envelope against its published schema.
 //!
 //! Every compliance level is rendered for every SBOM fixture and validated
-//! twice: against `schemas/compliance-v2.schema.json` as published, and
+//! twice: against `schemas/compliance/v2.schema.json` as published, and
 //! against a strict copy that rejects undeclared fields, so a field the
 //! envelope starts emitting cannot ship without a schema entry. The CLI side
 //! (`validate -o json` for every `--standard`) is covered in
@@ -24,7 +24,7 @@ use serde_json::{Value, json};
 const FIXTURES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 const SCHEMA_PATH: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/schemas/compliance-v2.schema.json"
+    "/schemas/compliance/v2.schema.json"
 );
 
 /// Fixture directories that hold SBOMs (as in tests/compliance_snapshots.rs).

@@ -497,7 +497,7 @@ Checks an SBOM against a compliance standard and reports missing fields or faili
 `-o json` emits one object for any number of standards, with a stable
 `finding_id` on every violation; [docs/compliance-output.md](docs/compliance-output.md)
 describes every field, and the schema is
-[`schemas/compliance-v2.schema.json`](schemas/compliance-v2.schema.json).
+[`schemas/compliance/v2.schema.json`](schemas/compliance/v2.schema.json).
 
 </details>
 

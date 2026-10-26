@@ -368,7 +368,7 @@ const CANONICAL_STANDARDS: [&str; 16] = [
 fn compliance_schema() -> Value {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/schemas/compliance-v2.schema.json"
+        "/schemas/compliance/v2.schema.json"
     );
     serde_json::from_str(&std::fs::read_to_string(path).expect("schema readable"))
         .expect("schema is JSON")
