@@ -66,26 +66,24 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-EO14028-INTEGRITY  - (1/2)
 [Cnsa2] NON-COMPLIANT · E13 W0 I0
   E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-128-cbc
+  E SBOM-CNSA2-ALG-002  crypto/algorithm/hkdf-sha256
+  E SBOM-CNSA2-ALG-002  crypto/algorithm/hmac-sha256
   E SBOM-CNSA2-ALG-002  crypto/algorithm/sha-256
   E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p256
   E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p384
   E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-2048
-  E SBOM-CNSA2-ALG-UNKNOWN  crypto/algorithm/hkdf-sha256
-  E SBOM-CNSA2-ALG-UNKNOWN  crypto/algorithm/hmac-sha256
   E SBOM-CNSA2-CERT-001  crypto/certificate/internal-ca
   E SBOM-CNSA2-CERT-001  crypto/certificate/webapp-tls
   E SBOM-CNSA2-PROTO-001  crypto/protocol/tls12
   E SBOM-CNSA2-PROTO-002  crypto/protocol/ssh
   E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12 ×2
-[NistPqc] NON-COMPLIANT · E7 W2 I0
+[NistPqc] NON-COMPLIANT · E7 W0 I0
   E SBOM-PQC-001  crypto/algorithm/ecdh-p256
   E SBOM-PQC-001  crypto/algorithm/ecdsa-p384
   E SBOM-PQC-001  crypto/algorithm/rsa-2048
   E SBOM-PQC-CERT-001  crypto/certificate/internal-ca
   E SBOM-PQC-CERT-001  crypto/certificate/webapp-tls
   E SBOM-PQC-PROTO-002  crypto/protocol/tls12 ×2
-  W SBOM-PQC-ALG-UNKNOWN  crypto/algorithm/hkdf-sha256
-  W SBOM-PQC-ALG-UNKNOWN  crypto/algorithm/hmac-sha256
 [BsiTr03183_2] NON-COMPLIANT · E3 W2 I0
   E SBOM-BSI-TR-03183-2-5-1  -
   E SBOM-BSI-TR-03183-2-5-4  - (1/2)
