@@ -816,17 +816,21 @@ const ADVICE_VULN_SEVERITY: FormatAdvice = FormatAdvice {
 };
 
 /// A fixed version or fix description on each vulnerability remediation.
+/// Only CycloneDX input reaches the check: an `analysis.response` of
+/// `update` or `workaround_available` with no text (see the parser's
+/// `cdx_remediation`). OSV enrichment records a fixed version with every
+/// remediation it adds, and no other source builds one without details.
 const ADVICE_VULN_REMEDIATION: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "set vulnerabilities[].recommendation on each entry to the fix (a fixed version or the steps to take).",
+        text: "an entry whose analysis.response declares update or workaround_available needs the details: set vulnerabilities[].recommendation to the fix (a fixed version or the steps to take), or vulnerabilities[].workaround to the workaround.",
         field: Some("vulnerabilities[].recommendation"),
     },
     spdx2: FieldAdvice {
-        text: "documents in this format carry no vulnerability data, so these entries were attached by enrichment.",
+        text: "documents in this format carry no vulnerability data, and enrichment records a fixed version with every remediation it adds, so the check does not fire on SPDX 2.x input.",
         field: None,
     },
     spdx3: FieldAdvice {
-        text: "remediations are not read from this format, so these entries were attached by enrichment.",
+        text: "the parser builds no remediation from this format, and enrichment records a fixed version with every remediation it adds, so the check does not fire on SPDX 3.0 input.",
         field: None,
     },
 };
