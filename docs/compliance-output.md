@@ -57,6 +57,7 @@ identity.
 | `message` | string | Human-readable explanation. Its wording may change in any release. |
 | `element` | string or null | Human-readable label of the offending element (usually a component name). Not unique. |
 | `component_id` | string | Canonical id of the offending component. Absent for document-level and aggregate findings. |
+| `finding_detail` | string | What tells this finding apart from the rule's other findings on the same subject: a value from the SBOM, such as the vulnerability id or the cipher suite. Absent when the rule reports at most one finding per subject. |
 | `counts` | object | `affected` and `total` components of an aggregate finding. Absent otherwise. |
 | `requirement` | string | The requirement, as text. |
 | `rule_id` | string | Stable internal rule key, e.g. `SBOM-NTIA-SUPPLIER`. |

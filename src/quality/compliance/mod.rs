@@ -537,6 +537,17 @@ pub struct Violation {
     /// Serialized as `component_id`, omitted when `None`; old payloads
     /// without the field deserialize to `None`.
     pub component_id: Option<String>,
+    /// What tells this finding apart from the rule's other findings on the
+    /// same subject, for a rule that legitimately reports several: a value
+    /// from the SBOM's own data, such as the vulnerability id of a
+    /// per-vulnerability finding or the cipher suite of a per-suite one.
+    /// Never message text, so rewording a message cannot change it.
+    ///
+    /// Part of the finding key (see [`finding_key`]). `None` for rules that
+    /// report at most one finding per subject. Serialized as
+    /// `finding_detail`, omitted when `None`; old payloads without the field
+    /// deserialize to `None`.
+    pub finding_detail: Option<String>,
     /// Affected/total component counts for aggregate findings.
     ///
     /// Mirrors the numbers embedded in the human-readable `message`
@@ -614,6 +625,8 @@ struct ViolationPayload {
     #[serde(default)]
     component_id: Option<String>,
     #[serde(default)]
+    finding_detail: Option<String>,
+    #[serde(default)]
     counts: Option<ViolationCounts>,
     requirement: String,
     #[serde(default)]
@@ -636,6 +649,7 @@ impl<'de> Deserialize<'de> for Violation {
             message: payload.message,
             element: payload.element,
             component_id: payload.component_id,
+            finding_detail: payload.finding_detail,
             counts: payload.counts,
             requirement: payload.requirement,
             // Unknown ids (from newer/older registries) collapse to the
@@ -658,9 +672,9 @@ impl Serialize for Violation {
     /// the externally-visible `sarif_rule_id` derived from the rule registry
     /// (never stored, so it cannot drift). Field order mirrors declaration
     /// order; `standard_refs` is skipped when empty, and `component_id` /
-    /// `counts` are skipped when `None`, as their serde-derive
-    /// `skip_serializing_if = "Option::is_none"` equivalents would be.
-    /// `remediation` is always written (see
+    /// `finding_detail` / `counts` are skipped when `None`, as their
+    /// serde-derive `skip_serializing_if = "Option::is_none"` equivalents
+    /// would be. `remediation` is always written (see
     /// [`Violation::remediation_guidance`]), followed by the derived
     /// `help_uri`, which is skipped when no standard reference has a URL.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -670,12 +684,14 @@ impl Serialize for Violation {
         use serde::ser::SerializeStruct;
         let has_refs = !self.standard_refs.is_empty();
         let has_component_id = self.component_id.is_some();
+        let has_finding_detail = self.finding_detail.is_some();
         let has_counts = self.counts.is_some();
         let help_uri = self.help_uri();
         let mut state = serializer.serialize_struct(
             "Violation",
             8 + usize::from(has_refs)
                 + usize::from(has_component_id)
+                + usize::from(has_finding_detail)
                 + usize::from(has_counts)
                 + usize::from(help_uri.is_some()),
         )?;
@@ -687,6 +703,11 @@ impl Serialize for Violation {
             state.serialize_field("component_id", &self.component_id)?;
         } else {
             state.skip_field("component_id")?;
+        }
+        if has_finding_detail {
+            state.serialize_field("finding_detail", &self.finding_detail)?;
+        } else {
+            state.skip_field("finding_detail")?;
         }
         if has_counts {
             state.serialize_field("counts", &self.counts)?;
@@ -2343,6 +2364,7 @@ mod tests {
             counts: None,
             standard_refs: Vec::new(),
             remediation: None,
+            finding_detail: None,
         };
         let errors_only = ComplianceResult::new(
             ComplianceLevel::NtiaMinimum,
@@ -2479,6 +2501,7 @@ mod tests {
                 .map(|(kind, id)| StandardRef::new(*kind, *id))
                 .collect(),
             remediation: None,
+            finding_detail: None,
         };
         let json = serde_json::to_value(&hardware).expect("violation serializes");
         assert!(
@@ -2515,6 +2538,32 @@ mod tests {
         );
     }
 
+    /// `finding_detail` is written right after `component_id`, only when
+    /// set, and round-trips; payloads without it deserialize to `None`.
+    #[test]
+    fn finding_detail_is_written_only_when_set_and_round_trips() {
+        let mut v = ntia_supplier_finding(SbomFormat::CycloneDx, "1.6");
+        let json = serde_json::to_value(&v).expect("violation serializes");
+        assert!(
+            json.get("finding_detail").is_none(),
+            "omitted when None: {json}"
+        );
+        let old: Violation =
+            serde_json::from_value(json).expect("payload without the field deserializes");
+        assert_eq!(old.finding_detail, None);
+
+        v.finding_detail = Some("CVE-2026-0001".to_string());
+        let text = serde_json::to_string(&v).expect("violation serializes");
+        assert!(
+            text.contains(
+                r#""component_id":"pkg:cargo/lib@1.0","finding_detail":"CVE-2026-0001","#
+            ),
+            "{text}"
+        );
+        let back: Violation = serde_json::from_str(&text).expect("payload deserializes");
+        assert_eq!(back.finding_detail.as_deref(), Some("CVE-2026-0001"));
+    }
+
     /// A violation built outside the checker has no input format, so its
     /// remediation lists every format's advice; an unregistered rule id has
     /// no registry guidance at all.
@@ -2531,6 +2580,7 @@ mod tests {
             counts: None,
             standard_refs: Vec::new(),
             remediation: None,
+            finding_detail: None,
         };
         let guidance = unstamped("SBOM-CRA-COMPONENT-SUPPLIER")
             .remediation_guidance()
@@ -2720,6 +2770,7 @@ mod tests {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             },
             Violation {
                 severity: ViolationSeverity::Warning,
@@ -2732,6 +2783,7 @@ mod tests {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             },
             Violation {
                 severity: ViolationSeverity::Info,
@@ -2744,6 +2796,7 @@ mod tests {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             },
         ];
 
@@ -3844,6 +3897,7 @@ mod tests {
             counts: None,
             standard_refs: Vec::new(),
             remediation: None,
+            finding_detail: None,
         };
         v.registry_standard_refs()
     }
@@ -3894,6 +3948,7 @@ mod tests {
             counts: None,
             standard_refs: Vec::new(),
             remediation: None,
+            finding_detail: None,
         };
         let guidance = v.remediation_guidance();
         assert!(

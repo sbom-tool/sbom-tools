@@ -1499,6 +1499,7 @@ mod tests {
             counts: None,
             standard_refs: Vec::new(),
             remediation: None,
+            finding_detail: None,
         }
     }
 

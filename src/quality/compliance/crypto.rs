@@ -432,6 +432,7 @@ impl ComplianceChecker {
                                     counts: None,
                                     standard_refs: Vec::new(),
                                     remediation: None,
+                                    finding_detail: None,
                                 });
                             }
                             // An unclassifiable signature ref fails closed —
@@ -455,6 +456,7 @@ impl ComplianceChecker {
                                     counts: None,
                                     standard_refs: Vec::new(),
                                     remediation: None,
+                                    finding_detail: None,
                                 });
                             }
                         }
@@ -495,6 +497,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
     }
@@ -543,6 +546,7 @@ impl ComplianceChecker {
                             counts: None,
                             standard_refs: Vec::new(),
                             remediation: None,
+                            finding_detail: None,
                         });
                     }
                 } else {
@@ -560,6 +564,7 @@ impl ComplianceChecker {
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 }
             }
@@ -588,6 +593,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
                 true
             }
@@ -621,6 +627,7 @@ impl ComplianceChecker {
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
+                        finding_detail: None,
                     });
                 }
                 declared_vulnerable
@@ -657,6 +664,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         } else if matches!(proto.protocol_type, ProtocolType::Tls | ProtocolType::Dtls)
             && proto.version.as_deref().and_then(parse_tls_version) != Some((1, 3))
@@ -685,6 +693,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
         let version_rejected = violations.len() > violations_before;
@@ -709,6 +718,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         };
         // References that resolve nowhere and carry no recognizable token
@@ -827,6 +837,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         } else if judged == 0 && !version_rejected {
             let detail = if substantive {
@@ -851,6 +862,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
         version_rejected || judged > 0
@@ -926,6 +938,7 @@ impl ComplianceChecker {
                                 counts: None,
                                 standard_refs: Vec::new(),
                                 remediation: None,
+                                finding_detail: None,
                             });
                         } else if cls.class == AlgorithmClass::Unknown {
                             // An unclassifiable signature ref must warn, never
@@ -949,6 +962,7 @@ impl ComplianceChecker {
                                 counts: None,
                                 standard_refs: Vec::new(),
                                 remediation: None,
+                                finding_detail: None,
                             });
                         }
                     }
@@ -992,6 +1006,7 @@ impl ComplianceChecker {
                                     counts: None,
                                     standard_refs: Vec::new(),
                                     remediation: None,
+                                    finding_detail: None,
                                 });
                             }
                         }
@@ -1020,6 +1035,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
     }
@@ -1058,6 +1074,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -1088,6 +1105,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -1104,6 +1122,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -1126,6 +1145,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -1145,6 +1165,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
 
@@ -1175,6 +1196,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
+                    finding_detail: None,
                 });
             }
         }
@@ -1195,6 +1217,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
         cls.class != AlgorithmClass::Unknown || ql == Some(0) || hybrid
@@ -1232,6 +1255,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         } else if matches!(proto.protocol_type, ProtocolType::Tls | ProtocolType::Dtls)
             && let Some(version) = proto.version.as_deref()
@@ -1253,6 +1277,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
         let version_rejected = violations.len() > violations_before;
@@ -1287,6 +1312,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         };
         // How many algorithms the classifier could identify, ready or not.
@@ -1398,6 +1424,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         } else if judged.get() == 0 && !version_rejected {
             // Nothing the classifier can name: a TLS 1.3 asset whose suites
@@ -1422,6 +1449,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
+                finding_detail: None,
             });
         }
         version_rejected || judged.get() > 0
