@@ -93,6 +93,7 @@ fn every_violation_carries_remediation_for_its_format() {
                 let foreign = match format {
                     RemediationFormat::CycloneDx => SPDX_FIELDS,
                     RemediationFormat::Spdx2 | RemediationFormat::Spdx3 => CYCLONEDX_FIELDS,
+                    other => panic!("no foreign fields listed for {other:?}"),
                 };
                 for field in foreign {
                     assert!(

@@ -142,6 +142,7 @@ fn sarif_descriptors_match_registry_name_description_and_severity() {
                 ViolationSeverity::Error => "error",
                 ViolationSeverity::Warning => "warning",
                 ViolationSeverity::Info => "note",
+                other => panic!("no SARIF level for severity {other:?}"),
             };
             assert_eq!(
                 rule["defaultConfiguration"]["level"].as_str(),

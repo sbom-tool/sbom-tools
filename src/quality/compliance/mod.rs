@@ -61,6 +61,7 @@ use shared::{
 
 /// CRA enforcement phase
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum CraPhase {
     /// Phase 1: Article 14 reporting obligations — apply from 11 September 2026
     /// (Reg. (EU) 2024/2847 Art. 71(2)). Basic SBOM requirements:
@@ -414,6 +415,7 @@ impl StandardKind {
 /// can map a violation directly to the standards landscape without parsing
 /// the human-readable `requirement` string.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct StandardRef {
     /// Which standard this reference points at
     pub standard: StandardKind,
@@ -521,6 +523,7 @@ impl StandardKind {
 
 /// A compliance violation
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct Violation {
     /// Severity: error, warning, info
     pub severity: ViolationSeverity,
@@ -605,6 +608,7 @@ pub struct Violation {
 /// the human-readable message (e.g. "7/10 components (70%)…"), so machine
 /// consumers can extract them without regexing the message.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct ViolationCounts {
     /// Numerator as printed in the message — usually the number of offending
     /// components; for coverage-style findings ("only X/Y carry …") it is the
@@ -844,6 +848,7 @@ fn registry_sarif_id(rule_id: &str) -> &'static str {
 /// [`finding_key`]), and the two share one key space: a rule reports either
 /// violations or passes, never both.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct PassedCheck {
     /// Stable internal rule key, a [`RuleKind::Pass`] rule of the registry.
     pub rule_id: &'static str,
@@ -1024,6 +1029,7 @@ pub const fn generic_rule_id_for_level(level: ComplianceLevel) -> &'static str {
 
 /// Severity of a compliance violation
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum ViolationSeverity {
     /// Must be fixed for compliance
     Error,
@@ -1049,6 +1055,7 @@ impl ViolationSeverity {
 
 /// Category of compliance violation
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum ViolationCategory {
     /// Document metadata issue
     DocumentMetadata,
@@ -1128,6 +1135,7 @@ impl ViolationCategory {
 /// without the field deserialize as `Applicable`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case", tag = "status", content = "reason")]
+#[non_exhaustive]
 pub enum Applicability {
     /// The standard evaluated the SBOM; `is_compliant` is meaningful.
     #[default]
@@ -1138,6 +1146,7 @@ pub enum Applicability {
 
 /// Result of compliance checking
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct ComplianceResult {
     /// Overall compliance status
     pub is_compliant: bool,
@@ -1176,6 +1185,7 @@ pub struct ComplianceResult {
 /// notified bodies and auditors see the route + the missing evidence in
 /// one glance.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct ConformityAssessmentSummary {
     /// CRA Annex III/IV product class
     pub product_class: crate::model::CraProductClass,
@@ -1189,6 +1199,7 @@ pub struct ConformityAssessmentSummary {
 /// the SBOM (or sidecar) carries the expected reference; `false` means it
 /// is missing and the manufacturer should attach it before submitting.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct ConformityEvidence {
     /// Short label (e.g., "EU Declaration of Conformity")
     pub label: String,
@@ -1299,6 +1310,7 @@ impl ComplianceResult {
 /// given class" (typically Default doesn't carry EUCC/attestation
 /// expectations).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum ClassCheck {
     /// Vendor-supplied hash coverage below threshold ([PRE-7-RQ-07-RE]).
     VendorHashCoverage,
