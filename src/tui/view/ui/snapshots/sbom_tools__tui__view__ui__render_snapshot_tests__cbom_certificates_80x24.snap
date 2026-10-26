@@ -8,7 +8,7 @@ sbom-tools  VIEW  │ quantum-ready-app │ CycloneDX 1.7 │ [CBOM]
 
 ────────────────────────────────────────────────────────────────────────────────
 ┌ Certificates (1) ────────────────┐┌ Certificate Detail ──────────────────────┐
-│✓ quantum-ready-app...  2028-01-01││Name: quantum-ready-app.example.com       │
+│✓ quantum-ready-app...  2099-01-01││Name: quantum-ready-app.example.com       │
 │                                  ││                                          │
 │                                  ││Subject:    CN =                          │
 │                                  ││quantum-ready-app.example.com, O = Acme   │
@@ -17,7 +17,7 @@ sbom-tools  VIEW  │ quantum-ready-app │ CycloneDX 1.7 │ [CBOM]
 │                                  ││Corp, C = US                              │
 │                                  ││                                          │
 │                                  ││Valid From: 2026-01-01                    │
-│                                  ││Valid To:   2028-01-01                    │
+│                                  ││Valid To:   2099-01-01                    │
 │                                  ││Remaining:  [N] days   │
 │                                  ││                                          │
 │                                  ││Format:     X.509                         │

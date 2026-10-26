@@ -492,8 +492,9 @@ mod tests {
             .with_timezone(&chrono::Utc)
     }
 
+    /// Pinned to the shared test clock (tests/common/clock.rs).
     fn checker() -> ComplianceChecker {
-        ComplianceChecker::new(ComplianceLevel::PciDss632)
+        ComplianceChecker::new(ComplianceLevel::PciDss632).with_as_of(ts("2026-10-12T00:00:00Z"))
     }
 
     fn run(sbom: &NormalizedSbom) -> Vec<Violation> {

@@ -7,9 +7,13 @@
 //! exact violation count, so that adding more fine-grained checks does
 //! not require updating every fixture in lockstep.
 
+#[path = "common/clock.rs"]
+mod clock;
+
+use clock::checker;
 use sbom_tools::model::CraSidecarMetadata;
 use sbom_tools::parsers::parse_sbom;
-use sbom_tools::quality::{ComplianceChecker, ComplianceLevel, ViolationSeverity};
+use sbom_tools::quality::{ComplianceLevel, ViolationSeverity};
 use std::path::PathBuf;
 
 fn fixtures_dir() -> PathBuf {
@@ -34,7 +38,7 @@ fn cra_compliant_cdx_with_sidecar_has_no_errors_at_phase2() {
     let parsed = parse_sbom(&sbom_path).expect("parse compliant fixture");
     let sidecar = CraSidecarMetadata::from_file(&sidecar_path).expect("load sidecar");
 
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let result = checker(ComplianceLevel::CraPhase2)
         .with_sidecar(sidecar)
         .check(&parsed);
 
@@ -53,7 +57,7 @@ fn cra_compliant_cdx_with_sidecar_has_no_errors_at_phase2() {
 fn cra_compliant_cdx_passes_bsi_with_no_errors() {
     let sbom_path = fixtures_dir().join("cra-compliant.cdx.json");
     let parsed = parse_sbom(&sbom_path).expect("parse compliant fixture");
-    let result = ComplianceChecker::new(ComplianceLevel::BsiTr03183_2).check(&parsed);
+    let result = checker(ComplianceLevel::BsiTr03183_2).check(&parsed);
     let errors: Vec<_> = result
         .violations
         .iter()
@@ -71,7 +75,7 @@ fn cra_compliant_passes_oss_steward_floor() {
     let sidecar_path = fixtures_dir().join("cra-compliant.cra.json");
     let parsed = parse_sbom(&sbom_path).unwrap();
     let sidecar = CraSidecarMetadata::from_file(&sidecar_path).unwrap();
-    let result = ComplianceChecker::new(ComplianceLevel::CraOssSteward)
+    let result = checker(ComplianceLevel::CraOssSteward)
         .with_sidecar(sidecar)
         .check(&parsed);
     let errors: Vec<_> = result
@@ -90,7 +94,7 @@ fn noncompliant_no_manufacturer_fires_art_13_16_or_supplier_check() {
     let sbom_path = fixtures_dir().join("cra-noncompliant-no-manufacturer.cdx.json");
     assert!(sbom_path.exists());
     let parsed = parse_sbom(&sbom_path).expect("parse fixture");
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&parsed);
+    let result = checker(ComplianceLevel::CraPhase2).check(&parsed);
 
     let manufacturer_finding = result.violations.iter().any(|v| {
         v.requirement.contains("Art. 13(16)")
@@ -113,7 +117,7 @@ fn noncompliant_weak_hashes_fires_at_bsi_or_phase2() {
     let sbom_path = fixtures_dir().join("cra-noncompliant-weak-hashes.cdx.json");
     let parsed = parse_sbom(&sbom_path).expect("parse fixture");
 
-    let bsi = ComplianceChecker::new(ComplianceLevel::BsiTr03183_2).check(&parsed);
+    let bsi = checker(ComplianceLevel::BsiTr03183_2).check(&parsed);
     let bsi_hash_finding = bsi.violations.iter().any(|v| {
         v.rule_id == "SBOM-BSI-TR-03183-2-5-4" || v.rule_id == "SBOM-BSI-TR-03183-2-5-4-MISSING"
     });
@@ -138,7 +142,7 @@ fn vendor_hash_carry_through_satisfied_by_compliant_fixture() {
     let parsed = parse_sbom(&sbom_path).unwrap();
     let mut sc = CraSidecarMetadata::from_file(&sidecar_path).unwrap();
     sc.product_class = Some(sbom_tools::model::CraProductClass::ImportantClass2);
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let result = checker(ComplianceLevel::CraPhase2)
         .with_sidecar(sc)
         .check(&parsed);
     assert!(
@@ -156,7 +160,7 @@ fn conformity_summary_present_when_class_pinned_via_sidecar() {
     let sidecar_path = fixtures_dir().join("cra-compliant.cra.json");
     let parsed = parse_sbom(&sbom_path).unwrap();
     let sc = CraSidecarMetadata::from_file(&sidecar_path).unwrap();
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let result = checker(ComplianceLevel::CraPhase2)
         .with_sidecar(sc)
         .check(&parsed);
     assert!(
@@ -186,7 +190,7 @@ fn spdx3_shared_creationinfo_fixture_passes_bsi_gate_with_no_errors() {
         "specVersion must resolve through the shared CreationInfo node"
     );
 
-    let result = ComplianceChecker::new(ComplianceLevel::BsiTr03183_2).check(&parsed);
+    let result = checker(ComplianceLevel::BsiTr03183_2).check(&parsed);
     let errors: Vec<_> = result
         .violations
         .iter()

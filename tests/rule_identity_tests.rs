@@ -15,10 +15,12 @@
 //!    findings carry `counts` mirroring the message's affected/total numbers —
 //!    on JSON and SARIF alike — while old payloads still deserialize.
 
+#[path = "common/clock.rs"]
+mod clock;
+
+use clock::{as_of, checker};
 use sbom_tools::model::{Component, DocumentMetadata, NormalizedSbom};
-use sbom_tools::quality::{
-    ComplianceChecker, ComplianceLevel, QualityScorer, ScoringProfile, rule_meta,
-};
+use sbom_tools::quality::{ComplianceLevel, QualityScorer, ScoringProfile, rule_meta};
 use sbom_tools::reports::{generate_compliance_sarif, generate_quality_sarif};
 use std::collections::BTreeSet;
 
@@ -40,7 +42,7 @@ fn violating_sbom() -> NormalizedSbom {
 
 #[test]
 fn serialized_violations_carry_rule_id_and_sarif_rule_id() {
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&violating_sbom());
+    let result = checker(ComplianceLevel::CraPhase2).check(&violating_sbom());
     assert!(
         !result.violations.is_empty(),
         "fixture must fire violations"
@@ -85,7 +87,7 @@ fn old_payloads_without_rule_id_still_deserialize() {
 
 #[test]
 fn known_rule_ids_survive_a_serde_round_trip() {
-    let result = ComplianceChecker::new(ComplianceLevel::NtiaMinimum).check(&violating_sbom());
+    let result = checker(ComplianceLevel::NtiaMinimum).check(&violating_sbom());
     let json = serde_json::to_string(&result).expect("serialize");
     let back: sbom_tools::quality::ComplianceResult =
         serde_json::from_str(&json).expect("deserialize");
@@ -114,7 +116,7 @@ fn sarif_descriptors_match_registry_name_description_and_severity() {
         ComplianceLevel::Cnsa2,
         ComplianceLevel::NistPqc,
     ] {
-        let result = ComplianceChecker::new(level).check(&sbom);
+        let result = checker(level).check(&sbom);
         let sarif = generate_compliance_sarif(&result).expect("sarif generation");
         let json: serde_json::Value = serde_json::from_str(&sarif).expect("valid JSON");
         let rules = json["runs"][0]["tool"]["driver"]["rules"]
@@ -172,12 +174,14 @@ fn quality_and_validate_sarif_agree_on_rule_ids() {
     let sbom = violating_sbom();
 
     // `quality --profile cra -o sarif`
-    let report = QualityScorer::new(ScoringProfile::Cra).score(&sbom);
+    let report = QualityScorer::new(ScoringProfile::Cra)
+        .with_as_of(as_of())
+        .score(&sbom);
     assert_eq!(report.compliance.level, ComplianceLevel::CraPhase2);
     let quality_sarif = generate_quality_sarif(&report, "test.cdx.json", "cra").expect("sarif");
 
     // `validate --standard cra-phase-2 -o sarif`
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&sbom);
+    let result = checker(ComplianceLevel::CraPhase2).check(&sbom);
     let validate_sarif = generate_compliance_sarif(&result).expect("sarif");
 
     let quality_ids: BTreeSet<String> = sarif_rule_ids(&quality_sarif)
@@ -195,7 +199,9 @@ fn quality_and_validate_sarif_agree_on_rule_ids() {
 #[test]
 fn quality_sarif_has_no_invented_quality_ids_and_no_error_level_recommendations() {
     let sbom = violating_sbom();
-    let report = QualityScorer::new(ScoringProfile::Cra).score(&sbom);
+    let report = QualityScorer::new(ScoringProfile::Cra)
+        .with_as_of(as_of())
+        .score(&sbom);
     assert!(
         !report.recommendations.is_empty(),
         "fixture must produce recommendations"
@@ -266,8 +272,7 @@ fn declared_rule_ids(run: &serde_json::Value) -> BTreeSet<String> {
 /// result carries `properties.standardIds` for the running standard.
 #[test]
 fn ntia_validate_sarif_emits_no_cra_rule_ids_and_family_correct_fallback() {
-    let result =
-        ComplianceChecker::new(ComplianceLevel::NtiaMinimum).check(&fallback_firing_sbom());
+    let result = checker(ComplianceLevel::NtiaMinimum).check(&fallback_firing_sbom());
     // Check sites stamp the family generic directly, so the JSON-visible
     // rule_id agrees with SARIF — no CRA identity anywhere in the raw result.
     assert!(
@@ -362,7 +367,7 @@ fn quality_sarif_emits_no_cra_rule_ids_for_non_cra_profiles() {
 /// scanning dedups on these ids).
 #[test]
 fn cra_validate_sarif_keeps_the_cra_general_fallback() {
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&fallback_firing_sbom());
+    let result = checker(ComplianceLevel::CraPhase2).check(&fallback_firing_sbom());
     let sarif = generate_compliance_sarif(&result).expect("sarif");
     let ids = sarif_rule_ids(&sarif);
     assert!(
@@ -380,7 +385,7 @@ fn oscal_emits_one_result_per_standard_with_verdict_and_applicability() {
     let sbom = violating_sbom();
     let results: Vec<_> = [ComplianceLevel::NtiaMinimum, ComplianceLevel::CraPhase2]
         .into_iter()
-        .map(|l| ComplianceChecker::new(l).check(&sbom))
+        .map(|l| checker(l).check(&sbom))
         .collect();
     let oscal = sbom_tools::reports::oscal::generate_assessment_results(&results).expect("oscal");
     let json: serde_json::Value = serde_json::from_str(&oscal).expect("valid JSON");
@@ -424,7 +429,7 @@ fn component_scoped_violations_carry_canonical_component_id() {
     let sbom = violating_sbom();
     // NTIA emits one per-component finding per missing version, so every
     // fixture component fires SBOM-NTIA-VERSION.
-    let result = ComplianceChecker::new(ComplianceLevel::NtiaMinimum).check(&sbom);
+    let result = checker(ComplianceLevel::NtiaMinimum).check(&sbom);
     let per_component: Vec<_> = result
         .violations
         .iter()
@@ -475,7 +480,7 @@ fn aggregate_violations_carry_counts_matching_the_message() {
     let sbom = violating_sbom();
     // EO 14028 aggregates missing versions into a single "N/M components"
     // finding; all 3 fixture components lack a version.
-    let result = ComplianceChecker::new(ComplianceLevel::Eo14028).check(&sbom);
+    let result = checker(ComplianceLevel::Eo14028).check(&sbom);
     let v = result
         .violations
         .iter()
@@ -537,7 +542,7 @@ fn sarif_results_carry_component_id_and_counts_properties() {
         .keys()
         .map(|id| id.value().to_string())
         .collect();
-    let result = ComplianceChecker::new(ComplianceLevel::NtiaMinimum).check(&sbom);
+    let result = checker(ComplianceLevel::NtiaMinimum).check(&sbom);
     let sarif = generate_compliance_sarif(&result).expect("sarif");
     let json: serde_json::Value = serde_json::from_str(&sarif).expect("valid SARIF");
     let component_ids: Vec<&str> = json["runs"][0]["results"]
@@ -558,7 +563,7 @@ fn sarif_results_carry_component_id_and_counts_properties() {
     }
 
     // Aggregate surface: affected/total properties mirror Violation::counts.
-    let result = ComplianceChecker::new(ComplianceLevel::Eo14028).check(&sbom);
+    let result = checker(ComplianceLevel::Eo14028).check(&sbom);
     let sarif = generate_compliance_sarif(&result).expect("sarif");
     let json: serde_json::Value = serde_json::from_str(&sarif).expect("valid SARIF");
     assert!(
