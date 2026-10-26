@@ -158,6 +158,7 @@ impl AppConfig {
                 no_color: true,
                 streaming: super::types::StreamingConfig::default(),
                 export_template: None,
+                sarif_base: None,
             },
             filtering: FilterConfig {
                 only_changes: true,

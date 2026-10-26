@@ -371,6 +371,12 @@ struct DiffArgs {
     #[arg(short = 'O', long)]
     output_file: Option<PathBuf>,
 
+    /// Directory the SBOM path in `-o sarif` output is relative to. Defaults
+    /// to the repository the SBOM file is in (the nearest ancestor holding a
+    /// `.git`), else the current directory. Only `-o sarif` reads it
+    #[arg(long, value_name = "DIR")]
+    sarif_base: Option<PathBuf>,
+
     /// Report types to include
     #[arg(long, default_value = "all")]
     reports: ReportType,
@@ -492,6 +498,12 @@ struct ViewArgs {
     #[arg(short = 'O', long)]
     output_file: Option<PathBuf>,
 
+    /// Directory the SBOM path in `-o sarif` output is relative to. Defaults
+    /// to the repository the SBOM file is in (the nearest ancestor holding a
+    /// `.git`), else the current directory. Only `-o sarif` reads it
+    #[arg(long, value_name = "DIR")]
+    sarif_base: Option<PathBuf>,
+
     /// Validate against NTIA minimum elements
     #[arg(long)]
     validate_ntia: bool,
@@ -592,6 +604,12 @@ struct ValidateArgs {
     /// Output file path (stdout if not specified)
     #[arg(short = 'O', long)]
     output_file: Option<PathBuf>,
+
+    /// Directory the SBOM path in `-o sarif` output is relative to. Defaults
+    /// to the repository the SBOM file is in (the nearest ancestor holding a
+    /// `.git`), else the current directory. Only `-o sarif` reads it
+    #[arg(long, value_name = "DIR")]
+    sarif_base: Option<PathBuf>,
 
     /// Exit with non-zero code when warnings are found (not just errors)
     #[arg(long)]
@@ -915,6 +933,12 @@ struct QualityArgs {
     /// Output file path (stdout if not specified)
     #[arg(short = 'O', long)]
     output_file: Option<PathBuf>,
+
+    /// Directory the SBOM path in `-o sarif` output is relative to. Defaults
+    /// to the repository the SBOM file is in (the nearest ancestor holding a
+    /// `.git`), else the current directory. Only `-o sarif` reads it
+    #[arg(long, value_name = "DIR")]
+    sarif_base: Option<PathBuf>,
 
     /// Show detailed recommendations
     #[arg(long)]
@@ -1943,6 +1967,7 @@ fn run() -> Result<()> {
                         stream_stdin: true,
                     },
                     export_template: cli.export_template.clone(),
+                    sarif_base: args.sarif_base.or_else(|| app.output.sarif_base.clone()),
                 },
                 matching: MatchingConfig {
                     fuzzy_preset: resolve(
@@ -2044,6 +2069,7 @@ fn run() -> Result<()> {
                     no_color: resolve_bool(cli.no_color, app.output.no_color),
                     streaming: sbom_tools::config::StreamingConfig::default(),
                     export_template: cli.export_template.clone(),
+                    sarif_base: args.sarif_base.or_else(|| app.output.sarif_base.clone()),
                 },
                 validate_ntia: args.validate_ntia,
                 min_severity: args.severity.or_else(|| app.filtering.min_severity.clone()),
@@ -2112,6 +2138,7 @@ fn run() -> Result<()> {
                 args.as_of.as_deref(),
                 args.require_applicable,
                 args.json_schema,
+                args.sarif_base.or_else(|| app.output.sarif_base.clone()),
             )?;
             if exit_code != 0 {
                 std::process::exit(exit_code);
@@ -2134,6 +2161,7 @@ fn run() -> Result<()> {
                     file: args.output_file,
                     no_color: resolve_bool(cli.no_color, app.output.no_color),
                     export_template: cli.export_template.clone(),
+                    sarif_base: None,
                     ..Default::default()
                 },
                 matching: MatchingConfig {
@@ -2211,6 +2239,7 @@ fn run() -> Result<()> {
                     file: args.output_file,
                     no_color: resolve_bool(cli.no_color, app.output.no_color),
                     export_template: cli.export_template.clone(),
+                    sarif_base: None,
                     ..Default::default()
                 },
                 matching: MatchingConfig {
@@ -2285,6 +2314,7 @@ fn run() -> Result<()> {
                     file: args.output_file,
                     no_color: resolve_bool(cli.no_color, app.output.no_color),
                     export_template: cli.export_template.clone(),
+                    sarif_base: None,
                     ..Default::default()
                 },
                 matching: MatchingConfig {
@@ -2390,6 +2420,7 @@ fn run() -> Result<()> {
                     .or_else(|| app.compliance.cra_product_class.clone()),
                 args.as_of,
                 enrichment,
+                args.sarif_base.or_else(|| app.output.sarif_base.clone()),
             )?;
             if exit_code != 0 {
                 std::process::exit(exit_code);
@@ -2448,6 +2479,7 @@ fn run() -> Result<()> {
                     no_color: resolve_bool(cli.no_color, app.output.no_color),
                     streaming: sbom_tools::config::StreamingConfig::default(),
                     export_template: None,
+                    sarif_base: None,
                 },
                 enrichment,
                 limit: args.limit,
@@ -2554,6 +2586,7 @@ fn run() -> Result<()> {
                     no_color: resolve_bool(cli.no_color, app.output.no_color),
                     streaming: sbom_tools::config::StreamingConfig::default(),
                     export_template: None,
+                    sarif_base: None,
                 },
                 enrichment,
                 webhook_url: args.webhook,

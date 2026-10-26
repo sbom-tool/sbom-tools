@@ -51,6 +51,9 @@ pub struct QualityConfig {
     /// source is enabled the SBOM is enriched before scoring so the
     /// Lifecycle / `VulnDocs` categories reflect live data.
     pub enrichment: EnrichmentConfig,
+    /// Directory the SBOM path in `-o sarif` output is relative to
+    /// (`--sarif-base`); the SBOM's repository root when `None`.
+    pub sarif_base: Option<PathBuf>,
 }
 
 /// Run the quality command, returning the desired exit code.
@@ -76,6 +79,7 @@ pub fn run_quality(
     cra_product_class: Option<String>,
     as_of: Option<String>,
     enrichment: EnrichmentConfig,
+    sarif_base: Option<PathBuf>,
 ) -> Result<i32> {
     let config = QualityConfig {
         sbom_path,
@@ -91,6 +95,7 @@ pub fn run_quality(
         cra_product_class,
         as_of,
         enrichment,
+        sarif_base,
     };
 
     run_quality_impl(config)
@@ -98,6 +103,7 @@ pub fn run_quality(
 
 fn run_quality_impl(config: QualityConfig) -> Result<i32> {
     super::ensure_output_format_supported("quality", config.output, QUALITY_OUTPUT_FORMATS)?;
+    super::check_sarif_base(config.output, config.sarif_base.as_deref())?;
 
     // Pinned evaluation clock for deadline-sensitive compliance checks
     // (shared parser with `validate --as-of`). Parsed up front so a bad
@@ -179,7 +185,20 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
     // Build output based on format
     let output_text = match config.output {
         ReportFormat::Json => format_quality_json(&report, &config),
-        ReportFormat::Sarif => format_quality_sarif(&report, &config),
+        ReportFormat::Sarif => {
+            // SARIF results point at the SBOM lines of their components.
+            let artifact = super::sarif_artifact(
+                &config.sbom_path,
+                config.sarif_base.as_deref(),
+                parsed.sbom(),
+                parsed.raw_content(),
+            )?;
+            format_quality_sarif(
+                &report,
+                &config,
+                &crate::reports::SarifOptions::new().with_artifact(artifact),
+            )
+        }
         ReportFormat::SbomqsJson => crate::reports::sbomqs_compat::render_json(&sbomqs_input),
         _ => {
             let sbomqs_table = (config.profile != ScoringProfile::AiReadiness)
@@ -266,7 +285,11 @@ fn format_quality_json(report: &QualityReport, config: &QualityConfig) -> String
 }
 
 /// Format quality report as SARIF 2.1.0
-fn format_quality_sarif(report: &QualityReport, config: &QualityConfig) -> String {
+fn format_quality_sarif(
+    report: &QualityReport,
+    config: &QualityConfig,
+    options: &crate::reports::SarifOptions,
+) -> String {
     // AI-readiness uses a dedicated SBOM-AIBOM-* SARIF rule family (one result per
     // failing model-card check), with a rule table and run-level properties.
     if report.profile == ScoringProfile::AiReadiness
@@ -275,7 +298,7 @@ fn format_quality_sarif(report: &QualityReport, config: &QualityConfig) -> Strin
         let na = metrics.is_not_applicable();
         let score = if na { None } else { Some(report.overall_score) };
         let grade = if na { "N/A" } else { report.grade.letter() };
-        return crate::reports::generate_ai_readiness_sarif(
+        return crate::reports::generate_ai_readiness_sarif_with(
             metrics,
             &config
                 .sbom_path
@@ -285,6 +308,7 @@ fn format_quality_sarif(report: &QualityReport, config: &QualityConfig) -> Strin
             &config.profile.to_string(),
             score,
             grade,
+            options,
         )
         .unwrap_or_else(|_| {
             serde_json::to_string_pretty(&serde_json::json!({ "runs": [] })).unwrap_or_default()
@@ -295,7 +319,7 @@ fn format_quality_sarif(report: &QualityReport, config: &QualityConfig) -> Strin
     // the compliance violations carry the exact same external rule ids as
     // `validate -o sarif`, and recommendations are merged into the same run
     // as advisory (never `error`) results.
-    crate::reports::generate_quality_sarif(
+    crate::reports::generate_quality_sarif_with(
         report,
         &config
             .sbom_path
@@ -303,6 +327,7 @@ fn format_quality_sarif(report: &QualityReport, config: &QualityConfig) -> Strin
             .unwrap_or_default()
             .to_string_lossy(),
         &config.profile.to_string(),
+        options,
     )
     .unwrap_or_else(|_| {
         serde_json::to_string_pretty(&serde_json::json!({ "runs": [] })).unwrap_or_default()
@@ -700,6 +725,7 @@ mod tests {
                 None,
                 None,
                 EnrichmentConfig::default(),
+                None,
             )
             .expect_err("unsupported format must be rejected");
             let msg = err.to_string();
@@ -740,6 +766,7 @@ mod tests {
             None,
             None,
             EnrichmentConfig::default(),
+            None,
         )
         .expect("sbomqs-json run must succeed");
         assert_eq!(code, exit_codes::SUCCESS);
@@ -782,6 +809,7 @@ mod tests {
             None,
             None,
             EnrichmentConfig::default(),
+            None,
         )
         .expect("summary run must succeed");
         assert_eq!(code, exit_codes::SUCCESS);
@@ -819,6 +847,7 @@ mod tests {
             None,
             None,
             EnrichmentConfig::default(),
+            None,
         )
         .expect_err("broken explicit sidecar must be a hard error");
         assert!(err.to_string().contains("Failed to load CRA sidecar"));
@@ -855,6 +884,7 @@ mod tests {
             None,
             None,
             EnrichmentConfig::default(),
+            None,
         )
         .expect("an N/A AI-readiness run must not error");
         assert_eq!(
@@ -884,6 +914,7 @@ mod tests {
             None,
             None,
             EnrichmentConfig::default(),
+            None,
         )
         .expect("the run itself must succeed");
         assert_eq!(code, exit_codes::COMPLIANCE_ERRORS);
@@ -909,6 +940,7 @@ mod tests {
             Some("critcal".to_string()),
             None,
             EnrichmentConfig::default(),
+            None,
         )
         .expect_err("typo'd --cra-product-class must be a hard error");
         let msg = err.to_string();
@@ -935,6 +967,7 @@ mod tests {
             None,
             Some("not-a-date".to_string()),
             EnrichmentConfig::default(),
+            None,
         )
         .expect_err("invalid --as-of must be rejected");
         assert!(err.to_string().contains("invalid --as-of"));
@@ -967,6 +1000,7 @@ mod tests {
             None,
             None,
             EnrichmentConfig::default(),
+            None,
         )
         .expect_err("a discovered-but-broken sidecar must hard-error");
         assert!(
@@ -990,6 +1024,7 @@ mod tests {
             cra_product_class: None,
             as_of: None,
             enrichment: EnrichmentConfig::default(),
+            sarif_base: None,
         }
     }
 
@@ -1070,7 +1105,7 @@ mod tests {
         let report = QualityScorer::new(ScoringProfile::Cra).score(&sbom);
         let mut config = ai_config(ReportFormat::Sarif, None);
         config.profile = ScoringProfile::Cra;
-        let out = format_quality_sarif(&report, &config);
+        let out = format_quality_sarif(&report, &config, &crate::reports::SarifOptions::new());
         let value: serde_json::Value = serde_json::from_str(&out).expect("valid SARIF JSON");
         let run = &value["runs"][0];
         let results = run["results"].as_array().expect("results array");
@@ -1094,7 +1129,11 @@ mod tests {
     fn test_format_quality_sarif_ai_readiness_na_is_not_misleading() {
         let sbom = NormalizedSbom::new(DocumentMetadata::default());
         let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
-        let out = format_quality_sarif(&report, &ai_config(ReportFormat::Sarif, None));
+        let out = format_quality_sarif(
+            &report,
+            &ai_config(ReportFormat::Sarif, None),
+            &crate::reports::SarifOptions::new(),
+        );
         let value: serde_json::Value = serde_json::from_str(&out).expect("valid SARIF JSON");
         let run = &value["runs"][0];
         let props = &run["properties"];

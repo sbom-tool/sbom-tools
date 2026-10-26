@@ -238,6 +238,9 @@ impl AppConfig {
                 .export_template
                 .clone_from(&other.output.export_template);
         }
+        if other.output.sarif_base.is_some() {
+            self.output.sarif_base.clone_from(&other.output.sarif_base);
+        }
 
         // Filtering config
         if other.filtering.only_changes {

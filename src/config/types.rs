@@ -566,6 +566,11 @@ pub struct OutputConfig {
     /// `{format}` (json/md/html), `{command}` (diff/view).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub export_template: Option<String>,
+    /// Directory the artifact URIs of `-o sarif` output are relative to
+    /// (`--sarif-base`). When unset, the repository the SBOM file is in (the
+    /// nearest ancestor with a `.git` entry), else the current directory.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sarif_base: Option<PathBuf>,
 }
 
 impl Default for OutputConfig {
@@ -577,6 +582,7 @@ impl Default for OutputConfig {
             no_color: false,
             streaming: StreamingConfig::default(),
             export_template: None,
+            sarif_base: None,
         }
     }
 }

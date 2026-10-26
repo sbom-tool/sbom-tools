@@ -25,6 +25,18 @@ pub fn output_report(
     old_sbom: &NormalizedSbom,
     new_sbom: &NormalizedSbom,
 ) -> Result<()> {
+    output_report_with_sarif(config, result, old_sbom, new_sbom, None)
+}
+
+/// [`output_report`] with the two SBOM files `-o sarif` results point into:
+/// `(old, new)`. Without them, SARIF results carry no physical location.
+pub fn output_report_with_sarif(
+    config: &DiffConfig,
+    result: &DiffResult,
+    old_sbom: &NormalizedSbom,
+    new_sbom: &NormalizedSbom,
+    sarif: Option<(crate::reports::SarifArtifact, crate::reports::SarifArtifact)>,
+) -> Result<()> {
     let output_target = OutputTarget::from_option(config.output.file.clone());
     let effective_output = auto_detect_format(config.output.format, &output_target);
 
@@ -53,7 +65,7 @@ pub fn output_report(
         (None, None)
     };
 
-    let report_config = ReportConfig {
+    let mut report_config = ReportConfig {
         report_types: vec![config.output.report_types],
         only_changes: config.filtering.only_changes,
         min_severity: config
@@ -70,6 +82,10 @@ pub fn output_report(
         new_cra_compliance: new_cra,
         ..Default::default()
     };
+    if let Some((old_artifact, new_artifact)) = sarif {
+        report_config.old_sarif_artifact = Some(old_artifact);
+        report_config.new_sarif_artifact = Some(new_artifact);
+    }
 
     if use_streaming {
         if !config.behavior.quiet {

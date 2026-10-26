@@ -4,8 +4,8 @@
 
 use crate::config::DiffConfig;
 use crate::pipeline::{
-    OutputTarget, auto_detect_format, compute_diff, exit_codes, is_stdin_path, output_report,
-    parse_sbom_with_context,
+    OutputTarget, auto_detect_format, compute_diff, exit_codes, is_stdin_path,
+    output_report_with_sarif, parse_sbom_with_context,
 };
 use crate::reports::ReportFormat;
 use crate::tui::{App, run_tui};
@@ -41,6 +41,8 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
              use `sbom-tools quality -o sbomqs-json` for sbomqs-comparable scores"
         );
     }
+
+    super::check_sarif_base(config.output.format, config.output.sarif_base.as_deref())?;
 
     // Stdin can only be consumed once, so a diff can read at most one side from "-".
     if is_stdin_path(&config.paths.old) && is_stdin_path(&config.paths.new) {
@@ -260,9 +262,30 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
 
         run_tui(&mut app, config.output.no_color)?;
     } else {
+        // SARIF results point at the lines of their components in the two
+        // files, found in the text before it is dropped.
+        let sarif = if effective_output == ReportFormat::Sarif {
+            let base = config.output.sarif_base.as_deref();
+            Some((
+                super::sarif_artifact(
+                    &config.paths.old,
+                    base,
+                    &old_parsed.sbom,
+                    &old_parsed.raw_content,
+                )?,
+                super::sarif_artifact(
+                    &config.paths.new,
+                    base,
+                    &new_parsed.sbom,
+                    &new_parsed.raw_content,
+                )?,
+            ))
+        } else {
+            None
+        };
         old_parsed.drop_raw_content();
         new_parsed.drop_raw_content();
-        output_report(&config, &result, &old_parsed.sbom, &new_parsed.sbom)?;
+        output_report_with_sarif(&config, &result, &old_parsed.sbom, &new_parsed.sbom, sarif)?;
     }
 
     Ok(exit_code)

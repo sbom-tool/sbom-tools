@@ -8,7 +8,9 @@ use crate::quality::{
     ComplianceChecker, ComplianceLevel, ComplianceResult, StandardSelector, ViolationSeverity,
 };
 use crate::reports::escape::sanitize_line;
-use crate::reports::{ReportFormat, generate_compliance_json, generate_compliance_sarif};
+use crate::reports::{
+    ReportFormat, SarifOptions, generate_compliance_json, generate_compliance_sarif_with,
+};
 use anyhow::Result;
 use std::path::PathBuf;
 
@@ -69,11 +71,13 @@ pub fn run_validate(
     as_of: Option<&str>,
     require_applicable: bool,
     json_schema: ValidateJsonSchema,
+    sarif_base: Option<PathBuf>,
 ) -> Result<i32> {
     // `--summary` overrides `--output` (documented on the flag), so the
     // requested format is never rendered and must not be gated.
     if !summary {
         super::ensure_output_format_supported("validate", output, VALIDATE_OUTPUT_FORMATS)?;
+        super::check_sarif_base(output, sarif_base.as_deref())?;
     }
     // Pinned evaluation clock for deadline-sensitive checks (shared parser
     // with `quality --as-of`).
@@ -143,10 +147,22 @@ pub fn run_validate(
     // Inputs that make machine output reproducible: OSCAL derives its UUIDs
     // from the SBOM digest and stamps the --as-of instant. It also describes
     // the SBOM document and the components its findings are about.
+    // SARIF results point at the SBOM lines of their components.
+    let sarif = if !summary && output == ReportFormat::Sarif {
+        SarifOptions::new().with_artifact(super::sarif_artifact(
+            &sbom_path,
+            sarif_base.as_deref(),
+            parsed.sbom(),
+            parsed.raw_content(),
+        )?)
+    } else {
+        SarifOptions::new()
+    };
     let provenance = OutputProvenance {
         sbom: parsed.sbom(),
         sbom_digest: sha256_hex(parsed.raw_content.as_bytes()),
         as_of,
+        sarif,
     };
 
     if !summary && output == ReportFormat::Json && json_schema == ValidateJsonSchema::V1 {
@@ -195,6 +211,8 @@ struct OutputProvenance<'a> {
     sbom_digest: String,
     /// The pinned evaluation instant (`--as-of`), if any.
     as_of: Option<chrono::DateTime<chrono::Utc>>,
+    /// The SBOM file SARIF results point into (`-o sarif` only).
+    sarif: SarifOptions,
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {
@@ -220,7 +238,7 @@ fn write_compliance_output(
             ValidateJsonSchema::V1 => serde_json::to_string_pretty(result)
                 .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
         },
-        ReportFormat::Sarif => generate_compliance_sarif(result)?,
+        ReportFormat::Sarif => generate_compliance_sarif_with(result, &provenance.sarif)?,
         ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results_at(
             std::slice::from_ref(result),
             provenance.sbom,
@@ -292,7 +310,9 @@ fn write_multi_compliance_output(
             ValidateJsonSchema::V1 => serde_json::to_string_pretty(results)
                 .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
         },
-        ReportFormat::Sarif => crate::reports::generate_multi_compliance_sarif(results)?,
+        ReportFormat::Sarif => {
+            crate::reports::generate_multi_compliance_sarif_with(results, &provenance.sarif)?
+        }
         ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results_at(
             results,
             provenance.sbom,
@@ -444,6 +464,7 @@ mod tests {
                 None,
                 false,
                 ValidateJsonSchema::V2,
+                None,
             )
             .expect_err("unsupported format must be rejected");
             let msg = err.to_string();
@@ -472,6 +493,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            None,
         )
         .expect_err("empty standard list must be rejected");
         assert!(err.to_string().contains("no compliance standard selected"));
@@ -501,6 +523,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            None,
         )
         .expect("--summary must override -o html instead of hard-erroring");
         let content = std::fs::read_to_string(out).unwrap();
@@ -532,6 +555,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            None,
         )
         .expect_err("typo'd --cra-product-class must be a hard error");
         let msg = err.to_string();
@@ -565,6 +589,7 @@ mod tests {
             Some("2027-01-01T00:00:00"),
             false,
             ValidateJsonSchema::V2,
+            None,
         )
         .expect("offset-less --as-of datetime must parse (assumed UTC)");
     }
@@ -592,6 +617,7 @@ mod tests {
             None,
             false,
             ValidateJsonSchema::V2,
+            None,
         )
         .expect_err("broken explicit sidecar must be a hard error");
         assert!(err.to_string().contains("Failed to load CRA sidecar"));

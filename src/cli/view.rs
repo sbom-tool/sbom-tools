@@ -33,6 +33,8 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
         );
     }
 
+    super::check_sarif_base(config.output.format, config.output.sarif_base.as_deref())?;
+
     // Validate --severity before any parsing or (network) enrichment work so
     // a typo fails fast instead of after expensive I/O.
     if let Some(s) = config.min_severity.as_deref() {
@@ -264,6 +266,18 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
 
         run_view_tui(&mut app, config.output.no_color)?;
     } else {
+        // SARIF results point at the SBOM lines of their components, found
+        // in the text before it is dropped.
+        let sarif_artifact = if effective_output == ReportFormat::Sarif {
+            Some(super::sarif_artifact(
+                &config.sbom_path,
+                config.output.sarif_base.as_deref(),
+                parsed.sbom(),
+                parsed.raw_content(),
+            )?)
+        } else {
+            None
+        };
         parsed.drop_raw_content();
         output_view_report(
             &config,
@@ -271,6 +285,7 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
             effective_class,
             parsed.sbom(),
             &output_target,
+            sarif_artifact,
         )?;
     }
 
@@ -384,6 +399,7 @@ fn output_view_report(
     effective_class: Option<crate::model::CraProductClass>,
     sbom: &NormalizedSbom,
     output_target: &OutputTarget,
+    sarif_artifact: Option<crate::reports::SarifArtifact>,
 ) -> Result<()> {
     let effective_output = auto_detect_format(config.output.format, output_target);
 
@@ -407,6 +423,7 @@ fn output_view_report(
             ..Default::default()
         },
         view_cra_compliance: Some(cra_result),
+        view_sarif_artifact: sarif_artifact,
         ..Default::default()
     };
 
@@ -476,6 +493,7 @@ mod tests {
                 no_color: false,
                 streaming: crate::config::StreamingConfig::default(),
                 export_template: None,
+                sarif_base: None,
             },
             validate_ntia: false,
             min_severity: min_severity.map(str::to_string),

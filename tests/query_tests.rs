@@ -21,6 +21,7 @@ fn base_config(paths: Vec<PathBuf>) -> QueryConfig {
             no_color: true,
             streaming: StreamingConfig::default(),
             export_template: None,
+            sarif_base: None,
         },
         enrichment: EnrichmentConfig::default(),
         limit: None,
