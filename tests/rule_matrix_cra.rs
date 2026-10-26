@@ -22,7 +22,7 @@ mod rule_matrix;
 
 use rule_matrix::clock::{as_of, checker};
 use rule_matrix::{
-    ComponentFixture, RuleEntry, SHA256_FILLER, SbomFixture, assert_no_violations,
+    ComponentFixture, RuleEntry, SHA256_FILLER, SbomFixture, assert_no_violations, check,
     render_violations, run_matrix,
 };
 use sbom_tools::model::{
@@ -1203,6 +1203,49 @@ fn cra_oss_steward_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     ];
 
     run_matrix(STEWARD, STEWARD_RULE_UNIVERSE, &entries);
+}
+
+/// Pinned scope decision: the Art. 24 steward profile runs no
+/// document-metadata check, so a steward SBOM without a creator, a timestamp
+/// or a serial number draws exactly the findings of the complete one. Art.
+/// 24 obliges a steward to a cybersecurity policy and to vulnerability
+/// handling, not to the manufacturer's Art. 13 documentation, and
+/// check_cra_oss_steward runs only the component, dependency and format
+/// checks plus the two steward floors. The manufacturer phases report the
+/// same gaps (no creator: an SBOM-CRA-GENERAL Error; no timestamp:
+/// SBOM-CRA-SBOM-FRESHNESS).
+#[test]
+fn steward_profile_runs_no_document_metadata_check() {
+    let bare = steward_broken(|s| {
+        s.tools.clear();
+        s.authors.clear();
+        s.manufacturer = None;
+        s.timestamp = None;
+        s.serial_number = None;
+    });
+    let findings = |fixture: &SbomFixture| -> Vec<(String, Sev)> {
+        let mut found: Vec<(String, Sev)> = check(STEWARD, fixture)
+            .violations
+            .iter()
+            .map(|v| (v.rule_id.to_string(), v.severity))
+            .collect();
+        found.sort_by(|a, b| a.0.cmp(&b.0));
+        found
+    };
+    assert_eq!(
+        findings(&bare),
+        findings(&steward_base()),
+        "no creator, timestamp or serial number must change the steward verdict:\n{}",
+        render_violations(&check(STEWARD, &bare))
+    );
+    let phase2 = check(PHASE2, &bare);
+    for rule in ["SBOM-CRA-SBOM-FRESHNESS", "SBOM-CRA-GENERAL"] {
+        assert!(
+            phase2.violations.iter().any(|v| v.rule_id == rule),
+            "the manufacturer phase reports {rule} for the same document:\n{}",
+            render_violations(&phase2)
+        );
+    }
 }
 
 /// The CRA universes are tied back to the shared slice: together they cover

@@ -18,7 +18,8 @@ mod rule_matrix;
 
 use rule_matrix::clock::{as_of, checker};
 use rule_matrix::{
-    ComponentFixture, RuleEntry, SbomFixture, assert_no_violations, render_violations, run_matrix,
+    ComponentFixture, RuleEntry, SbomFixture, assert_no_violations, check, render_violations,
+    run_matrix,
 };
 use sbom_tools::model::CraSidecarMetadata;
 use sbom_tools::parsers::parse_sbom_str;
@@ -97,6 +98,42 @@ fn without_certref() -> SbomFixture {
 #[test]
 fn eucc_conforming_fixture_is_compliant_with_zero_violations() {
     assert_no_violations(LEVEL, &base());
+}
+
+/// Pinned scope decision: the EUCC profile is reference-only. It reads the
+/// certificate evidence (sidecar fields, a certificate reference, CDXA) and
+/// runs no inventory or other SBOM-content check, so a document listing no
+/// components at all passes once the sidecar evidence is complete — only
+/// the in-document certificate reference is missing. The SBOM content is
+/// the CRA profiles' to judge: `--standard cra` reports SBOM-CRA-INVENTORY
+/// for the same document. Gating EUCC on the inventory would take a new
+/// rule id (an SBOM-EUCC-INVENTORY the SARIF slice does not have).
+#[test]
+fn eucc_runs_no_inventory_check() {
+    let empty = broken(|s| {
+        s.primary = None;
+        s.components.clear();
+        s.dependencies.clear();
+    });
+    let eucc = check(LEVEL, &empty);
+    assert!(
+        eucc.is_compliant
+            && eucc
+                .violations
+                .iter()
+                .all(|v| v.sarif_rule_id() == "SBOM-EUCC-CERTREF"),
+        "an empty SBOM with complete EUCC evidence draws only the certificate-reference \
+         warning under EUCC:\n{}",
+        render_violations(&eucc)
+    );
+    let cra = check(ComplianceLevel::CraPhase2, &empty);
+    assert!(
+        cra.violations
+            .iter()
+            .any(|v| v.rule_id == "SBOM-CRA-INVENTORY"),
+        "the CRA profile judges the inventory:\n{}",
+        render_violations(&cra)
+    );
 }
 
 #[test]

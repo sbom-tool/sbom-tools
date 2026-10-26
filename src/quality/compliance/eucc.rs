@@ -14,6 +14,12 @@ impl ComplianceChecker {
     // notified-body auditors expect to see in a Common Criteria
     // submission. Does NOT perform a Common Criteria evaluation —
     // that's out of scope for SBOM tooling.
+    //
+    // Nor does it judge the SBOM's content: no inventory, component or
+    // dependency check runs here, so a document listing no components
+    // passes once the certificate evidence is complete. The CRA profiles
+    // judge the SBOM itself (SBOM-CRA-INVENTORY and the rest); the scope is
+    // pinned by eucc_runs_no_inventory_check in tests/rule_matrix_eucc.rs.
 
     pub(crate) fn check_eucc_substantial(
         &self,
