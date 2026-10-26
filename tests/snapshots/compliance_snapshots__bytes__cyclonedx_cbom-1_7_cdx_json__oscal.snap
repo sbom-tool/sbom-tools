@@ -3,6 +3,41 @@ source: tests/compliance_snapshots.rs
 ---
 {
   "assessment-results": {
+    "back-matter": {
+      "resources": [
+        {
+          "description": "The SBOM document this assessment examined. Every observation names it as a subject.",
+          "document-ids": [
+            {
+              "identifier": "urn:uuid:b2c3d4e5-f6a7-8901-bcde-f23456789012"
+            }
+          ],
+          "props": [
+            {
+              "name": "type",
+              "value": "artifact"
+            },
+            {
+              "name": "sha256",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "97b4195d754e26ef6db0406f488dfa1c08f68dd576ea51b30a4bd189170986a9"
+            },
+            {
+              "name": "format",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "CycloneDX"
+            },
+            {
+              "name": "spec-version",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "1.7"
+            }
+          ],
+          "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+          "uuid": "651925e4-f689-56dd-88c5-af176acd93bc"
+        }
+      ]
+    },
     "import-ap": {
       "href": "urn:sbom-tools:assessment-plan:validation"
     },
@@ -216,6 +251,164 @@ source: tests/compliance_snapshots.rs
             "uuid": "ab380ede-c128-55d2-acdb-339fbc4947db"
           }
         ],
+        "local-definitions": {
+          "components": [
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/algorithm/ml-kem-768"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "ML-KEM-768",
+              "type": "software",
+              "uuid": "a9d64021-1c55-5e6a-8a50-52955152509d"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/algorithm/ml-dsa-65"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "ML-DSA-65",
+              "type": "software",
+              "uuid": "a039a9cd-8bcf-5cac-8467-9f2fce3f0136"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/algorithm/slh-dsa-shake-256s"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "SLH-DSA-SHAKE-256s",
+              "type": "software",
+              "uuid": "7a3f5bb7-2931-555d-bdea-8ffb538c188e"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/algorithm/x25519"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "X25519",
+              "type": "software",
+              "uuid": "764be9f0-1d0b-5c5f-96bf-570d4cec6223"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/algorithm/hybrid-kem"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "X25519-ML-KEM-768",
+              "type": "software",
+              "uuid": "872a3919-caa2-50a8-83dc-0a8bab65bec1"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/algorithm/ecdsa-p521"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "ECDSA-P521",
+              "type": "software",
+              "uuid": "f7b54a4f-4e49-58f2-b315-ed4b51a772fe"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/protocol/tls13-pqc"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "TLS 1.3 (PQC Hybrid)",
+              "type": "software",
+              "uuid": "d6a7238e-4cdb-5229-ad46-3845d800120a"
+            }
+          ]
+        },
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -248,6 +441,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "ML-KEM-768"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "a9d64021-1c55-5e6a-8a50-52955152509d",
+                "title": "ML-KEM-768",
+                "type": "component"
               }
             ],
             "title": "SBOM-CNSA2-ALG-007",
@@ -289,6 +494,18 @@ source: tests/compliance_snapshots.rs
                 "value": "ML-KEM-768"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "a9d64021-1c55-5e6a-8a50-52955152509d",
+                "title": "ML-KEM-768",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CNSA2-ALG-003",
             "types": [
               "discovery"
@@ -326,6 +543,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "ML-DSA-65"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "a039a9cd-8bcf-5cac-8467-9f2fce3f0136",
+                "title": "ML-DSA-65",
+                "type": "component"
               }
             ],
             "title": "SBOM-CNSA2-ALG-007",
@@ -367,6 +596,18 @@ source: tests/compliance_snapshots.rs
                 "value": "ML-DSA-65"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "a039a9cd-8bcf-5cac-8467-9f2fce3f0136",
+                "title": "ML-DSA-65",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CNSA2-ALG-004",
             "types": [
               "discovery"
@@ -404,6 +645,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SLH-DSA-SHAKE-256s"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "7a3f5bb7-2931-555d-bdea-8ffb538c188e",
+                "title": "SLH-DSA-SHAKE-256s",
+                "type": "component"
               }
             ],
             "title": "SBOM-CNSA2-ALG-008",
@@ -445,6 +698,18 @@ source: tests/compliance_snapshots.rs
                 "value": "X25519"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "764be9f0-1d0b-5c5f-96bf-570d4cec6223",
+                "title": "X25519",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CNSA2-ALG-006",
             "types": [
               "discovery"
@@ -482,6 +747,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "X25519-ML-KEM-768"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "872a3919-caa2-50a8-83dc-0a8bab65bec1",
+                "title": "X25519-ML-KEM-768",
+                "type": "component"
               }
             ],
             "title": "SBOM-CNSA2-ALG-007",
@@ -523,6 +800,18 @@ source: tests/compliance_snapshots.rs
                 "value": "X25519-ML-KEM-768"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "872a3919-caa2-50a8-83dc-0a8bab65bec1",
+                "title": "X25519-ML-KEM-768",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CNSA2-ALG-003",
             "types": [
               "discovery"
@@ -560,6 +849,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "ECDSA-P521"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "f7b54a4f-4e49-58f2-b315-ed4b51a772fe",
+                "title": "ECDSA-P521",
+                "type": "component"
               }
             ],
             "title": "SBOM-CNSA2-ALG-006",
@@ -601,6 +902,18 @@ source: tests/compliance_snapshots.rs
                 "value": "TLS 1.3 (PQC Hybrid)"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "d6a7238e-4cdb-5229-ad46-3845d800120a",
+                "title": "TLS 1.3 (PQC Hybrid)",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CNSA2-PROTO-002",
             "types": [
               "discovery"
@@ -638,6 +951,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "TLS 1.3 (PQC Hybrid)"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "d6a7238e-4cdb-5229-ad46-3845d800120a",
+                "title": "TLS 1.3 (PQC Hybrid)",
+                "type": "component"
               }
             ],
             "title": "SBOM-CNSA2-PROTO-002",
@@ -887,6 +1212,230 @@ source: tests/compliance_snapshots.rs
             "uuid": "28316281-d04c-5036-9e15-e10ddbd64805"
           }
         ],
+        "local-definitions": {
+          "components": [
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/algorithm/ml-kem-1024"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "ML-KEM-1024",
+              "type": "software",
+              "uuid": "68740911-725c-5aec-ae2b-4d18ce3bd892"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/algorithm/ml-kem-768"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "ML-KEM-768",
+              "type": "software",
+              "uuid": "a9d64021-1c55-5e6a-8a50-52955152509d"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/algorithm/ml-dsa-87"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "ML-DSA-87",
+              "type": "software",
+              "uuid": "70764451-56f6-5e50-9cb6-1917128aca03"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/algorithm/ml-dsa-65"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "ML-DSA-65",
+              "type": "software",
+              "uuid": "a039a9cd-8bcf-5cac-8467-9f2fce3f0136"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/algorithm/slh-dsa-shake-256s"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "SLH-DSA-SHAKE-256s",
+              "type": "software",
+              "uuid": "7a3f5bb7-2931-555d-bdea-8ffb538c188e"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/algorithm/x25519"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "X25519",
+              "type": "software",
+              "uuid": "764be9f0-1d0b-5c5f-96bf-570d4cec6223"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/algorithm/hybrid-kem"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "X25519-ML-KEM-768",
+              "type": "software",
+              "uuid": "872a3919-caa2-50a8-83dc-0a8bab65bec1"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/algorithm/ecdsa-p521"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "ECDSA-P521",
+              "type": "software",
+              "uuid": "f7b54a4f-4e49-58f2-b315-ed4b51a772fe"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/algorithm/xmss"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "XMSS",
+              "type": "software",
+              "uuid": "c52ea31b-1245-5774-a84d-c1395a5d7a21"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "crypto/protocol/tls13-pqc"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "cryptographic"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "TLS 1.3 (PQC Hybrid)",
+              "type": "software",
+              "uuid": "d6a7238e-4cdb-5229-ad46-3845d800120a"
+            }
+          ]
+        },
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -919,6 +1468,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "ML-KEM-1024"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "68740911-725c-5aec-ae2b-4d18ce3bd892",
+                "title": "ML-KEM-1024",
+                "type": "component"
               }
             ],
             "title": "SBOM-PQC-009",
@@ -960,6 +1521,18 @@ source: tests/compliance_snapshots.rs
                 "value": "ML-KEM-768"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "a9d64021-1c55-5e6a-8a50-52955152509d",
+                "title": "ML-KEM-768",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-PQC-009",
             "types": [
               "discovery"
@@ -997,6 +1570,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "ML-DSA-87"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "70764451-56f6-5e50-9cb6-1917128aca03",
+                "title": "ML-DSA-87",
+                "type": "component"
               }
             ],
             "title": "SBOM-PQC-009",
@@ -1038,6 +1623,18 @@ source: tests/compliance_snapshots.rs
                 "value": "ML-DSA-65"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "a039a9cd-8bcf-5cac-8467-9f2fce3f0136",
+                "title": "ML-DSA-65",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-PQC-009",
             "types": [
               "discovery"
@@ -1075,6 +1672,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SLH-DSA-SHAKE-256s"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "7a3f5bb7-2931-555d-bdea-8ffb538c188e",
+                "title": "SLH-DSA-SHAKE-256s",
+                "type": "component"
               }
             ],
             "title": "SBOM-PQC-009",
@@ -1116,6 +1725,18 @@ source: tests/compliance_snapshots.rs
                 "value": "X25519"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "764be9f0-1d0b-5c5f-96bf-570d4cec6223",
+                "title": "X25519",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-PQC-001",
             "types": [
               "discovery"
@@ -1153,6 +1774,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "X25519-ML-KEM-768"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "872a3919-caa2-50a8-83dc-0a8bab65bec1",
+                "title": "X25519-ML-KEM-768",
+                "type": "component"
               }
             ],
             "title": "SBOM-PQC-010",
@@ -1194,6 +1827,18 @@ source: tests/compliance_snapshots.rs
                 "value": "ECDSA-P521"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "f7b54a4f-4e49-58f2-b315-ed4b51a772fe",
+                "title": "ECDSA-P521",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-PQC-001",
             "types": [
               "discovery"
@@ -1233,6 +1878,18 @@ source: tests/compliance_snapshots.rs
                 "value": "XMSS"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "c52ea31b-1245-5774-a84d-c1395a5d7a21",
+                "title": "XMSS",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-PQC-009",
             "types": [
               "discovery"
@@ -1270,6 +1927,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "TLS 1.3 (PQC Hybrid)"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "651925e4-f689-56dd-88c5-af176acd93bc",
+                "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "d6a7238e-4cdb-5229-ad46-3845d800120a",
+                "title": "TLS 1.3 (PQC Hybrid)",
+                "type": "component"
               }
             ],
             "title": "SBOM-PQC-PROTO-002",

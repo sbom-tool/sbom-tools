@@ -3,6 +3,36 @@ source: tests/compliance_snapshots.rs
 ---
 {
   "assessment-results": {
+    "back-matter": {
+      "resources": [
+        {
+          "description": "The SBOM document this assessment examined. Every observation names it as a subject.",
+          "props": [
+            {
+              "name": "type",
+              "value": "artifact"
+            },
+            {
+              "name": "sha256",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "53e00feed5e200b15242a7e5c589d0d9b21abc5fb49f73132bf87a91514cbdb0"
+            },
+            {
+              "name": "format",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "CycloneDX"
+            },
+            {
+              "name": "spec-version",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "1.6"
+            }
+          ],
+          "title": "aibom-complete-app (CycloneDX 1.6 SBOM)",
+          "uuid": "437ee9e2-a952-570e-b55f-7013564da526"
+        }
+      ]
+    },
     "import-ap": {
       "href": "urn:sbom-tools:assessment-plan:validation"
     },
@@ -332,6 +362,13 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-BSIAI-META"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "437ee9e2-a952-570e-b55f-7013564da526",
+                "title": "aibom-complete-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-BSIAI-META-SIGNATURE",
             "types": [
               "discovery"
@@ -366,6 +403,13 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-BSIAI-SYS"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "437ee9e2-a952-570e-b55f-7013564da526",
+                "title": "aibom-complete-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-BSIAI-SYS-PRODUCER",
             "types": [
               "discovery"
@@ -398,6 +442,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSIAI-SYS"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "437ee9e2-a952-570e-b55f-7013564da526",
+                "title": "aibom-complete-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-BSIAI-SYS-DATAFLOW",
@@ -439,6 +490,13 @@ source: tests/compliance_snapshots.rs
                 "value": "sentiment-classifier"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "437ee9e2-a952-570e-b55f-7013564da526",
+                "title": "aibom-complete-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-BSIAI-MODEL-IDENTIFIER",
             "types": [
               "discovery"
@@ -476,6 +534,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "sentiment-classifier"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "437ee9e2-a952-570e-b55f-7013564da526",
+                "title": "aibom-complete-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-BSIAI-MODEL-LICENSE",
@@ -517,6 +582,13 @@ source: tests/compliance_snapshots.rs
                 "value": "product-reviews-1M"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "437ee9e2-a952-570e-b55f-7013564da526",
+                "title": "aibom-complete-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-BSIAI-DATASET-IDENTIFIER",
             "types": [
               "discovery"
@@ -554,6 +626,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "product-reviews-1M"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "437ee9e2-a952-570e-b55f-7013564da526",
+                "title": "aibom-complete-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-BSIAI-DATASET-HASH",
@@ -595,6 +674,13 @@ source: tests/compliance_snapshots.rs
                 "value": "product-reviews-1M"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "437ee9e2-a952-570e-b55f-7013564da526",
+                "title": "aibom-complete-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-BSIAI-DATASET-LICENSE",
             "types": [
               "discovery"
@@ -634,6 +720,13 @@ source: tests/compliance_snapshots.rs
                 "value": "product-reviews-1M"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "437ee9e2-a952-570e-b55f-7013564da526",
+                "title": "aibom-complete-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-BSIAI-DATASET-PROVENANCE",
             "types": [
               "discovery"
@@ -666,6 +759,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSIAI-INFRA"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "437ee9e2-a952-570e-b55f-7013564da526",
+                "title": "aibom-complete-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-BSIAI-INFRA-RUNTIME",
@@ -702,6 +802,13 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-BSIAI-SEC"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "437ee9e2-a952-570e-b55f-7013564da526",
+                "title": "aibom-complete-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-BSIAI-SEC-CONTROLS",
             "types": [
               "discovery"
@@ -734,6 +841,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSIAI-SEC"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "437ee9e2-a952-570e-b55f-7013564da526",
+                "title": "aibom-complete-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-BSIAI-SEC-EXPLOITABILITY",

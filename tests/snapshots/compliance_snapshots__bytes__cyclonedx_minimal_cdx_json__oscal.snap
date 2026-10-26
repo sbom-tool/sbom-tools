@@ -3,6 +3,36 @@ source: tests/compliance_snapshots.rs
 ---
 {
   "assessment-results": {
+    "back-matter": {
+      "resources": [
+        {
+          "description": "The SBOM document this assessment examined. Every observation names it as a subject.",
+          "props": [
+            {
+              "name": "type",
+              "value": "artifact"
+            },
+            {
+              "name": "sha256",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "be7995c235de8f84244baf2d5cd4a217deb705904ffe2e874647f3e3c0824d96"
+            },
+            {
+              "name": "format",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "CycloneDX"
+            },
+            {
+              "name": "spec-version",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "1.5"
+            }
+          ],
+          "title": "test-app (CycloneDX 1.5 SBOM)",
+          "uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0"
+        }
+      ]
+    },
     "import-ap": {
       "href": "urn:sbom-tools:assessment-plan:validation"
     },
@@ -131,6 +161,88 @@ source: tests/compliance_snapshots.rs
             "uuid": "35e7c5e3-94cd-5f27-8736-51c6386bf8c5"
           }
         ],
+        "local-definitions": {
+          "components": [
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "1.0.0"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "test-app"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "application"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "test-app 1.0.0",
+              "type": "software",
+              "uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "4.17.21"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:npm/lodash@4.17.21"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "lodash 4.17.21",
+              "type": "software",
+              "uuid": "fb518702-6d3b-5c67-badc-be492fac6536"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "4.18.2"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:npm/express@4.18.2"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "express 4.18.2",
+              "type": "software",
+              "uuid": "014dbcfd-9b69-551a-a9d3-36303cb427c1"
+            }
+          ]
+        },
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -163,6 +275,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "test-app"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
               }
             ],
             "title": "SBOM-NTIA-IDENTIFIER",
@@ -204,6 +328,18 @@ source: tests/compliance_snapshots.rs
                 "value": "test-app"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-NTIA-SUPPLIER",
             "types": [
               "discovery"
@@ -241,6 +377,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "lodash"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "fb518702-6d3b-5c67-badc-be492fac6536",
+                "title": "lodash 4.17.21",
+                "type": "component"
               }
             ],
             "title": "SBOM-NTIA-SUPPLIER",
@@ -282,6 +430,18 @@ source: tests/compliance_snapshots.rs
                 "value": "express"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "014dbcfd-9b69-551a-a9d3-36303cb427c1",
+                "title": "express 4.18.2",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-NTIA-SUPPLIER",
             "types": [
               "discovery"
@@ -321,6 +481,18 @@ source: tests/compliance_snapshots.rs
                 "value": "test-app"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-NTIA-DEPENDENCY",
             "types": [
               "discovery"
@@ -358,6 +530,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "test-app"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
               }
             ],
             "title": "SBOM-NTIA-GENERAL",
@@ -641,6 +825,88 @@ source: tests/compliance_snapshots.rs
             "uuid": "d251da9f-fd8b-504f-bbcc-9f2a45942843"
           }
         ],
+        "local-definitions": {
+          "components": [
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "1.0.0"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "test-app"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "application"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "test-app 1.0.0",
+              "type": "software",
+              "uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "4.17.21"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:npm/lodash@4.17.21"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "lodash 4.17.21",
+              "type": "software",
+              "uuid": "fb518702-6d3b-5c67-badc-be492fac6536"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "4.18.2"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:npm/express@4.18.2"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "express 4.18.2",
+              "type": "software",
+              "uuid": "014dbcfd-9b69-551a-a9d3-36303cb427c1"
+            }
+          ]
+        },
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -668,6 +934,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-CISA2026-AUTHOR"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-CISA2026-AUTHOR",
@@ -704,6 +977,13 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-CISA2026-SIGNATURE"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-CISA2026-SIGNATURE",
             "types": [
               "discovery"
@@ -736,6 +1016,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-CISA2026-GENERATION-CONTEXT"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-CISA2026-GENERATION-CONTEXT",
@@ -777,6 +1064,18 @@ source: tests/compliance_snapshots.rs
                 "value": "test-app"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CISA2026-PRODUCER",
             "types": [
               "discovery"
@@ -814,6 +1113,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "test-app"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
               }
             ],
             "title": "SBOM-CISA2026-IDENTIFIER",
@@ -855,6 +1166,18 @@ source: tests/compliance_snapshots.rs
                 "value": "test-app"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CISA2026-HASH",
             "types": [
               "discovery"
@@ -892,6 +1215,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "test-app"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
               }
             ],
             "title": "SBOM-CISA2026-LICENSE",
@@ -933,6 +1268,18 @@ source: tests/compliance_snapshots.rs
                 "value": "lodash"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "fb518702-6d3b-5c67-badc-be492fac6536",
+                "title": "lodash 4.17.21",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CISA2026-PRODUCER",
             "types": [
               "discovery"
@@ -970,6 +1317,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "lodash"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "fb518702-6d3b-5c67-badc-be492fac6536",
+                "title": "lodash 4.17.21",
+                "type": "component"
               }
             ],
             "title": "SBOM-CISA2026-HASH",
@@ -1011,6 +1370,18 @@ source: tests/compliance_snapshots.rs
                 "value": "express"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "014dbcfd-9b69-551a-a9d3-36303cb427c1",
+                "title": "express 4.18.2",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CISA2026-PRODUCER",
             "types": [
               "discovery"
@@ -1050,6 +1421,18 @@ source: tests/compliance_snapshots.rs
                 "value": "express"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "014dbcfd-9b69-551a-a9d3-36303cb427c1",
+                "title": "express 4.18.2",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CISA2026-HASH",
             "types": [
               "discovery"
@@ -1082,6 +1465,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-CISA2026-COVERAGE"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-CISA2026-COVERAGE",

@@ -3,6 +3,41 @@ source: tests/compliance_snapshots.rs
 ---
 {
   "assessment-results": {
+    "back-matter": {
+      "resources": [
+        {
+          "description": "The SBOM document this assessment examined. Every observation names it as a subject.",
+          "document-ids": [
+            {
+              "identifier": "https://example.com/test-app-1.0.0"
+            }
+          ],
+          "props": [
+            {
+              "name": "type",
+              "value": "artifact"
+            },
+            {
+              "name": "sha256",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "112025cca042383bb7172ffe41f60033816a7f49e8be3d21de6b1955bcdb9b4e"
+            },
+            {
+              "name": "format",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "SPDX"
+            },
+            {
+              "name": "spec-version",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "2.3"
+            }
+          ],
+          "title": "test-app (SPDX 2.3 SBOM)",
+          "uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8"
+        }
+      ]
+    },
     "import-ap": {
       "href": "urn:sbom-tools:assessment-plan:validation"
     },
@@ -63,6 +98,62 @@ source: tests/compliance_snapshots.rs
             "uuid": "e610869d-32e4-5ff7-9328-b8f317b34495"
           }
         ],
+        "local-definitions": {
+          "components": [
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "4.17.21"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:npm/lodash@4.17.21"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "lodash 4.17.21",
+              "type": "software",
+              "uuid": "1dba761d-d7ef-5034-8c82-3b07ded59fa5"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "4.18.2"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:npm/express@4.18.2"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "express 4.18.2",
+              "type": "software",
+              "uuid": "611079a2-8d1e-5d63-8251-fa79cf8a27f2"
+            }
+          ]
+        },
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -95,6 +186,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "lodash"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "1dba761d-d7ef-5034-8c82-3b07ded59fa5",
+                "title": "lodash 4.17.21",
+                "type": "component"
               }
             ],
             "title": "SBOM-NTIA-SUPPLIER",
@@ -134,6 +237,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "express"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "611079a2-8d1e-5d63-8251-fa79cf8a27f2",
+                "title": "express 4.18.2",
+                "type": "component"
               }
             ],
             "title": "SBOM-NTIA-SUPPLIER",
@@ -344,6 +459,13 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-FSCT-DIRECT-DEPS"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-FSCT-DIRECT-DEPS",
             "types": [
               "discovery"
@@ -376,6 +498,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-FSCT-SUPPLIER"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-FSCT-SUPPLIER",
@@ -412,6 +541,13 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-FSCT-HASH"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-FSCT-HASH",
             "types": [
               "discovery"
@@ -444,6 +580,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-FSCT-IDENTIFIER-MULTI"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-FSCT-IDENTIFIER-MULTI",
@@ -480,6 +623,13 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-FSCT-COMPLETENESS"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-FSCT-COMPLETENESS",
             "types": [
               "discovery"
@@ -512,6 +662,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-FSCT-DYNAMIC-DEPS"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-FSCT-DYNAMIC-DEPS",

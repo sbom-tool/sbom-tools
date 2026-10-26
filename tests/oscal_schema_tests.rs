@@ -4,8 +4,14 @@
 //! `tests/fixtures/schemas/oscal/1.2.3/` (see the README there for its source
 //! and digest) and checked with the in-repo validator in
 //! `tests/common/json_schema.rs`, extended for the draft-07 keywords the
-//! schema uses. The validator's own checks are exercised at the bottom of
-//! this file: each one must be able to fail.
+//! schema uses.
+//!
+//! The writer's output for every SBOM fixture is validated at every
+//! compliance level, along with what the schema cannot express: references
+//! that resolve (findings to observations, observations to their subjects),
+//! UUIDs unique across the document, one UUID per component. A hostile SBOM
+//! and the CLI path are covered too. The validator's own checks are
+//! exercised at the bottom of this file: each one must be able to fail.
 
 #[path = "common/json_schema.rs"]
 mod json_schema;
@@ -192,8 +198,9 @@ fn check(
 
 /// The reproducible OSCAL document for `results`, parsed.
 fn oscal(fixture: &Fixture, results: &[ComplianceResult]) -> Value {
-    let text = generate_assessment_results_at(results, &fixture.digest, Some(as_of()))
-        .expect("OSCAL serializes");
+    let text =
+        generate_assessment_results_at(results, &fixture.sbom, &fixture.digest, Some(as_of()))
+            .expect("OSCAL serializes");
     serde_json::from_str(&text).expect("OSCAL is JSON")
 }
 
@@ -206,8 +213,12 @@ fn uuid_of(value: &Value) -> &str {
 }
 
 /// What the JSON schema cannot express: the declared release, the
-/// observation type, per-assessment UUIDs unique across the document, and
-/// findings whose related observations exist in their result.
+/// observation type, per-assessment UUIDs unique across the document,
+/// findings whose related observations exist in their result, and subjects
+/// that resolve: the SBOM document to the one back-matter resource, a
+/// component to its result's local definitions (OSCAL's
+/// `oscal-unique-ar-local-definitions-component` keeps those unique), with
+/// one UUID per component across results.
 fn assert_invariants(document: &Value, results: &[ComplianceResult], label: &str) {
     let ar = &document["assessment-results"];
     assert_eq!(ar["metadata"]["oscal-version"], OSCAL_VERSION, "{label}");
@@ -217,19 +228,52 @@ fn assert_invariants(document: &Value, results: &[ComplianceResult], label: &str
         results.len().max(1),
         "{label}: one per standard"
     );
+    let resources = array(&ar["back-matter"], "resources");
+    assert_eq!(resources.len(), 1, "{label}: the SBOM document resource");
+    let document_uuid = uuid_of(&resources[0]);
 
     let mut uuids = vec![uuid_of(ar)];
+    let mut component_ids: std::collections::HashMap<&str, &str> = Default::default();
     for entry in entries {
         uuids.push(uuid_of(entry));
+        let mut local = HashSet::new();
+        for component in array(&entry["local-definitions"], "components") {
+            assert!(
+                local.insert(uuid_of(component)),
+                "{label}: component {} defined twice in one result",
+                uuid_of(component)
+            );
+            let id = component["props"]
+                .as_array()
+                .and_then(|props| props.iter().find(|p| p["name"] == "component-id"))
+                .and_then(|p| p["value"].as_str())
+                .unwrap_or("");
+            let first = *component_ids.entry(uuid_of(component)).or_insert(id);
+            assert_eq!(first, id, "{label}: one UUID, two components");
+        }
+        let mut named = HashSet::new();
         let observations: HashSet<&str> = array(entry, "observations")
             .iter()
             .map(|observation| {
                 // OSCAL 1.2 deprecates the `finding` observation type in favour
                 // of `discovery`.
                 assert_eq!(observation["types"], json!(["discovery"]), "{label}");
+                let subjects = array(observation, "subjects");
+                assert_eq!(subjects[0]["type"], "resource", "{label}");
+                assert_eq!(subjects[0]["subject-uuid"], document_uuid, "{label}");
+                for subject in &subjects[1..] {
+                    assert_eq!(subject["type"], "component", "{label}");
+                    let uuid = subject["subject-uuid"].as_str().expect("uuid");
+                    assert!(
+                        local.contains(uuid),
+                        "{label}: subject {uuid} is not a local component"
+                    );
+                    named.insert(uuid);
+                }
                 uuid_of(observation)
             })
             .collect();
+        assert_eq!(named, local, "{label}: every local component is named");
         uuids.extend(observations.iter().copied());
         for finding in array(entry, "findings") {
             uuids.push(uuid_of(finding));
@@ -243,6 +287,8 @@ fn assert_invariants(document: &Value, results: &[ComplianceResult], label: &str
             }
         }
     }
+    uuids.push(document_uuid);
+    uuids.extend(component_ids.keys().copied());
     let unique: HashSet<&str> = uuids.iter().copied().collect();
     assert_eq!(unique.len(), uuids.len(), "{label}: duplicate UUIDs");
 }
@@ -344,6 +390,7 @@ fn hostile_sbom_text_keeps_every_level_schema_valid() {
         .collect();
     let text = generate_assessment_results_at(
         &results,
+        &sbom,
         &sha256_hex(HOSTILE_SBOM.as_bytes()),
         Some(as_of()),
     )
@@ -352,7 +399,8 @@ fn hostile_sbom_text_keeps_every_level_schema_valid() {
     assert_valid(&schema(), &document, "hostile SBOM");
     assert_invariants(&document, &results, "hostile SBOM");
 
-    let elements: HashSet<&str> = array(&document["assessment-results"], "results")
+    let entries = array(&document["assessment-results"], "results");
+    let elements: HashSet<&str> = entries
         .iter()
         .flat_map(|entry| array(entry, "observations"))
         .flat_map(|observation| array(observation, "props"))
@@ -365,6 +413,74 @@ fn hostile_sbom_text_keeps_every_level_schema_valid() {
             "expected the label {normalized:?} among {elements:?}"
         );
     }
+    let titles: HashSet<&str> = entries
+        .iter()
+        .flat_map(|entry| array(&entry["local-definitions"], "components"))
+        .filter_map(|component| component["title"].as_str())
+        .collect();
+    for normalized in [
+        "lodash 4.17.21",
+        "app name",
+        "line break",
+        "tab\tinside 1.0",
+    ] {
+        assert!(
+            titles.contains(normalized),
+            "expected the component title {normalized:?} among {titles:?}"
+        );
+    }
+    assert_eq!(
+        document["assessment-results"]["back-matter"]["resources"][0]["title"],
+        "app name (CycloneDX 1.6 SBOM)"
+    );
+}
+
+/// `validate -o oscal-json` end to end: the binary hands the writer the
+/// parsed SBOM and the digest of the bytes it read, and the document is
+/// schema-valid and byte-identical across runs.
+#[test]
+fn validate_oscal_json_is_schema_valid_and_reproducible() {
+    let path = Path::new(FIXTURES_DIR).join("cyclonedx/minimal.cdx.json");
+    let run = || {
+        let output = std::process::Command::new(env!("CARGO_BIN_EXE_sbom-tools"))
+            .args(["--no-color", "validate"])
+            .arg(&path)
+            .args(["--standard", "ntia,cra", "-o", "oscal-json"])
+            .args(["--as-of", "2026-10-12T00:00:00Z"])
+            .env("RUST_LOG", "error")
+            .output()
+            .expect("validate runs");
+        assert!(
+            matches!(output.status.code(), Some(0 | 1)),
+            "validate must complete: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8(output.stdout).expect("stdout is UTF-8")
+    };
+    let first = run();
+    assert_eq!(first, run(), "validate -o oscal-json differs between runs");
+    let document: Value = serde_json::from_str(&first).expect("stdout is JSON");
+    assert_valid(&schema(), &document, "validate -o oscal-json");
+
+    let resource = &document["assessment-results"]["back-matter"]["resources"][0];
+    assert_eq!(resource["title"], "test-app (CycloneDX 1.5 SBOM)");
+    let digest = sha256_hex(&std::fs::read(&path).expect("fixture readable"));
+    assert!(
+        array(resource, "props")
+            .iter()
+            .any(|p| p["name"] == "sha256" && p["value"] == digest.as_str()),
+        "the document subject carries the SHA-256 of the SBOM bytes"
+    );
+    let entries = array(&document["assessment-results"], "results");
+    assert_eq!(entries.len(), 2, "ntia and cra");
+    let titles: HashSet<&str> = array(&entries[0]["local-definitions"], "components")
+        .iter()
+        .filter_map(|component| component["title"].as_str())
+        .collect();
+    assert!(
+        titles.contains("lodash 4.17.21"),
+        "components are described from the SBOM: {titles:?}"
+    );
 }
 
 /// Finding targets are `token`s built from rule ids (`target-id` is the

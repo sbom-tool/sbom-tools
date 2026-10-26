@@ -7,7 +7,16 @@
 //! machine-readable verdict (standard id, `is_compliant`, applicability,
 //! severity counts, score). A fully compliant standard still gets its result
 //! entry, with a satisfied roll-up finding.
+//!
+//! Each rule a standard checked against the SBOM becomes an observation and
+//! the finding that judges it (a `Check`). Observations name their
+//! subjects: the SBOM document, described once as a back-matter resource,
+//! and, when the check is about a component, that component, defined in the
+//! result's `local-definitions`.
 
+use std::collections::HashMap;
+
+use crate::model::{Component, ComponentType, NormalizedSbom};
 use crate::quality::{Applicability, ComplianceResult, Violation, ViolationSeverity};
 use anyhow::Result;
 use chrono::{DateTime, SecondsFormat, Utc};
@@ -21,69 +30,75 @@ const OSCAL_VERSION: &str = "1.2.3";
 const ASSESSMENT_PLAN_URN: &str = "urn:sbom-tools:assessment-plan:validation";
 const PROP_NS: &str = "https://sbom.tools/ns/oscal";
 
-/// Observation type of a rule violation. OSCAL 1.2.0 deprecated `finding`,
-/// the type for observations made by tools, and named `discovery` its
-/// replacement.
-const VIOLATION_OBSERVATION_TYPE: &str = "discovery";
-
 /// Generate an OSCAL 1.2.3 assessment-results JSON document.
 ///
 /// Stamps the current time and random UUIDs, so two runs never produce the
-/// same bytes. Prefer [`generate_assessment_results_at`], which is
-/// reproducible.
+/// same bytes, and knows only what the results say about the SBOM: the
+/// document subject carries no name or digest, and a component is titled by
+/// the label its findings give it. Prefer [`generate_assessment_results_at`],
+/// which is reproducible and describes the SBOM and its components.
 pub fn generate_assessment_results(results: &[ComplianceResult]) -> Result<String> {
-    build_assessment_results(results, Utc::now(), &mut Uuid::new_v4)
+    build_assessment_results(
+        results,
+        Assessed::default(),
+        Utc::now(),
+        &mut RandomUuids::default(),
+    )
 }
 
-/// Generate an OSCAL 1.2.3 assessment-results JSON document that is
-/// reproducible for a given input.
+/// Generate an OSCAL 1.2.3 assessment-results JSON document for `sbom` that
+/// is reproducible for a given input.
+///
+/// `sbom` is the parsed document the results were computed from and
+/// `sbom_digest` the lowercase hex SHA-256 of its bytes. Together they
+/// describe the subjects observations name: the SBOM document (a back-matter
+/// resource with the digest, format and serial number) and the components
+/// findings are about (local definitions with name, version and canonical
+/// id).
 ///
 /// The `collected` and `last-modified` timestamps are `as_of` (the `--as-of`
-/// evaluation instant), or the current time when none is given. Every UUID is
-/// a UUIDv5 derived from `sbom_digest`, that timestamp, the checked standards
-/// and the UUID's position in the document. The same SBOM evaluated against
-/// the same standards at the same instant therefore always yields the same
-/// bytes, while a different SBOM, instant or standard set never reuses a UUID.
+/// evaluation instant), or the current time when none is given. Every UUID
+/// is a UUIDv5. Those that identify the assessment (the document, each
+/// result, observation and finding) derive from `sbom_digest`, that
+/// timestamp, the checked standards and their position in the document: the
+/// same SBOM evaluated against the same standards at the same instant always
+/// yields the same bytes, while a different SBOM, instant or standard set
+/// never reuses one. Those that identify a subject derive from `sbom_digest`
+/// and the subject alone (for a component, its canonical id), so a subject
+/// keeps its UUID across instants, standard sets and results, as OSCAL asks
+/// of per-subject identifiers.
 pub fn generate_assessment_results_at(
     results: &[ComplianceResult],
+    sbom: &NormalizedSbom,
     sbom_digest: &str,
     as_of: Option<DateTime<Utc>>,
 ) -> Result<String> {
     let timestamp = as_of.unwrap_or_else(Utc::now);
-    let namespace = Uuid::new_v5(&Uuid::NAMESPACE_URL, UUID_NAMESPACE_NAME.as_bytes());
-    let standards: Vec<String> = results.iter().map(standard_id).collect();
-    let seed = format!(
-        "{sbom_digest}|{}|{}",
-        timestamp.to_rfc3339_opts(SecondsFormat::Secs, true),
-        standards.join(",")
-    );
-    let mut position = 0u64;
-    build_assessment_results(results, timestamp, &mut || {
-        position += 1;
-        Uuid::new_v5(&namespace, format!("{seed}|{position}").as_bytes())
-    })
+    let assessed = Assessed {
+        sbom: Some(sbom),
+        digest: Some(sbom_digest),
+    };
+    let mut uuids = DerivedUuids::new(results, sbom_digest, timestamp);
+    build_assessment_results(results, assessed, timestamp, &mut uuids)
 }
-
-/// Name (in the RFC 4122 URL namespace) of the UUIDv5 namespace that
-/// [`generate_assessment_results_at`] derives document UUIDs from.
-const UUID_NAMESPACE_NAME: &str =
-    "https://github.com/sbom-tool/sbom-tools/oscal/assessment-results";
 
 fn build_assessment_results(
     results: &[ComplianceResult],
+    assessed: Assessed<'_>,
     timestamp: DateTime<Utc>,
-    uuid: &mut impl FnMut() -> Uuid,
+    uuids: &mut impl UuidSource,
 ) -> Result<String> {
     let collected = timestamp.to_rfc3339_opts(SecondsFormat::Secs, true);
+    let subjects = Subjects::new(assessed, uuids);
     let mut result_entries: Vec<Value> = results
         .iter()
-        .map(|result| standard_result(result, &collected, uuid))
+        .map(|result| standard_result(result, &collected, &subjects, uuids))
         .collect();
     // OSCAL requires at least one result entry; keep the historical empty
     // assessment shape when no standard was checked at all.
     if result_entries.is_empty() {
         result_entries.push(json!({
-            "uuid": uuid(),
+            "uuid": uuids.next(),
             "title": "sbom-tools validation assessment",
             "description": "Validation results derived only from the supplied SBOM.",
             "start": collected,
@@ -93,7 +108,7 @@ fn build_assessment_results(
 
     Ok(serde_json::to_string_pretty(&json!({
         "assessment-results": {
-            "uuid": uuid(),
+            "uuid": uuids.next(),
             "metadata": {
                 "title": "sbom-tools validation assessment results",
                 "last-modified": collected,
@@ -101,9 +116,176 @@ fn build_assessment_results(
                 "oscal-version": OSCAL_VERSION
             },
             "import-ap": { "href": ASSESSMENT_PLAN_URN },
-            "results": result_entries
+            "results": result_entries,
+            "back-matter": { "resources": [subjects.document_resource()] }
         }
     }))?)
+}
+
+// ---------------------------------------------------------------------------
+// UUIDs
+// ---------------------------------------------------------------------------
+
+/// Where the document's UUIDs come from.
+trait UuidSource {
+    /// The next UUID that identifies the assessment (the document, a result,
+    /// an observation, a finding), drawn in document order.
+    fn next(&mut self) -> Uuid;
+
+    /// The UUID of the subject `key` names: equal keys give equal UUIDs.
+    fn subject(&mut self, key: &str) -> Uuid;
+}
+
+/// Name (in the RFC 4122 URL namespace) of the UUIDv5 namespace that
+/// [`generate_assessment_results_at`] derives document UUIDs from.
+const UUID_NAMESPACE_NAME: &str =
+    "https://github.com/sbom-tool/sbom-tools/oscal/assessment-results";
+
+/// UUIDv5s derived from the input ([`generate_assessment_results_at`]).
+struct DerivedUuids {
+    namespace: Uuid,
+    /// `<digest>|<instant>|<standards>`; an assessment UUID appends its
+    /// position in the document.
+    assessment_seed: String,
+    /// `<digest>`; a subject UUID appends `subject|<key>`.
+    subject_seed: String,
+    position: u64,
+}
+
+impl DerivedUuids {
+    fn new(results: &[ComplianceResult], sbom_digest: &str, timestamp: DateTime<Utc>) -> Self {
+        let standards: Vec<String> = results.iter().map(standard_id).collect();
+        Self {
+            namespace: Uuid::new_v5(&Uuid::NAMESPACE_URL, UUID_NAMESPACE_NAME.as_bytes()),
+            assessment_seed: format!(
+                "{sbom_digest}|{}|{}",
+                timestamp.to_rfc3339_opts(SecondsFormat::Secs, true),
+                standards.join(",")
+            ),
+            subject_seed: sbom_digest.to_string(),
+            position: 0,
+        }
+    }
+}
+
+impl UuidSource for DerivedUuids {
+    fn next(&mut self) -> Uuid {
+        self.position += 1;
+        let name = format!("{}|{}", self.assessment_seed, self.position);
+        Uuid::new_v5(&self.namespace, name.as_bytes())
+    }
+
+    fn subject(&mut self, key: &str) -> Uuid {
+        let name = format!("{}|subject|{key}", self.subject_seed);
+        Uuid::new_v5(&self.namespace, name.as_bytes())
+    }
+}
+
+/// Random UUIDv4s ([`generate_assessment_results`]), one per subject.
+#[derive(Default)]
+struct RandomUuids {
+    subjects: HashMap<String, Uuid>,
+}
+
+impl UuidSource for RandomUuids {
+    fn next(&mut self) -> Uuid {
+        Uuid::new_v4()
+    }
+
+    fn subject(&mut self, key: &str) -> Uuid {
+        *self
+            .subjects
+            .entry(key.to_string())
+            .or_insert_with(Uuid::new_v4)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Checks: one observation and the finding that judges it
+// ---------------------------------------------------------------------------
+
+/// Whether a check met its objective. OSCAL's finding-target `state` is a
+/// closed enum (no allow-other) with exactly these two values.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Objective {
+    Satisfied,
+    NotSatisfied,
+}
+
+impl Objective {
+    const fn from_met(met: bool) -> Self {
+        if met {
+            Self::Satisfied
+        } else {
+            Self::NotSatisfied
+        }
+    }
+
+    const fn state(self) -> &'static str {
+        match self {
+            Self::Satisfied => "satisfied",
+            Self::NotSatisfied => "not-satisfied",
+        }
+    }
+
+    /// The type of the observation behind a check. An unmet objective is a
+    /// `discovery`: OSCAL 1.2.0 deprecated `finding`, the type for
+    /// observations made by tools, and named `discovery` its replacement. A
+    /// met one is an observation about the status of a `control-objective`.
+    const fn observation_type(self) -> &'static str {
+        match self {
+            Self::Satisfied => "control-objective",
+            Self::NotSatisfied => "discovery",
+        }
+    }
+}
+
+/// One rule checked against one subject, emitted as an observation and the
+/// finding that judges it. A violation is a check whose objective was not
+/// met; a check the SBOM passed takes the same path with
+/// [`Objective::Satisfied`].
+struct Check<'a> {
+    rule_id: &'static str,
+    /// What the check found: the observation's and the finding's
+    /// description.
+    message: &'a str,
+    objective: Objective,
+    /// Canonical id of the component the check is about; `None` for the
+    /// document and for aggregate checks.
+    component_id: Option<&'a str>,
+    /// The SBOM's label for that component (usually its name): its title
+    /// when the SBOM itself is not at hand.
+    label: Option<&'a str>,
+    /// The observation's properties.
+    props: Vec<Value>,
+}
+
+impl<'a> Check<'a> {
+    /// The check a violation reports. Any violation, whatever its severity,
+    /// is an unmet objective; the severity is the observation's `severity`
+    /// property.
+    fn violation(violation: &'a Violation) -> Self {
+        let mut props: Vec<Value> = [
+            prop("severity", severity(violation.severity)),
+            prop("standard-reference", &violation.requirement),
+            prop("rule-id", violation.rule_id),
+            prop("sarif-rule-id", violation.sarif_rule_id()),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        if let Some(element) = &violation.element {
+            props.extend(prop("sbom-element", element));
+        }
+        Self {
+            rule_id: violation.rule_id,
+            message: &violation.message,
+            objective: Objective::NotSatisfied,
+            component_id: violation.component_id.as_deref(),
+            label: violation.element.as_deref(),
+            props,
+        }
+    }
 }
 
 fn reviewed_controls() -> Value {
@@ -125,7 +307,8 @@ fn standard_id(result: &ComplianceResult) -> String {
 fn standard_result(
     result: &ComplianceResult,
     collected: &str,
-    uuid: &mut impl FnMut() -> Uuid,
+    subjects: &Subjects<'_>,
+    uuids: &mut impl UuidSource,
 ) -> Value {
     let standard_name = result.level.name();
     let mut props: Vec<Value> = [
@@ -154,47 +337,51 @@ fn standard_result(
         props.extend(prop("score", &score.to_string()));
     }
 
+    // A real N/A result carries exactly one Info marker violation
+    // (SBOM-AIACT-NA / SBOM-BSIAI-NA) — that is how the checker encodes
+    // "this standard never evaluated the SBOM". The applicability props
+    // above already carry that verdict; rendering the marker as a check
+    // would emit a `not-satisfied` objective (OSCAL's finding-target state
+    // is a closed satisfied/not-satisfied enum with no N/A) for a standard
+    // that was never evaluated. Skip it, like the CSV export does; any other
+    // violation keeps current behavior.
+    let checks = result
+        .violations
+        .iter()
+        .filter(|violation| result.is_applicable() || !is_not_applicable_marker(violation))
+        .map(Check::violation);
+
     let mut observations = Vec::new();
     let mut findings = Vec::new();
+    let mut components = LocalComponents::default();
     // Roll-up finding: the standard-level verdict. Not-applicable standards
     // keep `is_compliant = true` by contract but were never evaluated, so
     // they get no roll-up — the props above carry the N/A verdict instead.
     if result.is_applicable() {
-        findings.push(rollup_finding(result, standard_name, uuid()));
+        findings.push(rollup_finding(result, standard_name, uuids.next()));
     }
-    for violation in &result.violations {
-        // A real N/A result carries exactly one Info marker violation
-        // (SBOM-AIACT-NA / SBOM-BSIAI-NA) — that is how the checker encodes
-        // "this standard never evaluated the SBOM". The applicability props
-        // above already carry that verdict; rendering the marker through
-        // `finding()` would emit a `not-satisfied` objective (OSCAL's
-        // finding-target state is a closed satisfied/not-satisfied enum with
-        // no N/A) for a standard that was never evaluated. Skip it, like the
-        // CSV export does; any other violation keeps current behavior.
-        if !result.is_applicable() && is_not_applicable_marker(violation) {
-            continue;
-        }
-        let observation_uuid = uuid();
-        observations.push(observation(violation, observation_uuid, collected));
-        findings.push(finding(violation, observation_uuid, uuid()));
+    for check in checks {
+        let observation_uuid = uuids.next();
+        let observed = subjects.references(&check, &mut components, uuids);
+        findings.push(finding(&check, observation_uuid, uuids.next()));
+        observations.push(observation(check, observation_uuid, collected, observed));
     }
 
     let mut entry = json!({
-        "uuid": uuid(),
+        "uuid": uuids.next(),
         "title": format!("sbom-tools validation assessment — {standard_name}"),
         "description": format!(
             "Validation results for {standard_name}, derived only from the supplied SBOM."
         ),
         "start": collected,
         "reviewed-controls": reviewed_controls(),
-        "props": props,
     });
-    if !observations.is_empty() {
-        entry["observations"] = Value::Array(observations);
+    set_array(&mut entry, "props", props);
+    if !components.definitions.is_empty() {
+        entry["local-definitions"] = json!({ "components": components.definitions });
     }
-    if !findings.is_empty() {
-        entry["findings"] = Value::Array(findings);
-    }
+    set_array(&mut entry, "observations", observations);
+    set_array(&mut entry, "findings", findings);
     entry
 }
 
@@ -205,6 +392,284 @@ fn is_not_applicable_marker(violation: &Violation) -> bool {
     matches!(violation.rule_id, "SBOM-AIACT-NA" | "SBOM-BSIAI-NA")
 }
 
+/// Standard-level roll-up finding: `satisfied` when the standard evaluated
+/// the SBOM and found no blocking violation, `not-satisfied` otherwise.
+fn rollup_finding(result: &ComplianceResult, standard_name: &str, uuid: Uuid) -> Value {
+    json!({
+        "uuid": uuid,
+        "title": format!("{standard_name} compliance roll-up"),
+        "description": format!(
+            "Overall verdict for {standard_name}: {} error(s), {} warning(s), {} informational finding(s).",
+            result.error_count, result.warning_count, result.info_count
+        ),
+        "target": {
+            "type": "objective-id",
+            "target-id": format!("{}-compliance", standard_id(result).to_ascii_lowercase()),
+            "status": { "state": Objective::from_met(result.is_compliant).state() }
+        }
+    })
+}
+
+fn observation(check: Check<'_>, uuid: Uuid, collected: &str, subjects: Vec<Value>) -> Value {
+    let mut observation = json!({
+        "uuid": uuid,
+        "title": check.rule_id,
+        "description": check.message,
+        "methods": ["EXAMINE"],
+        "types": [check.objective.observation_type()],
+        "subjects": subjects,
+        "collected": collected,
+    });
+    set_array(&mut observation, "props", check.props);
+    observation
+}
+
+fn finding(check: &Check<'_>, observation_uuid: Uuid, uuid: Uuid) -> Value {
+    json!({
+        "uuid": uuid,
+        "title": check.rule_id,
+        "description": check.message,
+        "target": {
+            "type": "objective-id",
+            "target-id": check.rule_id.to_ascii_lowercase(),
+            "status": { "state": check.objective.state() }
+        },
+        "related-observations": [{ "observation-uuid": observation_uuid }]
+    })
+}
+
+const fn severity(value: ViolationSeverity) -> &'static str {
+    match value {
+        ViolationSeverity::Error => "error",
+        ViolationSeverity::Warning => "warning",
+        ViolationSeverity::Info => "info",
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Subjects: the SBOM document and its components
+// ---------------------------------------------------------------------------
+
+/// What the writer knows about the assessed SBOM.
+#[derive(Clone, Copy, Default)]
+struct Assessed<'a> {
+    /// The parsed document: names, versions and identifiers of subjects.
+    sbom: Option<&'a NormalizedSbom>,
+    /// Lowercase hex SHA-256 of the SBOM bytes.
+    digest: Option<&'a str>,
+}
+
+/// Subject key of the SBOM document; a component's is `component|<id>`.
+const DOCUMENT_SUBJECT_KEY: &str = "document";
+
+/// The subjects observations name: the SBOM document, described once as a
+/// back-matter resource, and the components checks are about.
+struct Subjects<'a> {
+    assessed: Assessed<'a>,
+    /// The SBOM's components by canonical id.
+    components: HashMap<&'a str, &'a Component>,
+    document_uuid: Uuid,
+    document_title: String,
+}
+
+impl<'a> Subjects<'a> {
+    fn new(assessed: Assessed<'a>, uuids: &mut impl UuidSource) -> Self {
+        let components = assessed
+            .sbom
+            .map(|sbom| {
+                sbom.components
+                    .values()
+                    .map(|component| (component.canonical_id.value(), component))
+                    .collect()
+            })
+            .unwrap_or_default();
+        Self {
+            assessed,
+            components,
+            document_uuid: uuids.subject(DOCUMENT_SUBJECT_KEY),
+            document_title: document_title(assessed.sbom),
+        }
+    }
+
+    /// The back-matter resource describing the SBOM document: an `artifact`
+    /// in OSCAL's resource vocabulary, with the SHA-256 of its bytes, its
+    /// format and specification version, and its serial number (CycloneDX)
+    /// or document namespace (SPDX) as a document id.
+    fn document_resource(&self) -> Value {
+        let mut props: Vec<Value> = oscal_prop("type", "artifact").into_iter().collect();
+        let mut document_ids = Vec::new();
+        if let Some(digest) = self.assessed.digest {
+            props.extend(prop("sha256", digest));
+        }
+        if let Some(sbom) = self.assessed.sbom {
+            let document = &sbom.document;
+            props.extend(prop("format", &document.format.to_string()));
+            props.extend(prop("spec-version", &document.spec_version));
+            if let Some(serial) = document.serial_number.as_deref().and_then(oscal_string) {
+                document_ids.push(json!({ "identifier": serial }));
+            }
+        }
+        let mut resource = json!({
+            "uuid": self.document_uuid,
+            "title": self.document_title,
+            "description": "The SBOM document this assessment examined. Every observation names it as a subject.",
+        });
+        set_array(&mut resource, "props", props);
+        set_array(&mut resource, "document-ids", document_ids);
+        resource
+    }
+
+    /// The subjects of `check`: the SBOM document, then the component the
+    /// check is about, defined in `local` on its first reference.
+    fn references(
+        &self,
+        check: &Check<'_>,
+        local: &mut LocalComponents,
+        uuids: &mut impl UuidSource,
+    ) -> Vec<Value> {
+        let mut references = vec![json!({
+            "subject-uuid": self.document_uuid,
+            "type": "resource",
+            "title": self.document_title,
+        })];
+        if let Some(id) = check.component_id {
+            let uuid = uuids.subject(&format!("component|{id}"));
+            let title = local.title(uuid, || self.component(id, check.label));
+            references.push(json!({
+                "subject-uuid": uuid,
+                "type": "component",
+                "title": title,
+            }));
+        }
+        references
+    }
+
+    /// The component with canonical id `id`, described from the SBOM when it
+    /// is at hand and from the check's `label` otherwise.
+    fn component(&self, id: &str, label: Option<&str>) -> ComponentSubject {
+        let component = self.components.get(id).copied();
+        let version = component
+            .and_then(|c| c.version.as_deref())
+            .and_then(oscal_string);
+        let name = component
+            .map(|c| c.name.as_str())
+            .or(label)
+            .and_then(oscal_string)
+            .or_else(|| oscal_string(id))
+            .unwrap_or_else(|| "Unnamed component".to_string());
+        let title = match &version {
+            Some(version) => format!("{name} {version}"),
+            None => name,
+        };
+        let mut props: Vec<Value> = version
+            .as_deref()
+            .and_then(|version| oscal_prop("version", version))
+            .into_iter()
+            .collect();
+        props.extend(prop("component-id", id));
+        if let Some(component) = component {
+            props.extend(prop(
+                "component-type",
+                &component.component_type.to_string(),
+            ));
+        }
+        ComponentSubject {
+            title,
+            oscal_type: component.map_or("software", |c| oscal_component_type(&c.component_type)),
+            props,
+        }
+    }
+}
+
+/// The title of the SBOM document's resource, e.g. `acme-app (CycloneDX 1.6
+/// SBOM)`.
+fn document_title(sbom: Option<&NormalizedSbom>) -> String {
+    let Some(sbom) = sbom else {
+        return "Assessed SBOM".to_string();
+    };
+    let document = &sbom.document;
+    let kind = match oscal_string(&document.spec_version) {
+        Some(spec) => format!("{} {spec} SBOM", document.format),
+        None => format!("{} SBOM", document.format),
+    };
+    match document.name.as_deref().and_then(oscal_string) {
+        Some(name) => format!("{name} ({kind})"),
+        None => kind,
+    }
+}
+
+/// OSCAL's component `type` for an SBOM component type. The SBOM's own type
+/// is kept in the `component-type` property.
+const fn oscal_component_type(component_type: &ComponentType) -> &'static str {
+    match component_type {
+        ComponentType::Service => "service",
+        ComponentType::Device => "hardware",
+        _ => "software",
+    }
+}
+
+/// A component as a subject: its local definition and the title its
+/// references repeat.
+struct ComponentSubject {
+    title: String,
+    oscal_type: &'static str,
+    props: Vec<Value>,
+}
+
+impl ComponentSubject {
+    fn definition(self, uuid: Uuid) -> Value {
+        let mut definition = json!({
+            "uuid": uuid,
+            "type": self.oscal_type,
+            "title": self.title,
+            "description": "A component listed in the assessed SBOM.",
+            // `status` is required; the SBOM does not say whether the
+            // component is operational.
+            "status": {
+                "state": "other",
+                "remarks": "The SBOM does not state the component's operational status."
+            },
+        });
+        set_array(&mut definition, "props", self.props);
+        definition
+    }
+}
+
+/// The components one result's observations name, each defined once, in
+/// order of first reference (`local-definitions.components`).
+#[derive(Default)]
+struct LocalComponents {
+    titles: HashMap<Uuid, String>,
+    definitions: Vec<Value>,
+}
+
+impl LocalComponents {
+    /// The title of component `uuid`, defining it from `describe` on first
+    /// reference.
+    fn title(&mut self, uuid: Uuid, describe: impl FnOnce() -> ComponentSubject) -> String {
+        if let Some(title) = self.titles.get(&uuid) {
+            return title.clone();
+        }
+        let subject = describe();
+        let title = subject.title.clone();
+        self.definitions.push(subject.definition(uuid));
+        self.titles.insert(uuid, title.clone());
+        title
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Values
+// ---------------------------------------------------------------------------
+
+/// Set `field` to `items` unless there are none: OSCAL arrays hold at least
+/// one item.
+fn set_array(object: &mut Value, field: &str, items: Vec<Value>) {
+    if !items.is_empty() {
+        object[field] = Value::Array(items);
+    }
+}
+
 /// A property in our namespace, or `None` when `value` holds no text.
 fn prop(name: &str, value: &str) -> Option<Value> {
     let value = oscal_string(value)?;
@@ -213,6 +678,13 @@ fn prop(name: &str, value: &str) -> Option<Value> {
         "ns": PROP_NS,
         "value": value
     }))
+}
+
+/// A property from OSCAL's own vocabulary (no `ns`), or `None` when `value`
+/// holds no text.
+fn oscal_prop(name: &str, value: &str) -> Option<Value> {
+    let value = oscal_string(value)?;
+    Some(json!({ "name": name, "value": value }))
 }
 
 /// `text` as an OSCAL `string`, or `None` when nothing is left of it.
@@ -245,89 +717,14 @@ const fn is_line_terminator(c: char) -> bool {
     matches!(c, '\n' | '\r' | '\u{2028}' | '\u{2029}')
 }
 
-/// Standard-level roll-up finding: `satisfied` when the standard evaluated
-/// the SBOM and found no blocking violation, `not-satisfied` otherwise.
-fn rollup_finding(result: &ComplianceResult, standard_name: &str, uuid: Uuid) -> Value {
-    let state = if result.is_compliant {
-        "satisfied"
-    } else {
-        "not-satisfied"
-    };
-    json!({
-        "uuid": uuid,
-        "title": format!("{standard_name} compliance roll-up"),
-        "description": format!(
-            "Overall verdict for {standard_name}: {} error(s), {} warning(s), {} informational finding(s).",
-            result.error_count, result.warning_count, result.info_count
-        ),
-        "target": {
-            "type": "objective-id",
-            "target-id": format!("{}-compliance", standard_id(result).to_ascii_lowercase()),
-            "status": { "state": state }
-        }
-    })
-}
-
-fn observation(violation: &Violation, uuid: Uuid, collected: &str) -> Value {
-    let mut props: Vec<Value> = [
-        prop("severity", severity(violation.severity)),
-        prop("standard-reference", &violation.requirement),
-        prop("rule-id", violation.rule_id),
-        prop("sarif-rule-id", violation.sarif_rule_id()),
-    ]
-    .into_iter()
-    .flatten()
-    .collect();
-    if let Some(element) = &violation.element {
-        props.extend(prop("sbom-element", element));
-    }
-    json!({
-        "uuid": uuid,
-        "title": violation.rule_id,
-        "description": violation.message,
-        "methods": ["EXAMINE"],
-        "types": [VIOLATION_OBSERVATION_TYPE],
-        "collected": collected,
-        "props": props
-    })
-}
-
-fn finding(violation: &Violation, observation_uuid: Uuid, uuid: Uuid) -> Value {
-    json!({
-        "uuid": uuid,
-        "title": violation.rule_id,
-        "description": violation.message,
-        "target": {
-            "type": "objective-id",
-            "target-id": violation.rule_id.to_ascii_lowercase(),
-            "status": {
-                // OSCAL's finding-target status `state` is a closed enum
-                // (satisfied | not-satisfied, no allow-other). Any violation —
-                // regardless of severity — is a non-satisfied objective; the
-                // severity detail is carried separately in the observation's
-                // custom `severity` property.
-                "state": "not-satisfied"
-            }
-        },
-        "related-observations": [{ "observation-uuid": observation_uuid }]
-    })
-}
-
-const fn severity(value: ViolationSeverity) -> &'static str {
-    match value {
-        ViolationSeverity::Error => "error",
-        ViolationSeverity::Warning => "warning",
-        ViolationSeverity::Info => "info",
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::build_assessment_results;
+    use super::{Assessed, DerivedUuids, build_assessment_results};
+    use crate::model::{Component, DocumentMetadata, NormalizedSbom};
     use crate::quality::{
         ComplianceLevel, ComplianceResult, Violation, ViolationCategory, ViolationSeverity,
     };
-    use chrono::{TimeZone, Utc};
+    use chrono::{DateTime, TimeZone, Utc};
     use uuid::Uuid;
 
     fn violation(message: &str) -> Violation {
@@ -358,18 +755,61 @@ mod tests {
         }
     }
 
-    fn build(results: &[ComplianceResult]) -> serde_json::Value {
-        let timestamp = Utc
-            .with_ymd_and_hms(2026, 7, 1, 12, 0, 0)
+    fn instant(year: i32, month: u32, day: u32) -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(year, month, day, 12, 0, 0)
             .single()
-            .expect("valid timestamp");
-        let mut next = 0u128;
-        let json = build_assessment_results(results, timestamp, &mut || {
-            next += 1;
-            Uuid::from_u128(next)
-        })
-        .expect("OSCAL serialization");
+            .expect("valid timestamp")
+    }
+
+    /// The document for `results` about `sbom` (or, without one, only what
+    /// the results say), with UUIDs derived from a fixed digest.
+    fn build_for(results: &[ComplianceResult], sbom: Option<&NormalizedSbom>) -> serde_json::Value {
+        let timestamp = instant(2026, 7, 1);
+        let assessed = Assessed {
+            sbom,
+            digest: Some("abc123"),
+        };
+        let mut uuids = DerivedUuids::new(results, "abc123", timestamp);
+        let json = build_assessment_results(results, assessed, timestamp, &mut uuids)
+            .expect("OSCAL serialization");
         serde_json::from_str(&json).expect("valid JSON")
+    }
+
+    fn build(results: &[ComplianceResult]) -> serde_json::Value {
+        build_for(results, None)
+    }
+
+    /// An SBOM with one component, `lodash` 4.17.21 (canonical id: its purl).
+    fn lodash_sbom() -> NormalizedSbom {
+        let document = DocumentMetadata {
+            name: Some("acme-app".to_string()),
+            spec_version: "1.6".to_string(),
+            serial_number: Some("urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79".to_string()),
+            ..DocumentMetadata::default()
+        };
+        let mut sbom = NormalizedSbom::new(document);
+        sbom.add_component(
+            Component::new("lodash".to_string(), "lodash-ref".to_string())
+                .with_version("4.17.21".to_string())
+                .with_purl("pkg:npm/lodash@4.17.21".to_string()),
+        );
+        sbom
+    }
+
+    /// A component-scoped violation about the component with canonical id
+    /// `component_id`, labelled `label`.
+    fn component_violation(rule_id: &'static str, component_id: &str, label: &str) -> Violation {
+        let mut v = violation(&format!("Component '{label}' fails {rule_id}"));
+        v.rule_id = rule_id;
+        v.component_id = Some(component_id.to_string());
+        v.element = Some(label.to_string());
+        v
+    }
+
+    fn subjects(observation: &serde_json::Value) -> &[serde_json::Value] {
+        observation["subjects"]
+            .as_array()
+            .map_or(&[], Vec::as_slice)
     }
 
     fn prop_value<'a>(entry: &'a serde_json::Value, name: &str) -> Option<&'a str> {
@@ -620,10 +1060,14 @@ mod tests {
             .with_ymd_and_hms(2026, 10, 12, 0, 0, 0)
             .single()
             .expect("valid timestamp");
-        let results = [result(vec![violation("missing timestamp")])];
-        let first = generate_assessment_results_at(&results, "abc123", Some(as_of))
+        let sbom = lodash_sbom();
+        let results = [result(vec![
+            violation("missing timestamp"),
+            component_violation("SBOM-NTIA-SUPPLIER", "pkg:npm/lodash@4.17.21", "lodash"),
+        ])];
+        let first = generate_assessment_results_at(&results, &sbom, "abc123", Some(as_of))
             .expect("OSCAL serialization");
-        let second = generate_assessment_results_at(&results, "abc123", Some(as_of))
+        let second = generate_assessment_results_at(&results, &sbom, "abc123", Some(as_of))
             .expect("OSCAL serialization");
         assert_eq!(
             first, second,
@@ -642,12 +1086,242 @@ mod tests {
         // OSCAL's uuid datatype accepts only RFC 4122 version 4 or 5.
         assert_eq!(parsed.get_version_num(), 5, "document UUID version");
 
-        let other_sbom = generate_assessment_results_at(&results, "def456", Some(as_of))
+        let other_sbom = generate_assessment_results_at(&results, &sbom, "def456", Some(as_of))
             .expect("OSCAL serialization");
         let other: serde_json::Value = serde_json::from_str(&other_sbom).expect("valid JSON");
         assert_ne!(
             document["assessment-results"]["uuid"], other["assessment-results"]["uuid"],
             "a different SBOM must not reuse UUIDs"
         );
+        let subject_uuids = |document: &serde_json::Value| -> Vec<serde_json::Value> {
+            subjects(&document["assessment-results"]["results"][0]["observations"][1])
+                .iter()
+                .map(|s| s["subject-uuid"].clone())
+                .collect()
+        };
+        assert_ne!(
+            subject_uuids(&document),
+            subject_uuids(&other),
+            "a different SBOM must not reuse subject UUIDs either"
+        );
+    }
+
+    #[test]
+    fn every_observation_names_the_sbom_document_described_in_back_matter() {
+        let sbom = lodash_sbom();
+        let document = build_for(
+            &[result(vec![
+                violation("missing timestamp"),
+                component_violation("SBOM-NTIA-SUPPLIER", "pkg:npm/lodash@4.17.21", "lodash"),
+            ])],
+            Some(&sbom),
+        );
+        let resources = document["assessment-results"]["back-matter"]["resources"]
+            .as_array()
+            .expect("back-matter resources");
+        assert_eq!(resources.len(), 1, "one resource: the SBOM document");
+        let resource = &resources[0];
+        assert_eq!(resource["title"], "acme-app (CycloneDX 1.6 SBOM)");
+        // OSCAL's own resource vocabulary: an artifact an assessor reviews.
+        assert!(
+            resource["props"]
+                .as_array()
+                .expect("props")
+                .iter()
+                .any(|p| p["name"] == "type" && p["value"] == "artifact" && p.get("ns").is_none())
+        );
+        assert_eq!(prop_value(resource, "sha256"), Some("abc123"));
+        assert_eq!(prop_value(resource, "format"), Some("CycloneDX"));
+        assert_eq!(prop_value(resource, "spec-version"), Some("1.6"));
+        assert_eq!(
+            resource["document-ids"][0]["identifier"],
+            "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79"
+        );
+
+        let observations = document["assessment-results"]["results"][0]["observations"]
+            .as_array()
+            .expect("observations");
+        for observation in observations {
+            let first = &subjects(observation)[0];
+            assert_eq!(first["type"], "resource");
+            assert_eq!(first["subject-uuid"], resource["uuid"]);
+            assert_eq!(first["title"], resource["title"]);
+        }
+        assert_eq!(
+            subjects(&observations[0]).len(),
+            1,
+            "a document finding names only the document"
+        );
+    }
+
+    #[test]
+    fn a_component_finding_names_the_component_defined_in_local_definitions() {
+        let sbom = lodash_sbom();
+        let document = build_for(
+            &[result(vec![component_violation(
+                "SBOM-NTIA-SUPPLIER",
+                "pkg:npm/lodash@4.17.21",
+                "a label, not the name",
+            )])],
+            Some(&sbom),
+        );
+        let entry = &document["assessment-results"]["results"][0];
+        let components = entry["local-definitions"]["components"]
+            .as_array()
+            .expect("local components");
+        assert_eq!(components.len(), 1);
+        let component = &components[0];
+        assert_eq!(component["type"], "software");
+        assert_eq!(
+            component["title"], "lodash 4.17.21",
+            "the SBOM's name and version, not the finding's label"
+        );
+        assert_eq!(component["status"]["state"], "other");
+        assert_eq!(
+            prop_value(component, "component-id"),
+            Some("pkg:npm/lodash@4.17.21")
+        );
+        assert_eq!(prop_value(component, "component-type"), Some("library"));
+        let version = component["props"]
+            .as_array()
+            .expect("props")
+            .iter()
+            .find(|p| p["name"] == "version")
+            .expect("OSCAL version prop");
+        assert_eq!(version["value"], "4.17.21");
+        assert!(version.get("ns").is_none(), "`version` is OSCAL's own prop");
+
+        let subject = &subjects(&entry["observations"][0])[1];
+        assert_eq!(subject["type"], "component");
+        assert_eq!(subject["subject-uuid"], component["uuid"]);
+        assert_eq!(subject["title"], "lodash 4.17.21");
+    }
+
+    #[test]
+    fn a_component_is_defined_once_per_result_with_one_uuid_across_results() {
+        let sbom = lodash_sbom();
+        let id = "pkg:npm/lodash@4.17.21";
+        let ntia = result(vec![
+            component_violation("SBOM-NTIA-SUPPLIER", id, "lodash"),
+            component_violation("SBOM-NTIA-VERSION", id, "lodash"),
+        ]);
+        let mut cra = result(vec![component_violation("SBOM-CRA-GENERAL", id, "lodash")]);
+        cra.level = ComplianceLevel::CraPhase2;
+        let document = build_for(&[ntia, cra], Some(&sbom));
+        let entries = document["assessment-results"]["results"]
+            .as_array()
+            .expect("results");
+        let definitions = |entry: &serde_json::Value| -> Vec<serde_json::Value> {
+            entry["local-definitions"]["components"]
+                .as_array()
+                .expect("local components")
+                .iter()
+                .map(|c| c["uuid"].clone())
+                .collect()
+        };
+        assert_eq!(
+            definitions(&entries[0]).len(),
+            1,
+            "defined once, named twice"
+        );
+        assert_eq!(
+            definitions(&entries[0]),
+            definitions(&entries[1]),
+            "the same component keeps its UUID in every result"
+        );
+        for observation in entries[0]["observations"].as_array().expect("observations") {
+            assert_eq!(
+                subjects(observation)[1]["subject-uuid"],
+                definitions(&entries[0])[0]
+            );
+        }
+    }
+
+    #[test]
+    fn subject_uuids_do_not_depend_on_the_instant_or_the_standards() {
+        use super::generate_assessment_results_at;
+        let sbom = lodash_sbom();
+        let id = "pkg:npm/lodash@4.17.21";
+        let ntia = result(vec![component_violation(
+            "SBOM-NTIA-SUPPLIER",
+            id,
+            "lodash",
+        )]);
+        let mut cra = ntia.clone();
+        cra.level = ComplianceLevel::CraPhase2;
+        let render = |results: &[ComplianceResult], as_of| -> serde_json::Value {
+            let text = generate_assessment_results_at(results, &sbom, "abc123", Some(as_of))
+                .expect("OSCAL serialization");
+            serde_json::from_str(&text).expect("valid JSON")
+        };
+        let first = render(std::slice::from_ref(&ntia), instant(2026, 10, 12));
+        let later = render(&[cra, ntia], instant(2027, 1, 15));
+        let subject_uuids = |document: &serde_json::Value| -> Vec<serde_json::Value> {
+            subjects(&document["assessment-results"]["results"][0]["observations"][0])
+                .iter()
+                .map(|s| s["subject-uuid"].clone())
+                .collect()
+        };
+        assert_eq!(
+            subject_uuids(&first),
+            subject_uuids(&later),
+            "the SBOM document and its component keep their UUIDs"
+        );
+        assert_ne!(
+            first["assessment-results"]["uuid"], later["assessment-results"]["uuid"],
+            "the assessment does not"
+        );
+    }
+
+    #[test]
+    fn without_the_sbom_a_component_is_titled_by_its_label() {
+        let document = build(&[result(vec![component_violation(
+            "SBOM-NTIA-SUPPLIER",
+            "pkg:npm/lodash@4.17.21",
+            "lodash",
+        )])]);
+        let entry = &document["assessment-results"]["results"][0];
+        let component = &entry["local-definitions"]["components"][0];
+        assert_eq!(component["title"], "lodash");
+        assert_eq!(
+            prop_value(component, "component-id"),
+            Some("pkg:npm/lodash@4.17.21")
+        );
+        assert_eq!(
+            document["assessment-results"]["back-matter"]["resources"][0]["title"],
+            "Assessed SBOM"
+        );
+    }
+
+    /// A check the SBOM passed takes the violation's path with a met
+    /// objective: a satisfied finding over a control-objective observation
+    /// that names the same subjects.
+    #[test]
+    fn a_passed_check_is_a_satisfied_control_objective() {
+        use super::{Check, LocalComponents, Objective, Subjects, finding, observation};
+        let sbom = lodash_sbom();
+        let mut uuids = DerivedUuids::new(&[], "abc123", instant(2026, 7, 1));
+        let assessed = Assessed {
+            sbom: Some(&sbom),
+            digest: Some("abc123"),
+        };
+        let subjects_index = Subjects::new(assessed, &mut uuids);
+        let check = Check {
+            rule_id: "SBOM-NTIA-SUPPLIER",
+            message: "Component 'lodash' names its supplier",
+            objective: Objective::Satisfied,
+            component_id: Some("pkg:npm/lodash@4.17.21"),
+            label: Some("lodash"),
+            props: Vec::new(),
+        };
+        let mut local = LocalComponents::default();
+        let named = subjects_index.references(&check, &mut local, &mut uuids);
+        let judged = finding(&check, Uuid::from_u128(1), Uuid::from_u128(2));
+        let observed = observation(check, Uuid::from_u128(1), "2026-07-01T12:00:00Z", named);
+        assert_eq!(judged["target"]["status"]["state"], "satisfied");
+        assert_eq!(observed["types"], serde_json::json!(["control-objective"]));
+        assert_eq!(subjects(&observed).len(), 2, "document and component");
+        assert_eq!(local.definitions.len(), 1);
+        assert!(observed.get("props").is_none(), "no props, no empty array");
     }
 }

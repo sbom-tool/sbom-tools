@@ -3,6 +3,41 @@ source: tests/compliance_snapshots.rs
 ---
 {
   "assessment-results": {
+    "back-matter": {
+      "resources": [
+        {
+          "description": "The SBOM document this assessment examined. Every observation names it as a subject.",
+          "document-ids": [
+            {
+              "identifier": "urn:spdx:doc:minimal-spdx3"
+            }
+          ],
+          "props": [
+            {
+              "name": "type",
+              "value": "artifact"
+            },
+            {
+              "name": "sha256",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "c53e25847e7f12617e08f71fc4543a79df0dd141033f217f2e3424f782d12b56"
+            },
+            {
+              "name": "format",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "SPDX"
+            },
+            {
+              "name": "spec-version",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "3.0.1"
+            }
+          ],
+          "title": "Minimal SPDX 3.0 Test Document (SPDX 3.0.1 SBOM)",
+          "uuid": "05a6f69c-00f8-577e-ba53-f5cfa1e6d02a"
+        }
+      ]
+    },
     "import-ap": {
       "href": "urn:sbom-tools:assessment-plan:validation"
     },
@@ -194,6 +229,13 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-BSI-TR-03183-2-5-1"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "05a6f69c-00f8-577e-ba53-f5cfa1e6d02a",
+                "title": "Minimal SPDX 3.0 Test Document (SPDX 3.0.1 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-BSI-TR-03183-2-5-1",
             "types": [
               "discovery"
@@ -226,6 +268,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSI-TR-03183-2-LICENSE"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "05a6f69c-00f8-577e-ba53-f5cfa1e6d02a",
+                "title": "Minimal SPDX 3.0 Test Document (SPDX 3.0.1 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-BSI-TR-03183-2-LICENSE",
@@ -262,6 +311,13 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-BSI-TR-03183-2-CREATOR"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "05a6f69c-00f8-577e-ba53-f5cfa1e6d02a",
+                "title": "Minimal SPDX 3.0 Test Document (SPDX 3.0.1 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-BSI-TR-03183-2-CREATOR",
             "types": [
               "discovery"
@@ -294,6 +350,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSI-TR-03183-2-5-4"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "05a6f69c-00f8-577e-ba53-f5cfa1e6d02a",
+                "title": "Minimal SPDX 3.0 Test Document (SPDX 3.0.1 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-BSI-TR-03183-2-5-4",
@@ -330,6 +393,13 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-BSI-TR-03183-2-5-4-MISSING"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "05a6f69c-00f8-577e-ba53-f5cfa1e6d02a",
+                "title": "Minimal SPDX 3.0 Test Document (SPDX 3.0.1 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-BSI-TR-03183-2-5-4-MISSING",
             "types": [
               "discovery"
@@ -362,6 +432,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "05a6f69c-00f8-577e-ba53-f5cfa1e6d02a",
+                "title": "Minimal SPDX 3.0 Test Document (SPDX 3.0.1 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS",
@@ -398,6 +475,13 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-BSI-TR-03183-2-5-2-4"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "05a6f69c-00f8-577e-ba53-f5cfa1e6d02a",
+                "title": "Minimal SPDX 3.0 Test Document (SPDX 3.0.1 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-BSI-TR-03183-2-5-2-4",
             "types": [
               "discovery"
@@ -430,6 +514,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSI-TR-03183-2-3-1"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "05a6f69c-00f8-577e-ba53-f5cfa1e6d02a",
+                "title": "Minimal SPDX 3.0 Test Document (SPDX 3.0.1 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-BSI-TR-03183-2-3-1",
@@ -606,6 +697,13 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-EO14028-IDENTIFIER"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "05a6f69c-00f8-577e-ba53-f5cfa1e6d02a",
+                "title": "Minimal SPDX 3.0 Test Document (SPDX 3.0.1 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-EO14028-IDENTIFIER",
             "types": [
               "discovery"
@@ -638,6 +736,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-EO14028-INTEGRITY"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "05a6f69c-00f8-577e-ba53-f5cfa1e6d02a",
+                "title": "Minimal SPDX 3.0 Test Document (SPDX 3.0.1 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-EO14028-INTEGRITY",
@@ -674,6 +779,13 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-EO14028-DISCLOSURE"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "05a6f69c-00f8-577e-ba53-f5cfa1e6d02a",
+                "title": "Minimal SPDX 3.0 Test Document (SPDX 3.0.1 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-EO14028-DISCLOSURE",
             "types": [
               "discovery"
@@ -706,6 +818,13 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-EO14028-SUPPLIER"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "05a6f69c-00f8-577e-ba53-f5cfa1e6d02a",
+                "title": "Minimal SPDX 3.0 Test Document (SPDX 3.0.1 SBOM)",
+                "type": "resource"
               }
             ],
             "title": "SBOM-EO14028-SUPPLIER",
