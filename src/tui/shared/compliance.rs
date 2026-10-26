@@ -206,6 +206,7 @@ mod tests {
             requirement: "EU AI Act Annex IV".to_string(),
             rule_id: "SBOM-AIACT-ANNEX-IV-2D",
             standard_refs: vec![StandardRef::new(StandardKind::EuAiAct, "Annex IV §2(d)")],
+            remediation: None,
         }
     }
 
@@ -250,6 +251,7 @@ mod tests {
                 StandardRef::new(StandardKind::Pren40000_1_3, "PRE-7-RQ-01"),
                 StandardRef::new(StandardKind::Pren40000_1_3, "PRE-7-RQ-03"),
             ],
+            remediation: None,
         }
     }
 

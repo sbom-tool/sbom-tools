@@ -62,6 +62,7 @@ pub(crate) fn inventory_absent_violation(
         component_id: None,
         counts: None,
         standard_refs: Vec::new(),
+        remediation: None,
     })
 }
 

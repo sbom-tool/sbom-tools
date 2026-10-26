@@ -560,6 +560,9 @@ pub struct Violation {
     /// Populated by `ComplianceChecker::check()` from [`Violation::rule_id`]
     /// via [`rule_meta`]. Empty when a violation's rule maps to no references.
     pub standard_refs: Vec<StandardRef>,
+    /// Remediation guidance for this violation; `None` until a producer
+    /// fills it in.
+    pub remediation: Option<String>,
 }
 
 /// Affected/total component counts carried by aggregate findings.
@@ -629,6 +632,7 @@ impl<'de> Deserialize<'de> for Violation {
                 .and_then(lookup_static_rule_id)
                 .unwrap_or_else(default_rule_id),
             standard_refs: payload.standard_refs,
+            remediation: None,
         })
     }
 }
@@ -2259,6 +2263,7 @@ mod tests {
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         };
         let errors_only = ComplianceResult::new(
             ComplianceLevel::NtiaMinimum,
@@ -2408,6 +2413,7 @@ mod tests {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             },
             Violation {
                 severity: ViolationSeverity::Warning,
@@ -2419,6 +2425,7 @@ mod tests {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             },
             Violation {
                 severity: ViolationSeverity::Info,
@@ -2430,6 +2437,7 @@ mod tests {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             },
         ];
 
@@ -3529,6 +3537,7 @@ mod tests {
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         };
         v.registry_standard_refs()
     }
@@ -3578,6 +3587,7 @@ mod tests {
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         };
         let guidance = v.remediation_guidance();
         assert!(
