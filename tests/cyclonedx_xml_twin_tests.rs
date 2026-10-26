@@ -454,6 +454,16 @@ fn twins_cover_every_crypto_property() {
                     "cipherSuites",
                 );
                 seen(
+                    p.cipher_suites.iter().any(|s| !s.tls_groups.is_empty()),
+                    "tlsGroups (1.7)",
+                );
+                seen(
+                    p.cipher_suites
+                        .iter()
+                        .any(|s| !s.tls_signature_schemes.is_empty()),
+                    "tlsSignatureSchemes (1.7)",
+                );
+                seen(
                     p.related_crypto_assets.is_empty() && !p.crypto_ref_array.is_empty(),
                     "cryptoRef",
                 );
@@ -510,6 +520,8 @@ fn twins_cover_every_crypto_property() {
             "protocol relatedCryptographicAssets (1.7)",
             "securedBy",
             "securityLevels",
+            "tlsGroups (1.7)",
+            "tlsSignatureSchemes (1.7)",
         ]
         .into_iter()
         .collect(),

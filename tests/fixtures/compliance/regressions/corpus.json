@@ -847,20 +847,238 @@
       "id": "v7-tls13-classical-groups",
       "review_id": "V7",
       "fixture": "v7-tls13-classical-groups.cdx.json",
-      "note": "A TLS 1.3 suite with an acceptable AEAD and hash, but only classical key-exchange groups (x25519, secp256r1).",
+      "note": "A TLS 1.3 suite with an acceptable AEAD and hash, but only classical key-exchange groups (x25519, secp256r1) and an ECDSA P-384 signature scheme, passed both profiles with zero findings: tlsGroups and tlsSignatureSchemes were not read. Each offered group and scheme is judged now, so both profiles fail it under PROTO-002.",
       "checks": [
         {
           "standard": "cnsa2",
-          "xfail": "2.3",
           "expect": {
-            "compliant": false
+            "compliant": false,
+            "errors": 2,
+            "rules_present": [
+              {
+                "rule": "SBOM-CNSA2-PROTO-002",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-CNSA2-PROTO-UNKNOWN"
+            ]
           }
         },
         {
           "standard": "pqc",
-          "xfail": "2.3",
           "expect": {
-            "compliant": false
+            "compliant": false,
+            "errors": 2,
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-PROTO-002",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-PQC-PROTO-UNKNOWN"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v7-tls13-classical-only",
+      "review_id": "V7",
+      "fixture": "v7-tls13-classical-only.cdx.json",
+      "note": "TLS 1.3 offering only classical groups (x25519, secp256r1) and classical signature schemes (ecdsa_secp256r1_sha256, rsa_pss_rsae_sha256): the groups and the schemes each fail both profiles under PROTO-002.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": false,
+            "errors": 2,
+            "rules_present": [
+              {
+                "rule": "SBOM-CNSA2-PROTO-002",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-CNSA2-PROTO-UNKNOWN"
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": false,
+            "errors": 2,
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-PROTO-002",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-PQC-PROTO-UNKNOWN"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v7-tls13-x25519mlkem768",
+      "review_id": "V7",
+      "fixture": "v7-tls13-x25519mlkem768.cdx.json",
+      "note": "TLS 1.3 offering the hybrid group X25519MLKEM768 (RFC 10024) with mldsa87: NIST PQC accepts the group on its ML-KEM-768 part (SP 800-227 §4.6.2); CNSA 2.0 fails it under PROTO-002, as ML-KEM-768 is not ML-KEM-1024 and X25519 is not a CNSA 1.0 algorithm.",
+      "checks": [
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-PQC-PROTO-002",
+              "SBOM-PQC-PROTO-UNKNOWN"
+            ]
+          }
+        },
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": false,
+            "errors": 1,
+            "rules_present": [
+              {
+                "rule": "SBOM-CNSA2-PROTO-002",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-CNSA2-PROTO-UNKNOWN"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v7-tls13-mlkem1024-mldsa87",
+      "review_id": "V7",
+      "fixture": "v7-tls13-mlkem1024-mldsa87.cdx.json",
+      "note": "TLS 1.3 offering the pure ML-KEM-1024 group and the mldsa87 signature scheme, the algorithms NSA's CNSA 2.0 TLS profile requires (draft-becker-cnsa2-tls-profile-05 §4): passes both profiles.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-CNSA2-PROTO-UNKNOWN"
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-PQC-PROTO-UNKNOWN"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v7-tls13-codepoints",
+      "review_id": "V7",
+      "fixture": "v7-tls13-codepoints.cdx.json",
+      "note": "The same algorithms given by IANA codepoint: groups 514 (MLKEM1024, decimal) and 0x11ED (SecP384r1MLKEM1024, hex), signature scheme 0x0906 (mldsa87). Each resolves through the IANA registry and passes both profiles; an unresolved codepoint would be unverifiable.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-CNSA2-PROTO-UNKNOWN"
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-PQC-PROTO-UNKNOWN"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v7-tls13-kyber-draft",
+      "review_id": "V7",
+      "fixture": "v7-tls13-kyber-draft.cdx.json",
+      "note": "The obsolete pre-standard group X25519Kyber768Draft00 is round-3 Kyber, not ML-KEM: it cannot be verified, so CNSA 2.0 fails it closed and NIST PQC warns instead of passing it silently.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": false,
+            "errors": 1,
+            "rules_present": [
+              {
+                "rule": "SBOM-CNSA2-PROTO-UNKNOWN",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-CNSA2-PROTO-002"
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "errors": 0,
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-PROTO-UNKNOWN",
+                "severity": "warning"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-PQC-PROTO-002"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v7-tls13-grease",
+      "review_id": "V7",
+      "fixture": "v7-tls13-grease.cdx.json",
+      "note": "A client-side capture offering GREASE values (RFC 8701 §2: groups 0x0A0A and 64250 = 0xFAFA, signature scheme 0x1A1A) beside MLKEM1024 and mldsa87. No peer negotiates a GREASE value (RFC 8701 §3.2), so they are skipped, neither judged nor unverifiable, and the classical-free suite passes both profiles.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-CNSA2-PROTO-002",
+              "SBOM-CNSA2-PROTO-UNKNOWN"
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-PQC-PROTO-002",
+              "SBOM-PQC-PROTO-UNKNOWN"
+            ]
           }
         }
       ]

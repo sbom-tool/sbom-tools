@@ -296,6 +296,37 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                         .crypto_ref("algo-ecdh"),
                 );
             }),
+        )
+        // Each TLS group and signature scheme a suite offers is an
+        // alternative a peer may negotiate (CycloneDX 1.7): a classical one
+        // fails beside post-quantum ones.
+        .with_firing(
+            "TLS 1.3 suite offering secp384r1 beside X25519MLKEM768",
+            Sev::Error,
+            broken(|s| {
+                s.spec_version = "1.7".to_string();
+                replace(
+                    s,
+                    "tls13",
+                    CryptoAssetFixture::protocol("tls13", "tls", Some("1.3"))
+                        .cipher_suite("TLS_AES_256_GCM_SHA384", &["algo-aes256", "algo-sha384"])
+                        .tls_groups(&["X25519MLKEM768", "secp384r1"]),
+                );
+            }),
+        )
+        .with_firing(
+            "TLS 1.3 suite offering rsa_pss_rsae_sha256 beside mldsa44",
+            Sev::Error,
+            broken(|s| {
+                s.spec_version = "1.7".to_string();
+                replace(
+                    s,
+                    "tls13",
+                    CryptoAssetFixture::protocol("tls13", "tls", Some("1.3"))
+                        .cipher_suite("TLS_AES_256_GCM_SHA384", &["algo-aes256", "algo-sha384"])
+                        .tls_signature_schemes(&["mldsa44", "rsa_pss_rsae_sha256"]),
+                );
+            }),
         ),
         // Opaque references, an unparseable version, or a protocol that
         // declares nothing evaluable cannot be verified.
@@ -325,6 +356,20 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| {
                 s.crypto_assets
                     .push(CryptoAssetFixture::protocol("ssh2", "ssh", Some("2.0")));
+            }),
+        )
+        .with_firing(
+            "TLS group codepoint the IANA registry does not assign",
+            Sev::Warning,
+            broken(|s| {
+                s.spec_version = "1.7".to_string();
+                replace(
+                    s,
+                    "tls13",
+                    CryptoAssetFixture::protocol("tls13", "tls", Some("1.3"))
+                        .cipher_suite("TLS_AES_256_GCM_SHA384", &["algo-aes256", "algo-sha384"])
+                        .tls_groups(&["MLKEM1024", "0x1234"]),
+                );
             }),
         ),
         RuleEntry::skipped(

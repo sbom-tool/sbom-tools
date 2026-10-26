@@ -643,7 +643,7 @@ impl ProtocolProperties {
 // ── Supporting Structs ──────────────────────────────────────────────────
 
 /// A cipher suite within a protocol.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CipherSuite {
     /// Cipher suite name (e.g., `"TLS_AES_256_GCM_SHA384"`).
     pub name: Option<String>,
@@ -651,6 +651,17 @@ pub struct CipherSuite {
     pub algorithms: Vec<String>,
     /// IANA cipher suite identifiers (e.g., `["0x13", "0x02"]`).
     pub identifiers: Vec<String>,
+    /// TLS named groups offered with the suite (CycloneDX 1.7 `tlsGroups`),
+    /// as declared: IANA "TLS Supported Groups" names or codepoints (e.g.,
+    /// `["x25519", "X25519MLKEM768"]`). See [`tls_named_group`].
+    #[serde(default)]
+    pub tls_groups: Vec<String>,
+    /// TLS signature schemes offered with the suite (CycloneDX 1.7
+    /// `tlsSignatureSchemes`), as declared: IANA "TLS SignatureScheme" names
+    /// or codepoints (e.g., `["ecdsa_secp384r1_sha384", "mldsa87"]`). See
+    /// [`tls_signature_scheme`].
+    #[serde(default)]
+    pub tls_signature_schemes: Vec<String>,
 }
 
 /// IKEv2 transform types for IPsec protocols (RFC 9370).
@@ -809,6 +820,441 @@ pub fn ikev2_key_exchange_group(group: u32) -> Option<(&'static str, Option<&'st
         37 => ("ML-KEM", Some("1024")),
         _ => return None,
     })
+}
+
+// ── TLS named groups and signature schemes ──────────────────────────────
+//
+// A TLS 1.3 cipher suite names only its AEAD and HKDF hash; the key exchange
+// is a named group and the authentication a signature scheme, negotiated on
+// their own. CycloneDX 1.7 lists both with each suite (`tlsGroups`,
+// `tlsSignatureSchemes`), by IANA name or codepoint. The tables below
+// transcribe every assigned entry of the IANA "TLS Supported Groups" and
+// "TLS SignatureScheme" registries
+// (<https://www.iana.org/assignments/tls-parameters/>, last updated
+// 2026-10-21, checked 2026-10-26) with the algorithm each stands for.
+
+/// What an IANA TLS registry entry stands for.
+#[derive(Debug, Clone, Copy)]
+enum TlsAlgorithm {
+    /// One algorithm: its canonical family and parameter.
+    Single(&'static str, Option<&'static str>),
+    /// A PQ/T hybrid group, classified by its registered name like any other
+    /// hybrid (see `registered_hybrid`).
+    Hybrid,
+    /// A pre-standard draft the registry marks obsolete.
+    Obsolete,
+}
+
+/// One algorithm of a canonical family, with no parameter.
+const fn tls_one(family: &'static str) -> TlsAlgorithm {
+    TlsAlgorithm::Single(family, None)
+}
+
+/// ECDH(E) over a named curve, by its canonical name.
+const fn tls_ecdh(curve: &'static str) -> TlsAlgorithm {
+    TlsAlgorithm::Single("ECDH", Some(curve))
+}
+
+/// Finite-field Diffie-Hellman over an RFC 7919 group of `bits`.
+const fn tls_ffdhe(bits: &'static str) -> TlsAlgorithm {
+    TlsAlgorithm::Single("DH", Some(bits))
+}
+
+/// GOST R 34.10-2012 over one of its 256- or 512-bit curves.
+const fn tls_gost(bits: &'static str) -> TlsAlgorithm {
+    TlsAlgorithm::Single("GOST-R-34.10", Some(bits))
+}
+
+/// ML-KEM (FIPS 203) of a parameter set.
+const fn tls_mlkem(set: &'static str) -> TlsAlgorithm {
+    TlsAlgorithm::Single("ML-KEM", Some(set))
+}
+
+/// ECDSA over a named curve, by its canonical name.
+const fn tls_ecdsa(curve: &'static str) -> TlsAlgorithm {
+    TlsAlgorithm::Single("ECDSA", Some(curve))
+}
+
+/// RSASSA-PKCS1-v1_5 or RSASSA-PSS: a TLS scheme fixes the padding and
+/// hash, never the modulus size.
+const TLS_RSA: TlsAlgorithm = tls_one("RSA");
+
+/// ML-DSA (FIPS 204) of a parameter set.
+const fn tls_mldsa(set: &'static str) -> TlsAlgorithm {
+    TlsAlgorithm::Single("ML-DSA", Some(set))
+}
+
+/// SLH-DSA (FIPS 205) of a parameter set.
+const fn tls_slhdsa(set: &'static str) -> TlsAlgorithm {
+    TlsAlgorithm::Single("SLH-DSA", Some(set))
+}
+
+/// Every assigned entry of the IANA "TLS Supported Groups" registry
+/// (tls-parameters-8), by codepoint and name, with the key exchange it
+/// stands for. References are the registry's: RFC 8422 (the SEC 2 curves
+/// and the explicit-curve markers; RFC 9847 marks the smaller curves
+/// discouraged), RFC 7027 and RFC 8734 (brainpool), RFC 9846 §4.3.7
+/// (x25519, x448), RFC 9189 (the GOST curves), RFC 8998 (curveSM2), RFC
+/// 7919 (FFDHE), draft-ietf-tls-mlkem-10 (pure ML-KEM; approved, in the RFC
+/// Editor queue), RFC 10024 (the hybrids 4587-4589),
+/// draft-rosomakho-tls-ecdhe-mlkem512-00 (4585, 4586) and
+/// draft-yang-tls-hybrid-sm2-mlkem-03 (4590). The two Kyber draft groups
+/// (draft-tls-westerbaan-xyber768d00-02,
+/// draft-kwiatkowski-tls-ecdhe-kyber-01) combine round-3 Kyber, not ML-KEM;
+/// RFC 10024 obsoletes them. GREASE values (RFC 8701) and the private-use
+/// ranges 508-511 and 65024-65279 name no group.
+const TLS_SUPPORTED_GROUPS: &[(u16, &str, TlsAlgorithm)] = &[
+    (1, "sect163k1", tls_ecdh("sect163k1")),
+    (2, "sect163r1", tls_ecdh("sect163r1")),
+    (3, "sect163r2", tls_ecdh("sect163r2")),
+    (4, "sect193r1", tls_ecdh("sect193r1")),
+    (5, "sect193r2", tls_ecdh("sect193r2")),
+    (6, "sect233k1", tls_ecdh("sect233k1")),
+    (7, "sect233r1", tls_ecdh("sect233r1")),
+    (8, "sect239k1", tls_ecdh("sect239k1")),
+    (9, "sect283k1", tls_ecdh("sect283k1")),
+    (10, "sect283r1", tls_ecdh("sect283r1")),
+    (11, "sect409k1", tls_ecdh("sect409k1")),
+    (12, "sect409r1", tls_ecdh("sect409r1")),
+    (13, "sect571k1", tls_ecdh("sect571k1")),
+    (14, "sect571r1", tls_ecdh("sect571r1")),
+    (15, "secp160k1", tls_ecdh("secp160k1")),
+    (16, "secp160r1", tls_ecdh("secp160r1")),
+    (17, "secp160r2", tls_ecdh("secp160r2")),
+    (18, "secp192k1", tls_ecdh("secp192k1")),
+    (19, "secp192r1", tls_ecdh("P-192")),
+    (20, "secp224k1", tls_ecdh("secp224k1")),
+    (21, "secp224r1", tls_ecdh("P-224")),
+    (22, "secp256k1", tls_ecdh("secp256k1")),
+    (23, "secp256r1", tls_ecdh("P-256")),
+    (24, "secp384r1", tls_ecdh("P-384")),
+    (25, "secp521r1", tls_ecdh("P-521")),
+    (26, "brainpoolP256r1", tls_ecdh("brainpoolP256r1")),
+    (27, "brainpoolP384r1", tls_ecdh("brainpoolP384r1")),
+    (28, "brainpoolP512r1", tls_ecdh("brainpoolP512r1")),
+    (29, "x25519", tls_one("X25519")),
+    (30, "x448", tls_one("X448")),
+    (31, "brainpoolP256r1tls13", tls_ecdh("brainpoolP256r1")),
+    (32, "brainpoolP384r1tls13", tls_ecdh("brainpoolP384r1")),
+    (33, "brainpoolP512r1tls13", tls_ecdh("brainpoolP512r1")),
+    (34, "GC256A", tls_gost("256")),
+    (35, "GC256B", tls_gost("256")),
+    (36, "GC256C", tls_gost("256")),
+    (37, "GC256D", tls_gost("256")),
+    (38, "GC512A", tls_gost("512")),
+    (39, "GC512B", tls_gost("512")),
+    (40, "GC512C", tls_gost("512")),
+    (41, "curveSM2", tls_one("SM2")),
+    (256, "ffdhe2048", tls_ffdhe("2048")),
+    (257, "ffdhe3072", tls_ffdhe("3072")),
+    (258, "ffdhe4096", tls_ffdhe("4096")),
+    (259, "ffdhe6144", tls_ffdhe("6144")),
+    (260, "ffdhe8192", tls_ffdhe("8192")),
+    (512, "MLKEM512", tls_mlkem("512")),
+    (513, "MLKEM768", tls_mlkem("768")),
+    (514, "MLKEM1024", tls_mlkem("1024")),
+    (4585, "SecP256r1MLKEM512", TlsAlgorithm::Hybrid),
+    (4586, "MLKEM512X25519", TlsAlgorithm::Hybrid),
+    (4587, "SecP256r1MLKEM768", TlsAlgorithm::Hybrid),
+    (4588, "X25519MLKEM768", TlsAlgorithm::Hybrid),
+    (4589, "SecP384r1MLKEM1024", TlsAlgorithm::Hybrid),
+    (4590, "curveSM2MLKEM768", TlsAlgorithm::Hybrid),
+    (25497, "X25519Kyber768Draft00", TlsAlgorithm::Obsolete),
+    (25498, "SecP256r1Kyber768Draft00", TlsAlgorithm::Obsolete),
+    (65281, "arbitrary_explicit_prime_curves", tls_one("ECDH")),
+    (65282, "arbitrary_explicit_char2_curves", tls_one("ECDH")),
+];
+
+/// Every assigned entry of the IANA "TLS SignatureScheme" registry, by
+/// codepoint and name, with the signature algorithm it stands for. The
+/// hash a scheme names is part of the scheme, not an algorithm judged on
+/// its own ("rsa_pss_rsae_sha256" is RSA, "slhdsa_sha2_128s" SLH-DSA),
+/// except that the two SHA-1 schemes are judged by SHA-1, which breaks
+/// them, as the JCA names SHA1withRSA and SHA1withECDSA are (RFC 9155;
+/// SP 800-131A Rev. 2 disallows SHA-1 signatures). References are the
+/// registry's: RFC 9846 §4.3.3 (TLS 1.3), RFC 9963 (the "_legacy"
+/// RSASSA-PKCS1-v1_5 schemes), draft-wang-tls-raw-public-key-with-ibc-02
+/// (ECCSI per RFC 6507, ISO/IEC 14888-3 IBS-1 and IBS-2 — elliptic-curve
+/// and pairing-based — and the SM9 "Chinese IBS"), RFC 8998 (SM2), RFC 9367
+/// (GOST), RFC 8734 (brainpool), draft-ietf-tls-mldsa-06 (ML-DSA; approved,
+/// in the RFC Editor queue) and draft-reddy-tls-slhdsa-01 (SLH-DSA). No
+/// composite ML-DSA scheme is registered yet. The TLS 1.2 (hash,
+/// signature) pairs reserved for backward compatibility and the private-use
+/// range 0xFE00-0xFFFF name no scheme.
+const TLS_SIGNATURE_SCHEMES: &[(u16, &str, TlsAlgorithm)] = &[
+    (0x0201, "rsa_pkcs1_sha1", tls_one("SHA-1")),
+    (0x0203, "ecdsa_sha1", tls_one("SHA-1")),
+    (0x0401, "rsa_pkcs1_sha256", TLS_RSA),
+    (0x0403, "ecdsa_secp256r1_sha256", tls_ecdsa("P-256")),
+    (0x0420, "rsa_pkcs1_sha256_legacy", TLS_RSA),
+    (0x0501, "rsa_pkcs1_sha384", TLS_RSA),
+    (0x0503, "ecdsa_secp384r1_sha384", tls_ecdsa("P-384")),
+    (0x0520, "rsa_pkcs1_sha384_legacy", TLS_RSA),
+    (0x0601, "rsa_pkcs1_sha512", TLS_RSA),
+    (0x0603, "ecdsa_secp521r1_sha512", tls_ecdsa("P-521")),
+    (0x0620, "rsa_pkcs1_sha512_legacy", TLS_RSA),
+    (0x0704, "eccsi_sha256", tls_one("EC")),
+    (0x0705, "iso_ibs1", tls_one("EC")),
+    (0x0706, "iso_ibs2", tls_one("EC")),
+    (0x0707, "iso_chinese_ibs", tls_one("SM9")),
+    (0x0708, "sm2sig_sm3", tls_one("SM2")),
+    (0x0709, "gostr34102012_256a", tls_gost("256")),
+    (0x070A, "gostr34102012_256b", tls_gost("256")),
+    (0x070B, "gostr34102012_256c", tls_gost("256")),
+    (0x070C, "gostr34102012_256d", tls_gost("256")),
+    (0x070D, "gostr34102012_512a", tls_gost("512")),
+    (0x070E, "gostr34102012_512b", tls_gost("512")),
+    (0x070F, "gostr34102012_512c", tls_gost("512")),
+    (0x0804, "rsa_pss_rsae_sha256", TLS_RSA),
+    (0x0805, "rsa_pss_rsae_sha384", TLS_RSA),
+    (0x0806, "rsa_pss_rsae_sha512", TLS_RSA),
+    (0x0807, "ed25519", tls_one("ED25519")),
+    (0x0808, "ed448", tls_one("ED448")),
+    (0x0809, "rsa_pss_pss_sha256", TLS_RSA),
+    (0x080A, "rsa_pss_pss_sha384", TLS_RSA),
+    (0x080B, "rsa_pss_pss_sha512", TLS_RSA),
+    (
+        0x081A,
+        "ecdsa_brainpoolP256r1tls13_sha256",
+        tls_ecdsa("brainpoolP256r1"),
+    ),
+    (
+        0x081B,
+        "ecdsa_brainpoolP384r1tls13_sha384",
+        tls_ecdsa("brainpoolP384r1"),
+    ),
+    (
+        0x081C,
+        "ecdsa_brainpoolP512r1tls13_sha512",
+        tls_ecdsa("brainpoolP512r1"),
+    ),
+    (0x0904, "mldsa44", tls_mldsa("44")),
+    (0x0905, "mldsa65", tls_mldsa("65")),
+    (0x0906, "mldsa87", tls_mldsa("87")),
+    (0x0911, "slhdsa_sha2_128s", tls_slhdsa("SHA2-128s")),
+    (0x0912, "slhdsa_sha2_128f", tls_slhdsa("SHA2-128f")),
+    (0x0913, "slhdsa_sha2_192s", tls_slhdsa("SHA2-192s")),
+    (0x0914, "slhdsa_sha2_192f", tls_slhdsa("SHA2-192f")),
+    (0x0915, "slhdsa_sha2_256s", tls_slhdsa("SHA2-256s")),
+    (0x0916, "slhdsa_sha2_256f", tls_slhdsa("SHA2-256f")),
+    (0x0917, "slhdsa_shake_128s", tls_slhdsa("SHAKE-128s")),
+    (0x0918, "slhdsa_shake_128f", tls_slhdsa("SHAKE-128f")),
+    (0x0919, "slhdsa_shake_192s", tls_slhdsa("SHAKE-192s")),
+    (0x091A, "slhdsa_shake_192f", tls_slhdsa("SHAKE-192f")),
+    (0x091B, "slhdsa_shake_256s", tls_slhdsa("SHAKE-256s")),
+    (0x091C, "slhdsa_shake_256f", tls_slhdsa("SHAKE-256f")),
+];
+
+/// Spellings outside the IANA "TLS Supported Groups" registry that each
+/// name exactly one of its entries, as (alias, registered name): the NIST
+/// names of the prime curves (FIPS 186-5 "P-256", also unhyphenated) and
+/// their SSH (RFC 5656 "nistp256"), ANSI X9.62 ("prime256v1") and Go
+/// `crypto/tls` ("CurveP256") names; the FIPS 203 names of the ML-KEM
+/// parameter sets ("ML-KEM-768"); and the hybrid group names with a
+/// separator between their parts, the ML-KEM part written either way
+/// ("X25519-MLKEM768", "X25519-ML-KEM-768"). An alias matches ignoring
+/// ASCII case, with `_` and ` ` read as `-` ("X25519_MLKEM768"). Nothing
+/// outside this table and the registry is guessed at — there is no fallback
+/// to the generic name classifier — and no Kyber spelling is an alias:
+/// round-3 Kyber ("X25519Kyber768", "kyber768") is not ML-KEM, so it stays
+/// unverifiable.
+const TLS_GROUP_ALIASES: &[(&str, &str)] = &[
+    ("P-192", "secp192r1"),
+    ("P-224", "secp224r1"),
+    ("P-256", "secp256r1"),
+    ("P-384", "secp384r1"),
+    ("P-521", "secp521r1"),
+    ("P192", "secp192r1"),
+    ("P224", "secp224r1"),
+    ("P256", "secp256r1"),
+    ("P384", "secp384r1"),
+    ("P521", "secp521r1"),
+    ("nistp192", "secp192r1"),
+    ("nistp224", "secp224r1"),
+    ("nistp256", "secp256r1"),
+    ("nistp384", "secp384r1"),
+    ("nistp521", "secp521r1"),
+    ("prime192v1", "secp192r1"),
+    ("prime256v1", "secp256r1"),
+    ("CurveP256", "secp256r1"),
+    ("CurveP384", "secp384r1"),
+    ("CurveP521", "secp521r1"),
+    ("ML-KEM-512", "MLKEM512"),
+    ("ML-KEM-768", "MLKEM768"),
+    ("ML-KEM-1024", "MLKEM1024"),
+    ("SecP256r1-MLKEM512", "SecP256r1MLKEM512"),
+    ("SecP256r1-ML-KEM-512", "SecP256r1MLKEM512"),
+    ("MLKEM512-X25519", "MLKEM512X25519"),
+    ("ML-KEM-512-X25519", "MLKEM512X25519"),
+    ("SecP256r1-MLKEM768", "SecP256r1MLKEM768"),
+    ("SecP256r1-ML-KEM-768", "SecP256r1MLKEM768"),
+    ("X25519-MLKEM768", "X25519MLKEM768"),
+    ("X25519-ML-KEM-768", "X25519MLKEM768"),
+    ("SecP384r1-MLKEM1024", "SecP384r1MLKEM1024"),
+    ("SecP384r1-ML-KEM-1024", "SecP384r1MLKEM1024"),
+    ("curveSM2-MLKEM768", "curveSM2MLKEM768"),
+    ("curveSM2-ML-KEM-768", "curveSM2MLKEM768"),
+];
+
+/// Spellings outside the IANA "TLS SignatureScheme" registry that each name
+/// exactly one of its entries, as (alias, registered name): the FIPS 204
+/// names of the ML-DSA parameter sets ("ML-DSA-87") and the FIPS 205 names
+/// of the SLH-DSA ones ("SLH-DSA-SHA2-128s"). Matched like
+/// `TLS_GROUP_ALIASES`.
+const TLS_SIGNATURE_SCHEME_ALIASES: &[(&str, &str)] = &[
+    ("ML-DSA-44", "mldsa44"),
+    ("ML-DSA-65", "mldsa65"),
+    ("ML-DSA-87", "mldsa87"),
+    ("SLH-DSA-SHA2-128s", "slhdsa_sha2_128s"),
+    ("SLH-DSA-SHA2-128f", "slhdsa_sha2_128f"),
+    ("SLH-DSA-SHA2-192s", "slhdsa_sha2_192s"),
+    ("SLH-DSA-SHA2-192f", "slhdsa_sha2_192f"),
+    ("SLH-DSA-SHA2-256s", "slhdsa_sha2_256s"),
+    ("SLH-DSA-SHA2-256f", "slhdsa_sha2_256f"),
+    ("SLH-DSA-SHAKE-128s", "slhdsa_shake_128s"),
+    ("SLH-DSA-SHAKE-128f", "slhdsa_shake_128f"),
+    ("SLH-DSA-SHAKE-192s", "slhdsa_shake_192s"),
+    ("SLH-DSA-SHAKE-192f", "slhdsa_shake_192f"),
+    ("SLH-DSA-SHAKE-256s", "slhdsa_shake_256s"),
+    ("SLH-DSA-SHAKE-256f", "slhdsa_shake_256f"),
+];
+
+/// An entry of an IANA TLS registry — "TLS Supported Groups" or "TLS
+/// SignatureScheme" — as found by [`tls_named_group`] or
+/// [`tls_signature_scheme`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct TlsRegistryEntry {
+    /// The codepoint (the registry's Value column).
+    pub codepoint: u16,
+    /// The registered name (the Description column), without the
+    /// "(OBSOLETE)" marker.
+    pub name: &'static str,
+    /// Whether the registry marks the entry obsolete.
+    pub obsolete: bool,
+    /// The algorithm the entry stands for, as [`classify_algorithm`] would
+    /// classify it: a group's key exchange (ECDH over its curve,
+    /// finite-field DH, ML-KEM, or a PQ/T hybrid of two of them) or a
+    /// signature scheme's signature algorithm. `None` for the obsolete
+    /// pre-standard Kyber groups, which are not ML-KEM.
+    pub classification: Option<AlgorithmClassification>,
+}
+
+/// Look up a TLS named group — a CycloneDX 1.7 `tlsGroups` entry — in the
+/// IANA "TLS Supported Groups" registry, by its registered name ignoring
+/// ASCII case, by its codepoint in decimal or in hexadecimal with a `0x`
+/// prefix, or by one of the unambiguous spellings of an explicit alias
+/// table (the curve names "P-256", "nistp256", "prime256v1"; the FIPS 203
+/// "ML-KEM-768"; separated hybrid names such as "X25519_MLKEM768"):
+/// "x25519", "29" and "0x001D" are the same group, and so are
+/// "secp256r1" and "P-256". Returns `None` for any other name and for an
+/// unassigned, reserved (including GREASE, see [`is_tls_grease`]) or
+/// private-use codepoint.
+#[must_use]
+pub fn tls_named_group(id: &str) -> Option<TlsRegistryEntry> {
+    tls_registry_entry(TLS_SUPPORTED_GROUPS, TLS_GROUP_ALIASES, id)
+}
+
+/// Look up a TLS signature scheme — a CycloneDX 1.7 `tlsSignatureSchemes`
+/// entry — in the IANA "TLS SignatureScheme" registry, by its registered
+/// name ignoring ASCII case, by its codepoint in decimal or in hexadecimal
+/// with a `0x` prefix, or by the FIPS 204 or FIPS 205 name of an ML-DSA or
+/// SLH-DSA parameter set: "ecdsa_secp256r1_sha256", "1027" and "0x0403"
+/// are the same scheme, and so are "mldsa87" and "ML-DSA-87". Returns
+/// `None` for any other name and for an unassigned, reserved (including
+/// GREASE, see [`is_tls_grease`]) or private-use codepoint.
+#[must_use]
+pub fn tls_signature_scheme(id: &str) -> Option<TlsRegistryEntry> {
+    tls_registry_entry(TLS_SIGNATURE_SCHEMES, TLS_SIGNATURE_SCHEME_ALIASES, id)
+}
+
+/// Whether a TLS named group or signature scheme entry is a GREASE value:
+/// one of the codepoints 0x0A0A, 0x1A1A, …, 0xFAFA that RFC 8701 §2
+/// reserves in both the named-group and the signature-algorithm spaces,
+/// written in decimal or in hexadecimal with a `0x` prefix. Clients
+/// advertise them so that peers keep tolerating unknown values, and no
+/// peer ever negotiates one (RFC 8701 §3.2), so a GREASE value offers
+/// nothing to judge. It is no registry entry: [`tls_named_group`] and
+/// [`tls_signature_scheme`] return `None` for it.
+#[must_use]
+pub fn is_tls_grease(id: &str) -> bool {
+    tls_codepoint(id.trim()).is_some_and(|cp| cp >> 8 == cp & 0xFF && cp & 0x0F == 0x0A)
+}
+
+/// The entry of `registry` that `id` names by codepoint, by registered
+/// name, or by one of `aliases`.
+fn tls_registry_entry(
+    registry: &[(u16, &'static str, TlsAlgorithm)],
+    aliases: &[(&str, &str)],
+    id: &str,
+) -> Option<TlsRegistryEntry> {
+    let id = id.trim();
+    let &(codepoint, name, algorithm) = match tls_codepoint(id) {
+        Some(value) => registry.iter().find(|(c, ..)| *c == value),
+        None => registry
+            .iter()
+            .find(|(_, n, algorithm)| {
+                let bare = match algorithm {
+                    TlsAlgorithm::Obsolete => without_obsolete_marker(id),
+                    TlsAlgorithm::Single(..) | TlsAlgorithm::Hybrid => None,
+                };
+                n.eq_ignore_ascii_case(id) || bare.is_some_and(|bare| n.eq_ignore_ascii_case(bare))
+            })
+            .or_else(|| {
+                let target = tls_alias_target(aliases, id)?;
+                registry.iter().find(|(_, n, _)| *n == target)
+            }),
+    }?;
+    let classification = match algorithm {
+        TlsAlgorithm::Single(family, parameter) => Some(AlgorithmClassification::primitive(
+            family,
+            parameter.map(str::to_string),
+        )),
+        TlsAlgorithm::Hybrid => registered_hybrid(&name.to_ascii_uppercase()),
+        TlsAlgorithm::Obsolete => None,
+    };
+    Some(TlsRegistryEntry {
+        codepoint,
+        name,
+        obsolete: matches!(algorithm, TlsAlgorithm::Obsolete),
+        classification,
+    })
+}
+
+/// The registered name the alias `id` stands for in `aliases`, matched
+/// ignoring ASCII case, with `_` and ` ` read as `-`.
+fn tls_alias_target<'a>(aliases: &[(&str, &'a str)], id: &str) -> Option<&'a str> {
+    let hyphenated: String = id
+        .chars()
+        .map(|c| if c == '_' || c == ' ' { '-' } else { c })
+        .collect();
+    aliases
+        .iter()
+        .find(|(alias, _)| alias.eq_ignore_ascii_case(&hyphenated))
+        .map(|&(_, target)| target)
+}
+
+/// A name written as the registry writes an obsolete entry,
+/// "X25519Kyber768Draft00 (OBSOLETE)", without that marker.
+fn without_obsolete_marker(id: &str) -> Option<&str> {
+    const MARKER: &str = "(OBSOLETE";
+    let rest = id.strip_suffix(')')?.trim_end();
+    let split = rest.len().checked_sub(MARKER.len())?;
+    let (bare, marker) = (rest.get(..split)?, rest.get(split..)?);
+    marker.eq_ignore_ascii_case(MARKER).then(|| bare.trim_end())
+}
+
+/// A TLS registry codepoint written in decimal ("29") or in hexadecimal
+/// with a `0x` prefix ("0x001D"), or `None` when `id` is neither.
+fn tls_codepoint(id: &str) -> Option<u16> {
+    let (digits, radix) = match id.strip_prefix("0x").or_else(|| id.strip_prefix("0X")) {
+        Some(hex) => (hex, 16),
+        None => (id, 10),
+    };
+    if digits.is_empty() || !digits.chars().all(|c| c.is_digit(radix)) {
+        return None;
+    }
+    u16::from_str_radix(digits, radix).ok()
 }
 
 /// A typed reference to a related cryptographic asset (CycloneDX 1.7
@@ -2962,11 +3408,62 @@ mod tests {
                 name: Some("TLS_AES_256_GCM_SHA384".to_string()),
                 algorithms: vec!["algo/aes-256-gcm".to_string()],
                 identifiers: vec!["0x13".to_string(), "0x02".to_string()],
+                ..CipherSuite::default()
             }]);
 
         assert_eq!(proto.protocol_type, ProtocolType::Tls);
         assert_eq!(proto.version.as_deref(), Some("1.3"));
         assert_eq!(proto.cipher_suites.len(), 1);
+    }
+
+    /// Every alias names one registered entry and resolves to exactly it;
+    /// none shadows a registered name or a codepoint, none repeats once
+    /// case and separators are ignored, and none spells Kyber.
+    #[test]
+    fn tls_aliases_resolve_to_the_entry_they_name() {
+        type Lookup = fn(&str) -> Option<TlsRegistryEntry>;
+        let tables: [(&[(u16, &str, TlsAlgorithm)], &[(&str, &str)], Lookup); 2] = [
+            (TLS_SUPPORTED_GROUPS, TLS_GROUP_ALIASES, tls_named_group),
+            (
+                TLS_SIGNATURE_SCHEMES,
+                TLS_SIGNATURE_SCHEME_ALIASES,
+                tls_signature_scheme,
+            ),
+        ];
+        for (registry, aliases, lookup) in tables {
+            let mut seen = std::collections::BTreeSet::new();
+            for &(alias, target) in aliases {
+                let registered = registry
+                    .iter()
+                    .find(|(_, name, _)| *name == target)
+                    .unwrap_or_else(|| panic!("alias {alias}: {target} is not registered"));
+                assert!(
+                    registry
+                        .iter()
+                        .all(|(_, name, _)| !name.eq_ignore_ascii_case(alias)),
+                    "alias {alias} shadows a registered name"
+                );
+                assert!(
+                    tls_codepoint(alias).is_none(),
+                    "alias {alias} is a codepoint"
+                );
+                assert!(
+                    !alias.to_ascii_uppercase().contains("KYBER"),
+                    "alias {alias} spells Kyber"
+                );
+                assert!(
+                    seen.insert(alias.to_ascii_uppercase().replace(['_', ' '], "-")),
+                    "alias {alias} repeats"
+                );
+                let entry = lookup(alias).unwrap_or_else(|| panic!("alias {alias} resolves"));
+                assert_eq!(
+                    (entry.codepoint, entry.name),
+                    (registered.0, target),
+                    "alias {alias}"
+                );
+                assert_eq!(Some(entry), lookup(target), "alias {alias}");
+            }
+        }
     }
 
     // ── classify_algorithm ──────────────────────────────────────────────
