@@ -194,6 +194,12 @@ jq '."assessment-results" | {
 }' /tmp/validation-results.oscal.json
 ```
 
+Each observation names its subjects: the SBOM document, described in
+`back-matter` with its SHA-256, and for a component finding the component,
+defined in the result's `local-definitions`. The mapping, and what changed
+from the OSCAL 1.1.2 export of earlier releases, is in
+[`compliance-output.md`](compliance-output.md#oscal-assessment-results).
+
 The export maps existing findings; it does not generate an assessment plan,
 SSP, authorization package, attestation, or evidence absent from the BOM.
 
