@@ -11,7 +11,10 @@
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
-use rule_matrix::{ComponentFixture, RuleEntry, SbomFixture, assert_no_violations, run_matrix};
+use rule_matrix::{
+    ComponentFixture, RuleEntry, SbomFixture, assert_no_violations, assert_spdx_version_unknown,
+    run_matrix,
+};
 use sbom_tools::quality::{ComplianceLevel, NTIA_SARIF_RULE_IDS, ViolationSeverity as Sev};
 
 const LEVEL: ComplianceLevel = ComplianceLevel::NtiaMinimum;
@@ -136,11 +139,19 @@ fn ntia_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.timestamp = None),
             base(),
         ),
-        // The NTIA generic bucket carries the CycloneDX format notes: a
-        // version newer than any this tool reads warns; an outdated version
-        // and a component whose bom-ref collapses to its name are Infos.
-        RuleEntry::tested(
+        // The NTIA generic bucket carries the format notes, each under an
+        // alias key of its own (per-key rows below).
+        RuleEntry::skipped(
             "SBOM-NTIA-GENERAL",
+            "no check emits SBOM-NTIA-GENERAL under its own key since WP 1.8b: the \
+             format checks that share the SARIF rule report alias keys of their own \
+             (SPEC-VERSION, SPEC-VERSION-UNKNOWN, ELEMENT-ID), each with a per-key row",
+        ),
+        // ── Per-key rows ─────────────────────────────────────────────────
+        // A CycloneDX version newer than any this tool reads warns; an
+        // outdated version is an Info.
+        RuleEntry::key_tested(
+            "SBOM-NTIA-SPEC-VERSION",
             Sev::Warning,
             broken(|s| s.spec_version = "1.8".to_string()),
             base(),
@@ -149,16 +160,31 @@ fn ntia_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "CycloneDX 1.3 is outdated",
             Sev::Info,
             broken(|s| s.spec_version = "1.3".to_string()),
-        )
-        .with_departing_firing(
-            "component may be missing bom-ref",
+        ),
+        RuleEntry::key_skipped(
+            "SBOM-NTIA-SPEC-VERSION-UNKNOWN",
+            "an SPDX version that is neither 2.x nor 3.x is an SPDX-only check, out of \
+             the CycloneDX-only DSL's reach; ntia_spec_version_unknown_reads_only_spdx \
+             below fires it on SPDX 4.0 and keeps it silent on SPDX 2.3",
+        ),
+        // A component whose bom-ref collapses to its name.
+        RuleEntry::key_tested(
+            "SBOM-NTIA-ELEMENT-ID",
             Sev::Info,
             broken(|s| {
                 s.component_mut("libalpha").bom_ref = "libalpha".to_string();
                 s.dependencies = vec![("libalpha".to_string(), vec!["ref-libbeta".to_string()])];
             }),
+            base(),
         ),
     ];
 
     run_matrix(LEVEL, NTIA_SARIF_RULE_IDS, &entries);
+}
+
+/// SBOM-NTIA-SPEC-VERSION-UNKNOWN reads only SPDX input, so its per-key row
+/// is skipped.
+#[test]
+fn ntia_spec_version_unknown_reads_only_spdx() {
+    assert_spdx_version_unknown(LEVEL, "SBOM-NTIA-SPEC-VERSION-UNKNOWN");
 }
