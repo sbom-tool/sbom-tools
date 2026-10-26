@@ -194,8 +194,24 @@ const SPDX3_GAPS: &[(&str, &str)] = &[
     ),
     (
         "vulnerability_analyses",
-        "SPDX 3 has no VEX response field (the parser infers a response from the action \
-         statement text and builds no remediation record from SPDX 3)",
+        "an analysis in a state other than not_affected, which is rendered as a \
+         VexNotAffectedVulnAssessmentRelationship: every case that sets another state is about \
+         a VEX response, and SPDX 3 has no VEX response field (the parser infers a response \
+         from the action statement text and builds no remediation record from SPDX 3)",
+    ),
+    (
+        "vulnerability_analyses.responses",
+        "a VEX response on a not_affected analysis: SPDX 3 has no VEX response field",
+    ),
+    (
+        "vulnerability_analyses.recommendation",
+        "a recommendation on a not_affected analysis: an SPDX 3 not_affected assessment \
+         carries no action statement",
+    ),
+    (
+        "vulnerability_analyses.workaround",
+        "a workaround on a not_affected analysis: an SPDX 3 not_affected assessment carries \
+         no action statement",
     ),
     SPDX_CRYPTO_GAP,
     (
@@ -524,8 +540,14 @@ impl SbomFixture {
                         if let Some(state) = &analysis.state {
                             a.insert("state".into(), serde_json::json!(state));
                         }
+                        if let Some(justification) = &analysis.justification {
+                            a.insert("justification".into(), serde_json::json!(justification));
+                        }
                         if !analysis.responses.is_empty() {
                             a.insert("response".into(), serde_json::json!(analysis.responses));
+                        }
+                        if let Some(detail) = &analysis.detail {
+                            a.insert("detail".into(), serde_json::json!(detail));
                         }
                         if !a.is_empty() {
                             v.insert("analysis".into(), serde_json::Value::Object(a));
@@ -1076,10 +1098,18 @@ impl SbomFixture {
                 if let Some(analysis) = analysis {
                     x.opt("recommendation", analysis.recommendation.as_deref());
                     x.opt("workaround", analysis.workaround.as_deref());
-                    if analysis.state.is_some() || !analysis.responses.is_empty() {
+                    if analysis.state.is_some()
+                        || analysis.justification.is_some()
+                        || !analysis.responses.is_empty()
+                        || analysis.detail.is_some()
+                    {
+                        // The schema's order: state, justification,
+                        // responses, detail.
                         x.open("analysis", &[]);
                         x.opt("state", analysis.state.as_deref());
+                        x.opt("justification", analysis.justification.as_deref());
                         x.list("responses", "response", &analysis.responses);
+                        x.opt("detail", analysis.detail.as_deref());
                         x.close("analysis");
                     }
                 }
@@ -1763,6 +1793,21 @@ fn spdx3_cvss(severity: &str) -> Option<(f64, &'static str)> {
     })
 }
 
+/// The SPDX 3.0.1 `VexJustificationType` for a CycloneDX
+/// impactAnalysisJustification: the justification the CycloneDX parser
+/// reads the CycloneDX value as, so a fixture means the same in both.
+fn spdx3_justification(cdx: &str) -> &'static str {
+    match cdx {
+        "code_not_present" => "vulnerableCodeNotPresent",
+        "code_not_reachable" => "vulnerableCodeNotInExecutePath",
+        "requires_configuration" | "requires_dependency" | "requires_environment" => {
+            "vulnerableCodeCannotBeControlledByAdversary"
+        }
+        "protected_by_mitigating_control" => "inlineMitigationsAlreadyExist",
+        other => panic!("the CycloneDX parser reads no justification from {other:?}"),
+    }
+}
+
 /// The `@graph` of an SPDX 3 document under construction.
 struct Spdx3Graph {
     nodes: Vec<serde_json::Value>,
@@ -1942,9 +1987,6 @@ impl SbomFixture {
         }
 
         // ── Vulnerabilities ─────────────────────────────────────────────
-        if !self.vulnerability_analyses.is_empty() {
-            drops.drop_field("vulnerability_analyses");
-        }
         for (i, (vuln_id, severity, affected_ref)) in self.vulnerabilities.iter().enumerate() {
             let vuln = format!("{SPDX3_NS}vulnerability/{i}");
             let identifier_type = if vuln_id.starts_with("CVE-") {
@@ -1963,7 +2005,44 @@ impl SbomFixture {
                 }],
             }));
             let affected = id(affected_ref);
-            g.relationship(&vuln, "affects", vec![affected.clone()], None);
+            match self.analysis_of(vuln_id) {
+                // A not_affected analysis is a VEX assessment, which takes
+                // the place of the AFFECTS relationship: the parser keeps
+                // the two apart as statements that contradict each other.
+                Some(analysis) if analysis.state.as_deref() == Some("not_affected") => {
+                    let mut node = serde_json::json!({
+                        "type": "security_VexNotAffectedVulnAssessmentRelationship",
+                        "spdxId": format!("{SPDX3_NS}vex/{i}"),
+                        "from": vuln,
+                        "relationshipType": "doesNotAffect",
+                        "to": [affected.clone()],
+                        "security_assessedElement": affected.clone(),
+                    });
+                    if let Some(justification) = &analysis.justification {
+                        node["security_justificationType"] =
+                            serde_json::json!(spdx3_justification(justification));
+                    }
+                    if let Some(detail) = &analysis.detail {
+                        node["security_impactStatement"] = serde_json::json!(detail);
+                    }
+                    if !analysis.responses.is_empty() {
+                        drops.drop_field("vulnerability_analyses.responses");
+                    }
+                    if analysis.recommendation.is_some() {
+                        drops.drop_field("vulnerability_analyses.recommendation");
+                    }
+                    if analysis.workaround.is_some() {
+                        drops.drop_field("vulnerability_analyses.workaround");
+                    }
+                    g.element(node);
+                }
+                analysis => {
+                    if analysis.is_some() {
+                        drops.drop_field("vulnerability_analyses");
+                    }
+                    g.relationship(&vuln, "affects", vec![affected.clone()], None);
+                }
+            }
             if severity.is_empty() {
                 continue;
             }
