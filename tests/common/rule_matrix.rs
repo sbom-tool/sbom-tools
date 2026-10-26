@@ -385,10 +385,22 @@ pub struct ProtocolFixture {
     /// `ssl`).
     pub protocol_type: String,
     pub version: Option<String>,
-    /// `cipherSuites[]` as `(name, algorithm bom-refs)`.
-    pub cipher_suites: Vec<(String, Vec<String>)>,
+    /// `cipherSuites[]`.
+    pub cipher_suites: Vec<CipherSuiteFixture>,
     /// `cryptoRefArray` bom-refs.
     pub crypto_refs: Vec<String>,
+}
+
+/// One `cipherSuites[]` entry of a [`ProtocolFixture`].
+#[derive(Debug, Clone, Default)]
+pub struct CipherSuiteFixture {
+    pub name: String,
+    /// `algorithms` bom-refs.
+    pub algorithms: Vec<String>,
+    /// `tlsGroups` (CycloneDX 1.7): IANA names or codepoints.
+    pub tls_groups: Vec<String>,
+    /// `tlsSignatureSchemes` (CycloneDX 1.7): IANA names or codepoints.
+    pub tls_signature_schemes: Vec<String>,
 }
 
 /// A CycloneDX 1.6+ `cryptographic-asset` component: an algorithm, a
@@ -548,11 +560,36 @@ impl CryptoAssetFixture {
     /// Add a protocol cipher suite with the given algorithm bom-refs.
     #[must_use]
     pub fn cipher_suite(mut self, name: &str, algorithm_refs: &[&str]) -> Self {
-        self.protocol_mut().cipher_suites.push((
-            name.to_string(),
-            algorithm_refs.iter().map(|r| (*r).to_string()).collect(),
-        ));
+        self.protocol_mut().cipher_suites.push(CipherSuiteFixture {
+            name: name.to_string(),
+            algorithms: algorithm_refs.iter().map(|r| (*r).to_string()).collect(),
+            ..CipherSuiteFixture::default()
+        });
         self
+    }
+
+    /// Set the `tlsGroups` the last cipher suite offers.
+    #[must_use]
+    pub fn tls_groups(mut self, groups: &[&str]) -> Self {
+        self.last_cipher_suite().tls_groups = groups.iter().map(|g| (*g).to_string()).collect();
+        self
+    }
+
+    /// Set the `tlsSignatureSchemes` the last cipher suite offers.
+    #[must_use]
+    pub fn tls_signature_schemes(mut self, schemes: &[&str]) -> Self {
+        self.last_cipher_suite().tls_signature_schemes =
+            schemes.iter().map(|s| (*s).to_string()).collect();
+        self
+    }
+
+    /// The cipher suite added last (panics when there is none).
+    fn last_cipher_suite(&mut self) -> &mut CipherSuiteFixture {
+        let bom_ref = self.bom_ref.clone();
+        self.protocol_mut()
+            .cipher_suites
+            .last_mut()
+            .unwrap_or_else(|| panic!("protocol {bom_ref:?} has no cipher suite"))
     }
 
     /// Add a protocol `cryptoRefArray` entry.
@@ -615,7 +652,20 @@ impl CryptoAssetFixture {
                 let suites: Vec<_> = proto
                     .cipher_suites
                     .iter()
-                    .map(|(name, algos)| serde_json::json!({ "name": name, "algorithms": algos }))
+                    .map(|suite| {
+                        let mut s = serde_json::json!({
+                            "name": suite.name,
+                            "algorithms": suite.algorithms,
+                        });
+                        if !suite.tls_groups.is_empty() {
+                            s["tlsGroups"] = serde_json::json!(suite.tls_groups);
+                        }
+                        if !suite.tls_signature_schemes.is_empty() {
+                            s["tlsSignatureSchemes"] =
+                                serde_json::json!(suite.tls_signature_schemes);
+                        }
+                        s
+                    })
                     .collect();
                 props.insert("cipherSuites".into(), serde_json::json!(suites));
             }
