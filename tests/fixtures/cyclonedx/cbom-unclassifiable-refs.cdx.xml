@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:0f9e8d7c-6b5a-4321-fedc-ba9876543210" version="1">
+  <metadata>
+    <timestamp>2026-07-01T10:00:00Z</timestamp>
+    <tools>
+      <components>
+        <component type="application">
+          <name>cbom-scanner</name>
+          <version>2.0.0</version>
+        </component>
+      </components>
+    </tools>
+    <component type="application" bom-ref="opaque-app">
+      <name>opaque-app</name>
+      <version>1.0.0</version>
+      <purl>pkg:cargo/opaque-app@1.0.0</purl>
+    </component>
+  </metadata>
+  <components>
+    <component type="cryptographic-asset" bom-ref="crypto/certificate/opaque-signed">
+      <name>opaque-signed.example.com</name>
+      <cryptoProperties>
+        <assetType>certificate</assetType>
+        <certificateProperties>
+          <subjectName>CN=opaque-signed.example.com</subjectName>
+          <notValidAfter>2027-01-01T00:00:00Z</notValidAfter>
+          <signatureAlgorithmRef>sig-algo-42</signatureAlgorithmRef>
+        </certificateProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/protocol/opaque-ikev2">
+      <name>IPsec IKEv2 (opaque transforms)</name>
+      <cryptoProperties>
+        <assetType>protocol</assetType>
+        <protocolProperties>
+          <type>ikev2</type>
+          <version>2</version>
+          <ikev2TransformTypes>
+            <encr>transform-encr-7</encr>
+            <prf>transform-prf-3</prf>
+            <integ>transform-integ-2</integ>
+            <ke>transform-ke-9</ke>
+          </ikev2TransformTypes>
+        </protocolProperties>
+      </cryptoProperties>
+    </component>
+  </components>
+  <dependencies>
+    <dependency ref="opaque-app">
+      <dependency ref="crypto/certificate/opaque-signed"/>
+      <dependency ref="crypto/protocol/opaque-ikev2"/>
+    </dependency>
+  </dependencies>
+</bom>

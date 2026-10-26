@@ -1244,22 +1244,30 @@ pub enum PqcKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AlgorithmClass {
     /// Classically broken or disallowed per SP 800-131A (MD5, SHA-1, DES,
-    /// 3DES, RC2, RC4, Blowfish, IDEA, CAST5, …).
+    /// 3DES, RC2, RC4, Blowfish, IDEA, CAST5, Dual_EC_DRBG, …), or an
+    /// obsolete cipher with a published break (A5/1, A5/2, CMEA).
     Broken,
     /// Classical public-key algorithm broken by Shor's algorithm (RSA,
     /// DSA, DH/DHE, ECDH/ECDHE, ECDSA, EdDSA/Ed25519/Ed448, X25519/X448,
-    /// ElGamal, ECIES, ECMQV, generic EC/ECC).
+    /// ElGamal, ECIES, MQV/ECMQV, generic EC/ECC and named curves), and
+    /// the PAKEs and protocols built on those groups (SRP, SPAKE2, OPAQUE,
+    /// CPace, X3DH, …).
     ClassicalQuantumVulnerable,
-    /// Modern symmetric cipher (AES, ChaCha20, Camellia, ARIA, …); strength
-    /// judgments (e.g., CNSA 2.0's AES-256-only rule) are up to the caller.
+    /// Modern symmetric primitive — cipher (AES, ChaCha20, Camellia, ARIA,
+    /// …), MAC (Poly1305, UMAC) or symmetric DRBG (Fortuna, Yarrow) — and a
+    /// keyed construction (HMAC, HKDF, CMAC, …) whose underlying primitive
+    /// is not named; strength judgments (e.g., CNSA 2.0's AES-256-only
+    /// rule) are up to the caller.
     Symmetric,
     /// SHA-2 family hash; the digest size, when known, is in `parameter`.
     Sha2,
-    /// SHA-3 family hash/XOF (SHA3-*, SHAKE, Keccak).
+    /// SHA-3 family hash/XOF (SHA3-*, SHAKE, Keccak) and the Keccak-based
+    /// functions derived from it (KMAC, cSHAKE, TUAK).
     Sha3,
     /// Recognized modern hash outside the SHA-2/SHA-3 families (SM3,
-    /// GOST R 34.11 "Streebog", …) — not broken, but not on approval
-    /// lists such as CNSA 2.0.
+    /// GOST R 34.11 "Streebog", BLAKE2/3, RIPEMD, Whirlpool, SipHash) and
+    /// the password hashes scrypt, yescrypt, Argon2 and bcrypt — not
+    /// broken, but not on approval lists such as CNSA 2.0.
     OtherHash,
     /// Post-quantum algorithm; the parameter set, when known, is in
     /// `parameter` (e.g., "1024" for ML-KEM-1024, "87" for ML-DSA-87).
@@ -1294,11 +1302,19 @@ impl AlgorithmClass {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AlgorithmClassification {
     /// Canonical family (e.g., "AES", "SHA-2", "ML-KEM", "RSA"), if known.
+    /// For a keyed construction this is the primitive it is built on.
     pub family: Option<String>,
     /// Parameter set / key size / digest size (e.g., "256", "1024", "87").
     pub parameter: Option<String>,
     /// Coarse security class.
     pub class: AlgorithmClass,
+    /// The keyed construction (MAC, KDF or PRF) built on `family` — "HMAC"
+    /// for HMAC-SHA-384, "PBKDF2-HMAC" for PBKDF2 with HMAC-SHA-512 — or
+    /// `None` for a bare primitive. A construction is judged by its
+    /// primitive, so `family`, `parameter` and `class` describe that
+    /// primitive; when none is named, `family` is `None` and `class` is
+    /// [`AlgorithmClass::Symmetric`].
+    pub construction: Option<String>,
 }
 
 impl AlgorithmClassification {
@@ -1309,6 +1325,7 @@ impl AlgorithmClassification {
             family: None,
             parameter: None,
             class: AlgorithmClass::Unknown,
+            construction: None,
         }
     }
 
@@ -1318,9 +1335,22 @@ impl AlgorithmClassification {
         self.parameter.as_deref().and_then(|p| p.parse().ok())
     }
 
-    /// Human-readable label, e.g. "AES-128", "SHA-384", "ML-KEM-1024", "RSA".
+    /// Human-readable label, e.g. "AES-128", "SHA-384", "ML-KEM-1024",
+    /// "RSA", "HMAC-SHA-256" — or just the construction ("HMAC") when it
+    /// names no primitive.
     #[must_use]
     pub fn label(&self) -> String {
+        match (self.construction.as_deref(), self.family.is_some()) {
+            (Some(c), true) => format!("{c}-{}", self.primitive_label()),
+            (Some(c), false) => c.to_string(),
+            (None, _) => self.primitive_label(),
+        }
+    }
+
+    /// Label of the primitive alone, without any construction: "SHA-256"
+    /// for HMAC-SHA-256.
+    #[must_use]
+    pub fn primitive_label(&self) -> String {
         let Some(family) = self.family.as_deref() else {
             return "unclassified".to_string();
         };
@@ -1332,23 +1362,47 @@ impl AlgorithmClassification {
             (f, None) => f.to_string(),
         }
     }
+
+    /// A primitive classification of the canonical `family`.
+    fn primitive(family: &'static str, parameter: Option<String>) -> Self {
+        Self {
+            family: Some(family.to_string()),
+            parameter,
+            class: family_class(family),
+            construction: None,
+        }
+    }
 }
 
 /// Map a canonical family name to its security class.
 fn family_class(canonical: &str) -> AlgorithmClass {
     use AlgorithmClass as C;
     match canonical {
-        "MD2" | "MD4" | "MD5" | "SHA-1" | "DES" | "3DES" | "RC2" | "RC4" | "BLOWFISH" | "IDEA"
-        | "CAST5" | "SKIPJACK" => C::Broken,
+        // RC5 (in its usual RC5-32 form) joins the other legacy 64-bit-block
+        // ciphers. PBES1/PBKDF1 allow only MD2/MD5/SHA-1 with DES/RC2 (RFC
+        // 8018 §5.1, §6.1), and Dual_EC_DRBG is disallowed (SP 800-131A
+        // Rev. 2 Table 3). The 3GPP XOR algorithm is a plain-XOR test
+        // algorithm with no cryptographic strength.
+        "MD2" | "MD4" | "MD5" | "SHA-1" | "DES" | "3DES" | "RC2" | "RC4" | "RC5" | "BLOWFISH"
+        | "IDEA" | "CAST5" | "SKIPJACK" | "A5/1" | "A5/2" | "CMEA" | "3GPP-XOR" | "PBES1"
+        | "PBKDF1" | "DUAL-EC-DRBG" => C::Broken,
+        // Every standardized PAKE runs over a classical finite-field or
+        // elliptic-curve group, so Shor's algorithm breaks it like DH.
         "RSA" | "DSA" | "DH" | "ECDH" | "ECDSA" | "EDDSA" | "ED25519" | "ED448" | "X25519"
-        | "X448" | "ELGAMAL" | "ECIES" | "ECMQV" | "EC" | "SM2" | "SM9" | "GOST-R-34.10" => {
+        | "X448" | "ELGAMAL" | "ECIES" | "MQV" | "ECMQV" | "EC" | "SM2" | "SM9"
+        | "GOST-R-34.10" | "BLS" | "X3DH" | "SRP" | "SPAKE2" | "SPAKE2+" | "OPAQUE" | "CPACE"
+        | "AUCPACE" | "J-PAKE" | "EKE" | "PACE" | "DRAGONFLY" | "SAE" => {
             C::ClassicalQuantumVulnerable
         }
-        "AES" | "CHACHA20" | "CAMELLIA" | "ARIA" | "SEED" | "SERPENT" | "TWOFISH" | "SM4"
-        | "MAGMA" | "KUZNYECHIK" => C::Symmetric,
+        "AES" | "CHACHA20" | "SALSA20" | "CAMELLIA" | "ARIA" | "SEED" | "SERPENT" | "TWOFISH"
+        | "RC6" | "CAST6" | "SM4" | "MAGMA" | "KUZNYECHIK" | "ASCON" | "HC" | "RABBIT"
+        | "SNOW3G" | "ZUC" | "MILENAGE" | "POLY1305" | "UMAC" | "FORTUNA" | "YARROW" => {
+            C::Symmetric
+        }
         "SHA-2" => C::Sha2,
-        "SHA-3" => C::Sha3,
-        "SM3" | "GOST-R-34.11" => C::OtherHash,
+        "SHA-3" | "KMAC" | "TUAK" => C::Sha3,
+        "SM3" | "GOST-R-34.11" | "BLAKE2" | "BLAKE3" | "RIPEMD" | "WHIRLPOOL" | "SIPHASH"
+        | "SCRYPT" | "YESCRYPT" | "ARGON2" | "BCRYPT" => C::OtherHash,
         "ML-KEM" => C::PostQuantum(PqcKind::MlKem),
         "ML-DSA" => C::PostQuantum(PqcKind::MlDsa),
         "SLH-DSA" => C::PostQuantum(PqcKind::SlhDsa),
@@ -1373,23 +1427,42 @@ fn alias_lookup(token: &str) -> Option<(&'static str, Option<&'static str>, bool
         "SHA-1" | "SHA1" | "SHA" => ("SHA-1", None),
         "DES" => ("DES", None),
         "3DES" | "TDES" | "TDEA" | "DES3" | "DESEDE" | "DESEDE3" | "DES-EDE" | "DES-EDE2"
-        | "DES-EDE3" | "3DES-EDE" | "TRIPLE-DES" | "TRIPLEDES" => ("3DES", None),
+        | "DES-EDE3" | "3DES-EDE" | "TRIPLE-DES" | "TRIPLEDES" | "DESEDEWRAP" => ("3DES", None),
         "RC2" => ("RC2", None),
         "RC4" | "ARC4" | "ARCFOUR" => ("RC4", None),
+        "RC5" => ("RC5", None),
         "BLOWFISH" => ("BLOWFISH", None),
         "IDEA" => ("IDEA", None),
         "CAST5" | "CAST-128" | "CAST128" => ("CAST5", None),
         "SKIPJACK" => ("SKIPJACK", None),
-        // Classical public-key (quantum-vulnerable).
-        "RSA" | "RSAES" | "RSASSA" | "RSA-PSS" | "RSA-OAEP" | "RSAES-OAEP" | "RSASSA-PSS" => {
+        // GSM (A5/1, A5/2) and cdmaOne (CMEA) ciphers with published breaks,
+        // and the 3GPP XOR test algorithm; the CycloneDX "A5/1" spelling
+        // arrives as "A5-1".
+        "A5-1" => ("A5/1", None),
+        "A5-2" => ("A5/2", None),
+        "CMEA" => ("CMEA", None),
+        "3GPP-XOR" => ("3GPP-XOR", None),
+        "PBES1" => ("PBES1", None),
+        "PBKDF1" => ("PBKDF1", None),
+        "DUAL-EC-DRBG" | "DUAL-EC" | "DUALEC" | "DUALECDRBG" => ("DUAL-EC-DRBG", None),
+        // Classical public-key (quantum-vulnerable). The glued forms are
+        // the signature halves of JCA and X.509 names ("SHA256withRSAandMGF1",
+        // "SHAKE128withRSAPSS", "sha256WithRSAEncryption",
+        // "…withECDSAinP1363Format", the deterministic "…withECDDSA").
+        "RSA" | "RSAES" | "RSASSA" | "RSA-PSS" | "RSA-OAEP" | "RSAES-OAEP" | "RSASSA-PSS"
+        | "RSAES-PKCS1" | "RSASSA-PKCS1" | "RSA-PKCS1" | "RSAES-PKCS1-V1-5"
+        | "RSASSA-PKCS1-V1-5" | "RSA-PKCS1-1-5" | "RSAENCRYPTION" | "RSAANDMGF1" | "RSAPSS" => {
             ("RSA", None)
         }
-        "DSA" | "DSS" => ("DSA", None),
+        "DSA" | "DSS" | "DSAINP1363FORMAT" | "DDSA" | "DETDSA" => ("DSA", None),
         // MODP: the IKE / RFC 3526 finite-field groups ("modp1024", "MODP-2048").
-        "DH" | "DHE" | "FFDHE" | "EDH" | "ADH" | "DIFFIE-HELLMAN" | "MODP" => ("DH", None),
+        "DH" | "DHE" | "FFDH" | "FFDHE" | "EDH" | "ADH" | "DIFFIE-HELLMAN" | "DIFFIEHELLMAN"
+        | "MODP" => ("DH", None),
         // ECP: the IKE random-ECP groups over the NIST curves ("ecp256").
-        "ECDH" | "ECDHE" | "XDH" | "ECP" => ("ECDH", None),
-        "ECDSA" => ("ECDSA", None),
+        // ECCDH is cofactor ECDH, and the RFC 9180 DHKEMs (JCA "DHKEM") run
+        // over the NIST curves and X25519/X448 only.
+        "ECDH" | "ECDHE" | "ECCDH" | "XDH" | "ECP" | "DHKEM" => ("ECDH", None),
+        "ECDSA" | "ECDDSA" | "DETECDSA" | "ECDSAINP1363FORMAT" => ("ECDSA", None),
         "EDDSA" => ("EDDSA", None),
         "ED25519" => ("ED25519", None),
         "ED448" => ("ED448", None),
@@ -1397,8 +1470,34 @@ fn alias_lookup(token: &str) -> Option<(&'static str, Option<&'static str>, bool
         "X448" | "CURVE448" => ("X448", None),
         "ELGAMAL" | "EL-GAMAL" => ("ELGAMAL", None),
         "ECIES" => ("ECIES", None),
+        // SP 800-56A MQV over finite fields, and its EC form.
+        "MQV" | "FFMQV" | "HMQV" | "FHMQV" => ("MQV", None),
         "ECMQV" => ("ECMQV", None),
-        "EC" | "ECC" => ("EC", None),
+        "EC" | "ECC" | "ECNR" => ("EC", None),
+        // NIST prime curves under their SEC 2, X9.62 and SSH (RFC 5656)
+        // names, one canonical name each, plus the other common groups.
+        "P-192" | "P192" | "SECP192R1" | "PRIME192V1" | "NISTP192" => ("EC", Some("P-192")),
+        "P-224" | "P224" | "SECP224R1" | "NISTP224" => ("EC", Some("P-224")),
+        "P-256" | "P256" | "SECP256R1" | "PRIME256V1" | "NISTP256" => ("EC", Some("P-256")),
+        "P-384" | "P384" | "SECP384R1" | "NISTP384" => ("EC", Some("P-384")),
+        "P-521" | "P521" | "SECP521R1" | "NISTP521" => ("EC", Some("P-521")),
+        "SECP256K1" => ("EC", Some("secp256k1")),
+        "RISTRETTO255" | "RISTRETTO" => ("EC", Some("ristretto255")),
+        "DECAF448" => ("EC", Some("decaf448")),
+        "BLS" => ("BLS", None),
+        "X3DH" => ("X3DH", None),
+        // PAKEs, by name; each is judged by the classical group it runs on.
+        "SRP" | "SRP6A" | "SRP-6A" => ("SRP", None),
+        "SPAKE2" => ("SPAKE2", None),
+        "SPAKE2+" | "SPAKE2PLUS" | "SPAKE2-PLUS" => ("SPAKE2+", None),
+        "OPAQUE" => ("OPAQUE", None),
+        "CPACE" => ("CPACE", None),
+        "AUCPACE" => ("AUCPACE", None),
+        "J-PAKE" | "JPAKE" | "EC-JPAKE" | "ECJPAKE" => ("J-PAKE", None),
+        "EKE" => ("EKE", None),
+        "PACE" => ("PACE", None),
+        "DRAGONFLY" => ("DRAGONFLY", None),
+        "SAE" => ("SAE", None),
         // National classical public-key algorithms (quantum-vulnerable):
         // Chinese SM2/SM9 and Russian GOST R 34.10. `normalize_algo_token`
         // maps '.'/' '/'_' to '-', so "GOST R 34.10" arrives as
@@ -1406,15 +1505,33 @@ fn alias_lookup(token: &str) -> Option<(&'static str, Option<&'static str>, bool
         // scheme and is classified conservatively as such.
         "SM2" => ("SM2", None),
         "SM9" => ("SM9", None),
-        "GOST" | "GOST3410" | "GOSTR3410" | "GOST-R-34-10" => ("GOST-R-34.10", None),
-        // Symmetric.
-        "AES" | "RIJNDAEL" => ("AES", None),
+        "GOST" | "GOST3410" | "GOSTR3410" | "GOST-R-34-10" | "ECGOST3410" => ("GOST-R-34.10", None),
+        // Symmetric, including the JCA key-wrap ciphers ("AESWrap_256",
+        // "AESWrapPad", "DESedeWrap").
+        "AES" | "RIJNDAEL" | "AESWRAP" | "AESWRAPPAD" => ("AES", None),
         "CHACHA" | "CHACHA20" | "XCHACHA20" | "CHACHA20-POLY1305" => ("CHACHA20", None),
+        "SALSA20" | "XSALSA20" => ("SALSA20", None),
         "CAMELLIA" => ("CAMELLIA", None),
         "ARIA" => ("ARIA", None),
         "SEED" => ("SEED", None),
         "SERPENT" => ("SERPENT", None),
         "TWOFISH" => ("TWOFISH", None),
+        "RC6" => ("RC6", None),
+        "CAST6" | "CAST-256" | "CAST256" => ("CAST6", None),
+        "ASCON" | "ASCON-AEAD" | "ASCON-HASH" | "ASCON-XOF" | "ASCON-CXOF" => ("ASCON", None),
+        "HC" => ("HC", None),
+        "RABBIT" => ("RABBIT", None),
+        // 3GPP ciphers and MACs (TS 35.216 SNOW 3G, TS 35.221 ZUC,
+        // TS 35.206 MILENAGE), including their UEA/EEA/EIA names.
+        "SNOW3G" | "SNOW-3G" | "UEA2" | "UIA2" | "128-EEA1" | "128-EIA1" | "EEA1" | "EIA1" => {
+            ("SNOW3G", None)
+        }
+        "ZUC" | "128-EEA3" | "128-EIA3" | "EEA3" | "EIA3" => ("ZUC", None),
+        "MILENAGE" => ("MILENAGE", None),
+        "POLY1305" => ("POLY1305", None),
+        "UMAC" => ("UMAC", None),
+        "FORTUNA" => ("FORTUNA", None),
+        "YARROW" => ("YARROW", None),
         // National symmetric ciphers (SM4 is fixed 128-bit; GOST R 34.12
         // Magma/Kuznyechik).
         "SM4" => ("SM4", None),
@@ -1423,6 +1540,16 @@ fn alias_lookup(token: &str) -> Option<(&'static str, Option<&'static str>, bool
         // National hashes — recognized, but not CNSA 2.0-approved.
         "SM3" => ("SM3", None),
         "GOST3411" | "GOSTR3411" | "GOST-R-34-11" | "STREEBOG" => ("GOST-R-34.11", None),
+        // Other recognized hashes and password hashes.
+        "BLAKE2" | "BLAKE2B" | "BLAKE2S" | "BLAKE2BP" | "BLAKE2SP" => ("BLAKE2", None),
+        "BLAKE3" => ("BLAKE3", None),
+        "RIPEMD" | "RMD" => ("RIPEMD", None),
+        "WHIRLPOOL" => ("WHIRLPOOL", None),
+        "SIPHASH" => ("SIPHASH", None),
+        "SCRYPT" => ("SCRYPT", None),
+        "YESCRYPT" => ("YESCRYPT", None),
+        "ARGON2" | "ARGON2I" | "ARGON2D" | "ARGON2ID" => ("ARGON2", None),
+        "BCRYPT" => ("BCRYPT", None),
         // SHA-2 (digest size carried in the token where present).
         "SHA-2" | "SHA2" => ("SHA-2", None),
         "SHA-224" | "SHA224" => ("SHA-2", Some("224")),
@@ -1436,8 +1563,13 @@ fn alias_lookup(token: &str) -> Option<(&'static str, Option<&'static str>, bool
         // generic rsplit branch preferred the alias-implied 512).
         "SHA-512-256" | "SHA512-256" => ("SHA-2", Some("256")),
         "SHA-512-224" | "SHA512-224" => ("SHA-2", Some("224")),
-        // SHA-3 family.
-        "SHA-3" | "SHA3" | "KECCAK" | "SHAKE" | "SHAKE128" | "SHAKE256" => ("SHA-3", None),
+        // SHA-3 family, including the SP 800-185 derived functions; KMAC
+        // and TUAK (3GPP TS 35.231) keep their own names.
+        "SHA-3" | "SHA3" | "KECCAK" | "SHAKE" | "SHAKE128" | "SHAKE256" | "CSHAKE"
+        | "CSHAKE128" | "CSHAKE256" | "TUPLEHASH" | "TUPLEHASH128" | "TUPLEHASH256"
+        | "PARALLELHASH" | "PARALLELHASH128" | "PARALLELHASH256" => ("SHA-3", None),
+        "KMAC" => ("KMAC", None),
+        "TUAK" => ("TUAK", None),
         "SHA3-224" => ("SHA-3", Some("224")),
         "SHA3-256" => ("SHA-3", Some("256")),
         "SHA3-384" => ("SHA-3", Some("384")),
@@ -1504,6 +1636,12 @@ fn classify_token(token: &str) -> Option<(&'static str, Option<String>)> {
         return Some(("EC", None));
     }
 
+    // SEC 2, ANSI X9.62 and X9.63 named curves ("secp112r1", "sect571k1",
+    // "prime239v3", "c2pnb163v1", "ansip521r1"): classical EC crypto too.
+    if is_secg_or_x9_curve(&t) {
+        return Some(("EC", Some(t.to_ascii_lowercase())));
+    }
+
     // Trailing "-<digits>" size: "ML-KEM-1024", "AES-128", "RSA-2048", "KYBER-768".
     if let Some((base, digits)) = t.rsplit_once('-')
         && !digits.is_empty()
@@ -1533,6 +1671,85 @@ fn classify_token(token: &str) -> Option<(&'static str, Option<String>)> {
     None
 }
 
+/// Whether a normalized token is a SEC 2 / ANSI X9.62 / X9.63 curve name:
+/// a fixed prefix, the field size, then a letter-digit suffix.
+fn is_secg_or_x9_curve(t: &str) -> bool {
+    const SHAPES: &[(&str, &[u8])] = &[
+        ("SECP", b"RK"),
+        ("SECT", b"RK"),
+        ("ANSIP", b"RK"),
+        ("ANSIT", b"RK"),
+        ("PRIME", b"V"),
+        ("C2PNB", b"VW"),
+        ("C2TNB", b"VR"),
+        ("C2ONB", b"V"),
+    ];
+    SHAPES.iter().any(|(prefix, letters)| {
+        t.strip_prefix(prefix).is_some_and(|rest| {
+            let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
+            match &rest.as_bytes()[digits..] {
+                [letter, n] => digits > 0 && letters.contains(letter) && n.is_ascii_digit(),
+                _ => false,
+            }
+        })
+    })
+}
+
+/// Keyed constructions — MACs, KDFs and PRFs — that take their security
+/// from an underlying hash function or block cipher, by normalized token
+/// span. KMAC is not one: it is a SHA-3 family function in its own right.
+fn construction_alias(span: &str) -> Option<&'static str> {
+    Some(match span {
+        "HMAC" => "HMAC",
+        "HKDF" => "HKDF",
+        "PBKDF2" => "PBKDF2",
+        "PBMAC1" => "PBMAC1",
+        "PBES2" => "PBES2",
+        "CMAC" => "CMAC",
+        "GMAC" => "GMAC",
+        "IKE-PRF" | "IKE1-PRF" | "IKE2-PRF" => "IKE-PRF",
+        // SP 800-108 KBKDF, including the CycloneDX mode spellings
+        // ("SP800_108_CounterKDF").
+        "SP800-108"
+        | "KBKDF"
+        | "SP800-108-COUNTERKDF"
+        | "SP800-108-FEEDBACKKDF"
+        | "SP800-108-DOUBLEPIPELINEKDF" => "SP800-108",
+        _ => return None,
+    })
+}
+
+/// Whether the keyed `construction` can be built on `primitive`: HMAC and
+/// the constructions defined over it take a hash function, CMAC and GMAC a
+/// block cipher, and the PRF-agnostic KDFs (PBES2, IKE-PRF, SP 800-108)
+/// either.
+fn builds_on(construction: &str, primitive: &AlgorithmClassification) -> bool {
+    use AlgorithmClass as C;
+    let hash = matches!(primitive.class, C::Sha2 | C::Sha3 | C::OtherHash)
+        || matches!(
+            primitive.family.as_deref(),
+            Some("MD2" | "MD4" | "MD5" | "SHA-1")
+        );
+    let cipher = !hash && matches!(primitive.class, C::Symmetric | C::Broken);
+    match construction {
+        "HMAC" | "HKDF" | "PBKDF2" | "PBMAC1" => hash,
+        "CMAC" | "GMAC" => cipher,
+        _ => hash || cipher,
+    }
+}
+
+/// A keyed construction (`chain`, outermost first) that names no
+/// primitive. GMAC is specified only for AES (SP 800-38D), so it still
+/// names that cipher, just not its key size.
+fn bare_construction(chain: &[&'static str]) -> AlgorithmClassification {
+    AlgorithmClassification {
+        family: (chain.last() == Some(&"GMAC")).then(|| "AES".to_string()),
+        parameter: None,
+        class: AlgorithmClass::Symmetric,
+        construction: Some(chain.join("-")),
+    }
+}
+
 /// Extract every recognizable algorithm mention from a free-form name using
 /// word-boundary token matching (never bare substrings). Used for cipher-suite
 /// names ("`TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256`") and as the guarded
@@ -1541,7 +1758,11 @@ fn classify_token(token: &str) -> Option<(&'static str, Option<String>)> {
 /// Tokens are split on any non-alphanumeric character (keeping `+` for
 /// "SPHINCS+"); spans of up to three adjacent tokens are joined with `-` and
 /// matched longest-first, so "ML KEM 1024" and "AES 128" resolve as units.
-/// Unrecognized tokens (GCM, CBC, TLS, WITH, …) are simply skipped.
+/// Unrecognized tokens (GCM, CBC, TLS, WITH, …) are simply skipped. A keyed
+/// construction joins the primitive right after it ("HMAC-SHA-384",
+/// "PBKDF2WithHmacSHA256") or, failing that, right before it
+/// ("AES-128-CMAC"); JCA `<digest>with<signature>` names are split at
+/// their glued `with` ("SHA256withRSA").
 #[must_use]
 pub fn classify_algorithm_names(name: &str) -> Vec<AlgorithmClassification> {
     classify_names_impl(name, false)
@@ -1560,24 +1781,152 @@ pub fn classify_algorithm_names_guarded(name: &str) -> Vec<AlgorithmClassificati
 }
 
 /// Whether a matched token span is too generic to trust in unstructured
-/// text: the bare SEED / EC / ECC aliases (with or without a trailing
-/// size digit run) collide with non-crypto words.
+/// text: the bare SEED / EC / ECC / RABBIT / OPAQUE / PACE / SAE aliases
+/// (with or without a trailing size digit run) collide with non-crypto
+/// words.
 fn is_overgeneric_span(span: &str) -> bool {
     let base = span
         .trim_end_matches(|c: char| c.is_ascii_digit())
         .trim_end_matches('-');
-    // A bare "ECP" (no group size) is too generic to read as the IKE group.
-    matches!(base, "SEED" | "EC" | "ECC") || span == "ECP"
+    // A bare "ECP" (no group size) is too generic to read as the IKE group,
+    // and a bare "HC" as the eSTREAM cipher.
+    matches!(
+        base,
+        "SEED" | "EC" | "ECC" | "RABBIT" | "OPAQUE" | "PACE" | "SAE"
+    ) || matches!(span, "ECP" | "HC")
 }
 
 fn classify_names_impl(name: &str, guarded: bool) -> Vec<AlgorithmClassification> {
     let upper = name.to_uppercase();
-    let tokens: Vec<&str> = upper
+    classify_jca_name(&upper, guarded).unwrap_or_else(|| scan_names(&upper, guarded))
+}
+
+/// The mentions in a JCA-style `<digest>with<signature>` name —
+/// "SHA256withRSA", "SHA3-256withECDSA", "SHA512/256withRSA/PSS",
+/// "NONEwithRSA" — or `None` when `upper` has no `WITH` glued between a
+/// recognized name (or NONE) and the next name. Cipher-suite names
+/// separate it (`_WITH_`), and in "RSA/ECB/OAEPWithSHA-256AndMGF1Padding"
+/// it follows a padding scheme, not a digest.
+///
+/// Such a name is judged by its weaker part: a broken part decides, and so
+/// does a classical (quantum-vulnerable) one ("ECDHwithSHA256KDF") unless a
+/// post-quantum part is present too. A post-quantum signature would hide
+/// behind its digest, and a classical part beside a post-quantum one makes
+/// a hybrid, so such names stay unclassified (fail closed), as does a
+/// digest beside a signature that is not recognized. A KDF named with its
+/// PRF ("PBKDF2WithHmacSHA256") is the construction built on the PRF's
+/// hash.
+fn classify_jca_name(upper: &str, guarded: bool) -> Option<Vec<AlgorithmClassification>> {
+    use AlgorithmClass as C;
+    let bytes = upper.as_bytes();
+    let at = upper.match_indices("WITH").map(|(at, _)| at).find(|&at| {
+        at > 0
+            && bytes[at - 1].is_ascii_alphanumeric()
+            && bytes.get(at + 4).is_some_and(u8::is_ascii_alphanumeric)
+    })?;
+    let (left, right) = (&upper[..at], &upper[at + 4..]);
+    // The digest ends right at the `with`: the last one to three tokens
+    // before it form one recognized name, or say NONE.
+    let tokens = name_tokens(left);
+    let n = tokens.len();
+    let digest_at_with = tokens.last() == Some(&"NONE")
+        || (1..=3.min(n)).any(|span| {
+            longest_hit(&tokens[n - span..], guarded).is_some_and(|(_, len)| len == span)
+        });
+    if !digest_at_with {
+        return None;
+    }
+    let digest = scan_names(left, guarded);
+    if !digest.is_empty()
+        && digest
+            .iter()
+            .all(|m| m.family.is_none() && m.construction.is_some())
+    {
+        return Some(scan_names(&format!("{left} {right}"), guarded));
+    }
+    let mut parts = digest;
+    for m in scan_names(right, guarded) {
+        push_unique(&mut parts, m);
+    }
+    let broken = parts.iter().any(|m| m.class == C::Broken);
+    let classical = parts
+        .iter()
+        .any(|m| m.class == C::ClassicalQuantumVulnerable);
+    let post_quantum = parts.iter().any(|m| matches!(m.class, C::PostQuantum(_)));
+    Some(if broken || (classical && !post_quantum) {
+        parts
+    } else {
+        Vec::new()
+    })
+}
+
+/// One recognized token span: a primitive, or a keyed construction waiting
+/// for the primitive it is built on.
+enum NameHit {
+    Primitive(AlgorithmClassification),
+    Construction(&'static str),
+}
+
+/// The longest recognized span (up to three tokens) at the start of
+/// `tokens`, with its length.
+fn longest_hit(tokens: &[&str], guarded: bool) -> Option<(NameHit, usize)> {
+    for span in (1..=3.min(tokens.len())).rev() {
+        let joined = tokens[..span].join("-");
+        if let Some(construction) = construction_alias(&joined) {
+            return Some((NameHit::Construction(construction), span));
+        }
+        if let Some((family, parameter)) = classify_token(&joined) {
+            if guarded && is_overgeneric_span(&joined) {
+                continue;
+            }
+            let cls = AlgorithmClassification::primitive(family, parameter);
+            return Some((NameHit::Primitive(cls), span));
+        }
+    }
+    None
+}
+
+/// Split a JCA `Mac` name glued to its hash ("HMACSHA256", from
+/// "HmacSHA256") into the tokens HMAC and SHA256.
+fn split_glued_hmac(token: &str) -> impl Iterator<Item = &str> {
+    let (head, tail) = match token.strip_prefix("HMAC") {
+        Some(rest) if !rest.is_empty() => (&token[..4], Some(rest)),
+        _ => (token, None),
+    };
+    std::iter::once(head).chain(tail)
+}
+
+/// Push `cls` unless it is already listed; returns its index.
+fn push_unique(out: &mut Vec<AlgorithmClassification>, cls: AlgorithmClassification) -> usize {
+    out.iter().position(|c| *c == cls).unwrap_or_else(|| {
+        out.push(cls);
+        out.len() - 1
+    })
+}
+
+/// The tokens of an uppercased name: split on any non-alphanumeric
+/// character but `+`, with glued JCA `Mac` names split too.
+fn name_tokens(upper: &str) -> Vec<&str> {
+    upper
         .split(|c: char| !(c.is_ascii_alphanumeric() || c == '+'))
         .filter(|t| !t.is_empty())
-        .collect();
+        .flat_map(split_glued_hmac)
+        .collect()
+}
+
+/// The mentions in an uppercased name, in order (see
+/// [`classify_algorithm_names`]).
+fn scan_names(upper: &str, guarded: bool) -> Vec<AlgorithmClassification> {
+    let tokens = name_tokens(upper);
 
     let mut out: Vec<AlgorithmClassification> = Vec::new();
+    // Constructions waiting for their primitive (outermost first), and the
+    // token index where they start.
+    let mut pending: Vec<&'static str> = Vec::new();
+    let mut pending_at = 0;
+    // The last primitive mention: its index in `out`, and the token index
+    // just past it.
+    let mut last: Option<(usize, usize)> = None;
     let mut i = 0;
     while i < tokens.len() {
         // A pure number can never start an algorithm mention.
@@ -1585,32 +1934,63 @@ fn classify_names_impl(name: &str, guarded: bool) -> Vec<AlgorithmClassification
             i += 1;
             continue;
         }
-        let max_span = 3.min(tokens.len() - i);
-        let mut advanced = false;
-        for span in (1..=max_span).rev() {
-            let joined = tokens[i..i + span].join("-");
-            if let Some((family, parameter)) = classify_token(&joined) {
-                if guarded && is_overgeneric_span(&joined) {
-                    continue;
+        match longest_hit(&tokens[i..], guarded) {
+            Some((NameHit::Construction(construction), span)) => {
+                if pending.is_empty() {
+                    pending_at = i;
                 }
-                let cls = AlgorithmClassification {
-                    family: Some(family.to_string()),
-                    parameter,
-                    class: family_class(family),
-                };
-                if !out.contains(&cls) {
-                    out.push(cls);
+                // A construction named twice ("HMAC HMAC-SHA-384") nests
+                // nothing.
+                if pending.last() != Some(&construction) {
+                    pending.push(construction);
                 }
                 i += span;
-                advanced = true;
-                break;
+            }
+            Some((NameHit::Primitive(mut cls), span)) => {
+                if pending.last().is_some_and(|c| builds_on(c, &cls)) {
+                    cls.construction = Some(pending.join("-"));
+                    pending.clear();
+                } else {
+                    settle_constructions(&mut out, &mut pending, pending_at, last);
+                }
+                last = Some((push_unique(&mut out, cls), i + span));
+                i += span;
+            }
+            None => {
+                settle_constructions(&mut out, &mut pending, pending_at, last);
+                i += 1;
             }
         }
-        if !advanced {
-            i += 1;
+    }
+    settle_constructions(&mut out, &mut pending, pending_at, last);
+    out
+}
+
+/// Settle constructions that no primitive they can be built on followed:
+/// they join the primitive right before them when they can be built on it
+/// ("AES-128-CMAC", "SHA256-HMAC"), else stand alone, naming no primitive.
+fn settle_constructions(
+    out: &mut Vec<AlgorithmClassification>,
+    pending: &mut Vec<&'static str>,
+    pending_at: usize,
+    last: Option<(usize, usize)>,
+) {
+    let Some(&innermost) = pending.last() else {
+        return;
+    };
+    match last {
+        Some((index, end))
+            if end == pending_at
+                && out[index].construction.is_none()
+                && builds_on(innermost, &out[index]) =>
+        {
+            out[index].construction = Some(pending.join("-"));
+        }
+        _ => {
+            push_unique(out, bare_construction(pending));
         }
     }
-    out
+    pending.clear();
 }
 
 /// The most severe classification among `mentions` (first wins on ties),
@@ -1650,7 +2030,28 @@ fn classify_oid(oid: &str) -> Option<(&'static str, Option<String>)> {
         "1.2.840.113549.3.7" => Some(("3DES", None)),
         "1.2.840.113549.3.2" => Some(("RC2", None)),
         "1.2.840.113549.3.4" => Some(("RC4", None)),
-        "1.2.840.10040.4.1" | "1.2.840.10040.4.3" => Some(("DSA", None)),
+        "1.2.840.113549.3.9" => Some(("RC5", None)), // rc5-CBC-PAD, RFC 8018 B.2.4
+        "1.2.840.10040.4.1" => Some(("DSA", None)),
+        // A signature over a broken digest is judged by that digest, like the
+        // JCA names "MD5withRSA" and "SHA1withDSA": md2/md4/md5/sha1With-
+        // RSAEncryption (RFC 8017 Appendix C, RFC 2313 §11), id-dsa-with-sha1
+        // and ecdsa-with-SHA1 (RFC 3279 §2.2.2, §2.2.3).
+        "1.2.840.113549.1.1.2" => Some(("MD2", None)),
+        "1.2.840.113549.1.1.3" => Some(("MD4", None)),
+        "1.2.840.113549.1.1.4" => Some(("MD5", None)),
+        "1.2.840.113549.1.1.5" | "1.2.840.10040.4.3" | "1.2.840.10045.4.1" => Some(("SHA-1", None)),
+        // RSASSA-PSS and ECDSA with SHAKE128/256 (RFC 8692 §3).
+        "1.3.6.1.5.5.7.6.30" | "1.3.6.1.5.5.7.6.31" => Some(("RSA", None)),
+        "1.3.6.1.5.5.7.6.32" | "1.3.6.1.5.5.7.6.33" => Some(("ECDSA", None)),
+        // PBES1 with MD2/MD5/SHA-1 and DES/RC2 (RFC 8018 Appendix A.3).
+        "1.2.840.113549.1.5.1"
+        | "1.2.840.113549.1.5.3"
+        | "1.2.840.113549.1.5.4"
+        | "1.2.840.113549.1.5.6"
+        | "1.2.840.113549.1.5.10"
+        | "1.2.840.113549.1.5.11" => Some(("PBES1", None)),
+        "1.2.840.113549.1.9.16.3.18" => Some(("CHACHA20", None)), // AEAD, RFC 8103 §3
+        "1.3.6.1.4.1.11591.4.11" => Some(("SCRYPT", None)),       // id-scrypt, RFC 7914 §7
         "1.2.840.113549.1.3.1" | "1.2.840.10046.2.1" => Some(("DH", None)),
         "1.3.101.110" => Some(("X25519", None)),
         "1.3.101.111" => Some(("X448", None)),
@@ -1668,6 +2069,10 @@ fn classify_oid(oid: &str) -> Option<(&'static str, Option<String>)> {
         "2.16.840.1.101.3.4.2.9" => Some(("SHA-3", Some("384"))),
         "2.16.840.1.101.3.4.2.10" => Some(("SHA-3", Some("512"))),
         "2.16.840.1.101.3.4.2.11" | "2.16.840.1.101.3.4.2.12" => Some(("SHA-3", None)), // SHAKE
+        // KMAC: id-KmacWithSHAKE128/256 (RFC 8702 §2) and the KMAC KDFs
+        // id-kmac128/256 (RFC 9688 §5.2).
+        "2.16.840.1.101.3.4.2.19" | "2.16.840.1.101.3.4.2.21" => Some(("KMAC", Some("128"))),
+        "2.16.840.1.101.3.4.2.20" | "2.16.840.1.101.3.4.2.22" => Some(("KMAC", Some("256"))),
         // SP 800-208 / RFC 8708 stateful hash-based signatures.
         "1.2.840.113549.1.9.16.3.17" => Some(("LMS", None)), // id-alg-hss-lms-hashsig
         "0.4.0.127.0.15.1.1.13.0" => Some(("XMSS", None)),
@@ -1752,12 +2157,17 @@ fn classify_oid(oid: &str) -> Option<(&'static str, Option<String>)> {
     }
     // Russian GOST R 34.10 (quantum-vulnerable EC signature): 34.10-94/2001
     // keys and signatures plus the 34.10-2012 key (1.2.643.7.1.1.1.*) and
-    // signature (1.2.643.7.1.1.3.*) arcs.
+    // signature (1.2.643.7.1.1.3.*) arcs, and the curve parameter sets:
+    // CryptoPro signing (.35.*) and exchange (.36.*) sets (RFC 4357 §10.1,
+    // §10.8) and the TC26 sets (RFC 7836 §5.1.1, §5.2.1).
     if matches!(
         o,
         "1.2.643.2.2.19" | "1.2.643.2.2.20" | "1.2.643.2.2.3" | "1.2.643.2.2.4"
     ) || o.starts_with("1.2.643.7.1.1.1.")
         || o.starts_with("1.2.643.7.1.1.3.")
+        || o.starts_with("1.2.643.2.2.35.")
+        || o.starts_with("1.2.643.2.2.36.")
+        || o.starts_with("1.2.643.7.1.2.1.")
     {
         return Some(("GOST-R-34.10", None));
     }
@@ -1773,6 +2183,57 @@ fn classify_oid(oid: &str) -> Option<(&'static str, Option<String>)> {
     None
 }
 
+/// Classify an OID that names a keyed construction: HMAC over SHA-1 and
+/// SHA-2 (RFC 8018 Appendix B.1.1–B.1.2, RFC 3370 §6.1) and SHA-3 (RFC 9688
+/// §4), HKDF over SHA-2 (RFC 8619 §2) and SHA-3 (RFC 9688 §5.1), and
+/// AES-GMAC (RFC 9044 §3.1). PBKDF2, PBES2 and PBMAC1 (RFC 8018 Appendix
+/// A.2, A.4, A.5) carry their PRF and cipher in the algorithm parameters,
+/// which a CBOM does not record, so their OIDs name no primitive.
+fn classify_construction_oid(oid: &str) -> Option<AlgorithmClassification> {
+    type Primitive = Option<(&'static str, Option<&'static str>)>;
+    let (construction, primitive): (&'static str, Primitive) = match oid.trim() {
+        "1.2.840.113549.2.7" | "1.3.6.1.5.5.8.1.2" => ("HMAC", Some(("SHA-1", None))),
+        // hmacWithSHA512-224 / -256 by their truncated output size.
+        "1.2.840.113549.2.8" | "1.2.840.113549.2.12" => ("HMAC", Some(("SHA-2", Some("224")))),
+        "1.2.840.113549.2.9" | "1.2.840.113549.2.13" => ("HMAC", Some(("SHA-2", Some("256")))),
+        "1.2.840.113549.2.10" => ("HMAC", Some(("SHA-2", Some("384")))),
+        "1.2.840.113549.2.11" => ("HMAC", Some(("SHA-2", Some("512")))),
+        "2.16.840.1.101.3.4.2.13" => ("HMAC", Some(("SHA-3", Some("224")))),
+        "2.16.840.1.101.3.4.2.14" => ("HMAC", Some(("SHA-3", Some("256")))),
+        "2.16.840.1.101.3.4.2.15" => ("HMAC", Some(("SHA-3", Some("384")))),
+        "2.16.840.1.101.3.4.2.16" => ("HMAC", Some(("SHA-3", Some("512")))),
+        "1.2.840.113549.1.9.16.3.28" => ("HKDF", Some(("SHA-2", Some("256")))),
+        "1.2.840.113549.1.9.16.3.29" => ("HKDF", Some(("SHA-2", Some("384")))),
+        "1.2.840.113549.1.9.16.3.30" => ("HKDF", Some(("SHA-2", Some("512")))),
+        "1.2.840.113549.1.9.16.3.32" => ("HKDF", Some(("SHA-3", Some("224")))),
+        "1.2.840.113549.1.9.16.3.33" => ("HKDF", Some(("SHA-3", Some("256")))),
+        "1.2.840.113549.1.9.16.3.34" => ("HKDF", Some(("SHA-3", Some("384")))),
+        "1.2.840.113549.1.9.16.3.35" => ("HKDF", Some(("SHA-3", Some("512")))),
+        "2.16.840.1.101.3.4.1.9" => ("GMAC", Some(("AES", Some("128")))),
+        "2.16.840.1.101.3.4.1.29" => ("GMAC", Some(("AES", Some("192")))),
+        "2.16.840.1.101.3.4.1.49" => ("GMAC", Some(("AES", Some("256")))),
+        "1.2.840.113549.1.5.12" => ("PBKDF2", None),
+        "1.2.840.113549.1.5.13" => ("PBES2", None),
+        "1.2.840.113549.1.5.14" => ("PBMAC1", None),
+        _ => return None,
+    };
+    Some(match primitive {
+        Some((family, size)) => AlgorithmClassification {
+            construction: Some(construction.to_string()),
+            ..AlgorithmClassification::primitive(family, size.map(str::to_string))
+        },
+        None => bare_construction(&[construction]),
+    })
+}
+
+/// The classification an OID names: a keyed construction, else a primitive.
+fn oid_classification(oid: &str) -> Option<AlgorithmClassification> {
+    classify_construction_oid(oid).or_else(|| {
+        classify_oid(oid)
+            .map(|(family, parameter)| AlgorithmClassification::primitive(family, parameter))
+    })
+}
+
 /// Classify a cryptographic algorithm from whatever identity a CBOM provides.
 ///
 /// Sources are consulted in decreasing order of authority:
@@ -1783,11 +2244,15 @@ fn classify_oid(oid: &str) -> Option<(&'static str, Option<String>)> {
 ///    ("ML-KEM-768" → ML-KEM + 768). A bare "SHA" family accompanied by a
 ///    SHA-2 digest size in `parameter_set` reads as SHA-2 of that size
 ///    (bare "SHA" means SHA-1 only in cipher-suite context).
-/// 2. `oid` (CycloneDX 1.6+ `cryptoProperties.oid`) via [`classify_oid`].
+/// 2. `oid` (CycloneDX 1.6+ `cryptoProperties.oid`) via [`classify_oid`],
+///    or [`classify_construction_oid`] for HMAC/HKDF/GMAC/PBKDF2 OIDs.
 /// 3. A declared-but-unrecognized `family` string is token-scanned as a
 ///    last resort ("DES-CBC", "AES-128-CBC", "RSA/ECB/PKCS1Padding"), and
 ///    the most severe mention wins — a mode/padding-qualified family must
-///    not silently classify as Unknown.
+///    not silently classify as Unknown. A keyed-construction family
+///    ("HMAC", "HKDF", "CMAC", "PBKDF2", …) lands here too and takes its
+///    primitive from `parameter_set` or `name` ("HMAC" + "SHA-384"); with
+///    neither it stays a construction that names no primitive.
 /// 4. `elliptic_curve` (CycloneDX 1.7 `ellipticCurve`, or the 1.6 `curve`
 ///    it deprecates): any named curve marks the asset as classical
 ///    elliptic-curve crypto.
@@ -1814,6 +2279,16 @@ pub fn classify_algorithm(
     elliptic_curve: Option<&str>,
 ) -> AlgorithmClassification {
     let fill_parameter = |mut cls: AlgorithmClassification| {
+        // A keyed construction that names no primitive takes the one the
+        // parameter set or the component name gives it; the name is
+        // unstructured, so it is scanned guarded.
+        if cls.family.is_none()
+            && let Some(construction) = cls.construction.clone()
+        {
+            return construction_built_on(&construction, parameter_set, false)
+                .or_else(|| construction_built_on(&construction, name, true))
+                .unwrap_or(cls);
+        }
         if cls.parameter.is_none() {
             cls.parameter = parameter_set
                 .map(str::trim)
@@ -1842,41 +2317,25 @@ pub fn classify_algorithm(
         if normalize_algo_token(f) == "SHA"
             && let Some(p @ ("224" | "256" | "384" | "512")) = parameter_set.map(str::trim)
         {
-            return AlgorithmClassification {
-                family: Some("SHA-2".to_string()),
-                parameter: Some(p.to_string()),
-                class: AlgorithmClass::Sha2,
-            };
+            return AlgorithmClassification::primitive("SHA-2", Some(p.to_string()));
         }
         if let Some((canonical, parameter)) = classify_token(f) {
-            return fill_parameter(AlgorithmClassification {
-                family: Some(canonical.to_string()),
-                parameter,
-                class: family_class(canonical),
-            });
+            return fill_parameter(AlgorithmClassification::primitive(canonical, parameter));
         }
     } else if let Some(o) = oid.map(str::trim).filter(|o| !o.is_empty()) {
         // 2. OID (only consulted when no family is declared: a recognized
         //    family is authoritative over the OID).
-        if let Some((canonical, parameter)) = classify_oid(o) {
-            return fill_parameter(AlgorithmClassification {
-                family: Some(canonical.to_string()),
-                parameter,
-                class: family_class(canonical),
-            });
+        if let Some(cls) = oid_classification(o) {
+            return fill_parameter(cls);
         }
     }
 
     // Family declared but unrecognized: still try the OID.
     if family.is_some()
         && let Some(o) = oid.map(str::trim).filter(|o| !o.is_empty())
-        && let Some((canonical, parameter)) = classify_oid(o)
+        && let Some(cls) = oid_classification(o)
     {
-        return fill_parameter(AlgorithmClassification {
-            family: Some(canonical.to_string()),
-            parameter,
-            class: family_class(canonical),
-        });
+        return fill_parameter(cls);
     }
 
     // 3. Family declared but not a single recognizable token: token-scan
@@ -1894,11 +2353,7 @@ pub fn classify_algorithm(
 
     // 4. A named elliptic curve is authoritative that this is EC crypto.
     if let Some(curve) = elliptic_curve.map(str::trim).filter(|c| !c.is_empty()) {
-        return AlgorithmClassification {
-            family: Some("EC".to_string()),
-            parameter: Some(curve.to_string()),
-            class: AlgorithmClass::ClassicalQuantumVulnerable,
-        };
+        return AlgorithmClassification::primitive("EC", Some(curve.to_string()));
     }
 
     // 5. Guarded name fallback: only when family and OID are both absent,
@@ -1913,10 +2368,26 @@ pub fn classify_algorithm(
     }
 
     AlgorithmClassification {
-        family: None,
         parameter: parameter_set.map(str::to_string),
-        class: AlgorithmClass::Unknown,
+        ..AlgorithmClassification::unknown()
     }
+}
+
+/// `construction` built on the primitive `text` names ("SHA-384",
+/// "HMAC-SHA-384"), when `text` names one it can be built on.
+fn construction_built_on(
+    construction: &str,
+    text: Option<&str>,
+    guarded: bool,
+) -> Option<AlgorithmClassification> {
+    classify_names_impl(&format!("{construction} {}", text?), guarded)
+        .into_iter()
+        .find(|m| {
+            m.family.is_some()
+                && m.construction
+                    .as_deref()
+                    .is_some_and(|c| c.starts_with(construction))
+        })
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────

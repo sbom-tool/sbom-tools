@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.7" serialNumber="urn:uuid:8b2e6f14-3d9a-4c71-b5e0-71a4c9d2e863" version="1">
+  <metadata>
+    <timestamp>2026-10-04T00:00:00Z</timestamp>
+    <tools>
+      <components>
+        <component type="application">
+          <name>protocol-scanner</name>
+          <version>1.0.0</version>
+        </component>
+      </components>
+    </tools>
+  </metadata>
+  <components>
+    <component type="cryptographic-asset" bom-ref="crypto/protocol/ike">
+      <name>IKEv1</name>
+      <cryptoProperties>
+        <assetType>protocol</assetType>
+        <protocolProperties>
+          <type>ike</type>
+          <version>1.0</version>
+        </protocolProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/protocol/ssh">
+      <name>SSH</name>
+      <cryptoProperties>
+        <assetType>protocol</assetType>
+        <protocolProperties>
+          <type>ssh</type>
+          <version>2.0</version>
+        </protocolProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/protocol/quic">
+      <name>QUIC</name>
+      <cryptoProperties>
+        <assetType>protocol</assetType>
+        <protocolProperties>
+          <type>quic</type>
+        </protocolProperties>
+      </cryptoProperties>
+    </component>
+  </components>
+</bom>

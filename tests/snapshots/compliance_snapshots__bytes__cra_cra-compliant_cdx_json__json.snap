@@ -14,7 +14,8 @@ source: tests/compliance_snapshots.rs
         "component_id": "pkg:cargo/lib-a@2.3.4",
         "requirement": "CycloneDX: bom-ref for dependency tracking",
         "rule_id": "SBOM-CRA-GENERAL",
-        "sarif_rule_id": "SBOM-CRA-GENERAL"
+        "sarif_rule_id": "SBOM-CRA-GENERAL",
+        "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
       },
       {
         "severity": "Info",
@@ -24,7 +25,8 @@ source: tests/compliance_snapshots.rs
         "component_id": "pkg:cargo/lib-b@0.9.1",
         "requirement": "CycloneDX: bom-ref for dependency tracking",
         "rule_id": "SBOM-CRA-GENERAL",
-        "sarif_rule_id": "SBOM-CRA-GENERAL"
+        "sarif_rule_id": "SBOM-CRA-GENERAL",
+        "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
       },
       {
         "severity": "Warning",
@@ -45,7 +47,9 @@ source: tests/compliance_snapshots.rs
             "id": "Annex I Part II (1)",
             "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
-        ]
+        ],
+        "remediation": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
+        "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
       },
       {
         "severity": "Info",
@@ -61,7 +65,9 @@ source: tests/compliance_snapshots.rs
             "id": "Annex I Part II (1)",
             "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
-        ]
+        ],
+        "remediation": "Include the product's known vulnerabilities in the SBOM (Annex I Part II (1)). CycloneDX: list them in vulnerabilities[] with affects[].ref pointing at the affected components; a vulnerability-assertion externalReference is not yet recognized.",
+        "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
       }
     ],
     "error_count": 0,
@@ -104,7 +110,8 @@ source: tests/compliance_snapshots.rs
         "component_id": "pkg:cargo/lib-a@2.3.4",
         "requirement": "CycloneDX: bom-ref for dependency tracking",
         "rule_id": "SBOM-CRA-GENERAL",
-        "sarif_rule_id": "SBOM-CRA-GENERAL"
+        "sarif_rule_id": "SBOM-CRA-GENERAL",
+        "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
       },
       {
         "severity": "Info",
@@ -114,7 +121,8 @@ source: tests/compliance_snapshots.rs
         "component_id": "pkg:cargo/lib-b@0.9.1",
         "requirement": "CycloneDX: bom-ref for dependency tracking",
         "rule_id": "SBOM-CRA-GENERAL",
-        "sarif_rule_id": "SBOM-CRA-GENERAL"
+        "sarif_rule_id": "SBOM-CRA-GENERAL",
+        "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
       },
       {
         "severity": "Warning",
@@ -135,7 +143,9 @@ source: tests/compliance_snapshots.rs
             "id": "Annex I Part II (1)",
             "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
-        ]
+        ],
+        "remediation": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
+        "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
       },
       {
         "severity": "Info",
@@ -151,7 +161,9 @@ source: tests/compliance_snapshots.rs
             "id": "Annex I Part II (1)",
             "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
-        ]
+        ],
+        "remediation": "Include the product's known vulnerabilities in the SBOM (Annex I Part II (1)). CycloneDX: list them in vulnerabilities[] with affects[].ref pointing at the affected components; a vulnerability-assertion externalReference is not yet recognized.",
+        "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
       }
     ],
     "error_count": 0,

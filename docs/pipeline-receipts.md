@@ -35,11 +35,11 @@ unique, and no component of an artifact or lock path may be a symlink.
 
 Exit codes are 0 for accepted verification, 1 for readable JSON violating the
 contract (including oversized documents), and 3 for I/O or malformed JSON. CLI
-usage errors retain exit code 2. `--quiet` suppresses success output; failure
-diagnostics remain on stderr. With `--output json`, `verify receipt` and
-`verify receipt-aggregate` print a JSON verdict (`valid`, `error`, and for
-aggregation `receipt_count`/`artifact_count`) on stdout for both outcomes,
-regardless of `--quiet`.
+usage errors also exit 3, as in every command. `--quiet` suppresses success
+output; failure diagnostics remain on stderr. With `--output json`,
+`verify receipt` and `verify receipt-aggregate` print a JSON verdict (`valid`,
+`error`, and for aggregation `receipt_count`/`artifact_count`) on stdout for
+both outcomes, regardless of `--quiet`.
 
 ## Identity
 

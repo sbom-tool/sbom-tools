@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.7" serialNumber="urn:uuid:d4e5f6a7-b8c9-0123-def4-567890123456" version="1">
+  <metadata>
+    <timestamp>2026-04-01T16:00:00Z</timestamp>
+    <tools>
+      <components>
+        <component type="application">
+          <name>pqc-cbom-scanner</name>
+          <version>4.0.0</version>
+        </component>
+      </components>
+    </tools>
+    <component type="application" bom-ref="pqc-app">
+      <name>fully-quantum-safe-app</name>
+      <version>1.0.0</version>
+      <purl>pkg:cargo/fully-quantum-safe-app@1.0.0</purl>
+    </component>
+  </metadata>
+  <components>
+    <component type="library" bom-ref="pqc-lib">
+      <name>pqc-crypto-suite</name>
+      <version>2.0.0</version>
+      <hashes>
+        <hash alg="SHA-384">aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899</hash>
+      </hashes>
+      <licenses>
+        <license>
+          <id>MIT</id>
+        </license>
+      </licenses>
+      <purl>pkg:cargo/pqc-crypto-suite@2.0.0</purl>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/ml-kem-1024">
+      <name>ML-KEM-1024</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>kem</primitive>
+          <algorithmFamily>ML-KEM</algorithmFamily>
+          <parameterSetIdentifier>1024</parameterSetIdentifier>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>encapsulate</cryptoFunction>
+            <cryptoFunction>decapsulate</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>256</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>5</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.4.3</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/ml-kem-768">
+      <name>ML-KEM-768</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>kem</primitive>
+          <algorithmFamily>ML-KEM</algorithmFamily>
+          <parameterSetIdentifier>768</parameterSetIdentifier>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>encapsulate</cryptoFunction>
+            <cryptoFunction>decapsulate</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>192</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>3</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.4.2</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/ml-dsa-87">
+      <name>ML-DSA-87</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>signature</primitive>
+          <algorithmFamily>ML-DSA</algorithmFamily>
+          <parameterSetIdentifier>87</parameterSetIdentifier>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>sign</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>256</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>5</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.3.19</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/ml-dsa-65">
+      <name>ML-DSA-65</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>signature</primitive>
+          <algorithmFamily>ML-DSA</algorithmFamily>
+          <parameterSetIdentifier>65</parameterSetIdentifier>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>sign</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>192</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>3</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.3.18</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/slh-dsa-sha2-256s">
+      <name>SLH-DSA-SHA2-256s</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>signature</primitive>
+          <algorithmFamily>SLH-DSA</algorithmFamily>
+          <parameterSetIdentifier>SHA2-256s</parameterSetIdentifier>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>sign</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>256</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>5</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.3.24</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/slh-dsa-shake-128f">
+      <name>SLH-DSA-SHAKE-128f</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>signature</primitive>
+          <algorithmFamily>SLH-DSA</algorithmFamily>
+          <parameterSetIdentifier>SHAKE-128f</parameterSetIdentifier>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>sign</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>128</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>1</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.3.27</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/aes-256-gcm">
+      <name>AES-256-GCM</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>ae</primitive>
+          <algorithmFamily>AES</algorithmFamily>
+          <parameterSetIdentifier>256</parameterSetIdentifier>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <mode>gcm</mode>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>encrypt</cryptoFunction>
+            <cryptoFunction>decrypt</cryptoFunction>
+            <cryptoFunction>tag</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>256</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>1</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.1.46</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/sha-384">
+      <name>SHA-384</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>hash</primitive>
+          <algorithmFamily>SHA-2</algorithmFamily>
+          <parameterSetIdentifier>384</parameterSetIdentifier>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>digest</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>384</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>2</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.2.2</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/sha-512">
+      <name>SHA-512</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>hash</primitive>
+          <algorithmFamily>SHA-2</algorithmFamily>
+          <parameterSetIdentifier>512</parameterSetIdentifier>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>digest</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>512</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>2</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.2.3</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/sha3-256">
+      <name>SHA3-256</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>hash</primitive>
+          <algorithmFamily>SHA-3</algorithmFamily>
+          <parameterSetIdentifier>256</parameterSetIdentifier>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>digest</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>256</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>2</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.2.8</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/lms">
+      <name>LMS</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>signature</primitive>
+          <algorithmFamily>LMS</algorithmFamily>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <certificationLevel>none</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>sign</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>256</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>5</nistQuantumSecurityLevel>
+        </algorithmProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/xmss">
+      <name>XMSS</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>signature</primitive>
+          <algorithmFamily>XMSS</algorithmFamily>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <certificationLevel>none</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>sign</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>256</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>5</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>0.4.0.127.0.15.1.1.13.0</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/certificate/pqc-tls">
+      <name>pqc-app.example.com</name>
+      <cryptoProperties>
+        <assetType>certificate</assetType>
+        <certificateProperties>
+          <subjectName>CN = pqc-app.example.com, O = PQC Corp, C = US</subjectName>
+          <issuerName>CN = PQC Root CA, O = PQC Corp, C = US</issuerName>
+          <notValidBefore>2026-01-01T00:00:00Z</notValidBefore>
+          <notValidAfter>2029-01-01T23:59:59Z</notValidAfter>
+          <signatureAlgorithmRef>crypto/algorithm/ml-dsa-87</signatureAlgorithmRef>
+          <subjectPublicKeyRef>crypto/key/ml-kem-pubkey</subjectPublicKeyRef>
+          <certificateFormat>X.509</certificateFormat>
+          <certificateExtension>pem</certificateExtension>
+        </certificateProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/key/ml-kem-pubkey">
+      <name>ml-kem-1024-public-key</name>
+      <cryptoProperties>
+        <assetType>related-crypto-material</assetType>
+        <relatedCryptoMaterialProperties>
+          <type>public-key</type>
+          <id>abcdef01-2345-6789-abcd-ef0123456789</id>
+          <state>active</state>
+          <algorithmRef>crypto/algorithm/ml-kem-1024</algorithmRef>
+          <creationDate>2026-01-01T00:00:00Z</creationDate>
+          <activationDate>2026-01-01T00:00:00Z</activationDate>
+          <size>1568</size>
+          <format>DER</format>
+          <securedBy>
+            <mechanism>HSM</mechanism>
+            <algorithmRef>crypto/algorithm/aes-256-gcm</algorithmRef>
+          </securedBy>
+        </relatedCryptoMaterialProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/key/ml-dsa-keypair">
+      <name>ml-dsa-87-signing-keypair</name>
+      <cryptoProperties>
+        <assetType>related-crypto-material</assetType>
+        <relatedCryptoMaterialProperties>
+          <type>key-pair</type>
+          <id>fedcba98-7654-3210-fedc-ba9876543210</id>
+          <state>active</state>
+          <algorithmRef>crypto/algorithm/ml-dsa-87</algorithmRef>
+          <creationDate>2026-01-01T00:00:00Z</creationDate>
+          <activationDate>2026-01-01T00:00:00Z</activationDate>
+          <size>4896</size>
+          <format>DER</format>
+          <securedBy>
+            <mechanism>HSM</mechanism>
+          </securedBy>
+        </relatedCryptoMaterialProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/protocol/tls13-pqc">
+      <name>TLS 1.3 (Full PQC)</name>
+      <cryptoProperties>
+        <assetType>protocol</assetType>
+        <protocolProperties>
+          <type>tls</type>
+          <version>1.3</version>
+          <cipherSuites>
+            <cipherSuite>
+              <name>TLS_AES_256_GCM_SHA384_ML_KEM_1024</name>
+              <algorithms>
+                <algorithm>crypto/algorithm/ml-kem-1024</algorithm>
+                <algorithm>crypto/algorithm/aes-256-gcm</algorithm>
+                <algorithm>crypto/algorithm/sha-384</algorithm>
+              </algorithms>
+              <identifiers>
+                <identifier>0x13</identifier>
+                <identifier>0x02</identifier>
+              </identifiers>
+            </cipherSuite>
+          </cipherSuites>
+          <cryptoRef>crypto/certificate/pqc-tls</cryptoRef>
+        </protocolProperties>
+      </cryptoProperties>
+    </component>
+  </components>
+  <dependencies>
+    <dependency ref="pqc-app">
+      <dependency ref="pqc-lib"/>
+      <dependency ref="crypto/protocol/tls13-pqc"/>
+    </dependency>
+    <dependency ref="pqc-lib">
+      <provides ref="crypto/algorithm/ml-kem-1024"/>
+      <provides ref="crypto/algorithm/ml-kem-768"/>
+      <provides ref="crypto/algorithm/ml-dsa-87"/>
+      <provides ref="crypto/algorithm/ml-dsa-65"/>
+      <provides ref="crypto/algorithm/slh-dsa-sha2-256s"/>
+      <provides ref="crypto/algorithm/slh-dsa-shake-128f"/>
+      <provides ref="crypto/algorithm/aes-256-gcm"/>
+      <provides ref="crypto/algorithm/sha-384"/>
+      <provides ref="crypto/algorithm/sha-512"/>
+      <provides ref="crypto/algorithm/sha3-256"/>
+      <provides ref="crypto/algorithm/lms"/>
+      <provides ref="crypto/algorithm/xmss"/>
+    </dependency>
+    <dependency ref="crypto/protocol/tls13-pqc">
+      <dependency ref="crypto/certificate/pqc-tls"/>
+      <dependency ref="crypto/algorithm/ml-kem-1024"/>
+      <dependency ref="crypto/algorithm/aes-256-gcm"/>
+      <dependency ref="crypto/algorithm/sha-384"/>
+    </dependency>
+    <dependency ref="crypto/certificate/pqc-tls">
+      <dependency ref="crypto/key/ml-kem-pubkey"/>
+      <dependency ref="crypto/algorithm/ml-dsa-87"/>
+    </dependency>
+  </dependencies>
+  <compositions>
+    <composition>
+      <aggregate>complete</aggregate>
+      <assemblies>
+        <assembly ref="pqc-app"/>
+        <assembly ref="pqc-lib"/>
+      </assemblies>
+    </composition>
+  </compositions>
+</bom>

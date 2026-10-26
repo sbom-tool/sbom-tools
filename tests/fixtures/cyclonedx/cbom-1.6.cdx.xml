@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:a1b2c3d4-e5f6-7890-abcd-ef1234567890" version="1">
+  <metadata>
+    <timestamp>2026-03-15T10:00:00Z</timestamp>
+    <tools>
+      <components>
+        <component type="application">
+          <name>cbom-scanner</name>
+          <version>2.0.0</version>
+        </component>
+      </components>
+    </tools>
+    <component type="application" bom-ref="acme-webapp">
+      <name>acme-webapp</name>
+      <version>3.1.0</version>
+      <purl>pkg:cargo/acme-webapp@3.1.0</purl>
+    </component>
+  </metadata>
+  <components>
+    <component type="library" bom-ref="openssl-lib">
+      <name>openssl</name>
+      <version>3.2.1</version>
+      <hashes>
+        <hash alg="SHA-256">a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2</hash>
+      </hashes>
+      <licenses>
+        <license>
+          <id>Apache-2.0</id>
+        </license>
+      </licenses>
+      <purl>pkg:cargo/openssl@3.2.1</purl>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/aes-256-gcm">
+      <name>AES-256-GCM</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>ae</primitive>
+          <parameterSetIdentifier>256</parameterSetIdentifier>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <mode>gcm</mode>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>encrypt</cryptoFunction>
+            <cryptoFunction>decrypt</cryptoFunction>
+            <cryptoFunction>tag</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>256</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>1</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.1.46</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/aes-128-cbc">
+      <name>AES-128-CBC</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>block-cipher</primitive>
+          <parameterSetIdentifier>128</parameterSetIdentifier>
+          <executionEnvironment>software-plain-ram</executionEnvironment>
+          <implementationPlatform>x86_64</implementationPlatform>
+          <certificationLevel>none</certificationLevel>
+          <mode>cbc</mode>
+          <padding>pkcs5</padding>
+          <cryptoFunctions>
+            <cryptoFunction>encrypt</cryptoFunction>
+            <cryptoFunction>decrypt</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>128</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>1</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.1.2</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/rsa-2048">
+      <name>RSA-2048</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>pke</primitive>
+          <parameterSetIdentifier>2048</parameterSetIdentifier>
+          <certificationLevel>fips140-2-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>encrypt</cryptoFunction>
+            <cryptoFunction>decrypt</cryptoFunction>
+            <cryptoFunction>sign</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>112</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>0</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.2.840.113549.1.1.1</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/sha-256">
+      <name>SHA-256</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>hash</primitive>
+          <parameterSetIdentifier>256</parameterSetIdentifier>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>digest</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>256</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>2</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.2.1</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/sha-384">
+      <name>SHA-384</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>hash</primitive>
+          <parameterSetIdentifier>384</parameterSetIdentifier>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>digest</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>384</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>2</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.2.2</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/ecdh-p256">
+      <name>ECDH-P256</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>key-agree</primitive>
+          <parameterSetIdentifier>P-256</parameterSetIdentifier>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keyderive</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>128</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>0</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.2.840.10045.3.1.7</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/ecdsa-p384">
+      <name>ECDSA-P384</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>signature</primitive>
+          <parameterSetIdentifier>P-384</parameterSetIdentifier>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>sign</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>192</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>0</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.2.840.10045.4.3.3</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/hmac-sha256">
+      <name>HMAC-SHA-256</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>mac</primitive>
+          <parameterSetIdentifier>256</parameterSetIdentifier>
+          <certificationLevel>fips140-3-l1</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>tag</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>256</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>1</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.2.840.113549.2.9</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/hkdf-sha256">
+      <name>HKDF-SHA-256</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>kdf</primitive>
+          <parameterSetIdentifier>256</parameterSetIdentifier>
+          <certificationLevel>none</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keyderive</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>256</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>1</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.2.840.113549.2.9</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/certificate/webapp-tls">
+      <name>acme-webapp.example.com</name>
+      <cryptoProperties>
+        <assetType>certificate</assetType>
+        <certificateProperties>
+          <subjectName>CN = acme-webapp.example.com, O = Acme Corp, C = US</subjectName>
+          <issuerName>CN = DigiCert TLS RSA SHA256 2020 CA1, O = DigiCert Inc, C = US</issuerName>
+          <notValidBefore>2025-06-01T00:00:00Z</notValidBefore>
+          <notValidAfter>2027-06-01T23:59:59Z</notValidAfter>
+          <signatureAlgorithmRef>crypto/algorithm/rsa-2048</signatureAlgorithmRef>
+          <subjectPublicKeyRef>crypto/key/webapp-pubkey</subjectPublicKeyRef>
+          <certificateFormat>X.509</certificateFormat>
+          <certificateExtension>pem</certificateExtension>
+        </certificateProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/certificate/internal-ca">
+      <name>Acme Internal CA</name>
+      <cryptoProperties>
+        <assetType>certificate</assetType>
+        <certificateProperties>
+          <subjectName>CN = Acme Internal CA, O = Acme Corp, C = US</subjectName>
+          <issuerName>CN = Acme Root CA, O = Acme Corp, C = US</issuerName>
+          <notValidBefore>2023-01-01T00:00:00Z</notValidBefore>
+          <notValidAfter>2033-01-01T23:59:59Z</notValidAfter>
+          <signatureAlgorithmRef>crypto/algorithm/ecdsa-p384</signatureAlgorithmRef>
+          <subjectPublicKeyRef>crypto/key/ca-pubkey</subjectPublicKeyRef>
+          <certificateFormat>X.509</certificateFormat>
+          <certificateExtension>crt</certificateExtension>
+        </certificateProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/key/webapp-pubkey">
+      <name>webapp-tls-public-key</name>
+      <cryptoProperties>
+        <assetType>related-crypto-material</assetType>
+        <relatedCryptoMaterialProperties>
+          <type>public-key</type>
+          <id>f47ac10b-58cc-4372-a567-0e02b2c3d479</id>
+          <state>active</state>
+          <algorithmRef>crypto/algorithm/rsa-2048</algorithmRef>
+          <creationDate>2025-06-01T00:00:00Z</creationDate>
+          <activationDate>2025-06-01T00:00:00Z</activationDate>
+          <size>2048</size>
+          <format>PEM</format>
+          <securedBy>
+            <mechanism>Software</mechanism>
+          </securedBy>
+        </relatedCryptoMaterialProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/key/ca-pubkey">
+      <name>ca-ecdsa-public-key</name>
+      <cryptoProperties>
+        <assetType>related-crypto-material</assetType>
+        <relatedCryptoMaterialProperties>
+          <type>public-key</type>
+          <id>8a3b7c9d-2e4f-1a5b-6c8d-0f1e2a3b4c5d</id>
+          <state>active</state>
+          <algorithmRef>crypto/algorithm/ecdsa-p384</algorithmRef>
+          <creationDate>2023-01-01T00:00:00Z</creationDate>
+          <activationDate>2023-01-01T00:00:00Z</activationDate>
+          <size>384</size>
+          <format>DER</format>
+          <securedBy>
+            <mechanism>HSM</mechanism>
+            <algorithmRef>crypto/algorithm/aes-256-gcm</algorithmRef>
+          </securedBy>
+        </relatedCryptoMaterialProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/key/session-symmetric">
+      <name>tls-session-key</name>
+      <cryptoProperties>
+        <assetType>related-crypto-material</assetType>
+        <relatedCryptoMaterialProperties>
+          <type>symmetric-key</type>
+          <id>d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f90</id>
+          <state>active</state>
+          <algorithmRef>crypto/algorithm/aes-256-gcm</algorithmRef>
+          <creationDate>2026-03-15T09:00:00Z</creationDate>
+          <activationDate>2026-03-15T09:00:00Z</activationDate>
+          <expirationDate>2026-03-15T21:00:00Z</expirationDate>
+          <size>256</size>
+          <securedBy>
+            <mechanism>Software</mechanism>
+            <algorithmRef>crypto/algorithm/hkdf-sha256</algorithmRef>
+          </securedBy>
+        </relatedCryptoMaterialProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/protocol/tls12">
+      <name>TLS 1.2</name>
+      <cryptoProperties>
+        <assetType>protocol</assetType>
+        <protocolProperties>
+          <type>tls</type>
+          <version>1.2</version>
+          <cipherSuites>
+            <cipherSuite>
+              <name>TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384</name>
+              <algorithms>
+                <algorithm>crypto/algorithm/ecdh-p256</algorithm>
+                <algorithm>crypto/algorithm/rsa-2048</algorithm>
+                <algorithm>crypto/algorithm/aes-256-gcm</algorithm>
+                <algorithm>crypto/algorithm/sha-384</algorithm>
+              </algorithms>
+              <identifiers>
+                <identifier>0xC0</identifier>
+                <identifier>0x30</identifier>
+              </identifiers>
+            </cipherSuite>
+            <cipherSuite>
+              <name>TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256</name>
+              <algorithms>
+                <algorithm>crypto/algorithm/ecdh-p256</algorithm>
+                <algorithm>crypto/algorithm/rsa-2048</algorithm>
+                <algorithm>crypto/algorithm/aes-128-cbc</algorithm>
+                <algorithm>crypto/algorithm/sha-256</algorithm>
+              </algorithms>
+              <identifiers>
+                <identifier>0xC0</identifier>
+                <identifier>0x27</identifier>
+              </identifiers>
+            </cipherSuite>
+          </cipherSuites>
+          <cryptoRef>crypto/certificate/webapp-tls</cryptoRef>
+        </protocolProperties>
+        <oid>1.3.18.0.2.32.104</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/protocol/ssh">
+      <name>SSH 2.0</name>
+      <cryptoProperties>
+        <assetType>protocol</assetType>
+        <protocolProperties>
+          <type>ssh</type>
+          <version>2.0</version>
+          <cipherSuites>
+            <cipherSuite>
+              <name>chacha20-poly1305@openssh.com</name>
+              <algorithms>
+                <algorithm>crypto/algorithm/aes-256-gcm</algorithm>
+              </algorithms>
+            </cipherSuite>
+          </cipherSuites>
+        </protocolProperties>
+      </cryptoProperties>
+    </component>
+  </components>
+  <dependencies>
+    <dependency ref="acme-webapp">
+      <dependency ref="openssl-lib"/>
+      <dependency ref="crypto/protocol/tls12"/>
+      <dependency ref="crypto/protocol/ssh"/>
+    </dependency>
+    <dependency ref="openssl-lib">
+      <dependency ref="crypto/algorithm/aes-256-gcm"/>
+      <dependency ref="crypto/algorithm/aes-128-cbc"/>
+      <dependency ref="crypto/algorithm/rsa-2048"/>
+      <dependency ref="crypto/algorithm/sha-256"/>
+      <dependency ref="crypto/algorithm/sha-384"/>
+      <dependency ref="crypto/algorithm/ecdh-p256"/>
+      <dependency ref="crypto/algorithm/ecdsa-p384"/>
+      <dependency ref="crypto/algorithm/hmac-sha256"/>
+      <dependency ref="crypto/algorithm/hkdf-sha256"/>
+    </dependency>
+    <dependency ref="crypto/protocol/tls12">
+      <dependency ref="crypto/certificate/webapp-tls"/>
+      <dependency ref="crypto/algorithm/aes-256-gcm"/>
+      <dependency ref="crypto/algorithm/aes-128-cbc"/>
+      <dependency ref="crypto/algorithm/rsa-2048"/>
+      <dependency ref="crypto/algorithm/ecdh-p256"/>
+      <dependency ref="crypto/algorithm/sha-256"/>
+      <dependency ref="crypto/algorithm/sha-384"/>
+    </dependency>
+    <dependency ref="crypto/certificate/webapp-tls">
+      <dependency ref="crypto/key/webapp-pubkey"/>
+      <dependency ref="crypto/algorithm/rsa-2048"/>
+    </dependency>
+    <dependency ref="crypto/certificate/internal-ca">
+      <dependency ref="crypto/key/ca-pubkey"/>
+      <dependency ref="crypto/algorithm/ecdsa-p384"/>
+    </dependency>
+  </dependencies>
+  <compositions>
+    <composition>
+      <aggregate>complete</aggregate>
+      <assemblies>
+        <assembly ref="acme-webapp"/>
+        <assembly ref="openssl-lib"/>
+      </assemblies>
+    </composition>
+  </compositions>
+</bom>

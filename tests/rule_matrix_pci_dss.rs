@@ -35,6 +35,12 @@ fn recent_timestamp() -> String {
     (as_of() - chrono::Duration::days(1)).to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
 }
 
+/// A timestamp 30 days after the pinned test clock, i.e. after the
+/// evaluation instant.
+fn future_timestamp() -> String {
+    (as_of() + chrono::Duration::days(30)).to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+}
+
 /// A fixture that satisfies every PCI DSS 6.3.2 element the engine checks —
 /// except the completeness declaration, which it leaves undeclared (see the
 /// module docs): named/versioned/identified primary with an advisories
@@ -183,14 +189,20 @@ fn pci_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Info,
             declared("not_specified"),
         ),
-        // Missing timestamp (epoch sentinel) warns; the stale-timestamp Info
-        // advisory is pinned-clock-tested in pci_dss.rs unit tests (fixtures
-        // here are dated the day before the runner's pinned clock).
+        // Missing timestamp (epoch sentinel) warns, and so does one dated
+        // after the evaluation instant; the stale-timestamp Info advisory is
+        // pinned-clock-tested in pci_dss.rs unit tests (fixtures here are
+        // dated the day before the runner's pinned clock).
         RuleEntry::tested(
             "SBOM-PCI-6-3-2-FRESHNESS",
             Sev::Warning,
             broken(|s| s.timestamp = None),
             base(),
+        )
+        .with_firing(
+            "future-dated",
+            Sev::Warning,
+            broken(|s| s.timestamp = Some(future_timestamp())),
         ),
         // No vulnerability-management hook anywhere: no embedded data, no
         // advisories/assertion/VDR reference, no contact.

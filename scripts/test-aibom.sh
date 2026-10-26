@@ -71,12 +71,12 @@ elif command -v python3 >/dev/null 2>&1; then
     # Translate the small subset of jq paths used below into python lookups.
     json_get() {
         python3 -c '
-import json, sys
+import json, re, sys
 path, f = sys.argv[1], sys.argv[2]
 try:
     cur = json.load(open(f))
-    for key in path.lstrip(".").split("."):
-        cur = cur[key]
+    for key, index in re.findall(r"([^.\[\]]+)|\[(\d+)\]", path):
+        cur = cur[int(index)] if index else cur[key]
 except Exception:
     cur = None
 print("-" if cur is None else cur)
@@ -198,10 +198,11 @@ for file in "${FILES[@]}"; do
             op_errors=$((op_errors + 1))
             continue
         fi
-        compliant=$(json_get '.is_compliant' "$stem.$standard.json")
-        errs=$(json_get '.error_count' "$stem.$standard.json")
-        applicability=$(json_get '.applicability.status' "$stem.$standard.json")
-        if [[ "$applicability" == "not_applicable" ]]; then
+        # One standard: the compliance/v2 envelope's only result.
+        compliant=$(json_get '.results[0].compliant' "$stem.$standard.json")
+        errs=$(json_get '.results[0].counts.error' "$stem.$standard.json")
+        na_reason=$(json_get '.results[0].not_applicable_reason' "$stem.$standard.json")
+        if [[ "$na_reason" != "-" ]]; then
             verdicts+=("N/A")
         elif [[ "$compliant" == "true" || "$compliant" == "True" ]]; then
             verdicts+=("PASS")

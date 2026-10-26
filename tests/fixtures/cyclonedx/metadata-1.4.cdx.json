@@ -1,0 +1,82 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.4",
+  "serialNumber": "urn:uuid:5a1e7c2d-0b3f-4e68-9d14-2f6b8a9c0e31",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-09-14T08:00:00Z",
+    "tools": [
+      { "vendor": "Example Org", "name": "example-sbom-gen", "version": "4.2.0" }
+    ],
+    "authors": [
+      { "name": "Release Engineering", "email": "release@example.org" }
+    ],
+    "component": {
+      "type": "application",
+      "bom-ref": "gateway",
+      "supplier": { "name": "Example Org" },
+      "name": "gateway",
+      "version": "3.1.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "a41c209ce979138183b0804c86b84478e3679c4022e4a0a03885263c3a467a17d53eefbd5489d912d8ee033215e933fbdf2d31ac3edf4bbbfaae45cdc61c36a0"
+        }
+      ],
+      "licenses": [{ "license": { "id": "Apache-2.0" } }],
+      "copyright": "Copyright 2026 Example Org",
+      "purl": "pkg:generic/example/gateway@3.1.0"
+    },
+    "manufacture": {
+      "name": "Example Org",
+      "url": ["https://example.org"],
+      "contact": [{ "name": "SBOM desk", "email": "sbom@example.org" }]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "zlib",
+      "supplier": { "name": "zlib authors" },
+      "name": "zlib",
+      "version": "1.3.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "60426024c0107b30aa2dfefffa580eaebec850e1f97905be15db6a5365ec5f649f4dbd8dca0088674f74fc04a3470c22cfce6dbd175b806f889ed5bd7cedb046"
+        }
+      ],
+      "licenses": [{ "license": { "id": "Zlib" } }],
+      "copyright": "Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler",
+      "purl": "pkg:generic/zlib@1.3.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "libyaml",
+      "supplier": { "name": "YAML project" },
+      "name": "libyaml",
+      "version": "0.2.5",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "17c6b9ad971e5937275d79cf36fbf230737815590f4d5bd57b9de96c5897461587c7ee483b637acc84d6768ff342c835c87634c9e0ec00204247cb0d1d4899a4"
+        }
+      ],
+      "licenses": [{ "license": { "id": "MIT" } }],
+      "copyright": "Copyright (c) 2006-2016 Kirill Simonov",
+      "purl": "pkg:generic/libyaml@0.2.5"
+    }
+  ],
+  "dependencies": [
+    { "ref": "gateway", "dependsOn": ["zlib", "libyaml"] },
+    { "ref": "zlib", "dependsOn": [] },
+    { "ref": "libyaml", "dependsOn": [] }
+  ],
+  "compositions": [
+    { "aggregate": "complete", "assemblies": ["gateway", "zlib", "libyaml"] }
+  ],
+  "signature": {
+    "algorithm": "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
+    "value": "MQ/qtwicBYHjC2m7U1U33s0K69aCkCloN2m/UjAhBlbA/KWEfbBHppCIqNyQdljrsD274hspA7qw0h7e8SCaVD8fhDcgHY54J04TYnP3D78="
+  }
+}
