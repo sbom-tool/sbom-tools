@@ -1045,6 +1045,80 @@ const TLS_SIGNATURE_SCHEMES: &[(u16, &str, TlsAlgorithm)] = &[
     (0x091C, "slhdsa_shake_256f", tls_slhdsa("SHAKE-256f")),
 ];
 
+/// Spellings outside the IANA "TLS Supported Groups" registry that each
+/// name exactly one of its entries, as (alias, registered name): the NIST
+/// names of the prime curves (FIPS 186-5 "P-256", also unhyphenated) and
+/// their SSH (RFC 5656 "nistp256"), ANSI X9.62 ("prime256v1") and Go
+/// `crypto/tls` ("CurveP256") names; the FIPS 203 names of the ML-KEM
+/// parameter sets ("ML-KEM-768"); and the hybrid group names with a
+/// separator between their parts, the ML-KEM part written either way
+/// ("X25519-MLKEM768", "X25519-ML-KEM-768"). An alias matches ignoring
+/// ASCII case, with `_` and ` ` read as `-` ("X25519_MLKEM768"). Nothing
+/// outside this table and the registry is guessed at — there is no fallback
+/// to the generic name classifier — and no Kyber spelling is an alias:
+/// round-3 Kyber ("X25519Kyber768", "kyber768") is not ML-KEM, so it stays
+/// unverifiable.
+const TLS_GROUP_ALIASES: &[(&str, &str)] = &[
+    ("P-192", "secp192r1"),
+    ("P-224", "secp224r1"),
+    ("P-256", "secp256r1"),
+    ("P-384", "secp384r1"),
+    ("P-521", "secp521r1"),
+    ("P192", "secp192r1"),
+    ("P224", "secp224r1"),
+    ("P256", "secp256r1"),
+    ("P384", "secp384r1"),
+    ("P521", "secp521r1"),
+    ("nistp192", "secp192r1"),
+    ("nistp224", "secp224r1"),
+    ("nistp256", "secp256r1"),
+    ("nistp384", "secp384r1"),
+    ("nistp521", "secp521r1"),
+    ("prime192v1", "secp192r1"),
+    ("prime256v1", "secp256r1"),
+    ("CurveP256", "secp256r1"),
+    ("CurveP384", "secp384r1"),
+    ("CurveP521", "secp521r1"),
+    ("ML-KEM-512", "MLKEM512"),
+    ("ML-KEM-768", "MLKEM768"),
+    ("ML-KEM-1024", "MLKEM1024"),
+    ("SecP256r1-MLKEM512", "SecP256r1MLKEM512"),
+    ("SecP256r1-ML-KEM-512", "SecP256r1MLKEM512"),
+    ("MLKEM512-X25519", "MLKEM512X25519"),
+    ("ML-KEM-512-X25519", "MLKEM512X25519"),
+    ("SecP256r1-MLKEM768", "SecP256r1MLKEM768"),
+    ("SecP256r1-ML-KEM-768", "SecP256r1MLKEM768"),
+    ("X25519-MLKEM768", "X25519MLKEM768"),
+    ("X25519-ML-KEM-768", "X25519MLKEM768"),
+    ("SecP384r1-MLKEM1024", "SecP384r1MLKEM1024"),
+    ("SecP384r1-ML-KEM-1024", "SecP384r1MLKEM1024"),
+    ("curveSM2-MLKEM768", "curveSM2MLKEM768"),
+    ("curveSM2-ML-KEM-768", "curveSM2MLKEM768"),
+];
+
+/// Spellings outside the IANA "TLS SignatureScheme" registry that each name
+/// exactly one of its entries, as (alias, registered name): the FIPS 204
+/// names of the ML-DSA parameter sets ("ML-DSA-87") and the FIPS 205 names
+/// of the SLH-DSA ones ("SLH-DSA-SHA2-128s"). Matched like
+/// `TLS_GROUP_ALIASES`.
+const TLS_SIGNATURE_SCHEME_ALIASES: &[(&str, &str)] = &[
+    ("ML-DSA-44", "mldsa44"),
+    ("ML-DSA-65", "mldsa65"),
+    ("ML-DSA-87", "mldsa87"),
+    ("SLH-DSA-SHA2-128s", "slhdsa_sha2_128s"),
+    ("SLH-DSA-SHA2-128f", "slhdsa_sha2_128f"),
+    ("SLH-DSA-SHA2-192s", "slhdsa_sha2_192s"),
+    ("SLH-DSA-SHA2-192f", "slhdsa_sha2_192f"),
+    ("SLH-DSA-SHA2-256s", "slhdsa_sha2_256s"),
+    ("SLH-DSA-SHA2-256f", "slhdsa_sha2_256f"),
+    ("SLH-DSA-SHAKE-128s", "slhdsa_shake_128s"),
+    ("SLH-DSA-SHAKE-128f", "slhdsa_shake_128f"),
+    ("SLH-DSA-SHAKE-192s", "slhdsa_shake_192s"),
+    ("SLH-DSA-SHAKE-192f", "slhdsa_shake_192f"),
+    ("SLH-DSA-SHAKE-256s", "slhdsa_shake_256s"),
+    ("SLH-DSA-SHAKE-256f", "slhdsa_shake_256f"),
+];
+
 /// An entry of an IANA TLS registry — "TLS Supported Groups" or "TLS
 /// SignatureScheme" — as found by [`tls_named_group`] or
 /// [`tls_signature_scheme`].
@@ -1068,26 +1142,30 @@ pub struct TlsRegistryEntry {
 
 /// Look up a TLS named group — a CycloneDX 1.7 `tlsGroups` entry — in the
 /// IANA "TLS Supported Groups" registry, by its registered name ignoring
-/// ASCII case, or by its codepoint in decimal or in hexadecimal with a
-/// `0x` prefix: "x25519", "29" and "0x001D" are the same group. Returns
-/// `None` for a name the registry does not hold and for an unassigned,
-/// reserved (including GREASE, see [`is_tls_grease`]) or private-use
-/// codepoint.
+/// ASCII case, by its codepoint in decimal or in hexadecimal with a `0x`
+/// prefix, or by one of the unambiguous spellings of an explicit alias
+/// table (the curve names "P-256", "nistp256", "prime256v1"; the FIPS 203
+/// "ML-KEM-768"; separated hybrid names such as "X25519_MLKEM768"):
+/// "x25519", "29" and "0x001D" are the same group, and so are
+/// "secp256r1" and "P-256". Returns `None` for any other name and for an
+/// unassigned, reserved (including GREASE, see [`is_tls_grease`]) or
+/// private-use codepoint.
 #[must_use]
 pub fn tls_named_group(id: &str) -> Option<TlsRegistryEntry> {
-    tls_registry_entry(TLS_SUPPORTED_GROUPS, id)
+    tls_registry_entry(TLS_SUPPORTED_GROUPS, TLS_GROUP_ALIASES, id)
 }
 
 /// Look up a TLS signature scheme — a CycloneDX 1.7 `tlsSignatureSchemes`
 /// entry — in the IANA "TLS SignatureScheme" registry, by its registered
-/// name ignoring ASCII case, or by its codepoint in decimal or in
-/// hexadecimal with a `0x` prefix: "ecdsa_secp256r1_sha256", "1027" and
-/// "0x0403" are the same scheme. Returns `None` for a name the registry
-/// does not hold and for an unassigned, reserved (including GREASE, see
-/// [`is_tls_grease`]) or private-use codepoint.
+/// name ignoring ASCII case, by its codepoint in decimal or in hexadecimal
+/// with a `0x` prefix, or by the FIPS 204 or FIPS 205 name of an ML-DSA or
+/// SLH-DSA parameter set: "ecdsa_secp256r1_sha256", "1027" and "0x0403"
+/// are the same scheme, and so are "mldsa87" and "ML-DSA-87". Returns
+/// `None` for any other name and for an unassigned, reserved (including
+/// GREASE, see [`is_tls_grease`]) or private-use codepoint.
 #[must_use]
 pub fn tls_signature_scheme(id: &str) -> Option<TlsRegistryEntry> {
-    tls_registry_entry(TLS_SIGNATURE_SCHEMES, id)
+    tls_registry_entry(TLS_SIGNATURE_SCHEMES, TLS_SIGNATURE_SCHEME_ALIASES, id)
 }
 
 /// Whether a TLS named group or signature scheme entry is a GREASE value:
@@ -1103,21 +1181,29 @@ pub fn is_tls_grease(id: &str) -> bool {
     tls_codepoint(id.trim()).is_some_and(|cp| cp >> 8 == cp & 0xFF && cp & 0x0F == 0x0A)
 }
 
-/// The entry of `registry` that `id` names by codepoint or by name.
+/// The entry of `registry` that `id` names by codepoint, by registered
+/// name, or by one of `aliases`.
 fn tls_registry_entry(
     registry: &[(u16, &'static str, TlsAlgorithm)],
+    aliases: &[(&str, &str)],
     id: &str,
 ) -> Option<TlsRegistryEntry> {
     let id = id.trim();
     let &(codepoint, name, algorithm) = match tls_codepoint(id) {
         Some(value) => registry.iter().find(|(c, ..)| *c == value),
-        None => registry.iter().find(|(_, n, algorithm)| {
-            let bare = match algorithm {
-                TlsAlgorithm::Obsolete => without_obsolete_marker(id),
-                TlsAlgorithm::Single(..) | TlsAlgorithm::Hybrid => None,
-            };
-            n.eq_ignore_ascii_case(id) || bare.is_some_and(|bare| n.eq_ignore_ascii_case(bare))
-        }),
+        None => registry
+            .iter()
+            .find(|(_, n, algorithm)| {
+                let bare = match algorithm {
+                    TlsAlgorithm::Obsolete => without_obsolete_marker(id),
+                    TlsAlgorithm::Single(..) | TlsAlgorithm::Hybrid => None,
+                };
+                n.eq_ignore_ascii_case(id) || bare.is_some_and(|bare| n.eq_ignore_ascii_case(bare))
+            })
+            .or_else(|| {
+                let target = tls_alias_target(aliases, id)?;
+                registry.iter().find(|(_, n, _)| *n == target)
+            }),
     }?;
     let classification = match algorithm {
         TlsAlgorithm::Single(family, parameter) => Some(AlgorithmClassification::primitive(
@@ -1133,6 +1219,19 @@ fn tls_registry_entry(
         obsolete: matches!(algorithm, TlsAlgorithm::Obsolete),
         classification,
     })
+}
+
+/// The registered name the alias `id` stands for in `aliases`, matched
+/// ignoring ASCII case, with `_` and ` ` read as `-`.
+fn tls_alias_target<'a>(aliases: &[(&str, &'a str)], id: &str) -> Option<&'a str> {
+    let hyphenated: String = id
+        .chars()
+        .map(|c| if c == '_' || c == ' ' { '-' } else { c })
+        .collect();
+    aliases
+        .iter()
+        .find(|(alias, _)| alias.eq_ignore_ascii_case(&hyphenated))
+        .map(|&(_, target)| target)
 }
 
 /// A name written as the registry writes an obsolete entry,
@@ -3315,6 +3414,56 @@ mod tests {
         assert_eq!(proto.protocol_type, ProtocolType::Tls);
         assert_eq!(proto.version.as_deref(), Some("1.3"));
         assert_eq!(proto.cipher_suites.len(), 1);
+    }
+
+    /// Every alias names one registered entry and resolves to exactly it;
+    /// none shadows a registered name or a codepoint, none repeats once
+    /// case and separators are ignored, and none spells Kyber.
+    #[test]
+    fn tls_aliases_resolve_to_the_entry_they_name() {
+        type Lookup = fn(&str) -> Option<TlsRegistryEntry>;
+        let tables: [(&[(u16, &str, TlsAlgorithm)], &[(&str, &str)], Lookup); 2] = [
+            (TLS_SUPPORTED_GROUPS, TLS_GROUP_ALIASES, tls_named_group),
+            (
+                TLS_SIGNATURE_SCHEMES,
+                TLS_SIGNATURE_SCHEME_ALIASES,
+                tls_signature_scheme,
+            ),
+        ];
+        for (registry, aliases, lookup) in tables {
+            let mut seen = std::collections::BTreeSet::new();
+            for &(alias, target) in aliases {
+                let registered = registry
+                    .iter()
+                    .find(|(_, name, _)| *name == target)
+                    .unwrap_or_else(|| panic!("alias {alias}: {target} is not registered"));
+                assert!(
+                    registry
+                        .iter()
+                        .all(|(_, name, _)| !name.eq_ignore_ascii_case(alias)),
+                    "alias {alias} shadows a registered name"
+                );
+                assert!(
+                    tls_codepoint(alias).is_none(),
+                    "alias {alias} is a codepoint"
+                );
+                assert!(
+                    !alias.to_ascii_uppercase().contains("KYBER"),
+                    "alias {alias} spells Kyber"
+                );
+                assert!(
+                    seen.insert(alias.to_ascii_uppercase().replace(['_', ' '], "-")),
+                    "alias {alias} repeats"
+                );
+                let entry = lookup(alias).unwrap_or_else(|| panic!("alias {alias} resolves"));
+                assert_eq!(
+                    (entry.codepoint, entry.name),
+                    (registered.0, target),
+                    "alias {alias}"
+                );
+                assert_eq!(Some(entry), lookup(target), "alias {alias}");
+            }
+        }
     }
 
     // ── classify_algorithm ──────────────────────────────────────────────

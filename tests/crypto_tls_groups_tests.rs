@@ -203,6 +203,123 @@ fn tls_tables_match_the_iana_registries() {
         tls_signature_scheme,
         SIGNATURE_SCHEMES,
     );
+    assert_aliases_resolve("TLS group", tls_named_group, GROUP_ALIASES);
+    assert_aliases_resolve("TLS signature scheme", tls_signature_scheme, SCHEME_ALIASES);
+}
+
+/// Unambiguous spellings outside the registries, each with the IANA entry
+/// it names: NIST, SSH, ANSI X9.62 and Go names of the prime curves, FIPS
+/// 203 ML-KEM names, and hybrid group names with separators.
+const GROUP_ALIASES: &[(&str, &str)] = &[
+    ("P-192", "secp192r1"),
+    ("P-224", "secp224r1"),
+    ("P-256", "secp256r1"),
+    ("P-384", "secp384r1"),
+    ("P-521", "secp521r1"),
+    ("P192", "secp192r1"),
+    ("P224", "secp224r1"),
+    ("P256", "secp256r1"),
+    ("P384", "secp384r1"),
+    ("P521", "secp521r1"),
+    ("nistp192", "secp192r1"),
+    ("nistp224", "secp224r1"),
+    ("nistp256", "secp256r1"),
+    ("nistp384", "secp384r1"),
+    ("nistp521", "secp521r1"),
+    ("prime192v1", "secp192r1"),
+    ("prime256v1", "secp256r1"),
+    ("CurveP256", "secp256r1"),
+    ("CurveP384", "secp384r1"),
+    ("CurveP521", "secp521r1"),
+    ("ML-KEM-512", "MLKEM512"),
+    ("ML-KEM-768", "MLKEM768"),
+    ("ML-KEM-1024", "MLKEM1024"),
+    ("SecP256r1-MLKEM512", "SecP256r1MLKEM512"),
+    ("SecP256r1-ML-KEM-512", "SecP256r1MLKEM512"),
+    ("MLKEM512-X25519", "MLKEM512X25519"),
+    ("ML-KEM-512-X25519", "MLKEM512X25519"),
+    ("SecP256r1-MLKEM768", "SecP256r1MLKEM768"),
+    ("SecP256r1-ML-KEM-768", "SecP256r1MLKEM768"),
+    ("X25519-MLKEM768", "X25519MLKEM768"),
+    ("X25519-ML-KEM-768", "X25519MLKEM768"),
+    ("SecP384r1-MLKEM1024", "SecP384r1MLKEM1024"),
+    ("SecP384r1-ML-KEM-1024", "SecP384r1MLKEM1024"),
+    ("curveSM2-MLKEM768", "curveSM2MLKEM768"),
+    ("curveSM2-ML-KEM-768", "curveSM2MLKEM768"),
+];
+
+/// The FIPS 204 ML-DSA and FIPS 205 SLH-DSA parameter-set names, each with
+/// the IANA signature scheme it names.
+const SCHEME_ALIASES: &[(&str, &str)] = &[
+    ("ML-DSA-44", "mldsa44"),
+    ("ML-DSA-65", "mldsa65"),
+    ("ML-DSA-87", "mldsa87"),
+    ("SLH-DSA-SHA2-128s", "slhdsa_sha2_128s"),
+    ("SLH-DSA-SHA2-128f", "slhdsa_sha2_128f"),
+    ("SLH-DSA-SHA2-192s", "slhdsa_sha2_192s"),
+    ("SLH-DSA-SHA2-192f", "slhdsa_sha2_192f"),
+    ("SLH-DSA-SHA2-256s", "slhdsa_sha2_256s"),
+    ("SLH-DSA-SHA2-256f", "slhdsa_sha2_256f"),
+    ("SLH-DSA-SHAKE-128s", "slhdsa_shake_128s"),
+    ("SLH-DSA-SHAKE-128f", "slhdsa_shake_128f"),
+    ("SLH-DSA-SHAKE-192s", "slhdsa_shake_192s"),
+    ("SLH-DSA-SHAKE-192f", "slhdsa_shake_192f"),
+    ("SLH-DSA-SHAKE-256s", "slhdsa_shake_256s"),
+    ("SLH-DSA-SHAKE-256f", "slhdsa_shake_256f"),
+];
+
+/// Each alias, in any ASCII case and with `_` or ` ` for `-`, resolves to
+/// exactly the entry its IANA name resolves to.
+fn assert_aliases_resolve(what: &str, lookup: Lookup, aliases: &[(&str, &str)]) {
+    for &(alias, iana) in aliases {
+        let expected = lookup(iana).unwrap_or_else(|| panic!("{what} {iana} is registered"));
+        assert_eq!(expected.name, iana, "{what} {iana}");
+        for spelling in [
+            alias.to_string(),
+            alias.to_ascii_lowercase(),
+            alias.to_ascii_uppercase(),
+            alias.replace('-', "_"),
+            alias.replace('-', " "),
+            format!(" {alias}\t"),
+        ] {
+            assert_eq!(
+                lookup(&spelling).as_ref(),
+                Some(&expected),
+                "{what} alias {spelling:?} names {iana}"
+            );
+        }
+    }
+}
+
+/// Kyber spellings are no aliases: round-3 Kyber is not ML-KEM, so they
+/// stay unverifiable, and the registered Kyber drafts name no algorithm.
+#[test]
+fn kyber_spellings_stay_unverifiable() {
+    for spelling in [
+        "Kyber768",
+        "kyber-768",
+        "Kyber_768",
+        "KYBER1024",
+        "Kyber-512",
+        "X25519Kyber768",
+        "x25519_kyber768",
+        "X25519-Kyber768",
+        "X25519-Kyber-768",
+        "p256_kyber768",
+        "SecP256r1Kyber768",
+        "x25519_kyber512",
+        "X25519Kyber768Draft01",
+        "X25519_Kyber768Draft00",
+    ] {
+        assert!(
+            tls_named_group(spelling).is_none() && tls_signature_scheme(spelling).is_none(),
+            "{spelling:?} names no entry"
+        );
+    }
+    for draft in ["X25519Kyber768Draft00", "SecP256r1Kyber768Draft00", "25497"] {
+        let entry = tls_named_group(draft).expect("a registered draft");
+        assert!(entry.obsolete && entry.classification.is_none(), "{draft}");
+    }
 }
 
 /// Codepoints are decimal or `0x` hexadecimal; nothing else is read as one,
@@ -229,11 +346,15 @@ fn tls_codepoints_are_decimal_or_0x_hexadecimal() {
         "0x10000",
         "0x 1D",
         "x 25519",
-        "X25519-MLKEM768",
-        "P-256",
-        "prime256v1",
+        "X25519+MLKEM768",
+        "ML-KEM768",
+        "MLKEM-1024",
+        "P-255",
+        "nistp255",
+        "prime384v1",
         "kyber768",
-        "ML-DSA-87",
+        "ML-DSA-88",
+        "MLDSA-87",
         "x25519 (OBSOLETE)",
         "X25519Kyber768Draft00 (OBSOLETE",
         "(OBSOLETE)",
@@ -504,7 +625,8 @@ const PQC_UNKNOWN: (&str, ViolationSeverity) =
 /// and the hybrids by their ML-KEM part. One classical alternative among
 /// approved ones fails. An entry the registry does not identify, and an
 /// obsolete Kyber draft group, cannot be verified. A GREASE value is
-/// skipped: no peer negotiates it.
+/// skipped: no peer negotiates it. An alias ("P-256", "ML-KEM-1024") is
+/// judged as the entry it names.
 #[test]
 fn offered_tls_groups_and_signature_schemes_are_judged_one_by_one() {
     type Case<'a> = (
@@ -602,6 +724,27 @@ fn offered_tls_groups_and_signature_schemes_are_judged_one_by_one() {
             &[CNSA_PROTO_002],
             &[PQC_PROTO_002],
         ),
+        // An alias is judged as the entry it names; a Kyber spelling stays
+        // unverifiable.
+        (
+            &["P-256", "nistp384"],
+            &[],
+            &[CNSA_PROTO_002],
+            &[PQC_PROTO_002],
+        ),
+        (
+            &["ML-KEM-1024", "SecP384r1_MLKEM1024"],
+            &["ML-DSA-87", "SLH-DSA-SHAKE-256s"],
+            &[CNSA_PROTO_002],
+            &[],
+        ),
+        (
+            &["X25519-MLKEM768"],
+            &["ML-DSA-65"],
+            &[CNSA_PROTO_002, CNSA_PROTO_002],
+            &[],
+        ),
+        (&["x25519_kyber768"], &[], &[CNSA_UNKNOWN], &[PQC_UNKNOWN]),
         (&[], &["0x0402"], &[CNSA_UNKNOWN], &[PQC_UNKNOWN]),
         (
             &[],
