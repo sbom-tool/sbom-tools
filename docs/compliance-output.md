@@ -51,7 +51,7 @@ identity.
 | Field | Type | Meaning |
 |---|---|---|
 | `finding_id` | string | Opaque, stable id of the finding (see [Finding identity](#finding-identity)). |
-| `finding_key` | string | `<standard>\|<rule_id>\|<subject>`, the readable form of the id. |
+| `finding_key` | string | `<standard>\|<rule_id>\|<subject>`, or `<standard>\|<rule_id>:<finding_detail>\|<subject>`: the readable form of the id. |
 | `severity` | string | `Error`, `Warning` or `Info`. |
 | `category` | string | e.g. `DocumentMetadata`, `ComponentIdentification`, `SupplierInfo`. |
 | `message` | string | Human-readable explanation. Its wording may change in any release. |
@@ -70,8 +70,10 @@ The finding key names what a finding is about, not how it is worded:
 
 ```text
 <standard>|<rule_id>|<subject>
+<standard>|<rule_id>:<finding_detail>|<subject>
 ntia|SBOM-NTIA-SUPPLIER|pkg:npm/lodash@4.17.21
 ntia|SBOM-NTIA-AUTHOR|document
+cra|SBOM-CRA-VULN-METADATA:CVE-2024-3094|pkg:generic/xz-utils@5.6.0
 ```
 
 - `<standard>` is the canonical `--standard` value.
@@ -79,14 +81,22 @@ ntia|SBOM-NTIA-AUTHOR|document
   rules share a SARIF id (all ten `SBOM-BSIAI-MODEL-*` checks report as
   `SBOM-BSIAI-MODEL`), so keying on the SARIF id would merge distinct findings
   about one component.
+- `<finding_detail>` is the violation's `finding_detail`, present only for a
+  rule that reports several findings on one subject (one per vulnerability of
+  a component, one per cipher suite of a protocol). `%`, `|` and `:` in it are
+  percent-encoded as `%25`, `%7C` and `%3A`. Without a detail the key has no
+  `:` after the rule id.
 - `<subject>` is the violation's `component_id` when it has one, otherwise
   `document`. A finding about one dependency edge would use
   `edge:<from>-><to>`; no rule reports a single edge today, so that form is
   reserved.
 
-Neither the standard nor a rule id contains `|`, so the subject is everything
-after the second `|`. The `finding_id` is `sbomtools:v1:` followed by the first
-16 hex digits of the SHA-256 of the key's UTF-8 bytes. The library computes both
+Neither the standard nor a rule id contains `|` or `:`, and the encoded detail
+contains neither, so the key splits unambiguously: the standard is everything
+before the first `|`, the rule id runs to the next `:` or `|`, the detail (if
+any) runs from that `:` to the second `|`, and the subject is everything after
+the second `|`. The `finding_id` is `sbomtools:v1:` followed by the first 16
+hex digits of the SHA-256 of the key's UTF-8 bytes. The library computes both
 (`sbom_tools::quality::{finding_key, finding_id}`), so SARIF fingerprints and
 baselines can use the same identity.
 
@@ -107,7 +117,9 @@ component's findings new ids. Generators that write random UUIDs as `bom-ref`s
 therefore produce new ids on every regeneration for components without a purl,
 CPE, SWHID or SWID. When two different components share a canonical id, the
 later one in the document is re-keyed by appending `#` and its `bom-ref` or
-`SPDXID`, so reordering such components can move that suffix.
+`SPDXID`, so reordering such components can move that suffix. A finding with a
+`finding_detail` also changes id with its detail, which comes from the SBOM's
+own data (a vulnerability id, a cipher suite name), never from the message.
 
 **Uniqueness.** The key identifies one rule on one subject. Some rules report
 several findings on the same subject, and those share key and id: one

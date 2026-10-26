@@ -5,6 +5,7 @@
 //!
 //! ```text
 //! <standard>|<rule id>|<subject>
+//! <standard>|<rule id>:<detail>|<subject>
 //! ```
 //!
 //! - `<standard>` is the canonical `validate --standard` value of the level
@@ -13,14 +14,21 @@
 //!   `sarif_rule_id`: dozens of registry keys alias a shared SARIF rule (the
 //!   ten `SBOM-BSIAI-MODEL-*` checks all report as `SBOM-BSIAI-MODEL`), so a
 //!   SARIF-keyed id would merge distinct findings about the same component.
+//! - `<detail>` is the [`Violation::finding_detail`] of a rule that reports
+//!   several findings on one subject (the vulnerability id, the cipher
+//!   suite, …), with `%`, `|` and `:` percent-encoded as `%25`, `%7C` and
+//!   `%3A`. Without a detail the `:` is omitted too.
 //! - `<subject>` is the offending component's canonical id
 //!   ([`Violation::component_id`]), or [`DOCUMENT_SUBJECT`] for document-level
 //!   and aggregate findings. A finding about one dependency edge would use
 //!   `edge:<from>-><to>`, but no rule reports a single edge today, so that
 //!   form is reserved.
 //!
-//! Neither the standard key nor a rule id contains `|`, so the subject is
-//! everything after the second `|`. Severity, message, element label,
+//! Neither the standard key nor a rule id contains `|` or `:`, and the
+//! encoded detail contains neither, so the key splits unambiguously: the
+//! standard is everything before the first `|`, the rule id runs to the
+//! first `:` or `|` after it, the detail (if any) to the second `|`, and the
+//! subject is everything after that. Severity, message, element label,
 //! requirement text, counts and standard references are not part of the key:
 //! rewording a message or recalibrating a severity keeps the id. The canonical
 //! id is derived from the document's own identifiers (purl, CPE, SWHID, SWID,
@@ -71,8 +79,10 @@ pub const fn standard_key(level: ComplianceLevel) -> &'static str {
     }
 }
 
-/// What `violation` is about: the offending component's canonical id, or
-/// [`DOCUMENT_SUBJECT`].
+/// What `violation` is about, the `<subject>` of its finding key: the
+/// offending component's canonical id, or [`DOCUMENT_SUBJECT`]. Several
+/// findings of one rule on one subject are told apart by their
+/// [`Violation::finding_detail`], not by the subject.
 #[must_use]
 pub fn finding_subject(violation: &Violation) -> &str {
     violation
@@ -81,16 +91,27 @@ pub fn finding_subject(violation: &Violation) -> &str {
         .unwrap_or(DOCUMENT_SUBJECT)
 }
 
-/// The finding key `<standard>|<rule id>|<subject>` of `violation` reported
-/// under `level`.
+/// The finding key of `violation` reported under `level`:
+/// `<standard>|<rule id>|<subject>`, or `<standard>|<rule id>:<detail>|<subject>`
+/// when it carries a [`Violation::finding_detail`] (percent-encoded, see the
+/// module docs).
 #[must_use]
 pub fn finding_key(level: ComplianceLevel, violation: &Violation) -> String {
-    format!(
-        "{}|{}|{}",
-        standard_key(level),
-        violation.rule_id,
-        finding_subject(violation)
-    )
+    let mut key = format!("{}|{}", standard_key(level), violation.rule_id);
+    if let Some(detail) = &violation.finding_detail {
+        key.push(':');
+        for c in detail.chars() {
+            match c {
+                '%' => key.push_str("%25"),
+                '|' => key.push_str("%7C"),
+                ':' => key.push_str("%3A"),
+                c => key.push(c),
+            }
+        }
+    }
+    key.push('|');
+    key.push_str(finding_subject(violation));
+    key
 }
 
 /// The opaque id of a finding key: [`FINDING_ID_PREFIX`] followed by the
@@ -157,6 +178,91 @@ mod tests {
         );
     }
 
+    #[test]
+    fn detail_follows_the_rule_id_after_a_colon() {
+        let violations = ntia_violations();
+        let mut supplier = find(&violations, "SBOM-NTIA-SUPPLIER").clone();
+        supplier.finding_detail = Some("CVE-2026-0001".to_string());
+        assert_eq!(
+            finding_key(ComplianceLevel::NtiaMinimum, &supplier),
+            "ntia|SBOM-NTIA-SUPPLIER:CVE-2026-0001|pkg:npm/lodash@4.17.21"
+        );
+        let mut author = find(&violations, "SBOM-NTIA-AUTHOR").clone();
+        author.finding_detail = Some(String::new());
+        assert_eq!(
+            finding_key(ComplianceLevel::NtiaMinimum, &author),
+            "ntia|SBOM-NTIA-AUTHOR:|document",
+            "an empty detail still differs from none"
+        );
+    }
+
+    #[test]
+    fn detail_percent_encodes_the_separators() {
+        let violations = ntia_violations();
+        let mut v = find(&violations, "SBOM-NTIA-AUTHOR").clone();
+        v.finding_detail = Some("100%|a:b".to_string());
+        assert_eq!(
+            finding_key(ComplianceLevel::NtiaMinimum, &v),
+            "ntia|SBOM-NTIA-AUTHOR:100%25%7Ca%3Ab|document"
+        );
+    }
+
+    /// The parse the module docs describe: standard before the first `|`,
+    /// rule id up to the first `:` or `|` after it, the encoded detail up to
+    /// the second `|`, the subject after it.
+    fn split_key(key: &str) -> (&str, &str, Option<String>, &str) {
+        let (standard, rest) = key.split_once('|').expect("first separator");
+        let (head, subject) = rest.split_once('|').expect("second separator");
+        let (rule_id, detail) = match head.split_once(':') {
+            Some((rule_id, encoded)) => (
+                rule_id,
+                Some(
+                    encoded
+                        .replace("%7C", "|")
+                        .replace("%3A", ":")
+                        .replace("%25", "%"),
+                ),
+            ),
+            None => (head, None),
+        };
+        (standard, rule_id, detail, subject)
+    }
+
+    /// Whatever the detail and subject contain, the key splits back into
+    /// exactly its parts, so two findings share a key only when standard,
+    /// rule, detail and subject are all equal.
+    #[test]
+    fn keys_split_back_into_their_parts() {
+        let violations = ntia_violations();
+        let base = find(&violations, "SBOM-NTIA-SUPPLIER");
+        let mut keys = std::collections::BTreeSet::new();
+        let details = [
+            None,
+            Some(""),
+            Some("TLS_AES_256_GCM_SHA384"),
+            Some("a|b"),
+            Some("a:b"),
+            Some("100%"),
+            Some("%7C"),
+            Some("%3A|:%25"),
+        ];
+        let subjects = [None, Some("pkg:npm/x@1"), Some("a|b:c"), Some("b|c")];
+        for detail in details {
+            for subject in subjects {
+                let mut v = base.clone();
+                v.finding_detail = detail.map(str::to_string);
+                v.component_id = subject.map(str::to_string);
+                let key = finding_key(ComplianceLevel::Cisa2026, &v);
+                let (standard, rule_id, parsed_detail, parsed_subject) = split_key(&key);
+                assert_eq!(standard, "cisa-2026", "{key}");
+                assert_eq!(rule_id, "SBOM-NTIA-SUPPLIER", "{key}");
+                assert_eq!(parsed_detail.as_deref(), detail, "{key}");
+                assert_eq!(parsed_subject, subject.unwrap_or(DOCUMENT_SUBJECT), "{key}");
+                assert!(keys.insert(key.clone()), "two inputs share {key}");
+            }
+        }
+    }
+
     /// Known answers pin the digest, the truncation and the prefix, so the
     /// ids a baseline stores cannot drift with a refactor.
     #[test]
@@ -205,7 +311,7 @@ mod tests {
     }
 
     #[test]
-    fn standard_rule_and_subject_each_change_the_id() {
+    fn standard_rule_detail_and_subject_each_change_the_id() {
         let violations = ntia_violations();
         let original = find(&violations, "SBOM-NTIA-SUPPLIER");
         let id = finding_id(&finding_key(ComplianceLevel::NtiaMinimum, original));
@@ -213,6 +319,11 @@ mod tests {
         let other_standard = finding_id(&finding_key(ComplianceLevel::Cisa2026, original));
         let mut other_rule = original.clone();
         other_rule.rule_id = "SBOM-NTIA-VERSION";
+        let mut with_detail = original.clone();
+        with_detail.finding_detail = Some("CVE-2026-0001".to_string());
+        let mut other_detail = original.clone();
+        other_detail.finding_detail = Some("CVE-2026-0002".to_string());
+        let detail_id = finding_id(&finding_key(ComplianceLevel::NtiaMinimum, &with_detail));
         let mut other_subject = original.clone();
         other_subject.component_id = Some("pkg:npm/lodash@4.17.22".to_string());
         let mut document = original.clone();
@@ -224,6 +335,7 @@ mod tests {
                 "rule",
                 finding_id(&finding_key(ComplianceLevel::NtiaMinimum, &other_rule)),
             ),
+            ("detail", detail_id.clone()),
             (
                 "subject",
                 finding_id(&finding_key(ComplianceLevel::NtiaMinimum, &other_subject)),
@@ -235,6 +347,11 @@ mod tests {
         ] {
             assert_ne!(changed, id, "a different {what} must change the id");
         }
+        assert_ne!(
+            finding_id(&finding_key(ComplianceLevel::NtiaMinimum, &other_detail)),
+            detail_id,
+            "a different detail must change the id"
+        );
     }
 
     #[test]
@@ -248,15 +365,16 @@ mod tests {
         }
     }
 
-    /// The subject is everything after the second `|` only while neither the
-    /// standard key nor a rule id can contain one.
+    /// The key splits unambiguously only while neither the standard key nor
+    /// a rule id can contain a `|` or a `:`.
     #[test]
-    fn key_separator_never_appears_before_the_subject() {
+    fn key_separators_never_appear_in_standards_or_rule_ids() {
         for level in ComplianceLevel::all() {
-            assert!(!standard_key(*level).contains('|'), "{level:?}");
+            let standard = standard_key(*level);
+            assert!(!standard.contains(['|', ':']), "{level:?}");
         }
         for rule_id in crate::quality::all_rule_ids() {
-            assert!(!rule_id.contains('|'), "{rule_id}");
+            assert!(!rule_id.contains(['|', ':']), "{rule_id}");
         }
     }
 }

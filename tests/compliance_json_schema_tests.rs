@@ -161,7 +161,18 @@ fn assert_envelope_invariants(envelope: &Value, results: &[ComplianceResult], la
             assert_eq!(v["finding_id"], finding_id(key).as_str(), "{label}");
             let subject = v["component_id"].as_str().unwrap_or(DOCUMENT_SUBJECT);
             let rule = v["rule_id"].as_str().expect("rule_id");
-            assert_eq!(key, format!("{standard}|{rule}|{subject}"), "{label}");
+            let detail = v["finding_detail"].as_str().map_or_else(String::new, |d| {
+                let encoded = d
+                    .replace('%', "%25")
+                    .replace('|', "%7C")
+                    .replace(':', "%3A");
+                format!(":{encoded}")
+            });
+            assert_eq!(
+                key,
+                format!("{standard}|{rule}{detail}|{subject}"),
+                "{label}"
+            );
         }
     }
 }
@@ -295,6 +306,24 @@ fn schema_declares_the_announced_optional_fields() {
         &json_schema::strict_copy(&schema),
         &document,
         "announced fields",
+    );
+}
+
+/// A finding with a detail: `finding_detail` is declared, and the key keeps
+/// the pattern because the detail's own `|` and `:` are encoded.
+#[test]
+fn schema_declares_finding_detail() {
+    let schema = schema();
+    let key = "ntia|SBOM-NTIA-AUTHOR:a%7Cb%3Ac|document";
+    let mut document = minimal_envelope();
+    let violation = &mut document["results"][0]["violations"][0];
+    violation["finding_detail"] = json!("a|b:c");
+    violation["finding_key"] = json!(key);
+    violation["finding_id"] = json!(finding_id(key));
+    assert_valid(
+        &json_schema::strict_copy(&schema),
+        &document,
+        "finding_detail",
     );
 }
 
