@@ -78,7 +78,8 @@ fn bench_fsct_wide(c: &mut Criterion) {
 /// parsed components (`SarifArtifact::new`, what `-o sarif` runs once per
 /// SBOM). Parsing the same text is the reference: the locator is one linear
 /// pass and should stay well below it. The last two rows render NTIA SARIF
-/// for the same document with and without locations.
+/// for the same document, all 50,003 results (no `--sarif-max-results`
+/// cap), with and without locations.
 fn bench_sarif_locator(c: &mut Criterion) {
     let minified = cyclonedx_json(50_000);
     let value: serde_json::Value = serde_json::from_str(&minified).expect("generated JSON");
@@ -106,8 +107,8 @@ fn bench_sarif_locator(c: &mut Criterion) {
         });
     }
     let result = ComplianceChecker::new(ComplianceLevel::NtiaMinimum).check(&sbom);
-    let unlocated = SarifOptions::new();
-    let located = SarifOptions::new().with_artifact(artifact);
+    let unlocated = SarifOptions::new().with_max_results(0);
+    let located = unlocated.clone().with_artifact(artifact);
     group.bench_function("ntia_sarif_without_locations", |b| {
         b.iter(|| black_box(generate_compliance_sarif_with(&result, &unlocated)));
     });
