@@ -1,6 +1,5 @@
 ---
 source: tests/compliance_snapshots.rs
-
 ---
 {
   "schema": "sbom-tools/compliance/v2",
