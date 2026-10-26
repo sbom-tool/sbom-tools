@@ -1,0 +1,46 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:57ba47ea-8b9d-41c9-8644-e1cab1de8201",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T00:00:00Z",
+    "authors": [
+      {
+        "name": "Example Corp",
+        "email": "sbom@example.com"
+      }
+    ],
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "crypto-scanner",
+          "version": "1.0.0"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/protocol/tls13",
+      "name": "TLS 1.3",
+      "cryptoProperties": {
+        "assetType": "protocol",
+        "protocolProperties": {
+          "type": "tls",
+          "version": "1.3",
+          "cipherSuites": [
+            {
+              "name": "TLS_AES_256_GCM_SHA384",
+              "identifiers": ["0x13", "0x02"],
+              "tlsGroups": ["514", "0x11ED"],
+              "tlsSignatureSchemes": ["0x0906"]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

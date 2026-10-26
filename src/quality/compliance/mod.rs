@@ -3218,7 +3218,7 @@ mod tests {
                     .with_cipher_suites(vec![CipherSuite {
                         name: Some(suite_name.to_string()),
                         algorithms: suite_algos.iter().map(ToString::to_string).collect(),
-                        identifiers: Vec::new(),
+                        ..CipherSuite::default()
                     }]),
             ),
         );

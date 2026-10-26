@@ -404,6 +404,51 @@ fn cnsa2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                         .crypto_ref("algo-aes128"),
                 );
             }),
+        )
+        // Each TLS group and signature scheme a suite offers is an
+        // alternative a peer may negotiate (CycloneDX 1.7): one that is not
+        // allowlisted fails beside approved ones.
+        .with_firing(
+            "TLS 1.3 suite offering x25519 beside MLKEM1024",
+            Sev::Error,
+            broken(|s| {
+                s.spec_version = "1.7".to_string();
+                replace(
+                    s,
+                    "tls13",
+                    CryptoAssetFixture::protocol("tls13", "tls", Some("1.3"))
+                        .cipher_suite("TLS_AES_256_GCM_SHA384", &["algo-aes256", "algo-sha384"])
+                        .tls_groups(&["MLKEM1024", "x25519"]),
+                );
+            }),
+        )
+        .with_firing(
+            "TLS 1.3 suite offering the hybrid group X25519MLKEM768",
+            Sev::Error,
+            broken(|s| {
+                s.spec_version = "1.7".to_string();
+                replace(
+                    s,
+                    "tls13",
+                    CryptoAssetFixture::protocol("tls13", "tls", Some("1.3"))
+                        .cipher_suite("TLS_AES_256_GCM_SHA384", &["algo-aes256", "algo-sha384"])
+                        .tls_groups(&["X25519MLKEM768"]),
+                );
+            }),
+        )
+        .with_firing(
+            "TLS 1.3 suite offering the mldsa65 signature scheme beside mldsa87",
+            Sev::Error,
+            broken(|s| {
+                s.spec_version = "1.7".to_string();
+                replace(
+                    s,
+                    "tls13",
+                    CryptoAssetFixture::protocol("tls13", "tls", Some("1.3"))
+                        .cipher_suite("TLS_AES_256_GCM_SHA384", &["algo-aes256", "algo-sha384"])
+                        .tls_signature_schemes(&["mldsa87", "0x0905"]),
+                );
+            }),
         ),
         // Opaque references, or a protocol declaring nothing evaluable,
         // cannot be shown to be on the allowlist.
@@ -426,6 +471,20 @@ fn cnsa2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| {
                 s.crypto_assets
                     .push(CryptoAssetFixture::protocol("ssh2", "ssh", Some("2.0")));
+            }),
+        )
+        .with_firing(
+            "TLS group the IANA registry obsoletes (pre-standard Kyber)",
+            Sev::Error,
+            broken(|s| {
+                s.spec_version = "1.7".to_string();
+                replace(
+                    s,
+                    "tls13",
+                    CryptoAssetFixture::protocol("tls13", "tls", Some("1.3"))
+                        .cipher_suite("TLS_AES_256_GCM_SHA384", &["algo-aes256", "algo-sha384"])
+                        .tls_groups(&["X25519Kyber768Draft00"]),
+                );
             }),
         ),
         RuleEntry::skipped(

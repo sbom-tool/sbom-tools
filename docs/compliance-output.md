@@ -133,7 +133,7 @@ one finding per item on a subject sets `finding_detail` to the item:
 | Rule | One finding per | `finding_detail` |
 |---|---|---|
 | `SBOM-CRA-VULN-METADATA`, `SBOM-CRA-VULN-METADATA-REMEDIATION` | vulnerability of a component | the vulnerability id |
-| `SBOM-CNSA2-PROTO-002`, `SBOM-PQC-PROTO-002` | cipher suite of a protocol, plus its IKEv2 transforms and its crypto references | the suite's name, else its IANA identifiers, else its algorithm refs; `ikev2-transforms`; `crypto-refs` |
+| `SBOM-CNSA2-PROTO-002`, `SBOM-PQC-PROTO-002` | cipher suite of a protocol, the TLS groups and the signature schemes it offers, plus the protocol's IKEv2 transforms and its crypto references | the suite's name, else its IANA identifiers, else its algorithm refs; that detail plus `/tls-groups` or `/tls-signature-schemes`; `ikev2-transforms`; `crypto-refs` |
 | `SBOM-CNSA2-CERT-001`, `SBOM-CNSA2-CERT-UNKNOWN`, `SBOM-PQC-CERT-001`, `SBOM-PQC-CERT-UNKNOWN` | signature-algorithm candidate of a certificate | the candidate's bom-ref |
 | `SBOM-CRA-ANNEX-I-CONTROLS` | sidecar control claimed without evidence | the control id |
 | `SBOM-CRA-ART-13-16-EMAIL` | invalid manufacturer email | the address |
