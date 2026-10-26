@@ -17,10 +17,10 @@ use crate::model::{
     Hash, HashAlgorithm, Ikev2Transform, Ikev2TransformKind, Ikev2TransformTypes,
     ImplementationPlatform, LicenseExpression, NormalizedSbom, Organization, Property,
     ProtocolProperties, ProtocolType, RelatedCryptoAsset, RelatedCryptoMaterialProperties,
-    Remediation, RemediationType, SbomFormat, SecuredBy, Severity, SignatureInfo, VexJustification,
-    VexResponse, VexState, VexStatus, VulnerabilityRef, VulnerabilitySource,
-    ikev2_key_exchange_group, is_usable_purl,
+    Remediation, RemediationType, SbomFormat, SecuredBy, Severity, SignatureInfo, VexState,
+    VulnerabilityRef, VulnerabilitySource, ikev2_key_exchange_group, is_usable_purl,
 };
+use crate::parsers::cyclonedx_analysis;
 use crate::parsers::traits::{ParseError, SbomParser};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
@@ -1411,63 +1411,15 @@ impl CycloneDxParser {
         // Parse remediation (see `cdx_remediation`)
         vuln_ref.remediation = cdx_remediation(vuln);
 
-        // Parse analysis (VEX)
+        // Parse analysis (VEX), the way the CycloneDX VEX reader of `--vex`
+        // reads it too (see `cyclonedx_analysis`).
         let vex_status = vuln.analysis.as_ref().map(|analysis| {
-            // CycloneDX impactAnalysisState. "exploitable" must NOT collapse
-            // to UnderInvestigation (that would understate a live threat);
-            // unknown states stay UnderInvestigation (an honest "we don't
-            // know", not a fabricated safe claim).
-            let status = match analysis.state.as_deref() {
-                Some("not_affected") | Some("false_positive") => VexState::NotAffected,
-                Some("affected") | Some("exploitable") => VexState::Affected,
-                Some("fixed") | Some("resolved") | Some("resolved_with_pedigree") => {
-                    VexState::Fixed
-                }
-                _ => VexState::UnderInvestigation,
-            };
-
-            // Unknown/unrecognized justification must NOT fabricate a
-            // not-affected claim: an unrecognized string yields None, never
-            // ComponentNotPresent (the strongest "it isn't even here" claim).
-            let justification = analysis
-                .justification
-                .as_ref()
-                .and_then(|j| match j.as_str() {
-                    "code_not_present" => Some(VexJustification::VulnerableCodeNotPresent),
-                    "code_not_reachable" => Some(VexJustification::VulnerableCodeNotInExecutePath),
-                    "requires_configuration" | "requires_dependency" | "requires_environment" => {
-                        Some(VexJustification::VulnerableCodeCannotBeControlledByAdversary)
-                    }
-                    "protected_by_mitigating_control" => {
-                        Some(VexJustification::InlineMitigationsAlreadyExist)
-                    }
-                    _ => None,
-                });
-
-            let responses: Vec<VexResponse> = analysis
-                .response
-                .as_ref()
-                .map(|rs| {
-                    rs.iter()
-                        .map(|r| match r.as_str() {
-                            "can_not_fix" => VexResponse::CanNotFix,
-                            "will_not_fix" => VexResponse::WillNotFix,
-                            "rollback" => VexResponse::Rollback,
-                            "workaround_available" => VexResponse::Workaround,
-                            _ => VexResponse::Update,
-                        })
-                        .collect()
-                })
-                .unwrap_or_default();
-
-            VexStatus {
-                status,
-                justification,
-                action_statement: None,
-                impact_statement: analysis.detail.clone(),
-                responses,
-                detail: analysis.detail.clone(),
-            }
+            cyclonedx_analysis::vex_status(
+                analysis.state.as_deref(),
+                analysis.justification.as_deref(),
+                analysis.response.as_deref().unwrap_or_default(),
+                analysis.detail.as_deref(),
+            )
         });
 
         // Apply vulnerability to affected components. Dedup targets by

@@ -4,6 +4,7 @@
 //! producing an enriched SBOM in its original format.
 
 use crate::model::{NormalizedSbom, VexJustification, VexState, VexStatus, VulnerabilityRef};
+use crate::parsers::cyclonedx_analysis;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 
@@ -66,19 +67,6 @@ const fn vex_justification_cdx_str(justification: &VexJustification) -> &'static
         VexJustification::VulnerableCodeNotInExecutePath => "code_not_reachable",
         VexJustification::VulnerableCodeCannotBeControlledByAdversary => "requires_configuration",
         VexJustification::InlineMitigationsAlreadyExist => "protected_by_mitigating_control",
-    }
-}
-
-/// Mirror of the CycloneDX parser's `analysis.state` reading (see
-/// `parsers/cyclonedx.rs`), used to decide whether an existing entry's state
-/// already expresses the model's status. When it does, the input spelling
-/// (e.g. `false_positive`) is preserved verbatim instead of being rewritten.
-fn parse_cdx_analysis_state(state: Option<&str>) -> VexState {
-    match state {
-        Some("not_affected" | "false_positive") => VexState::NotAffected,
-        Some("affected" | "exploitable") => VexState::Affected,
-        Some("fixed" | "resolved" | "resolved_with_pedigree") => VexState::Fixed,
-        _ => VexState::UnderInvestigation,
     }
 }
 
@@ -269,8 +257,12 @@ fn patch_existing_vuln(entry: &mut Value, agg: &AggregatedVuln) {
                 obj.insert("analysis".into(), build_cdx_analysis(vex));
             }
             Some(analysis) => {
+                // The parser's own reading of the state (`cyclonedx_analysis`),
+                // to tell whether the entry already expresses the model's
+                // status: then the input spelling (e.g. `false_positive`)
+                // is kept verbatim instead of being rewritten.
                 let current =
-                    parse_cdx_analysis_state(analysis.get("state").and_then(Value::as_str));
+                    cyclonedx_analysis::vex_state(analysis.get("state").and_then(Value::as_str));
                 if current != vex.status {
                     analysis["state"] = Value::String(vex_state_cdx_str(&vex.status).into());
                     if let Some(justification) = &vex.justification {

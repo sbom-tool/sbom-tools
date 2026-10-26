@@ -102,15 +102,27 @@ FAQ does not mention VEX.
 A bare `not_affected` claim does not count, nor does an impact statement or
 `detail` text without a justification, a justification on any other state,
 or a statement on another vulnerability of the same component (the
-component-level VEX status sums up all of a component's statements). The
-CycloneDX SBOM parser leaves the `protected_by_compiler`,
-`protected_at_runtime` and `protected_at_perimeter` justifications unmapped
-(a CycloneDX VEX document passed with `--vex` maps the last two), and the
-CSAF reader ignores `flags` and `threats`, so such statements do not count
-yet. Before v0.4.0 every unrated vulnerability warned. Sources: the FAQ as
+component-level VEX status sums up all of a component's statements). Every
+CycloneDX justification counts: the SBOM parser and the reader of a
+CycloneDX VEX document passed with `--vex` map all nine the same way, each
+to the closest of the five model justifications (see the table below). The
+CSAF reader ignores `flags` and `threats`, so a CSAF `known_not_affected`
+entry does not count yet. Before v0.4.0 every unrated vulnerability warned.
+Sources: the FAQ as
 the Commission's Markdown conversion
 (<https://ec.europa.eu/newsroom/dae/redirection/document/123307>) and PDF
 (<https://ec.europa.eu/newsroom/dae/redirection/document/122331>).
+
+| CycloneDX `analysis.justification` (schema 1.6/1.7 definition) | Model justification (CISA, OpenVEX, SPDX 3.0) |
+|---|---|
+| `code_not_present` ("The code has been removed or tree-shaked.") | `VulnerableCodeNotPresent` |
+| `code_not_reachable` ("The vulnerable code is not invoked at runtime.") | `VulnerableCodeNotInExecutePath` |
+| `requires_configuration`, `requires_dependency`, `requires_environment` (exploitability requires an option, a dependency or an environment that is not there) | `VulnerableCodeCannotBeControlledByAdversary` |
+| `protected_at_perimeter` ("Attacks are blocked at physical, logical, or network perimeter.") | `VulnerableCodeCannotBeControlledByAdversary`: the protection is outside the product |
+| `protected_by_compiler` ("Exploitability requires a compiler flag to be set/unset."), `protected_at_runtime` ("Exploits are prevented at runtime."), `protected_by_mitigating_control` ("Preventative measures have been implemented …") | `InlineMitigationsAlreadyExist` |
+
+The `detail` text becomes the statement's impact statement (and its
+detail) in either path; it is no justification.
 
 ### CRA Article 14 (reporting obligations, applicable from 2026-09-11)
 

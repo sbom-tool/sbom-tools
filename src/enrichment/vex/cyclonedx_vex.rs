@@ -4,7 +4,8 @@
 //! a `vulnerabilities` section with `analysis.state` fields but few or no components.
 //! See <https://cyclonedx.org/capabilities/vex/> for the specification.
 
-use crate::model::{VexJustification, VexResponse, VexState, VexStatus};
+use crate::model::VexStatus;
+use crate::parsers::cyclonedx_analysis;
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -161,75 +162,16 @@ pub(crate) struct CdxVexResult {
     pub statements_parsed: usize,
 }
 
-/// Map CycloneDX `impactAnalysisState` to internal `VexState`.
-///
-/// Mirrors the CycloneDX SBOM parser's mapping so an external CDX-VEX and an
-/// embedded analysis block resolve a given state identically. `exploitable`
-/// must map to Affected (it is a live, actionable threat), NOT collapse to
-/// UnderInvestigation.
-fn parse_cdx_state(s: &str) -> VexState {
-    match s {
-        "not_affected" | "false_positive" => VexState::NotAffected,
-        "affected" | "exploitable" => VexState::Affected,
-        "fixed" | "resolved" | "resolved_with_pedigree" => VexState::Fixed,
-        _ => VexState::UnderInvestigation,
-    }
-}
-
-/// Map CycloneDX justification string to internal `VexJustification`.
-fn parse_cdx_justification(s: &str) -> Option<VexJustification> {
-    match s {
-        "code_not_present" => Some(VexJustification::ComponentNotPresent),
-        "code_not_reachable" => Some(VexJustification::VulnerableCodeNotInExecutePath),
-        "requires_configuration" | "requires_dependency" | "requires_environment" => {
-            Some(VexJustification::VulnerableCodeCannotBeControlledByAdversary)
-        }
-        "protected_by_mitigating_control" => Some(VexJustification::InlineMitigationsAlreadyExist),
-        "protected_at_runtime" | "protected_at_perimeter" => {
-            Some(VexJustification::InlineMitigationsAlreadyExist)
-        }
-        _ => None,
-    }
-}
-
-/// Map CycloneDX response string to internal `VexResponse`.
-fn parse_cdx_response(s: &str) -> Option<VexResponse> {
-    match s {
-        "can_not_fix" => Some(VexResponse::CanNotFix),
-        "will_not_fix" => Some(VexResponse::WillNotFix),
-        "update" => Some(VexResponse::Update),
-        "rollback" => Some(VexResponse::Rollback),
-        "workaround_available" => Some(VexResponse::Workaround),
-        _ => None,
-    }
-}
-
-/// Build a `VexStatus` from a CycloneDX analysis section.
+/// Build a `VexStatus` from a CycloneDX analysis section, the way the
+/// CycloneDX SBOM parser reads an embedded one (`parsers::cyclonedx_analysis`),
+/// so an external CycloneDX VEX and an embedded analysis mean the same.
 fn build_vex_status(analysis: &CdxAnalysis) -> VexStatus {
-    let state = analysis
-        .state
-        .as_deref()
-        .map_or(VexState::UnderInvestigation, parse_cdx_state);
-
-    let justification = analysis
-        .justification
-        .as_deref()
-        .and_then(parse_cdx_justification);
-
-    let responses: Vec<VexResponse> = analysis
-        .response
-        .iter()
-        .filter_map(|r| parse_cdx_response(r))
-        .collect();
-
-    VexStatus {
-        status: state,
-        justification,
-        action_statement: None,
-        impact_statement: None,
-        responses,
-        detail: analysis.detail.clone(),
-    }
+    cyclonedx_analysis::vex_status(
+        analysis.state.as_deref(),
+        analysis.justification.as_deref(),
+        &analysis.response,
+        analysis.detail.as_deref(),
+    )
 }
 
 // ============================================================================
@@ -239,6 +181,7 @@ fn build_vex_status(analysis: &CdxAnalysis) -> VexStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::{VexJustification, VexResponse, VexState};
 
     const CDX_VEX_SAMPLE: &str = r#"{
         "bomFormat": "CycloneDX",
@@ -374,50 +317,71 @@ mod tests {
         assert!(result.is_err());
     }
 
+    /// An external CycloneDX VEX statement and the same analysis embedded
+    /// in an SBOM read as one VEX status, for every CycloneDX justification
+    /// (and an unknown one), with the responses and the detail.
     #[test]
-    fn test_parse_cdx_state_mapping() {
-        assert_eq!(parse_cdx_state("not_affected"), VexState::NotAffected);
-        assert_eq!(parse_cdx_state("affected"), VexState::Affected);
-        assert_eq!(parse_cdx_state("fixed"), VexState::Fixed);
-        assert_eq!(parse_cdx_state("in_triage"), VexState::UnderInvestigation);
-        assert_eq!(parse_cdx_state("false_positive"), VexState::NotAffected);
-        assert_eq!(parse_cdx_state("resolved"), VexState::Fixed);
-        assert_eq!(parse_cdx_state("unknown"), VexState::UnderInvestigation);
-        // exploitable is a live, actionable threat — must be Affected, not
-        // collapsed to UnderInvestigation (matches the SBOM parser).
-        assert_eq!(parse_cdx_state("exploitable"), VexState::Affected);
-        assert_eq!(parse_cdx_state("resolved_with_pedigree"), VexState::Fixed);
-    }
-
-    #[test]
-    fn test_parse_cdx_justification_mapping() {
-        assert_eq!(
-            parse_cdx_justification("code_not_present"),
-            Some(VexJustification::ComponentNotPresent)
-        );
-        assert_eq!(
-            parse_cdx_justification("code_not_reachable"),
-            Some(VexJustification::VulnerableCodeNotInExecutePath)
-        );
-        assert_eq!(
-            parse_cdx_justification("protected_by_mitigating_control"),
-            Some(VexJustification::InlineMitigationsAlreadyExist)
-        );
-        assert_eq!(parse_cdx_justification("unknown"), None);
-    }
-
-    #[test]
-    fn test_parse_cdx_response_mapping() {
-        assert_eq!(
-            parse_cdx_response("can_not_fix"),
-            Some(VexResponse::CanNotFix)
-        );
-        assert_eq!(parse_cdx_response("update"), Some(VexResponse::Update));
-        assert_eq!(
-            parse_cdx_response("workaround_available"),
-            Some(VexResponse::Workaround)
-        );
-        assert_eq!(parse_cdx_response("unknown"), None);
+    fn overlay_and_embedded_analysis_read_alike() {
+        for justification in [
+            "code_not_present",
+            "code_not_reachable",
+            "requires_configuration",
+            "requires_dependency",
+            "requires_environment",
+            "protected_by_compiler",
+            "protected_at_runtime",
+            "protected_at_perimeter",
+            "protected_by_mitigating_control",
+            "totally_made_up",
+        ] {
+            let vulnerability = format!(
+                r#"{{"id": "CVE-2026-0001", "affects": [{{"ref": "pkg:npm/a@1.0.0"}}],
+                    "analysis": {{"state": "not_affected", "justification": "{justification}",
+                                  "response": ["will_not_fix", "reboot"],
+                                  "detail": "the parser is never called"}}}}"#
+            );
+            let vex_doc = format!(
+                r#"{{"bomFormat": "CycloneDX", "specVersion": "1.6",
+                    "vulnerabilities": [{vulnerability}]}}"#
+            );
+            let sbom_doc = format!(
+                r#"{{"bomFormat": "CycloneDX", "specVersion": "1.6",
+                    "components": [{{"type": "library", "bom-ref": "pkg:npm/a@1.0.0",
+                                     "name": "a", "version": "1.0.0",
+                                     "purl": "pkg:npm/a@1.0.0"}}],
+                    "vulnerabilities": [{vulnerability}]}}"#
+            );
+            let overlay = parse_cyclonedx_vex(&vex_doc).expect("VEX parses").scoped
+                [&("CVE-2026-0001".to_string(), "pkg:npm/a@1.0.0".to_string())]
+                .clone();
+            let sbom = crate::parsers::parse_sbom_str(&sbom_doc).expect("SBOM parses");
+            let embedded = sbom
+                .all_vulnerabilities()
+                .first()
+                .and_then(|(_, v)| v.vex_status.clone())
+                .expect("embedded VEX status");
+            assert_eq!(overlay.status, embedded.status, "{justification}");
+            assert_eq!(
+                overlay.justification, embedded.justification,
+                "{justification}"
+            );
+            assert_eq!(
+                overlay.justification.is_some(),
+                justification != "totally_made_up",
+                "{justification}"
+            );
+            assert_eq!(overlay.responses, embedded.responses, "{justification}");
+            assert_eq!(overlay.responses, vec![VexResponse::WillNotFix]);
+            assert_eq!(
+                overlay.impact_statement, embedded.impact_statement,
+                "{justification}"
+            );
+            assert_eq!(
+                overlay.impact_statement.as_deref(),
+                Some("the parser is never called")
+            );
+            assert_eq!(overlay.detail, embedded.detail, "{justification}");
+        }
     }
 
     #[test]

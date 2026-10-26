@@ -391,6 +391,17 @@ fn justified_not_affected() -> VulnAnalysisFixture {
     }
 }
 
+/// The unrated vulnerability, stated `not_affected` with the CycloneDX
+/// justification `justification`.
+fn not_affected_justified_by(s: &mut SbomFixture, justification: &str) {
+    s.vulnerabilities = vec![unrated_vulnerability()];
+    let analysis = VulnAnalysisFixture {
+        justification: Some(justification.to_string()),
+        ..not_affected()
+    };
+    with_analysis(s, UNRATED_CVE, analysis);
+}
+
 /// Add an external reference of `ref_type` carrying the SHA-256 of the
 /// referenced document to the product component.
 fn with_hashed_product_ref(s: &mut SbomFixture, ref_type: &str, url: &str) {
@@ -1337,6 +1348,20 @@ fn cra_phase2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 s.vulnerabilities = vec![unrated_vulnerability()];
                 with_analysis(s, UNRATED_CVE, justified_not_affected());
             }),
+        )
+        // The three CycloneDX justifications the parser used to read as
+        // none (src/parsers/cyclonedx_analysis.rs) count like the rest.
+        .with_silent(
+            "not_affected statement justified by protected_by_compiler",
+            broken(|s| not_affected_justified_by(s, "protected_by_compiler")),
+        )
+        .with_silent(
+            "not_affected statement justified by protected_at_runtime",
+            broken(|s| not_affected_justified_by(s, "protected_at_runtime")),
+        )
+        .with_silent(
+            "not_affected statement justified by protected_at_perimeter",
+            broken(|s| not_affected_justified_by(s, "protected_at_perimeter")),
         )
         .only(Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_VULNERABILITIES)
         .case_only(

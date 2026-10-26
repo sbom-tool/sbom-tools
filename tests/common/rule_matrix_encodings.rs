@@ -1795,16 +1795,20 @@ fn spdx3_cvss(severity: &str) -> Option<(f64, &'static str)> {
 
 /// The SPDX 3.0.1 `VexJustificationType` for a CycloneDX
 /// impactAnalysisJustification: the justification the CycloneDX parser
-/// reads the CycloneDX value as, so a fixture means the same in both.
+/// reads the CycloneDX value as (src/parsers/cyclonedx_analysis.rs), so a
+/// fixture means the same in both.
 fn spdx3_justification(cdx: &str) -> &'static str {
     match cdx {
         "code_not_present" => "vulnerableCodeNotPresent",
         "code_not_reachable" => "vulnerableCodeNotInExecutePath",
-        "requires_configuration" | "requires_dependency" | "requires_environment" => {
-            "vulnerableCodeCannotBeControlledByAdversary"
+        "requires_configuration"
+        | "requires_dependency"
+        | "requires_environment"
+        | "protected_at_perimeter" => "vulnerableCodeCannotBeControlledByAdversary",
+        "protected_by_compiler" | "protected_at_runtime" | "protected_by_mitigating_control" => {
+            "inlineMitigationsAlreadyExist"
         }
-        "protected_by_mitigating_control" => "inlineMitigationsAlreadyExist",
-        other => panic!("the CycloneDX parser reads no justification from {other:?}"),
+        other => panic!("{other:?} is no CycloneDX justification"),
     }
 }
 
