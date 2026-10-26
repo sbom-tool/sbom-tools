@@ -545,7 +545,9 @@ mod tests {
     /// primary + third-party components with suppliers, a Complete
     /// declaration, a fresh timestamp, and a security contact.
     fn conforming_sbom() -> NormalizedSbom {
-        let mut sbom = NormalizedSbom::default(); // created = now → fresh
+        let mut sbom = NormalizedSbom::default();
+        // The day before the pinned clock: fresh, and not future-dated.
+        sbom.document.created = ts("2026-10-11T00:00:00Z");
         sbom.document.completeness_declaration = CompletenessDeclaration::Complete;
         sbom.document.security_contact = Some("security@acme.example".to_string());
         let primary = conforming_component("acme-payments");

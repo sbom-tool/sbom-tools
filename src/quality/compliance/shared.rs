@@ -107,6 +107,7 @@ pub(crate) fn future_timestamp_violation(
         component_id: None,
         counts: None,
         standard_refs: Vec::new(),
+        remediation: None,
     })
 }
 

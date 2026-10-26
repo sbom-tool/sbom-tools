@@ -770,7 +770,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components.",
+          "remediation": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1685,7 +1685,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components.",
+          "remediation": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {

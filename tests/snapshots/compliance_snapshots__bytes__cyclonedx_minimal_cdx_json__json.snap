@@ -165,7 +165,7 @@ source: tests/compliance_snapshots.rs
             "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
           }
         ],
-        "remediation": "Sign the SBOM with a digital signature attributable to the SBOM author, using an algorithm approved per NIST DSS, ISO/IEC 14888-4:2024, or the ENISA Agreed Cryptographic Mechanisms. Detached signatures are invisible to this check, and not every format can carry one in-document — hence Warning, not Error. CycloneDX: sign the BOM: in JSON, a JSF signature object (algorithm and value) at the document root; in XML, an enveloped XML-DSig <Signature> element on <bom>.",
+        "remediation": "Sign the SBOM with a digital signature attributable to the SBOM author, using an algorithm approved per NIST DSS, ISO/IEC 14888-4:2024, or the ENISA Agreed Cryptographic Mechanisms. Detached signatures are invisible to this check, and not every format can carry one in-document — hence Warning, not Error. SPDX 2.x has no in-document signature field, so the rule is not evaluated for SPDX 2.x documents. CycloneDX: sign the BOM: in JSON, a JSF signature object (algorithm and value) at the document root; in XML, an enveloped XML-DSig <Signature> element on <bom>.",
         "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
       },
       {
@@ -183,7 +183,7 @@ source: tests/compliance_snapshots.rs
             "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
           }
         ],
-        "remediation": "Declare the lifecycle phase the SBOM was generated in — 'before build', 'build', 'after build', or a more specific identifier. Warning, not Error: not every format can carry the phase. CycloneDX: set metadata.lifecycles[].phase, e.g. build (the first entry is read).",
+        "remediation": "Declare the lifecycle phase the SBOM was generated in — 'before build', 'build', 'after build', or a more specific identifier. Warning, not Error: not every format can carry the phase. SPDX 2.x has no standard field for it, so the rule is not evaluated for SPDX 2.x documents. CycloneDX: set metadata.lifecycles[].phase, e.g. build (the first entry is read).",
         "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
       },
       {
@@ -358,7 +358,7 @@ source: tests/compliance_snapshots.rs
             "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
           }
         ],
-        "remediation": "Declare the SBOM's completeness: the 2026 Coverage element expects all components including transitive dependencies, and information gaps must be explicitly stated as unknown or deliberately withheld. This rule verifies the declaration, not actual completeness — the document itself points to external repositories / binary analysis for that. CycloneDX: set compositions[].aggregate (complete, incomplete, incomplete_first_party_only, …); the first composition is read.",
+        "remediation": "Declare the SBOM's completeness: the 2026 Coverage element expects all components including transitive dependencies, and information gaps must be explicitly stated as unknown or deliberately withheld. This rule verifies the declaration, not actual completeness — the document itself points to external repositories / binary analysis for that. SPDX 2.x has no completeness declaration, so the rule is not evaluated for SPDX 2.x documents. CycloneDX: set compositions[].aggregate (complete, incomplete, incomplete_first_party_only, …); the first composition is read.",
         "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
       }
     ],

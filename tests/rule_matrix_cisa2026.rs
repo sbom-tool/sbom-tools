@@ -15,7 +15,7 @@
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
-use rule_matrix::clock::checker;
+use rule_matrix::clock::{AS_OF, checker};
 use rule_matrix::{
     ComponentFixture, MD5_FILLER, RuleEntry, SbomFixture, check, render_violations, run_matrix,
 };
@@ -511,9 +511,6 @@ fn file_components_are_exempt_from_package_elements() {
 // declaration. These tests pin the evaluation clock.
 // ---------------------------------------------------------------------------
 
-/// Evaluation instant for the V14 tests (the review date).
-const AS_OF: &str = "2026-10-12T00:00:00Z";
-
 /// Filler SHA-512 digest (128 hex chars, the digest of empty input).
 const SHA512_FILLER: &str = "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce\
                              47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e";
@@ -529,10 +526,7 @@ fn fixture_path(rel: &str) -> std::path::PathBuf {
 
 fn check_at_as_of(json: &str) -> ComplianceResult {
     let sbom = parse_sbom_str(json).unwrap_or_else(|e| panic!("fixture must parse: {e}\n{json}"));
-    let as_of = chrono::DateTime::parse_from_rfc3339(AS_OF)
-        .expect("valid AS_OF")
-        .with_timezone(&chrono::Utc);
-    ComplianceChecker::new(LEVEL).with_as_of(as_of).check(&sbom)
+    checker(LEVEL).check(&sbom)
 }
 
 fn check_fixture(rel: &str) -> ComplianceResult {
