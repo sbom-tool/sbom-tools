@@ -1698,18 +1698,18 @@ mod cross_format_tests {
             .find(|c| c.name == "logging-lib")
             .expect("logging-lib not found");
 
-        // Should have vulnerabilities from AFFECTS relationship + CVSS assessment
-        assert!(
-            !logging_lib.vulnerabilities.is_empty(),
-            "logging-lib should have vulnerabilities"
+        // The AFFECTS relationship attaches CVE-2025-0001 and the CVSS
+        // assessment scores it: one record, carrying the score.
+        assert_eq!(
+            logging_lib.vulnerabilities.len(),
+            1,
+            "logging-lib should have one record for CVE-2025-0001"
         );
-
-        // Find the vulnerability with CVSS data (from the assessment)
-        let vuln_with_cvss = logging_lib
-            .vulnerabilities
-            .iter()
-            .find(|v| !v.cvss.is_empty())
-            .expect("Should have a vulnerability with CVSS scores from assessment");
+        let vuln_with_cvss = &logging_lib.vulnerabilities[0];
+        assert!(
+            !vuln_with_cvss.cvss.is_empty(),
+            "the record should carry the assessment's CVSS score"
+        );
 
         assert_eq!(vuln_with_cvss.id, "CVE-2025-0001");
 
@@ -1763,6 +1763,24 @@ mod cross_format_tests {
             vex.impact_statement.is_some(),
             "Should have impact statement"
         );
+
+        // The AFFECTS relationship attaches CVE-2025-0002 and the VEX
+        // assessment assesses it: one record, carrying the VEX status.
+        assert_eq!(
+            crypto_lib.vulnerabilities.len(),
+            1,
+            "crypto-lib should have one record for CVE-2025-0002"
+        );
+        let record = &crypto_lib.vulnerabilities[0];
+        assert_eq!(record.id, "CVE-2025-0002");
+        let record_vex = record
+            .vex_status
+            .as_ref()
+            .expect("the record should carry the assessment's VEX status");
+        assert_eq!(record_vex.status, sbom_tools::model::VexState::NotAffected);
+        assert!(record_vex.justification.is_some());
+        assert!(record_vex.impact_statement.is_some());
+        assert!(record_vex.detail.is_some(), "statusNotes is kept");
     }
 
     // Phase 2: Completeness Tests

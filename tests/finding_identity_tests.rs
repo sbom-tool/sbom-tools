@@ -338,3 +338,91 @@ fn repeat_prone_documents_keep_unique_keys() {
     }
     assert!(numbered > 0, "no repeated entry was numbered");
 }
+
+/// Whether `detail` ends in the `#n` that numbers an entry the SBOM repeats.
+fn is_numbered(detail: &str) -> bool {
+    detail
+        .rsplit_once('#')
+        .is_some_and(|(_, n)| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+}
+
+/// The numbered details among `result`'s violations and passed checks, as
+/// `<rule id> <detail>`, sorted.
+fn numbered_details(result: &ComplianceResult) -> Vec<String> {
+    let violations = result
+        .violations
+        .iter()
+        .map(|v| (v.rule_id, v.finding_detail.as_deref()));
+    let passes = result
+        .passed
+        .iter()
+        .map(|p| (p.rule_id, p.finding_detail.as_deref()));
+    let mut numbered: Vec<String> = violations
+        .chain(passes)
+        .filter_map(|(rule_id, detail)| {
+            let detail = detail.filter(|d| is_numbered(d))?;
+            Some(format!("{rule_id} {detail}"))
+        })
+        .collect();
+    numbered.sort();
+    numbered
+}
+
+/// Numbering is for entries the SBOM itself repeats. The SPDX 3.0 parser
+/// attached a vulnerability twice when an AFFECTS relationship and an
+/// assessment both named it, so spdx3/security-profile.spdx3.json reported
+/// CVE-2025-0002 on crypto-lib as `CVE-2025-0002` and `CVE-2025-0002#2`.
+/// That is one entry, reported once, and no finding of the document is
+/// numbered at any level. The CycloneDX fixture that lists four
+/// vulnerabilities twice for one component keeps its numbering.
+#[test]
+fn only_entries_the_sbom_repeats_are_numbered() {
+    let parse = |rel: &str| {
+        let path = Path::new(FIXTURES_DIR).join(rel);
+        parse_sbom_str(&std::fs::read_to_string(path).expect("fixture readable"))
+            .unwrap_or_else(|e| panic!("{rel} parses: {e}"))
+    };
+
+    let spdx3 = parse("spdx3/security-profile.spdx3.json");
+    let mut numbered = Vec::new();
+    for (label, checker) in checkers(None) {
+        let result = checker.check(&spdx3);
+        numbered.extend(
+            numbered_details(&result)
+                .into_iter()
+                .map(|d| format!("[{label}] {d}")),
+        );
+        if label == "CraPhase2" {
+            let metadata: Vec<(Option<&str>, Option<&str>)> = result
+                .violations
+                .iter()
+                .filter(|v| v.rule_id == "SBOM-CRA-VULN-METADATA")
+                .map(|v| (v.component_id.as_deref(), v.finding_detail.as_deref()))
+                .collect();
+            assert_eq!(
+                metadata,
+                [(Some("pkg:npm/crypto-lib@3.0.1"), Some("CVE-2025-0002"))],
+                "CVE-2025-0002 lacks a severity on crypto-lib and is reported once"
+            );
+        }
+    }
+    assert!(
+        numbered.is_empty(),
+        "spdx3/security-profile.spdx3.json repeats no entry, yet findings are numbered:\n{}",
+        numbered.join("\n")
+    );
+
+    let cdx = parse(
+        "cyclonedx/sbom-cyclone-dx-json-01-kef-56-j-7-wc-3-hbket-0-rqa-1-qgbm-01-kef-58-v-9-j-8-smskdv-5-yb-7-qje-6-v.json",
+    );
+    assert_eq!(
+        numbered_details(&clock::checker(ComplianceLevel::CraPhase2).check(&cdx)),
+        [
+            "SBOM-CRA-VULN-METADATA CVE-2023-52425#2",
+            "SBOM-CRA-VULN-METADATA CVE-2024-5535#2",
+            "SBOM-CRA-VULN-METADATA CVE-2024-9681#2",
+            "SBOM-CRA-VULN-METADATA CVE-2025-0725#2",
+        ],
+        "the CycloneDX fixture lists these vulnerabilities twice for one component"
+    );
+}

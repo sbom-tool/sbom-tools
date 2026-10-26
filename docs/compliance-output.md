@@ -183,7 +183,9 @@ one finding per item on a subject sets `finding_detail` to the item:
 
 When the SBOM itself lists an entry twice (two `vulnerabilities[]` entries
 with one id for the same component, say), both findings are reported, and the
-second one's detail is numbered: `CVE-2024-3094`, then `CVE-2024-3094#2`.
+second one's detail is numbered: `CVE-2024-3094`, then `CVE-2024-3094#2`. An
+SPDX 3 vulnerability that an `AFFECTS` relationship attaches and an assessment
+scores or assesses is one entry, not two.
 Passed checks are numbered the same way. The test suite checks the guarantee,
 over a result's violations and passed checks together, on every fixture at
 every level.
