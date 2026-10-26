@@ -13,9 +13,15 @@
 //! subjects: the SBOM document, described once as a back-matter resource,
 //! and, when the check is about a component, that component, defined in the
 //! result's `local-definitions`.
+//!
+//! OSCAL titles, descriptions and remarks are Markdown that viewers render,
+//! so every such field that carries SBOM text (violation messages, component
+//! and document names, versions) is Markdown-escaped; see `markup_text`.
+//! Property values are plain strings and are only normalized.
 
 use std::collections::HashMap;
 
+use super::escape::escape_markdown_inline;
 use crate::model::{Component, ComponentType, NormalizedSbom};
 use crate::quality::{Applicability, ComplianceResult, Violation, ViolationSeverity};
 use anyhow::Result;
@@ -246,8 +252,9 @@ impl Objective {
 /// [`Objective::Satisfied`].
 struct Check<'a> {
     rule_id: &'static str,
-    /// What the check found: the observation's and the finding's
-    /// description.
+    /// What the check found, as plain text that embeds SBOM values
+    /// (component names, versions, field contents); see
+    /// [`Check::description`].
     message: &'a str,
     objective: Objective,
     /// Canonical id of the component the check is about; `None` for the
@@ -285,6 +292,13 @@ impl<'a> Check<'a> {
             label: violation.element.as_deref(),
             props,
         }
+    }
+
+    /// The observation's and the finding's `description` (markup): the
+    /// message, Markdown-escaped as a whole because SBOM values sit inside it.
+    /// Its own wording renders unchanged; only the raw JSON gains backslashes.
+    fn description(&self) -> String {
+        markup_text(self.message).unwrap_or_default()
     }
 }
 
@@ -414,7 +428,7 @@ fn observation(check: Check<'_>, uuid: Uuid, collected: &str, subjects: Vec<Valu
     let mut observation = json!({
         "uuid": uuid,
         "title": check.rule_id,
-        "description": check.message,
+        "description": check.description(),
         "methods": ["EXAMINE"],
         "types": [check.objective.observation_type()],
         "subjects": subjects,
@@ -428,7 +442,7 @@ fn finding(check: &Check<'_>, observation_uuid: Uuid, uuid: Uuid) -> Value {
     json!({
         "uuid": uuid,
         "title": check.rule_id,
-        "description": check.message,
+        "description": check.description(),
         "target": {
             "type": "objective-id",
             "target-id": check.rule_id.to_ascii_lowercase(),
@@ -494,10 +508,13 @@ impl<'a> Subjects<'a> {
     /// The back-matter resource describing the SBOM document: an `artifact`
     /// in OSCAL's resource vocabulary, with the SHA-256 of its bytes, its
     /// format and specification version, and its serial number (CycloneDX)
-    /// or document namespace (SPDX) as a document id.
+    /// or document namespace (SPDX) as a document id. When that id is a URI
+    /// (`urn:uuid:…`, `https://…`), it is also the resource's `rlink`, with
+    /// the SHA-256 in `hashes` so the document can be checked against it.
     fn document_resource(&self) -> Value {
         let mut props: Vec<Value> = oscal_prop("type", "artifact").into_iter().collect();
         let mut document_ids = Vec::new();
+        let mut rlinks = Vec::new();
         if let Some(digest) = self.assessed.digest {
             props.extend(prop("sha256", digest));
         }
@@ -506,6 +523,14 @@ impl<'a> Subjects<'a> {
             props.extend(prop("format", &document.format.to_string()));
             props.extend(prop("spec-version", &document.spec_version));
             if let Some(serial) = document.serial_number.as_deref().and_then(oscal_string) {
+                if is_absolute_uri(&serial) {
+                    let mut rlink = json!({ "href": serial });
+                    // OSCAL checks a SHA-256 value is 64 hex digits.
+                    if let Some(digest) = self.assessed.digest.filter(|d| is_sha256_hex(d)) {
+                        rlink["hashes"] = json!([{ "algorithm": "SHA-256", "value": digest }]);
+                    }
+                    rlinks.push(rlink);
+                }
                 document_ids.push(json!({ "identifier": serial }));
             }
         }
@@ -516,6 +541,7 @@ impl<'a> Subjects<'a> {
         });
         set_array(&mut resource, "props", props);
         set_array(&mut resource, "document-ids", document_ids);
+        set_array(&mut resource, "rlinks", rlinks);
         resource
     }
 
@@ -545,24 +571,23 @@ impl<'a> Subjects<'a> {
     }
 
     /// The component with canonical id `id`, described from the SBOM when it
-    /// is at hand and from the check's `label` otherwise.
+    /// is at hand and from the check's `label` otherwise. Its title is markup,
+    /// so the name and version in it are escaped; its properties carry them
+    /// plain.
     fn component(&self, id: &str, label: Option<&str>) -> ComponentSubject {
         let component = self.components.get(id).copied();
-        let version = component
-            .and_then(|c| c.version.as_deref())
-            .and_then(oscal_string);
+        let version = component.and_then(|c| c.version.as_deref());
         let name = component
             .map(|c| c.name.as_str())
             .or(label)
-            .and_then(oscal_string)
-            .or_else(|| oscal_string(id))
+            .and_then(markup_text)
+            .or_else(|| markup_text(id))
             .unwrap_or_else(|| "Unnamed component".to_string());
-        let title = match &version {
+        let title = match version.and_then(markup_text) {
             Some(version) => format!("{name} {version}"),
             None => name,
         };
         let mut props: Vec<Value> = version
-            .as_deref()
             .and_then(|version| oscal_prop("version", version))
             .into_iter()
             .collect();
@@ -582,17 +607,17 @@ impl<'a> Subjects<'a> {
 }
 
 /// The title of the SBOM document's resource, e.g. `acme-app (CycloneDX 1.6
-/// SBOM)`.
+/// SBOM)`. The name and spec version come from the SBOM and are escaped.
 fn document_title(sbom: Option<&NormalizedSbom>) -> String {
     let Some(sbom) = sbom else {
         return "Assessed SBOM".to_string();
     };
     let document = &sbom.document;
-    let kind = match oscal_string(&document.spec_version) {
+    let kind = match markup_text(&document.spec_version) {
         Some(spec) => format!("{} {spec} SBOM", document.format),
         None => format!("{} SBOM", document.format),
     };
-    match document.name.as_deref().and_then(oscal_string) {
+    match document.name.as_deref().and_then(markup_text) {
         Some(name) => format!("{name} ({kind})"),
         None => kind,
     }
@@ -706,6 +731,80 @@ fn oscal_string(text: &str) -> Option<String> {
     })
 }
 
+/// SBOM-derived `text` for an OSCAL markup field (a `markup-line`, or a
+/// `markup-multiline` written as one paragraph), or `None` when nothing is
+/// left of it.
+///
+/// OSCAL markup is Markdown that viewers render, so the text goes through
+/// [`escape_markdown_inline`] (the S1 rule for human-readable output): it
+/// renders as the literal text it is, never as a link, image, HTML tag or
+/// emphasis. Line breaks become spaces and surrounding whitespace is trimmed
+/// ([`oscal_string`]), so it stays one line and cannot indent into a code
+/// block. The inline escaper already covers `#`, `>`, `*`, fences, `|` and
+/// `<`; a leading `-`, `+` or ordered-list number (`1.`, `1)`), which opens a
+/// list only at the start of a line, is escaped here.
+fn markup_text(text: &str) -> Option<String> {
+    let mut line = oscal_string(&escape_markdown_inline(text))?;
+    if line.starts_with(['-', '+']) {
+        line.insert(0, '\\');
+    } else if let Some(at) = ordered_list_delimiter(&line) {
+        line.insert(at, '\\');
+    }
+    Some(line)
+}
+
+/// The byte offset of the `.` or `)` when `line` opens a CommonMark ordered
+/// list item: one to nine digits, the delimiter, then a space, a tab or the
+/// end of the line.
+fn ordered_list_delimiter(line: &str) -> Option<usize> {
+    let digits = line.bytes().take_while(u8::is_ascii_digit).count();
+    let rest = &line.as_bytes()[digits..];
+    ((1..=9).contains(&digits)
+        && matches!(rest.first(), Some(b'.' | b')'))
+        && matches!(rest.get(1), None | Some(b' ' | b'\t')))
+    .then_some(digits)
+}
+
+/// Whether `text` is an absolute URI (RFC 3986): a scheme, a colon, and the
+/// rest in URI characters only, such as `urn:uuid:…` or `https://…`.
+fn is_absolute_uri(text: &str) -> bool {
+    let Some((scheme, rest)) = text.split_once(':') else {
+        return false;
+    };
+    let mut scheme_chars = scheme.chars();
+    scheme_chars.next().is_some_and(|c| c.is_ascii_alphabetic())
+        && scheme_chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
+        && !rest.is_empty()
+        && is_uri_text(text)
+}
+
+/// Only RFC 3986 characters (unreserved, reserved, `%XX` escapes), with at
+/// most one `#`.
+fn is_uri_text(text: &str) -> bool {
+    let bytes = text.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' {
+            let hex = |j: usize| bytes.get(j).is_some_and(u8::is_ascii_hexdigit);
+            if !(hex(i + 1) && hex(i + 2)) {
+                return false;
+            }
+            i += 3;
+        } else if bytes[i].is_ascii_alphanumeric() || b"-._~:/?#[]@!$&'()*+,;=".contains(&bytes[i])
+        {
+            i += 1;
+        } else {
+            return false;
+        }
+    }
+    text.matches('#').count() <= 1
+}
+
+/// Whether `digest` is a SHA-256 digest in hex.
+fn is_sha256_hex(digest: &str) -> bool {
+    digest.len() == 64 && digest.bytes().all(|b| b.is_ascii_hexdigit())
+}
+
 /// ECMA-262 `\s` (WhiteSpace and LineTerminator), plus U+0085, which Rust
 /// counts as whitespace; trimming it as well is harmless.
 fn is_ecma_whitespace(c: char) -> bool {
@@ -764,16 +863,27 @@ mod tests {
     /// The document for `results` about `sbom` (or, without one, only what
     /// the results say), with UUIDs derived from a fixed digest.
     fn build_for(results: &[ComplianceResult], sbom: Option<&NormalizedSbom>) -> serde_json::Value {
+        build_with_digest(results, sbom, "abc123")
+    }
+
+    fn build_with_digest(
+        results: &[ComplianceResult],
+        sbom: Option<&NormalizedSbom>,
+        digest: &str,
+    ) -> serde_json::Value {
         let timestamp = instant(2026, 7, 1);
         let assessed = Assessed {
             sbom,
-            digest: Some("abc123"),
+            digest: Some(digest),
         };
-        let mut uuids = DerivedUuids::new(results, "abc123", timestamp);
+        let mut uuids = DerivedUuids::new(results, digest, timestamp);
         let json = build_assessment_results(results, assessed, timestamp, &mut uuids)
             .expect("OSCAL serialization");
         serde_json::from_str(&json).expect("valid JSON")
     }
+
+    /// A SHA-256 digest in hex, as the CLI passes it.
+    const SHA256: &str = "be7995c235de8f84244baf2d5cd4a217deb705904ffe2e874647f3e3c0824d96";
 
     fn build(results: &[ComplianceResult]) -> serde_json::Value {
         build_for(results, None)
@@ -1323,5 +1433,168 @@ mod tests {
         assert_eq!(subjects(&observed).len(), 2, "document and component");
         assert_eq!(local.definitions.len(), 1);
         assert!(observed.get("props").is_none(), "no props, no empty array");
+    }
+
+    #[test]
+    fn markup_text_escapes_sbom_text_for_oscal_markup() {
+        use super::markup_text;
+        let cases = [
+            ("lodash", "lodash"),
+            ("my_app", "my\\_app"),
+            (
+                "<img src=x onerror=alert(1)>",
+                "\\<img src=x onerror=alert(1)\\>",
+            ),
+            (
+                "<script>alert(1)</script>",
+                "\\<script\\>alert(1)\\</script\\>",
+            ),
+            ("[x](javascript:alert(1))", "\\[x\\](javascript:alert(1))"),
+            // A backslash cannot cancel the escape after it.
+            ("\\<img src=x>", "\\\\\\<img src=x\\>"),
+            // Block markers at the start of the field.
+            ("# Forged", "\\# Forged"),
+            ("- item", "\\- item"),
+            ("+ item", "\\+ item"),
+            ("* item", "\\* item"),
+            ("> quote", "\\> quote"),
+            ("1. item", "1\\. item"),
+            ("12) item", "12\\) item"),
+            ("7.", "7\\."),
+            ("  - indented\n", "\\- indented"),
+            // Not list markers: left alone.
+            ("1.0.2", "1.0.2"),
+            ("2024 release", "2024 release"),
+            ("a - b", "a - b"),
+            // One line, trimmed; a leading colon cannot start a CI command.
+            (" two\nlines ", "two lines"),
+            ("::warning::x", "\\::warning::x"),
+        ];
+        for (text, expected) in cases {
+            assert_eq!(markup_text(text).as_deref(), Some(expected), "{text:?}");
+        }
+        for empty in ["", " \n ", "\u{202E}", "\u{1b}"] {
+            assert_eq!(markup_text(empty), None, "{empty:?}");
+        }
+    }
+
+    #[test]
+    fn descriptions_escape_the_message_and_props_stay_plain() {
+        let mut hostile = component_violation(
+            "SBOM-NTIA-SUPPLIER",
+            "pkg:npm/x@1",
+            "<img src=x onerror=alert(1)>",
+        );
+        hostile.message = "Component '<img src=x onerror=alert(1)>' missing supplier".to_string();
+        let document = build(&[result(vec![hostile])]);
+        let entry = &document["assessment-results"]["results"][0];
+        let escaped = "Component '\\<img src=x onerror=alert(1)\\>' missing supplier";
+        assert_eq!(entry["observations"][0]["description"], escaped);
+        assert_eq!(entry["findings"][1]["description"], escaped);
+        assert_eq!(
+            prop_value(&entry["observations"][0], "sbom-element"),
+            Some("<img src=x onerror=alert(1)>"),
+            "a property is a plain string, not markup"
+        );
+        assert_eq!(
+            entry["local-definitions"]["components"][0]["title"],
+            "\\<img src=x onerror=alert(1)\\>"
+        );
+    }
+
+    #[test]
+    fn titles_escape_the_sbom_name_and_version() {
+        let document_metadata = DocumentMetadata {
+            name: Some("- <b>acme</b>".to_string()),
+            spec_version: "1.6".to_string(),
+            ..DocumentMetadata::default()
+        };
+        let mut sbom = NormalizedSbom::new(document_metadata);
+        sbom.add_component(
+            Component::new("# evil_lib".to_string(), "evil-ref".to_string())
+                .with_version("*1*".to_string())
+                .with_purl("pkg:npm/evil@1".to_string()),
+        );
+        let document = build_for(
+            &[result(vec![component_violation(
+                "SBOM-NTIA-SUPPLIER",
+                "pkg:npm/evil@1",
+                "# evil_lib",
+            )])],
+            Some(&sbom),
+        );
+        let ar = &document["assessment-results"];
+        let resource = &ar["back-matter"]["resources"][0];
+        assert_eq!(
+            resource["title"],
+            "\\- \\<b\\>acme\\</b\\> (CycloneDX 1.6 SBOM)"
+        );
+        let component = &ar["results"][0]["local-definitions"]["components"][0];
+        assert_eq!(component["title"], "\\# evil\\_lib \\*1\\*");
+        let version = component["props"]
+            .as_array()
+            .expect("props")
+            .iter()
+            .find(|p| p["name"] == "version")
+            .expect("version prop");
+        assert_eq!(version["value"], "*1*", "a property is a plain string");
+        let named = &subjects(&ar["results"][0]["observations"][0]);
+        assert_eq!(named[0]["title"], resource["title"]);
+        assert_eq!(named[1]["title"], component["title"]);
+    }
+
+    #[test]
+    fn a_uri_serial_number_is_the_resources_rlink_with_its_sha256() {
+        let sbom = lodash_sbom();
+        let document = build_with_digest(&[result(Vec::new())], Some(&sbom), SHA256);
+        let resource = &document["assessment-results"]["back-matter"]["resources"][0];
+        assert_eq!(
+            resource["rlinks"],
+            serde_json::json!([{
+                "href": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+                "hashes": [{ "algorithm": "SHA-256", "value": SHA256 }]
+            }])
+        );
+        assert_eq!(
+            resource["document-ids"][0]["identifier"],
+            "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79"
+        );
+
+        // A digest that is not SHA-256 hex is not claimed as one.
+        let unhashed = build_with_digest(&[result(Vec::new())], Some(&sbom), "abc123");
+        let rlink = &unhashed["assessment-results"]["back-matter"]["resources"][0]["rlinks"][0];
+        assert_eq!(
+            rlink["href"],
+            "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79"
+        );
+        assert!(rlink.get("hashes").is_none());
+    }
+
+    #[test]
+    fn a_serial_number_that_is_no_uri_gets_no_rlink() {
+        use super::is_absolute_uri;
+        for (serial, linked) in [
+            ("urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79", true),
+            ("https://spdx.org/spdxdocs/acme-1.0", true),
+            ("ACME-0001", false),
+            ("1urn:x", false),
+            ("urn:", false),
+            ("https://example.com/a b", false),
+            ("https://example.com/a#b#c", false),
+        ] {
+            assert_eq!(is_absolute_uri(serial), linked, "{serial:?}");
+        }
+        let mut sbom = lodash_sbom();
+        sbom.document.serial_number = Some("ACME-0001".to_string());
+        let document = build_with_digest(&[result(Vec::new())], Some(&sbom), SHA256);
+        let resource = &document["assessment-results"]["back-matter"]["resources"][0];
+        assert!(resource.get("rlinks").is_none());
+        assert_eq!(resource["document-ids"][0]["identifier"], "ACME-0001");
+
+        sbom.document.serial_number = None;
+        let document = build_with_digest(&[result(Vec::new())], Some(&sbom), SHA256);
+        let resource = &document["assessment-results"]["back-matter"]["resources"][0];
+        assert!(resource.get("rlinks").is_none());
+        assert!(resource.get("document-ids").is_none());
     }
 }

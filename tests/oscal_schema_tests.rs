@@ -212,13 +212,116 @@ fn uuid_of(value: &Value) -> &str {
     value["uuid"].as_str().expect("uuid is a string")
 }
 
+/// Every OSCAL markup string in `value` with its path: the `title`,
+/// `description` and `remarks` fields at any depth. Property values are plain
+/// strings, not markup.
+fn markup_fields<'a>(value: &'a Value, path: &str, out: &mut Vec<(String, &'a str)>) {
+    match value {
+        Value::Object(map) => {
+            for (key, field) in map {
+                let field_path = format!("{path}/{key}");
+                match (key.as_str(), field) {
+                    ("title" | "description" | "remarks", Value::String(text)) => {
+                        out.push((field_path, text));
+                    }
+                    _ => markup_fields(field, &field_path, out),
+                }
+            }
+        }
+        Value::Array(items) => {
+            for (i, item) in items.iter().enumerate() {
+                markup_fields(item, &format!("{path}/{i}"), out);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Whether `needle` occurs in `markdown` with its first character live. A
+/// character is escaped only by an odd run of backslashes before it: `\\` is
+/// an escaped backslash, which leaves the character after it live.
+fn contains_live(markdown: &str, needle: &str) -> bool {
+    markdown.match_indices(needle).any(|(at, _)| {
+        markdown[..at]
+            .chars()
+            .rev()
+            .take_while(|&c| c == '\\')
+            .count()
+            % 2
+            == 0
+    })
+}
+
+/// Whether a one-line markup field opens a Markdown block of its own: a
+/// heading, bullet or ordered list item, quote, or HTML block.
+fn opens_a_block(markdown: &str) -> bool {
+    let line = markdown.trim_start();
+    let digits = line.bytes().take_while(u8::is_ascii_digit).count();
+    let ordered = (1..=9).contains(&digits)
+        && matches!(line.as_bytes().get(digits), Some(b'.' | b')'))
+        && matches!(line.as_bytes().get(digits + 1), None | Some(b' ' | b'\t'));
+    line.starts_with(['#', '-', '*', '+', '>', '<']) || ordered
+}
+
+/// The S1 rule for OSCAL markup: no field holds a live HTML tag or link
+/// bracket, or opens a Markdown block of its own.
+fn assert_markup_is_inert(document: &Value, label: &str) {
+    let mut fields = Vec::new();
+    markup_fields(document, "", &mut fields);
+    assert!(!fields.is_empty(), "{label}: no markup fields found");
+    for (path, text) in fields {
+        for live in ["<", "[", "]"] {
+            assert!(
+                !contains_live(text, live),
+                "{label}: {path} holds a live {live:?}: {text:?}"
+            );
+        }
+        assert!(
+            !opens_a_block(text),
+            "{label}: {path} opens a Markdown block: {text:?}"
+        );
+    }
+}
+
+/// The SBOM document's `rlink`: present exactly when its document id is an
+/// absolute URI, with that href and, as OSCAL's hash-length constraint
+/// requires, the 64-digit SHA-256 also given as the `sha256` property.
+fn assert_rlink(resource: &Value, label: &str) {
+    let identifier = resource["document-ids"][0]["identifier"].as_str();
+    let uri =
+        regex::Regex::new(r"^[A-Za-z][A-Za-z0-9+.\-]*:[A-Za-z0-9\-._~:/?#\[\]@!$&'()*+,;=%]+$")
+            .expect("valid regex");
+    let rlinks = array(resource, "rlinks");
+    assert_eq!(
+        rlinks.len(),
+        usize::from(identifier.is_some_and(|id| uri.is_match(id))),
+        "{label}: an rlink exactly when the document id {identifier:?} is a URI"
+    );
+    if let Some(rlink) = rlinks.first() {
+        assert_eq!(rlink["href"].as_str(), identifier, "{label}");
+        let sha256 = array(resource, "props")
+            .iter()
+            .find(|p| p["name"] == "sha256")
+            .and_then(|p| p["value"].as_str())
+            .expect("sha256 prop");
+        assert_eq!(sha256.len(), 64, "{label}: SHA-256 is 64 hex digits");
+        assert!(sha256.bytes().all(|b| b.is_ascii_hexdigit()), "{label}");
+        assert_eq!(
+            rlink["hashes"],
+            json!([{ "algorithm": "SHA-256", "value": sha256 }]),
+            "{label}"
+        );
+    }
+}
+
 /// What the JSON schema cannot express: the declared release, the
 /// observation type, per-assessment UUIDs unique across the document,
 /// findings whose related observations exist in their result, and subjects
 /// that resolve: the SBOM document to the one back-matter resource, a
 /// component to its result's local definitions (OSCAL's
 /// `oscal-unique-ar-local-definitions-component` keeps those unique), with
-/// one UUID per component across results.
+/// one UUID per component across results. Also the SBOM resource's `rlink`
+/// ([`assert_rlink`]) and inert markup ([`assert_markup_is_inert`]).
 fn assert_invariants(document: &Value, results: &[ComplianceResult], label: &str) {
     let ar = &document["assessment-results"];
     assert_eq!(ar["metadata"]["oscal-version"], OSCAL_VERSION, "{label}");
@@ -231,6 +334,8 @@ fn assert_invariants(document: &Value, results: &[ComplianceResult], label: &str
     let resources = array(&ar["back-matter"], "resources");
     assert_eq!(resources.len(), 1, "{label}: the SBOM document resource");
     let document_uuid = uuid_of(&resources[0]);
+    assert_rlink(&resources[0], label);
+    assert_markup_is_inert(document, label);
 
     let mut uuids = vec![uuid_of(ar)];
     let mut component_ids: std::collections::HashMap<&str, &str> = Default::default();
@@ -362,42 +467,69 @@ fn the_wall_clock_variant_matches_the_oscal_schema() {
 /// An SBOM whose names, versions and identifiers carry what OSCAL `string`
 /// and `markup-line` fields reject: edge whitespace, every ECMA line
 /// terminator, a lone byte-order mark, and text that is only whitespace.
-const HOSTILE_SBOM: &str = r#"{
+const HOSTILE_SBOM: &str = r##"{
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
   "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
   "version": 1,
   "metadata": {
     "timestamp": "2026-01-01T00:00:00Z",
-    "component": { "type": "application", "name": " app\nname ", "bom-ref": "app" }
+    "component": {
+      "type": "application",
+      "name": "evil-app\n## Forged product <img src=x onerror=alert(1)>",
+      "bom-ref": "app"
+    }
   },
   "components": [
     { "type": "library", "name": " lodash\n", "version": "\u2028 4.17.21 ", "bom-ref": " ref\r1 " },
     { "type": "library", "name": "\ufeff", "bom-ref": "\t" },
     { "type": "library", "name": "line\u2029break", "version": " ", "bom-ref": "lb" },
-    { "type": "library", "name": "tab\tinside", "version": "1.0", "purl": "pkg:npm/tab-inside@1.0" }
+    { "type": "library", "name": "tab\tinside", "version": "1.0", "purl": "pkg:npm/tab-inside@1.0" },
+    { "type": "library", "name": "<img src=x onerror=alert(1)>", "version": "*1*", "bom-ref": "img" },
+    { "type": "library", "name": "<script>alert(1)</script>", "bom-ref": "script" },
+    { "type": "library", "name": "[x](javascript:alert(1))", "bom-ref": "link" },
+    { "type": "library", "name": "\\<img src=x onerror=alert(2)>", "bom-ref": "backslash" },
+    { "type": "library", "name": "# Forged heading", "bom-ref": "heading" },
+    { "type": "library", "name": "- Forged item", "bom-ref": "dash" },
+    { "type": "library", "name": "* Forged item", "bom-ref": "star" },
+    { "type": "library", "name": "+ Forged item", "bom-ref": "plus" },
+    { "type": "library", "name": "1. Forged item", "bom-ref": "ordered" },
+    { "type": "library", "name": "> Forged quote", "bom-ref": "quote" }
   ]
-}"#;
+}"##;
 
-/// SBOM text reaches OSCAL `string` fields; whatever it holds, every level's
-/// document must stay schema-valid, with the text normalized, not dropped.
+/// SBOM text reaches OSCAL `string` and markup fields. Whatever it holds,
+/// every level's document stays schema-valid, and its markup stays inert:
+/// no crafted value opens an HTML tag or a link, or starts a heading, list
+/// item or quote of its own, even behind a backslash that would cancel the
+/// escape after it (the S1 rule for human-readable output, here applied to
+/// the Markdown that OSCAL viewers render). The text is escaped in place,
+/// not dropped, and property values keep it plain.
 #[test]
-fn hostile_sbom_text_keeps_every_level_schema_valid() {
+fn hostile_sbom_text_keeps_every_level_schema_valid_and_inert() {
     let sbom = parse_sbom_str(HOSTILE_SBOM).expect("hostile SBOM parses");
     let results: Vec<ComplianceResult> = ComplianceLevel::all()
         .iter()
         .map(|level| check(&sbom, *level, None))
         .collect();
-    let text = generate_assessment_results_at(
-        &results,
-        &sbom,
-        &sha256_hex(HOSTILE_SBOM.as_bytes()),
-        Some(as_of()),
-    )
-    .expect("OSCAL serializes");
+    let digest = sha256_hex(HOSTILE_SBOM.as_bytes());
+    let text = generate_assessment_results_at(&results, &sbom, &digest, Some(as_of()))
+        .expect("OSCAL serializes");
     let document: Value = serde_json::from_str(&text).expect("OSCAL is JSON");
     assert_valid(&schema(), &document, "hostile SBOM");
+    // Includes assert_markup_is_inert and assert_rlink.
     assert_invariants(&document, &results, "hostile SBOM");
+
+    let mut fields = Vec::new();
+    markup_fields(&document, "", &mut fields);
+    for (path, text) in &fields {
+        for raw in ["<img", "<script", "[x](javascript"] {
+            assert!(
+                !contains_live(text, raw),
+                "{path}: unescaped {raw:?} in {text:?}"
+            );
+        }
+    }
 
     let entries = array(&document["assessment-results"], "results");
     let elements: HashSet<&str> = entries
@@ -407,10 +539,18 @@ fn hostile_sbom_text_keeps_every_level_schema_valid() {
         .filter(|p| p["name"] == "sbom-element")
         .filter_map(|p| p["value"].as_str())
         .collect();
-    for normalized in ["lodash", "app name", "line break", "tab\tinside"] {
+    // Properties are plain strings: normalized, never escaped.
+    for plain in [
+        "lodash",
+        "line break",
+        "tab\tinside",
+        "evil-app ## Forged product <img src=x onerror=alert(1)>",
+        "<script>alert(1)</script>",
+        "- Forged item",
+    ] {
         assert!(
-            elements.contains(normalized),
-            "expected the label {normalized:?} among {elements:?}"
+            elements.contains(plain),
+            "expected the label {plain:?} among {elements:?}"
         );
     }
     let titles: HashSet<&str> = entries
@@ -418,20 +558,50 @@ fn hostile_sbom_text_keeps_every_level_schema_valid() {
         .flat_map(|entry| array(&entry["local-definitions"], "components"))
         .filter_map(|component| component["title"].as_str())
         .collect();
-    for normalized in [
+    for escaped in [
         "lodash 4.17.21",
-        "app name",
         "line break",
         "tab\tinside 1.0",
+        "evil-app \\#\\# Forged product \\<img src=x onerror=alert(1)\\>",
+        "\\<img src=x onerror=alert(1)\\> \\*1\\*",
+        "\\<script\\>alert(1)\\</script\\>",
+        "\\[x\\](javascript:alert(1))",
+        "\\\\\\<img src=x onerror=alert(2)\\>",
+        "\\# Forged heading",
+        "\\- Forged item",
+        "\\* Forged item",
+        "\\+ Forged item",
+        "1\\. Forged item",
+        "\\> Forged quote",
     ] {
         assert!(
-            titles.contains(normalized),
-            "expected the component title {normalized:?} among {titles:?}"
+            titles.contains(escaped),
+            "expected the component title {escaped:?} among {titles:?}"
         );
     }
+    let descriptions: Vec<&str> = entries
+        .iter()
+        .flat_map(|entry| array(entry, "observations"))
+        .filter_map(|observation| observation["description"].as_str())
+        .collect();
+    assert!(
+        descriptions
+            .iter()
+            .any(|d| d.contains("'\\<script\\>alert(1)\\</script\\>'")),
+        "violation messages are escaped in place: {descriptions:?}"
+    );
+
+    let resource = &document["assessment-results"]["back-matter"]["resources"][0];
     assert_eq!(
-        document["assessment-results"]["back-matter"]["resources"][0]["title"],
-        "app name (CycloneDX 1.6 SBOM)"
+        resource["title"],
+        "evil-app \\#\\# Forged product \\<img src=x onerror=alert(1)\\> (CycloneDX 1.6 SBOM)"
+    );
+    assert_eq!(
+        resource["rlinks"],
+        json!([{
+            "href": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+            "hashes": [{ "algorithm": "SHA-256", "value": digest }]
+        }])
     );
 }
 

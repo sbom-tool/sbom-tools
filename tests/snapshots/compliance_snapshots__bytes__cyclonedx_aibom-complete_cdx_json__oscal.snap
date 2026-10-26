@@ -129,7 +129,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "9f266429-d2a2-5d7c-807f-f35d7d3ff6e5"
           },
           {
-            "description": "[BSI-AI] Metadata readiness: SBOM carries no document signature (integrity attestation recommended)",
+            "description": "\\[BSI-AI\\] Metadata readiness: SBOM carries no document signature (integrity attestation recommended)",
             "related-observations": [
               {
                 "observation-uuid": "cdbaec54-c888-5826-8374-1295a7456296"
@@ -146,7 +146,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "70809126-e8b5-56cf-a087-a42d4d147741"
           },
           {
-            "description": "[BSI-AI] System-Level readiness: no producer/supplier of the AI system is declared",
+            "description": "\\[BSI-AI\\] System-Level readiness: no producer/supplier of the AI system is declared",
             "related-observations": [
               {
                 "observation-uuid": "6924e5f2-5b37-51b5-a1bd-11916b9186e1"
@@ -163,7 +163,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "d1d31c63-f0f6-5120-8c87-5db101663ca3"
           },
           {
-            "description": "[BSI-AI] System-Level readiness: AI-system data-flow / usage / input-output description is not declared (no SBOM field carries it today)",
+            "description": "\\[BSI-AI\\] System-Level readiness: AI-system data-flow / usage / input-output description is not declared (no SBOM field carries it today)",
             "related-observations": [
               {
                 "observation-uuid": "525c37a1-358b-54f1-b66f-a70aed80c5a0"
@@ -180,7 +180,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "49b9ea7e-f0df-595b-b140-b3326759f129"
           },
           {
-            "description": "[BSI-AI] Model identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): sentiment-classifier",
+            "description": "\\[BSI-AI\\] Model identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): sentiment-classifier",
             "related-observations": [
               {
                 "observation-uuid": "947943a3-8c7a-5146-a367-39c948dfa908"
@@ -197,7 +197,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "96fc4be6-1d78-57a5-95d4-36e28a7eeffa"
           },
           {
-            "description": "[BSI-AI] Model license readiness: 1 component(s) declare no license: sentiment-classifier",
+            "description": "\\[BSI-AI\\] Model license readiness: 1 component(s) declare no license: sentiment-classifier",
             "related-observations": [
               {
                 "observation-uuid": "03227228-0eed-5905-b0c6-d0eb36005dd9"
@@ -214,7 +214,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "c37ecc05-740b-5a5d-9c74-ef910657da3c"
           },
           {
-            "description": "[BSI-AI] Dataset identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): product-reviews-1M",
+            "description": "\\[BSI-AI\\] Dataset identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): product-reviews-1M",
             "related-observations": [
               {
                 "observation-uuid": "85853d82-9510-5f9e-a20b-331fe1de743e"
@@ -231,7 +231,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "761e5cda-b347-5e6a-9de5-a7bebe541323"
           },
           {
-            "description": "[BSI-AI] Dataset hash value readiness: 1 component(s) carry no hash value: product-reviews-1M",
+            "description": "\\[BSI-AI\\] Dataset hash value readiness: 1 component(s) carry no hash value: product-reviews-1M",
             "related-observations": [
               {
                 "observation-uuid": "1f86c77a-4871-526e-bbfe-d45e87c1e566"
@@ -248,7 +248,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "3eabee9d-cad2-5c67-84ca-c41c9e61c4d8"
           },
           {
-            "description": "[BSI-AI] Dataset license readiness: 1 component(s) declare no license: product-reviews-1M",
+            "description": "\\[BSI-AI\\] Dataset license readiness: 1 component(s) declare no license: product-reviews-1M",
             "related-observations": [
               {
                 "observation-uuid": "a5fe0ff1-b5a3-55bf-bcb1-5284b1a86719"
@@ -265,7 +265,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "23615914-fad5-5123-bcc0-8cf70a8550a5"
           },
           {
-            "description": "[BSI-AI] Provenance & intended use readiness: 1 component(s) declare no provenance / intended-use: product-reviews-1M",
+            "description": "\\[BSI-AI\\] Provenance & intended use readiness: 1 component(s) declare no provenance / intended-use: product-reviews-1M",
             "related-observations": [
               {
                 "observation-uuid": "395da9fd-e370-5a34-8c93-3ebb54bde30b"
@@ -282,7 +282,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "f438aaea-b65f-51a4-b2ef-3efcdeaf0df0"
           },
           {
-            "description": "[BSI-AI] Infrastructure readiness: no ML component links to its runtime / framework dependencies (no dependency edge or BOM/HBOM reference)",
+            "description": "\\[BSI-AI\\] Infrastructure readiness: no ML component links to its runtime / framework dependencies (no dependency edge or BOM/HBOM reference)",
             "related-observations": [
               {
                 "observation-uuid": "c838d0ca-691c-54b9-a184-89b80cf72cbc"
@@ -299,7 +299,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "29e6bc91-d4b7-5220-adf8-dbb1c8a09c0a"
           },
           {
-            "description": "[BSI-AI] Security readiness: no AI-specific security controls are declared (no SBOM field carries them today)",
+            "description": "\\[BSI-AI\\] Security readiness: no AI-specific security controls are declared (no SBOM field carries them today)",
             "related-observations": [
               {
                 "observation-uuid": "824efbaf-d2e5-5722-9ad4-54ee4a5c0b50"
@@ -316,7 +316,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "41ec1521-b489-5451-91a5-c57dc2395354"
           },
           {
-            "description": "[BSI-AI] Security readiness: no exploitability reference is declared (no SBOM field carries it today)",
+            "description": "\\[BSI-AI\\] Security readiness: no exploitability reference is declared (no SBOM field carries it today)",
             "related-observations": [
               {
                 "observation-uuid": "68753274-c82c-5dc2-af69-40253966e107"
@@ -336,7 +336,7 @@ source: tests/compliance_snapshots.rs
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[BSI-AI] Metadata readiness: SBOM carries no document signature (integrity attestation recommended)",
+            "description": "\\[BSI-AI\\] Metadata readiness: SBOM carries no document signature (integrity attestation recommended)",
             "methods": [
               "EXAMINE"
             ],
@@ -377,7 +377,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[BSI-AI] System-Level readiness: no producer/supplier of the AI system is declared",
+            "description": "\\[BSI-AI\\] System-Level readiness: no producer/supplier of the AI system is declared",
             "methods": [
               "EXAMINE"
             ],
@@ -418,7 +418,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[BSI-AI] System-Level readiness: AI-system data-flow / usage / input-output description is not declared (no SBOM field carries it today)",
+            "description": "\\[BSI-AI\\] System-Level readiness: AI-system data-flow / usage / input-output description is not declared (no SBOM field carries it today)",
             "methods": [
               "EXAMINE"
             ],
@@ -459,7 +459,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[BSI-AI] Model identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): sentiment-classifier",
+            "description": "\\[BSI-AI\\] Model identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): sentiment-classifier",
             "methods": [
               "EXAMINE"
             ],
@@ -505,7 +505,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[BSI-AI] Model license readiness: 1 component(s) declare no license: sentiment-classifier",
+            "description": "\\[BSI-AI\\] Model license readiness: 1 component(s) declare no license: sentiment-classifier",
             "methods": [
               "EXAMINE"
             ],
@@ -551,7 +551,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[BSI-AI] Dataset identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): product-reviews-1M",
+            "description": "\\[BSI-AI\\] Dataset identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): product-reviews-1M",
             "methods": [
               "EXAMINE"
             ],
@@ -597,7 +597,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[BSI-AI] Dataset hash value readiness: 1 component(s) carry no hash value: product-reviews-1M",
+            "description": "\\[BSI-AI\\] Dataset hash value readiness: 1 component(s) carry no hash value: product-reviews-1M",
             "methods": [
               "EXAMINE"
             ],
@@ -643,7 +643,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[BSI-AI] Dataset license readiness: 1 component(s) declare no license: product-reviews-1M",
+            "description": "\\[BSI-AI\\] Dataset license readiness: 1 component(s) declare no license: product-reviews-1M",
             "methods": [
               "EXAMINE"
             ],
@@ -689,7 +689,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[BSI-AI] Provenance & intended use readiness: 1 component(s) declare no provenance / intended-use: product-reviews-1M",
+            "description": "\\[BSI-AI\\] Provenance & intended use readiness: 1 component(s) declare no provenance / intended-use: product-reviews-1M",
             "methods": [
               "EXAMINE"
             ],
@@ -735,7 +735,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[BSI-AI] Infrastructure readiness: no ML component links to its runtime / framework dependencies (no dependency edge or BOM/HBOM reference)",
+            "description": "\\[BSI-AI\\] Infrastructure readiness: no ML component links to its runtime / framework dependencies (no dependency edge or BOM/HBOM reference)",
             "methods": [
               "EXAMINE"
             ],
@@ -776,7 +776,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[BSI-AI] Security readiness: no AI-specific security controls are declared (no SBOM field carries them today)",
+            "description": "\\[BSI-AI\\] Security readiness: no AI-specific security controls are declared (no SBOM field carries them today)",
             "methods": [
               "EXAMINE"
             ],
@@ -817,7 +817,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[BSI-AI] Security readiness: no exploitability reference is declared (no SBOM field carries it today)",
+            "description": "\\[BSI-AI\\] Security readiness: no exploitability reference is declared (no SBOM field carries it today)",
             "methods": [
               "EXAMINE"
             ],

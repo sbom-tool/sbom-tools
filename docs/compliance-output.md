@@ -170,13 +170,24 @@ sbom-tools validate sbom.json --standard ntia -o oscal-json --as-of 2026-10-12T0
 | `results[].observations[]` | One per violation, the evidence its finding relates to, typed `discovery`, with the properties `severity`, `standard-reference`, `rule-id`, `sarif-rule-id` and, when the SBOM gives a label, `sbom-element`. |
 | `results[].observations[].subjects[]` | The SBOM document (`type: resource`), then, for a finding about a component, the component (`type: component`). |
 | `results[].local-definitions.components[]` | The components the result's observations name, titled by name and version, with OSCAL's `version` property, `component-id` (the canonical id: `component_id` in `-o json`) and `component-type` (the SBOM's own type). |
-| `back-matter.resources[0]` | The SBOM document: `type` `artifact`, `sha256` (of the SBOM bytes as read), `format`, `spec-version`, and the serial number (CycloneDX) or document namespace (SPDX) in `document-ids`. |
+| `back-matter.resources[0]` | The SBOM document: `type` `artifact`, `sha256` (of the SBOM bytes as read), `format`, `spec-version`, and the serial number (CycloneDX) or document namespace (SPDX) in `document-ids`. When that id is a URI (`urn:uuid:…`, `https://…`), it is also the resource's `rlinks[0].href`, with the SHA-256 in `hashes`. |
 
 Properties without an `ns` are OSCAL's own; every other one has the namespace
-`https://sbom.tools/ns/oscal`. SBOM text in a property value or a title has
-its line breaks replaced by spaces and its leading and trailing whitespace
-trimmed, as OSCAL's string types require; a property left with no text is
-omitted.
+`https://sbom.tools/ns/oscal`.
+
+Titles, descriptions and remarks are OSCAL markup, Markdown that OSCAL
+viewers render. Those that carry SBOM text (component and document titles,
+and the violation messages, which embed component names and SBOM values) are
+Markdown-escaped (`\_`, `\[`, `\<`, a leading `\-`, …), so a crafted value
+renders as literal text and never as a link, image, HTML tag, or a heading or
+list item of its own. Render the field as Markdown, or drop the backslash
+escapes, to read the plain text. Property values are plain strings and are
+not escaped; `sbom-element`, `version` and `component-id` carry the same SBOM
+values unescaped.
+
+SBOM text has its line breaks replaced by spaces and its leading and trailing
+whitespace trimmed, as OSCAL's string types require, and a property left
+with no text is omitted.
 
 Every UUID is a UUIDv5. The document, its results, observations and findings
 derive from the SHA-256 of the SBOM, the evaluation instant (`--as-of`, else
@@ -198,9 +209,15 @@ should note:
 - Observations gain `subjects`, results gain `local-definitions`, and the
   document gains `back-matter`. These are additions: no existing field moved
   or changed meaning.
+- Titles and descriptions that carry SBOM text are Markdown-escaped, as
+  described above. A consumer that read a description as plain text now sees
+  backslash escapes (`\[CISA 2026\]`, `TLS\_AES\_256\_GCM\_SHA384`): render it
+  as Markdown, or read the plain values from the properties.
 - A property that would have no text is omitted instead of carrying an empty
   or whitespace value, and SBOM text in property values is normalized as
   described above. Either used to make the document invalid OSCAL.
+- The SBOM document resource has an `rlink` (its serial number or namespace,
+  with the SHA-256) when that id is a URI.
 - UUIDs and timestamps are reproducible, as described above; earlier
   releases drew random UUIDs and stamped the wall clock.
 

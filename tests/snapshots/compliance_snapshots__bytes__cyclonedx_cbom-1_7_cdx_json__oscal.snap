@@ -33,6 +33,17 @@ source: tests/compliance_snapshots.rs
               "value": "1.7"
             }
           ],
+          "rlinks": [
+            {
+              "hashes": [
+                {
+                  "algorithm": "SHA-256",
+                  "value": "97b4195d754e26ef6db0406f488dfa1c08f68dd576ea51b30a4bd189170986a9"
+                }
+              ],
+              "href": "urn:uuid:b2c3d4e5-f6a7-8901-bcde-f23456789012"
+            }
+          ],
           "title": "quantum-ready-app (CycloneDX 1.7 SBOM)",
           "uuid": "651925e4-f689-56dd-88c5-af176acd93bc"
         }
@@ -64,7 +75,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "ada234fc-89a5-5ee5-9075-27f0395ac3f2"
           },
           {
-            "description": "'ML-KEM-768' quantum level 3 < 5, CNSA 2.0 requires Level 5",
+            "description": "'ML-KEM-768' quantum level 3 \\< 5, CNSA 2.0 requires Level 5",
             "related-observations": [
               {
                 "observation-uuid": "fb8829fc-dc1a-5862-a940-31f0bd69cfdb"
@@ -98,7 +109,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "576aa26b-d05c-58ae-80ba-d16564d7e4ab"
           },
           {
-            "description": "'ML-DSA-65' quantum level 3 < 5, CNSA 2.0 requires Level 5",
+            "description": "'ML-DSA-65' quantum level 3 \\< 5, CNSA 2.0 requires Level 5",
             "related-observations": [
               {
                 "observation-uuid": "97c0dc15-d17a-5150-8cdd-c9d02750e64e"
@@ -166,7 +177,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "28868e81-aeef-5565-b716-f6b8a3b55435"
           },
           {
-            "description": "'X25519-ML-KEM-768' quantum level 3 < 5, CNSA 2.0 requires Level 5",
+            "description": "'X25519-ML-KEM-768' quantum level 3 \\< 5, CNSA 2.0 requires Level 5",
             "related-observations": [
               {
                 "observation-uuid": "62d42cf7-a0cd-53f5-b203-d8fefb9de912"
@@ -217,7 +228,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "42a3c7dd-4f3a-5628-9d21-295b6836e27f"
           },
           {
-            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384_ML_KEM_768' includes non-CNSA 2.0 algorithms: X25519 + ML-KEM-768, ML-KEM-768",
+            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS\\_AES\\_256\\_GCM\\_SHA384\\_ML\\_KEM\\_768' includes non-CNSA 2.0 algorithms: X25519 + ML-KEM-768, ML-KEM-768",
             "related-observations": [
               {
                 "observation-uuid": "7ecac478-b7bd-5bcd-ba3a-f37a718bcf42"
@@ -234,7 +245,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "bca247cf-f493-544c-ae48-7342f02db0fb"
           },
           {
-            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384' includes non-CNSA 2.0 algorithms: ECDH",
+            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS\\_AES\\_256\\_GCM\\_SHA384' includes non-CNSA 2.0 algorithms: ECDH",
             "related-observations": [
               {
                 "observation-uuid": "dab3033c-715b-5fc5-a477-b2e6cd29eb7c"
@@ -412,7 +423,7 @@ source: tests/compliance_snapshots.rs
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "'ML-KEM-768' quantum level 3 < 5, CNSA 2.0 requires Level 5",
+            "description": "'ML-KEM-768' quantum level 3 \\< 5, CNSA 2.0 requires Level 5",
             "methods": [
               "EXAMINE"
             ],
@@ -514,7 +525,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "'ML-DSA-65' quantum level 3 < 5, CNSA 2.0 requires Level 5",
+            "description": "'ML-DSA-65' quantum level 3 \\< 5, CNSA 2.0 requires Level 5",
             "methods": [
               "EXAMINE"
             ],
@@ -718,7 +729,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "'X25519-ML-KEM-768' quantum level 3 < 5, CNSA 2.0 requires Level 5",
+            "description": "'X25519-ML-KEM-768' quantum level 3 \\< 5, CNSA 2.0 requires Level 5",
             "methods": [
               "EXAMINE"
             ],
@@ -871,7 +882,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384_ML_KEM_768' includes non-CNSA 2.0 algorithms: X25519 + ML-KEM-768, ML-KEM-768",
+            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS\\_AES\\_256\\_GCM\\_SHA384\\_ML\\_KEM\\_768' includes non-CNSA 2.0 algorithms: X25519 + ML-KEM-768, ML-KEM-768",
             "methods": [
               "EXAMINE"
             ],
@@ -922,7 +933,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384' includes non-CNSA 2.0 algorithms: ECDH",
+            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS\\_AES\\_256\\_GCM\\_SHA384' includes non-CNSA 2.0 algorithms: ECDH",
             "methods": [
               "EXAMINE"
             ],
@@ -1195,7 +1206,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "5c906be7-9347-580a-91e1-a8780b176154"
           },
           {
-            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384' includes broken or quantum-vulnerable algorithms: ECDH (quantum-vulnerable)",
+            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS\\_AES\\_256\\_GCM\\_SHA384' includes broken or quantum-vulnerable algorithms: ECDH (quantum-vulnerable)",
             "related-observations": [
               {
                 "observation-uuid": "b70fe4ab-87fd-5495-bb26-e25b217469fa"
@@ -1898,7 +1909,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384' includes broken or quantum-vulnerable algorithms: ECDH (quantum-vulnerable)",
+            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS\\_AES\\_256\\_GCM\\_SHA384' includes broken or quantum-vulnerable algorithms: ECDH (quantum-vulnerable)",
             "methods": [
               "EXAMINE"
             ],

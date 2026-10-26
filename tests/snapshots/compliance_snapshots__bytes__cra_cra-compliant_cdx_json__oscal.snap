@@ -33,6 +33,17 @@ source: tests/compliance_snapshots.rs
               "value": "1.6"
             }
           ],
+          "rlinks": [
+            {
+              "hashes": [
+                {
+                  "algorithm": "SHA-256",
+                  "value": "1071fc3ec39be2934a57c9b8d40aaa286f0bec8a0dd87fed65d4671b8260f2bb"
+                }
+              ],
+              "href": "urn:uuid:fc1234ab-cdef-4567-89ab-cdef01234567"
+            }
+          ],
           "title": "example-app (CycloneDX 1.6 SBOM)",
           "uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4"
         }
@@ -98,7 +109,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "4b947eea-3541-57a1-a42f-f42adf51a359"
           },
           {
-            "description": "[CRA Art. 13(7) / Annex I Part II (1)] SBOM is 269 days old; keep the documented component inventory current when components change",
+            "description": "\\[CRA Art. 13(7) / Annex I Part II (1)\\] SBOM is 269 days old; keep the documented component inventory current when components change",
             "related-observations": [
               {
                 "observation-uuid": "44efd5b3-f88f-5d85-b596-bafeb9f8b220"
@@ -115,7 +126,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "c480d6bd-6540-5ed1-8f9e-282a2048b95c"
           },
           {
-            "description": "[CRA Annex I Part II (1)] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
+            "description": "\\[CRA Annex I Part II (1)\\] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
             "related-observations": [
               {
                 "observation-uuid": "232e4b30-9a47-5949-8f3a-13210eb3d37b"
@@ -293,7 +304,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CRA Art. 13(7) / Annex I Part II (1)] SBOM is 269 days old; keep the documented component inventory current when components change",
+            "description": "\\[CRA Art. 13(7) / Annex I Part II (1)\\] SBOM is 269 days old; keep the documented component inventory current when components change",
             "methods": [
               "EXAMINE"
             ],
@@ -334,7 +345,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CRA Annex I Part II (1)] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
+            "description": "\\[CRA Annex I Part II (1)\\] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
             "methods": [
               "EXAMINE"
             ],
@@ -478,7 +489,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "1039793f-84fa-562b-b44b-effea742eb2f"
           },
           {
-            "description": "[CRA Art. 13(7) / Annex I Part II (1)] SBOM is 269 days old; keep the documented component inventory current when components change",
+            "description": "\\[CRA Art. 13(7) / Annex I Part II (1)\\] SBOM is 269 days old; keep the documented component inventory current when components change",
             "related-observations": [
               {
                 "observation-uuid": "6bed1632-5ce6-5055-8810-3bd2b1c2795d"
@@ -495,7 +506,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "303eab50-71d2-5625-ab7b-6ea487b987d1"
           },
           {
-            "description": "[CRA Annex I Part II (1)] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
+            "description": "\\[CRA Annex I Part II (1)\\] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
             "related-observations": [
               {
                 "observation-uuid": "49983ea9-77ff-572b-a5a5-2e6afb309a5c"
@@ -673,7 +684,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CRA Art. 13(7) / Annex I Part II (1)] SBOM is 269 days old; keep the documented component inventory current when components change",
+            "description": "\\[CRA Art. 13(7) / Annex I Part II (1)\\] SBOM is 269 days old; keep the documented component inventory current when components change",
             "methods": [
               "EXAMINE"
             ],
@@ -714,7 +725,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CRA Annex I Part II (1)] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
+            "description": "\\[CRA Annex I Part II (1)\\] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
             "methods": [
               "EXAMINE"
             ],

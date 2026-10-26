@@ -33,6 +33,17 @@ source: tests/compliance_snapshots.rs
               "value": "2.3"
             }
           ],
+          "rlinks": [
+            {
+              "hashes": [
+                {
+                  "algorithm": "SHA-256",
+                  "value": "112025cca042383bb7172ffe41f60033816a7f49e8be3d21de6b1955bcdb9b4e"
+                }
+              ],
+              "href": "https://example.com/test-app-1.0.0"
+            }
+          ],
           "title": "test-app (SPDX 2.3 SBOM)",
           "uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8"
         }
@@ -328,7 +339,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "534f4ee5-128b-5e78-99b2-0d0397a593c0"
           },
           {
-            "description": "[CISA FSCT 3e §2.2.2/§2.3.3] No direct dependencies of the Primary Component are identified, and no completeness declaration covers their absence — identify all static direct dependencies or declare the enumeration's completeness",
+            "description": "\\[CISA FSCT 3e §2.2.2/§2.3.3\\] No direct dependencies of the Primary Component are identified, and no completeness declaration covers their absence — identify all static direct dependencies or declare the enumeration's completeness",
             "related-observations": [
               {
                 "observation-uuid": "ed5d063e-d06c-5ab6-bd8e-dfb2c7df4ee9"
@@ -345,7 +356,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "7d719f46-acf1-57f6-8eed-af19b5972fa9"
           },
           {
-            "description": "[CISA FSCT 3e §2.2.2.3] 2/2 component(s) declare no Supplier Name (an explicit 'unknown' is a permitted last resort; silent absence is not): lodash, express",
+            "description": "\\[CISA FSCT 3e §2.2.2.3\\] 2/2 component(s) declare no Supplier Name (an explicit 'unknown' is a permitted last resort; silent absence is not): lodash, express",
             "related-observations": [
               {
                 "observation-uuid": "e878837f-d1c9-5f2c-9e12-fc234802afa3"
@@ -362,7 +373,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "9a81d228-93d3-5baa-ac60-1aa69e65c72b"
           },
           {
-            "description": "[CISA FSCT 3e §2.2.2.5] 1/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): express",
+            "description": "\\[CISA FSCT 3e §2.2.2.5\\] 1/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): express",
             "related-observations": [
               {
                 "observation-uuid": "e3660acb-753a-5863-8587-4f7cd5086109"
@@ -379,7 +390,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "f09ea2c7-5be5-5d7d-a2f8-1f93627d9091"
           },
           {
-            "description": "[CISA FSCT 3e §2.2.2.4] 2/2 component(s) declare fewer than two globally unique identifier kinds (PURL/CPE/SWHID/SWID) — list as many as are available (heuristic threshold; profile policy): lodash, express",
+            "description": "\\[CISA FSCT 3e §2.2.2.4\\] 2/2 component(s) declare fewer than two globally unique identifier kinds (PURL/CPE/SWHID/SWID) — list as many as are available (heuristic threshold; profile policy): lodash, express",
             "related-observations": [
               {
                 "observation-uuid": "533d84eb-ca2d-54b2-b5dc-13d171b41cb8"
@@ -396,7 +407,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "088e6bb5-7411-5892-8d36-fdb8b0ec1edb"
           },
           {
-            "description": "[CISA FSCT 3e §2.2.2.6.4] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate)",
+            "description": "\\[CISA FSCT 3e §2.2.2.6.4\\] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate)",
             "related-observations": [
               {
                 "observation-uuid": "62f16653-5544-579d-a7df-15016613a890"
@@ -413,7 +424,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "e05493c3-b5d5-5193-9dd8-d4b7a7a015ec"
           },
           {
-            "description": "[CISA FSCT 3e §2.2.2/§2.2.2.6] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC_LINK / RUNTIME_DEPENDENCY_OF / PROVIDED_DEPENDENCY_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies",
+            "description": "\\[CISA FSCT 3e §2.2.2/§2.2.2.6\\] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC\\_LINK / RUNTIME\\_DEPENDENCY\\_OF / PROVIDED\\_DEPENDENCY\\_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies",
             "related-observations": [
               {
                 "observation-uuid": "3881b69c-21d7-50c6-9c95-4b66c16edda7"
@@ -433,7 +444,7 @@ source: tests/compliance_snapshots.rs
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA FSCT 3e §2.2.2/§2.3.3] No direct dependencies of the Primary Component are identified, and no completeness declaration covers their absence — identify all static direct dependencies or declare the enumeration's completeness",
+            "description": "\\[CISA FSCT 3e §2.2.2/§2.3.3\\] No direct dependencies of the Primary Component are identified, and no completeness declaration covers their absence — identify all static direct dependencies or declare the enumeration's completeness",
             "methods": [
               "EXAMINE"
             ],
@@ -474,7 +485,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA FSCT 3e §2.2.2.3] 2/2 component(s) declare no Supplier Name (an explicit 'unknown' is a permitted last resort; silent absence is not): lodash, express",
+            "description": "\\[CISA FSCT 3e §2.2.2.3\\] 2/2 component(s) declare no Supplier Name (an explicit 'unknown' is a permitted last resort; silent absence is not): lodash, express",
             "methods": [
               "EXAMINE"
             ],
@@ -515,7 +526,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA FSCT 3e §2.2.2.5] 1/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): express",
+            "description": "\\[CISA FSCT 3e §2.2.2.5\\] 1/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): express",
             "methods": [
               "EXAMINE"
             ],
@@ -556,7 +567,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA FSCT 3e §2.2.2.4] 2/2 component(s) declare fewer than two globally unique identifier kinds (PURL/CPE/SWHID/SWID) — list as many as are available (heuristic threshold; profile policy): lodash, express",
+            "description": "\\[CISA FSCT 3e §2.2.2.4\\] 2/2 component(s) declare fewer than two globally unique identifier kinds (PURL/CPE/SWHID/SWID) — list as many as are available (heuristic threshold; profile policy): lodash, express",
             "methods": [
               "EXAMINE"
             ],
@@ -597,7 +608,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA FSCT 3e §2.2.2.6.4] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate)",
+            "description": "\\[CISA FSCT 3e §2.2.2.6.4\\] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate)",
             "methods": [
               "EXAMINE"
             ],
@@ -638,7 +649,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA FSCT 3e §2.2.2/§2.2.2.6] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC_LINK / RUNTIME_DEPENDENCY_OF / PROVIDED_DEPENDENCY_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies",
+            "description": "\\[CISA FSCT 3e §2.2.2/§2.2.2.6\\] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC\\_LINK / RUNTIME\\_DEPENDENCY\\_OF / PROVIDED\\_DEPENDENCY\\_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies",
             "methods": [
               "EXAMINE"
             ],
