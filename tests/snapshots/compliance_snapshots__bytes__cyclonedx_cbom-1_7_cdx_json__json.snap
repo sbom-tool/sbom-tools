@@ -142,12 +142,12 @@ source: tests/compliance_snapshots.rs
       {
         "severity": "Error",
         "category": "CryptographyInfo",
-        "message": "'X25519-ML-KEM-768' is a hybrid combiner whose component algorithms cannot be identified, so it cannot be shown to be on the CNSA 2.0 allowlist",
+        "message": "'X25519-ML-KEM-768' uses the hybrid X25519 + ML-KEM-768, which CNSA 2.0 does not approve: ML-KEM-768 is not ML-KEM-1024, and X25519 is not a CNSA 1.0 algorithm (ECDH or ECDSA over P-384, or RSA or DH of 3072 bits or more)",
         "element": "X25519-ML-KEM-768",
         "component_id": "crypto/algorithm/hybrid-kem",
-        "requirement": "CNSA 2.0: algorithm identification",
-        "rule_id": "SBOM-CNSA2-ALG-UNKNOWN",
-        "sarif_rule_id": "SBOM-CNSA2-ALG-UNKNOWN",
+        "requirement": "CNSA 2.0 KEM",
+        "rule_id": "SBOM-CNSA2-ALG-003",
+        "sarif_rule_id": "SBOM-CNSA2-ALG-003",
         "standard_refs": [
           {
             "standard": "Cnsa2",
@@ -180,7 +180,7 @@ source: tests/compliance_snapshots.rs
       {
         "severity": "Error",
         "category": "CryptographyInfo",
-        "message": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384_ML_KEM_768' includes non-CNSA 2.0 algorithms: ML-KEM-768",
+        "message": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384_ML_KEM_768' includes non-CNSA 2.0 algorithms: X25519 + ML-KEM-768, ML-KEM-768",
         "element": "TLS 1.3 (PQC Hybrid)",
         "component_id": "crypto/protocol/tls13-pqc",
         "requirement": "CNSA 2.0 Protocol",
@@ -214,28 +214,9 @@ source: tests/compliance_snapshots.rs
         ],
         "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
         "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
-      },
-      {
-        "severity": "Error",
-        "category": "CryptographyInfo",
-        "message": "Protocol 'TLS 1.3 (PQC Hybrid)' has crypto references that cannot be resolved or classified: crypto/algorithm/hybrid-kem; they cannot be shown to be on the CNSA 2.0 allowlist",
-        "element": "TLS 1.3 (PQC Hybrid)",
-        "component_id": "crypto/protocol/tls13-pqc",
-        "requirement": "CNSA 2.0: protocol algorithm identification",
-        "rule_id": "SBOM-CNSA2-PROTO-UNKNOWN",
-        "sarif_rule_id": "SBOM-CNSA2-PROTO-UNKNOWN",
-        "standard_refs": [
-          {
-            "standard": "Cnsa2",
-            "id": "CNSA 2.0",
-            "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
-          }
-        ],
-        "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
-        "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
       }
     ],
-    "error_count": 12,
+    "error_count": 11,
     "warning_count": 0,
     "info_count": 0,
     "applicability": {
@@ -393,16 +374,21 @@ source: tests/compliance_snapshots.rs
       {
         "severity": "Info",
         "category": "CryptographyInfo",
-        "message": "'X25519-ML-KEM-768' is a hybrid PQC combiner — good migration practice",
+        "message": "'X25519-ML-KEM-768' is a PQ/T hybrid (X25519 + ML-KEM-768) whose post-quantum part is NIST-approved (FIPS 203); SP 800-227 §4.6.2 approves the key combination",
         "element": "X25519-ML-KEM-768",
         "component_id": "crypto/algorithm/hybrid-kem",
-        "requirement": "IR 8547: recommended transition",
+        "requirement": "SP 800-227 / IR 8547: PQ/T hybrid",
         "rule_id": "SBOM-PQC-010",
         "sarif_rule_id": "SBOM-PQC-010",
         "standard_refs": [
           {
             "standard": "NistPqc",
-            "id": "FIPS 203/204/205",
+            "id": "SP 800-227",
+            "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+          },
+          {
+            "standard": "NistPqc",
+            "id": "IR 8547 ipd",
             "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
           }
         ],
@@ -475,29 +461,10 @@ source: tests/compliance_snapshots.rs
         ],
         "remediation": "Disable SSL and TLS versions below 1.2 (SP 800-52 Rev. 2) and remove broken (SP 800-131A) or quantum-vulnerable (IR 8547) algorithms from negotiated cipher suites and IKEv2 transforms.",
         "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-      },
-      {
-        "severity": "Warning",
-        "category": "CryptographyInfo",
-        "message": "Protocol 'TLS 1.3 (PQC Hybrid)' has crypto evidence that cannot be resolved or classified: crypto/algorithm/hybrid-kem; unable to verify PQC readiness",
-        "element": "TLS 1.3 (PQC Hybrid)",
-        "component_id": "crypto/protocol/tls13-pqc",
-        "requirement": "IR 8547: protocol algorithm identification",
-        "rule_id": "SBOM-PQC-PROTO-UNKNOWN",
-        "sarif_rule_id": "SBOM-PQC-PROTO-UNKNOWN",
-        "standard_refs": [
-          {
-            "standard": "NistPqc",
-            "id": "IR 8547 ipd",
-            "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-          }
-        ],
-        "remediation": "Declare the asset's algorithm identity (algorithmFamily, OID, or a recognizable name), make bom-refs resolvable within the SBOM, and use parseable protocol versions so signature algorithms, cipher suites, and protocol references can be verified for PQC readiness.",
-        "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
       }
     ],
     "error_count": 3,
-    "warning_count": 1,
+    "warning_count": 0,
     "info_count": 7,
     "applicability": {
       "status": "applicable"

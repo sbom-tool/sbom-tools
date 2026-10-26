@@ -1,0 +1,58 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:a85cbefc-d731-430d-942f-f2ed07fc3ea6",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T00:00:00Z",
+    "authors": [
+      {
+        "name": "Example Corp",
+        "email": "sbom@example.com"
+      }
+    ],
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "crypto-scanner",
+          "version": "1.0.0"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/sig/mldsa87-ecdsa-p384",
+      "name": "id-MLDSA87-ECDSA-P384-SHA512",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "oid": "1.3.6.1.5.5.7.6.49",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "cryptoFunctions": ["sign", "verify"],
+          "nistQuantumSecurityLevel": 5
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/cert/composite-ca",
+      "name": "composite-ca",
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": {
+          "subjectName": "CN=Example Composite CA",
+          "issuerName": "CN=Example Composite CA",
+          "notValidBefore": "2026-01-01T00:00:00Z",
+          "notValidAfter": "2031-01-01T00:00:00Z",
+          "certificateFormat": "X.509",
+          "relatedCryptographicAssets": [
+            { "type": "algorithm", "ref": "crypto/sig/mldsa87-ecdsa-p384" }
+          ]
+        }
+      }
+    }
+  ]
+}

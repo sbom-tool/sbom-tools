@@ -53,7 +53,7 @@
           <classicalSecurityLevel>192</classicalSecurityLevel>
           <nistQuantumSecurityLevel>3</nistQuantumSecurityLevel>
         </algorithmProperties>
-        <oid>1.3.6.1.5.5.7.6.42</oid>
+        <oid>1.3.6.1.5.5.7.6.58</oid>
       </cryptoProperties>
     </component>
     <component type="cryptographic-asset" bom-ref="crypto/algorithm/hybrid-ecdh-ml-kem-1024">
@@ -75,7 +75,7 @@
           <classicalSecurityLevel>256</classicalSecurityLevel>
           <nistQuantumSecurityLevel>5</nistQuantumSecurityLevel>
         </algorithmProperties>
-        <oid>1.3.6.1.5.5.7.6.48</oid>
+        <oid>1.3.6.1.5.5.7.6.63</oid>
       </cryptoProperties>
     </component>
     <component type="cryptographic-asset" bom-ref="crypto/algorithm/hybrid-ecdsa-ml-dsa">
@@ -97,7 +97,7 @@
           <classicalSecurityLevel>192</classicalSecurityLevel>
           <nistQuantumSecurityLevel>3</nistQuantumSecurityLevel>
         </algorithmProperties>
-        <oid>1.3.6.1.5.5.7.6.58</oid>
+        <oid>1.3.6.1.5.5.7.6.46</oid>
       </cryptoProperties>
     </component>
     <component type="cryptographic-asset" bom-ref="crypto/algorithm/x25519">

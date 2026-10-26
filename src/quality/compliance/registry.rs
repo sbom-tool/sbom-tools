@@ -3007,12 +3007,16 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: REMEDIATION_PQC,
             advice: None,
         },
+        // A PQ/T hybrid (hybrid key exchange or composite signature) whose
+        // post-quantum part NIST approves: an approved combination (SP
+        // 800-227 §4.6.2 key combiners, IR 8547 ipd §3.2.2 composite
+        // signatures). Informational, as every check site emits it.
         "SBOM-PQC-010" => RuleMeta {
             sarif_id: "SBOM-PQC-010",
             name: "PqcHybridCombiner",
-            short_description: "NIST PQC: hybrid PQC combiner — recommended transition practice (IR 8547)",
-            default_severity: ViolationSeverity::Warning,
-            refs: &[(K::NistPqc, "FIPS 203/204/205")],
+            short_description: "NIST PQC: PQ/T hybrid with a NIST-approved post-quantum part — approved combination (SP 800-227, IR 8547)",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::NistPqc, "SP 800-227"), (K::NistPqc, "IR 8547 ipd")],
             remediation: REMEDIATION_PQC,
             advice: None,
         },

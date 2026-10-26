@@ -1127,6 +1127,13 @@ impl CycloneDxParser {
             (Ikev2TransformKind::Integ, &cdx.integ),
             (Ikev2TransformKind::Ke, &cdx.ke),
             (Ikev2TransformKind::Auth, &cdx.auth),
+            (Ikev2TransformKind::Addke1, &cdx.addke1),
+            (Ikev2TransformKind::Addke2, &cdx.addke2),
+            (Ikev2TransformKind::Addke3, &cdx.addke3),
+            (Ikev2TransformKind::Addke4, &cdx.addke4),
+            (Ikev2TransformKind::Addke5, &cdx.addke5),
+            (Ikev2TransformKind::Addke6, &cdx.addke6),
+            (Ikev2TransformKind::Addke7, &cdx.addke7),
         ];
         let transforms: Vec<Ikev2Transform> = lists
             .into_iter()
@@ -3239,6 +3246,23 @@ struct CdxIkev2TransformTypes {
     /// CycloneDX 1.7.
     #[serde(default)]
     auth: Vec<CdxIkev2Transform>,
+    /// RFC 9370 additional key exchanges ADDKE1–ADDKE7 (Transform Types
+    /// 6–12). CycloneDX 1.7 has no field for them, so they are read from
+    /// keys named after the IANA abbreviations, shaped like `ke`.
+    #[serde(default)]
+    addke1: Vec<CdxIkev2Transform>,
+    #[serde(default)]
+    addke2: Vec<CdxIkev2Transform>,
+    #[serde(default)]
+    addke3: Vec<CdxIkev2Transform>,
+    #[serde(default)]
+    addke4: Vec<CdxIkev2Transform>,
+    #[serde(default)]
+    addke5: Vec<CdxIkev2Transform>,
+    #[serde(default)]
+    addke6: Vec<CdxIkev2Transform>,
+    #[serde(default)]
+    addke7: Vec<CdxIkev2Transform>,
 }
 
 /// One IKEv2 transform entry. CycloneDX 1.6 gives a bare bom-ref string
@@ -4483,6 +4507,63 @@ mod tests {
         assert_eq!(ike.auth, ["sig"]);
         assert_eq!(ike.transforms[0].key_length, Some(128));
         assert_eq!(ike.transforms[2].group, Some(37));
+    }
+
+    /// RFC 9370 additional key exchanges have no CycloneDX 1.7 field; they
+    /// are read from `addke1`…`addke7`, shaped like `ke`, in JSON and XML
+    /// alike, into the typed transforms only — never into the KE list.
+    #[test]
+    fn ikev2_additional_key_exchanges_json_and_xml() {
+        let json = parse_json(
+            r#"{"bomFormat":"CycloneDX","specVersion":"1.7","components":[
+                {"type":"cryptographic-asset","name":"ipsec","cryptoProperties":{
+                    "assetType":"protocol","protocolProperties":{"type":"ikev2",
+                    "ikev2TransformTypes":{"ke":[{"group":20}],
+                        "addke1":[{"group":37},{"group":0}],"addke3":["kem-ref"]}}}}]}"#,
+        );
+        let xml = parse(
+            r#"<?xml version="1.0"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.7" version="1">
+  <components>
+    <component type="cryptographic-asset" bom-ref="p">
+      <name>ipsec</name>
+      <cryptoProperties><assetType>protocol</assetType>
+        <protocolProperties><type>ikev2</type>
+          <ikev2TransformTypes>
+            <ke><group>20</group></ke>
+            <addke1><group>37</group></addke1>
+            <addke1><group>0</group></addke1>
+            <addke3>kem-ref</addke3>
+          </ikev2TransformTypes>
+        </protocolProperties>
+      </cryptoProperties>
+    </component>
+  </components>
+</bom>"#,
+        );
+        for sbom in [&json, &xml] {
+            let ike = component(sbom, "ipsec")
+                .crypto_properties
+                .as_ref()
+                .and_then(|cp| cp.protocol_properties.as_ref())
+                .and_then(|p| p.ikev2_transform_types.clone())
+                .expect("IKEv2 transform types");
+            let transforms: Vec<_> = ike
+                .transforms
+                .iter()
+                .map(|t| (t.kind, t.group, t.algorithm_ref.as_deref()))
+                .collect();
+            assert_eq!(
+                transforms,
+                [
+                    (Ikev2TransformKind::Ke, Some(20), None),
+                    (Ikev2TransformKind::Addke1, Some(37), None),
+                    (Ikev2TransformKind::Addke1, Some(0), None),
+                    (Ikev2TransformKind::Addke3, None, Some("kem-ref")),
+                ]
+            );
+            assert_eq!(ike.ke, ["ECDH-secp384r1"]);
+        }
     }
 
     /// In XML, `relatedCryptographicAssets` wraps repeated

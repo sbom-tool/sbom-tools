@@ -138,7 +138,8 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.crypto_mut("algo-aes256").algorithm_mut().quantum_level = None),
             base(),
         ),
-        // Unclassifiable with a declared (non-zero) level: cannot verify.
+        // Unclassifiable with a declared (non-zero) level: cannot verify. So
+        // is a hybrid combiner whose parts cannot be identified.
         RuleEntry::tested(
             "SBOM-PQC-ALG-UNKNOWN",
             Sev::Warning,
@@ -147,11 +148,21 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     .push(CryptoAssetFixture::algorithm("algo-x", "acme-cipher").quantum_level(3));
             }),
             base(),
+        )
+        .with_firing(
+            "hybrid combiner of unidentifiable algorithms",
+            Sev::Warning,
+            broken(|s| {
+                s.crypto_assets.push(
+                    CryptoAssetFixture::algorithm("algo-hybrid", "acme-hybrid-kem")
+                        .primitive("combiner")
+                        .quantum_level(3),
+                );
+            }),
         ),
-        // A hybrid combiner is good migration practice (Info), even when its
-        // component algorithms cannot be named. The registry documents a
-        // Warning default, but the only push site emits Info.
-        RuleEntry::tested_departing(
+        // A PQ/T hybrid whose post-quantum part NIST approves is an approved
+        // combination (Info): SP 800-227 §4.6.2 for key establishment.
+        RuleEntry::tested(
             "SBOM-PQC-010",
             Sev::Info,
             broken(|s| {

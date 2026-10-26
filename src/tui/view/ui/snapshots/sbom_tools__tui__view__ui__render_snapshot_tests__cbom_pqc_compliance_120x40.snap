@@ -8,7 +8,7 @@ sbom-tools  VIEW  │ quantum-ready-app │ CycloneDX 1.7 │ [CBOM]
 
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ┌ PQC Compliance ──────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ CNSA 2.0: NON-COMPLIANT (12 errors: 9 algo + 3 other)   │   NIST PQC: NON-COMPLIANT (3 errors: 2 algo + 1 other)     │
+│ CNSA 2.0: NON-COMPLIANT (11 errors: 9 algo + 2 other)   │   NIST PQC: NON-COMPLIANT (3 errors: 2 algo + 1 other)     │
 │ Errors on certificates/keys/protocols have no row below — press e to export the full report                          │
 │ Algorithm-by-Algorithm Assessment                                                                                    │
 └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
