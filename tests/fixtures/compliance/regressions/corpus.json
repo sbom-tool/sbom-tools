@@ -1047,6 +1047,36 @@
       ]
     },
     {
+      "id": "v7-tls13-grease",
+      "review_id": "V7",
+      "fixture": "v7-tls13-grease.cdx.json",
+      "note": "A client-side capture offering GREASE values (RFC 8701 §2: groups 0x0A0A and 64250 = 0xFAFA, signature scheme 0x1A1A) beside MLKEM1024 and mldsa87. No peer negotiates a GREASE value (RFC 8701 §3.2), so they are skipped, neither judged nor unverifiable, and the classical-free suite passes both profiles.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-CNSA2-PROTO-002",
+              "SBOM-CNSA2-PROTO-UNKNOWN"
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-PQC-PROTO-002",
+              "SBOM-PQC-PROTO-UNKNOWN"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": "v8-ikev2-rfc9370-p384-mlkem1024",
       "review_id": "V8",
       "fixture": "v8-ikev2-rfc9370-p384-mlkem1024.cdx.json",

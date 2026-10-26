@@ -1071,7 +1071,8 @@ pub struct TlsRegistryEntry {
 /// ASCII case, or by its codepoint in decimal or in hexadecimal with a
 /// `0x` prefix: "x25519", "29" and "0x001D" are the same group. Returns
 /// `None` for a name the registry does not hold and for an unassigned,
-/// reserved (including GREASE) or private-use codepoint.
+/// reserved (including GREASE, see [`is_tls_grease`]) or private-use
+/// codepoint.
 #[must_use]
 pub fn tls_named_group(id: &str) -> Option<TlsRegistryEntry> {
     tls_registry_entry(TLS_SUPPORTED_GROUPS, id)
@@ -1082,10 +1083,24 @@ pub fn tls_named_group(id: &str) -> Option<TlsRegistryEntry> {
 /// name ignoring ASCII case, or by its codepoint in decimal or in
 /// hexadecimal with a `0x` prefix: "ecdsa_secp256r1_sha256", "1027" and
 /// "0x0403" are the same scheme. Returns `None` for a name the registry
-/// does not hold and for an unassigned, reserved or private-use codepoint.
+/// does not hold and for an unassigned, reserved (including GREASE, see
+/// [`is_tls_grease`]) or private-use codepoint.
 #[must_use]
 pub fn tls_signature_scheme(id: &str) -> Option<TlsRegistryEntry> {
     tls_registry_entry(TLS_SIGNATURE_SCHEMES, id)
+}
+
+/// Whether a TLS named group or signature scheme entry is a GREASE value:
+/// one of the codepoints 0x0A0A, 0x1A1A, …, 0xFAFA that RFC 8701 §2
+/// reserves in both the named-group and the signature-algorithm spaces,
+/// written in decimal or in hexadecimal with a `0x` prefix. Clients
+/// advertise them so that peers keep tolerating unknown values, and no
+/// peer ever negotiates one (RFC 8701 §3.2), so a GREASE value offers
+/// nothing to judge. It is no registry entry: [`tls_named_group`] and
+/// [`tls_signature_scheme`] return `None` for it.
+#[must_use]
+pub fn is_tls_grease(id: &str) -> bool {
+    tls_codepoint(id.trim()).is_some_and(|cp| cp >> 8 == cp & 0xFF && cp & 0x0F == 0x0A)
 }
 
 /// The entry of `registry` that `id` names by codepoint or by name.

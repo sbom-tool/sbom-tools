@@ -11,7 +11,7 @@ mod clock;
 
 use clock::checker;
 use sbom_tools::model::{
-    AlgorithmClass, NormalizedSbom, PqcKind, TlsRegistryEntry, tls_named_group,
+    AlgorithmClass, NormalizedSbom, PqcKind, TlsRegistryEntry, is_tls_grease, tls_named_group,
     tls_signature_scheme,
 };
 use sbom_tools::parse_sbom_str;
@@ -258,6 +258,42 @@ fn tls_codepoints_are_decimal_or_0x_hexadecimal() {
     assert!(tls_signature_scheme("0x0402").is_none());
 }
 
+/// The GREASE values RFC 8701 §2 reserves for named groups and signature
+/// algorithms, as the RFC lists them.
+const GREASE: [u16; 16] = [
+    0x0A0A, 0x1A1A, 0x2A2A, 0x3A3A, 0x4A4A, 0x5A5A, 0x6A6A, 0x7A7A, 0x8A8A, 0x9A9A, 0xAAAA, 0xBABA,
+    0xCACA, 0xDADA, 0xEAEA, 0xFAFA,
+];
+
+/// GREASE values are recognized by codepoint, in decimal or hexadecimal,
+/// and by nothing else; none is a registry entry.
+#[test]
+fn grease_values_are_recognized_by_codepoint() {
+    for codepoint in 0..=u16::MAX {
+        let grease = GREASE.contains(&codepoint);
+        for spelling in [
+            codepoint.to_string(),
+            format!("0x{codepoint:04X}"),
+            format!("0x{codepoint:x}"),
+            format!(" 0X{codepoint:04x} "),
+        ] {
+            assert_eq!(is_tls_grease(&spelling), grease, "{spelling:?}");
+            if grease {
+                assert!(
+                    tls_named_group(&spelling).is_none()
+                        && tls_signature_scheme(&spelling).is_none(),
+                    "GREASE {spelling} is no registry entry"
+                );
+            }
+        }
+    }
+    for spelling in [
+        "", "GREASE", "grease", "0x", "0x0A0A0", "0x0A0A,", "x0A0A", "2570.0", "+2570",
+    ] {
+        assert!(!is_tls_grease(spelling), "{spelling:?}");
+    }
+}
+
 /// What a registry entry is classified as: its label and class.
 fn classified(entry: Option<TlsRegistryEntry>) -> (String, AlgorithmClass) {
     let cls = entry
@@ -467,7 +503,8 @@ const PQC_UNKNOWN: (&str, ViolationSeverity) =
 /// while NIST PQC accepts every ML-KEM and ML-DSA parameter set, SLH-DSA
 /// and the hybrids by their ML-KEM part. One classical alternative among
 /// approved ones fails. An entry the registry does not identify, and an
-/// obsolete Kyber draft group, cannot be verified.
+/// obsolete Kyber draft group, cannot be verified. A GREASE value is
+/// skipped: no peer negotiates it.
 #[test]
 fn offered_tls_groups_and_signature_schemes_are_judged_one_by_one() {
     type Case<'a> = (
@@ -551,7 +588,20 @@ fn offered_tls_groups_and_signature_schemes_are_judged_one_by_one() {
         ),
         (&["25498"], &[], &[CNSA_UNKNOWN], &[PQC_UNKNOWN]),
         (&["acme-group"], &[], &[CNSA_UNKNOWN], &[PQC_UNKNOWN]),
-        (&["0x0A0A"], &[], &[CNSA_UNKNOWN], &[PQC_UNKNOWN]),
+        // GREASE values are skipped, never judged nor unverifiable.
+        (&["0x0A0A"], &["0x1A1A"], &[], &[]),
+        (
+            &["0x0A0A", "MLKEM1024", "64250"],
+            &["2570", "mldsa87", "0xFAFA"],
+            &[],
+            &[],
+        ),
+        (
+            &["0xCACA", "x25519"],
+            &[],
+            &[CNSA_PROTO_002],
+            &[PQC_PROTO_002],
+        ),
         (&[], &["0x0402"], &[CNSA_UNKNOWN], &[PQC_UNKNOWN]),
         (
             &[],
@@ -651,10 +701,10 @@ fn tls_findings_name_the_field_and_the_algorithms() {
     );
 
     // An unverifiable entry is named as written, with the obsolete draft a
-    // codepoint stands for.
+    // codepoint stands for; the GREASE values are not listed.
     let drafts = suite(
-        &["X25519Kyber768Draft00", "25497", "acme-group"],
-        &["0x0402"],
+        &["X25519Kyber768Draft00", "25497", "0xFAFA", "acme-group"],
+        &["0x0402", "6682"],
     );
     let cnsa = checker(ComplianceLevel::Cnsa2).check(&drafts);
     assert_eq!(

@@ -26,7 +26,7 @@ use crate::model::{
     CipherSuite, Component, CryptoAssetType, HybridParts, Ikev2Transform, Ikev2TransformKind,
     Ikev2TransformTypes, NormalizedSbomIndex, PqcKind, ProtocolProperties, ProtocolType,
     TlsRegistryEntry, classify_algorithm, classify_algorithm_names,
-    classify_algorithm_names_guarded, ikev2_key_exchange_group, tls_named_group,
+    classify_algorithm_names_guarded, ikev2_key_exchange_group, is_tls_grease, tls_named_group,
     tls_signature_scheme, worst_classification,
 };
 
@@ -291,10 +291,13 @@ type TlsOffer = Result<AlgorithmClassification, String>;
 /// alternative a peer may negotiate — is judged on its own, by the
 /// algorithm its IANA registry entry stands for. An entry the registry does
 /// not identify, or that names an obsolete pre-standard draft (the Kyber
-/// groups, which are not ML-KEM), is reported as unverifiable.
+/// groups, which are not ML-KEM), is reported as unverifiable. A GREASE
+/// value (RFC 8701 §2) is skipped: no peer negotiates it, so it is no
+/// alternative at all.
 fn tls_offers(suite: &CipherSuite) -> [(&'static str, Vec<TlsOffer>); 2] {
     let judge = |kind: &str, ids: &[String], lookup: fn(&str) -> Option<TlsRegistryEntry>| {
         ids.iter()
+            .filter(|id| !is_tls_grease(id))
             .map(|id| match lookup(id) {
                 Some(TlsRegistryEntry {
                     classification: Some(cls),
