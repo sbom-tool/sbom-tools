@@ -1217,6 +1217,8 @@ impl CycloneDxParser {
                     name: s.name.clone(),
                     algorithms: s.algorithms.clone().unwrap_or_default(),
                     identifiers: s.identifiers.clone().unwrap_or_default(),
+                    tls_groups: s.tls_groups.clone().unwrap_or_default(),
+                    tls_signature_schemes: s.tls_signature_schemes.clone().unwrap_or_default(),
                 })
                 .collect();
         }
@@ -3230,6 +3232,10 @@ struct CdxCipherSuite {
     name: Option<String>,
     algorithms: Option<Vec<String>>,
     identifiers: Option<Vec<String>>,
+    /// CycloneDX 1.7: TLS named groups, by IANA name or codepoint.
+    tls_groups: Option<Vec<String>>,
+    /// CycloneDX 1.7: TLS signature schemes, by IANA name or codepoint.
+    tls_signature_schemes: Option<Vec<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -4160,14 +4166,19 @@ struct CdxCipherSuitesXml {
     cipher_suite: Vec<CdxCipherSuiteXml>,
 }
 
-/// cipherSuite element for XML format: the algorithm references and the
-/// identifiers are wrapped (`<algorithms><algorithm>`,
-/// `<identifiers><identifier>`).
+/// cipherSuite element for XML format: the algorithm references, the
+/// identifiers and the 1.7 TLS groups and signature schemes are wrapped
+/// (`<algorithms><algorithm>`, `<identifiers><identifier>`,
+/// `<tlsGroups><group>`, `<tlsSignatureSchemes><signatureScheme>`).
 #[derive(Debug, Deserialize)]
 struct CdxCipherSuiteXml {
     name: Option<String>,
     algorithms: Option<CdxCipherSuiteAlgorithmsXml>,
     identifiers: Option<CdxCipherSuiteIdentifiersXml>,
+    #[serde(rename = "tlsGroups")]
+    tls_groups: Option<CdxTlsGroupsXml>,
+    #[serde(rename = "tlsSignatureSchemes")]
+    tls_signature_schemes: Option<CdxTlsSignatureSchemesXml>,
 }
 
 impl From<CdxCipherSuiteXml> for CdxCipherSuite {
@@ -4176,8 +4187,25 @@ impl From<CdxCipherSuiteXml> for CdxCipherSuite {
             name: xml.name,
             algorithms: xml.algorithms.map(|w| w.algorithm),
             identifiers: xml.identifiers.map(|w| w.identifier),
+            tls_groups: xml.tls_groups.map(|w| w.group),
+            tls_signature_schemes: xml.tls_signature_schemes.map(|w| w.signature_scheme),
         }
     }
+}
+
+/// `<tlsGroups>` wrapper element of an XML cipher suite (CycloneDX 1.7)
+#[derive(Debug, Deserialize)]
+struct CdxTlsGroupsXml {
+    #[serde(rename = "group", default)]
+    group: Vec<String>,
+}
+
+/// `<tlsSignatureSchemes>` wrapper element of an XML cipher suite
+/// (CycloneDX 1.7)
+#[derive(Debug, Deserialize)]
+struct CdxTlsSignatureSchemesXml {
+    #[serde(rename = "signatureScheme", default)]
+    signature_scheme: Vec<String>,
 }
 
 /// `<algorithms>` wrapper element of an XML cipher suite
@@ -4737,10 +4765,11 @@ mod tests {
     }
 
     /// XML `protocolProperties` read like JSON: `<cipherSuites>` wraps
-    /// `<cipherSuite>` elements whose algorithm references and identifiers
-    /// are wrapped too, and the `cryptoRefArray` references repeat as
-    /// `<cryptoRef>`, merged with the 1.7 related assets. Suites used to come
-    /// out as one empty suite and the references were dropped.
+    /// `<cipherSuite>` elements whose algorithm references, identifiers and
+    /// 1.7 TLS groups and signature schemes are wrapped too, and the
+    /// `cryptoRefArray` references repeat as `<cryptoRef>`, merged with the
+    /// 1.7 related assets. Suites used to come out as one empty suite and
+    /// the references were dropped.
     #[test]
     fn xml_protocol_properties_read_like_json() {
         let xml = parse(
@@ -4758,6 +4787,8 @@ mod tests {
               <name>TLS_AES_256_GCM_SHA384</name>
               <algorithms><algorithm>aes</algorithm><algorithm>sha384</algorithm></algorithms>
               <identifiers><identifier>0x13</identifier><identifier>0x02</identifier></identifiers>
+              <tlsGroups><group>MLKEM1024</group><group>0x11EC</group></tlsGroups>
+              <tlsSignatureSchemes><signatureScheme>mldsa87</signatureScheme></tlsSignatureSchemes>
             </cipherSuite>
             <cipherSuite>
               <name>TLS_CHACHA20_POLY1305_SHA256</name>
@@ -4783,7 +4814,8 @@ mod tests {
                  "cryptoProperties":{"assetType":"protocol","protocolProperties":{
                     "type":"tls","version":"1.3","cipherSuites":[
                         {"name":"TLS_AES_256_GCM_SHA384","algorithms":["aes","sha384"],
-                         "identifiers":["0x13","0x02"]},
+                         "identifiers":["0x13","0x02"],"tlsGroups":["MLKEM1024","0x11EC"],
+                         "tlsSignatureSchemes":["mldsa87"]},
                         {"name":"TLS_CHACHA20_POLY1305_SHA256","algorithms":["chacha"]}],
                     "cryptoRefArray":["cert","key"],
                     "relatedCryptographicAssets":[{"type":"publicKey","ref":"key"},
@@ -4806,11 +4838,13 @@ mod tests {
                     name: Some("TLS_AES_256_GCM_SHA384".to_string()),
                     algorithms: vec!["aes".to_string(), "sha384".to_string()],
                     identifiers: vec!["0x13".to_string(), "0x02".to_string()],
+                    tls_groups: vec!["MLKEM1024".to_string(), "0x11EC".to_string()],
+                    tls_signature_schemes: vec!["mldsa87".to_string()],
                 },
                 CipherSuite {
                     name: Some("TLS_CHACHA20_POLY1305_SHA256".to_string()),
                     algorithms: vec!["chacha".to_string()],
-                    identifiers: Vec::new(),
+                    ..CipherSuite::default()
                 },
             ]
         );
@@ -4854,6 +4888,10 @@ mod tests {
             <cipherSuite/>
             <cipherSuite>
               <name>S</name><algorithms/><identifiers>0x13</identifiers><extra>1</extra>
+              <tlsGroups>x25519</tlsGroups><tlsSignatureSchemes/>
+            </cipherSuite>
+            <cipherSuite>
+              <tlsGroups><note>vendor note</note><group>x25519</group></tlsGroups>
             </cipherSuite>
           </cipherSuites>
         </protocolProperties>
@@ -4882,15 +4920,14 @@ mod tests {
         assert_eq!(
             suites,
             [
-                CipherSuite {
-                    name: None,
-                    algorithms: Vec::new(),
-                    identifiers: Vec::new(),
-                },
+                CipherSuite::default(),
                 CipherSuite {
                     name: Some("S".to_string()),
-                    algorithms: Vec::new(),
-                    identifiers: Vec::new(),
+                    ..CipherSuite::default()
+                },
+                CipherSuite {
+                    tls_groups: vec!["x25519".to_string()],
+                    ..CipherSuite::default()
                 },
             ]
         );
@@ -4979,6 +5016,8 @@ mod tests {
         );
         let proto = cp("tls").protocol_properties.expect("protocol properties");
         assert_eq!(proto.cipher_suites[0].identifiers, ["0x13", "0x02"]);
+        assert_eq!(proto.cipher_suites[0].tls_groups, ["x25519mlkem768"]);
+        assert_eq!(proto.cipher_suites[0].tls_signature_schemes, ["mldsa87"]);
         assert_eq!(proto.crypto_ref_array, ["cert"]);
     }
 

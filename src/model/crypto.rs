@@ -643,7 +643,7 @@ impl ProtocolProperties {
 // ── Supporting Structs ──────────────────────────────────────────────────
 
 /// A cipher suite within a protocol.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CipherSuite {
     /// Cipher suite name (e.g., `"TLS_AES_256_GCM_SHA384"`).
     pub name: Option<String>,
@@ -651,6 +651,17 @@ pub struct CipherSuite {
     pub algorithms: Vec<String>,
     /// IANA cipher suite identifiers (e.g., `["0x13", "0x02"]`).
     pub identifiers: Vec<String>,
+    /// TLS named groups offered with the suite (CycloneDX 1.7 `tlsGroups`),
+    /// as declared: IANA "TLS Supported Groups" names or codepoints (e.g.,
+    /// `["x25519", "X25519MLKEM768"]`). See [`tls_named_group`].
+    #[serde(default)]
+    pub tls_groups: Vec<String>,
+    /// TLS signature schemes offered with the suite (CycloneDX 1.7
+    /// `tlsSignatureSchemes`), as declared: IANA "TLS SignatureScheme" names
+    /// or codepoints (e.g., `["ecdsa_secp384r1_sha384", "mldsa87"]`). See
+    /// [`tls_signature_scheme`].
+    #[serde(default)]
+    pub tls_signature_schemes: Vec<String>,
 }
 
 /// IKEv2 transform types for IPsec protocols (RFC 9370).
@@ -3283,6 +3294,7 @@ mod tests {
                 name: Some("TLS_AES_256_GCM_SHA384".to_string()),
                 algorithms: vec!["algo/aes-256-gcm".to_string()],
                 identifiers: vec!["0x13".to_string(), "0x02".to_string()],
+                ..CipherSuite::default()
             }]);
 
         assert_eq!(proto.protocol_type, ProtocolType::Tls);
