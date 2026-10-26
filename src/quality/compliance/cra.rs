@@ -701,7 +701,7 @@ impl ComplianceChecker {
                     element: None,
                     requirement: "CRA Annex I Part II (4): SPDX 3.0 Security profile conformance"
                         .to_string(),
-                    rule_id: "SBOM-CRA-VULN-METADATA",
+                    rule_id: "SBOM-CRA-VULN-METADATA-PROFILE",
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),

@@ -788,19 +788,35 @@ const ADVICE_VULN_SEVERITY: FormatAdvice = FormatAdvice {
     },
 };
 
-/// CRA vulnerability metadata, plus the SPDX 3.0 Security profile declaration the same rule checks.
-const ADVICE_CRA_VULN_METADATA: FormatAdvice = FormatAdvice {
+/// A fixed version or fix description on each vulnerability remediation.
+const ADVICE_VULN_REMEDIATION: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "set vulnerabilities[].ratings[] on each entry with a severity or CVSS score, and a recommendation describing the fix.",
-        field: Some("vulnerabilities[].ratings[]"),
+        text: "set vulnerabilities[].recommendation on each entry to the fix (a fixed version or the steps to take).",
+        field: Some("vulnerabilities[].recommendation"),
     },
     spdx2: FieldAdvice {
         text: "documents in this format carry no vulnerability data, so these entries were attached by enrichment.",
         field: None,
     },
     spdx3: FieldAdvice {
-        text: "add a security_CvssV3VulnAssessmentRelationship (security_score, security_vectorString) for each vulnerability, and list security in the SpdxDocument's profileConformance.",
-        field: Some("security_score"),
+        text: "remediations are not read from this format, so these entries were attached by enrichment.",
+        field: None,
+    },
+};
+
+/// SPDX 3.0 Security profile declaration; the check runs on SPDX 3.0 only.
+const ADVICE_SECURITY_PROFILE: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "the check does not run on CycloneDX input.",
+        field: None,
+    },
+    spdx2: FieldAdvice {
+        text: "the check does not run on SPDX 2.x input.",
+        field: None,
+    },
+    spdx3: FieldAdvice {
+        text: "list security in the SpdxDocument's profileConformance.",
+        field: Some("profileConformance"),
     },
 };
 
@@ -1365,14 +1381,35 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // Vulnerability severity/remediation metadata. Anchored to the
         // Annex I Part II (4) duty to share information about fixed
         // vulnerabilities (description, impacts, severity, remediation).
+        // One finding per vulnerability of a component, told apart by the
+        // vulnerability id (`finding_detail`). The remediation-detail and
+        // SPDX 3.0 profile checks report under their own ids below.
         "SBOM-CRA-VULN-METADATA" => RuleMeta {
             sarif_id: "SBOM-CRA-VULN-METADATA",
             name: "CraVulnerabilityMetadata",
             short_description: "CRA Annex I Part II (4): Vulnerability severity and remediation metadata completeness",
             default_severity: ViolationSeverity::Warning,
             refs: &[(ANNEX, "Annex I Part II (4)")],
-            remediation: "Give every vulnerability entry a severity or CVSS score, and give each remediation a fixed version or a description (Annex I Part II (4)).",
-            advice: Some(&ADVICE_CRA_VULN_METADATA),
+            remediation: "Give every vulnerability entry a severity or CVSS score (Annex I Part II (4)).",
+            advice: Some(&ADVICE_VULN_SEVERITY),
+        },
+        "SBOM-CRA-VULN-METADATA-REMEDIATION" => RuleMeta {
+            sarif_id: "SBOM-CRA-VULN-METADATA",
+            name: "CraVulnerabilityMetadata",
+            short_description: "CRA Annex I Part II (4): Vulnerability severity and remediation metadata completeness",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(ANNEX, "Annex I Part II (4)")],
+            remediation: "Give every vulnerability remediation a fixed version or a description of the fix (Annex I Part II (4)).",
+            advice: Some(&ADVICE_VULN_REMEDIATION),
+        },
+        "SBOM-CRA-VULN-METADATA-PROFILE" => RuleMeta {
+            sarif_id: "SBOM-CRA-VULN-METADATA",
+            name: "CraVulnerabilityMetadata",
+            short_description: "CRA Annex I Part II (4): Vulnerability severity and remediation metadata completeness",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(ANNEX, "Annex I Part II (4)")],
+            remediation: "Declare SPDX 3.0 Security profile conformance when the document carries vulnerabilities, so the vulnerability information it conveys is complete (Annex I Part II (4)).",
+            advice: Some(&ADVICE_SECURITY_PROFILE),
         },
         // Coordinated vulnerability disclosure policy. Formerly cited
         // Art. 13(7) (systematic documentation); the CVD-policy duty is
@@ -3713,6 +3750,8 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-CRA-ART-13-5",
     "SBOM-CRA-ART-13-17-CONTACT",
     "SBOM-CRA-VULN-METADATA",
+    "SBOM-CRA-VULN-METADATA-REMEDIATION",
+    "SBOM-CRA-VULN-METADATA-PROFILE",
     "SBOM-CRA-CVD-POLICY",
     "SBOM-CRA-ART-13-8",
     "SBOM-CRA-VULN-STATEMENT",

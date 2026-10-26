@@ -1253,6 +1253,8 @@ impl ComplianceChecker {
             return;
         }
 
+        // One finding per vulnerability of a component: the vulnerability id
+        // tells a component's findings apart.
         for (comp, vuln) in sbom.all_vulnerabilities() {
             if vuln.severity.is_none() && vuln.cvss.is_empty() {
                 violations.push(Violation {
@@ -1270,7 +1272,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
-                    finding_detail: None,
+                    finding_detail: Some(vuln.id.clone()),
                 });
             }
 
@@ -1287,12 +1289,12 @@ impl ComplianceChecker {
                         ),
                         element: Some(comp.name.clone()),
                         requirement: "CRA Annex I Part II (4): Remediation detail".to_string(),
-                        rule_id: "SBOM-CRA-VULN-METADATA",
+                        rule_id: "SBOM-CRA-VULN-METADATA-REMEDIATION",
                         component_id: Some(comp.canonical_id.value().to_string()),
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
-                        finding_detail: None,
+                        finding_detail: Some(vuln.id.clone()),
                     });
             }
         }
