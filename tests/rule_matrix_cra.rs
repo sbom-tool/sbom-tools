@@ -271,6 +271,20 @@ fn with_product_ref(s: &mut SbomFixture, ref_type: &str, url: &str) {
         .push((ref_type.to_string(), url.to_string()));
 }
 
+/// Declare a VEX `analysis.response` on the baseline's embedded
+/// vulnerability (CVE-2026-1111), with an optional remediation text member
+/// (`recommendation` or `workaround`) as `(member, text)`.
+fn with_response(s: &mut SbomFixture, response: &str, text: Option<(&str, &str)>) {
+    let mut extra = serde_json::json!({
+        "analysis": { "state": "exploitable", "response": [response] },
+    });
+    if let Some((member, value)) = text {
+        extra[member] = serde_json::json!(value);
+    }
+    s.vulnerability_extras
+        .push(("CVE-2026-1111".to_string(), extra));
+}
+
 /// Add an external reference of `ref_type` carrying the SHA-256 of the
 /// referenced document to the product component.
 fn with_hashed_product_ref(s: &mut SbomFixture, ref_type: &str, url: &str) {
@@ -864,7 +878,10 @@ fn cra_phase2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     let mut entries = manufacturer_rows();
     entries.extend([
         // An unrated vulnerability lacks the severity Annex I Part II (4)
-        // asks for.
+        // asks for. A declared remediation (analysis.response update or
+        // workaround_available) with no recommendation or workaround text
+        // gives users nothing to apply: an Info. CycloneDX has no
+        // fixed-version field, so the text is the only detail.
         RuleEntry::tested(
             "SBOM-CRA-VULN-METADATA",
             Sev::Warning,
@@ -877,12 +894,39 @@ fn cra_phase2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             }),
             base(),
         )
-        .with_skipped_case(
-            "remediation without fix details (Info site)",
-            "unreachable from CycloneDX: the parser builds every remediation \
-             from vulnerability.recommendation with description = Some(text), \
-             so the fixed_version.is_none() && description.is_none() branch of \
-             check_vulnerability_metadata never holds",
+        .with_departing_firing(
+            "update response without a recommendation",
+            Sev::Info,
+            broken(|s| with_response(s, "update", None)),
+        )
+        .with_departing_firing(
+            "workaround_available response without a workaround text",
+            Sev::Info,
+            broken(|s| with_response(s, "workaround_available", None)),
+        )
+        .with_silent(
+            "update response with a recommendation",
+            broken(|s| {
+                with_response(
+                    s,
+                    "update",
+                    Some(("recommendation", "Upgrade libalpha to 1.2.4")),
+                );
+            }),
+        )
+        .with_silent(
+            "workaround_available response with a workaround text",
+            broken(|s| {
+                with_response(
+                    s,
+                    "workaround_available",
+                    Some(("workaround", "Disable the libalpha XML parser")),
+                );
+            }),
+        )
+        .with_silent(
+            "will_not_fix response declares no remediation",
+            broken(|s| with_response(s, "will_not_fix", None)),
         ),
         // Phase 2 also asks for lifecycle evidence; an approaching-EOL
         // component (EOL enrichment) is an Info at the same rule id.

@@ -1158,6 +1158,25 @@
           }
         }
       ]
+    },
+    {
+      "id": "b5-remediation-without-details",
+      "review_id": "B5",
+      "fixture": "b5-remediation-without-details.cdx.json",
+      "note": "The vulnerability declares the response update but gives no recommendation or workaround, so users learn neither the fixed version nor how to remediate. The parser built remediation records only from recommendation text, which made the CRA Phase 2 remediation-detail Info unreachable from CycloneDX.",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-VULN-METADATA",
+                "severity": "info"
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

@@ -1399,14 +1399,8 @@ impl CycloneDxParser {
             vuln_ref.cwes = cwes.iter().map(|c| format!("CWE-{c}")).collect();
         }
 
-        // Parse remediation
-        if let Some(recommendation) = &vuln.recommendation {
-            vuln_ref.remediation = Some(Remediation {
-                remediation_type: RemediationType::Upgrade,
-                description: Some(recommendation.clone()),
-                fixed_version: None,
-            });
-        }
+        // Parse remediation (see `cdx_remediation`)
+        vuln_ref.remediation = cdx_remediation(vuln);
 
         // Parse analysis (VEX)
         let vex_status = vuln.analysis.as_ref().map(|analysis| {
@@ -1671,6 +1665,67 @@ fn map_cdx_external_ref_type(ref_type: &str) -> ExternalRefType {
         "citation" => ExternalRefType::Citation,
         other => ExternalRefType::Other(other.to_string()),
     }
+}
+
+/// The remediation a CycloneDX vulnerability declares, if any.
+///
+/// CycloneDX carries remediation details only as free text —
+/// `recommendation` ("how the vulnerability can be remediated or
+/// mitigated") and, since 1.5, `workaround` — and declares the remediation
+/// route in `analysis.response`. It has no fixed-version field: an
+/// `affects[].versions[]` entry with status `unaffected` may also be a
+/// version that predates the flaw, so it is not read as "fixed in", and
+/// `fixed_version` stays unset.
+///
+/// - The description is the `recommendation`, else the `workaround` text;
+///   blank text counts as none.
+/// - The type follows the declared response: `update` ("update to a
+///   different revision or release") is an upgrade, `workaround_available`
+///   a workaround. Without either, a recommendation keeps its long-standing
+///   upgrade type and a lone workaround text is a workaround.
+/// - A response of `update` or `workaround_available` with neither text is
+///   a remediation without details, which CRA Phase 2 reports
+///   (SBOM-CRA-VULN-METADATA: Annex I Part II (4) asks for information that
+///   helps users remediate). `rollback` has no remediation type in the
+///   model, and `can_not_fix` / `will_not_fix` state that no remediation
+///   will come, so they create no record.
+fn cdx_remediation(vuln: &CdxVulnerability) -> Option<Remediation> {
+    let responses = vuln
+        .analysis
+        .as_ref()
+        .and_then(|a| a.response.as_deref())
+        .unwrap_or_default();
+    let declared = |response: &str| responses.iter().any(|r| r == response);
+    let declared_type = if declared("update") {
+        Some(RemediationType::Upgrade)
+    } else if declared("workaround_available") {
+        Some(RemediationType::Workaround)
+    } else {
+        None
+    };
+    let text = |value: &Option<String>| {
+        value
+            .as_deref()
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .map(str::to_string)
+    };
+    let (default_type, description) = match (text(&vuln.recommendation), text(&vuln.workaround)) {
+        (Some(recommendation), _) => (RemediationType::Upgrade, Some(recommendation)),
+        (None, Some(workaround)) => (RemediationType::Workaround, Some(workaround)),
+        (None, None) => {
+            return declared_type.map(|remediation_type| Remediation {
+                remediation_type,
+                description: None,
+                fixed_version: None,
+            });
+        }
+    };
+    Some(Remediation {
+        remediation_type: declared_type.unwrap_or(default_type),
+        description,
+        fixed_version: None,
+    })
 }
 
 /// Risk ordering for component-level VEX resolution: higher = more actionable.
@@ -3454,6 +3509,9 @@ struct CdxVulnerability {
     references: Option<Vec<CdxVulnReference>>,
     description: Option<String>,
     recommendation: Option<String>,
+    /// CycloneDX 1.5+: a temporary bypass that reduces the vulnerability's
+    /// likelihood or impact.
+    workaround: Option<String>,
     ratings: Option<Vec<CdxRating>>,
     cwes: Option<Vec<u32>>,
     affects: Option<Vec<CdxAffects>>,
@@ -4305,6 +4363,7 @@ struct CdxVulnerabilityXml {
     references: Option<CdxVulnReferencesXml>,
     description: Option<String>,
     recommendation: Option<String>,
+    workaround: Option<String>,
     ratings: Option<CdxRatingsXml>,
     cwes: Option<CdxCwesXml>,
     affects: Option<CdxAffectsXml>,
@@ -4378,6 +4437,7 @@ impl From<CdxVulnerabilityXml> for CdxVulnerability {
             references: xml.references.map(|r| r.reference),
             description: xml.description,
             recommendation: xml.recommendation,
+            workaround: xml.workaround,
             ratings: xml.ratings.map(|r| r.rating),
             cwes: xml.cwes.map(|c| c.cwe),
             affects: xml.affects.map(|a| {
@@ -6598,6 +6658,138 @@ mod tests {
             let service_refs = &component(sbom, "api").external_refs;
             assert_eq!(service_refs[0].ref_type, ExternalRefType::Certification);
             assert_eq!(service_refs[0].hashes.len(), 1, "{label}: service hashes");
+        }
+    }
+
+    /// The remediation record follows the vulnerability's remediation text
+    /// (`recommendation`, else `workaround`) and its declared
+    /// `analysis.response`, in JSON and XML alike. No CycloneDX field is a
+    /// fixed version, so none is ever set.
+    #[test]
+    fn remediation_follows_text_and_declared_response() {
+        // (id, recommendation, workaround, responses, expected type and description)
+        type Case = (
+            &'static str,
+            Option<&'static str>,
+            Option<&'static str>,
+            &'static [&'static str],
+            Option<(RemediationType, Option<&'static str>)>,
+        );
+        let cases: &[Case] = &[
+            (
+                "CVE-1",
+                Some("Upgrade to 2.0"),
+                None,
+                &[],
+                Some((RemediationType::Upgrade, Some("Upgrade to 2.0"))),
+            ),
+            (
+                "CVE-2",
+                None,
+                Some("Disable the parser"),
+                &[],
+                Some((RemediationType::Workaround, Some("Disable the parser"))),
+            ),
+            (
+                "CVE-3",
+                Some("Apply the vendor mitigation"),
+                Some("Disable the parser"),
+                &["workaround_available"],
+                Some((
+                    RemediationType::Workaround,
+                    Some("Apply the vendor mitigation"),
+                )),
+            ),
+            (
+                "CVE-4",
+                None,
+                None,
+                &["update"],
+                Some((RemediationType::Upgrade, None)),
+            ),
+            (
+                "CVE-5",
+                None,
+                Some("  "),
+                &["workaround_available"],
+                Some((RemediationType::Workaround, None)),
+            ),
+            ("CVE-6", None, None, &["will_not_fix", "can_not_fix"], None),
+            ("CVE-7", None, None, &["rollback"], None),
+            ("CVE-8", None, None, &[], None),
+        ];
+        let json_vulns: Vec<serde_json::Value> = cases
+            .iter()
+            .map(|(id, recommendation, workaround, responses, _)| {
+                let mut v = serde_json::json!({ "id": id, "affects": [{ "ref": "lib" }] });
+                if let Some(text) = recommendation {
+                    v["recommendation"] = serde_json::json!(text);
+                }
+                if let Some(text) = workaround {
+                    v["workaround"] = serde_json::json!(text);
+                }
+                if !responses.is_empty() {
+                    v["analysis"] =
+                        serde_json::json!({ "state": "exploitable", "response": responses });
+                }
+                v
+            })
+            .collect();
+        let json = serde_json::json!({
+            "bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
+            "components": [{ "type": "library", "bom-ref": "lib", "name": "lib", "version": "1.0" }],
+            "vulnerabilities": json_vulns,
+        })
+        .to_string();
+        let xml_vulns: String = cases
+            .iter()
+            .map(|(id, recommendation, workaround, responses, _)| {
+                let recommendation = recommendation
+                    .map(|t| format!("<recommendation>{t}</recommendation>"))
+                    .unwrap_or_default();
+                let workaround = workaround
+                    .map(|t| format!("<workaround>{t}</workaround>"))
+                    .unwrap_or_default();
+                let analysis = if responses.is_empty() {
+                    String::new()
+                } else {
+                    let responses: String = responses
+                        .iter()
+                        .map(|r| format!("<response>{r}</response>"))
+                        .collect();
+                    format!("<analysis><state>exploitable</state><responses>{responses}</responses></analysis>")
+                };
+                format!(
+                    "<vulnerability><id>{id}</id>{recommendation}{workaround}{analysis}\
+                     <affects><target><ref>lib</ref></target></affects></vulnerability>"
+                )
+            })
+            .collect();
+        let xml = format!(
+            r#"<?xml version="1.0"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" version="1">
+  <components><component type="library" bom-ref="lib"><name>lib</name><version>1.0</version></component></components>
+  <vulnerabilities>{xml_vulns}</vulnerabilities>
+</bom>"#
+        );
+        let from_json = CycloneDxParser::new()
+            .parse_str(&json)
+            .expect("JSON should parse");
+        let from_xml = parse(&xml);
+        for (label, sbom) in [("JSON", &from_json), ("XML", &from_xml)] {
+            let lib = component(sbom, "lib");
+            for (id, _, _, _, expected) in cases {
+                let vuln = lib
+                    .vulnerabilities
+                    .iter()
+                    .find(|v| v.id == *id)
+                    .unwrap_or_else(|| panic!("{label}: {id} attached"));
+                let got = vuln.remediation.as_ref().map(|r| {
+                    assert_eq!(r.fixed_version, None, "{label} {id}: no fixed version");
+                    (r.remediation_type.clone(), r.description.as_deref())
+                });
+                assert_eq!(got, *expected, "{label} {id}");
+            }
         }
     }
 

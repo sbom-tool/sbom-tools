@@ -687,6 +687,9 @@ pub struct SbomFixture {
     /// bom-ref)`. An empty severity renders no `ratings` at all (an unrated
     /// vulnerability).
     pub vulnerabilities: Vec<(String, String, String)>,
+    /// Extra members merged into the rendered `vulnerabilities[]` entry with
+    /// the given id, e.g. `("CVE-…", json!({ "recommendation": "…" }))`.
+    pub vulnerability_extras: Vec<(String, serde_json::Value)>,
     /// `compositions[0].aggregate` (e.g. `complete`, `incomplete`).
     pub completeness: Option<String>,
     /// Top-level JSF `signature` as `(algorithm, value)`.
@@ -710,6 +713,7 @@ impl Default for SbomFixture {
             crypto_assets: Vec::new(),
             dependencies: Vec::new(),
             vulnerabilities: Vec::new(),
+            vulnerability_extras: Vec::new(),
             completeness: None,
             signature: None,
             sidecar: None,
@@ -835,6 +839,17 @@ impl SbomFixture {
                         "affects".into(),
                         serde_json::json!([{ "ref": affected_ref }]),
                     );
+                    for (extra_id, extra) in &self.vulnerability_extras {
+                        if extra_id != id {
+                            continue;
+                        }
+                        let members = extra
+                            .as_object()
+                            .expect("vulnerability extras are JSON objects");
+                        for (key, value) in members {
+                            v.insert(key.clone(), value.clone());
+                        }
+                    }
                     serde_json::Value::Object(v)
                 })
                 .collect();

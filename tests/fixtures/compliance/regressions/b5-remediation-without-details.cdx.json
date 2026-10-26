@@ -1,0 +1,89 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:5e7a9c1b-2d4f-4a6b-8c0e-1f3a5b7d9e2c",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T00:00:00Z",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "example-generator",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    "manufacturer": {
+      "name": "Example Corp"
+    },
+    "component": {
+      "type": "application",
+      "bom-ref": "gateway",
+      "name": "gateway",
+      "version": "3.1.0",
+      "purl": "pkg:generic/example/gateway@3.1.0",
+      "supplier": {
+        "name": "Example Corp"
+      }
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "libfoo",
+      "name": "libfoo",
+      "version": "2.1.0",
+      "purl": "pkg:npm/libfoo@2.1.0",
+      "supplier": {
+        "name": "Foo Maintainers"
+      },
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1f2e3d4c5b6a79881f2e3d4c5b6a79881f2e3d4c5b6a79881f2e3d4c5b6a7988"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "gateway",
+      "dependsOn": [
+        "libfoo"
+      ]
+    },
+    {
+      "ref": "libfoo",
+      "dependsOn": []
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2026-31337",
+      "ratings": [
+        {
+          "severity": "high"
+        }
+      ],
+      "analysis": {
+        "state": "exploitable",
+        "response": [
+          "update"
+        ]
+      },
+      "affects": [
+        {
+          "ref": "libfoo"
+        }
+      ]
+    }
+  ]
+}
