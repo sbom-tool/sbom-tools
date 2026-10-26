@@ -286,9 +286,11 @@ jq '{
 ```
 
 The fixture averages 7.22 across the five sbomqs categories
-(`NTIA-minimum-elements`, `Quality`, `Semantic`, `Sharing`, `Structural`).
-`-o summary` prints the same model as a compact 0-10 category table beneath
-the native 0-100 report.
+(`NTIA-minimum-elements`, `Quality`, `Semantic`, `Sharing`, `Structural`);
+the sbomqs run to compare it with is `sbomqs score --legacy --category
+ntia,semantic,quality,sharing,structural`, and `engine` names the sbomqs
+release the formulas are pinned to (v2.1.2). `-o summary` prints the same
+model as a compact 0-10 category table beneath the native 0-100 report.
 
 The two scales are not convertible. The compat emitter recomputes every
 feature with sbomqs' own formulas instead of rescaling the native score, and

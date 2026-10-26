@@ -161,7 +161,7 @@ flowchart TD
     I1 --> Z
 ```
 
-`sbomqs_compat` recomputes sbomqs v2.0.11 feature scores straight from the
+`sbomqs_compat` recomputes sbomqs v2.1.2 feature scores straight from the
 NormalizedSbom (plus the raw document text); it never reads `QualityReport`, so
 the 0-10 table and the 0-100 score are independent computations, not a rescale.
 

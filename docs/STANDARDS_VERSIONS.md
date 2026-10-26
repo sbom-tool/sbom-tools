@@ -83,33 +83,80 @@ requirements before a rule changes).
 
 ## sbomqs interoperability (`quality -o sbomqs-json`)
 
-**Parity target: interlynk-io/sbomqs v2.0.11** (2026-07-10; all formulas below
-verified against the fetched v2.0.11 sources). sbomqs is a tool, not a
-standard; this view exists so its 0-10 quality scores can be compared with
-this tool's output side by side. Implemented in
-`src/reports/sbomqs_compat.rs`, surfaced as:
+**Parity target: interlynk-io/sbomqs v2.1.2** (released 2026-09-11; every
+formula below verified on 2026-10-26 against the v2.1.2 sources,
+<https://github.com/interlynk-io/sbomqs/tree/v2.1.2>, and against the
+v2.0.11 → v2.1.2 diff, <https://github.com/interlynk-io/sbomqs/compare/v2.0.11...v2.1.2>).
+v2.1.3 (2026-10-14) is the latest release; it changes nothing the v1 engine
+computes (its changes are the NTIA 2026 compliance and v2-profile mappings,
+SPDX 3 SWHID/OmniBOR content identifiers, dependency bumps and CI;
+<https://github.com/interlynk-io/sbomqs/compare/v2.1.2...v2.1.3>), so the
+pin stays at v2.1.2. sbomqs is a tool,
+not a standard; this view exists so its 0-10 quality scores can be compared
+with this tool's output side by side. Implemented in
+`src/reports/sbomqs_compat.rs` (with `sbomqs_compat/expression.rs`, a port
+of the go-spdx v2.7.0 expression reading sbomqs applies to every license
+string, and `sbomqs_compat/license_data.rs`, the license classes generated
+from the license files sbomqs v2.1.2 embeds), surfaced as:
 
 - `sbom-tools quality <sbom> -o sbomqs-json` — a report in the exact
-  `sbomqs score --json` schema (`pkg/reporter/json.go` field names/types:
-  `run_id`, `timestamp`, `creation_info{name,version,scoring_engine_version,`
-  `vendor}`, `files[]{file_name,spec,spec_version,file_format,avg_score,`
+  `sbomqs score --legacy --json` schema (`pkg/reporter/json.go` field
+  names/types: `run_id`, `timestamp`,
+  `creation_info{name,version,scoring_engine_version,vendor}`,
+  `files[]{file_name,spec,spec_version,file_format,avg_score,`
   `num_components,creation_time,gen_tool_name,gen_tool_version,`
-  `scores[]{category,feature,score,max_score,description,ignored}}`).
-  `creation_info` honestly identifies **sbom-tools** — it never impersonates
-  the sbomqs binary, so divergent scores cannot be mis-attributed to
-  Interlynk.
-- A compact "sbomqs-Comparable Scores" table appended to the plain-text
-  `quality` summary (per-category 0-10 rollups plus `avg_score` and the
-  sbomqs-bracket grade).
+  `scores[]{category,feature,score,max_score,description,ignored}}`). Since
+  sbomqs 2.0 a plain `sbomqs score --json` runs the v2 engine, whose report
+  has a different shape; `--legacy` selects the v1 engine this view
+  mirrors. `creation_info` honestly identifies **sbom-tools** — it never
+  impersonates the sbomqs binary, so divergent scores cannot be
+  mis-attributed to Interlynk — and its `scoring_engine_version` names the
+  pinned release (`parity target sbomqs v2.1.2 engine 7`).
+- A compact "sbomqs-Comparable Scores (sbomqs v2.1.2 score model, 0-10)"
+  table appended to the plain-text `quality` summary (per-category 0-10
+  rollups plus `avg_score` and the sbomqs-bracket grade). `quality --help`
+  names the pinned release too.
 
-Phase 1 emits the sbomqs **legacy (v1) engine's** five default categories
-(23 features). The v2 engine (8 weighted categories, `score` default since
-sbomqs 2.0) and the per-standard profile scores (`ntia`, `ntia-2025`,
-`bsi-v1.1/v2.0/v2.1`, …) are documented here for a later phase; note that
-sbomqs v2.0.11's `ntia-2025` profile tracks the superseded CISA **2025
-draft** — the successor guidance was finalized on 2026-07-29 as the **2026
-Minimum Elements for a SBOM** (CISA/NSA/FBI et al.), so do not describe the
-CISA elements as "not yet final".
+The view emits the 23 features of the v1 engine's five documented
+categories (NTIA-minimum-elements, Semantic, Quality, Sharing, Structural).
+A default `sbomqs score --legacy` run also scores the `bsi-v1.1` and
+`bsi-v2.0` categories (`pkg/scorer/scorer.go AllScores`, 59 entries) and
+averages over all of them, so this view's `avg_score` is the one of
+`sbomqs score --legacy --category ntia,semantic,quality,sharing,structural`
+(sbomqs `docs/specs/LEGACY-V1-QUIRKS.md` §2 and `docs/commands/score.md`,
+<https://github.com/interlynk-io/sbomqs/blob/v2.1.2/docs/specs/LEGACY-V1-QUIRKS.md>).
+The v2 engine and its per-standard profiles are out of scope. v2.1.0 added
+a CISA 2026 Minimum Elements profile as `cisa-2026` (interlynk-io/sbomqs#745,
+#750); v2.1.1 made it the meaning of the v2 profile key `ntia` and moved the
+2021 NTIA profile to `ntia-2021` (aliases `cisa-2021`, `ntia2021`; #754),
+while `ntia-2025` still tracks the CISA 2025 draft
+(`pkg/scorer/v2/registry`); v2.1.2 made `sbomqs compliance --ntia` check
+the 2026 elements as its help already said (#760). None of that touches the
+v1 `NTIA-minimum-elements` category this view mirrors.
+
+### What changed from v2.0.11 to v2.1.2
+
+| Change (sbomqs release, PR) | Source | Effect here |
+|---|---|---|
+| `comp_with_uniq_ids` counts components with a purl or a CPE, the NTIA "Other Unique Identifiers" element, instead of a non-empty bom-ref/SPDXID (v2.1.0, #734) | `pkg/scorer/ntia.go compWithUniqIDCheck` | the feature now equals `comp_with_any_vuln_lookup_id` |
+| A license is free for any use when its AboutCode category is Public Domain, which `CC0-1.0` is (v2.1.0, #732); before, no SPDX-listed id could be | `pkg/licenses/license.go overlayFreeAnyUseFromAboutCode`, `embed_licenses.go isFreeAnyUse` | `sbom_sharable` is 10 for a document whose every license token is free: every SPDX 2.x document with `dataLicense: CC0-1.0`; 23 SPDX ids and 20 AboutCode keys are free (`license_data::FREE_ANY_USE`) |
+| A license in AboutCode's Non-Commercial category is restrictive, and the AboutCode and SPDX license data were refreshed (v2.1.0, #732) | `embed_licenses.go isRestrictive`; `pkg/licenses/files/` (SPDX list revision `e4c1f27`, 733 ids) | `comp_with_restrictive_licenses` uses sbomqs' 252 restrictive SPDX ids (`license_data::RESTRICTIVE_SPDX`) instead of the `spdx` crate's copyleft flag, which missed 149 of them (EPL-2.0, MPL-2.0, CC-BY-NC-4.0, …) |
+| SPDX 3.0.x documents are scored, through a reader of their own on spdx-zen (v2.0.12, #712) | `pkg/sbom/sbom.go`, `pkg/sbom/spdx3.go` | `3.0.1` is a recognized SPDX spec version; the document half of `sbom_required_fields` is always present for SPDX 3 and a package needs a name and a supplier that is not NOASSERTION; SPDX 3 component licenses are the concluded ones only; an SPDX 3 `operatingSystem` purpose is not recognized |
+| SPDX 2.x inverse relationships are flipped (DEPENDENCY_OF, CONTAINED_BY, DESCRIBED_BY) and duplicates collapsed; DESCRIBED_BY names the primary component (v2.1.0, #744) | `pkg/sbom/spdx.go parseRelationships`, `parsePrimaryComponent` | this repo's SPDX parser already flips these, so `sbom_dependencies` and `sbom_with_primary_component` agree more often |
+| `sbom_required_fields` rewritten without a behaviour change; the 5.0 for a zero-component document stays (v2.1.0, #735) | `pkg/scorer/semantic.go` | none |
+| Grade bands: the code (`ToGrade`) is unchanged; v2.1.0 corrected the docs that listed A as 8.0-10.0 (#735) | `pkg/scorer/v2/formulae/farmulas.go`, `docs/commands/score.md` | none (this view always used the code's bands) |
+| Null entries in SPDX package, file and relationship arrays are skipped (v2.1.0, #731); case-insensitive comparisons (v2.1.2, #759) | `pkg/sbom/spdx.go`, `pkg/licenses/license.go` | none |
+
+While re-verifying, four places where this view had diverged from sbomqs
+since v2.0.11 were fixed, so their scores move too: license strings are read
+the way sbomqs' go-spdx parsing reads them (a string naming an id outside
+the SPDX list, or no valid expression, is one custom license; a `WITH`
+clause stays on its term; terms are deduplicated); an SPDX 2.x package
+contributes its concluded license, or its declared one when the concluded
+yields none; SPDX tool strings split at the last hyphen only (sbomqs
+`extractVersion`); and the primary component's dependencies count only
+targets sbomqs enumerates, while a CycloneDX `components[]` entry typed
+`service` now counts as the component sbomqs sees.
 
 ### Not convertible from the 0-100 score
 
@@ -117,10 +164,9 @@ The 0-100 `quality` score and the sbomqs 0-10 score use different category
 taxonomies, different weights, and different missing-data semantics (this
 repo renormalizes N/A categories; sbomqs keeps ignored checks in the
 `avg_score` denominator), and different grade cut lines (sbomqs `ToGrade`:
-A ≥ 9.0, B ≥ 8.0, C ≥ 7.0, D ≥ 5.0, F — source-verified; the sbomqs docs
-page saying "A = 8.0-10.0" is stale. This repo: A ≥ 90 … D ≥ 60).
-**Dividing the 0-100 score by 10 is not an sbomqs-comparable number and the
-emitter never does it** — every feature score is recomputed from the
+A ≥ 9.0, B ≥ 8.0, C ≥ 7.0, D ≥ 5.0, F otherwise. This repo: A ≥ 90 … D ≥
+60). **Dividing the 0-100 score by 10 is not an sbomqs-comparable number and
+the emitter never does it** — every feature score is recomputed from the
 normalized SBOM with sbomqs' own formulas (the emitter does not read
 `QualityReport` at all).
 
@@ -137,31 +183,45 @@ reason in `description` — never silently dropped (that would inflate
 | sbomqs feature (category) | Computed from | Fidelity |
 |---|---|---|
 | `sbom_spec` (Structural) | `DocumentMetadata.format` (both normalized formats are sbomqs-supported specs) | exact |
-| `sbom_spec_version` (Structural) | `DocumentMetadata.spec_version` vs sbomqs' recognized versions (CDX 1.0-1.7; SPDX 2.1-2.3) | exact |
-| `sbom_file_format` (Structural) | Serialization detected from the raw document text vs sbomqs' recognized formats (CDX json,xml; SPDX json,yaml,rdf,tag-value) | approximate (detection heuristic); **ignored + reason** when the raw text is unavailable (library callers) |
+| `sbom_spec_version` (Structural) | `DocumentMetadata.spec_version` vs sbomqs' recognized versions (CDX 1.0-1.7; SPDX 2.1-2.3 and 3.0.1, so an SPDX 3 document declaring `3.0` scores 0) | exact |
+| `sbom_file_format` (Structural) | Serialization detected from the raw document text vs sbomqs' recognized formats (CDX json,xml; SPDX json,yaml,rdf,tag-value) | approximate (detection heuristic; sbomqs has no SPDX RDF/XML detection path and does not score such a document); **ignored + reason** when the raw text is unavailable (library callers) |
 | `sbom_parsable` (Structural) | Always 10 — this pipeline only scores documents it parsed | exact, with the documented asymmetry that sbomqs can also score an unparsable file 0 |
 | `comp_with_name` / `comp_with_version` (NTIA) | `Component.name` / `Component.version`, proportional `10·have/total` | exact |
-| `comp_with_uniq_ids` (NTIA) | Non-empty **local id** (`identifiers.format_id`: bom-ref / SPDXID) — `compWithUniqIDCheck` semantics, NOT purl/cpe (that is the BSI variant) | exact |
-| `comp_with_supplier` (NTIA) | `Component.supplier.name`; for SPDX also the author field (this model maps the SPDX originator there, mirroring sbomqs' originator fallback) | approximate |
-| `sbom_creation_timestamp` (NTIA) | `DocumentMetadata.created` (epoch sentinel = missing/unparseable) | approximate (a document genuinely claiming 1970-01-01 reads as missing) |
+| `comp_with_uniq_ids` (NTIA) | `identifiers.purl` OR `identifiers.cpe` — the v2.1.x `compWithUniqIDCheck`, the same predicate as `comp_with_any_vuln_lookup_id` | exact for well-formed values (sbomqs drops a purl or CPE its parsers reject) |
+| `comp_with_supplier` (NTIA) | `Component.supplier.name`; for SPDX also the author field (this model maps the SPDX 2.x originator there, mirroring sbomqs' originator fallback; the SPDX 3 `originatedBy` fallback is not modeled) | approximate |
+| `sbom_creation_timestamp` (NTIA) | `DocumentMetadata.created` (epoch sentinel = missing/unparseable) | approximate (a document genuinely claiming 1970-01-01 reads as missing; sbomqs leaves the description empty when the timestamp is missing) |
 | `sbom_authors` (NTIA) | `DocumentMetadata.creators` non-empty (sbomqs counts authors **plus** tools; `creators` carries both) | exact |
-| `sbom_dependencies` (NTIA) | Binary: ≥ 1 edge from the **primary component** (verbatim `sbomWithDepedenciesCheck` — not arbitrary edges) | exact |
-| `sbom_required_fields` (Semantic) | Blended doc+package formula, quirks preserved: `!docOK → 0.0`; `docOK && all pkgs → 10.0`; else `(10 + 10·have/total)/2` (5.0 for a docOK zero-component SBOM). Doc/pkg sub-checks approximated where the model keeps less than sbomqs reads (CDX `bomFormat`/dependency-refs, SPDX `downloadLocation`/verification code are not modeled) | approximate (fractional formula exact; sub-checks approximate) |
-| `comp_with_licenses` / `comp_with_checksums` (Semantic) | `Component.licenses` (NOASSERTION/NONE excluded, as sbomqs does) / `Component.hashes`, proportional | exact |
-| `comp_valid_licenses` (Quality) | Mean over ALL components of per-component ratios `(SPDX-listed ids / total license ids)·10`; license-less components contribute 0. v1 counts **only SPDX-list membership** (`l.Spdx()`) — `LicenseRef-*`/custom ids do NOT count | approximate (expression tokenization + `spdx` crate list vs sbomqs' embedded list; `WITH` exception ids dropped) |
-| `comp_with_primary_purpose` (Quality) | `ComponentType` display string vs sbomqs' per-spec purpose lists (CDX list lacks e.g. `machine-learning-model`) | approximate (typed model defaults missing purpose to Library → over-counts) |
-| `comp_with_deprecated_licenses` / `comp_with_restrictive_licenses` (Quality) | Inverted proportional `10·(total−affected)/total`; 0.0 + "no licenses found" when the SBOM has no licenses. Deprecated = SPDX-list flag; restrictive ≈ copyleft flag (sbomqs uses AboutCode "copyleft/restricted" categories) | approximate |
-| `comp_with_any_vuln_lookup_id` / `comp_with_multi_vuln_lookup_id` (Quality) | `identifiers.purl` OR/AND `identifiers.cpe` | exact |
-| `sbom_with_creator_and_version` (Quality) | Tool creators with a digit-bearing trailing token as version (the same heuristic sbomqs applies to SPDX tool strings); zero tools replicate sbomqs' `0/0 → NaN → 0.0` coercion | approximate |
+| `sbom_dependencies` (NTIA) | Binary: ≥ 1 edge from the **primary component** to a component sbomqs enumerates (verbatim `sbomWithDepedenciesCheck` and `GetDirectDependencies` — not arbitrary edges, not edges to SPDX files or CycloneDX services) | approximate (the edges follow this repo's SPDX relationship mapping: sbomqs counts every relationship from the primary but DESCRIBES and flips only DEPENDENCY_OF, CONTAINED_BY and DESCRIBED_BY; for SPDX 3 sbomqs takes the primary from a DESCRIBES relationship, this repo from `rootElement`) |
+| `sbom_required_fields` (Semantic) | Blended doc+package formula, quirks preserved: `!docOK → 0.0`; `docOK && all pkgs → 10.0`; else `(10 + 10·have/total)/2` (5.0 for a docOK zero-component SBOM). SPDX 3: docOK always, pkgOK = name and a non-NOASSERTION supplier. Doc/pkg sub-checks approximated where the model keeps less than sbomqs reads (CDX `bomFormat`/dependency-refs, SPDX 2.x `downloadLocation`/verification code are not modeled) | approximate (fractional formula exact; sub-checks approximate) |
+| `comp_with_licenses` / `comp_with_checksums` (Semantic) | The component's licenses as each sbomqs reader takes them (CycloneDX every license choice; SPDX 2.x the concluded license, else the declared one; SPDX 3 the concluded only), NOASSERTION/NONE excluded / `Component.hashes`, proportional | exact |
+| `comp_valid_licenses` (Quality) | Mean over ALL components of per-component ratios `(SPDX-listed terms / total terms)·10`; license-less components contribute 0. v1 counts **only SPDX-list membership** (`l.Spdx()`) — `LicenseRef-*`, custom strings, `X WITH Y` and `X+` terms do NOT count | approximate (license strings read like sbomqs, but against the `spdx` crate's SPDX list 3.29.0, 747 ids, not sbomqs' 733-id list: 13 recent ids count here and not there) |
+| `comp_with_primary_purpose` (Quality) | `ComponentType` display string vs sbomqs' per-spec purpose lists (CDX list lacks e.g. `machine-learning-model`); an SPDX 3 operating system never counts | approximate (typed model defaults missing purpose to Library → over-counts; the SPDX 2.3 spelling `OPERATING_SYSTEM` counts here, not in sbomqs) |
+| `comp_with_deprecated_licenses` / `comp_with_restrictive_licenses` (Quality) | Inverted proportional `10·(total−affected)/total`; 0.0 + "no licenses found" when the SBOM has no licenses. Deprecated = SPDX-list flag (the `spdx` crate's 32 deprecated ids are sbomqs' 32); restrictive = sbomqs v2.1.2's AboutCode classes (Copyleft, Copyleft Limited, Free Restricted, Non-Commercial) for SPDX-listed ids | approximate (AboutCode-only `LicenseRef-scancode-*` ids — 572 of them restrictive in sbomqs — are never restrictive or deprecated here) |
+| `comp_with_any_vuln_lookup_id` / `comp_with_multi_vuln_lookup_id` (Quality) | `identifiers.purl` OR/AND `identifiers.cpe` | exact for well-formed values (sbomqs drops a purl or CPE its parsers reject) |
+| `sbom_with_creator_and_version` (Quality) | Tool creators with a version: SPDX `name-version` split at the last hyphen, the version holding a digit (sbomqs `extractVersion`); CycloneDX `"name version"` (the parser's join of the two fields) split at the last space; zero tools replicate sbomqs' `0/0 → NaN → 0.0` coercion | exact for SPDX; approximate for CycloneDX (a version without a digit, or a nameless tool) |
 | `sbom_with_primary_component` (Quality) | `primary_component_id` present | exact |
-| `sbom_sharable` (Sharing) | Quirk-faithful 0.0: sbomqs v2.0.11's vendored SPDX list carries **no** `isFreeAnyUse` flags, so every SPDX-listed document license — including `CC0-1.0` — counts non-free and the check scores 0.0 for essentially every real document. Only AboutCode "Public Domain"-category ids absent from the SPDX list would score 10 there (not replicable without its data — disclosed in the description) | exact for practical inputs; **ignored + reason** when the raw text is unavailable |
+| `sbom_sharable` (Sharing) | 10 when the document declares at least one license and every license token is free for any use (sbomqs `sharableLicenseCheck`): the SPDX 2.x `dataLicense` (JSON, tag-value), the SPDX 3 SpdxDocument `dataLicense` value as written (an IRI is one custom license, as in sbomqs), or the CycloneDX `metadata.licenses` choices (JSON, XML) | exact for practical inputs; **ignored + reason** when the raw text is unavailable |
 
 Component enumeration parity: SPDX file/snippet components and CycloneDX
-service components are excluded from every per-component denominator and
-from `num_components`, because sbomqs enumerates SPDX *packages* and CDX
-components only. Side effect: an SPDX package whose purpose is
-SOURCE/ARCHIVE/FILE is also excluded (the typed model collapses those into
-`ComponentType::File`).
+`services[]` entries are excluded from every per-component denominator,
+from `num_components` and as dependency targets, because sbomqs enumerates
+SPDX *packages* and CDX components only. A CycloneDX `components[]` entry
+counts whatever its `type` (sbomqs `walkComponents`), and an SPDX package
+whose purpose is SOURCE/ARCHIVE/FILE is a package (typed `Other(..)`, not
+`File`).
+
+### Score changes in the re-baseline (2026-10-26)
+
+Of the 129 SBOM fixtures, 89 move (`avg_score` −0.87 to +0.43) and 13 change
+sbomqs grade. Most of it is `comp_with_uniq_ids` (82 fixtures, down by up to
+10.0 where components carry bom-refs but no purl or CPE — every CBOM, AI-BOM
+and crypto regression fixture). `sbom_sharable` rises to 10.0 on the six
+SPDX 2.x fixtures (`dataLicense: CC0-1.0`). The four SPDX 3 fixtures gain
+`sbom_spec_version` and the `sbom_required_fields` document half, and lose
+declared-only licenses and space-separated tool versions. The two
+`showcase/graph-*` fixtures count their two `type: service` components
+(`comp_with_primary_purpose` 10.0 → 6.0). `showcase/fleet-v3.cdx.json`
+(`docs/USER_JOURNEYS.md`) stays at 7.22.
 
 Other categories of this repo's 0-100 pipeline map onto sbomqs territory
 only loosely (completeness → NTIA + Semantic; identifiers → the Quality

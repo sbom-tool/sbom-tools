@@ -530,8 +530,11 @@ Scores an SBOM from 0–100 using a weighted profile. Use `--min-score` to fail 
 
 The plain-text summary also appends an sbomqs-comparable 0–10 category
 table, and `-o sbomqs-json` emits a full report in the
-[sbomqs](https://github.com/interlynk-io/sbomqs) `score --json` schema
-(parity target v2.0.11) so the two tools can be compared side by side.
+[sbomqs](https://github.com/interlynk-io/sbomqs) `score --legacy --json`
+schema (parity target sbomqs v2.1.2, printed with the scores) so the two
+tools can be compared side by side. It covers the five documented legacy
+categories, so its average matches
+`sbomqs score --legacy --category ntia,semantic,quality,sharing,structural`.
 Categories that cannot be computed are emitted as `ignored` with a reason.
 The two scales are **not** convertible — the 0–10 numbers are recomputed
 per feature with sbomqs' own formulas, not the 0–100 score divided by ten.
@@ -777,7 +780,7 @@ Select with `-o` / `--output`:
 | JSON | `json` | Programmatic integration |
 | SARIF | `sarif` | CI/CD security dashboards (SARIF 2.1.0) |
 | OSCAL assessment results | `oscal-json` | OSCAL 1.2.3 validation findings for assessment tooling (`validate` only) |
-| sbomqs JSON | `sbomqs-json` | sbomqs `score --json` 0–10 scores for tool comparison (`quality` only) |
+| sbomqs JSON | `sbomqs-json` | sbomqs v2.1.2 `score --legacy --json` 0–10 scores for tool comparison (`quality` only) |
 | NDJSON | `ndjson` | Newline-delimited JSON, one record per line (streaming-friendly) |
 | Markdown | `markdown` | Documentation, PR comments |
 | HTML | `html` | Stakeholder reports |
