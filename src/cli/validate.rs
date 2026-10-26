@@ -8,7 +8,7 @@ use crate::quality::{
     ComplianceChecker, ComplianceLevel, ComplianceResult, StandardSelector, ViolationSeverity,
 };
 use crate::reports::escape::sanitize_line;
-use crate::reports::{ReportFormat, generate_compliance_sarif};
+use crate::reports::{ReportFormat, generate_compliance_json, generate_compliance_sarif};
 use anyhow::Result;
 use std::path::PathBuf;
 
@@ -23,6 +23,18 @@ pub const VALIDATE_OUTPUT_FORMATS: &[ReportFormat] = &[
     ReportFormat::Sarif,
     ReportFormat::OscalJson,
 ];
+
+/// Layout of `validate -o json` (`--json-schema`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, clap::ValueEnum)]
+pub enum ValidateJsonSchema {
+    /// Deprecated pre-0.4 layout, removed in v0.5.0: a bare result object
+    /// for one standard, an array of them for several
+    V1,
+    /// The `sbom-tools/compliance/v2` envelope: one object for any number
+    /// of standards
+    #[default]
+    V2,
+}
 
 /// Run the validate command, returning the desired exit code.
 ///
@@ -56,6 +68,7 @@ pub fn run_validate(
     cra_product_class: Option<String>,
     as_of: Option<&str>,
     require_applicable: bool,
+    json_schema: ValidateJsonSchema,
 ) -> Result<i32> {
     // `--summary` overrides `--output` (documented on the flag), so the
     // requested format is never rendered and must not be gated.
@@ -134,19 +147,26 @@ pub fn run_validate(
         as_of,
     };
 
+    if !summary && output == ReportFormat::Json && json_schema == ValidateJsonSchema::V1 {
+        tracing::warn!(
+            "--json-schema v1 is deprecated and will be removed in v0.5.0; the default \
+             v2 envelope is described in docs/compliance-output.md"
+        );
+    }
+
     if results.len() == 1 {
         let result = &results[0];
         if summary {
             write_compliance_summary(result, output_file)?;
         } else {
-            write_compliance_output(result, output, output_file, &provenance)?;
+            write_compliance_output(result, output, output_file, &provenance, json_schema)?;
         }
     } else {
         // Multi-standard: merge results for output
         if summary {
             write_multi_compliance_summary(&results, output_file)?;
         } else {
-            write_multi_compliance_output(&results, output, output_file, &provenance)?;
+            write_multi_compliance_output(&results, output, output_file, &provenance, json_schema)?;
         }
     }
 
@@ -186,12 +206,16 @@ fn write_compliance_output(
     output: ReportFormat,
     output_file: Option<PathBuf>,
     provenance: &OutputProvenance,
+    json_schema: ValidateJsonSchema,
 ) -> Result<()> {
     let target = OutputTarget::from_option(output_file);
 
     let content = match output {
-        ReportFormat::Json => serde_json::to_string_pretty(result)
-            .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
+        ReportFormat::Json => match json_schema {
+            ValidateJsonSchema::V2 => generate_compliance_json(std::slice::from_ref(result))?,
+            ValidateJsonSchema::V1 => serde_json::to_string_pretty(result)
+                .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
+        },
         ReportFormat::Sarif => generate_compliance_sarif(result)?,
         ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results_at(
             std::slice::from_ref(result),
@@ -253,12 +277,16 @@ fn write_multi_compliance_output(
     output: ReportFormat,
     output_file: Option<PathBuf>,
     provenance: &OutputProvenance,
+    json_schema: ValidateJsonSchema,
 ) -> Result<()> {
     let target = OutputTarget::from_option(output_file);
 
     let content = match output {
-        ReportFormat::Json => serde_json::to_string_pretty(results)
-            .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
+        ReportFormat::Json => match json_schema {
+            ValidateJsonSchema::V2 => generate_compliance_json(results)?,
+            ValidateJsonSchema::V1 => serde_json::to_string_pretty(results)
+                .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
+        },
         ReportFormat::Sarif => crate::reports::generate_multi_compliance_sarif(results)?,
         ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results_at(
             results,
@@ -400,6 +428,7 @@ mod tests {
                 None,
                 None,
                 false,
+                ValidateJsonSchema::V2,
             )
             .expect_err("unsupported format must be rejected");
             let msg = err.to_string();
@@ -427,6 +456,7 @@ mod tests {
             None,
             None,
             false,
+            ValidateJsonSchema::V2,
         )
         .expect_err("empty standard list must be rejected");
         assert!(err.to_string().contains("no compliance standard selected"));
@@ -455,6 +485,7 @@ mod tests {
             None,
             None,
             false,
+            ValidateJsonSchema::V2,
         )
         .expect("--summary must override -o html instead of hard-erroring");
         let content = std::fs::read_to_string(out).unwrap();
@@ -485,6 +516,7 @@ mod tests {
             Some("critcal".to_string()),
             None,
             false,
+            ValidateJsonSchema::V2,
         )
         .expect_err("typo'd --cra-product-class must be a hard error");
         let msg = err.to_string();
@@ -517,6 +549,7 @@ mod tests {
             None,
             Some("2027-01-01T00:00:00"),
             false,
+            ValidateJsonSchema::V2,
         )
         .expect("offset-less --as-of datetime must parse (assumed UTC)");
     }
@@ -543,6 +576,7 @@ mod tests {
             None,
             None,
             false,
+            ValidateJsonSchema::V2,
         )
         .expect_err("broken explicit sidecar must be a hard error");
         assert!(err.to_string().contains("Failed to load CRA sidecar"));

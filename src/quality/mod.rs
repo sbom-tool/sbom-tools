@@ -40,6 +40,9 @@ pub use compliance::{
     StandardKind, StandardRef, StandardSelector, Violation, ViolationCategory, ViolationCounts,
     ViolationSeverity, all_rule_ids, generic_rule_id_for_level, rule_meta,
 };
+pub use compliance::{
+    DOCUMENT_SUBJECT, FINDING_ID_PREFIX, finding_id, finding_key, finding_subject, standard_key,
+};
 pub use metrics::{
     AuditabilityMetrics, CompletenessMetrics, ComplexityFactors, ComplexityLevel,
     CryptographyMetrics, DependencyMetrics, HashQualityMetrics, IdentifierMetrics, LicenseMetrics,

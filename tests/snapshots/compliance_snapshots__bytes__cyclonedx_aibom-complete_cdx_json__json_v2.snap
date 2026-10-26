@@ -1,0 +1,279 @@
+---
+source: tests/compliance_snapshots.rs
+---
+{
+  "schema": "sbom-tools/compliance/v2",
+  "tool": {
+    "name": "sbom-tools",
+    "version": "[VERSION]"
+  },
+  "results": [
+    {
+      "standard": "ai-act",
+      "name": "EU AI Act Annex IV Readiness",
+      "applicable": true,
+      "compliant": true,
+      "score": 100,
+      "counts": {
+        "error": 0,
+        "warning": 0,
+        "info": 0
+      },
+      "violations": []
+    },
+    {
+      "standard": "bsi-ai",
+      "name": "BSI/G7 SBOM-for-AI Minimum Elements Readiness",
+      "applicable": true,
+      "compliant": false,
+      "score": 12,
+      "counts": {
+        "error": 2,
+        "warning": 5,
+        "info": 5
+      },
+      "violations": [
+        {
+          "finding_id": "sbomtools:v1:b230137e90a4e287",
+          "finding_key": "bsi-ai|SBOM-BSIAI-META-SIGNATURE|document",
+          "severity": "Info",
+          "category": "IntegrityInfo",
+          "message": "[BSI-AI] Metadata readiness: SBOM carries no document signature (integrity attestation recommended)",
+          "element": null,
+          "requirement": "BSI/G7 SBOM-for-AI — Metadata / Signature",
+          "rule_id": "SBOM-BSIAI-META-SIGNATURE",
+          "sarif_rule_id": "SBOM-BSIAI-META",
+          "standard_refs": [
+            {
+              "standard": "BsiSbomForAi",
+              "id": "Metadata / Signature",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:1783ac537445c03a",
+          "finding_key": "bsi-ai|SBOM-BSIAI-SYS-PRODUCER|document",
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[BSI-AI] System-Level readiness: no producer/supplier of the AI system is declared",
+          "element": null,
+          "requirement": "BSI/G7 SBOM-for-AI — System-Level / Producer",
+          "rule_id": "SBOM-BSIAI-SYS-PRODUCER",
+          "sarif_rule_id": "SBOM-BSIAI-SYS",
+          "standard_refs": [
+            {
+              "standard": "BsiSbomForAi",
+              "id": "System-Level / Producer",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:d7ca27dca398f343",
+          "finding_key": "bsi-ai|SBOM-BSIAI-SYS-DATAFLOW|document",
+          "severity": "Info",
+          "category": "DocumentMetadata",
+          "message": "[BSI-AI] System-Level readiness: AI-system data-flow / usage / input-output description is not declared (no SBOM field carries it today)",
+          "element": null,
+          "requirement": "BSI/G7 SBOM-for-AI — System-Level / Data flow & usage",
+          "rule_id": "SBOM-BSIAI-SYS-DATAFLOW",
+          "sarif_rule_id": "SBOM-BSIAI-SYS",
+          "standard_refs": [
+            {
+              "standard": "BsiSbomForAi",
+              "id": "System-Level / Data flow & usage",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:f8fa5c15054a729a",
+          "finding_key": "bsi-ai|SBOM-BSIAI-MODEL-IDENTIFIER|document",
+          "severity": "Error",
+          "category": "ComponentIdentification",
+          "message": "[BSI-AI] Model identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): sentiment-classifier",
+          "element": "sentiment-classifier",
+          "counts": {
+            "affected": 1,
+            "total": 1
+          },
+          "requirement": "BSI/G7 SBOM-for-AI — Models / Model identifier",
+          "rule_id": "SBOM-BSIAI-MODEL-IDENTIFIER",
+          "sarif_rule_id": "SBOM-BSIAI-MODEL",
+          "standard_refs": [
+            {
+              "standard": "BsiSbomForAi",
+              "id": "Models / Model identifier",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:b1de68bec48da482",
+          "finding_key": "bsi-ai|SBOM-BSIAI-MODEL-LICENSE|document",
+          "severity": "Warning",
+          "category": "LicenseInfo",
+          "message": "[BSI-AI] Model license readiness: 1 component(s) declare no license: sentiment-classifier",
+          "element": "sentiment-classifier",
+          "counts": {
+            "affected": 1,
+            "total": 1
+          },
+          "requirement": "BSI/G7 SBOM-for-AI — Models / Model license",
+          "rule_id": "SBOM-BSIAI-MODEL-LICENSE",
+          "sarif_rule_id": "SBOM-BSIAI-MODEL",
+          "standard_refs": [
+            {
+              "standard": "BsiSbomForAi",
+              "id": "Models / Model license",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:1684f9587b9bb310",
+          "finding_key": "bsi-ai|SBOM-BSIAI-DATASET-IDENTIFIER|document",
+          "severity": "Error",
+          "category": "ComponentIdentification",
+          "message": "[BSI-AI] Dataset identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): product-reviews-1M",
+          "element": "product-reviews-1M",
+          "counts": {
+            "affected": 1,
+            "total": 1
+          },
+          "requirement": "BSI/G7 SBOM-for-AI — Datasets / Dataset identifier",
+          "rule_id": "SBOM-BSIAI-DATASET-IDENTIFIER",
+          "sarif_rule_id": "SBOM-BSIAI-DATASET",
+          "standard_refs": [
+            {
+              "standard": "BsiSbomForAi",
+              "id": "Datasets / Dataset identifier",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:b4588b41034ea1f1",
+          "finding_key": "bsi-ai|SBOM-BSIAI-DATASET-HASH|document",
+          "severity": "Warning",
+          "category": "IntegrityInfo",
+          "message": "[BSI-AI] Dataset hash value readiness: 1 component(s) carry no hash value: product-reviews-1M",
+          "element": "product-reviews-1M",
+          "counts": {
+            "affected": 1,
+            "total": 1
+          },
+          "requirement": "BSI/G7 SBOM-for-AI — Datasets / Dataset hash value",
+          "rule_id": "SBOM-BSIAI-DATASET-HASH",
+          "sarif_rule_id": "SBOM-BSIAI-DATASET",
+          "standard_refs": [
+            {
+              "standard": "BsiSbomForAi",
+              "id": "Datasets / Dataset hash value",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:67a07bd975d84c32",
+          "finding_key": "bsi-ai|SBOM-BSIAI-DATASET-LICENSE|document",
+          "severity": "Warning",
+          "category": "LicenseInfo",
+          "message": "[BSI-AI] Dataset license readiness: 1 component(s) declare no license: product-reviews-1M",
+          "element": "product-reviews-1M",
+          "counts": {
+            "affected": 1,
+            "total": 1
+          },
+          "requirement": "BSI/G7 SBOM-for-AI — Datasets / Dataset license",
+          "rule_id": "SBOM-BSIAI-DATASET-LICENSE",
+          "sarif_rule_id": "SBOM-BSIAI-DATASET",
+          "standard_refs": [
+            {
+              "standard": "BsiSbomForAi",
+              "id": "Datasets / Dataset license",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:5294c1949801d48c",
+          "finding_key": "bsi-ai|SBOM-BSIAI-DATASET-PROVENANCE|document",
+          "severity": "Warning",
+          "category": "DocumentMetadata",
+          "message": "[BSI-AI] Provenance & intended use readiness: 1 component(s) declare no provenance / intended-use: product-reviews-1M",
+          "element": "product-reviews-1M",
+          "counts": {
+            "affected": 1,
+            "total": 1
+          },
+          "requirement": "BSI/G7 SBOM-for-AI — Datasets / Provenance & intended use",
+          "rule_id": "SBOM-BSIAI-DATASET-PROVENANCE",
+          "sarif_rule_id": "SBOM-BSIAI-DATASET",
+          "standard_refs": [
+            {
+              "standard": "BsiSbomForAi",
+              "id": "Datasets / Provenance & intended use",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:d687aaf1fa585eea",
+          "finding_key": "bsi-ai|SBOM-BSIAI-INFRA-RUNTIME|document",
+          "severity": "Info",
+          "category": "DependencyInfo",
+          "message": "[BSI-AI] Infrastructure readiness: no ML component links to its runtime / framework dependencies (no dependency edge or BOM/HBOM reference)",
+          "element": null,
+          "requirement": "BSI/G7 SBOM-for-AI — Infrastructure / Runtime & framework",
+          "rule_id": "SBOM-BSIAI-INFRA-RUNTIME",
+          "sarif_rule_id": "SBOM-BSIAI-INFRA",
+          "standard_refs": [
+            {
+              "standard": "BsiSbomForAi",
+              "id": "Infrastructure / Runtime & framework",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:bced627c90b2adc1",
+          "finding_key": "bsi-ai|SBOM-BSIAI-SEC-CONTROLS|document",
+          "severity": "Info",
+          "category": "SecurityInfo",
+          "message": "[BSI-AI] Security readiness: no AI-specific security controls are declared (no SBOM field carries them today)",
+          "element": null,
+          "requirement": "BSI/G7 SBOM-for-AI — Security / AI security controls",
+          "rule_id": "SBOM-BSIAI-SEC-CONTROLS",
+          "sarif_rule_id": "SBOM-BSIAI-SEC",
+          "standard_refs": [
+            {
+              "standard": "BsiSbomForAi",
+              "id": "Security / AI security controls",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:9abd3f4073d259a1",
+          "finding_key": "bsi-ai|SBOM-BSIAI-SEC-EXPLOITABILITY|document",
+          "severity": "Info",
+          "category": "SecurityInfo",
+          "message": "[BSI-AI] Security readiness: no exploitability reference is declared (no SBOM field carries it today)",
+          "element": null,
+          "requirement": "BSI/G7 SBOM-for-AI — Security / Exploitability reference",
+          "rule_id": "SBOM-BSIAI-SEC-EXPLOITABILITY",
+          "sarif_rule_id": "SBOM-BSIAI-SEC",
+          "standard_refs": [
+            {
+              "standard": "BsiSbomForAi",
+              "id": "Security / Exploitability reference",
+              "help_uri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

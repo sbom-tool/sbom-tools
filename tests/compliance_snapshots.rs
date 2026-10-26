@@ -9,8 +9,10 @@
 //!   subject, counts). Messages are left out so rewording does not churn
 //!   them. Fixtures with an auto-discovered CRA sidecar are also run with it,
 //!   for the levels the CLI feeds a sidecar to.
-//! - **Byte snapshots** of the JSON, SARIF and OSCAL writers for six pinned
-//!   fixtures, plus a check that each writer is byte-identical across runs.
+//! - **Byte snapshots** of the JSON (the v1 result array and the
+//!   `sbom-tools/compliance/v2` envelope), SARIF and OSCAL writers for six
+//!   pinned fixtures, plus a check that each writer is byte-identical across
+//!   runs.
 //!
 //! Everything runs at a pinned `as_of`, so no snapshot depends on today's
 //! date. Accept intended changes with `cargo insta review`.
@@ -23,8 +25,8 @@ use sbom_tools::parse_sbom_str;
 use sbom_tools::quality::{
     ComplianceChecker, ComplianceLevel, ComplianceResult, StandardSelector, ViolationSeverity,
 };
-use sbom_tools::reports::generate_multi_compliance_sarif;
 use sbom_tools::reports::oscal::generate_assessment_results_at;
+use sbom_tools::reports::{generate_compliance_json, generate_multi_compliance_sarif};
 
 const FIXTURES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
@@ -263,7 +265,7 @@ fn redact_version(text: &str) -> String {
     )
 }
 
-fn render_outputs(rel: &str, standards: &[&str]) -> [(&'static str, String); 3] {
+fn render_outputs(rel: &str, standards: &[&str]) -> [(&'static str, String); 4] {
     let path = Path::new(FIXTURES_DIR).join(rel);
     let raw = std::fs::read_to_string(&path).expect("fixture readable");
     let sbom = parse_sbom_str(&raw).unwrap_or_else(|e| panic!("{rel} must parse: {e}"));
@@ -280,6 +282,7 @@ fn render_outputs(rel: &str, standards: &[&str]) -> [(&'static str, String); 3] 
         })
         .collect();
     let json = serde_json::to_string_pretty(&results).expect("JSON serializes");
+    let envelope = generate_compliance_json(&results).expect("envelope serializes");
     let sarif = generate_multi_compliance_sarif(&results).expect("SARIF serializes");
     let oscal = generate_assessment_results_at(
         &results,
@@ -287,7 +290,12 @@ fn render_outputs(rel: &str, standards: &[&str]) -> [(&'static str, String); 3] 
         Some(as_of()),
     )
     .expect("OSCAL serializes");
-    [("json", json), ("sarif", sarif), ("oscal", oscal)]
+    [
+        ("json", json),
+        ("json_v2", envelope),
+        ("sarif", sarif),
+        ("oscal", oscal),
+    ]
 }
 
 #[test]

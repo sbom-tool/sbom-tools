@@ -102,25 +102,28 @@ cargo run --release -- validate \
   --standard ntia \
   -o json > /tmp/validation.json
 
-jq '.summary // .' /tmp/validation.json
+jq '.results[0] | {standard, compliant, counts}' /tmp/validation.json
 ```
 
 Validation checks the supplied BOM. It does not certify the product or create
-evidence that is absent from the input.
+evidence that is absent from the input. `-o json` is one
+`sbom-tools/compliance/v2` envelope whatever the number of standards, and every
+violation carries a stable `finding_id`; [compliance-output.md](compliance-output.md)
+describes the fields.
 
 `--standard` accepts one profile or a comma-separated list. Recent additions
 are `cisa-2026` (CISA 2026 Minimum Elements for an SBOM, v2.1, successor to
 the NTIA 2021 elements), `pci-dss` (PCI DSS v4.0.1 Requirement 6.3.2 software
 inventory), and `fsct` (CISA Framing Software Component Transparency, 3rd
-edition). A list returns one result object per standard, identified by
-`level`:
+edition). A list returns one entry of `results` per standard, identified by
+`standard`:
 
 ```sh
 cargo run --release -- validate \
   tests/fixtures/showcase/fleet-v1.cdx.json \
   --standard ntia,cisa-2026 \
   -o json |
-  jq -c '.[] | {level, error_count, warning_count}'
+  jq -c '.results[] | {standard, error: .counts.error, warning: .counts.warning}'
 ```
 
 That fixture reports 4 errors under `ntia` and 9 errors with 3 warnings under

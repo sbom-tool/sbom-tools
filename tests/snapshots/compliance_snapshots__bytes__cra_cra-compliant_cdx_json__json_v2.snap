@@ -1,0 +1,212 @@
+---
+source: tests/compliance_snapshots.rs
+---
+{
+  "schema": "sbom-tools/compliance/v2",
+  "tool": {
+    "name": "sbom-tools",
+    "version": "[VERSION]"
+  },
+  "results": [
+    {
+      "standard": "cra",
+      "name": "EU CRA Phase 2 (2027)",
+      "applicable": true,
+      "compliant": true,
+      "score": 50,
+      "counts": {
+        "error": 0,
+        "warning": 1,
+        "info": 3
+      },
+      "violations": [
+        {
+          "finding_id": "sbomtools:v1:a1a7aa2a9acb7c4e",
+          "finding_key": "cra|SBOM-CRA-GENERAL|pkg:cargo/lib-a@2.3.4",
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'lib-a' may be missing bom-ref",
+          "element": "lib-a",
+          "component_id": "pkg:cargo/lib-a@2.3.4",
+          "requirement": "CycloneDX: bom-ref for dependency tracking",
+          "rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-GENERAL"
+        },
+        {
+          "finding_id": "sbomtools:v1:64fde278485cf42f",
+          "finding_key": "cra|SBOM-CRA-GENERAL|pkg:cargo/lib-b@0.9.1",
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'lib-b' may be missing bom-ref",
+          "element": "lib-b",
+          "component_id": "pkg:cargo/lib-b@0.9.1",
+          "requirement": "CycloneDX: bom-ref for dependency tracking",
+          "rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-GENERAL"
+        },
+        {
+          "finding_id": "sbomtools:v1:2423ce73fc79ae3c",
+          "finding_key": "cra|SBOM-CRA-SBOM-FRESHNESS|document",
+          "severity": "Warning",
+          "category": "DocumentMetadata",
+          "message": "[CRA Art. 13(7) / Annex I Part II (1)] SBOM is 269 days old; keep the documented component inventory current when components change",
+          "element": null,
+          "requirement": "CRA Art. 13(7) / Annex I Part II (1): SBOM freshness",
+          "rule_id": "SBOM-CRA-SBOM-FRESHNESS",
+          "sarif_rule_id": "SBOM-CRA-SBOM-FRESHNESS",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(7)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:f11e52f4b08d0b48",
+          "finding_key": "cra|SBOM-CRA-VULN-STATEMENT|document",
+          "severity": "Info",
+          "category": "SecurityInfo",
+          "message": "[CRA Annex I Part II (1)] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
+          "element": null,
+          "requirement": "CRA Annex I Part II (1): Documented vulnerability information",
+          "rule_id": "SBOM-CRA-VULN-STATEMENT",
+          "sarif_rule_id": "SBOM-CRA-VULN-STATEMENT",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        }
+      ],
+      "conformity_summary": {
+        "product_class": "important-class-1",
+        "route": "module-a",
+        "evidence": [
+          {
+            "label": "EU Declaration of Conformity",
+            "detail": "Annex V — manufacturer's signed declaration. Provide via Attestation/Certification external ref or sidecar ceMarkingReference.",
+            "satisfied": true
+          },
+          {
+            "label": "Internal-control technical file",
+            "detail": "Module A — manufacturer holds the technical file at their premises. No external attestation required.",
+            "satisfied": true
+          },
+          {
+            "label": "PSIRT contact (Art. 14)",
+            "detail": "Public PSIRT URL for receiving external vulnerability reports.",
+            "satisfied": true
+          }
+        ]
+      }
+    },
+    {
+      "standard": "cra-phase1",
+      "name": "EU CRA Phase 1 (2026)",
+      "applicable": true,
+      "compliant": true,
+      "score": 50,
+      "counts": {
+        "error": 0,
+        "warning": 1,
+        "info": 3
+      },
+      "violations": [
+        {
+          "finding_id": "sbomtools:v1:e54f5d06f07c67b6",
+          "finding_key": "cra-phase1|SBOM-CRA-GENERAL|pkg:cargo/lib-a@2.3.4",
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'lib-a' may be missing bom-ref",
+          "element": "lib-a",
+          "component_id": "pkg:cargo/lib-a@2.3.4",
+          "requirement": "CycloneDX: bom-ref for dependency tracking",
+          "rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-GENERAL"
+        },
+        {
+          "finding_id": "sbomtools:v1:1d19c44a1a1f5061",
+          "finding_key": "cra-phase1|SBOM-CRA-GENERAL|pkg:cargo/lib-b@0.9.1",
+          "severity": "Info",
+          "category": "FormatSpecific",
+          "message": "Component 'lib-b' may be missing bom-ref",
+          "element": "lib-b",
+          "component_id": "pkg:cargo/lib-b@0.9.1",
+          "requirement": "CycloneDX: bom-ref for dependency tracking",
+          "rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-GENERAL"
+        },
+        {
+          "finding_id": "sbomtools:v1:78fe654fd47ccc0f",
+          "finding_key": "cra-phase1|SBOM-CRA-SBOM-FRESHNESS|document",
+          "severity": "Warning",
+          "category": "DocumentMetadata",
+          "message": "[CRA Art. 13(7) / Annex I Part II (1)] SBOM is 269 days old; keep the documented component inventory current when components change",
+          "element": null,
+          "requirement": "CRA Art. 13(7) / Annex I Part II (1): SBOM freshness",
+          "rule_id": "SBOM-CRA-SBOM-FRESHNESS",
+          "sarif_rule_id": "SBOM-CRA-SBOM-FRESHNESS",
+          "standard_refs": [
+            {
+              "standard": "CraArticle",
+              "id": "Art. 13(7)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:e48721d2aa6b495f",
+          "finding_key": "cra-phase1|SBOM-CRA-VULN-STATEMENT|document",
+          "severity": "Info",
+          "category": "SecurityInfo",
+          "message": "[CRA Annex I Part II (1)] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
+          "element": null,
+          "requirement": "CRA Annex I Part II (1): Documented vulnerability information",
+          "rule_id": "SBOM-CRA-VULN-STATEMENT",
+          "sarif_rule_id": "SBOM-CRA-VULN-STATEMENT",
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ]
+        }
+      ],
+      "conformity_summary": {
+        "product_class": "important-class-1",
+        "route": "module-a",
+        "evidence": [
+          {
+            "label": "EU Declaration of Conformity",
+            "detail": "Annex V — manufacturer's signed declaration. Provide via Attestation/Certification external ref or sidecar ceMarkingReference.",
+            "satisfied": true
+          },
+          {
+            "label": "Internal-control technical file",
+            "detail": "Module A — manufacturer holds the technical file at their premises. No external attestation required.",
+            "satisfied": true
+          },
+          {
+            "label": "PSIRT contact (Art. 14)",
+            "detail": "Public PSIRT URL for receiving external vulnerability reports.",
+            "satisfied": true
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sbom-tools/compliance/v2",
+  "title": "ComplianceEnvelope",
+  "description": "Output of `sbom-tools validate -o json`: one object whatever the number of standards checked. Later releases may add fields without changing `schema`, so consumers must ignore fields they do not know. Field reference: docs/compliance-output.md.",
+  "type": "object",
+  "required": ["schema", "tool", "results"],
+  "properties": {
+    "schema": {"const": "sbom-tools/compliance/v2"},
+    "tool": {"$ref": "#/$defs/tool"},
+    "results": {
+      "type": "array",
+      "description": "One entry per checked standard, in --standard order.",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/result"}
+    }
+  },
+  "$defs": {
+    "count": {"type": "integer", "minimum": 0},
+    "tool": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"const": "sbom-tools"},
+        "version": {"type": "string", "minLength": 1, "description": "The sbom-tools release that produced the document."}
+      }
+    },
+    "result": {
+      "type": "object",
+      "required": ["standard", "name", "applicable", "compliant", "score", "counts", "violations"],
+      "properties": {
+        "standard": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "description": "Canonical --standard value: ntia, fda, cra, cra-phase1, ssdf, eo14028, cnsa2, pqc, bsi, oss-steward, eucc, ai-act, bsi-ai, cisa-2026, pci-dss, fsct."},
+        "name": {"type": "string", "minLength": 1, "description": "Display name of the standard."},
+        "applicable": {"type": "boolean", "description": "Whether the standard evaluated the SBOM. When false the standard did not apply: `compliant` stays true by contract and must not be read as a pass."},
+        "not_applicable_reason": {"type": "string", "description": "Why the standard did not apply. Present exactly when `applicable` is false."},
+        "compliant": {"type": "boolean", "description": "No error-severity violations. Meaningful only when `applicable` is true."},
+        "score": {"type": ["integer", "null"], "minimum": 0, "maximum": 100, "description": "Compliance score; null exactly when `applicable` is false."},
+        "counts": {"$ref": "#/$defs/counts"},
+        "violations": {"type": "array", "items": {"$ref": "#/$defs/violation"}},
+        "passed": {"type": "array", "description": "Checks the SBOM passed (populated by a later release)."},
+        "conformity_summary": {"$ref": "#/$defs/conformity_summary"}
+      }
+    },
+    "counts": {
+      "type": "object",
+      "description": "Violations per severity, plus passed checks once `passed` is populated.",
+      "required": ["error", "warning", "info"],
+      "properties": {
+        "error": {"$ref": "#/$defs/count"},
+        "warning": {"$ref": "#/$defs/count"},
+        "info": {"$ref": "#/$defs/count"},
+        "passed": {"$ref": "#/$defs/count"}
+      }
+    },
+    "violation": {
+      "type": "object",
+      "required": ["finding_id", "finding_key", "severity", "category", "message", "element", "requirement", "rule_id", "sarif_rule_id"],
+      "properties": {
+        "finding_id": {"type": "string", "pattern": "^sbomtools:v1:[0-9a-f]{16}$", "description": "`sbomtools:v1:` followed by the first 16 hex digits of SHA-256(finding_key)."},
+        "finding_key": {"type": "string", "pattern": "^[^|]+\\|[^|]+\\|", "description": "`<standard>|<rule_id>|<subject>`; the subject (everything after the second `|`) is the component's canonical id or `document`."},
+        "severity": {"enum": ["Error", "Warning", "Info"]},
+        "category": {"type": "string", "minLength": 1, "description": "Violation category, e.g. DocumentMetadata, ComponentIdentification, SupplierInfo."},
+        "message": {"type": "string"},
+        "element": {"type": ["string", "null"], "description": "Human-readable label of the offending element; not unique."},
+        "component_id": {"type": "string", "description": "Canonical id of the offending component; absent for document-level and aggregate findings."},
+        "counts": {"$ref": "#/$defs/violation_counts"},
+        "requirement": {"type": "string"},
+        "rule_id": {"type": "string", "minLength": 1, "description": "Stable internal rule key."},
+        "sarif_rule_id": {"type": "string", "minLength": 1, "description": "Rule id the SARIF output reports for this violation."},
+        "standard_refs": {"type": "array", "items": {"$ref": "#/$defs/standard_ref"}},
+        "remediation": {"type": "string", "description": "How to fix the violation (populated by a later release)."},
+        "help_uri": {"type": "string", "description": "Documentation link for the rule (populated by a later release)."}
+      }
+    },
+    "violation_counts": {
+      "type": "object",
+      "description": "Affected/total component counts of an aggregate finding.",
+      "required": ["affected", "total"],
+      "properties": {
+        "affected": {"$ref": "#/$defs/count"},
+        "total": {"$ref": "#/$defs/count"}
+      }
+    },
+    "standard_ref": {
+      "type": "object",
+      "required": ["standard", "id"],
+      "properties": {
+        "standard": {"type": "string", "minLength": 1, "description": "Referenced standard, e.g. NtiaMinimum, CraArticle, Pren40000_1_3."},
+        "id": {"type": "string", "description": "Clause or requirement within that standard."},
+        "help_uri": {"type": "string"}
+      }
+    },
+    "conformity_summary": {
+      "type": "object",
+      "description": "CRA Annex VIII conformity-assessment checklist; present for CRA standards once a product class is pinned.",
+      "required": ["product_class", "route", "evidence"],
+      "properties": {
+        "product_class": {"enum": ["default", "important-class-1", "important-class-2", "critical"]},
+        "route": {"enum": ["module-a", "module-b-c", "module-h", "eucc"]},
+        "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/conformity_evidence"}}
+      }
+    },
+    "conformity_evidence": {
+      "type": "object",
+      "required": ["label", "detail", "satisfied"],
+      "properties": {
+        "label": {"type": "string"},
+        "detail": {"type": "string"},
+        "satisfied": {"type": "boolean"}
+      }
+    }
+  }
+}

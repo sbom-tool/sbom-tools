@@ -492,6 +492,12 @@ Checks an SBOM against a compliance standard and reports missing fields or faili
 | `--standard <std>` | Standard to validate: `ntia` (default), `cisa-2026`, `fda`, `cra` (= Phase 2), `cra-phase1`, `ssdf`, `eo14028`, `cnsa2`, `pqc`, `bsi`, `oss-steward`, `eucc`, `ai-act`, `bsi-ai`, `pci-dss`, `fsct` (comma-separated for multiple; aliases in `--help`) |
 | `-o, --output <fmt>` | Output format: `summary` (default via `auto`), `json`, `sarif`, `oscal-json` |
 | `--require-applicable` | Exit `1` when a selected standard does not apply to the SBOM (e.g. `ai-act` on an SBOM without ML components); without it, such a standard is reported as N/A and exits `0` |
+| `--json-schema <v1\|v2>` | Layout of `-o json`: `v2` (default) is the `sbom-tools/compliance/v2` envelope; `v1` is the deprecated pre-0.4 layout, removed in v0.5.0 |
+
+`-o json` emits one object for any number of standards, with a stable
+`finding_id` on every violation; [docs/compliance-output.md](docs/compliance-output.md)
+describes every field, and the schema is
+[`schemas/compliance-v2.schema.json`](schemas/compliance-v2.schema.json).
 
 </details>
 
@@ -818,7 +824,11 @@ Which JSON payloads are a compatibility contract, and how firm it is
 - **No separate schema version.** The payload shape follows the crate version.
   Until 1.0 a breaking change may land in a minor release and is always listed
   under **Upgrade notes** in `CHANGELOG.md`; consumers should pin the crate
-  version and read those notes on each bump.
+  version and read those notes on each bump. The exception is
+  `validate -o json`, which names its layout (`"schema":
+  "sbom-tools/compliance/v2"`), has a published JSON Schema, and only adds
+  fields within a schema version; see
+  [docs/compliance-output.md](docs/compliance-output.md).
 - **Known conflation.** In the CycloneDX parser an absent
   `cryptoProperties.algorithmProperties.primitive` and an explicit
   `"unknown"` both normalize to `primitive: "Unknown"`. A consumer that must

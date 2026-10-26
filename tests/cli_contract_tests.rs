@@ -1,5 +1,8 @@
 //! CLI contract tests: per-command exit codes, typed value-enum parse
-//! validation, and NDJSON output wiring.
+//! validation, NDJSON output wiring, and the `validate -o json` envelope.
+
+#[path = "common/json_schema.rs"]
+mod json_schema;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -161,6 +164,7 @@ fn mistyped_standard_or_flag_value_exits_3_in_validate_and_diff() {
         vec!["validate", new, "--standard", "ntai"],
         vec!["validate", new, "--standard", "ntai", "--fail-on-warning"],
         vec!["validate", new, "--standard", "ntia,cra-phase3"],
+        vec!["validate", new, "--json-schema", "v3"],
         // `diff` takes no --standard, so passing one is an unknown argument.
         vec!["diff", old, new, "--standard", "ntia"],
         vec!["diff", old, new, "--fuzzy-preset", "balancd"],
@@ -333,6 +337,214 @@ fn require_applicable_makes_a_not_applicable_standard_exit_1() {
         "--require-applicable",
     ];
     assert_eq!(run(&ntia).status.code(), Some(0));
+}
+
+// ---------------------------------------------------------------------------
+// validate -o json: envelope v2 and --json-schema v1
+// ---------------------------------------------------------------------------
+
+/// Pinned evaluation instant, so every run sees the same deadlines.
+const AS_OF: &str = "2026-10-12T00:00:00Z";
+
+const CANONICAL_STANDARDS: [&str; 16] = [
+    "ntia",
+    "fda",
+    "cra",
+    "cra-phase1",
+    "ssdf",
+    "eo14028",
+    "cnsa2",
+    "pqc",
+    "bsi",
+    "oss-steward",
+    "eucc",
+    "ai-act",
+    "bsi-ai",
+    "cisa-2026",
+    "pci-dss",
+    "fsct",
+];
+
+fn compliance_schema() -> Value {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/schemas/compliance-v2.schema.json"
+    );
+    serde_json::from_str(&std::fs::read_to_string(path).expect("schema readable"))
+        .expect("schema is JSON")
+}
+
+/// `stdout` of a `validate -o json` run, validated against the published
+/// schema and against a strict copy that rejects undeclared fields.
+fn validated_envelope(args: &[&str]) -> Value {
+    let output = run(args);
+    assert!(
+        matches!(output.status.code(), Some(0 | 1)),
+        "{args:?} must complete a validation: {}",
+        stderr(&output)
+    );
+    let json: Value = serde_json::from_str(&stdout(&output))
+        .unwrap_or_else(|e| panic!("{args:?}: stdout is not JSON: {e}"));
+    let schema = compliance_schema();
+    for (kind, schema) in [
+        ("schema", schema.clone()),
+        ("strict schema", json_schema::strict_copy(&schema)),
+    ] {
+        if let Err(errors) = json_schema::validate(&schema, &json) {
+            panic!("{args:?} violates the {kind}:\n{}", errors.join("\n"));
+        }
+    }
+    json
+}
+
+fn standards_of(json: &Value) -> Vec<String> {
+    json["results"]
+        .as_array()
+        .expect("results array")
+        .iter()
+        .map(|r| r["standard"].as_str().unwrap_or_default().to_string())
+        .collect()
+}
+
+#[test]
+fn validate_json_is_one_schema_valid_envelope_for_every_standard() {
+    let plain = fixture_arg("demo-new.cdx.json");
+    for standard in CANONICAL_STANDARDS {
+        let json = validated_envelope(&[
+            "validate",
+            plain.as_str(),
+            "--standard",
+            standard,
+            "-o",
+            "json",
+            "--as-of",
+            AS_OF,
+        ]);
+        assert_eq!(json["schema"], "sbom-tools/compliance/v2");
+        assert_eq!(standards_of(&json), [standard], "{standard}");
+    }
+
+    let all = CANONICAL_STANDARDS.join(",");
+    for fixture in [
+        "demo-new.cdx.json",
+        "cyclonedx/aibom-complete.cdx.json",
+        "cyclonedx/cbom-1.7.cdx.json",
+        "spdx/minimal.spdx.json",
+        // Auto-discovers a sidecar that pins a product class, so the CRA
+        // results carry `conformity_summary`.
+        "cra/cra-compliant.cdx.json",
+    ] {
+        let path = fixture_arg(fixture);
+        let json = validated_envelope(&[
+            "validate",
+            path.as_str(),
+            "--standard",
+            all.as_str(),
+            "-o",
+            "json",
+            "--as-of",
+            AS_OF,
+        ]);
+        assert_eq!(standards_of(&json), CANONICAL_STANDARDS, "{fixture}");
+        if fixture.starts_with("cra/") {
+            assert!(
+                json["results"][2]["conformity_summary"].is_object(),
+                "{fixture}: cra must carry the conformity summary"
+            );
+        }
+    }
+
+    // SBOM text with line breaks and control characters stays valid JSON.
+    let dir = tempfile::tempdir().expect("tempdir");
+    let (_, hostile) = write_hostile_pair(dir.path());
+    let hostile = hostile.to_str().expect("utf-8");
+    validated_envelope(&[
+        "validate",
+        hostile,
+        "--standard",
+        all.as_str(),
+        "-o",
+        "json",
+    ]);
+}
+
+/// `--json-schema v1` prints exactly what `validate -o json` printed before
+/// v0.4: the bare result for one standard, a bare array for several.
+#[test]
+fn json_schema_v1_keeps_the_pre_0_4_shape() {
+    use sbom_tools::quality::{ComplianceChecker, ComplianceResult, StandardSelector};
+
+    let path = fixture_path("demo-new.cdx.json");
+    let raw = std::fs::read_to_string(&path).expect("fixture readable");
+    let sbom = sbom_tools::parse_sbom_str(&raw).expect("fixture parses");
+    let as_of = chrono::DateTime::parse_from_rfc3339(AS_OF)
+        .expect("valid instant")
+        .with_timezone(&chrono::Utc);
+    let check = |standard: &str| -> ComplianceResult {
+        let level = standard
+            .parse::<StandardSelector>()
+            .expect("known standard")
+            .level();
+        ComplianceChecker::new(level).with_as_of(as_of).check(&sbom)
+    };
+    let path = path.to_str().expect("utf-8");
+    let v1 = |standards: &str| {
+        run(&[
+            "validate",
+            path,
+            "--standard",
+            standards,
+            "-o",
+            "json",
+            "--json-schema",
+            "v1",
+            "--as-of",
+            AS_OF,
+        ])
+    };
+
+    let single = v1("ntia");
+    assert_eq!(single.status.code(), Some(1), "{}", stderr(&single));
+    assert_eq!(
+        stdout(&single),
+        format!(
+            "{}\n",
+            serde_json::to_string_pretty(&check("ntia")).expect("serializes")
+        )
+    );
+
+    let multi = v1("ntia,ai-act");
+    assert_eq!(
+        stdout(&multi),
+        format!(
+            "{}\n",
+            serde_json::to_string_pretty(&[check("ntia"), check("ai-act")]).expect("serializes")
+        )
+    );
+
+    // The deprecation note goes to stderr, never into the JSON.
+    let noisy = base_command()
+        .env("RUST_LOG", "warn")
+        .args([
+            "validate",
+            path,
+            "--standard",
+            "ntia",
+            "-o",
+            "json",
+            "--json-schema",
+            "v1",
+            "--as-of",
+            AS_OF,
+        ])
+        .output()
+        .expect("validate should run");
+    assert!(
+        stderr(&noisy).contains("--json-schema v1 is deprecated"),
+        "{}",
+        stderr(&noisy)
+    );
+    assert_eq!(stdout(&noisy), stdout(&single));
 }
 
 #[test]

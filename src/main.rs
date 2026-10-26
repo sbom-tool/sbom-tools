@@ -548,9 +548,15 @@ struct ViewArgs {
     validation — a nonzero exit is only a compliance verdict when the
     expected report was produced.
 
+JSON OUTPUT:
+    -o json emits the sbom-tools/compliance/v2 envelope (one object for any
+    number of standards; schema: schemas/compliance-v2.schema.json). The
+    pre-0.4 layout stays available with --json-schema v1 until v0.5.0.
+
 EXAMPLES:
     sbom-tools validate app.cdx.json                              # NTIA minimum
     sbom-tools validate app.cdx.json --standard cra,eo14028       # Multi-standard
+    sbom-tools validate app.cdx.json --standard ntia -o json      # JSON envelope v2
     sbom-tools validate app.cdx.json --standard ntia -o sarif     # SARIF for CI
     sbom-tools validate app.cdx.json --standard ntia -o oscal-json # OSCAL assessment results
     sbom-tools validate app.cdx.json --fail-on-warning            # Strict CI gate
@@ -596,6 +602,11 @@ struct ValidateArgs {
     /// it, such a standard is reported as N/A and exits 0
     #[arg(long)]
     require_applicable: bool,
+
+    /// Layout of `-o json`: v2 (default) is the sbom-tools/compliance/v2
+    /// envelope; v1 is the deprecated pre-0.4 layout, removed in v0.5.0
+    #[arg(long, value_enum, default_value_t = cli::ValidateJsonSchema::V2, value_name = "VERSION")]
+    json_schema: cli::ValidateJsonSchema,
 
     /// Output only a compact JSON summary (overrides --output)
     #[arg(long)]
@@ -2100,6 +2111,7 @@ fn run() -> Result<()> {
                     .or_else(|| app.compliance.cra_product_class.clone()),
                 args.as_of.as_deref(),
                 args.require_applicable,
+                args.json_schema,
             )?;
             if exit_code != 0 {
                 std::process::exit(exit_code);

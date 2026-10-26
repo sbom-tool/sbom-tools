@@ -23,6 +23,7 @@ mod crypto;
 mod eo14028;
 mod eu_ai_act;
 mod eucc;
+mod finding;
 mod fsct;
 mod generic;
 mod pci_dss;
@@ -32,6 +33,9 @@ mod shared;
 mod ssdf;
 
 use context::{ComplianceContext, checker_for};
+pub use finding::{
+    DOCUMENT_SUBJECT, FINDING_ID_PREFIX, finding_id, finding_key, finding_subject, standard_key,
+};
 pub use registry::{
     CISA2026_SARIF_RULE_IDS, CNSA2_SARIF_RULE_IDS, COMPLIANCE_SARIF_RULE_IDS,
     EO14028_SARIF_RULE_IDS, FDA_SARIF_RULE_IDS, FSCT_SARIF_RULE_IDS, NTIA_SARIF_RULE_IDS,

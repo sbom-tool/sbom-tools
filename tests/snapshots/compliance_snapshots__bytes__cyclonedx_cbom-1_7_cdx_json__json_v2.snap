@@ -1,0 +1,517 @@
+---
+source: tests/compliance_snapshots.rs
+---
+{
+  "schema": "sbom-tools/compliance/v2",
+  "tool": {
+    "name": "sbom-tools",
+    "version": "[VERSION]"
+  },
+  "results": [
+    {
+      "standard": "cnsa2",
+      "name": "CNSA 2.0",
+      "applicable": true,
+      "compliant": false,
+      "score": 7,
+      "counts": {
+        "error": 12,
+        "warning": 0,
+        "info": 0
+      },
+      "violations": [
+        {
+          "finding_id": "sbomtools:v1:db8f934f12fe2eaf",
+          "finding_key": "cnsa2|SBOM-CNSA2-ALG-007|crypto/algorithm/ml-kem-768",
+          "severity": "Error",
+          "category": "CryptographyInfo",
+          "message": "'ML-KEM-768' quantum level 3 < 5, CNSA 2.0 requires Level 5",
+          "element": "ML-KEM-768",
+          "component_id": "crypto/algorithm/ml-kem-768",
+          "requirement": "CNSA 2.0 Level 5",
+          "rule_id": "SBOM-CNSA2-ALG-007",
+          "sarif_rule_id": "SBOM-CNSA2-ALG-007",
+          "standard_refs": [
+            {
+              "standard": "Cnsa2",
+              "id": "CNSA 2.0",
+              "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:f6f3e69908944371",
+          "finding_key": "cnsa2|SBOM-CNSA2-ALG-003|crypto/algorithm/ml-kem-768",
+          "severity": "Error",
+          "category": "CryptographyInfo",
+          "message": "'ML-KEM-768' uses ML-KEM-768, CNSA 2.0 requires ML-KEM-1024 only",
+          "element": "ML-KEM-768",
+          "component_id": "crypto/algorithm/ml-kem-768",
+          "requirement": "CNSA 2.0 KEM",
+          "rule_id": "SBOM-CNSA2-ALG-003",
+          "sarif_rule_id": "SBOM-CNSA2-ALG-003",
+          "standard_refs": [
+            {
+              "standard": "Cnsa2",
+              "id": "CNSA 2.0",
+              "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:326a99536d9bc878",
+          "finding_key": "cnsa2|SBOM-CNSA2-ALG-007|crypto/algorithm/ml-dsa-65",
+          "severity": "Error",
+          "category": "CryptographyInfo",
+          "message": "'ML-DSA-65' quantum level 3 < 5, CNSA 2.0 requires Level 5",
+          "element": "ML-DSA-65",
+          "component_id": "crypto/algorithm/ml-dsa-65",
+          "requirement": "CNSA 2.0 Level 5",
+          "rule_id": "SBOM-CNSA2-ALG-007",
+          "sarif_rule_id": "SBOM-CNSA2-ALG-007",
+          "standard_refs": [
+            {
+              "standard": "Cnsa2",
+              "id": "CNSA 2.0",
+              "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:059cf70a9ae9a775",
+          "finding_key": "cnsa2|SBOM-CNSA2-ALG-004|crypto/algorithm/ml-dsa-65",
+          "severity": "Error",
+          "category": "CryptographyInfo",
+          "message": "'ML-DSA-65' uses ML-DSA-65, CNSA 2.0 requires ML-DSA-87 only",
+          "element": "ML-DSA-65",
+          "component_id": "crypto/algorithm/ml-dsa-65",
+          "requirement": "CNSA 2.0 Signature",
+          "rule_id": "SBOM-CNSA2-ALG-004",
+          "sarif_rule_id": "SBOM-CNSA2-ALG-004",
+          "standard_refs": [
+            {
+              "standard": "Cnsa2",
+              "id": "CNSA 2.0",
+              "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:83cc7dc911fdae9e",
+          "finding_key": "cnsa2|SBOM-CNSA2-ALG-008|crypto/algorithm/slh-dsa-shake-256s",
+          "severity": "Error",
+          "category": "CryptographyInfo",
+          "message": "'SLH-DSA-SHAKE-256s' uses SLH-DSA, which is NIST-approved (FIPS 205) but not part of CNSA 2.0",
+          "element": "SLH-DSA-SHAKE-256s",
+          "component_id": "crypto/algorithm/slh-dsa-shake-256s",
+          "requirement": "CNSA 2.0 Approved Algorithms",
+          "rule_id": "SBOM-CNSA2-ALG-008",
+          "sarif_rule_id": "SBOM-CNSA2-ALG-008",
+          "standard_refs": [
+            {
+              "standard": "Cnsa2",
+              "id": "CNSA 2.0",
+              "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:9682dc81d044cfe2",
+          "finding_key": "cnsa2|SBOM-CNSA2-ALG-006|crypto/algorithm/x25519",
+          "severity": "Error",
+          "category": "CryptographyInfo",
+          "message": "'X25519' (ECDH) is quantum-vulnerable, must migrate to CNSA 2.0 approved algorithm",
+          "element": "X25519",
+          "component_id": "crypto/algorithm/x25519",
+          "requirement": "CNSA 2.0 PQC Migration",
+          "rule_id": "SBOM-CNSA2-ALG-006",
+          "sarif_rule_id": "SBOM-CNSA2-ALG-006",
+          "standard_refs": [
+            {
+              "standard": "Cnsa2",
+              "id": "CNSA 2.0",
+              "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:ee8a3c54afb74d2d",
+          "finding_key": "cnsa2|SBOM-CNSA2-ALG-007|crypto/algorithm/hybrid-kem",
+          "severity": "Error",
+          "category": "CryptographyInfo",
+          "message": "'X25519-ML-KEM-768' quantum level 3 < 5, CNSA 2.0 requires Level 5",
+          "element": "X25519-ML-KEM-768",
+          "component_id": "crypto/algorithm/hybrid-kem",
+          "requirement": "CNSA 2.0 Level 5",
+          "rule_id": "SBOM-CNSA2-ALG-007",
+          "sarif_rule_id": "SBOM-CNSA2-ALG-007",
+          "standard_refs": [
+            {
+              "standard": "Cnsa2",
+              "id": "CNSA 2.0",
+              "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:f71ab2860b405cc2",
+          "finding_key": "cnsa2|SBOM-CNSA2-ALG-UNKNOWN|crypto/algorithm/hybrid-kem",
+          "severity": "Error",
+          "category": "CryptographyInfo",
+          "message": "'X25519-ML-KEM-768' is a hybrid combiner whose component algorithms cannot be identified, so it cannot be shown to be on the CNSA 2.0 allowlist",
+          "element": "X25519-ML-KEM-768",
+          "component_id": "crypto/algorithm/hybrid-kem",
+          "requirement": "CNSA 2.0: algorithm identification",
+          "rule_id": "SBOM-CNSA2-ALG-UNKNOWN",
+          "sarif_rule_id": "SBOM-CNSA2-ALG-UNKNOWN",
+          "standard_refs": [
+            {
+              "standard": "Cnsa2",
+              "id": "CNSA 2.0",
+              "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:3d1e46793ae574a2",
+          "finding_key": "cnsa2|SBOM-CNSA2-ALG-006|crypto/algorithm/ecdsa-p521",
+          "severity": "Error",
+          "category": "CryptographyInfo",
+          "message": "'ECDSA-P521' (ECDSA) is quantum-vulnerable, must migrate to CNSA 2.0 approved algorithm",
+          "element": "ECDSA-P521",
+          "component_id": "crypto/algorithm/ecdsa-p521",
+          "requirement": "CNSA 2.0 PQC Migration",
+          "rule_id": "SBOM-CNSA2-ALG-006",
+          "sarif_rule_id": "SBOM-CNSA2-ALG-006",
+          "standard_refs": [
+            {
+              "standard": "Cnsa2",
+              "id": "CNSA 2.0",
+              "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:2fad371371b58c48",
+          "finding_key": "cnsa2|SBOM-CNSA2-PROTO-002|crypto/protocol/tls13-pqc",
+          "severity": "Error",
+          "category": "CryptographyInfo",
+          "message": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384_ML_KEM_768' includes non-CNSA 2.0 algorithms: ML-KEM-768",
+          "element": "TLS 1.3 (PQC Hybrid)",
+          "component_id": "crypto/protocol/tls13-pqc",
+          "requirement": "CNSA 2.0 Protocol",
+          "rule_id": "SBOM-CNSA2-PROTO-002",
+          "sarif_rule_id": "SBOM-CNSA2-PROTO-002",
+          "standard_refs": [
+            {
+              "standard": "Cnsa2",
+              "id": "CNSA 2.0",
+              "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:2fad371371b58c48",
+          "finding_key": "cnsa2|SBOM-CNSA2-PROTO-002|crypto/protocol/tls13-pqc",
+          "severity": "Error",
+          "category": "CryptographyInfo",
+          "message": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384' includes non-CNSA 2.0 algorithms: ECDH",
+          "element": "TLS 1.3 (PQC Hybrid)",
+          "component_id": "crypto/protocol/tls13-pqc",
+          "requirement": "CNSA 2.0 Protocol",
+          "rule_id": "SBOM-CNSA2-PROTO-002",
+          "sarif_rule_id": "SBOM-CNSA2-PROTO-002",
+          "standard_refs": [
+            {
+              "standard": "Cnsa2",
+              "id": "CNSA 2.0",
+              "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:1c8d3d26b0929d61",
+          "finding_key": "cnsa2|SBOM-CNSA2-PROTO-UNKNOWN|crypto/protocol/tls13-pqc",
+          "severity": "Error",
+          "category": "CryptographyInfo",
+          "message": "Protocol 'TLS 1.3 (PQC Hybrid)' has crypto references that cannot be resolved or classified: crypto/algorithm/hybrid-kem; they cannot be shown to be on the CNSA 2.0 allowlist",
+          "element": "TLS 1.3 (PQC Hybrid)",
+          "component_id": "crypto/protocol/tls13-pqc",
+          "requirement": "CNSA 2.0: protocol algorithm identification",
+          "rule_id": "SBOM-CNSA2-PROTO-UNKNOWN",
+          "sarif_rule_id": "SBOM-CNSA2-PROTO-UNKNOWN",
+          "standard_refs": [
+            {
+              "standard": "Cnsa2",
+              "id": "CNSA 2.0",
+              "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "standard": "pqc",
+      "name": "NIST PQC Readiness",
+      "applicable": true,
+      "compliant": false,
+      "score": 20,
+      "counts": {
+        "error": 3,
+        "warning": 1,
+        "info": 7
+      },
+      "violations": [
+        {
+          "finding_id": "sbomtools:v1:1b668fce7dabff77",
+          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/ml-kem-1024",
+          "severity": "Info",
+          "category": "CryptographyInfo",
+          "message": "'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+          "element": "ML-KEM-1024",
+          "component_id": "crypto/algorithm/ml-kem-1024",
+          "requirement": "FIPS 203/204/205: approved",
+          "rule_id": "SBOM-PQC-009",
+          "sarif_rule_id": "SBOM-PQC-009",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "FIPS 203/204/205",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            },
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-208",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:1ab07b91d0dfc149",
+          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/ml-kem-768",
+          "severity": "Info",
+          "category": "CryptographyInfo",
+          "message": "'ML-KEM-768' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+          "element": "ML-KEM-768",
+          "component_id": "crypto/algorithm/ml-kem-768",
+          "requirement": "FIPS 203/204/205: approved",
+          "rule_id": "SBOM-PQC-009",
+          "sarif_rule_id": "SBOM-PQC-009",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "FIPS 203/204/205",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            },
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-208",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:1e7ace63cafd4753",
+          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/ml-dsa-87",
+          "severity": "Info",
+          "category": "CryptographyInfo",
+          "message": "'ML-DSA-87' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+          "element": "ML-DSA-87",
+          "component_id": "crypto/algorithm/ml-dsa-87",
+          "requirement": "FIPS 203/204/205: approved",
+          "rule_id": "SBOM-PQC-009",
+          "sarif_rule_id": "SBOM-PQC-009",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "FIPS 203/204/205",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            },
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-208",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:82ab8e3138bc09d9",
+          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/ml-dsa-65",
+          "severity": "Info",
+          "category": "CryptographyInfo",
+          "message": "'ML-DSA-65' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+          "element": "ML-DSA-65",
+          "component_id": "crypto/algorithm/ml-dsa-65",
+          "requirement": "FIPS 203/204/205: approved",
+          "rule_id": "SBOM-PQC-009",
+          "sarif_rule_id": "SBOM-PQC-009",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "FIPS 203/204/205",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            },
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-208",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:ce3f644b51d4d60e",
+          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/slh-dsa-shake-256s",
+          "severity": "Info",
+          "category": "CryptographyInfo",
+          "message": "'SLH-DSA-SHAKE-256s' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+          "element": "SLH-DSA-SHAKE-256s",
+          "component_id": "crypto/algorithm/slh-dsa-shake-256s",
+          "requirement": "FIPS 203/204/205: approved",
+          "rule_id": "SBOM-PQC-009",
+          "sarif_rule_id": "SBOM-PQC-009",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "FIPS 203/204/205",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            },
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-208",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:9f9263b04c514a5f",
+          "finding_key": "pqc|SBOM-PQC-001|crypto/algorithm/x25519",
+          "severity": "Error",
+          "category": "CryptographyInfo",
+          "message": "'X25519' (ECDH) is quantum-vulnerable and must migrate to PQC (IR 8547)",
+          "element": "X25519",
+          "component_id": "crypto/algorithm/x25519",
+          "requirement": "IR 8547: quantum-vulnerable",
+          "rule_id": "SBOM-PQC-001",
+          "sarif_rule_id": "SBOM-PQC-001",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "IR 8547 ipd",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            },
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-131A Rev. 2",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:8119d896d50ea594",
+          "finding_key": "pqc|SBOM-PQC-010|crypto/algorithm/hybrid-kem",
+          "severity": "Info",
+          "category": "CryptographyInfo",
+          "message": "'X25519-ML-KEM-768' is a hybrid PQC combiner — good migration practice",
+          "element": "X25519-ML-KEM-768",
+          "component_id": "crypto/algorithm/hybrid-kem",
+          "requirement": "IR 8547: recommended transition",
+          "rule_id": "SBOM-PQC-010",
+          "sarif_rule_id": "SBOM-PQC-010",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "FIPS 203/204/205",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:461158e579e9d249",
+          "finding_key": "pqc|SBOM-PQC-001|crypto/algorithm/ecdsa-p521",
+          "severity": "Error",
+          "category": "CryptographyInfo",
+          "message": "'ECDSA-P521' (ECDSA) is quantum-vulnerable and must migrate to PQC (IR 8547)",
+          "element": "ECDSA-P521",
+          "component_id": "crypto/algorithm/ecdsa-p521",
+          "requirement": "IR 8547: quantum-vulnerable",
+          "rule_id": "SBOM-PQC-001",
+          "sarif_rule_id": "SBOM-PQC-001",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "IR 8547 ipd",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            },
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-131A Rev. 2",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:77d714919f4f5c86",
+          "finding_key": "pqc|SBOM-PQC-009|crypto/algorithm/xmss",
+          "severity": "Info",
+          "category": "CryptographyInfo",
+          "message": "'XMSS' uses NIST-approved PQC algorithm (SP 800-208 stateful hash-based signature)",
+          "element": "XMSS",
+          "component_id": "crypto/algorithm/xmss",
+          "requirement": "FIPS 203/204/205: approved",
+          "rule_id": "SBOM-PQC-009",
+          "sarif_rule_id": "SBOM-PQC-009",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "FIPS 203/204/205",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            },
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-208",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:4f38695956b2fe51",
+          "finding_key": "pqc|SBOM-PQC-PROTO-002|crypto/protocol/tls13-pqc",
+          "severity": "Error",
+          "category": "CryptographyInfo",
+          "message": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384' includes broken or quantum-vulnerable algorithms: ECDH (quantum-vulnerable)",
+          "element": "TLS 1.3 (PQC Hybrid)",
+          "component_id": "crypto/protocol/tls13-pqc",
+          "requirement": "IR 8547 / SP 800-131A: protocol algorithms",
+          "rule_id": "SBOM-PQC-PROTO-002",
+          "sarif_rule_id": "SBOM-PQC-PROTO-002",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "SP 800-131A / IR 8547",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        },
+        {
+          "finding_id": "sbomtools:v1:0989a78580e29dc4",
+          "finding_key": "pqc|SBOM-PQC-PROTO-UNKNOWN|crypto/protocol/tls13-pqc",
+          "severity": "Warning",
+          "category": "CryptographyInfo",
+          "message": "Protocol 'TLS 1.3 (PQC Hybrid)' has crypto evidence that cannot be resolved or classified: crypto/algorithm/hybrid-kem; unable to verify PQC readiness",
+          "element": "TLS 1.3 (PQC Hybrid)",
+          "component_id": "crypto/protocol/tls13-pqc",
+          "requirement": "IR 8547: protocol algorithm identification",
+          "rule_id": "SBOM-PQC-PROTO-UNKNOWN",
+          "sarif_rule_id": "SBOM-PQC-PROTO-UNKNOWN",
+          "standard_refs": [
+            {
+              "standard": "NistPqc",
+              "id": "IR 8547 ipd",
+              "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
