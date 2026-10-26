@@ -665,6 +665,34 @@
           }
         }
       ]
+    },
+    {
+      "id": "v14-maven-default-hashes",
+      "review_id": "V14",
+      "fixture": "v14-maven-default-hashes.cdx.json",
+      "note": "Every component carries MD5, SHA-1, SHA-256 and SHA-512, the cyclonedx-maven-plugin default. HASH-ALGO warned on each although SHA-256 satisfies the element. The SPDX 2.x gate must not reach CycloneDX: the missing signature and completeness declaration still warn.",
+      "checks": [
+        {
+          "standard": "cisa-2026",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-CISA2026-HASH-ALGO"
+            ],
+            "rules_present": [
+              {
+                "rule": "SBOM-CISA2026-SIGNATURE",
+                "severity": "warning"
+              },
+              {
+                "rule": "SBOM-CISA2026-COVERAGE",
+                "severity": "warning"
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

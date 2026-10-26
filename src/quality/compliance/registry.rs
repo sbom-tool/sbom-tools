@@ -1888,7 +1888,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CISA 2026: Component Hash Algorithm — recognized, authority-approved hash algorithm",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::CisaMinimum2026, "Component Hash Algorithm")],
-            remediation: "Identify hash algorithms using IANA Hash Function Textual Names, and use algorithms approved by a relevant authority such as NIST: MD5 is not NIST-approved; SHA-1 is deprecated and slated for withdrawal by 2030 — use SHA-256 or stronger.",
+            remediation: "Identify hash algorithms using IANA Hash Function Textual Names, and use algorithms approved by a relevant authority such as NIST: MD5 is not NIST-approved; SHA-1 is deprecated and slated for withdrawal by 2030 — use SHA-256 or stronger. A component that carries one such hash passes even when it also lists MD5 or SHA-1 digests.",
         },
         "SBOM-CISA2026-LICENSE" => RuleMeta {
             sarif_id: "SBOM-CISA2026-LICENSE",

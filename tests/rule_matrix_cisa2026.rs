@@ -214,6 +214,17 @@ fn cisa2026_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 s.component_mut("libalpha").hashes =
                     vec![("WHIRLPOOL".to_string(), SHA1_FILLER.to_string())];
             }),
+        )
+        // Weak digests only, however many: no strong hash to fall back on.
+        .with_firing(
+            "md5-and-sha1-only",
+            Sev::Warning,
+            broken(|s| {
+                s.component_mut("libalpha").hashes = vec![
+                    ("MD5".to_string(), MD5_FILLER.to_string()),
+                    ("SHA-1".to_string(), SHA1_FILLER.to_string()),
+                ];
+            }),
         ),
         RuleEntry::tested(
             "SBOM-CISA2026-LICENSE",
@@ -492,4 +503,62 @@ fn file_components_are_exempt_from_package_elements() {
     ] {
         assert_silent(&result, id);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Review finding V14: weak digests beside a strong one. These tests pin the
+// evaluation clock.
+// ---------------------------------------------------------------------------
+
+/// Evaluation instant for the V14 tests (the review date).
+const AS_OF: &str = "2026-10-12T00:00:00Z";
+
+/// Filler SHA-512 digest (128 hex chars, the digest of empty input).
+const SHA512_FILLER: &str = "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce\
+                             47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e";
+
+fn check_at_as_of(json: &str) -> ComplianceResult {
+    let sbom = parse_sbom_str(json).unwrap_or_else(|e| panic!("fixture must parse: {e}\n{json}"));
+    let as_of = chrono::DateTime::parse_from_rfc3339(AS_OF)
+        .expect("valid AS_OF")
+        .with_timezone(&chrono::Utc);
+    ComplianceChecker::new(LEVEL).with_as_of(as_of).check(&sbom)
+}
+
+/// The cyclonedx-maven-plugin default lists MD5 and SHA-1 next to SHA-256
+/// and SHA-512. The strong digests satisfy the element, so the conforming
+/// document stays clean with that hash set on every component.
+#[test]
+fn weak_digests_beside_a_strong_one_do_not_warn() {
+    let mut doc = conforming_json();
+    let maven_default = serde_json::json!([
+        { "alg": "MD5", "content": MD5_FILLER },
+        { "alg": "SHA-1", "content": SHA1_FILLER },
+        { "alg": "SHA-256", "content": rule_matrix::SHA256_FILLER },
+        { "alg": "SHA-512", "content": SHA512_FILLER },
+    ]);
+    doc["metadata"]["component"]["hashes"] = maven_default.clone();
+    for component in doc["components"].as_array_mut().unwrap() {
+        component["hashes"] = maven_default.clone();
+    }
+    let result = check_at_as_of(&doc.to_string());
+    assert!(
+        result.violations.is_empty() && result.is_compliant,
+        "the Maven default hash set must pass cleanly; emitted:\n{}",
+        render_violations(&result)
+    );
+}
+
+/// A strong algorithm counts only with a real digest: next to an SHA-256
+/// entry that declares its value unknown, MD5 is the only hash, and warns.
+#[test]
+fn a_strong_algorithm_without_a_digest_leaves_the_warning() {
+    let mut doc = conforming_json();
+    doc["components"][0]["hashes"] = serde_json::json!([
+        { "alg": "MD5", "content": MD5_FILLER },
+        { "alg": "SHA-256", "content": "NOASSERTION" },
+    ]);
+    let result = check_at_as_of(&doc.to_string());
+    assert_fires(&result, "SBOM-CISA2026-HASH-ALGO", Sev::Warning);
+    assert_silent(&result, "SBOM-CISA2026-HASH");
 }

@@ -68,6 +68,21 @@ fn is_ascii_hex(value: &str) -> bool {
     !value.is_empty() && value.chars().all(|c| c.is_ascii_hexdigit())
 }
 
+/// Why a hash algorithm falls short of the Component Hash Algorithm element,
+/// or `None` when it is acceptable. "The algorithm should be approved by a
+/// relevant authority, such as NIST": MD5 was never FIPS-approved; SHA-1 is
+/// deprecated with withdrawal slated by 2030; an unrecognized algorithm
+/// cannot be mapped to an IANA Hash Function Textual Name.
+fn hash_algorithm_shortfall(algorithm: &crate::model::HashAlgorithm) -> Option<String> {
+    use crate::model::HashAlgorithm;
+    match algorithm {
+        HashAlgorithm::Md5 => Some("MD5 (not NIST-approved)".to_string()),
+        HashAlgorithm::Sha1 => Some("SHA-1 (deprecated; NIST withdrawal by 2030)".to_string()),
+        HashAlgorithm::Other(name) => Some(format!("{name} (not a recognized hash function name)")),
+        _ => None,
+    }
+}
+
 impl ComplianceChecker {
     // ════════════════════════════════════════════════════════════════════
     // CISA 2026 Minimum Elements (successor to NTIA 2021)
@@ -83,9 +98,7 @@ impl ComplianceChecker {
     /// Explicitly Identifying Unknown Information declaration check.
     #[allow(clippy::too_many_lines)]
     pub(crate) fn check_cisa2026(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
-        use crate::model::{
-            CompletenessDeclaration, CreatorType, ExternalRefType, HashAlgorithm, HashProvenance,
-        };
+        use crate::model::{CompletenessDeclaration, CreatorType, ExternalRefType, HashProvenance};
 
         // The per-component elements below have nothing to judge without a
         // package-scoped component.
@@ -482,26 +495,22 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                 });
             } else {
-                // Hash-value evidence is sound — assess the algorithms.
-                // "The algorithm should be approved by a relevant authority,
-                // such as NIST" is a 'should', hence Warning: MD5 was never
-                // FIPS-approved; SHA-1 is deprecated with withdrawal slated
-                // by 2030; an unrecognized algorithm cannot be mapped to an
-                // IANA Hash Function Textual Name.
+                // Hash-value evidence is sound — assess the algorithms (see
+                // `hash_algorithm_shortfall`). "Should be approved by a
+                // relevant authority" is a 'should', hence Warning. One
+                // strong hash (an acceptable algorithm with an ASCII-hex
+                // value) satisfies the element: the cyclonedx-maven-plugin,
+                // for one, emits MD5 and SHA-1 beside SHA-256 and SHA-512 by
+                // default, and weak digests next to a strong one take nothing
+                // away. Components with only weak hashes still warn.
                 let offending: Vec<String> = authored
                     .iter()
-                    .filter_map(|h| match &h.algorithm {
-                        HashAlgorithm::Md5 => Some("MD5 (not NIST-approved)".to_string()),
-                        HashAlgorithm::Sha1 => {
-                            Some("SHA-1 (deprecated; NIST withdrawal by 2030)".to_string())
-                        }
-                        HashAlgorithm::Other(name) => {
-                            Some(format!("{name} (not a recognized hash function name)"))
-                        }
-                        _ => None,
-                    })
+                    .filter_map(|h| hash_algorithm_shortfall(&h.algorithm))
                     .collect();
-                if !offending.is_empty() {
+                let has_strong_hash = authored.iter().any(|h| {
+                    hash_algorithm_shortfall(&h.algorithm).is_none() && is_ascii_hex(h.value.trim())
+                });
+                if !offending.is_empty() && !has_strong_hash {
                     violations.push(Violation {
                         severity: ViolationSeverity::Warning,
                         category: ViolationCategory::IntegrityInfo,
