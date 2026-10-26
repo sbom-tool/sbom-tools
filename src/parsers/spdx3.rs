@@ -2123,8 +2123,11 @@ where
 ///
 /// SPDX metric entries are commonly objects such as `{ "ai_name": "accuracy",
 /// "ai_value": "0.97" }`, but the property is loosely typed, so plain strings
-/// and numbers are also accepted. `type`/`name`/`key` map to the metric type and
-/// `value` is stringified to preserve precision and non-numeric values.
+/// and numbers are also accepted. `name`/`key`/`type` map to the metric type and
+/// `value` is stringified to preserve precision and non-numeric values. The
+/// canonical SPDX 3.0.1 form is a DictionaryEntry
+/// (`{ "type": "DictionaryEntry", "key": "accuracy", "value": "0.97" }`), whose
+/// `type` names the class, not the metric: `key` is read before `type`.
 fn spdx3_metric_to_entry(value: serde_json::Value) -> crate::model::MetricEntry {
     let stringify = |v: &serde_json::Value| -> Option<String> {
         match v {
@@ -2137,7 +2140,7 @@ fn spdx3_metric_to_entry(value: serde_json::Value) -> crate::model::MetricEntry 
         serde_json::Value::Object(map) => {
             let pick = |keys: &[&str]| keys.iter().find_map(|k| map.get(*k).and_then(stringify));
             crate::model::MetricEntry {
-                metric_type: pick(&["ai_name", "name", "type", "ai_type", "key"]),
+                metric_type: pick(&["ai_name", "name", "key", "type", "ai_type"]),
                 value: pick(&["ai_value", "value", "ai_decisionThreshold"]),
                 slice: pick(&["ai_slice", "slice"]),
             }
@@ -3310,5 +3313,25 @@ mod tests {
         let empty = signature("");
         assert_eq!(empty.algorithm, "ES256");
         assert!(!empty.has_value, "an empty hashValue is no signature value");
+    }
+
+    /// The canonical SPDX 3.0.1 metric is a DictionaryEntry whose `type` is
+    /// the class name: the metric is its `key`, as in the compact
+    /// `{ key, value }` form (found by the rule-matrix format axis, whose
+    /// SPDX 3 renderer writes the canonical form).
+    #[test]
+    fn spdx3_dictionary_entry_metric_is_named_by_its_key() {
+        for metric in [
+            r#"{"type": "DictionaryEntry", "key": "accuracy", "value": "0.94"}"#,
+            r#"{"key": "accuracy", "value": "0.94"}"#,
+            r#"{"ai_name": "accuracy", "ai_value": "0.94"}"#,
+        ] {
+            let entry = spdx3_metric_to_entry(serde_json::from_str(metric).expect("JSON"));
+            assert_eq!(entry.metric_type.as_deref(), Some("accuracy"), "{metric}");
+            assert_eq!(entry.value.as_deref(), Some("0.94"), "{metric}");
+        }
+        // A bare `type` still names the metric when no key does.
+        let typed = spdx3_metric_to_entry(serde_json::json!({ "type": "F1", "value": 0.9 }));
+        assert_eq!(typed.metric_type.as_deref(), Some("F1"));
     }
 }
