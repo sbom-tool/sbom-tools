@@ -14,11 +14,19 @@ use chrono::{DateTime, SecondsFormat, Utc};
 use serde_json::{Value, json};
 use uuid::Uuid;
 
-const OSCAL_VERSION: &str = "1.1.2";
+/// The OSCAL release the document conforms to, declared in
+/// `metadata.oscal-version`. Tests validate every fixture's output against
+/// this release's JSON schema (`tests/fixtures/schemas/oscal/`).
+const OSCAL_VERSION: &str = "1.2.3";
 const ASSESSMENT_PLAN_URN: &str = "urn:sbom-tools:assessment-plan:validation";
 const PROP_NS: &str = "https://sbom.tools/ns/oscal";
 
-/// Generate an OSCAL 1.1.2 assessment-results JSON document.
+/// Observation type of a rule violation. OSCAL 1.2.0 deprecated `finding`,
+/// the type for observations made by tools, and named `discovery` its
+/// replacement.
+const VIOLATION_OBSERVATION_TYPE: &str = "discovery";
+
+/// Generate an OSCAL 1.2.3 assessment-results JSON document.
 ///
 /// Stamps the current time and random UUIDs, so two runs never produce the
 /// same bytes. Prefer [`generate_assessment_results_at`], which is
@@ -27,7 +35,7 @@ pub fn generate_assessment_results(results: &[ComplianceResult]) -> Result<Strin
     build_assessment_results(results, Utc::now(), &mut Uuid::new_v4)
 }
 
-/// Generate an OSCAL 1.1.2 assessment-results JSON document that is
+/// Generate an OSCAL 1.2.3 assessment-results JSON document that is
 /// reproducible for a given input.
 ///
 /// The `collected` and `last-modified` timestamps are `as_of` (the `--as-of`
@@ -120,7 +128,7 @@ fn standard_result(
     uuid: &mut impl FnMut() -> Uuid,
 ) -> Value {
     let standard_name = result.level.name();
-    let mut props = vec![
+    let mut props: Vec<Value> = [
         prop("standard", &standard_id(result)),
         prop("standard-name", standard_name),
         prop("is-compliant", &result.is_compliant.to_string()),
@@ -135,12 +143,15 @@ fn standard_result(
         prop("error-count", &result.error_count.to_string()),
         prop("warning-count", &result.warning_count.to_string()),
         prop("info-count", &result.info_count.to_string()),
-    ];
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
     if let Applicability::NotApplicable(reason) = &result.applicability {
-        props.push(prop("not-applicable-reason", reason));
+        props.extend(prop("not-applicable-reason", reason));
     }
     if let Some(score) = result.score() {
-        props.push(prop("score", &score.to_string()));
+        props.extend(prop("score", &score.to_string()));
     }
 
     let mut observations = Vec::new();
@@ -194,12 +205,44 @@ fn is_not_applicable_marker(violation: &Violation) -> bool {
     matches!(violation.rule_id, "SBOM-AIACT-NA" | "SBOM-BSIAI-NA")
 }
 
-fn prop(name: &str, value: &str) -> Value {
-    json!({
+/// A property in our namespace, or `None` when `value` holds no text.
+fn prop(name: &str, value: &str) -> Option<Value> {
+    let value = oscal_string(value)?;
+    Some(json!({
         "name": name,
         "ns": PROP_NS,
         "value": value
+    }))
+}
+
+/// `text` as an OSCAL `string`, or `None` when nothing is left of it.
+///
+/// OSCAL property values (and the identifiers and versions it types as
+/// `string`) must match `^\S(.*\S)?$` read as ECMA-262: no leading or
+/// trailing whitespace, and no line terminator anywhere, since `.` stops at
+/// each of them. Text taken from the SBOM — component names, labels,
+/// versions, identifiers — can hold anything, so line terminators become
+/// spaces and surrounding whitespace is trimmed. The result is also a valid
+/// `markup-line` (single line, non-empty).
+fn oscal_string(text: &str) -> Option<String> {
+    let trimmed = text.trim_matches(is_ecma_whitespace);
+    (!trimmed.is_empty()).then(|| {
+        trimmed
+            .chars()
+            .map(|c| if is_line_terminator(c) { ' ' } else { c })
+            .collect()
     })
+}
+
+/// ECMA-262 `\s` (WhiteSpace and LineTerminator), plus U+0085, which Rust
+/// counts as whitespace; trimming it as well is harmless.
+fn is_ecma_whitespace(c: char) -> bool {
+    c.is_whitespace() || c == '\u{feff}'
+}
+
+/// The ECMA-262 LineTerminator code points.
+const fn is_line_terminator(c: char) -> bool {
+    matches!(c, '\n' | '\r' | '\u{2028}' | '\u{2029}')
 }
 
 /// Standard-level roll-up finding: `satisfied` when the standard evaluated
@@ -226,21 +269,24 @@ fn rollup_finding(result: &ComplianceResult, standard_name: &str, uuid: Uuid) ->
 }
 
 fn observation(violation: &Violation, uuid: Uuid, collected: &str) -> Value {
-    let mut props = vec![
+    let mut props: Vec<Value> = [
         prop("severity", severity(violation.severity)),
         prop("standard-reference", &violation.requirement),
         prop("rule-id", violation.rule_id),
         prop("sarif-rule-id", violation.sarif_rule_id()),
-    ];
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
     if let Some(element) = &violation.element {
-        props.push(prop("sbom-element", element));
+        props.extend(prop("sbom-element", element));
     }
     json!({
         "uuid": uuid,
         "title": violation.rule_id,
         "description": violation.message,
         "methods": ["EXAMINE"],
-        "types": ["finding"],
+        "types": [VIOLATION_OBSERVATION_TYPE],
         "collected": collected,
         "props": props
     })
@@ -255,7 +301,7 @@ fn finding(violation: &Violation, observation_uuid: Uuid, uuid: Uuid) -> Value {
             "type": "objective-id",
             "target-id": violation.rule_id.to_ascii_lowercase(),
             "status": {
-                // OSCAL 1.1.2 finding-target status `state` is a closed enum
+                // OSCAL's finding-target status `state` is a closed enum
                 // (satisfied | not-satisfied, no allow-other). Any violation —
                 // regardless of severity — is a non-satisfied objective; the
                 // severity detail is carried separately in the observation's
@@ -492,8 +538,51 @@ mod tests {
     }
 
     #[test]
+    fn document_declares_oscal_1_2_3_and_discovery_observations() {
+        let document = build(&[result(vec![violation("missing timestamp")])]);
+        assert_eq!(
+            document["assessment-results"]["metadata"]["oscal-version"],
+            "1.2.3"
+        );
+        // OSCAL 1.2.0 deprecated the `finding` observation type in favour
+        // of `discovery`.
+        assert_eq!(
+            document["assessment-results"]["results"][0]["observations"][0]["types"],
+            serde_json::json!(["discovery"])
+        );
+    }
+
+    #[test]
+    fn sbom_text_is_normalized_to_an_oscal_string() {
+        use super::oscal_string;
+        assert_eq!(oscal_string("lodash").as_deref(), Some("lodash"));
+        assert_eq!(oscal_string(" lodash\n").as_deref(), Some("lodash"));
+        assert_eq!(oscal_string("two\nlines").as_deref(), Some("two lines"));
+        assert_eq!(
+            oscal_string("a\r\u{2028}\u{2029}b").as_deref(),
+            Some("a   b"),
+            "every ECMA line terminator becomes a space"
+        );
+        assert_eq!(oscal_string("tab\tinside").as_deref(), Some("tab\tinside"));
+        assert_eq!(oscal_string("\u{feff}bom\u{feff}").as_deref(), Some("bom"));
+        for empty in ["", " ", "\n\t", "\u{feff}", "\u{2028}"] {
+            assert_eq!(oscal_string(empty), None, "{empty:?}");
+        }
+    }
+
+    #[test]
+    fn a_label_with_no_text_leaves_out_the_property() {
+        let mut blank = violation("blank label");
+        blank.element = Some(" \n ".to_string());
+        let document = build(&[result(vec![blank])]);
+        let obs = &document["assessment-results"]["results"][0]["observations"][0];
+        assert_eq!(prop_value(obs, "sbom-element"), None);
+        assert_eq!(prop_value(obs, "rule-id"), Some("SBOM-NTIA-TIMESTAMP"));
+    }
+
+    #[test]
     fn finding_status_state_is_valid_oscal_token_for_every_severity() {
-        // OSCAL 1.1.2 finding-target status `state` is a CLOSED enum:
+        // OSCAL's finding-target status `state` is a CLOSED enum:
         // only "satisfied" / "not-satisfied" (no allow-other). Every violation
         // is a non-satisfied objective regardless of severity. This guards the
         // Info/Warning branches that the other tests (Error-only) never reach.

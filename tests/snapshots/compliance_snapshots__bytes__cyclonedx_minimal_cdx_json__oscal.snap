@@ -8,7 +8,7 @@ source: tests/compliance_snapshots.rs
     },
     "metadata": {
       "last-modified": "2026-10-12T00:00:00Z",
-      "oscal-version": "1.1.2",
+      "oscal-version": "1.2.3",
       "title": "sbom-tools validation assessment results",
       "version": "[VERSION]"
     },
@@ -167,7 +167,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-NTIA-IDENTIFIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "eb4dde64-c238-557e-b2bc-d5effda09d52"
           },
@@ -206,7 +206,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-NTIA-SUPPLIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "93f57206-5d01-5e31-a2f3-bfdd374dfc84"
           },
@@ -245,7 +245,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-NTIA-SUPPLIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "a08ef9c3-94c0-52e2-88f3-2bd9af8485a0"
           },
@@ -284,7 +284,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-NTIA-SUPPLIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "21eb9ca5-ebb9-5cb9-8b28-f924acf02a3c"
           },
@@ -323,7 +323,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-NTIA-DEPENDENCY",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "7da54341-077d-587b-b781-b2bf1cc12b06"
           },
@@ -362,7 +362,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-NTIA-GENERAL",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "d910703c-7964-5005-a221-6cbd42678f9e"
           }
@@ -672,7 +672,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CISA2026-AUTHOR",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "e56bcb5d-e88a-55b1-95c6-aa5e316b1b87"
           },
@@ -706,7 +706,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CISA2026-SIGNATURE",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "fb2e8002-8c70-5a1b-b53b-40e48c26390d"
           },
@@ -740,7 +740,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CISA2026-GENERATION-CONTEXT",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "aa14f4ec-c005-5640-9006-0f8abb41de19"
           },
@@ -779,7 +779,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CISA2026-PRODUCER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "ddab5b0f-3d24-5b07-9705-9f302419db17"
           },
@@ -818,7 +818,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CISA2026-IDENTIFIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "ac20ff1c-bdea-53a4-b911-0a83f4e884cf"
           },
@@ -857,7 +857,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CISA2026-HASH",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "2ba41766-867a-5496-a544-82fcb3a87b1f"
           },
@@ -896,7 +896,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CISA2026-LICENSE",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "87b0137c-f184-53d2-a60a-1a8b7576f243"
           },
@@ -935,7 +935,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CISA2026-PRODUCER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "c1b3a7f7-192a-5a68-8802-84eee074c58b"
           },
@@ -974,7 +974,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CISA2026-HASH",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "c25c118c-4fea-5651-a39b-900f9fb97ef8"
           },
@@ -1013,7 +1013,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CISA2026-PRODUCER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "acb8419b-3694-50a0-a9ad-c23c56832511"
           },
@@ -1052,7 +1052,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CISA2026-HASH",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "e3915823-a79a-55ed-8b62-b1e5b108f7cc"
           },
@@ -1086,7 +1086,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CISA2026-COVERAGE",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "7740ac5b-aad5-581c-815f-b234e360e15b"
           }

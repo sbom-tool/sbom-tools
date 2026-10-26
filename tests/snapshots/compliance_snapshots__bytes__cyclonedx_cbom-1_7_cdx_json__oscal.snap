@@ -8,7 +8,7 @@ source: tests/compliance_snapshots.rs
     },
     "metadata": {
       "last-modified": "2026-10-12T00:00:00Z",
-      "oscal-version": "1.1.2",
+      "oscal-version": "1.2.3",
       "title": "sbom-tools validation assessment results",
       "version": "[VERSION]"
     },
@@ -252,7 +252,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CNSA2-ALG-007",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "fb8829fc-dc1a-5862-a940-31f0bd69cfdb"
           },
@@ -291,7 +291,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CNSA2-ALG-003",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "fb0e85db-b27a-5b9d-be1b-2465bd37a6b7"
           },
@@ -330,7 +330,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CNSA2-ALG-007",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "97c0dc15-d17a-5150-8cdd-c9d02750e64e"
           },
@@ -369,7 +369,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CNSA2-ALG-004",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "e6689049-6b50-5203-bbdb-026e9fe553b9"
           },
@@ -408,7 +408,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CNSA2-ALG-008",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "8aab58b5-d0ed-558f-89f5-f07778197876"
           },
@@ -447,7 +447,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CNSA2-ALG-006",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "219f2c5c-b79e-5624-9643-b8ee672b6215"
           },
@@ -486,7 +486,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CNSA2-ALG-007",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "62d42cf7-a0cd-53f5-b203-d8fefb9de912"
           },
@@ -525,7 +525,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CNSA2-ALG-003",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "d5952ed0-0744-562c-9b87-525951bf3312"
           },
@@ -564,7 +564,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CNSA2-ALG-006",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "b0c49624-58db-592f-84a7-a42f91e1afb2"
           },
@@ -603,7 +603,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CNSA2-PROTO-002",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "7ecac478-b7bd-5bcd-ba3a-f37a718bcf42"
           },
@@ -642,7 +642,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CNSA2-PROTO-002",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "dab3033c-715b-5fc5-a477-b2e6cd29eb7c"
           }
@@ -923,7 +923,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-PQC-009",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "c9f60d6e-8bcd-54f0-b7e1-483715f041ec"
           },
@@ -962,7 +962,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-PQC-009",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "7e6fc5b3-68a0-536d-a214-d53fd3f1f600"
           },
@@ -1001,7 +1001,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-PQC-009",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "06be73b5-2084-5588-b1cf-56fb1f29bdbe"
           },
@@ -1040,7 +1040,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-PQC-009",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "8eb9be32-0a20-5396-a2f1-24e160d75f0f"
           },
@@ -1079,7 +1079,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-PQC-009",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "44acb7c8-67a4-5456-9211-413c29591f22"
           },
@@ -1118,7 +1118,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-PQC-001",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "5fca561a-2a2b-550c-a47d-a4a30dbffe09"
           },
@@ -1157,7 +1157,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-PQC-010",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "f7832ea4-184a-546f-b849-54fae5327766"
           },
@@ -1196,7 +1196,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-PQC-001",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "83c08d48-4408-5b0c-a39a-ff2e3f2fce11"
           },
@@ -1235,7 +1235,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-PQC-009",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "d42970ff-52c8-50ac-b6a1-c5f499fb9ef4"
           },
@@ -1274,7 +1274,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-PQC-PROTO-002",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "b70fe4ab-87fd-5495-bb26-e25b217469fa"
           }

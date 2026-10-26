@@ -8,7 +8,7 @@ source: tests/compliance_snapshots.rs
     },
     "metadata": {
       "last-modified": "2026-10-12T00:00:00Z",
-      "oscal-version": "1.1.2",
+      "oscal-version": "1.2.3",
       "title": "sbom-tools validation assessment results",
       "version": "[VERSION]"
     },
@@ -196,7 +196,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSI-TR-03183-2-5-1",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "617979fa-9c9a-5715-b6fe-83f539c486d0"
           },
@@ -230,7 +230,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSI-TR-03183-2-LICENSE",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "2b5684b2-8d5f-5909-834e-34c1b42ece42"
           },
@@ -264,7 +264,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSI-TR-03183-2-CREATOR",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "818336d0-9c28-500e-942c-93e6a5ec171c"
           },
@@ -298,7 +298,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSI-TR-03183-2-5-4",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "4eb01774-6d16-59d8-9d4a-ed799462ef1c"
           },
@@ -332,7 +332,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSI-TR-03183-2-5-4-MISSING",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "37a1cebe-020b-5447-bac9-dbe7c6cc120c"
           },
@@ -366,7 +366,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "d224e91a-ac44-50ba-9a82-f48a76068830"
           },
@@ -400,7 +400,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSI-TR-03183-2-5-2-4",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "8224fbec-c4d5-5474-97f0-198116cf1628"
           },
@@ -434,7 +434,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSI-TR-03183-2-3-1",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "5fc6e24d-95c9-589c-a835-6d21062228ff"
           }
@@ -608,7 +608,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-EO14028-IDENTIFIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "87fea353-f4fd-502d-99d5-097872a1ebe7"
           },
@@ -642,7 +642,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-EO14028-INTEGRITY",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "a16949c7-c691-51e8-ab48-7b1bccd99149"
           },
@@ -676,7 +676,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-EO14028-DISCLOSURE",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "a6a175b9-c897-58da-8e29-0c1bc7363dbd"
           },
@@ -710,7 +710,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-EO14028-SUPPLIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "13401877-b4be-5e8d-a108-81400912068c"
           }

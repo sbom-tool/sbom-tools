@@ -10,6 +10,13 @@
 #[path = "common/json_schema.rs"]
 mod json_schema;
 
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
+
+use sbom_tools::model::{CraSidecarMetadata, NormalizedSbom};
+use sbom_tools::parse_sbom_str;
+use sbom_tools::quality::{ComplianceChecker, ComplianceLevel, ComplianceResult};
+use sbom_tools::reports::oscal::{generate_assessment_results, generate_assessment_results_at};
 use serde_json::{Value, json};
 
 const SCHEMA_PATH: &str = concat!(
@@ -20,6 +27,31 @@ const SCHEMA_PATH: &str = concat!(
 /// SHA-256 of the vendored schema: the digest GitHub publishes for the
 /// `oscal_assessment-results_schema.json` asset of the v1.2.3 release.
 const SCHEMA_SHA256: &str = "4034e2032332dbf597e59e0646ec16c2c31df992962490371e91f47b219ff42c";
+
+/// The release the writer declares in `metadata.oscal-version`.
+const OSCAL_VERSION: &str = "1.2.3";
+
+const FIXTURES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
+
+/// Fixture directories that hold SBOMs (as in tests/compliance_snapshots.rs).
+const SBOM_DIRS: &[&str] = &[
+    "aibom",
+    "compliance/regressions",
+    "cra",
+    "cyclonedx",
+    "showcase",
+    "spdx",
+    "spdx3",
+];
+
+/// Levels the CLI hands a CRA sidecar to (see `cli/validate.rs`).
+const SIDECAR_LEVELS: &[ComplianceLevel] = &[
+    ComplianceLevel::CraPhase1,
+    ComplianceLevel::CraPhase2,
+    ComplianceLevel::CraOssSteward,
+    ComplianceLevel::EuccSubstantial,
+    ComplianceLevel::EuAiAct,
+];
 
 fn schema() -> Value {
     let text = std::fs::read_to_string(SCHEMA_PATH).expect("schema readable");
@@ -67,8 +99,288 @@ fn vendored_schema_is_the_published_release_asset() {
     assert_eq!(schema["$schema"], "http://json-schema.org/draft-07/schema#");
     assert_eq!(
         schema["$id"],
-        "http://csrc.nist.gov/ns/oscal/1.2.3/oscal-ar-schema.json"
+        format!("http://csrc.nist.gov/ns/oscal/{OSCAL_VERSION}/oscal-ar-schema.json")
     );
+}
+
+// ---------------------------------------------------------------------------
+// The writer: every level on every SBOM fixture
+// ---------------------------------------------------------------------------
+
+fn as_of() -> chrono::DateTime<chrono::Utc> {
+    chrono::DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
+        .expect("valid instant")
+        .with_timezone(&chrono::Utc)
+}
+
+/// Files under the SBOM directories that are not SBOMs (sidecars, docs,
+/// scanner configs).
+fn is_non_sbom(rel: &str) -> bool {
+    [
+        ".cra.json",
+        ".cra.yaml",
+        ".md",
+        ".toml",
+        "corpus.json",
+        ".openvex.json",
+    ]
+    .iter()
+    .any(|suffix| rel.ends_with(suffix))
+}
+
+/// A parseable SBOM fixture with its digest and auto-discovered sidecar.
+struct Fixture {
+    rel: String,
+    digest: String,
+    sbom: NormalizedSbom,
+    sidecar: Option<CraSidecarMetadata>,
+}
+
+/// Every parseable SBOM fixture, sorted.
+fn fixtures() -> Vec<Fixture> {
+    fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, out);
+            } else {
+                out.push(path);
+            }
+        }
+    }
+    let root = Path::new(FIXTURES_DIR);
+    let mut paths = Vec::new();
+    for dir in SBOM_DIRS {
+        walk(&root.join(dir), &mut paths);
+    }
+    paths.sort();
+    paths
+        .into_iter()
+        .filter_map(|path| {
+            let rel = path.strip_prefix(root).ok()?.to_string_lossy().into_owned();
+            if is_non_sbom(&rel) {
+                return None;
+            }
+            let raw = std::fs::read_to_string(&path).ok()?;
+            let sbom = parse_sbom_str(&raw).ok()?;
+            let sidecar = CraSidecarMetadata::discover_for_sbom(&path)
+                .unwrap_or_else(|e| panic!("{rel}: sidecar does not load: {e}"));
+            Some(Fixture {
+                rel,
+                digest: sha256_hex(raw.as_bytes()),
+                sbom,
+                sidecar,
+            })
+        })
+        .collect()
+}
+
+fn check(
+    sbom: &NormalizedSbom,
+    level: ComplianceLevel,
+    sidecar: Option<&CraSidecarMetadata>,
+) -> ComplianceResult {
+    let mut checker = ComplianceChecker::new(level).with_as_of(as_of());
+    if let Some(sc) = sidecar {
+        checker = checker.with_sidecar(sc.clone());
+    }
+    checker.check(sbom)
+}
+
+/// The reproducible OSCAL document for `results`, parsed.
+fn oscal(fixture: &Fixture, results: &[ComplianceResult]) -> Value {
+    let text = generate_assessment_results_at(results, &fixture.digest, Some(as_of()))
+        .expect("OSCAL serializes");
+    serde_json::from_str(&text).expect("OSCAL is JSON")
+}
+
+fn array<'a>(value: &'a Value, field: &str) -> &'a [Value] {
+    value[field].as_array().map_or(&[], Vec::as_slice)
+}
+
+fn uuid_of(value: &Value) -> &str {
+    value["uuid"].as_str().expect("uuid is a string")
+}
+
+/// What the JSON schema cannot express: the declared release, the
+/// observation type, per-assessment UUIDs unique across the document, and
+/// findings whose related observations exist in their result.
+fn assert_invariants(document: &Value, results: &[ComplianceResult], label: &str) {
+    let ar = &document["assessment-results"];
+    assert_eq!(ar["metadata"]["oscal-version"], OSCAL_VERSION, "{label}");
+    let entries = array(ar, "results");
+    assert_eq!(
+        entries.len(),
+        results.len().max(1),
+        "{label}: one per standard"
+    );
+
+    let mut uuids = vec![uuid_of(ar)];
+    for entry in entries {
+        uuids.push(uuid_of(entry));
+        let observations: HashSet<&str> = array(entry, "observations")
+            .iter()
+            .map(|observation| {
+                // OSCAL 1.2 deprecates the `finding` observation type in favour
+                // of `discovery`.
+                assert_eq!(observation["types"], json!(["discovery"]), "{label}");
+                uuid_of(observation)
+            })
+            .collect();
+        uuids.extend(observations.iter().copied());
+        for finding in array(entry, "findings") {
+            uuids.push(uuid_of(finding));
+            for related in array(finding, "related-observations") {
+                let target = related["observation-uuid"].as_str().expect("uuid");
+                assert!(
+                    observations.contains(target),
+                    "{label}: finding {} relates to unknown observation {target}",
+                    uuid_of(finding)
+                );
+            }
+        }
+    }
+    let unique: HashSet<&str> = uuids.iter().copied().collect();
+    assert_eq!(unique.len(), uuids.len(), "{label}: duplicate UUIDs");
+}
+
+#[test]
+fn every_level_on_every_fixture_matches_the_oscal_schema() {
+    let schema = schema();
+    let fixtures = fixtures();
+    assert!(fixtures.len() > 50, "fixture walk found {}", fixtures.len());
+    let mut documents = 0;
+    for fixture in &fixtures {
+        let all: Vec<ComplianceResult> = ComplianceLevel::all()
+            .iter()
+            .map(|level| check(&fixture.sbom, *level, None))
+            .collect();
+        // One document per level, as `validate --standard <one>` writes it,
+        // and one with every level.
+        let mut runs: Vec<(String, Vec<ComplianceResult>)> = all
+            .iter()
+            .map(|result| {
+                (
+                    format!("{} [{:?}]", fixture.rel, result.level),
+                    vec![result.clone()],
+                )
+            })
+            .collect();
+        runs.push((format!("{} [all levels]", fixture.rel), all));
+        if let Some(sc) = &fixture.sidecar {
+            runs.push((
+                format!("{} [sidecar levels + sidecar]", fixture.rel),
+                SIDECAR_LEVELS
+                    .iter()
+                    .map(|level| check(&fixture.sbom, *level, Some(sc)))
+                    .collect(),
+            ));
+        }
+        for (label, results) in runs {
+            let document = oscal(fixture, &results);
+            assert_valid(&schema, &document, &label);
+            assert_invariants(&document, &results, &label);
+            documents += 1;
+        }
+    }
+    assert!(
+        documents > fixtures.len() * ComplianceLevel::all().len(),
+        "validated {documents} documents"
+    );
+}
+
+#[test]
+fn a_run_without_standards_matches_the_oscal_schema() {
+    let fixture = fixtures().into_iter().next().expect("a fixture");
+    let document = oscal(&fixture, &[]);
+    assert_valid(&schema(), &document, "no standards");
+    assert_invariants(&document, &[], "no standards");
+}
+
+#[test]
+fn the_wall_clock_variant_matches_the_oscal_schema() {
+    let fixture = fixtures().into_iter().next().expect("a fixture");
+    let results: Vec<ComplianceResult> = ComplianceLevel::all()
+        .iter()
+        .map(|level| check(&fixture.sbom, *level, None))
+        .collect();
+    let text = generate_assessment_results(&results).expect("OSCAL serializes");
+    let document: Value = serde_json::from_str(&text).expect("OSCAL is JSON");
+    assert_valid(&schema(), &document, "wall clock");
+    assert_invariants(&document, &results, "wall clock");
+}
+
+/// An SBOM whose names, versions and identifiers carry what OSCAL `string`
+/// and `markup-line` fields reject: edge whitespace, every ECMA line
+/// terminator, a lone byte-order mark, and text that is only whitespace.
+const HOSTILE_SBOM: &str = r#"{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-01-01T00:00:00Z",
+    "component": { "type": "application", "name": " app\nname ", "bom-ref": "app" }
+  },
+  "components": [
+    { "type": "library", "name": " lodash\n", "version": "\u2028 4.17.21 ", "bom-ref": " ref\r1 " },
+    { "type": "library", "name": "\ufeff", "bom-ref": "\t" },
+    { "type": "library", "name": "line\u2029break", "version": " ", "bom-ref": "lb" },
+    { "type": "library", "name": "tab\tinside", "version": "1.0", "purl": "pkg:npm/tab-inside@1.0" }
+  ]
+}"#;
+
+/// SBOM text reaches OSCAL `string` fields; whatever it holds, every level's
+/// document must stay schema-valid, with the text normalized, not dropped.
+#[test]
+fn hostile_sbom_text_keeps_every_level_schema_valid() {
+    let sbom = parse_sbom_str(HOSTILE_SBOM).expect("hostile SBOM parses");
+    let results: Vec<ComplianceResult> = ComplianceLevel::all()
+        .iter()
+        .map(|level| check(&sbom, *level, None))
+        .collect();
+    let text = generate_assessment_results_at(
+        &results,
+        &sha256_hex(HOSTILE_SBOM.as_bytes()),
+        Some(as_of()),
+    )
+    .expect("OSCAL serializes");
+    let document: Value = serde_json::from_str(&text).expect("OSCAL is JSON");
+    assert_valid(&schema(), &document, "hostile SBOM");
+    assert_invariants(&document, &results, "hostile SBOM");
+
+    let elements: HashSet<&str> = array(&document["assessment-results"], "results")
+        .iter()
+        .flat_map(|entry| array(entry, "observations"))
+        .flat_map(|observation| array(observation, "props"))
+        .filter(|p| p["name"] == "sbom-element")
+        .filter_map(|p| p["value"].as_str())
+        .collect();
+    for normalized in ["lodash", "app name", "line break", "tab\tinside"] {
+        assert!(
+            elements.contains(normalized),
+            "expected the label {normalized:?} among {elements:?}"
+        );
+    }
+}
+
+/// Finding targets are `token`s built from rule ids (`target-id` is the
+/// lowercased id), so every registry id must make one.
+#[test]
+fn every_rule_id_makes_a_valid_oscal_token() {
+    let schema = schema();
+    let token = &schema["definitions"]["TokenDatatype"];
+    assert!(token.is_object(), "the schema defines TokenDatatype");
+    for rule_id in sbom_tools::quality::all_rule_ids() {
+        let target_id = rule_id.to_ascii_lowercase();
+        assert!(
+            json_schema::validate(token, &json!(target_id)).is_ok(),
+            "{rule_id} does not make an OSCAL token"
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------

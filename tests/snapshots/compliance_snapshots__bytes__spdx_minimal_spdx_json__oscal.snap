@@ -8,7 +8,7 @@ source: tests/compliance_snapshots.rs
     },
     "metadata": {
       "last-modified": "2026-10-12T00:00:00Z",
-      "oscal-version": "1.1.2",
+      "oscal-version": "1.2.3",
       "title": "sbom-tools validation assessment results",
       "version": "[VERSION]"
     },
@@ -99,7 +99,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-NTIA-SUPPLIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "65034028-3201-5dc3-ac61-1bf9fd8d60ee"
           },
@@ -138,7 +138,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-NTIA-SUPPLIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "c2e6d62f-5e44-5ec6-b930-22a928ba89f9"
           }
@@ -346,7 +346,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-FSCT-DIRECT-DEPS",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "ed5d063e-d06c-5ab6-bd8e-dfb2c7df4ee9"
           },
@@ -380,7 +380,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-FSCT-SUPPLIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "e878837f-d1c9-5f2c-9e12-fc234802afa3"
           },
@@ -414,7 +414,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-FSCT-HASH",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "e3660acb-753a-5863-8587-4f7cd5086109"
           },
@@ -448,7 +448,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-FSCT-IDENTIFIER-MULTI",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "533d84eb-ca2d-54b2-b5dc-13d171b41cb8"
           },
@@ -482,7 +482,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-FSCT-COMPLETENESS",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "62f16653-5544-579d-a7df-15016613a890"
           },
@@ -516,7 +516,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-FSCT-DYNAMIC-DEPS",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "3881b69c-21d7-50c6-9c95-4b66c16edda7"
           }

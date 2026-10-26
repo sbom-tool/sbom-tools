@@ -8,7 +8,7 @@ source: tests/compliance_snapshots.rs
     },
     "metadata": {
       "last-modified": "2026-10-12T00:00:00Z",
-      "oscal-version": "1.1.2",
+      "oscal-version": "1.2.3",
       "title": "sbom-tools validation assessment results",
       "version": "[VERSION]"
     },
@@ -133,7 +133,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CRA-GENERAL",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "2f3b6e76-23a8-568b-94be-c6c41587f753"
           },
@@ -172,7 +172,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CRA-GENERAL",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "f7143079-792a-5830-8376-ff623d09d9ee"
           },
@@ -206,7 +206,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CRA-SBOM-FRESHNESS",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "44efd5b3-f88f-5d85-b596-bafeb9f8b220"
           },
@@ -240,7 +240,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CRA-VULN-STATEMENT",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "232e4b30-9a47-5949-8f3a-13210eb3d37b"
           }
@@ -419,7 +419,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CRA-GENERAL",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "363e158c-aba2-5f2c-a82c-e5f26f931c8f"
           },
@@ -458,7 +458,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CRA-GENERAL",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "17dc5857-1cfb-5740-afa3-66cc7a7a1696"
           },
@@ -492,7 +492,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CRA-SBOM-FRESHNESS",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "6bed1632-5ce6-5055-8810-3bd2b1c2795d"
           },
@@ -526,7 +526,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-CRA-VULN-STATEMENT",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "49983ea9-77ff-572b-a5a5-2e6afb309a5c"
           }

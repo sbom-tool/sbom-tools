@@ -8,7 +8,7 @@ source: tests/compliance_snapshots.rs
     },
     "metadata": {
       "last-modified": "2026-10-12T00:00:00Z",
-      "oscal-version": "1.1.2",
+      "oscal-version": "1.2.3",
       "title": "sbom-tools validation assessment results",
       "version": "[VERSION]"
     },
@@ -334,7 +334,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSIAI-META-SIGNATURE",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "cdbaec54-c888-5826-8374-1295a7456296"
           },
@@ -368,7 +368,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSIAI-SYS-PRODUCER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "6924e5f2-5b37-51b5-a1bd-11916b9186e1"
           },
@@ -402,7 +402,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSIAI-SYS-DATAFLOW",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "525c37a1-358b-54f1-b66f-a70aed80c5a0"
           },
@@ -441,7 +441,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSIAI-MODEL-IDENTIFIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "947943a3-8c7a-5146-a367-39c948dfa908"
           },
@@ -480,7 +480,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSIAI-MODEL-LICENSE",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "03227228-0eed-5905-b0c6-d0eb36005dd9"
           },
@@ -519,7 +519,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSIAI-DATASET-IDENTIFIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "85853d82-9510-5f9e-a20b-331fe1de743e"
           },
@@ -558,7 +558,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSIAI-DATASET-HASH",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "1f86c77a-4871-526e-bbfe-d45e87c1e566"
           },
@@ -597,7 +597,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSIAI-DATASET-LICENSE",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "a5fe0ff1-b5a3-55bf-bcb1-5284b1a86719"
           },
@@ -636,7 +636,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSIAI-DATASET-PROVENANCE",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "395da9fd-e370-5a34-8c93-3ebb54bde30b"
           },
@@ -670,7 +670,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSIAI-INFRA-RUNTIME",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "c838d0ca-691c-54b9-a184-89b80cf72cbc"
           },
@@ -704,7 +704,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSIAI-SEC-CONTROLS",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "824efbaf-d2e5-5722-9ad4-54ee4a5c0b50"
           },
@@ -738,7 +738,7 @@ source: tests/compliance_snapshots.rs
             ],
             "title": "SBOM-BSIAI-SEC-EXPLOITABILITY",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "68753274-c82c-5dc2-af69-40253966e107"
           }
