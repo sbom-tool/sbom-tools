@@ -336,14 +336,16 @@ pub fn escape_md_opt(s: Option<&str>) -> String {
 ///
 /// Whitespace, control and bidi characters and the brackets themselves are
 /// removed, so the URL can neither end the destination early nor start a new
-/// line, and `|` is percent-encoded so the link also holds inside a table
-/// cell. Used for `[text](<url>)` links and, on its own, as an autolink.
+/// line. `|` is percent-encoded so the link also holds inside a table cell,
+/// and `\` so a trailing one cannot escape the closing `>`. Used for
+/// `[text](<url>)` links and, on its own, as an autolink.
 pub(crate) fn markdown_link_destination(url: &str) -> String {
     let mut out = String::with_capacity(url.len() + 2);
     out.push('<');
     for c in url.chars() {
         match c {
             '|' => out.push_str("%7C"),
+            '\\' => out.push_str("%5C"),
             '<' | '>' => {}
             c if c.is_whitespace() || is_stripped(c) => {}
             _ => out.push(c),
@@ -657,6 +659,12 @@ mod tests {
         assert_eq!(
             markdown_link_destination("https://e.x/p>\n# Forged\u{202E} q|r"),
             "<https://e.x/p#Forgedq%7Cr>"
+        );
+        // A backslash before the closing `>` would escape it and leave the
+        // destination open.
+        assert_eq!(
+            markdown_link_destination("https://e.x/a\\b\\"),
+            "<https://e.x/a%5Cb%5C>"
         );
     }
 
