@@ -937,6 +937,65 @@ pub fn render_violations(result: &ComplianceResult) -> String {
         .join("\n")
 }
 
+/// A minimal SPDX tag-value document whose `SPDXVersion` line reads
+/// `SPDX-{version}`: one named, versioned, supplier-attributed package. The
+/// fixture DSL renders CycloneDX only, so the format checks that read only
+/// SPDX input are asserted through this document instead.
+pub fn spdx_tag_value(version: &str) -> String {
+    format!(
+        "SPDXVersion: SPDX-{version}\n\
+         DataLicense: CC0-1.0\n\
+         SPDXID: SPDXRef-DOCUMENT\n\
+         DocumentName: rule-matrix-spdx\n\
+         DocumentNamespace: https://acme.example/spdxdocs/rule-matrix-spdx\n\
+         Creator: Tool: acme-sbom-tool-1.0.0\n\
+         Created: 2026-01-15T10:00:00Z\n\
+         \n\
+         PackageName: libalpha\n\
+         SPDXID: SPDXRef-libalpha\n\
+         PackageVersion: 1.0.0\n\
+         PackageSupplier: Organization: Acme Components Ltd\n\
+         PackageDownloadLocation: NOASSERTION\n\
+         FilesAnalyzed: false\n\
+         PackageLicenseDeclared: MIT\n\
+         \n\
+         Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-libalpha\n"
+    )
+}
+
+/// Assert that `key`, a family's `SBOM-*-SPEC-VERSION-UNKNOWN` id, fires at
+/// `level` once, as a Warning, on an SPDX document claiming version 4.0
+/// (neither 2.x nor 3.x), and stays silent on SPDX 2.3. Both documents go
+/// through the real parser and the checker at the pinned clock.
+pub fn assert_spdx_version_unknown(level: ComplianceLevel, key: &str) {
+    let run = |version: &str| {
+        let sbom = parse_sbom_str(&spdx_tag_value(version))
+            .unwrap_or_else(|e| panic!("SPDX-{version} tag-value document must parse: {e}"));
+        clock::checker(level).check(&sbom)
+    };
+    let fired = |result: &ComplianceResult| -> Vec<ViolationSeverity> {
+        result
+            .violations
+            .iter()
+            .filter(|v| v.rule_id == key)
+            .map(|v| v.severity)
+            .collect()
+    };
+    let unknown = run("4.0");
+    assert_eq!(
+        fired(&unknown),
+        vec![ViolationSeverity::Warning],
+        "[{level:?}] an SPDX 4.0 document must fire {key} once as a Warning:\n{}",
+        render_violations(&unknown)
+    );
+    let known = run("2.3");
+    assert!(
+        fired(&known).is_empty(),
+        "[{level:?}] an SPDX 2.3 document must not fire {key}:\n{}",
+        render_violations(&known)
+    );
+}
+
 /// Assert a fully-conforming fixture yields a clean, compliant verdict.
 pub fn assert_no_violations(level: ComplianceLevel, fixture: &SbomFixture) {
     let result = check(level, fixture);

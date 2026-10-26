@@ -11,7 +11,11 @@
 //! cra.rs; `cra_universes_cover_the_cra_slice` ties them back to the slice.
 //! Most CRA findings share the `SBOM-CRA-ANNEX-I` and `SBOM-CRA-GENERAL`
 //! SARIF rules through alias keys, so each alias key also gets a per-key
-//! row.
+//! row. Since WP 1.8b gave every check a key of its own, no check emits
+//! `SBOM-CRA-GENERAL` or `SBOM-CRA-PRE-8-RQ-02` under its own key (nor, at
+//! Phase 1, `SBOM-CRA-LIFECYCLE` or `SBOM-CRA-VULN-METADATA`): those SARIF
+//! rows are skipped, and the per-key rows of their alias keys carry the
+//! cases.
 //!
 //! The manufacturer fixtures carry a CRA sidecar with the Art. 14 reporting
 //! channels (the only place they can be declared); the pinned clock is past
@@ -22,8 +26,8 @@ mod rule_matrix;
 
 use rule_matrix::clock::{as_of, checker};
 use rule_matrix::{
-    ComponentFixture, RuleEntry, SHA256_FILLER, SbomFixture, assert_no_violations, check,
-    render_violations, run_matrix,
+    ComponentFixture, RuleEntry, SHA256_FILLER, SbomFixture, assert_no_violations,
+    assert_spdx_version_unknown, check, render_violations, run_matrix,
 };
 use sbom_tools::model::{
     ConformityRoute, ControlAssertion, CraProductClass, CraSidecarMetadata, EolStatus,
@@ -295,6 +299,40 @@ fn with_hashed_product_ref(s: &mut SbomFixture, ref_type: &str, url: &str) {
     ));
 }
 
+/// Give the named component a bom-ref equal to its name (the shape the
+/// CycloneDX "may be missing bom-ref" note reads), rewriting the
+/// dependencies and vulnerabilities that reference it.
+fn bom_ref_is_name(s: &mut SbomFixture, name: &str) {
+    let old = std::mem::replace(&mut s.component_mut(name).bom_ref, name.to_string());
+    for (from, to) in &mut s.dependencies {
+        for r in std::iter::once(from).chain(to.iter_mut()) {
+            if *r == old {
+                *r = name.to_string();
+            }
+        }
+    }
+    for (_, _, affected) in &mut s.vulnerabilities {
+        if *affected == old {
+            *affected = name.to_string();
+        }
+    }
+}
+
+/// A device component without a version (prEN 40000-1-3 [PRE-8-RQ-02]
+/// accepts a device version or an associated firmware component).
+fn unversioned_device() -> ComponentFixture {
+    let mut device = comp("acme-board");
+    device.component_type = "device".to_string();
+    device.version = None;
+    device
+}
+
+/// Skip reason of the SPDX-only spec-version row in the three CRA matrices.
+const SPEC_VERSION_UNKNOWN_SKIP: &str = "an SPDX version that is neither 2.x nor 3.x is an \
+     SPDX-only check, out of the CycloneDX-only DSL's reach; \
+     cra_spec_version_unknown_reads_only_spdx below fires it on SPDX 4.0 and keeps it silent \
+     on SPDX 2.3 at all three CRA levels";
+
 /// Rows whose behaviour is identical under CRA Phase 1 and Phase 2.
 fn manufacturer_rows() -> Vec<RuleEntry> {
     vec![
@@ -357,8 +395,9 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             broken(|s| s.component_mut("libalpha").licenses.clear()),
         ),
         // No support end date is an Info; the sidecar's supportEndDate
-        // declares it too (silent). An end-of-life component (EOL
-        // enrichment) warns at the same rule id.
+        // declares it too (silent). An end-of-life component reports
+        // SBOM-CRA-ART-13-8-EOL under the same SARIF rule (per-key row
+        // below).
         RuleEntry::tested(
             "SBOM-CRA-ART-13-8",
             Sev::Info,
@@ -367,11 +406,6 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
                 s.primary_mut().properties.clear();
                 s.sidecar_mut().support_end_date = Some(as_of() + chrono::Duration::days(1800));
             }),
-        )
-        .with_departing_firing(
-            "end-of-life component (EOL enrichment)",
-            Sev::Warning,
-            broken(|s| s.component_mut("libalpha").eol = Some(EolStatus::EndOfLife)),
         ),
         RuleEntry::tested(
             "SBOM-CRA-ART-13-15-PRODUCT",
@@ -523,73 +557,23 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
                 );
             }),
         ),
-        // The CRA generic bucket: serial number (Warning), no creator at all
-        // (Error), a placeholder component name (Error), and the format notes
-        // (Info). The Art. 14 / Annex IV / Art. 13(2) sites share it through
-        // per-key rows below.
-        RuleEntry::tested(
+        // The CRA generic bucket. Its sites report alias keys of their own:
+        // the document metadata and format notes, the Art. 14 channels,
+        // Annex IV and (Phase 2) Art. 13(2).
+        RuleEntry::skipped(
             "SBOM-CRA-GENERAL",
-            Sev::Warning,
-            broken(|s| s.serial_number = None),
-            base(),
-        )
-        .with_departing_firing(
-            "no creator at all",
-            Sev::Error,
-            broken(|s| {
-                s.tools.clear();
-                s.manufacturer = None;
-            }),
-        )
-        .with_departing_firing(
-            "placeholder component name",
-            Sev::Error,
-            broken(|s| s.component_mut("libalpha").name = "unknown".to_string()),
-        )
-        .with_departing_firing(
-            "CycloneDX 1.3 is outdated",
-            Sev::Info,
-            broken(|s| s.spec_version = "1.3".to_string()),
+            "no check emits SBOM-CRA-GENERAL under its own key since WP 1.8b: every \
+             check that shares the SARIF rule reports an alias key of its own (CREATOR, \
+             SERIAL, COMPONENT-NAME, SPEC-VERSION, SPEC-VERSION-UNKNOWN, ELEMENT-ID, the \
+             four ART-14-* channels, ANNEX-IV and, at Phase 2, ART-13-2), each with a \
+             per-key row",
         ),
-        // prEN 40000-1-3 [PRE-8-RQ-02] hardware: a conforming firmware
-        // component is silent.
-        RuleEntry::tested(
+        // prEN 40000-1-3 [PRE-8-RQ-02] hardware: one alias key per check.
+        RuleEntry::skipped(
             "SBOM-CRA-PRE-8-RQ-02",
-            Sev::Error,
-            broken(|s| {
-                let mut fw = firmware();
-                fw.version = None;
-                with_firmware(s, fw);
-            }),
-            broken(|s| with_firmware(s, firmware())),
-        )
-        .with_firing(
-            "hardware component without a producer",
-            Sev::Error,
-            broken(|s| {
-                let mut fw = firmware();
-                fw.supplier = None;
-                with_firmware(s, fw);
-            }),
-        )
-        .with_firing(
-            "hardware component without a unique identifier",
-            Sev::Error,
-            broken(|s| {
-                let mut fw = firmware();
-                fw.purl = None;
-                with_firmware(s, fw);
-            }),
-        )
-        .with_departing_firing(
-            "device with no version and no firmware",
-            Sev::Warning,
-            broken(|s| {
-                let mut device = comp("acme-board");
-                device.component_type = "device".to_string();
-                device.version = None;
-                with_firmware(s, device);
-            }),
+            "no check emits SBOM-CRA-PRE-8-RQ-02 under its own key since WP 1.8b: each \
+             [PRE-8-RQ-02] hardware check reports an alias key of its own (PRODUCER, \
+             IDENTIFIER, FIRMWARE-VERSION, DEVICE-FIRMWARE), each with a per-key row",
         ),
         // Severity scales with the product class.
         RuleEntry::tested("SBOM-CRA-CYCLES", Sev::Warning, broken(add_cycle), base())
@@ -684,29 +668,63 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             }),
         ),
         // ── Per-key rows ─────────────────────────────────────────────────
-        // Art. 14 channels past the 2026-09-11 deadline: missing channels
-        // warn (Error for important class II+); the ENISA platform id stays
-        // an Info (the registry default documents the pre-deadline Info).
+        // Document metadata: no creator at all gates; a missing serial
+        // number warns (SBOM-CRA-DOC-INTEGRITY reports it beside).
         RuleEntry::key_tested(
-            "SBOM-CRA-ART-14",
-            Sev::Info,
-            broken(|s| s.sidecar_mut().enisa_reporting_platform_id = None),
+            "SBOM-CRA-CREATOR",
+            Sev::Error,
+            broken(|s| {
+                s.tools.clear();
+                s.manufacturer = None;
+            }),
+            base(),
+        )
+        .with_silent("a tool creator alone", broken(|s| s.manufacturer = None)),
+        RuleEntry::key_tested(
+            "SBOM-CRA-SERIAL",
+            Sev::Warning,
+            broken(|s| s.serial_number = None),
+            base(),
+        ),
+        // "unknown" without a corroborating PURL name segment does not count
+        // as a component name.
+        RuleEntry::key_tested(
+            "SBOM-CRA-COMPONENT-NAME",
+            Sev::Error,
+            broken(|s| s.component_mut("libalpha").name = "unknown".to_string()),
+            base(),
+        ),
+        // CycloneDX format notes: a version newer than any this tool reads
+        // warns, an outdated one is an Info (SBOM-CRA-MACHINE-READABLE
+        // reports the 1.3 floor beside it).
+        RuleEntry::key_tested(
+            "SBOM-CRA-SPEC-VERSION",
+            Sev::Warning,
+            broken(|s| s.spec_version = "1.8".to_string()),
             base(),
         )
         .with_departing_firing(
-            "PSIRT URL missing",
+            "CycloneDX 1.3 is outdated",
+            Sev::Info,
+            broken(|s| s.spec_version = "1.3".to_string()),
+        ),
+        RuleEntry::key_skipped("SBOM-CRA-SPEC-VERSION-UNKNOWN", SPEC_VERSION_UNKNOWN_SKIP),
+        RuleEntry::key_tested(
+            "SBOM-CRA-ELEMENT-ID",
+            Sev::Info,
+            broken(|s| bom_ref_is_name(s, "libalpha")),
+            base(),
+        ),
+        // Art. 14 channels past the 2026-09-11 deadline (the pinned clock):
+        // each missing channel warns, escalated to Error for important class
+        // II and critical products, and the ENISA platform id stays an Info
+        // at every class. art_14_findings_escalate_on_2026_09_11
+        // (tests/pinned_clock_tests.rs) covers the pre-deadline Infos.
+        RuleEntry::key_tested(
+            "SBOM-CRA-ART-14-PSIRT",
             Sev::Warning,
             broken(|s| s.sidecar_mut().psirt_url = None),
-        )
-        .with_departing_firing(
-            "24-hour early-warning channel missing",
-            Sev::Warning,
-            broken(|s| s.sidecar_mut().early_warning_contact = None),
-        )
-        .with_departing_firing(
-            "72-hour notification channel missing",
-            Sev::Warning,
-            broken(|s| s.sidecar_mut().incident_report_contact = None),
+            base(),
         )
         .with_departing_firing(
             "important class II product",
@@ -715,6 +733,148 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
                 s.sidecar_mut().psirt_url = None;
                 pin_class(s, CraProductClass::ImportantClass2, None);
             }),
+        ),
+        RuleEntry::key_tested(
+            "SBOM-CRA-ART-14-EARLY-WARNING",
+            Sev::Warning,
+            broken(|s| s.sidecar_mut().early_warning_contact = None),
+            base(),
+        )
+        .with_departing_firing(
+            "important class II product",
+            Sev::Error,
+            broken(|s| {
+                s.sidecar_mut().early_warning_contact = None;
+                pin_class(s, CraProductClass::ImportantClass2, None);
+            }),
+        ),
+        RuleEntry::key_tested(
+            "SBOM-CRA-ART-14-NOTIFICATION",
+            Sev::Warning,
+            broken(|s| s.sidecar_mut().incident_report_contact = None),
+            base(),
+        )
+        .with_departing_firing(
+            "important class II product",
+            Sev::Error,
+            broken(|s| {
+                s.sidecar_mut().incident_report_contact = None;
+                pin_class(s, CraProductClass::ImportantClass2, None);
+            }),
+        ),
+        RuleEntry::key_tested(
+            "SBOM-CRA-ART-14-ENISA",
+            Sev::Info,
+            broken(|s| s.sidecar_mut().enisa_reporting_platform_id = None),
+            base(),
+        )
+        .with_firing(
+            "important class II product",
+            Sev::Info,
+            broken(|s| {
+                s.sidecar_mut().enisa_reporting_platform_id = None;
+                pin_class(s, CraProductClass::ImportantClass2, None);
+            }),
+        ),
+        // prEN 40000-1-3 [PRE-8-RQ-02] hardware checks: a conforming
+        // firmware component is silent.
+        RuleEntry::key_tested(
+            "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
+            Sev::Error,
+            broken(|s| {
+                let mut fw = firmware();
+                fw.supplier = None;
+                with_firmware(s, fw);
+            }),
+            broken(|s| with_firmware(s, firmware())),
+        ),
+        RuleEntry::key_tested(
+            "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
+            Sev::Error,
+            broken(|s| {
+                let mut fw = firmware();
+                fw.purl = None;
+                with_firmware(s, fw);
+            }),
+            broken(|s| with_firmware(s, firmware())),
+        ),
+        RuleEntry::key_tested(
+            "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
+            Sev::Error,
+            broken(|s| {
+                let mut fw = firmware();
+                fw.version = None;
+                with_firmware(s, fw);
+            }),
+            broken(|s| with_firmware(s, firmware())),
+        ),
+        // A device needs a version or an associated firmware component.
+        RuleEntry::key_tested(
+            "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
+            Sev::Warning,
+            broken(|s| with_firmware(s, unversioned_device())),
+            broken(|s| {
+                let mut device = unversioned_device();
+                device.version = Some("2.1.0".to_string());
+                with_firmware(s, device);
+            }),
+        )
+        .with_silent(
+            "device without a version, wired to a firmware component",
+            broken(|s| {
+                let device = unversioned_device();
+                let fw = firmware();
+                s.dependencies
+                    .push((device.bom_ref.clone(), vec![fw.bom_ref.clone()]));
+                with_firmware(s, device);
+                with_firmware(s, fw);
+            }),
+        ),
+        // EOL enrichment: an end-of-life component warns (Error for
+        // important class II and critical products); one approaching
+        // end-of-life is an Info.
+        RuleEntry::key_tested(
+            "SBOM-CRA-ART-13-8-EOL",
+            Sev::Warning,
+            broken(|s| s.component_mut("libalpha").eol = Some(EolStatus::EndOfLife)),
+            base(),
+        )
+        .with_departing_firing(
+            "important class II product",
+            Sev::Error,
+            broken(|s| {
+                s.component_mut("libalpha").eol = Some(EolStatus::EndOfLife);
+                pin_class(s, CraProductClass::ImportantClass2, None);
+            }),
+        )
+        .with_silent(
+            "component approaching end-of-life",
+            broken(|s| s.component_mut("libalpha").eol = Some(EolStatus::ApproachingEol)),
+        ),
+        RuleEntry::key_tested(
+            "SBOM-CRA-LIFECYCLE-APPROACHING-EOL",
+            Sev::Info,
+            broken(|s| s.component_mut("libalpha").eol = Some(EolStatus::ApproachingEol)),
+            base(),
+        )
+        .with_silent(
+            "end-of-life component",
+            broken(|s| s.component_mut("libalpha").eol = Some(EolStatus::EndOfLife)),
+        ),
+        // SPDX 3.0 profile-conformance notes.
+        RuleEntry::key_skipped(
+            "SBOM-CRA-ART-13-5-PROFILE",
+            "SPDX 3.0-only note (a document that tracks licences without declaring the \
+             SimpleLicensing profile), out of the CycloneDX-only DSL's reach; \
+             cra_spdx3_profile_notes_fire_without_their_profile below fires it and keeps it \
+             silent at both phases",
+        ),
+        RuleEntry::key_skipped(
+            "SBOM-CRA-VULN-METADATA-PROFILE",
+            "SPDX 3.0-only note (a document that carries vulnerabilities without declaring \
+             the Security profile), out of the CycloneDX-only DSL's reach; \
+             cra_spdx3_profile_notes_fire_without_their_profile below fires it and keeps it \
+             silent at both phases",
         ),
         RuleEntry::key_tested(
             "SBOM-CRA-ANNEX-I-IDENTIFIER",
@@ -734,8 +894,8 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             broken(|s| s.component_mut("libalpha").hashes.clear()),
             base(),
         ),
-        // No relationships at all gates; a primary outside the graph, several
-        // roots without a primary, and an orphan majority warn.
+        // No relationships at all gates; a primary outside the graph and an
+        // orphan majority warn.
         RuleEntry::key_tested(
             "SBOM-CRA-ANNEX-I-DEPENDENCY",
             Sev::Error,
@@ -751,14 +911,6 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             }),
         )
         .with_departing_firing(
-            "several root components and no primary",
-            Sev::Warning,
-            broken(|s| {
-                without_primary(s);
-                s.components.push(comp("libgamma"));
-            }),
-        )
-        .with_departing_firing(
             "orphan majority (3 of 5 components disconnected, primary included)",
             Sev::Warning,
             broken(|s| {
@@ -768,6 +920,18 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
                 s.components.push(comp("libdelta"));
             }),
         ),
+        // Several root components and no primary to tell the product apart;
+        // a single root needs no primary.
+        RuleEntry::key_tested(
+            "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS",
+            Sev::Warning,
+            broken(|s| {
+                without_primary(s);
+                s.components.push(comp("libgamma"));
+            }),
+            base(),
+        )
+        .with_silent("one root component and no primary", broken(without_primary)),
         RuleEntry::key_tested(
             "SBOM-CRA-ANNEX-I-PRIMARY",
             Sev::Warning,
@@ -877,30 +1041,44 @@ fn cra_phase1_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     entries.extend([
         RuleEntry::skipped(
             "SBOM-CRA-VULN-METADATA",
-            "at Phase 1 the only site is the SPDX 3.0 Security-profile \
-             conformance note in check_cra_gaps, which the CycloneDX-only DSL \
-             cannot reach; covered by the raw SPDX 3.0 test \
-             cra_phase1_vuln_metadata_is_the_spdx3_security_profile_note below",
+            "at Phase 1 no check emits SBOM-CRA-VULN-METADATA under its own key: the \
+             severity and remediation checks run only at Phase 2, and the one Phase 1 \
+             site, the SPDX 3.0 Security-profile note, reports \
+             SBOM-CRA-VULN-METADATA-PROFILE since WP 1.8b (its per-key row is skipped: \
+             the CycloneDX-only DSL cannot reach it)",
         ),
-        // At Phase 1 only the approaching-EOL site (EOL enrichment) exists.
-        RuleEntry::tested(
+        RuleEntry::skipped(
             "SBOM-CRA-LIFECYCLE",
-            Sev::Info,
-            broken(|s| s.component_mut("libalpha").eol = Some(EolStatus::ApproachingEol)),
-            base(),
+            "at Phase 1 no check emits SBOM-CRA-LIFECYCLE under its own key: the \
+             lifecycle-evidence check runs only at Phase 2, and the approaching-EOL note \
+             reports SBOM-CRA-LIFECYCLE-APPROACHING-EOL since WP 1.8b (per-key row)",
         ),
         // A direct dependency without a supplier warns at Phase 1; a
-        // transitive one is an Info.
+        // transitive one is an Info under a key of its own.
         RuleEntry::key_tested(
             "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
             Sev::Warning,
             broken(|s| s.component_mut("libalpha").supplier = None),
             base(),
         )
-        .with_departing_firing(
+        .with_silent(
             "transitive dependency without a supplier",
+            broken(|s| add_transitive_without_supplier(s, 1)),
+        ),
+        RuleEntry::key_tested(
+            "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
             Sev::Info,
             broken(|s| add_transitive_without_supplier(s, 1)),
+            base(),
+        )
+        .with_firing(
+            "transitive dependencies without a supplier above 30%",
+            Sev::Info,
+            broken(|s| add_transitive_without_supplier(s, 2)),
+        )
+        .with_silent(
+            "direct dependency without a supplier",
+            broken(|s| s.component_mut("libalpha").supplier = None),
         ),
         // Phase 1 gates only below 50% vendor-hash coverage: 1 of 3 warns,
         // 2 of 3 is silent.
@@ -920,10 +1098,7 @@ fn cra_phase2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     let mut entries = manufacturer_rows();
     entries.extend([
         // An unrated vulnerability lacks the severity Annex I Part II (4)
-        // asks for. A declared remediation (analysis.response update or
-        // workaround_available) with no recommendation or workaround text
-        // gives users nothing to apply: an Info. CycloneDX has no
-        // fixed-version field, so the text is the only detail.
+        // asks for.
         RuleEntry::tested(
             "SBOM-CRA-VULN-METADATA",
             Sev::Warning,
@@ -935,13 +1110,18 @@ fn cra_phase2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 )];
             }),
             base(),
-        )
-        .with_departing_firing(
-            "update response without a recommendation",
+        ),
+        // A declared remediation (analysis.response update or
+        // workaround_available) with no recommendation or workaround text
+        // gives users nothing to apply: an Info. CycloneDX has no
+        // fixed-version field, so the text is the only detail.
+        RuleEntry::key_tested(
+            "SBOM-CRA-VULN-METADATA-REMEDIATION",
             Sev::Info,
             broken(|s| with_response(s, "update", None)),
+            base(),
         )
-        .with_departing_firing(
+        .with_firing(
             "workaround_available response without a workaround text",
             Sev::Info,
             broken(|s| with_response(s, "workaround_available", None)),
@@ -970,36 +1150,40 @@ fn cra_phase2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "will_not_fix response declares no remediation",
             broken(|s| with_response(s, "will_not_fix", None)),
         ),
-        // Phase 2 also asks for lifecycle evidence; an approaching-EOL
-        // component (EOL enrichment) is an Info at the same rule id.
+        // Phase 2 also asks for lifecycle evidence. An approaching-EOL
+        // component reports SBOM-CRA-LIFECYCLE-APPROACHING-EOL under the same
+        // SARIF rule (per-key row in manufacturer_rows).
         RuleEntry::tested(
             "SBOM-CRA-LIFECYCLE",
             Sev::Info,
             broken(|s| s.primary_mut().properties.clear()),
             base(),
-        )
-        .with_firing(
-            "component approaching end-of-life (EOL enrichment)",
-            Sev::Info,
-            broken(|s| s.component_mut("libalpha").eol = Some(EolStatus::ApproachingEol)),
         ),
         // Phase 2 makes direct-dependency suppliers mandatory (Error); over
         // 30% transitive gaps warn, fewer are an Info.
-        RuleEntry::key_tested_departing(
+        RuleEntry::key_skipped(
             "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
-            Sev::Error,
-            broken(|s| s.component_mut("libalpha").supplier = None),
+            "at Phase 2 a direct dependency without a supplier is always an Error \
+             ([PRE-7-RQ-03] makes direct-dependency suppliers mandatory), never the \
+             registry default Warning that Phase 1 emits, so no Phase 2 case can meet \
+             run_matrix's rule that a tested row fires at the registry default; \
+             cra_phase2_direct_dependency_supplier_gap_is_an_error below pins the Error \
+             and its silent cases",
+        ),
+        RuleEntry::key_tested(
+            "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
+            Sev::Info,
+            broken(|s| add_transitive_without_supplier(s, 1)),
             base(),
         )
-        .with_firing(
+        .with_departing_firing(
             "transitive dependencies without a supplier above 30%",
             Sev::Warning,
             broken(|s| add_transitive_without_supplier(s, 2)),
         )
-        .with_departing_firing(
-            "transitive dependency without a supplier at or below 30%",
-            Sev::Info,
-            broken(|s| add_transitive_without_supplier(s, 1)),
+        .with_silent(
+            "direct dependency without a supplier",
+            broken(|s| s.component_mut("libalpha").supplier = None),
         ),
         // Phase 2: below 50% vendor-hash coverage gates, below 80% warns.
         RuleEntry::tested_departing(
@@ -1114,23 +1298,14 @@ fn cra_oss_steward_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             steward_base(),
         ),
         // The steward profile runs no document-metadata check, so the
-        // generic bucket carries only the component-name and format sites
-        // (plus the Art. 24 per-key row below).
-        RuleEntry::tested(
+        // generic bucket's steward sites are the component-name and format
+        // checks plus the Art. 24 floor, each under an alias key of its own.
+        RuleEntry::skipped(
             "SBOM-CRA-GENERAL",
-            Sev::Warning,
-            steward_broken(|s| s.spec_version = "1.8".to_string()),
-            steward_base(),
-        )
-        .with_departing_firing(
-            "placeholder component name",
-            Sev::Error,
-            steward_broken(|s| s.component_mut("libalpha").name = "unknown".to_string()),
-        )
-        .with_departing_firing(
-            "CycloneDX 1.3 is outdated",
-            Sev::Info,
-            steward_broken(|s| s.spec_version = "1.3".to_string()),
+            "no check emits SBOM-CRA-GENERAL under its own key since WP 1.8b: the \
+             steward checks that share the SARIF rule report alias keys of their own \
+             (COMPONENT-NAME, SPEC-VERSION, SPEC-VERSION-UNKNOWN, ELEMENT-ID, ART-24), \
+             each with a per-key row",
         ),
         RuleEntry::tested(
             "SBOM-CRA-COMPONENT-VERSION",
@@ -1230,6 +1405,39 @@ fn cra_oss_steward_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     vec![("ref-libalpha".to_string(), vec!["ref-libbeta".to_string()])];
             }),
         ),
+        RuleEntry::key_tested(
+            "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS",
+            Sev::Warning,
+            steward_broken(|s| {
+                without_primary(s);
+                s.components.push(comp("libgamma"));
+            }),
+            steward_base(),
+        ),
+        RuleEntry::key_tested(
+            "SBOM-CRA-COMPONENT-NAME",
+            Sev::Error,
+            steward_broken(|s| s.component_mut("libalpha").name = "unknown".to_string()),
+            steward_base(),
+        ),
+        RuleEntry::key_tested(
+            "SBOM-CRA-SPEC-VERSION",
+            Sev::Warning,
+            steward_broken(|s| s.spec_version = "1.8".to_string()),
+            steward_base(),
+        )
+        .with_departing_firing(
+            "CycloneDX 1.3 is outdated",
+            Sev::Info,
+            steward_broken(|s| s.spec_version = "1.3".to_string()),
+        ),
+        RuleEntry::key_skipped("SBOM-CRA-SPEC-VERSION-UNKNOWN", SPEC_VERSION_UNKNOWN_SKIP),
+        RuleEntry::key_tested(
+            "SBOM-CRA-ELEMENT-ID",
+            Sev::Info,
+            steward_broken(|s| bom_ref_is_name(s, "libalpha")),
+            steward_base(),
+        ),
     ];
 
     run_matrix(STEWARD, STEWARD_RULE_UNIVERSE, &entries);
@@ -1242,7 +1450,8 @@ fn cra_oss_steward_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
 /// handling, not to the manufacturer's Art. 13 documentation, and
 /// check_cra_oss_steward runs only the component, dependency and format
 /// checks plus the two steward floors. The manufacturer phases report the
-/// same gaps (no creator: an SBOM-CRA-GENERAL Error; no timestamp:
+/// same gaps, each under its own rule (no creator: an SBOM-CRA-CREATOR
+/// Error; no serial number: SBOM-CRA-SERIAL; no timestamp:
 /// SBOM-CRA-SBOM-FRESHNESS).
 #[test]
 fn steward_profile_runs_no_document_metadata_check() {
@@ -1269,7 +1478,11 @@ fn steward_profile_runs_no_document_metadata_check() {
         render_violations(&check(STEWARD, &bare))
     );
     let phase2 = check(PHASE2, &bare);
-    for rule in ["SBOM-CRA-SBOM-FRESHNESS", "SBOM-CRA-GENERAL"] {
+    for rule in [
+        "SBOM-CRA-SBOM-FRESHNESS",
+        "SBOM-CRA-CREATOR",
+        "SBOM-CRA-SERIAL",
+    ] {
         assert!(
             phase2.violations.iter().any(|v| v.rule_id == rule),
             "the manufacturer phase reports {rule} for the same document:\n{}",
@@ -1310,43 +1523,113 @@ fn cra_universes_cover_the_cra_slice() {
     );
 }
 
-/// At Phase 1, SBOM-CRA-VULN-METADATA has a single site: an SPDX 3.0
-/// document that carries vulnerabilities without declaring the Security
-/// profile. The fixture declares it (silent); dropping it fires the Info.
+/// Two CRA notes read only SPDX 3.0 input, out of the CycloneDX-only DSL's
+/// reach: a document that carries vulnerabilities without declaring the
+/// Security profile (SBOM-CRA-VULN-METADATA-PROFILE, at Phase 1 the only
+/// SBOM-CRA-VULN-METADATA site) and one that tracks licences without
+/// declaring the SimpleLicensing profile (SBOM-CRA-ART-13-5-PROFILE). Both
+/// manufacturer phases run them. The fixture carries vulnerabilities and a
+/// declared licence and declares both profiles (silent); dropping one
+/// profile fires its note, and only that one, as an Info.
 #[test]
-fn cra_phase1_vuln_metadata_is_the_spdx3_security_profile_note() {
+fn cra_spdx3_profile_notes_fire_without_their_profile() {
+    const SECURITY: &str = "SBOM-CRA-VULN-METADATA-PROFILE";
+    const LICENSING: &str = "SBOM-CRA-ART-13-5-PROFILE";
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/fixtures/spdx3/security-profile.spdx3.json"
     );
     let raw = std::fs::read_to_string(path)
         .unwrap_or_else(|e| panic!("SPDX 3.0 fixture {path} must exist: {e}"));
-    let run = |profiles: &[&str]| {
+    let run = |level: ComplianceLevel, profiles: &[&str]| {
         let mut doc: serde_json::Value = serde_json::from_str(&raw).expect("fixture is JSON");
         doc["profileConformance"] = serde_json::json!(profiles);
         let sbom = parse_sbom_str(&doc.to_string()).expect("fixture parses as SPDX 3.0");
-        checker(PHASE1).check(&sbom)
+        checker(level).check(&sbom)
     };
-    let metadata = |result: &sbom_tools::quality::ComplianceResult| -> Vec<Sev> {
+    let fired = |result: &sbom_tools::quality::ComplianceResult, key: &str| -> Vec<Sev> {
         result
             .violations
             .iter()
-            .filter(|v| v.sarif_rule_id() == "SBOM-CRA-VULN-METADATA")
+            .filter(|v| v.rule_id == key)
             .map(|v| v.severity)
             .collect()
     };
 
-    let declared = run(&["core", "software", "security", "simpleLicensing"]);
-    assert!(
-        metadata(&declared).is_empty(),
-        "a declared Security profile must keep VULN-METADATA silent:\n{}",
-        render_violations(&declared)
-    );
-    let undeclared = run(&["core", "software", "simpleLicensing"]);
+    for level in [PHASE1, PHASE2] {
+        let declared = run(level, &["core", "software", "security", "simpleLicensing"]);
+        for key in [SECURITY, LICENSING] {
+            assert!(
+                fired(&declared, key).is_empty(),
+                "[{level:?}] both profiles declared must keep {key} silent:\n{}",
+                render_violations(&declared)
+            );
+        }
+        for (profiles, key, other) in [
+            (["core", "software", "simpleLicensing"], SECURITY, LICENSING),
+            (["core", "software", "security"], LICENSING, SECURITY),
+        ] {
+            let result = run(level, &profiles);
+            assert_eq!(
+                fired(&result, key),
+                vec![Sev::Info],
+                "[{level:?}] profiles {profiles:?} must fire {key} once as an Info:\n{}",
+                render_violations(&result)
+            );
+            assert!(
+                fired(&result, other).is_empty(),
+                "[{level:?}] profiles {profiles:?} must keep {other} silent:\n{}",
+                render_violations(&result)
+            );
+        }
+    }
+}
+
+/// At Phase 2 a direct dependency without a supplier is always an Error,
+/// so the per-key row of SBOM-CRA-ANNEX-I-SUPPLY-CHAIN cannot fire at the
+/// registry default (the Phase 1 Warning) and is skipped there; this pins
+/// the Phase 2 Error. A supplier on every component, and a supplier-less
+/// transitive dependency (SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE), keep
+/// it silent.
+#[test]
+fn cra_phase2_direct_dependency_supplier_gap_is_an_error() {
+    const KEY: &str = "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN";
+    let fired = |fixture: &SbomFixture| -> Vec<Sev> {
+        check(PHASE2, fixture)
+            .violations
+            .iter()
+            .filter(|v| v.rule_id == KEY)
+            .map(|v| v.severity)
+            .collect()
+    };
+    let direct = broken(|s| s.component_mut("libalpha").supplier = None);
     assert_eq!(
-        metadata(&undeclared),
-        vec![Sev::Info],
-        "vulnerabilities without the Security profile must fire one Info:\n{}",
-        render_violations(&undeclared)
+        fired(&direct),
+        vec![Sev::Error],
+        "a direct dependency without a supplier must fire {KEY} once as an Error:\n{}",
+        render_violations(&check(PHASE2, &direct))
     );
+    for (label, fixture) in [
+        ("every component has a supplier", base()),
+        (
+            "transitive dependency without a supplier",
+            broken(|s| add_transitive_without_supplier(s, 1)),
+        ),
+    ] {
+        assert!(
+            fired(&fixture).is_empty(),
+            "{label}: {KEY} must stay silent:\n{}",
+            render_violations(&check(PHASE2, &fixture))
+        );
+    }
+}
+
+/// SBOM-CRA-SPEC-VERSION-UNKNOWN reads only SPDX input (a version that is
+/// neither 2.x nor 3.x), so its per-key rows are skipped; every CRA level
+/// runs the format checks.
+#[test]
+fn cra_spec_version_unknown_reads_only_spdx() {
+    for level in [PHASE1, PHASE2, STEWARD] {
+        assert_spdx_version_unknown(level, "SBOM-CRA-SPEC-VERSION-UNKNOWN");
+    }
 }
