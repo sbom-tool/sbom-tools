@@ -9,12 +9,16 @@
 //! Three elements have no SBOM field today (system data flow, AI security
 //! controls, exploitability references): they fire as Info on every
 //! applicable AI-BOM, so their only silent state is an out-of-scope SBOM.
+//!
+//! Every row runs in CycloneDX JSON, CycloneDX XML and SPDX 3; SPDX 2.3 has
+//! no AI or dataset profile.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
 use rule_matrix::{
-    ComponentFixture, MD5_FILLER, RuleEntry, SbomFixture, check, render_violations, run_matrix,
+    ComponentFixture, Encoding, MD5_FILLER, Outcome, RuleEntry, SPDX23_HAS_NO_AI_PROFILE,
+    SbomFixture, check_in, render_violations, run_matrix,
 };
 use sbom_tools::quality::{COMPLIANCE_SARIF_RULE_IDS, ComplianceLevel, ViolationSeverity as Sev};
 use std::collections::BTreeMap;
@@ -132,41 +136,47 @@ fn untyped_hf_model() -> ComponentFixture {
 }
 
 /// The complete AI-BOM is compliant, and fires exactly the three elements
-/// no SBOM field can carry, as Infos.
+/// no SBOM field can carry, as Infos, in every encoding with an AI profile.
 #[test]
 fn bsi_ai_complete_fixture_fires_only_the_unmodeled_elements() {
-    let result = check(LEVEL, &base());
-    let fired: BTreeMap<&str, Sev> = result
-        .violations
-        .iter()
-        .map(|v| (v.rule_id, v.severity))
+    for &encoding in Encoding::ALL_BUT_SPDX23 {
+        let result = check_in(LEVEL, &base(), encoding);
+        let fired: BTreeMap<&str, Sev> = result
+            .violations
+            .iter()
+            .map(|v| (v.rule_id, v.severity))
+            .collect();
+        let expected: BTreeMap<&str, Sev> = [
+            ("SBOM-BSIAI-SYS-DATAFLOW", Sev::Info),
+            ("SBOM-BSIAI-SEC-CONTROLS", Sev::Info),
+            ("SBOM-BSIAI-SEC-EXPLOITABILITY", Sev::Info),
+        ]
+        .into_iter()
         .collect();
-    let expected: BTreeMap<&str, Sev> = [
-        ("SBOM-BSIAI-SYS-DATAFLOW", Sev::Info),
-        ("SBOM-BSIAI-SEC-CONTROLS", Sev::Info),
-        ("SBOM-BSIAI-SEC-EXPLOITABILITY", Sev::Info),
-    ]
-    .into_iter()
-    .collect();
-    assert!(
-        fired == expected && result.violations.len() == 3 && result.is_compliant,
-        "[{LEVEL:?}] the complete AI-BOM must fire exactly the three unmodeled \
-         elements as Info; got is_compliant={}:\n{}",
-        result.is_compliant,
-        render_violations(&result)
-    );
+        assert!(
+            fired == expected && result.violations.len() == 3 && result.is_compliant,
+            "[{LEVEL:?}] the complete AI-BOM must fire exactly the three unmodeled \
+             elements as Info in {}; got is_compliant={}:\n{}",
+            encoding.name(),
+            result.is_compliant,
+            render_violations(&result)
+        );
+    }
 }
 
 /// A plain software SBOM is out of scope: the result says N/A and reports
-/// no finding, never a failure.
+/// no finding, never a failure, in every encoding.
 #[test]
 fn bsi_ai_non_ai_sbom_is_not_applicable() {
-    let result = check(LEVEL, &non_ai());
-    assert!(
-        !result.is_applicable() && result.is_compliant && result.violations.is_empty(),
-        "[{LEVEL:?}] a non-AI SBOM must be N/A with no finding:\n{}",
-        render_violations(&result)
-    );
+    for &encoding in Encoding::ALL {
+        let result = check_in(LEVEL, &non_ai(), encoding);
+        assert!(
+            !result.is_applicable() && result.is_compliant && result.violations.is_empty(),
+            "[{LEVEL:?}] a non-AI SBOM must be N/A with no finding in {}:\n{}",
+            encoding.name(),
+            render_violations(&result)
+        );
+    }
 }
 
 #[test]
@@ -195,6 +205,12 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             broken(|s| s.spec_version = String::new()),
             base(),
+        )
+        .case_only(
+            "firing",
+            &[Encoding::CycloneDxJson],
+            "an empty CycloneDX specVersion: XML carries the version in the bom namespace \
+             (one without reads as 1.4), and the SPDX encodings write their own version",
         ),
         RuleEntry::tested(
             "SBOM-BSIAI-META-TIMESTAMP",
@@ -398,6 +414,23 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Warning,
             broken(|s| dataset(s).dataset_mut().governance_owners.clear()),
             base(),
+        )
+        .with_firing(
+            "no governance owner and no supplier",
+            Sev::Warning,
+            broken(|s| {
+                let ds = dataset(s);
+                ds.dataset_mut().governance_owners.clear();
+                ds.supplier = None;
+            }),
+        )
+        .case_differs(
+            "firing",
+            &[Encoding::Spdx3JsonLd],
+            Outcome::Silent,
+            "the SPDX 3 parser reads a dataset's suppliedBy and originatedBy agents as its \
+             governance owners (SPDX 3 has no governance field), so the supplier declares \
+             the dataset's provenance",
         ),
         // ── Infrastructure and Security clusters ───────────────────────────
         // Silent: a BOM link on the model stands in for a dependency edge.
@@ -412,10 +445,21 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     "https://acme.example/sboms/runtime.cdx.json".to_string(),
                 ));
             }),
+        )
+        .case_only(
+            "silent",
+            Encoding::CYCLONEDX,
+            "SPDX 3.0.1 has no external-reference type for a linked BOM",
         ),
         RuleEntry::tested("SBOM-BSIAI-SEC-CONTROLS", Sev::Info, base(), non_ai()),
         RuleEntry::tested("SBOM-BSIAI-SEC-EXPLOITABILITY", Sev::Info, base(), non_ai()),
     ];
 
+    // SPDX 2.3 has no AI profile: every row runs in the other three
+    // encodings.
+    let entries: Vec<RuleEntry> = entries
+        .into_iter()
+        .map(|entry| entry.only(Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_AI_PROFILE))
+        .collect();
     run_matrix(LEVEL, &bsi_ai_universe(), &entries);
 }

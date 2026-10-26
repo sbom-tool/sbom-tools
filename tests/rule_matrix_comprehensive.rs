@@ -14,8 +14,8 @@
 mod rule_matrix;
 
 use rule_matrix::{
-    ComponentFixture, RuleEntry, SbomFixture, assert_no_violations, assert_spdx_version_unknown,
-    run_matrix,
+    CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, RuleEntry, SbomFixture,
+    assert_no_violations_in, assert_spdx_version_unknown, run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, ViolationSeverity as Sev};
 
@@ -79,11 +79,12 @@ fn broken(mutate: impl FnOnce(&mut SbomFixture)) -> SbomFixture {
     fixture
 }
 
-/// The conforming Comprehensive fixture must pass with a clean verdict — the
-/// strictest generic profile previously had no passing-case test at all.
+/// The conforming Comprehensive fixture must pass with a clean verdict in
+/// every encoding — the strictest generic profile previously had no
+/// passing-case test at all.
 #[test]
 fn comprehensive_conforming_fixture_is_compliant_with_zero_violations() {
-    assert_no_violations(LEVEL, &base());
+    assert_no_violations_in(LEVEL, &base(), Encoding::ALL);
 }
 
 #[test]
@@ -179,7 +180,8 @@ fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             base(),
         ),
         // CycloneDX newer than the latest version read (1.7) warns; an
-        // outdated version is an Info.
+        // outdated version is an Info. Both cases are about a CycloneDX
+        // version.
         RuleEntry::tested(
             "SBOM-QUALITY-SPEC-VERSION",
             Sev::Warning,
@@ -190,13 +192,18 @@ fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "CycloneDX 1.3 is outdated",
             Sev::Info,
             broken(|s| s.spec_version = "1.3".to_string()),
+        )
+        .case_only("firing", Encoding::CYCLONEDX, CYCLONEDX_VERSION_CASE)
+        .case_only(
+            "CycloneDX 1.3 is outdated",
+            Encoding::CYCLONEDX,
+            CYCLONEDX_VERSION_CASE,
         ),
         RuleEntry::skipped(
             "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
             "an SPDX version that is neither 2.x nor 3.x is an SPDX-only check, out of \
-             the CycloneDX-only DSL's reach; \
-             comprehensive_spec_version_unknown_reads_only_spdx below fires it on SPDX 4.0 \
-             and keeps it silent on SPDX 2.3",
+             the DSL's reach (it sets no SPDX version); comprehensive_spec_version_unknown_reads_only_spdx \
+             below fires it on SPDX 4.0 and keeps it silent on SPDX 2.3",
         ),
         // A component whose bom-ref collapses to its name.
         RuleEntry::tested(
@@ -213,8 +220,8 @@ fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     run_matrix(LEVEL, COMPREHENSIVE_RULE_UNIVERSE, &entries);
 }
 
-/// SBOM-QUALITY-SPEC-VERSION-UNKNOWN reads only SPDX input, so its matrix
-/// row is skipped.
+/// SBOM-QUALITY-SPEC-VERSION-UNKNOWN reads only SPDX input, of a version the
+/// DSL cannot set, so its matrix row is skipped.
 #[test]
 fn comprehensive_spec_version_unknown_reads_only_spdx() {
     assert_spdx_version_unknown(LEVEL, "SBOM-QUALITY-SPEC-VERSION-UNKNOWN");

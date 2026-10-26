@@ -3,24 +3,26 @@
 //! attribute-maturity profile.
 //!
 //! Every rule id in `FSCT_SARIF_RULE_IDS` gets a firing fixture and a silent
-//! fixture (real CycloneDX JSON through the real parser), or an explicit
-//! skip-with-reason; exhaustiveness is enforced against the registry slice.
-//! The tier→severity pinning (Minimum Expected → Error, Recommended Practice
-//! → Warning, Aspirational Goal → Info) is asserted against the registry
-//! defaults — no entry departs from them.
+//! fixture (rendered in each of the four encodings and run through the real
+//! parser), or an explicit skip-with-reason; exhaustiveness is enforced
+//! against the registry slice. The tier→severity pinning (Minimum Expected →
+//! Error, Recommended Practice → Warning, Aspirational Goal → Info) is
+//! asserted against the registry defaults — no entry departs from them.
 //!
 //! The shared fixture DSL cannot express `metadata.lifecycles`, component
-//! `copyright`/`cpe`, or SPDX input. Rules whose silent (or firing) state
-//! needs those fields are explicitly skipped in the matrix with the
-//! dedicated raw-JSON / SPDX tag-value test (below) that covers both states
-//! named in the reason.
+//! `copyright`/`cpe`, dynamic links or concluded licences. Rules whose
+//! silent (or firing) state needs those fields are explicitly skipped in the
+//! matrix with the dedicated raw-JSON / SPDX tag-value test (below) that
+//! covers both states named in the reason. SIGNATURE reads CycloneDX only
+//! (the profile's evidence gate); its row asserts the gate in SPDX.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
 use rule_matrix::clock::checker;
 use rule_matrix::{
-    ComponentFixture, MD5_FILLER, RuleEntry, SHA256_FILLER, SbomFixture, run_matrix,
+    ComponentFixture, Encoding, MD5_FILLER, Outcome, RuleEntry, SHA256_FILLER,
+    SPDX23_HAS_NO_COMPLETENESS, SbomFixture, run_matrix,
 };
 use sbom_tools::parsers::parse_sbom_str;
 use sbom_tools::quality::{
@@ -30,10 +32,10 @@ use std::collections::BTreeMap;
 
 const LEVEL: ComplianceLevel = ComplianceLevel::Fsct;
 
-/// The DSL-expressible conforming core: person author with email, versioned
-/// generation tool, timestamp, JSF signature, primary component wired to a
-/// depth-2 dependency chain, and components carrying version + PURL +
-/// supplier + SHA-256 hash + license.
+/// The conforming core: person author with email, versioned generation
+/// tool, timestamp, JSF signature, primary component wired to a depth-2
+/// dependency chain, and components carrying version + PURL + supplier +
+/// SHA-256 hash + license.
 ///
 /// NOT fully conforming — the DSL cannot express copyright, a second
 /// identifier kind, or lifecycles, and the base leaves the relationship
@@ -98,6 +100,11 @@ fn no_primary() -> SbomFixture {
     })
 }
 
+/// The CycloneDX-only signature gate.
+const CYCLONEDX_GATED: &str = "FSCT reads the signature from CycloneDX only (its documented \
+     evidence gate): it does not consult the SPDX 3 verifiedUsing signature that CISA 2026 \
+     reads";
+
 #[test]
 fn fsct_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     let entries = vec![
@@ -155,7 +162,7 @@ fn fsct_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "the positive signal (DYNAMIC_LINK / RUNTIME_DEPENDENCY_OF / \
              PROVIDED_DEPENDENCY_OF edges) is parsed only from SPDX \
              relationships, so the readiness note is evidence-gated to SPDX \
-             input and the CycloneDX-only DSL cannot reach the firing state; \
+             input, and the DSL has no dynamic-link hook for its silent state; \
              fsct_dynamic_deps_is_spdx_gated_with_firing_and_silent_states \
              covers both states with SPDX tag-value documents",
         ),
@@ -253,6 +260,7 @@ fn fsct_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // The base leaves the aggregate undeclared (see base()); a
         // not_specified aggregate is no assertion either, a complete one is.
+        // Unlike CISA 2026, FSCT asks SPDX 2.x for a declaration too.
         RuleEntry::tested(
             "SBOM-FSCT-COMPLETENESS",
             Sev::Warning,
@@ -263,6 +271,12 @@ fn fsct_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "aggregate not_specified",
             Sev::Warning,
             broken(|s| s.completeness = Some("not_specified".to_string())),
+        )
+        .case_differs(
+            "silent",
+            &[Encoding::Spdx23Json],
+            Outcome::Fires(Sev::Warning),
+            SPDX23_HAS_NO_COMPLETENESS,
         ),
         RuleEntry::tested(
             "SBOM-FSCT-LICENSE-PRIMARY",
@@ -298,7 +312,7 @@ fn fsct_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "SBOM-FSCT-LICENSE-CONCLUDED",
             "the concluded-license prong of §2.2.2.7 is evidence-gated to SPDX \
              (PackageLicenseConcluded; the CycloneDX licenses[].acknowledgement field is \
-             not parsed), so the CycloneDX-only DSL cannot reach the firing state; \
+             not parsed), and the DSL has no concluded-licence hook for its silent state; \
              fsct_license_concluded_is_spdx_gated_with_firing_and_silent_states covers \
              both states with SPDX tag-value documents",
         ),
@@ -357,6 +371,13 @@ fn fsct_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "signature without a value",
             Sev::Info,
             broken(|s| s.signature = Some(("ES256".to_string(), String::new()))),
+        )
+        .case_differs("firing", Encoding::SPDX, Outcome::Silent, CYCLONEDX_GATED)
+        .case_differs(
+            "signature without a value",
+            Encoding::SPDX,
+            Outcome::Silent,
+            CYCLONEDX_GATED,
         ),
     ];
 

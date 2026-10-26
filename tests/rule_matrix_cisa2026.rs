@@ -2,21 +2,25 @@
 //! (audit P4: CISA 2026 Minimum Elements, v2.1, July 29, 2026).
 //!
 //! Every rule id in `CISA2026_SARIF_RULE_IDS` gets a firing fixture and a
-//! silent fixture (real CycloneDX JSON through the real parser), or an
-//! explicit skip-with-reason; exhaustiveness is enforced against the
-//! registry slice.
+//! silent fixture (rendered in each of the four encodings and run through
+//! the real parser), or an explicit skip-with-reason; exhaustiveness is
+//! enforced against the registry slice.
 //!
 //! Two rules cannot be exercised through the shared fixture DSL (it has no
 //! hook for `metadata.lifecycles` or an omitted top-level `version`); their
 //! firing/silent behaviour is covered by the dedicated raw-JSON tests at the
-//! bottom of this file, which drive the same real parser and checker.
+//! bottom of this file, which drive the same real parser and checker. SPDX
+//! 2.x has no field for a signature, a lifecycle phase or a completeness
+//! declaration, and the profile asks no SPDX 2.x document for them (review
+//! finding V14), so those rows assert the gate in SPDX 2.3.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
 use rule_matrix::clock::{AS_OF, checker};
 use rule_matrix::{
-    ComponentFixture, MD5_FILLER, RuleEntry, SbomFixture, check, render_violations, run_matrix,
+    CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, MD5_FILLER, Outcome, RuleEntry,
+    SbomFixture, check, render_violations, run_matrix,
 };
 use sbom_tools::parsers::parse_sbom_str;
 use sbom_tools::quality::{
@@ -76,6 +80,11 @@ fn broken(mutate: impl FnOnce(&mut SbomFixture)) -> SbomFixture {
     fixture
 }
 
+/// CISA 2026 asks no SPDX 2.x document for a signature, a lifecycle phase
+/// or a completeness declaration (review finding V14).
+const SPDX2_NOT_ASKED: &str = "SPDX 2.x has no field that can carry this evidence, so CISA \
+     2026 asks no SPDX 2.x document for it (review finding V14)";
+
 #[test]
 fn cisa2026_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     let entries = vec![
@@ -111,6 +120,18 @@ fn cisa2026_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "signature without a value",
             Sev::Warning,
             broken(|s| s.signature = Some(("ES256".to_string(), String::new()))),
+        )
+        .case_differs(
+            "firing",
+            &[Encoding::Spdx23Json],
+            Outcome::Silent,
+            SPDX2_NOT_ASKED,
+        )
+        .case_differs(
+            "signature without a value",
+            &[Encoding::Spdx23Json],
+            Outcome::Silent,
+            SPDX2_NOT_ASKED,
         ),
         RuleEntry::tested(
             "SBOM-CISA2026-FORMAT",
@@ -118,7 +139,8 @@ fn cisa2026_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             // Tool-policy floor (CycloneDX 1.4+): 1.3 must warn.
             broken(|s| s.spec_version = "1.3".to_string()),
             base(),
-        ),
+        )
+        .case_only("firing", Encoding::CYCLONEDX, CYCLONEDX_VERSION_CASE),
         RuleEntry::skipped(
             "SBOM-CISA2026-GENERATION-CONTEXT",
             "the fixture DSL has no metadata.lifecycles hook, so every DSL \
@@ -257,6 +279,18 @@ fn cisa2026_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "declared incomplete",
             Sev::Warning,
             broken(|s| s.completeness = Some("incomplete".to_string())),
+        )
+        .case_differs(
+            "firing",
+            &[Encoding::Spdx23Json],
+            Outcome::Silent,
+            SPDX2_NOT_ASKED,
+        )
+        .case_differs(
+            "declared incomplete",
+            &[Encoding::Spdx23Json],
+            Outcome::Silent,
+            SPDX2_NOT_ASKED,
         ),
     ];
 

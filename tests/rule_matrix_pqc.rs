@@ -4,7 +4,8 @@
 //! below 128 bits) were previously never asserted.
 //!
 //! Every rule id in `PQC_SARIF_RULE_IDS` gets a firing fixture and a silent
-//! fixture (a CycloneDX 1.6 CBOM through the real parser), or an explicit
+//! fixture (a CycloneDX 1.6 CBOM, in JSON and in XML, through the real
+//! parser; SPDX has no cryptographic-asset model), or an explicit
 //! skip-with-reason; exhaustiveness is enforced against the registry slice.
 //! Each row breaks one asset of the ready baseline, so a crypto-vocabulary
 //! change that moves a verdict touches exactly the row that pins it. The
@@ -15,7 +16,10 @@
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
-use rule_matrix::{CryptoAssetFixture, RuleEntry, SbomFixture, assert_no_violations, run_matrix};
+use rule_matrix::{
+    CBOM_IS_CYCLONEDX, CryptoAssetFixture, Encoding, RuleEntry, SbomFixture,
+    assert_no_violations_in, run_matrix,
+};
 use sbom_tools::quality::{ComplianceLevel, PQC_SARIF_RULE_IDS, ViolationSeverity as Sev};
 
 const LEVEL: ComplianceLevel = ComplianceLevel::NistPqc;
@@ -62,10 +66,10 @@ fn replace(s: &mut SbomFixture, bom_ref: &str, asset: CryptoAssetFixture) {
     *s.crypto_mut(bom_ref) = asset;
 }
 
-/// The PQC-ready CBOM must pass with a clean verdict.
+/// The PQC-ready CBOM must pass with a clean verdict, in JSON and XML.
 #[test]
 fn pqc_conforming_fixture_is_compliant_with_zero_violations() {
-    assert_no_violations(LEVEL, &base());
+    assert_no_violations_in(LEVEL, &base(), Encoding::CYCLONEDX);
 }
 
 #[test]
@@ -85,7 +89,15 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 s.crypto_assets =
                     vec![CryptoAssetFixture::algorithm("algo-x", "acme-cipher").quantum_level(3)];
             }),
-        ),
+        )
+        // An SPDX document lists no cryptographic asset at all: it is an
+        // empty CBOM, so only the empty-CBOM case runs in every encoding.
+        .case_only(
+            "unidentifiable algorithms only",
+            Encoding::CYCLONEDX,
+            CBOM_IS_CYCLONEDX,
+        )
+        .case_only("silent", Encoding::CYCLONEDX, CBOM_IS_CYCLONEDX),
         // Classical public-key families are quantum-vulnerable regardless
         // of key size; a declared level 0 judges an unclassified asset.
         RuleEntry::tested(
@@ -376,5 +388,14 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
     ];
 
+    // A CBOM is CycloneDX only: every row runs in CycloneDX JSON and XML,
+    // but for the empty-CBOM case of SBOM-PQC-000 (its own row says so).
+    let entries: Vec<RuleEntry> = entries
+        .into_iter()
+        .map(|entry| match entry.id {
+            "SBOM-PQC-000" => entry,
+            _ => entry.only(Encoding::CYCLONEDX, CBOM_IS_CYCLONEDX),
+        })
+        .collect();
     run_matrix(LEVEL, PQC_SARIF_RULE_IDS, &entries);
 }
