@@ -79,6 +79,15 @@ fn broken(mutate: impl FnOnce(&mut SbomFixture)) -> SbomFixture {
     fixture
 }
 
+/// The model and dataset clusters test raw emptiness instead of the shared
+/// known-value predicate, so a placeholder satisfies the element.
+const PLACEHOLDER_BUG: &str = "bug: check_bsiai_models_cluster / \
+     check_bsiai_datasets_cluster test raw emptiness (name.trim().is_empty(), an \
+     empty version, empty licence lists) instead of the shared known-value predicate \
+     (shared::known_value / has_known_license), so a placeholder or sentinel (TBD, N/A, \
+     NOASSERTION) satisfies this element; WP 0.5 (a71686c) made placeholders fail \
+     every other presence check";
+
 /// A plain software SBOM: out of the profile's scope.
 fn non_ai() -> SbomFixture {
     broken(|s| {
@@ -264,12 +273,20 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             broken(|s| model(s).name = String::new()),
             base(),
+        )
+        .with_skipped_case(
+            "placeholder model name (TBD / N/A / NOASSERTION)",
+            PLACEHOLDER_BUG,
         ),
         RuleEntry::key_tested(
             "SBOM-BSIAI-MODEL-VERSION",
             Sev::Error,
             broken(|s| model(s).version = None),
             base(),
+        )
+        .with_skipped_case(
+            "placeholder model version (TBD / N/A / NOASSERTION)",
+            PLACEHOLDER_BUG,
         ),
         RuleEntry::key_tested(
             "SBOM-BSIAI-MODEL-IDENTIFIER",
@@ -336,6 +353,10 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Warning,
             broken(|s| model(s).licenses.clear()),
             base(),
+        )
+        .with_skipped_case(
+            "placeholder model licence (TBD / N/A / NOASSERTION)",
+            PLACEHOLDER_BUG,
         ),
         // ── Per-key rows: Datasets cluster ───────────────────────────────
         RuleEntry::key_tested(
@@ -343,6 +364,10 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             broken(|s| dataset(s).name = String::new()),
             base(),
+        )
+        .with_skipped_case(
+            "placeholder dataset name (TBD / N/A / NOASSERTION)",
+            PLACEHOLDER_BUG,
         ),
         RuleEntry::key_tested(
             "SBOM-BSIAI-DATASET-IDENTIFIER",
@@ -361,6 +386,10 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Warning,
             broken(|s| dataset(s).licenses.clear()),
             base(),
+        )
+        .with_skipped_case(
+            "placeholder dataset licence (TBD / N/A / NOASSERTION)",
+            PLACEHOLDER_BUG,
         ),
         RuleEntry::key_tested(
             "SBOM-BSIAI-DATASET-SENSITIVITY",
