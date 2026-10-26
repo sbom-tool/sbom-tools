@@ -604,7 +604,9 @@ mod tests {
         let cycle: EolCycle = serde_json::from_str(json).unwrap();
         assert_eq!(cycle.cycle, "3.11");
         assert_eq!(cycle.latest.as_deref(), Some("3.11.8"));
-        assert!(!cycle.eol.is_reached()); // 2027 is in the future
+        // The parsed date, not `is_reached()`: 2027-10-31 is only in the
+        // future until it passes (test_date_or_bool_future_date covers that).
+        assert_eq!(cycle.eol.as_date(), NaiveDate::from_ymd_opt(2027, 10, 31));
     }
 
     #[test]

@@ -34,9 +34,35 @@ fn key(code: KeyCode) -> KeyEvent {
 /// Render one view tab at a given size and return the trimmed buffer text.
 fn render_tab(active_tab: ViewTab, width: u16, height: u16) -> String {
     let mut app = demo_view_app(active_tab);
+    pin_view_reports(&mut app);
     render_to_text(width, height, |frame| {
         render(frame, &mut app);
     })
+}
+
+/// Keep render fixtures independent of the calendar: the constructor scores
+/// quality (SBOM age) and the compliance tab checks every standard at the
+/// wall clock, so recompute both at the shared test clock
+/// (tests/common/clock.rs).
+fn pin_view_reports(app: &mut ViewApp) {
+    use crate::quality::{ComplianceChecker, ComplianceLevel, QualityScorer};
+    let as_of = chrono::DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
+        .expect("valid instant")
+        .with_timezone(&chrono::Utc);
+    let profile = crate::tui::scoring_profile_for(app.bom_profile);
+    app.quality_report = QualityScorer::new(profile)
+        .with_as_of(as_of)
+        .score(&app.sbom);
+    app.compliance_results = Some(
+        ComplianceLevel::all()
+            .iter()
+            .map(|level| {
+                ComplianceChecker::new(*level)
+                    .with_as_of(as_of)
+                    .check(&app.sbom)
+            })
+            .collect(),
+    );
 }
 
 /// The SBOM-profile view tabs (the demo fixture is a plain SBOM).
@@ -921,9 +947,25 @@ fn view_overview_eol_compact_snapshot() {
 }
 
 /// Build a `ViewApp` on the CBOM fixture with a deterministic tab.
+///
+/// The crypto tabs judge certificate expiry at the wall clock (the TUI has
+/// no clock seam), and the fixture's one certificate expires on 2028-01-01,
+/// so its expiry moves out of reach here to keep renders date-independent.
 fn cbom_view_app(active_tab: ViewTab) -> ViewApp {
     pin_theme();
-    let (sbom, profile) = crate::tui::test_support::cbom_single();
+    let (mut sbom, profile) = crate::tui::test_support::cbom_single();
+    let far_future = chrono::DateTime::parse_from_rfc3339("2099-01-01T23:59:59Z")
+        .expect("valid instant")
+        .with_timezone(&chrono::Utc);
+    for comp in sbom.components.values_mut() {
+        if let Some(cert) = comp
+            .crypto_properties
+            .as_mut()
+            .and_then(|p| p.certificate_properties.as_mut())
+        {
+            cert.not_valid_after = Some(far_future);
+        }
+    }
     let mut app = ViewApp::new(sbom, crate::tui::test_support::CBOM, profile);
     app.active_tab = active_tab;
     app
