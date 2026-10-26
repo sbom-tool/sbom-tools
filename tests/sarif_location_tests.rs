@@ -1,10 +1,11 @@
 //! Every SARIF result points at the SBOM and carries a fingerprint of its
 //! finding identity, and the fingerprints survive the SBOM's lines moving.
 //!
-//! - Every result of every writer (`validate` at every level, `quality`,
-//!   `diff`, `view`) on every SBOM fixture has a physical location (the SBOM
-//!   file and a line) and a fingerprint; no two results about one SBOM file
-//!   share one; `ruleIndex` names the rule of `ruleId`; `findingId` and the
+//! - Every result of every writer (`validate` at every level, passed checks
+//!   included, `quality`, `diff`, `view`) on every SBOM fixture has a
+//!   physical location (the SBOM file and a line) and a fingerprint; no two
+//!   results about one SBOM file share one, so no pass shares a violation's;
+//!   `ruleIndex` names the rule of `ruleId`; `findingId` and the
 //!   fingerprints are the digests of `findingKey`.
 //! - A component result points at the line that states the component's id.
 //! - Re-serializing an SBOM (minified, re-indented, with lines inserted)
@@ -25,8 +26,8 @@ use sbom_tools::DiffEngine;
 use sbom_tools::model::NormalizedSbom;
 use sbom_tools::parse_sbom_str;
 use sbom_tools::quality::{
-    ComplianceLevel, ComplianceResult, QualityScorer, ScoringProfile, finding_fingerprint,
-    finding_id,
+    ComplianceLevel, ComplianceResult, PASS_RULE_IDS, QualityScorer, ScoringProfile,
+    finding_fingerprint, finding_id, finding_key,
 };
 use sbom_tools::reports::SbomLocator;
 use sbom_tools::reports::{
@@ -79,6 +80,13 @@ fn assert_located_and_fingerprinted(sarif: &str, label: &str) -> Vec<(String, St
             Some(rule_id),
             "{label}: ruleIndex {index} does not name {rule_id}"
         );
+        // A passed check is `kind: "pass"` at level `none`; a violation
+        // keeps SARIF's default kind, `fail`, and a level GitHub shows.
+        match result.get("kind").and_then(Value::as_str) {
+            Some("pass") => assert_eq!(result["level"], "none", "{label}: pass {rule_id}"),
+            None => assert_ne!(result["level"], "none", "{label}: {rule_id}"),
+            Some(other) => panic!("{label}: {rule_id} has kind {other}"),
+        }
         let physical = &result["locations"][0]["physicalLocation"];
         let uri = physical["artifactLocation"]["uri"]
             .as_str()
@@ -125,20 +133,105 @@ fn every_validate_result_has_a_location_and_a_fingerprint_on_every_fixture() {
     let mut total = 0usize;
     for fixture in &fixtures {
         let results = check_all_levels(&fixture.sbom);
-        let options =
-            SarifOptions::new().with_artifact(artifact(&fixture.rel, &fixture.sbom, &fixture.raw));
+        // `--sarif-include-passes`: the passed checks are results too.
+        let options = SarifOptions::new()
+            .with_artifact(artifact(&fixture.rel, &fixture.sbom, &fixture.raw))
+            .with_passes(true);
         let sarif = generate_multi_compliance_sarif_with(&results, &options).expect("SARIF");
         let located = assert_located_and_fingerprinted(&sarif, &fixture.rel);
-        let violations: usize = results.iter().map(|r| r.violations.len()).sum();
+        let findings: usize = results
+            .iter()
+            .map(|r| r.violations.len() + r.passed.len())
+            .sum();
         assert_eq!(
             located.len(),
-            violations,
-            "{}: one result per violation",
+            findings,
+            "{}: one result per violation and per passed check",
             fixture.rel
         );
         total += located.len();
     }
     assert!(total > 1000, "only {total} results were checked");
+}
+
+/// `--sarif-include-passes` on the PQC acceptance fixtures: each pass is a
+/// result of `kind: "pass"` at level `none` with a violation's identity
+/// (the line of its component, `ruleIndex`, both fingerprints, `findingKey`
+/// and `findingId` from its own finding key), no pass shares a violation's
+/// fingerprint, and the pass-only rules' descriptors keep `note`, the lowest
+/// level GitHub accepts for `defaultConfiguration.level`.
+#[test]
+fn passes_carry_the_identity_of_a_violation() {
+    let fixtures = sbom_fixtures::fixtures();
+    let mut passes = 0usize;
+    for rel in [
+        "cyclonedx/cbom-quantum-ready.cdx.json",
+        "cyclonedx/cbom-quantum-ready.cdx.xml",
+        "cyclonedx/cbom-1.7.cdx.json",
+    ] {
+        let fixture = fixtures
+            .iter()
+            .find(|f| f.rel == rel)
+            .unwrap_or_else(|| panic!("fixture {rel} missing"));
+        let artifact = artifact(&fixture.rel, &fixture.sbom, &fixture.raw);
+        let results: Vec<ComplianceResult> = [ComplianceLevel::NistPqc, ComplianceLevel::Cnsa2]
+            .iter()
+            .map(|level| fixture.check(*level))
+            .collect();
+        let pqc = &results[0];
+        assert!(!pqc.passed.is_empty(), "{rel}: no passed check");
+        let options = SarifOptions::new()
+            .with_artifact(artifact.clone())
+            .with_passes(true);
+        let sarif = generate_multi_compliance_sarif_with(&results, &options).expect("SARIF");
+        let located = assert_located_and_fingerprinted(&sarif, rel);
+        let doc: Value = serde_json::from_str(&sarif).expect("JSON");
+        let run = &doc["runs"][0];
+        for pass in &pqc.passed {
+            let key = finding_key(ComplianceLevel::NistPqc, pass);
+            let result = run["results"]
+                .as_array()
+                .expect("results")
+                .iter()
+                .find(|r| r["properties"]["findingKey"] == key.as_str())
+                .unwrap_or_else(|| panic!("{rel}: no result for the pass {key}"));
+            assert_eq!(result["kind"], "pass", "{rel}: {key}");
+            assert_eq!(result["level"], "none", "{rel}: {key}");
+            let id = pass.component_id.as_deref().expect("a component pass");
+            assert_eq!(
+                result["locations"][0]["physicalLocation"]["region"]["startLine"].as_u64(),
+                Some(u64::from(artifact.component_line(id).unwrap_or(1))),
+                "{rel}: {key}"
+            );
+            passes += 1;
+        }
+        // Passed and violated checks share one key space.
+        let keys: HashSet<&str> = located.iter().map(|(key, _, _)| key.as_str()).collect();
+        assert_eq!(keys.len(), located.len(), "{rel}: a key repeats");
+        for rule in run["tool"]["driver"]["rules"].as_array().expect("rules") {
+            let id = rule["id"].as_str().expect("id");
+            if PASS_RULE_IDS.contains(&id) {
+                assert_eq!(
+                    rule["defaultConfiguration"]["level"], "note",
+                    "{rel}: pass-only rule {id}"
+                );
+            }
+        }
+        // Without the flag, no result is a pass.
+        let sarif =
+            generate_multi_compliance_sarif_with(&results, &options.clone().with_passes(false))
+                .expect("SARIF");
+        let doc: Value = serde_json::from_str(&sarif).expect("JSON");
+        assert!(
+            doc["runs"][0]["results"]
+                .as_array()
+                .expect("results")
+                .iter()
+                .all(|r| r.get("kind").is_none()),
+            "{rel}: a pass without the flag"
+        );
+    }
+    assert!(passes >= 16, "only {passes} passes were checked");
 }
 
 #[test]

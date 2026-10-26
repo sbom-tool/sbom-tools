@@ -124,6 +124,15 @@ fn validate_sarif_matches_the_schema_at_every_level_on_every_fixture() {
         let sarif =
             generate_multi_compliance_sarif_with(&results, &options).expect("SARIF serializes");
         assert_valid(&schema, &sarif, &format!("{} @ every level", fixture.rel));
+        // `--sarif-include-passes`: passed checks are results of kind "pass".
+        let sarif =
+            generate_multi_compliance_sarif_with(&results, &options.clone().with_passes(true))
+                .expect("SARIF serializes");
+        assert_valid(
+            &schema,
+            &sarif,
+            &format!("{} @ every level, with passes", fixture.rel),
+        );
         // Without the SBOM file, results keep only logical locations.
         let sarif = generate_multi_compliance_sarif(&results).expect("SARIF serializes");
         assert_valid(
