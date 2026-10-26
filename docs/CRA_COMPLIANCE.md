@@ -60,7 +60,7 @@ that ends up in SARIF `properties.standardHelpUris`.
 
 | Requirement string                                              | CRA anchor                        | prEN 40000-1-3      | BSI TR-03183-2 § | sidecar field that clears it                              |
 |-----------------------------------------------------------------|-----------------------------------|---------------------|------------------|-----------------------------------------------------------|
-| `CRA Art. 13(2): Documented risk assessment`                    | Art. 13(2)                        | —                   | —                | `riskAssessmentUrl` + `riskAssessmentMethodology`         |
+| `CRA Art. 13(2): Documented risk assessment`                    | Art. 13(2)                        | —                   | —                | `riskAssessmentUrl` (or a `risk-assessment` external reference) |
 | `CRA Art. 13(7) / Annex I Part II (1): SBOM freshness`          | Art. 13(7); Annex I Part II (1)   | PRE-7-RQ-04         | §3.1             | regenerate SBOM on each release                           |
 | `CRA Annex I Part II (1): Machine-readable SBOM format`         | Annex I Part II (1)               | PRE-7-RQ-04         | §4               | parse-time check (CycloneDX 1.4+ / SPDX 2.3+)             |
 | `CRA Art. 13(5): Third-party due diligence (license tracking)`  | Art. 13(5)                        | PRE-7-RQ-05         | §5.2.2           | populate component `license` fields                       |
@@ -68,7 +68,7 @@ that ends up in SARIF `properties.standardHelpUris`.
 | `CRA Annex I Part II (5): Coordinated vulnerability disclosure policy` | Annex I Part II (5); Art. 13(8) | RLS-2-RQ-02      | —                | `coordinatedDisclosurePolicyUrl`                          |
 | `CRA Art. 13(8): Support period / lifecycle management`         | Art. 13(8)                        | PRE-7-RQ-06         | —                | `supportEndDate` + EOL enrichment                         |
 | `CRA Art. 13(8) / 13(19): Support period disclosure`            | Art. 13(8); Art. 13(19); Annex II (7) | PRE-7-RQ-06     | —                | `supportEndDate`                                          |
-| `CRA Annex I Part II (1): Documented vulnerability information` | Annex I Part II (1)               | RLS-2-RQ-04         | —                | OSV / KEV / VEX enrichment                                |
+| `CRA Annex I Part II (1): Documented vulnerability information` | Annex I Part II (1)               | RLS-2-RQ-04         | —                | embedded vulnerabilities (or OSV / KEV / VEX enrichment), or a `vulnerability-assertion` / `exploitability-statement` external reference |
 | `CRA Annex II (7): Component lifecycle monitoring/status`       | Art. 13(8); Annex II (7)          | PRE-7-RQ-06         | —                | EOL enrichment + transitive supplier coverage             |
 | `CRA Art. 13(15): Product identification`                       | Art. 13(15); Annex II (3)         | PRE-7-RQ-06         | §5.2.2           | SBOM `metadata.component.name` + sidecar `productName`    |
 | `CRA Annex I Part II (1): Component version`                    | Annex I Part II (1)               | PRE-7-RQ-06         | §5.2.2           | component `version` fields                                |
@@ -111,6 +111,19 @@ exists.
 | `CRA Annex V: EU Declaration of Conformity reference`       | Annex V                  | —                   | `Attestation`/`Certification` external ref OR `ceMarkingReference` |
 | `CRA Annex VIII: <Module> attestation reference`            | Annex VIII (Module B+C/H/EUCC) | —             | Module-specific `Attestation`/`Certification` external ref |
 | `CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware component inventory` | Annex I Part II   | PRE-8-RQ-02         | producer + identifier + firmware version on hardware    |
+
+External-reference types. The `Attestation`, `Certification`,
+`RiskAssessment`, `VulnerabilityAssertion` and `ExploitabilityStatement`
+references these checks read come from CycloneDX
+`externalReferences[].type` `attestation`, `certification-report`,
+`risk-assessment`, `vulnerability-assertion` and `exploitability-statement`,
+and from SPDX 3.0 `externalRef[].externalRefType` `secureSoftwareAttestation`,
+`certificationReport`, `riskAssessment`, `vulnerabilityDisclosureReport` and
+`vulnerabilityExploitabilityAssessment`. SPDX 2.3 has no external-reference
+category for any of them (its OTHER category with a
+`declaration-of-conformity` type is still read as an Annex V reference).
+Before v0.4.0 the parsers did not map these types, so only the sidecar keys
+and CDXA attestations could satisfy the checks.
 
 ### Article 24 — open-source software steward floor
 

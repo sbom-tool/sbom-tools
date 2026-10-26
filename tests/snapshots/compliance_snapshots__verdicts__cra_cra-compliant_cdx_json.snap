@@ -21,8 +21,7 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-14  - ×3
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2] compliant · E0 W5 I7
-  I SBOM-CRA-ANNEX-V  -
+[CraPhase2] compliant · E0 W5 I6
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-ART-14  -
   I SBOM-CRA-GENERAL  pkg:cargo/lib-a@2.3.4

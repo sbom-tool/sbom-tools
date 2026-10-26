@@ -134,6 +134,17 @@ fn ssdf_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     .retain(|(t, _)| t != "build-meta");
             }),
             base(),
+        )
+        .with_silent(
+            "build-system reference instead of build-meta",
+            broken(|s| {
+                let refs = &mut s.component_mut("libalpha").external_refs;
+                refs.retain(|(t, _)| t != "build-meta");
+                refs.push((
+                    "build-system".to_string(),
+                    "https://ci.acme.example/pipelines/libalpha".to_string(),
+                ));
+            }),
         ),
         RuleEntry::tested(
             "SBOM-SSDF-PW4",
@@ -150,6 +161,17 @@ fn ssdf_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     .retain(|(t, _)| t != "advisories");
             }),
             base(),
+        )
+        .with_silent(
+            "vulnerability-assertion (VDR) reference instead of advisories",
+            broken(|s| {
+                let refs = &mut s.component_mut("libalpha").external_refs;
+                refs.retain(|(t, _)| t != "advisories");
+                refs.push((
+                    "vulnerability-assertion".to_string(),
+                    "https://acme.example/security/vdr.json".to_string(),
+                ));
+            }),
         ),
         RuleEntry::tested(
             "SBOM-SSDF-RV1",

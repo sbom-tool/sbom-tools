@@ -263,16 +263,12 @@ fn without_primary(s: &mut SbomFixture) {
     s.dependencies = vec![("ref-libalpha".to_string(), vec!["ref-libbeta".to_string()])];
 }
 
-/// The parser maps CycloneDX `attestation`, `certification-report`,
-/// `risk-assessment`, `vulnerability-assertion` and
-/// `exploitability-statement` external references to
-/// `ExternalRefType::Other`, so no check that looks for those reference
-/// kinds can ever see one in a CycloneDX document.
-const EXTREF_BUG: &str = "bug: map_cdx_external_ref_type (src/parsers/cyclonedx.rs) maps \
-     CycloneDX externalReferences types attestation / certification-report / \
-     risk-assessment / vulnerability-assertion / exploitability-statement to \
-     ExternalRefType::Other, so the reference kinds this check accepts never reach it \
-     from a CycloneDX document";
+/// Add an external reference of `ref_type` to the product component.
+fn with_product_ref(s: &mut SbomFixture, ref_type: &str, url: &str) {
+    s.primary_mut()
+        .external_refs
+        .push((ref_type.to_string(), url.to_string()));
+}
 
 /// Rows whose behaviour is identical under CRA Phase 1 and Phase 2.
 fn manufacturer_rows() -> Vec<RuleEntry> {
@@ -403,16 +399,35 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             broken(|s| s.component_mut("libalpha").supplier = None),
             base(),
         ),
+        // A VDR or VEX reference states the vulnerability information
+        // instead of embedded entries.
         RuleEntry::tested(
             "SBOM-CRA-VULN-STATEMENT",
             Sev::Info,
             broken(|s| s.vulnerabilities.clear()),
             base(),
         )
-        .with_skipped_case(
-            "vulnerability-assertion externalReference as the no-known-vulnerabilities statement \
-             (silent)",
-            EXTREF_BUG,
+        .with_silent(
+            "vulnerability-assertion (VDR) reference, no embedded vulnerabilities",
+            broken(|s| {
+                s.vulnerabilities.clear();
+                with_product_ref(
+                    s,
+                    "vulnerability-assertion",
+                    "https://acme.example/vdr.json",
+                );
+            }),
+        )
+        .with_silent(
+            "exploitability-statement (VEX) reference, no embedded vulnerabilities",
+            broken(|s| {
+                s.vulnerabilities.clear();
+                with_product_ref(
+                    s,
+                    "exploitability-statement",
+                    "https://acme.example/vex.json",
+                );
+            }),
         ),
         // The Annex I bucket, by severity: traceability (Warning), a missing
         // identifier (Error), a missing hash (Info). Each site has its own
@@ -453,9 +468,8 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
         .with_skipped_case(
             "attestation / certification externalReference with a hash (silent)",
             "bug: the CycloneDX parser drops externalReferences hashes \
-             (convert_component always sets hashes: Vec::new()) and maps \
-             attestation / certification-report to ExternalRefType::Other, so \
-             only the serial number can satisfy this rule",
+             (convert_component always sets hashes: Vec::new()), so only the \
+             serial number can satisfy this rule",
         ),
         // The CRA generic bucket: serial number (Warning), no creator at all
         // (Error), a placeholder component name (Error), and the format notes
@@ -560,9 +574,31 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             Sev::Error,
             broken(|s| pin_class(s, CraProductClass::ImportantClass2, None)),
         )
-        .with_skipped_case(
-            "attestation / certification-report externalReference (silent)",
-            EXTREF_BUG,
+        .with_silent(
+            "certification-report reference for the Module B+C route",
+            broken(|s| {
+                pin_class(
+                    s,
+                    CraProductClass::ImportantClass1,
+                    Some(ConformityRoute::ModuleBC),
+                );
+                with_product_ref(
+                    s,
+                    "certification-report",
+                    "https://notified-body.example/certificates/eu-type-0815.pdf",
+                );
+            }),
+        )
+        .with_silent(
+            "attestation reference for an important class II product",
+            broken(|s| {
+                pin_class(s, CraProductClass::ImportantClass2, None);
+                with_product_ref(
+                    s,
+                    "attestation",
+                    "https://acme.example/attestations/qms.pdf",
+                );
+            }),
         ),
         // ── Per-key rows ─────────────────────────────────────────────────
         // Art. 14 channels past the 2026-09-11 deadline: missing channels
@@ -695,6 +731,31 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             "critical product",
             Sev::Error,
             broken(|s| pin_class(s, CraProductClass::Critical, None)),
+        )
+        // The external-reference fallback: a certification or attestation
+        // reference counts only when its URL names the EUCC scheme.
+        .with_departing_firing(
+            "critical product, certification-report reference naming no EUCC scheme",
+            Sev::Error,
+            broken(|s| {
+                pin_class(s, CraProductClass::Critical, None);
+                with_product_ref(
+                    s,
+                    "certification-report",
+                    "https://notified-body.example/certificates/0815.pdf",
+                );
+            }),
+        )
+        .with_silent(
+            "critical product, certification-report reference to an EUCC certificate",
+            broken(|s| {
+                pin_class(s, CraProductClass::Critical, None);
+                with_product_ref(
+                    s,
+                    "certification-report",
+                    "https://certification.enisa.europa.eu/eucc/certificates/EUCC-1234.pdf",
+                );
+            }),
         ),
     ]
 }
@@ -872,9 +933,24 @@ fn cra_phase2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 pin_class(s, CraProductClass::Critical, None);
             }),
         )
-        .with_skipped_case(
-            "attestation externalReference as the EU DoC reference (silent)",
-            EXTREF_BUG,
+        .with_silent(
+            "attestation reference as the EU DoC reference",
+            broken(|s| {
+                s.sidecar_mut().ce_marking_reference = None;
+                with_product_ref(s, "attestation", "https://acme.example/eu-doc-2026-001.pdf");
+            }),
+        )
+        .with_silent(
+            "certification-report reference, critical product",
+            broken(|s| {
+                s.sidecar_mut().ce_marking_reference = None;
+                pin_class(s, CraProductClass::Critical, None);
+                with_product_ref(
+                    s,
+                    "certification-report",
+                    "https://certification.enisa.europa.eu/eucc/certificates/EUCC-1234.pdf",
+                );
+            }),
         ),
         RuleEntry::key_tested(
             "SBOM-CRA-ART-13-2",
@@ -882,7 +958,17 @@ fn cra_phase2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.sidecar_mut().risk_assessment_url = None),
             base(),
         )
-        .with_skipped_case("risk-assessment externalReference (silent)", EXTREF_BUG),
+        .with_silent(
+            "risk-assessment reference instead of the sidecar key",
+            broken(|s| {
+                s.sidecar_mut().risk_assessment_url = None;
+                with_product_ref(
+                    s,
+                    "risk-assessment",
+                    "https://acme.example/docs/risk-assessment.pdf",
+                );
+            }),
+        ),
     ]);
 
     run_matrix(PHASE2, PHASE2_RULE_UNIVERSE, &entries);
@@ -986,9 +1072,14 @@ fn cra_oss_steward_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             steward_broken(|s| s.primary_mut().external_refs.clear()),
             steward_base(),
         )
-        .with_skipped_case(
-            "vulnerability-assertion externalReference as the handling process (silent)",
-            EXTREF_BUG,
+        .with_silent(
+            "vulnerability-assertion (VDR) reference as the handling process",
+            steward_broken(|s| {
+                s.primary_mut().external_refs = vec![(
+                    "vulnerability-assertion".to_string(),
+                    "https://acme.example/vdr.json".to_string(),
+                )];
+            }),
         ),
         RuleEntry::key_tested_departing(
             "SBOM-CRA-ANNEX-I-IDENTIFIER",

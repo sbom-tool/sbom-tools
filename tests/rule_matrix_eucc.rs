@@ -8,16 +8,18 @@
 //! evidence fields in an attached CRA sidecar), or an explicit
 //! skip-with-reason.
 //!
-//! SBOM-EUCC-CERTREF cannot be silenced through the fixture DSL: the only
-//! document evidence the parser lets through is a CDXA attestation (see the
-//! skip reason), so its firing and silent states are covered by the raw-JSON
-//! tests at the bottom of this file.
+//! SBOM-EUCC-CERTREF reads the document: a `certification-report` or
+//! `attestation` external reference whose URL names EUCC or Common
+//! Criteria, or a CDXA attestation. The CDXA path is beyond the fixture
+//! DSL, so it is covered by the raw-JSON tests at the bottom of this file.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
 use rule_matrix::clock::{as_of, checker};
-use rule_matrix::{ComponentFixture, RuleEntry, SbomFixture, render_violations, run_matrix};
+use rule_matrix::{
+    ComponentFixture, RuleEntry, SbomFixture, assert_no_violations, render_violations, run_matrix,
+};
 use sbom_tools::model::CraSidecarMetadata;
 use sbom_tools::parsers::parse_sbom_str;
 use sbom_tools::quality::{
@@ -54,17 +56,25 @@ fn eucc_sidecar() -> CraSidecarMetadata {
     }
 }
 
-/// A CycloneDX 1.6 product SBOM (CDXA-capable) with the EUCC evidence in its
-/// sidecar. Not fully conforming: SBOM-EUCC-CERTREF fires on every DSL
-/// fixture (see the module docs); the zero-violation document is
-/// `conforming_json()` below.
+/// The product's EUCC certificate, as a CycloneDX external reference.
+fn eucc_certificate_ref() -> (String, String) {
+    (
+        "certification-report".to_string(),
+        "https://certification.enisa.europa.eu/eucc/certificates/EUCC-DE-2026-0042.pdf".to_string(),
+    )
+}
+
+/// A conforming CycloneDX 1.6 product SBOM: the EUCC evidence in its
+/// sidecar, and the certificate referenced from the product component.
 fn base() -> SbomFixture {
+    let mut primary = ComponentFixture::conforming("acme-hsm");
+    primary.external_refs = vec![eucc_certificate_ref()];
     SbomFixture {
         spec_version: "1.6".to_string(),
         timestamp: Some("2026-10-01T00:00:00Z".to_string()),
         serial_number: Some("urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79".to_string()),
         tools: vec![("acme-sbom-tool".to_string(), "1.0.0".to_string())],
-        primary: Some(ComponentFixture::conforming("acme-hsm")),
+        primary: Some(primary),
         components: vec![ComponentFixture::conforming("libalpha")],
         dependencies: vec![("ref-acme-hsm".to_string(), vec!["ref-libalpha".to_string()])],
         sidecar: Some(eucc_sidecar()),
@@ -76,6 +86,17 @@ fn broken(mutate: impl FnOnce(&mut SbomFixture)) -> SbomFixture {
     let mut fixture = base();
     mutate(&mut fixture);
     fixture
+}
+
+/// `base()` without the certificate reference: the sidecar evidence alone.
+fn without_certref() -> SbomFixture {
+    broken(|s| s.primary_mut().external_refs.clear())
+}
+
+/// The sidecar evidence and the certificate reference make a clean verdict.
+#[test]
+fn eucc_conforming_fixture_is_compliant_with_zero_violations() {
+    assert_no_violations(LEVEL, &base());
 }
 
 #[test]
@@ -133,15 +154,29 @@ fn eucc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Warning,
             broken(|s| s.sidecar_mut().eucc_valid_until = Some(days_from_now(90))),
         ),
-        RuleEntry::skipped(
-            "SBOM-EUCC-CERTREF",
-            "bug: the CycloneDX parser maps externalReferences types \
-             'attestation' / 'certification-report' to ExternalRefType::Other \
-             (map_cdx_external_ref_type), so no document reference can satisfy \
-             this rule and every DSL fixture fires it; firing, and the one \
-             silent path left (fresh CDXA attestation evidence for an EUCC \
-             standard), are covered by the raw-JSON tests eucc_certref_* below",
-        ),
+        // A certification or attestation reference counts only when its URL
+        // names the EUCC scheme or Common Criteria; the CDXA path is covered
+        // by the raw-JSON tests eucc_certref_* below.
+        RuleEntry::tested("SBOM-EUCC-CERTREF", Sev::Warning, without_certref(), base())
+            .with_firing(
+                "attestation reference naming no EUCC scheme",
+                Sev::Warning,
+                broken(|s| {
+                    s.primary_mut().external_refs = vec![(
+                        "attestation".to_string(),
+                        "https://acme.example/attestations/iso-27001.pdf".to_string(),
+                    )];
+                }),
+            )
+            .with_silent(
+                "attestation reference to a Common Criteria certificate",
+                broken(|s| {
+                    s.primary_mut().external_refs = vec![(
+                        "attestation".to_string(),
+                        "https://common-criteria.example/certificates/CC-2026-0042.pdf".to_string(),
+                    )];
+                }),
+            ),
         RuleEntry::skipped(
             "SBOM-EUCC-GENERAL",
             "registry catch-all for the EUCC family: no check site in \
@@ -157,13 +192,13 @@ fn eucc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
 // SBOM-EUCC-CERTREF: raw-JSON cases (CDXA declarations are beyond the DSL)
 // ---------------------------------------------------------------------------
 
-/// `base()` plus a CDXA attestation that fully supports an EUCC / Common
-/// Criteria requirement of a CRA-classified standard: a claim on the
+/// `without_certref()` plus a CDXA attestation that fully supports an EUCC /
+/// Common Criteria requirement of a CRA-classified standard: a claim on the
 /// primary component, backed by evidence created before and expiring after
 /// the pinned clock, mapped with full conformance.
 fn conforming_json() -> String {
     let mut doc: serde_json::Value =
-        serde_json::from_str(&base().to_json_string()).expect("fixture JSON re-parses");
+        serde_json::from_str(&without_certref().to_json_string()).expect("fixture JSON re-parses");
     doc["definitions"] = serde_json::json!({
         "standards": [{
             "bom-ref": "std-eucc",
@@ -202,10 +237,11 @@ fn check_json(json: &str) -> ComplianceResult {
     checker(LEVEL).with_sidecar(eucc_sidecar()).check(&sbom)
 }
 
-/// Every evidence field present and a fresh CDXA EUCC attestation: the
-/// profile passes with zero violations.
+/// Every sidecar evidence field present and a fresh CDXA EUCC attestation
+/// instead of a certificate reference: the profile passes with zero
+/// violations.
 #[test]
-fn eucc_conforming_document_is_compliant_with_zero_violations() {
+fn eucc_cdxa_conforming_document_is_compliant_with_zero_violations() {
     let result = check_json(&conforming_json());
     assert!(
         result.violations.is_empty() && result.is_compliant,
@@ -218,7 +254,7 @@ fn eucc_conforming_document_is_compliant_with_zero_violations() {
 
 #[test]
 fn eucc_certref_fires_without_attestation_evidence() {
-    let result = check_json(&base().to_json_string());
+    let result = check_json(&without_certref().to_json_string());
     assert!(
         result
             .violations

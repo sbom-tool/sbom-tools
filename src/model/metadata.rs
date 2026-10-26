@@ -443,7 +443,14 @@ pub struct ExternalReference {
     pub hashes: Vec<Hash>,
 }
 
-/// External reference types
+/// External reference types.
+///
+/// The variants follow the CycloneDX `externalReference.type` vocabulary,
+/// and each displays as its CycloneDX value (`Certification` as
+/// `certification-report`, `SourceDistribution` as `distribution`, …), which
+/// is what the CycloneDX writer emits. Parsers map the other formats'
+/// equivalents onto the same variants; a type without one is kept verbatim
+/// in `Other`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ExternalRefType {
     Vcs,
@@ -456,7 +463,10 @@ pub enum ExternalRefType {
     Chat,
     Documentation,
     Support,
+    /// CycloneDX `distribution`: a direct or repository download location
+    /// (the SPDX parsers store a package's download location here).
     SourceDistribution,
+    /// CycloneDX `distribution-intake`: where the component was published.
     BinaryDistribution,
     License,
     BuildMeta,
@@ -482,6 +492,7 @@ pub enum ExternalRefType {
     Maturity,
     Certification,
     QualityMetrics,
+    /// CycloneDX `codified-infrastructure` (infrastructure as code).
     Codified,
     Citation,
     Patent,
@@ -529,7 +540,7 @@ impl std::fmt::Display for ExternalRefType {
             Self::Maturity => write!(f, "maturity-report"),
             Self::Certification => write!(f, "certification-report"),
             Self::QualityMetrics => write!(f, "quality-metrics"),
-            Self::Codified => write!(f, "codified"),
+            Self::Codified => write!(f, "codified-infrastructure"),
             Self::Citation => write!(f, "citation"),
             Self::Patent => write!(f, "patent"),
             Self::PatentAssertion => write!(f, "patent-assertion"),

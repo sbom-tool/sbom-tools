@@ -1,5 +1,5 @@
 {
-  "description": "False-pass regression corpus from the v0.3.0 compliance review. Each check names the verdict a standard must reach. A check with \"xfail\" is a known defect, still reproduced: the runner asserts its expectation does NOT hold yet, and the work package named in \"xfail\" must remove the marker when it fixes it. Paths are relative to this directory. Evaluated at as_of 2026-10-12T00:00:00Z.",
+  "description": "False-pass regression corpus from the v0.3.0 compliance review (review ids V*) and the v0.4.0 rule matrices (WP 1.2 findings B*). Each check names the verdict a standard must reach. A check with \"xfail\" is a known defect, still reproduced: the runner asserts its expectation does NOT hold yet, and the work package named in \"xfail\" must remove the marker when it fixes it. Paths are relative to this directory. Evaluated at as_of 2026-10-12T00:00:00Z.",
   "entries": [
     {
       "id": "v1-empty-purl-collision",
@@ -992,6 +992,84 @@
               "SBOM-CISA2026-SIGNATURE",
               "SBOM-CISA2026-GENERATION-CONTEXT",
               "SBOM-CISA2026-COVERAGE"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "b1-evidence-references",
+      "review_id": "B1",
+      "fixture": "b1-evidence-references.cdx.json",
+      "note": "The product's evidence is all external references: an attestation (the EU DoC), an EUCC certification report, a risk assessment, a VDR (vulnerability-assertion) and a build system. The CycloneDX parser mapped these types to Other, so the CRA, EUCC, SSDF and PCI DSS checks asking for them fired anyway.",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "rules_absent": [
+              "SBOM-CRA-ANNEX-V",
+              "SBOM-CRA-ART-13-2",
+              "SBOM-CRA-VULN-STATEMENT"
+            ]
+          }
+        },
+        {
+          "standard": "cra-phase1",
+          "expect": {
+            "rules_absent": [
+              "SBOM-CRA-VULN-STATEMENT"
+            ]
+          }
+        },
+        {
+          "standard": "oss-steward",
+          "expect": {
+            "rules_absent": [
+              "SBOM-CRA-ART-24"
+            ]
+          }
+        },
+        {
+          "standard": "eucc",
+          "expect": {
+            "rules_absent": [
+              "SBOM-EUCC-CERTREF"
+            ]
+          }
+        },
+        {
+          "standard": "ssdf",
+          "expect": {
+            "rules_absent": [
+              "SBOM-SSDF-PO3",
+              "SBOM-SSDF-PW6"
+            ]
+          }
+        },
+        {
+          "standard": "pci-dss",
+          "expect": {
+            "rules_absent": [
+              "SBOM-PCI-6-3-2-VULN-EVIDENCE"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "b1-evidence-references-critical",
+      "review_id": "B1",
+      "fixture": "b1-evidence-references.cdx.json",
+      "sidecar": "b1-evidence-references.cra.json",
+      "note": "The same product pinned to the critical class (EUCC route): the certification report is both the Annex VIII route evidence and, its URL naming the EUCC scheme, the Annex IV reference.",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "rules_absent": [
+              "SBOM-CRA-ANNEX-IV",
+              "SBOM-CRA-ANNEX-V",
+              "SBOM-CRA-ANNEX-VIII"
             ]
           }
         }

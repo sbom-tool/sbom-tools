@@ -940,6 +940,14 @@ pub struct SkippedCase {
     pub reason: &'static str,
 }
 
+/// Another satisfying shape that must not surface the rule, beside the
+/// row's main silent fixture (e.g. a document reference that satisfies a
+/// rule the main fixture satisfies through the CRA sidecar).
+pub struct SilentCase {
+    pub label: &'static str,
+    pub fixture: SbomFixture,
+}
+
 /// Coverage for one rule of a standard's universe. The silent fixture is
 /// boxed to keep the variants comparable in size
 /// (clippy::large_enum_variant).
@@ -947,6 +955,7 @@ pub enum RuleCoverage {
     Tested {
         firing: Vec<FiringCase>,
         silent: Box<SbomFixture>,
+        extra_silent: Vec<SilentCase>,
         skipped_cases: Vec<SkippedCase>,
     },
     /// The rule genuinely cannot fire from document content alone (or has no
@@ -996,6 +1005,7 @@ impl RuleEntry {
                     fixture: firing,
                 }],
                 silent: Box::new(silent),
+                extra_silent: Vec::new(),
                 skipped_cases: Vec::new(),
             },
         }
@@ -1078,6 +1088,21 @@ impl RuleEntry {
             departs_from_registry_default: true,
             fixture,
         });
+        self
+    }
+
+    /// Additional silent case: another satisfying fixture that must not emit
+    /// the row's identity.
+    #[must_use]
+    pub fn with_silent(mut self, label: &'static str, fixture: SbomFixture) -> Self {
+        match &mut self.coverage {
+            RuleCoverage::Tested { extra_silent, .. } => {
+                extra_silent.push(SilentCase { label, fixture });
+            }
+            RuleCoverage::Skipped { .. } => {
+                panic!("cannot add a silent case to skipped rule {}", self.id)
+            }
+        }
         self
     }
 
@@ -1211,7 +1236,13 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
     );
 
     for entry in entries {
-        let RuleCoverage::Tested { firing, silent, .. } = &entry.coverage else {
+        let RuleCoverage::Tested {
+            firing,
+            silent,
+            extra_silent,
+            ..
+        } = &entry.coverage
+        else {
             continue; // skip-with-reason rows carry their justification inline
         };
         let id = entry.id;
@@ -1257,13 +1288,17 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
             );
         }
 
-        let result = check(level, silent);
-        assert!(
-            result.violations.iter().all(|v| !entry.matches(v)),
-            "[{level:?}] {id} (silent): the satisfying fixture must not fire this rule; \
-             emitted:\n{violations}",
-            violations = render_violations(&result)
-        );
+        let silent_cases = std::iter::once(("silent", silent.as_ref()))
+            .chain(extra_silent.iter().map(|c| (c.label, &c.fixture)));
+        for (label, fixture) in silent_cases {
+            let result = check(level, fixture);
+            assert!(
+                result.violations.iter().all(|v| !entry.matches(v)),
+                "[{level:?}] {id} ({label}): the satisfying fixture must not fire this rule; \
+                 emitted:\n{violations}",
+                violations = render_violations(&result)
+            );
+        }
     }
 
     // Universe sweep: no fixture in this matrix may emit a rule outside the
@@ -1271,13 +1306,20 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
     // check site for this standard must extend the universe (and therefore
     // the matrix) instead of escaping it.
     for entry in entries {
-        let RuleCoverage::Tested { firing, silent, .. } = &entry.coverage else {
+        let RuleCoverage::Tested {
+            firing,
+            silent,
+            extra_silent,
+            ..
+        } = &entry.coverage
+        else {
             continue;
         };
         let fixtures = firing
             .iter()
             .map(|c| (c.label, &c.fixture))
-            .chain(std::iter::once(("silent", silent.as_ref())));
+            .chain(std::iter::once(("silent", silent.as_ref())))
+            .chain(extra_silent.iter().map(|c| (c.label, &c.fixture)));
         for (label, fixture) in fixtures {
             let result = check(level, fixture);
             for v in &result.violations {

@@ -1259,6 +1259,13 @@ impl SpdxParser {
                     comp.identifiers.swid = Some(ext_ref.reference_locator.clone());
                     continue;
                 }
+                // SPDX 2.3 Annex F defines four categories: SECURITY
+                // (cpe22Type, cpe23Type, advisory, fix, url, swid),
+                // PACKAGE-MANAGER (maven-central, npm, nuget, bower, purl),
+                // PERSISTENT-ID (swh, gitoid) and OTHER (free-form). None of
+                // them names an attestation, certification report, risk
+                // assessment, VDR or VEX, so those stay `Other` here; SPDX 3.0
+                // has terms for them (see `map_spdx3_external_ref_type`).
                 let ref_type = match category.as_str() {
                     // Only advisory-shaped SECURITY refs are advisories; CPE
                     // and SWID identifiers were promoted above.

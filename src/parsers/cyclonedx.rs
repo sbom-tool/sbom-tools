@@ -1584,25 +1584,76 @@ fn xml_depth_within_limit(content: &str) -> Result<(), ParseError> {
 }
 
 /// Map a CycloneDX external-reference type string to the normalized enum.
-/// Shared by the component and service conversion paths.
+/// Shared by every conversion path that reads `externalReferences` —
+/// components, services and CDXA declarations, JSON and XML alike.
+///
+/// The vocabulary is the `externalReference.type` enum of the CycloneDX
+/// schemas (`definitions.externalReference.properties.type` in
+/// bom-1.4…1.7.schema.json, `externalReferenceType` in the XSDs). 1.4 has
+/// 16 values; 1.5 adds `distribution-intake`, `security-contact`,
+/// `model-card` and the assurance-evidence types from `log` to `poam`; 1.6
+/// adds `source-distribution`, `electronic-signature`, `digital-signature`
+/// and `rfc-9116`; 1.7 adds `patent`, `patent-family`, `patent-assertion`
+/// and `citation`.
+///
+/// Every value with a model variant maps to it, and the variant displays as
+/// that same value, so a CycloneDX document round-trips through the model.
+/// The rest stay `Other`, verbatim: `source-distribution` (the model's
+/// `SourceDistribution` is CycloneDX `distribution`, which is also how the
+/// SPDX parsers store a download location), `poam`, `electronic-signature`,
+/// `digital-signature`, `rfc-9116`, `other`, and any unlisted string.
+///
+/// Until v0.4.0 only 16 values were mapped. Among the ones that were not,
+/// `attestation`, `certification-report`, `risk-assessment`,
+/// `vulnerability-assertion`, `exploitability-statement` and `build-system`
+/// are what the CRA, EUCC and SSDF checks look for, so no CycloneDX document
+/// could satisfy those checks through its external references.
 fn map_cdx_external_ref_type(ref_type: &str) -> ExternalRefType {
     match ref_type {
+        // CycloneDX 1.4
         "vcs" => ExternalRefType::Vcs,
         "issue-tracker" => ExternalRefType::IssueTracker,
         "website" => ExternalRefType::Website,
         "advisories" => ExternalRefType::Advisories,
         "bom" => ExternalRefType::Bom,
-        "model-card" => ExternalRefType::ModelCard,
+        "mailing-list" => ExternalRefType::MailingList,
+        "social" => ExternalRefType::Social,
+        "chat" => ExternalRefType::Chat,
         "documentation" => ExternalRefType::Documentation,
         "support" => ExternalRefType::Support,
-        "security-contact" => ExternalRefType::SecurityContact,
+        "distribution" => ExternalRefType::SourceDistribution,
         "license" => ExternalRefType::License,
         "build-meta" => ExternalRefType::BuildMeta,
+        "build-system" => ExternalRefType::BuildSystem,
         "release-notes" => ExternalRefType::ReleaseNotes,
-        "citation" => ExternalRefType::Citation,
+        // CycloneDX 1.5
+        "distribution-intake" => ExternalRefType::BinaryDistribution,
+        "security-contact" => ExternalRefType::SecurityContact,
+        "model-card" => ExternalRefType::ModelCard,
+        "log" => ExternalRefType::Log,
+        "configuration" => ExternalRefType::Configuration,
+        "evidence" => ExternalRefType::Evidence,
+        "formulation" => ExternalRefType::Formulation,
+        "attestation" => ExternalRefType::Attestation,
+        "threat-model" => ExternalRefType::ThreatModel,
+        "adversary-model" => ExternalRefType::AdversaryModel,
+        "risk-assessment" => ExternalRefType::RiskAssessment,
+        "vulnerability-assertion" => ExternalRefType::VulnerabilityAssertion,
+        "exploitability-statement" => ExternalRefType::ExploitabilityStatement,
+        "pentest-report" => ExternalRefType::Pentest,
+        "static-analysis-report" => ExternalRefType::StaticAnalysis,
+        "dynamic-analysis-report" => ExternalRefType::DynamicAnalysis,
+        "runtime-analysis-report" => ExternalRefType::RuntimeAnalysis,
+        "component-analysis-report" => ExternalRefType::ComponentAnalysis,
+        "maturity-report" => ExternalRefType::Maturity,
+        "certification-report" => ExternalRefType::Certification,
+        "codified-infrastructure" => ExternalRefType::Codified,
+        "quality-metrics" => ExternalRefType::QualityMetrics,
+        // CycloneDX 1.7
         "patent" => ExternalRefType::Patent,
-        "patent-assertion" => ExternalRefType::PatentAssertion,
         "patent-family" => ExternalRefType::PatentFamily,
+        "patent-assertion" => ExternalRefType::PatentAssertion,
+        "citation" => ExternalRefType::Citation,
         other => ExternalRefType::Other(other.to_string()),
     }
 }
@@ -6352,5 +6403,158 @@ mod tests {
             "id-less vulnerability must fall back to its reference id"
         );
         component(&sbom, "api");
+    }
+
+    /// The `externalReference.type` enum of bom-1.7.schema.json, which
+    /// contains every value of 1.4, 1.5 and 1.6.
+    const CDX_EXTERNAL_REF_TYPES: &[&str] = &[
+        "vcs",
+        "issue-tracker",
+        "website",
+        "advisories",
+        "bom",
+        "mailing-list",
+        "social",
+        "chat",
+        "documentation",
+        "support",
+        "source-distribution",
+        "distribution",
+        "distribution-intake",
+        "license",
+        "build-meta",
+        "build-system",
+        "release-notes",
+        "security-contact",
+        "model-card",
+        "log",
+        "configuration",
+        "evidence",
+        "formulation",
+        "attestation",
+        "threat-model",
+        "adversary-model",
+        "risk-assessment",
+        "vulnerability-assertion",
+        "exploitability-statement",
+        "pentest-report",
+        "static-analysis-report",
+        "dynamic-analysis-report",
+        "runtime-analysis-report",
+        "component-analysis-report",
+        "maturity-report",
+        "certification-report",
+        "codified-infrastructure",
+        "quality-metrics",
+        "poam",
+        "electronic-signature",
+        "digital-signature",
+        "rfc-9116",
+        "patent",
+        "patent-family",
+        "patent-assertion",
+        "citation",
+        "other",
+    ];
+
+    /// The CycloneDX values the model has no variant for.
+    const CDX_TYPES_WITHOUT_VARIANT: &[&str] = &[
+        "source-distribution",
+        "poam",
+        "electronic-signature",
+        "digital-signature",
+        "rfc-9116",
+        "other",
+    ];
+
+    /// Every CycloneDX external-reference type maps to the variant that
+    /// displays as it, so the CycloneDX writer emits the same value back;
+    /// the six values without a variant stay `Other`, verbatim.
+    #[test]
+    fn every_cyclonedx_external_ref_type_round_trips() {
+        assert_eq!(CDX_EXTERNAL_REF_TYPES.len(), 47, "bom-1.7 has 47 types");
+        for value in CDX_EXTERNAL_REF_TYPES {
+            let mapped = map_cdx_external_ref_type(value);
+            assert_eq!(mapped.to_string(), *value, "{value} must display as itself");
+            assert_eq!(
+                matches!(mapped, ExternalRefType::Other(_)),
+                CDX_TYPES_WITHOUT_VARIANT.contains(value),
+                "{value}: mapped to {mapped:?}"
+            );
+        }
+        // The evidence kinds the CRA, EUCC and SSDF checks read.
+        for (value, expected) in [
+            ("attestation", ExternalRefType::Attestation),
+            ("certification-report", ExternalRefType::Certification),
+            ("risk-assessment", ExternalRefType::RiskAssessment),
+            (
+                "vulnerability-assertion",
+                ExternalRefType::VulnerabilityAssertion,
+            ),
+            (
+                "exploitability-statement",
+                ExternalRefType::ExploitabilityStatement,
+            ),
+            ("build-system", ExternalRefType::BuildSystem),
+        ] {
+            assert_eq!(map_cdx_external_ref_type(value), expected);
+        }
+    }
+
+    /// JSON and XML read every external-reference type the same way.
+    #[test]
+    fn external_ref_types_read_alike_from_json_and_xml() {
+        let json_refs: Vec<serde_json::Value> = CDX_EXTERNAL_REF_TYPES
+            .iter()
+            .map(|t| serde_json::json!({ "type": t, "url": format!("https://example.com/{t}") }))
+            .collect();
+        let json = serde_json::json!({
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.7",
+            "version": 1,
+            "components": [{
+                "type": "library",
+                "bom-ref": "lib",
+                "name": "lib",
+                "externalReferences": json_refs,
+            }],
+        })
+        .to_string();
+        let xml_refs: String = CDX_EXTERNAL_REF_TYPES
+            .iter()
+            .map(|t| {
+                format!(r#"<reference type="{t}"><url>https://example.com/{t}</url></reference>"#)
+            })
+            .collect();
+        let xml = format!(
+            r#"<?xml version="1.0"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.7" version="1">
+  <components>
+    <component type="library" bom-ref="lib">
+      <name>lib</name>
+      <externalReferences>{xml_refs}</externalReferences>
+    </component>
+  </components>
+</bom>"#
+        );
+        let from_json = CycloneDxParser::new()
+            .parse_str(&json)
+            .expect("JSON should parse");
+        let from_xml = parse(&xml);
+        let types = |sbom: &NormalizedSbom| -> Vec<ExternalRefType> {
+            component(sbom, "lib")
+                .external_refs
+                .iter()
+                .map(|r| r.ref_type.clone())
+                .collect()
+        };
+        assert_eq!(types(&from_json), types(&from_xml));
+        assert_eq!(
+            types(&from_json),
+            CDX_EXTERNAL_REF_TYPES
+                .iter()
+                .map(|t| map_cdx_external_ref_type(t))
+                .collect::<Vec<_>>()
+        );
     }
 }
