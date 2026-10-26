@@ -167,3 +167,118 @@ fn cra_docs_unfilled_fields_show_tbd_placeholders() {
         "DoC without sidecar must contain _TBD_ placeholders for unfilled fields"
     );
 }
+
+/// SBOM text that tries to break out of its place in the dossier Markdown: a
+/// new heading, an HTML tag, a link, and a CI workflow command.
+const HOSTILE_CDX: &str = r#"{
+    "bomFormat": "CycloneDX",
+    "specVersion": "1.5",
+    "serialNumber": "urn:uuid:22222222-2222-2222-2222-222222222222\n# Forged serial",
+    "metadata": {
+        "component": {
+            "type": "application",
+            "name": "evil-app\n## Forged product <img src=x onerror=alert(1)>",
+            "version": "1.0.0"
+        }
+    },
+    "components": [
+        {"type": "library", "name": "::warning::FORGED\n- [x](javascript:alert(1))", "version": "1.0.0"}
+    ]
+}"#;
+
+/// Sidecar values with the same break-out attempts (no `productName`, so the
+/// DoC takes the product name from the SBOM).
+const HOSTILE_SIDECAR: &str = r##"{
+    "manufacturerName": "Evil Corp\n**7. Signed for and on behalf of the manufacturer**",
+    "manufacturerEmail": "legal@example.com\n# Forged contact",
+    "psirtUrl": "https://example.com/psirt>\n# Forged psirt",
+    "securityContact": "security@example.com | injected cell",
+    "earlyWarningContact": "\\<img src=x onerror=alert(2)>",
+    "riskAssessmentMethodology": "ISO <script>alert(1)</script>",
+    "annexIPartIControls": {
+        "ctl-1\n# Forged control": {
+            "satisfied": true,
+            "evidenceUrl": "https://example.com/ev) [y](data:text/html,x",
+            "methodology": "SAST | injected",
+            "note": "fine\n## Forged note"
+        }
+    },
+    "productClass": "important-class-1"
+}"##;
+
+/// Whether `needle` occurs in `md` without a Markdown backslash escape on its
+/// first character. Only an odd run of backslashes escapes it: an even run is
+/// escaped backslashes, after which the needle is live (`\\<img`).
+fn contains_unescaped(md: &str, needle: &str) -> bool {
+    md.match_indices(needle)
+        .any(|(at, _)| md[..at].chars().rev().take_while(|&c| c == '\\').count() % 2 == 0)
+}
+
+/// Text from the SBOM and the sidecar is escaped in every dossier file: no
+/// crafted value starts its own heading, list item or table row, opens an HTML
+/// tag or a link, or begins a line with a workflow command (the S1 rule for
+/// human-readable output, here applied to the generated Markdown).
+#[test]
+fn cra_docs_neutralizes_sbom_and_sidecar_text() {
+    let dir = tempdir().unwrap();
+    let sbom = write_temp(dir.path(), "app.cdx.json", HOSTILE_CDX);
+    let sidecar = write_temp(dir.path(), "app.cra.json", HOSTILE_SIDECAR);
+    let out = dir.path().join("dossier");
+
+    run_cra_docs(sbom, out.clone(), Some(sidecar), None).expect("cra-docs runs");
+
+    for file in [
+        "eu-declaration-of-conformity.md",
+        "technical-documentation.md",
+        "vulnerability-handling-policy.md",
+    ] {
+        let md = fs::read_to_string(out.join(file)).unwrap();
+        for line in md.lines() {
+            let line = line.trim_start();
+            // A crafted value that begins a line, after any block marker,
+            // would render as its own heading or list item.
+            assert!(
+                !line
+                    .trim_start_matches(['#', '-', '*', ' '])
+                    .starts_with("Forged"),
+                "{file}: a crafted value started its own Markdown block: {line:?}"
+            );
+            assert!(
+                !line.starts_with("::"),
+                "{file}: a line starts a workflow command: {line:?}"
+            );
+        }
+        for raw in ["<img", "<script", "[x](javascript", "| injected"] {
+            assert!(
+                !contains_unescaped(&md, raw),
+                "{file}: unescaped {raw:?}:\n{md}"
+            );
+        }
+    }
+
+    // The values are rendered, not dropped: escaped in place, with URLs kept
+    // as clickable autolinks.
+    let doc = fs::read_to_string(out.join("eu-declaration-of-conformity.md")).unwrap();
+    assert_eq!(
+        doc.lines()
+            .filter(|l| l.trim() == "**7. Signed for and on behalf of the manufacturer**")
+            .count(),
+        1,
+        "the manufacturer name forged a second signature section:\n{doc}"
+    );
+    assert!(
+        doc.contains("Evil Corp"),
+        "manufacturer still named:\n{doc}"
+    );
+    assert!(doc.contains("evil-app"), "product still named:\n{doc}");
+    let policy = fs::read_to_string(out.join("vulnerability-handling-policy.md")).unwrap();
+    assert!(
+        policy.contains("<https://example.com/psirt#Forgedpsirt>"),
+        "PSIRT URL kept as one autolink:\n{policy}"
+    );
+    let tech = fs::read_to_string(out.join("technical-documentation.md")).unwrap();
+    assert!(
+        tech.contains("[link](<https://example.com/ev)[y](data:text/html,x>)"),
+        "evidence URL kept inside its link destination:\n{tech}"
+    );
+}

@@ -15,6 +15,9 @@
 use crate::model::{ConformityRoute, CraProductClass, CraSidecarMetadata, NormalizedSbom};
 use crate::pipeline::parse_sbom_with_context;
 use crate::quality::{ComplianceChecker, ComplianceLevel, ComplianceResult};
+use crate::reports::escape::{
+    escape_markdown_inline, markdown_link_destination, markdown_url_or_text,
+};
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 
@@ -153,20 +156,32 @@ fn render_doc(
                 .find(|c| matches!(c.creator_type, crate::model::CreatorType::Organization))
                 .map(|c| c.name.as_str())
         })
-        .unwrap_or("_TBD: manufacturer name_");
+        .map_or_else(
+            || "_TBD: manufacturer name_".to_string(),
+            escape_markdown_inline,
+        );
     let manufacturer_email = sidecar
         .and_then(|s| s.manufacturer_email.as_deref())
-        .unwrap_or("_TBD: manufacturer email_");
+        .map_or_else(
+            || "_TBD: manufacturer email_".to_string(),
+            markdown_url_or_text,
+        );
     let product_name = sidecar
         .and_then(|s| s.product_name.as_deref())
         .or(sbom.document.name.as_deref())
-        .unwrap_or("_TBD: product name_");
+        .map_or_else(|| "_TBD: product name_".to_string(), escape_markdown_inline);
     let product_version = sidecar
         .and_then(|s| s.product_version.as_deref())
-        .unwrap_or("_TBD: product version_");
+        .map_or_else(
+            || "_TBD: product version_".to_string(),
+            escape_markdown_inline,
+        );
     let ce_marking = sidecar
         .and_then(|s| s.ce_marking_reference.as_deref())
-        .unwrap_or("_TBD: CE marking reference / DoC document ID_");
+        .map_or_else(
+            || "_TBD: CE marking reference / DoC document ID_".to_string(),
+            escape_markdown_inline,
+        );
 
     // §6 "other Union legislation". When the sidecar flags the product as a
     // high-risk AI system, name the AI Act explicitly and point the operator at
@@ -237,16 +252,27 @@ fn render_tech_doc(
 ) -> String {
     let component_count = sbom.components.len();
     let dependency_count = sbom.edges.len();
-    let format_label = format!("{:?} {}", sbom.document.format, sbom.document.spec_version);
+    let format_label = format!(
+        "{:?} {}",
+        sbom.document.format,
+        escape_markdown_inline(&sbom.document.spec_version)
+    );
     let risk_assessment = sidecar
         .and_then(|s| s.risk_assessment_url.as_deref())
-        .unwrap_or("_TBD: link to documented risk assessment (CRA Art. 13(2))_");
+        .map_or_else(
+            || "_TBD: link to documented risk assessment (CRA Art. 13(2))_".to_string(),
+            markdown_url_or_text,
+        );
     let methodology = sidecar
         .and_then(|s| s.risk_assessment_methodology.as_deref())
-        .unwrap_or("_TBD: e.g., ISO/IEC 27005:2022_");
-    let psirt = sidecar
-        .and_then(|s| s.psirt_url.as_deref())
-        .unwrap_or("_TBD: PSIRT URL (CRA Art. 14)_");
+        .map_or_else(
+            || "_TBD: e.g., ISO/IEC 27005:2022_".to_string(),
+            escape_markdown_inline,
+        );
+    let psirt = sidecar.and_then(|s| s.psirt_url.as_deref()).map_or_else(
+        || "_TBD: PSIRT URL (CRA Art. 14)_".to_string(),
+        markdown_url_or_text,
+    );
     let support_end = sidecar
         .and_then(|s| s.support_end_date)
         .map(|d| d.format("%Y-%m-%d").to_string())
@@ -273,7 +299,9 @@ fn render_tech_doc(
             };
             violations_md.push_str(&format!(
                 "- **[{}] {}** — {}\n",
-                sev, v.requirement, v.message
+                sev,
+                escape_markdown_inline(&v.requirement),
+                escape_markdown_inline(&v.message)
             ));
         }
         if compliance.violations.len() > 10 {
@@ -328,11 +356,10 @@ fn render_tech_doc(
         psirt = psirt,
         support_end = support_end,
         tool_version = env!("CARGO_PKG_VERSION"),
-        serial = sbom
-            .document
-            .serial_number
-            .as_deref()
-            .unwrap_or("_TBD: assign a unique serial / namespace_"),
+        serial = sbom.document.serial_number.as_deref().map_or_else(
+            || "_TBD: assign a unique serial / namespace_".to_string(),
+            escape_markdown_inline
+        ),
         violations_md = violations_md,
         controls_assertion_md = controls_assertion_md,
         adjacent_regulation_md = adjacent_regulation_md,
@@ -361,13 +388,20 @@ fn render_controls_assertion_section(sidecar: Option<&CraSidecarMetadata>) -> St
     s.push_str("|---------|-----------|-------------|----------|------|\n");
     for (id, claim) in &sc.annex_i_part_i_controls {
         let satisfied = if claim.satisfied { "✅" } else { "❌" };
-        let methodology = claim.methodology.as_deref().unwrap_or("_TBD_");
-        let evidence = claim
-            .evidence_url
+        let id = escape_markdown_inline(id);
+        let methodology = claim
+            .methodology
             .as_deref()
-            .map(|u| format!("[link]({u})"))
-            .unwrap_or_else(|| "_TBD_".to_string());
-        let note = claim.note.as_deref().unwrap_or("");
+            .map_or_else(|| "_TBD_".to_string(), escape_markdown_inline);
+        let evidence = claim.evidence_url.as_deref().map_or_else(
+            || "_TBD_".to_string(),
+            |u| format!("[link]({})", markdown_link_destination(u)),
+        );
+        let note = claim
+            .note
+            .as_deref()
+            .map(escape_markdown_inline)
+            .unwrap_or_default();
         s.push_str(&format!(
             "| {id} | {satisfied} | {methodology} | {evidence} | {note} |\n"
         ));
@@ -481,22 +515,37 @@ fn render_adjacent_regulation_section(sidecar: Option<&CraSidecarMetadata>) -> S
 fn render_vuln_policy(sbom: &NormalizedSbom, sidecar: Option<&CraSidecarMetadata>) -> String {
     let psirt = sidecar
         .and_then(|s| s.psirt_url.as_deref())
-        .unwrap_or("_TBD: PSIRT URL_");
+        .map_or_else(|| "_TBD: PSIRT URL_".to_string(), markdown_url_or_text);
     let security_contact = sidecar
         .and_then(|s| s.security_contact.as_deref())
-        .unwrap_or("_TBD: security contact email_");
+        .map_or_else(
+            || "_TBD: security contact email_".to_string(),
+            markdown_url_or_text,
+        );
     let cvd_policy = sidecar
         .and_then(|s| s.coordinated_disclosure_policy_url.as_deref())
-        .unwrap_or("_TBD: coordinated vulnerability-disclosure policy URL_");
+        .map_or_else(
+            || "_TBD: coordinated vulnerability-disclosure policy URL_".to_string(),
+            markdown_url_or_text,
+        );
     let early = sidecar
         .and_then(|s| s.early_warning_contact.as_deref())
-        .unwrap_or("_TBD: 24-hour early-warning channel (CRA Art. 14(2)(a) / 14(4)(a))_");
+        .map_or_else(
+            || "_TBD: 24-hour early-warning channel (CRA Art. 14(2)(a) / 14(4)(a))_".to_string(),
+            markdown_url_or_text,
+        );
     let incident = sidecar
         .and_then(|s| s.incident_report_contact.as_deref())
-        .unwrap_or("_TBD: 72-hour notification channel (CRA Art. 14(2)(b) / 14(4)(b))_");
+        .map_or_else(
+            || "_TBD: 72-hour notification channel (CRA Art. 14(2)(b) / 14(4)(b))_".to_string(),
+            markdown_url_or_text,
+        );
     let enisa = sidecar
         .and_then(|s| s.enisa_reporting_platform_id.as_deref())
-        .unwrap_or("_TBD: ENISA single-reporting-platform manufacturer ID (Art. 14(7))_");
+        .map_or_else(
+            || "_TBD: ENISA single-reporting-platform manufacturer ID (Art. 14(7))_".to_string(),
+            escape_markdown_inline,
+        );
 
     format!(
         "# Vulnerability-Handling Policy (CRA Annex I Part II)\n\n\
@@ -538,11 +587,10 @@ fn render_vuln_policy(sbom: &NormalizedSbom, sidecar: Option<&CraSidecarMetadata
          alongside the SBOM whenever a vulnerability affecting a tracked \
          component is acknowledged.\n",
         components = sbom.components.len(),
-        primary_id = sbom
-            .primary_component_id
-            .as_ref()
-            .map(|c| c.value().to_string())
-            .unwrap_or_else(|| "_TBD: primary component ID_".to_string()),
+        primary_id = sbom.primary_component_id.as_ref().map_or_else(
+            || "_TBD: primary component ID_".to_string(),
+            |c| escape_markdown_inline(c.value())
+        ),
         psirt = psirt,
         security_contact = security_contact,
         cvd_policy = cvd_policy,
