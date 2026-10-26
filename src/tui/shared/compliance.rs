@@ -109,7 +109,7 @@ pub fn render_violation_detail_overlay(
     )));
 
     let guidance = violation.remediation_guidance();
-    for wrapped_line in textwrap_simple(guidance, inner_width as usize) {
+    for wrapped_line in textwrap_simple(&guidance, inner_width as usize) {
         lines.push(Line::from(Span::styled(
             wrapped_line,
             Style::default().fg(scheme.text),
@@ -206,6 +206,7 @@ mod tests {
             requirement: "EU AI Act Annex IV".to_string(),
             rule_id: "SBOM-AIACT-ANNEX-IV-2D",
             standard_refs: vec![StandardRef::new(StandardKind::EuAiAct, "Annex IV §2(d)")],
+            remediation: None,
         }
     }
 
@@ -232,7 +233,8 @@ mod tests {
 
     /// #347: the reporter's CRA Annex I violation (3 references + a multi-line
     /// remediation) overflowed the old fixed 60%-height box at 24 rows, so
-    /// the end of the remediation text and the close hint were clipped.
+    /// the end of the remediation text and the close hint were clipped. The
+    /// remediation is the CycloneDX text `ComplianceChecker::check()` stamps.
     fn cra_supply_chain_violation() -> Violation {
         Violation {
             severity: ViolationSeverity::Warning,
@@ -250,18 +252,28 @@ mod tests {
                 StandardRef::new(StandardKind::Pren40000_1_3, "PRE-7-RQ-01"),
                 StandardRef::new(StandardKind::Pren40000_1_3, "PRE-7-RQ-03"),
             ],
+            remediation: Some(
+                crate::quality::rule_meta("SBOM-CRA-ANNEX-I-SUPPLY-CHAIN")
+                    .expect("registered rule")
+                    .remediation_for(crate::quality::RemediationFormat::CycloneDx),
+            ),
         }
     }
 
     #[test]
     fn overlay_grows_to_fit_remediation_and_close_hint() {
         let violation = cra_supply_chain_violation();
+        let guidance = violation.remediation_guidance();
+        let last_word = guidance
+            .split_whitespace()
+            .last()
+            .expect("remediation has words");
         for (width, height) in [(166u16, 24u16), (120, 24), (100, 24), (80, 24), (166, 40)] {
             let text = render_to_text(width, height, |frame| {
                 super::render_violation_detail_overlay(frame, frame.area(), &violation);
             });
             assert!(
-                text.contains("PackageOriginator).") && text.contains("Remediation:"),
+                text.contains(last_word) && text.contains("Remediation:"),
                 "remediation must be fully visible to its last word at {width}x{height}; got:\n{text}"
             );
             assert!(

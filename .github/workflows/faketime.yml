@@ -1,0 +1,75 @@
+name: Faketime
+
+# The test suite must hold at any date. Compliance tests pin their clock
+# (tests/common/clock.rs, enforced by tests/pinned_clock_tests.rs); this job
+# catches what pinning missed (a fixture date that falls into the past, a
+# certificate that expires, a deadline that passes) by running the whole
+# suite with the wall clock moved years ahead under libfaketime.
+
+on:
+  schedule:
+    - cron: "0 5 * * 1" # Monday 05:00 UTC
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/faketime.yml"
+
+permissions: read-all
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  faketime:
+    name: Tests at ${{ matrix.date }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        date: ["2028-01-01", "2031-01-01"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Rust 1.88
+        # toolchain "1.88" matches rust-toolchain.toml; action pinned to master (no releases)
+        uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067 # master
+        with:
+          toolchain: "1.88"
+      - name: Cache
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: faketime
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Install libfaketime
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q faketime
+      # Compile on the real clock, so only the test run sees the fake one.
+      - name: Build test binaries
+        run: cargo test --locked --all-features --no-run
+      - name: Run tests at ${{ matrix.date }}
+        env:
+          FAKE_DATE: ${{ matrix.date }}
+          # Real monotonic clocks keep timeouts and Instant-based waits sane.
+          FAKETIME_DONT_FAKE_MONOTONIC: "1"
+        run: |
+          # A relative offset (rather than "@<date>") moves every process by
+          # the same amount: timestamps one process writes (the CLI under
+          # test) stay consistent with the clock of the process that reads
+          # them, and file mtimes (libfaketime fakes stat as well) move with
+          # the clock, so cache ages and cargo's freshness checks hold.
+          # Signed seconds ("+N" or "-N"), so a matrix date that has passed
+          # still works.
+          offset=$(printf '%+d' $(( $(date -u -d "$FAKE_DATE" +%s) - $(date -u +%s) )))
+          faketime -f "$offset" date -u
+          # --offline: under the fake clock TLS certificates read as expired.
+          faketime -f "$offset" cargo test --locked --offline --all-features

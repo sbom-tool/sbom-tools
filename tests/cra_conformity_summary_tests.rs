@@ -6,16 +6,20 @@
 //! - The evidence checklist matches the expected per-route shape.
 //! - Markdown / HTML report rendering surfaces the summary.
 
+#[path = "common/clock.rs"]
+mod clock;
+
+use clock::checker;
 use sbom_tools::model::{
     Component, ConformityRoute, CraProductClass, CraSidecarMetadata, ExternalRefType,
     ExternalReference, NormalizedSbom,
 };
-use sbom_tools::quality::{ComplianceChecker, ComplianceLevel};
+use sbom_tools::quality::ComplianceLevel;
 
 #[test]
 fn no_summary_when_class_not_pinned() {
     let sbom = NormalizedSbom::default();
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&sbom);
+    let result = checker(ComplianceLevel::CraPhase2).check(&sbom);
     assert!(
         result.conformity_summary.is_none(),
         "no summary when no product class pinned"
@@ -25,7 +29,7 @@ fn no_summary_when_class_not_pinned() {
 #[test]
 fn summary_present_at_default_class_lists_doc_and_module_a() {
     let sbom = NormalizedSbom::default();
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let result = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Default)
         .check(&sbom);
     let summary = result
@@ -48,7 +52,7 @@ fn summary_module_bc_includes_eu_type_examination() {
         ..Default::default()
     };
     let sbom = NormalizedSbom::default();
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let result = checker(ComplianceLevel::CraPhase2)
         .with_sidecar(sidecar)
         .check(&sbom);
     let summary = result.conformity_summary.expect("summary");
@@ -66,7 +70,7 @@ fn summary_module_h_includes_qms_certification() {
         ..Default::default()
     };
     let sbom = NormalizedSbom::default();
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let result = checker(ComplianceLevel::CraPhase2)
         .with_sidecar(sidecar)
         .check(&sbom);
     let summary = result.conformity_summary.expect("summary");
@@ -82,7 +86,7 @@ fn summary_module_h_includes_qms_certification() {
 
 #[test]
 fn summary_eucc_includes_target_of_evaluation() {
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let result = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Critical)
         .check(&NormalizedSbom::default());
     let summary = result.conformity_summary.expect("summary");
@@ -103,7 +107,7 @@ fn doc_evidence_satisfied_by_attestation_external_ref() {
         hashes: Vec::new(),
     });
     sbom.add_component(c);
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let result = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Default)
         .check(&sbom);
     let summary = result.conformity_summary.expect("summary");
@@ -125,7 +129,7 @@ fn psirt_evidence_satisfied_by_sidecar() {
         psirt_url: Some("https://example.com/psirt".to_string()),
         ..Default::default()
     };
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let result = checker(ComplianceLevel::CraPhase2)
         .with_sidecar(sidecar)
         .check(&NormalizedSbom::default());
     let summary = result.conformity_summary.expect("summary");
@@ -148,7 +152,7 @@ fn eucc_evidence_satisfied_by_certification_with_eucc_url() {
         hashes: Vec::new(),
     });
     sbom.add_component(c);
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let result = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Critical)
         .check(&sbom);
     let summary = result.conformity_summary.expect("summary");
@@ -162,7 +166,7 @@ fn eucc_evidence_satisfied_by_certification_with_eucc_url() {
 
 #[test]
 fn json_serialization_roundtrips_conformity_summary() {
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let result = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Critical)
         .check(&NormalizedSbom::default());
     let json = serde_json::to_string(&result).unwrap();

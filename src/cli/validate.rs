@@ -293,13 +293,17 @@ fn write_multi_compliance_summary(
     Ok(())
 }
 
-/// Render a compliance result as plain text, one finding per two lines.
+/// Render a compliance result as plain text, one finding per three lines:
+/// the finding, its message, and a `fix:` line with the remediation for the
+/// SBOM's format.
 ///
 /// Requirement, element, message and the N/A reason can carry SBOM-supplied
 /// text (component names, versions, purls), so each passes through
 /// [`sanitize_line`]: a crafted name must not be able to start a new line
 /// (CI runners such as GitHub Actions parse a line beginning with `::error`
-/// as a workflow command) or smuggle terminal escape or bidi sequences.
+/// as a workflow command) or smuggle terminal escape or bidi sequences. The
+/// remediation is sanitized too: a deserialized violation carries whatever
+/// text its payload held.
 fn format_compliance_text(result: &ComplianceResult) -> String {
     let mut lines = Vec::new();
     lines.push(format!("Compliance ({})", result.level.name()));
@@ -343,14 +347,18 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
             sanitize_line(element)
         ));
         lines.push(format!("  {}", sanitize_line(&v.message)));
+        lines.push(format!(
+            "  fix: {}",
+            sanitize_line(&v.remediation_guidance())
+        ));
     }
 
     lines.join("\n")
 }
 
 /// Run the engine's NtiaMinimum check and print a compact PASSED/FAILED
-/// summary. Used by `view --validate-ntia`; gating errors are listed,
-/// warnings go to the log.
+/// summary. Used by `view --validate-ntia`; gating errors are listed, each
+/// with a `fix:` line, and warnings go to the log.
 pub fn print_ntia_validation(sbom: &NormalizedSbom) {
     let result = ComplianceChecker::new(ComplianceLevel::NtiaMinimum).check(sbom);
     for v in result.violations_by_severity(ViolationSeverity::Warning) {
@@ -364,6 +372,7 @@ pub fn print_ntia_validation(sbom: &NormalizedSbom) {
         println!("NTIA Validation: FAILED");
         for v in result.violations_by_severity(ViolationSeverity::Error) {
             println!("  - {}", sanitize_line(&v.message));
+            println!("    fix: {}", sanitize_line(&v.remediation_guidance()));
         }
     }
 }

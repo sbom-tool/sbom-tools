@@ -29,7 +29,7 @@ jobs:
         with:
           toolchain: stable
       - name: Cache Rust
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - name: Run Dagger Rust SDK pipeline
         run: ./scripts/run-dagger-ci.sh
 
@@ -44,7 +44,7 @@ jobs:
         with:
           toolchain: stable
       - name: Cache
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - name: Build FFI library
         run: bash ./scripts/build-bindings-mvp.sh
       - name: Test FFI ABI
@@ -78,7 +78,7 @@ jobs:
         with:
           go-version: '1.22'
       - name: Cache Rust
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - name: Build Rust library
         run: bash ./scripts/build-bindings-mvp.sh
       - name: Test Go wrapper
@@ -102,11 +102,11 @@ jobs:
         with:
           toolchain: stable
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
       - name: Cache Rust
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - name: Build Rust library
         run: cargo build -p sbom-tools-ffi --release
       - name: Create Python environment
@@ -158,13 +158,13 @@ jobs:
         with:
           toolchain: stable
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
           cache: npm
           cache-dependency-path: bindings/nodejs/package-lock.json
       - name: Cache Rust
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - name: Install Node.js dependencies
         working-directory: bindings/nodejs
         run: npm ci

@@ -9,9 +9,13 @@
 //!    output (which GitHub code scanning dedups on) are pinned to an explicit
 //!    snapshot, so a reworded message can never silently re-bucket a rule.
 
+#[path = "common/clock.rs"]
+mod clock;
+
+use clock::checker;
 use sbom_tools::model::CraSidecarMetadata;
 use sbom_tools::parsers::parse_sbom;
-use sbom_tools::quality::{ComplianceChecker, ComplianceLevel, rule_meta};
+use sbom_tools::quality::{ComplianceLevel, rule_meta};
 use sbom_tools::reports::generate_compliance_sarif;
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -67,7 +71,7 @@ fn every_emitted_violation_resolves_in_the_registry() {
             panic!("failed to parse fixture {}", fx.display());
         };
         for level in ComplianceLevel::all() {
-            let result = ComplianceChecker::new(*level).check(&sbom);
+            let result = checker(*level).check(&sbom);
             for v in &result.violations {
                 checked += 1;
                 let meta = rule_meta(v.rule_id);
@@ -98,7 +102,7 @@ fn every_emitted_violation_resolves_in_the_registry() {
 fn empty_sbom_emits_no_orphan_rules_at_any_level() {
     let sbom = sbom_tools::model::NormalizedSbom::default();
     for level in ComplianceLevel::all() {
-        let result = ComplianceChecker::new(*level).check(&sbom);
+        let result = checker(*level).check(&sbom);
         for v in &result.violations {
             assert!(
                 rule_meta(v.rule_id).is_some(),
@@ -113,7 +117,7 @@ fn empty_sbom_emits_no_orphan_rules_at_any_level() {
 fn sarif_rule_ids(sbom_path: &PathBuf, level: ComplianceLevel) -> BTreeSet<String> {
     let sbom = parse_sbom(sbom_path).expect("parse fixture");
     let sidecar = CraSidecarMetadata::from_file(&sbom_path.with_extension("cra.json")).ok();
-    let mut checker = ComplianceChecker::new(level);
+    let mut checker = checker(level);
     if let Some(s) = sidecar {
         checker = checker.with_sidecar(s);
     }

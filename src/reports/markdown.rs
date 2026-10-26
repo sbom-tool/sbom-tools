@@ -1076,7 +1076,7 @@ struct AggregatedViolation<'a> {
     category: &'a str,
     requirement: &'a str,
     message: String,
-    remediation: &'static str,
+    remediation: std::borrow::Cow<'a, str>,
     count: usize,
     /// Pre-rendered "Standard refs" cell — `<kind>:<id>` joined by `, `.
     /// Empty when the violation has no derived refs.
@@ -1130,7 +1130,7 @@ fn write_violation_table(
             escape_markdown_table(&v.standard_refs),
             escape_markdown_table(v.requirement),
             escape_markdown_table(&v.message),
-            escape_markdown_table(v.remediation),
+            escape_markdown_table(&v.remediation),
         )?;
     }
     writeln!(md)?;

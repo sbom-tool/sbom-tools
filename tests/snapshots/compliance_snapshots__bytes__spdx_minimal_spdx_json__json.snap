@@ -21,7 +21,9 @@ source: tests/compliance_snapshots.rs
             "id": "NTIA Minimum Elements",
             "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
           }
-        ]
+        ],
+        "remediation": "Name the supplier of every component, the entity that creates, defines and identifies it (an NTIA minimum data field); placeholders such as NOASSERTION do not count. SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.",
+        "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
       },
       {
         "severity": "Error",
@@ -38,7 +40,9 @@ source: tests/compliance_snapshots.rs
             "id": "NTIA Minimum Elements",
             "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
           }
-        ]
+        ],
+        "remediation": "Name the supplier of every component, the entity that creates, defines and identifies it (an NTIA minimum data field); placeholders such as NOASSERTION do not count. SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.",
+        "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
       }
     ],
     "error_count": 2,
@@ -71,7 +75,9 @@ source: tests/compliance_snapshots.rs
             "id": "§2.3.3",
             "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
           }
-        ]
+        ],
+        "remediation": "Identify all static, direct dependencies of the Primary Component (or carry an explicit completeness declaration covering their absence), and indicate when the dependency list is incomplete. 'All' is not verifiable from the document alone — the check uses dependency edges from the primary plus the completeness declaration as its evidence. SPDX 2.x: add relationships[] entries such as DEPENDS_ON (or DEPENDENCY_OF, CONTAINS) between the packages.",
+        "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
       },
       {
         "severity": "Error",
@@ -91,7 +97,9 @@ source: tests/compliance_snapshots.rs
             "id": "§2.2.2.3",
             "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
           }
-        ]
+        ],
+        "remediation": "Declare the Supplier Name for all components: the upstream supplier's legal-entity name (commercial) or project name (OSS); the domain URL / PURL namespace or an explicit 'unknown' are permitted last resorts. Silent absence fails; an explicit 'unknown' declaration satisfies the letter of the clause. SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\"; a NOASSERTION value is read as absent, so write an unknown supplier as \"Organization: unknown\".",
+        "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
       },
       {
         "severity": "Error",
@@ -111,7 +119,9 @@ source: tests/compliance_snapshots.rs
             "id": "§2.2.2.5",
             "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
           }
-        ]
+        ],
+        "remediation": "Provide a hash (with its algorithm, for reproducibility) for any component whose hash was provided or can be generated; otherwise indicate it as unknown. Accepted at this tier: MD5, SHA1, and SHA2 families — MD5/SHA1 are no longer recommended and are formally discontinued in 2030. Only author-provided hashes count; tool-enriched hashes are not author evidence. SPDX 2.x: add packages[].checksums[] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).",
+        "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
       },
       {
         "severity": "Warning",
@@ -131,7 +141,9 @@ source: tests/compliance_snapshots.rs
             "id": "§2.2.2.4",
             "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
           }
-        ]
+        ],
+        "remediation": "List as many globally unique identifiers as are available for the component. Heuristic: the >=2-distinct-identifier-kinds (PURL/CPE/SWHID/SWID) threshold is profile policy — 'as available' is unverifiable from the document alone. SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).",
+        "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
       },
       {
         "severity": "Warning",
@@ -152,7 +164,9 @@ source: tests/compliance_snapshots.rs
             "id": "§2.3.3",
             "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
           }
-        ]
+        ],
+        "remediation": "Record a relationship-completeness assertion (Unknown/None/Partial/Known) — mapped to the document-level completeness declaration. Warning, not Error: the document labels the attribute supplemental and optional, with Unknown as the open-world default. SPDX 2.x: no field records completeness.",
+        "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
       },
       {
         "severity": "Info",
@@ -173,7 +187,9 @@ source: tests/compliance_snapshots.rs
             "id": "§2.2.2.6",
             "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
           }
-        ]
+        ],
+        "remediation": "Make efforts to uniquely and unambiguously identify dependencies that are dynamic and/or remote. The check runs on SPDX input only (CycloneDX's parsed model cannot express the signal); absence surfaces as an informational readiness note, never a failure. SPDX 2.x: add relationships[] entries of type DYNAMIC_LINK, RUNTIME_DEPENDENCY_OF or PROVIDED_DEPENDENCY_OF.",
+        "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
       }
     ],
     "error_count": 3,
