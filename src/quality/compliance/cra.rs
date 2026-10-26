@@ -1071,7 +1071,7 @@ impl ComplianceChecker {
         sbom: &NormalizedSbom,
         violations: &mut Vec<Violation>,
     ) {
-        use crate::model::{ComponentType, IdSource};
+        use crate::model::ComponentType;
 
         let is_hardware_kind = |t: &ComponentType| {
             matches!(
@@ -1112,11 +1112,12 @@ impl ComplianceChecker {
                 });
             }
 
-            // 2) Identifier must be a real (non-synthetic / non-format-specific) one
-            if matches!(
-                comp.canonical_id.source(),
-                IdSource::Synthetic | IdSource::FormatSpecific
-            ) {
+            // 2) A unique identifier: a PURL, CPE, SWHID or SWID, as the
+            // other CRA identifier checks require. Read the identifiers, not
+            // the canonical id's source: a component re-keyed after a
+            // canonical-id collision has a format-specific canonical id and
+            // still has its purl.
+            if !comp.identifiers.has_cra_identifier() {
                 violations.push(Violation {
                     severity: ViolationSeverity::Error,
                     category: ViolationCategory::ComponentIdentification,

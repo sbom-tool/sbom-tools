@@ -1617,6 +1617,73 @@ fn cra_phase2_direct_dependency_supplier_gap_is_an_error() {
     }
 }
 
+/// SBOM-CRA-PRE-8-RQ-02-IDENTIFIER reads a hardware component's own
+/// identifiers, as SBOM-CRA-ANNEX-I-IDENTIFIER does, not the source of its
+/// canonical id. Two firmware components that share a purl but differ in
+/// name collide on their canonical id, and the parser re-keys the second
+/// with its bom-ref: a format-specific canonical id on a component that
+/// still has its purl. Neither component is missing an identifier, at Phase
+/// 1 or Phase 2.
+#[test]
+fn cra_hardware_identifier_reads_the_purl_of_a_re_keyed_component() {
+    use sbom_tools::model::IdSource;
+    const PURL: &str = "pkg:npm/acme-fw@1.2.3";
+    let fixture = broken(|s| {
+        let mut recovery = firmware();
+        recovery.name = "acme-fw-recovery".to_string();
+        recovery.bom_ref = "ref-acme-fw-recovery".to_string();
+        with_firmware(s, firmware());
+        with_firmware(s, recovery);
+    });
+
+    let sbom = fixture.parse();
+    let components: Vec<_> = sbom
+        .components
+        .values()
+        .filter(|c| c.name.starts_with("acme-fw"))
+        .collect();
+    let sources: Vec<(&str, &IdSource)> = components
+        .iter()
+        .map(|c| (c.name.as_str(), c.canonical_id.source()))
+        .collect();
+    assert_eq!(
+        sources,
+        [
+            ("acme-fw", &IdSource::Purl),
+            ("acme-fw-recovery", &IdSource::FormatSpecific)
+        ],
+        "the second firmware component must be re-keyed on the collision"
+    );
+    for comp in &components {
+        assert_eq!(
+            comp.identifiers.purl.as_deref(),
+            Some(PURL),
+            "{}",
+            comp.name
+        );
+    }
+
+    for level in [PHASE1, PHASE2] {
+        let result = check(level, &fixture);
+        let fired: Vec<(&str, Option<&str>)> = result
+            .violations
+            .iter()
+            .filter(|v| {
+                matches!(
+                    v.rule_id,
+                    "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER" | "SBOM-CRA-ANNEX-I-IDENTIFIER"
+                )
+            })
+            .map(|v| (v.rule_id, v.component_id.as_deref()))
+            .collect();
+        assert!(
+            fired.is_empty(),
+            "[{level:?}] both firmware components have a purl, yet {fired:?} fired:\n{}",
+            render_violations(&result)
+        );
+    }
+}
+
 /// SBOM-CRA-SPEC-VERSION-UNKNOWN reads only SPDX input (a version that is
 /// neither 2.x nor 3.x), so its matrix rows are skipped; every CRA level
 /// runs the format checks.
