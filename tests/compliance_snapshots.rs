@@ -286,6 +286,7 @@ fn render_outputs(rel: &str, standards: &[&str]) -> [(&'static str, String); 4] 
     let sarif = generate_multi_compliance_sarif(&results).expect("SARIF serializes");
     let oscal = generate_assessment_results_at(
         &results,
+        &sbom,
         &sha256_hex(lf_normalized(&raw).as_bytes()),
         Some(as_of()),
     )

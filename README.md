@@ -769,7 +769,7 @@ Select with `-o` / `--output`:
 | TUI | `tui` | Interactive exploration |
 | JSON | `json` | Programmatic integration |
 | SARIF | `sarif` | CI/CD security dashboards (SARIF 2.1.0) |
-| OSCAL assessment results | `oscal-json` | OSCAL 1.1.2 validation findings for assessment tooling (`validate` only) |
+| OSCAL assessment results | `oscal-json` | OSCAL 1.2.3 validation findings for assessment tooling (`validate` only) |
 | sbomqs JSON | `sbomqs-json` | sbomqs `score --json` 0–10 scores for tool comparison (`quality` only) |
 | NDJSON | `ndjson` | Newline-delimited JSON, one record per line (streaming-friendly) |
 | Markdown | `markdown` | Documentation, PR comments |

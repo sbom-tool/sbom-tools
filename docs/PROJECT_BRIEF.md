@@ -104,7 +104,7 @@ this repository.
 1. Installation packaging for the Python and Node.js bindings, proposed separately.
 
 Previously sequenced items now implemented: the BOM-visible ML-regression CI
-gate (`diff --fail-on-ml-regression`, exit code 7) and OSCAL 1.1.2
+gate (`diff --fail-on-ml-regression`, exit code 7) and OSCAL 1.2.3
 assessment-results export for validation findings (`validate -o oscal-json`).
 
 The sequence is a roadmap, not a claim that unmerged or proposed work is

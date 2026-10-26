@@ -12,6 +12,9 @@ sbom-tools validate sbom.json --standard ntia,cra -o json |
   jq -c '.results[] | {standard, applicable, compliant, counts}'
 ```
 
+`-o oscal-json` prints the same results as an OSCAL assessment-results
+document instead; see [OSCAL assessment results](#oscal-assessment-results).
+
 ## Envelope
 
 ```json
@@ -174,6 +177,78 @@ To migrate:
 
 `--summary` is a separate compact format (the verdict and counts per standard,
 with `standard` holding the display name) and is not affected.
+
+## OSCAL assessment results
+
+`sbom-tools validate -o oscal-json` prints an
+[OSCAL 1.2.3](https://github.com/usnistgov/OSCAL/releases/tag/v1.2.3)
+`assessment-results` document. The test suite validates the output for every
+fixture and standard against that release's JSON schema, vendored under
+`tests/fixtures/schemas/oscal/1.2.3/`.
+
+```sh
+sbom-tools validate sbom.json --standard ntia -o oscal-json --as-of 2026-10-12T00:00:00Z |
+  jq '."assessment-results".results[0].observations[0].subjects'
+```
+
+| Where | What |
+|---|---|
+| `metadata.oscal-version` | `1.2.3`. |
+| `results[]` | One per checked standard, in `--standard` order. Its `props` carry the verdict: `standard`, `standard-name`, `is-compliant`, `applicability`, `error-count`, `warning-count`, `info-count`, `score`, and `not-applicable-reason` when the standard did not apply. |
+| `results[].findings[]` | A roll-up finding for the standard (`satisfied` when compliant), then one `not-satisfied` finding per violation, targeting the objective named by the lowercased rule id. A standard that did not apply gets no roll-up, and its not-applicable marker is not reported as a violation. |
+| `results[].observations[]` | One per violation, the evidence its finding relates to, typed `discovery`, with the properties `severity`, `standard-reference`, `rule-id`, `sarif-rule-id` and, when the SBOM gives a label, `sbom-element`. |
+| `results[].observations[].subjects[]` | The SBOM document (`type: resource`), then, for a finding about a component, the component (`type: component`). |
+| `results[].local-definitions.components[]` | The components the result's observations name, titled by name and version, with OSCAL's `version` property, `component-id` (the canonical id: `component_id` in `-o json`) and `component-type` (the SBOM's own type). |
+| `back-matter.resources[0]` | The SBOM document: `type` `artifact`, `sha256` (of the SBOM bytes as read), `format`, `spec-version`, and the serial number (CycloneDX) or document namespace (SPDX) in `document-ids`. When that id is a URI (`urn:uuid:…`, `https://…`), it is also the resource's `rlinks[0].href`, with the SHA-256 in `hashes`. |
+
+Properties without an `ns` are OSCAL's own; every other one has the namespace
+`https://sbom.tools/ns/oscal`.
+
+Titles, descriptions and remarks are OSCAL markup, Markdown that OSCAL
+viewers render. Those that carry SBOM text (component and document titles,
+and the violation messages, which embed component names and SBOM values) are
+Markdown-escaped (`\_`, `\[`, `\<`, a leading `\-`, …), so a crafted value
+renders as literal text and never as a link, image, HTML tag, or a heading or
+list item of its own. Render the field as Markdown, or drop the backslash
+escapes, to read the plain text. Property values are plain strings and are
+not escaped; `sbom-element`, `version` and `component-id` carry the same SBOM
+values unescaped.
+
+SBOM text has its line breaks replaced by spaces and its leading and trailing
+whitespace trimmed, as OSCAL's string types require, and a property left
+with no text is omitted.
+
+Every UUID is a UUIDv5. The document, its results, observations and findings
+derive from the SHA-256 of the SBOM, the evaluation instant (`--as-of`, else
+the current time), the standards checked and their position, so a run with
+`--as-of` prints the same bytes every time. The SBOM document and its
+components derive from the SHA-256 of the SBOM and the subject alone (for a
+component, its canonical id), so a subject keeps its UUID across instants,
+standard sets and results.
+
+### Upgrading from OSCAL 1.1.2
+
+Releases before v0.4.0 emitted OSCAL 1.1.2. Consumers of `-o oscal-json`
+should note:
+
+- `metadata.oscal-version` is `1.2.3`. Validate against the 1.2.3 schema.
+- Observations are typed `discovery`, not `finding`: OSCAL 1.2.0 deprecated
+  `finding` and named `discovery` its replacement. A filter on `types`
+  containing `finding` must look for `discovery`.
+- Observations gain `subjects`, results gain `local-definitions`, and the
+  document gains `back-matter`. These are additions: no existing field moved
+  or changed meaning.
+- Titles and descriptions that carry SBOM text are Markdown-escaped, as
+  described above. A consumer that read a description as plain text now sees
+  backslash escapes (`\[CISA 2026\]`, `TLS\_AES\_256\_GCM\_SHA384`): render it
+  as Markdown, or read the plain values from the properties.
+- A property that would have no text is omitted instead of carrying an empty
+  or whitespace value, and SBOM text in property values is normalized as
+  described above. Either used to make the document invalid OSCAL.
+- The SBOM document resource has an `rlink` (its serial number or namespace,
+  with the SHA-256) when that id is a URI.
+- UUIDs and timestamps are reproducible, as described above; earlier
+  releases drew random UUIDs and stamped the wall clock.
 
 ## Exit codes
 
