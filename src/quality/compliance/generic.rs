@@ -157,7 +157,8 @@ impl ComplianceChecker {
                 }
             }
 
-            // Validate manufacturer email format if present
+            // Validate manufacturer email format if present: one finding per
+            // invalid address, told apart by the address itself.
             for creator in &sbom.document.creators {
                 if creator.creator_type == CreatorType::Organization
                     && let Some(email) = &creator.email
@@ -176,7 +177,7 @@ impl ComplianceChecker {
                         counts: None,
                         standard_refs: Vec::new(),
                         remediation: None,
-                        finding_detail: None,
+                        finding_detail: Some(email.clone()),
                     });
                 }
             }

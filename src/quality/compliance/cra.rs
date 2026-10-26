@@ -769,6 +769,7 @@ impl ComplianceChecker {
         if sidecar.annex_i_part_i_controls.is_empty() {
             return;
         }
+        // One finding per un-evidenced control, told apart by the control id.
         for (id, claim) in &sidecar.annex_i_part_i_controls {
             if claim.satisfied && claim.evidence_url.is_none() {
                 violations.push(Violation {
@@ -786,7 +787,7 @@ impl ComplianceChecker {
                     counts: None,
                     standard_refs: Vec::new(),
                     remediation: None,
-                    finding_detail: None,
+                    finding_detail: Some(id.clone()),
                 });
             }
         }

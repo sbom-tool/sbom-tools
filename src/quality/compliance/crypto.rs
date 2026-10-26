@@ -14,9 +14,9 @@
 
 use super::*;
 use crate::model::{
-    AlgorithmClass, AlgorithmClassification, CertificateProperties, Component, CryptoAssetType,
-    Ikev2Transform, NormalizedSbomIndex, PqcKind, ProtocolProperties, ProtocolType,
-    classify_algorithm, classify_algorithm_names, classify_algorithm_names_guarded,
+    AlgorithmClass, AlgorithmClassification, CertificateProperties, CipherSuite, Component,
+    CryptoAssetType, Ikev2Transform, NormalizedSbomIndex, PqcKind, ProtocolProperties,
+    ProtocolType, classify_algorithm, classify_algorithm_names, classify_algorithm_names_guarded,
     ikev2_key_exchange_group, worst_classification,
 };
 
@@ -366,6 +366,23 @@ fn is_ssl_protocol(proto: &ProtocolProperties) -> bool {
     matches!(&proto.protocol_type, ProtocolType::Other(s) if s.to_lowercase().contains("ssl"))
 }
 
+/// Finding detail of a PROTO-002 finding about one cipher suite, so a
+/// protocol's suites keep a finding key each: what the SBOM calls the suite
+/// — its name, else its IANA identifiers, else its algorithm references.
+fn cipher_suite_detail(suite: &CipherSuite) -> String {
+    match suite.name.as_deref().map(str::trim) {
+        Some(name) if !name.is_empty() => name.to_string(),
+        _ if !suite.identifiers.is_empty() => suite.identifiers.join(","),
+        _ => suite.algorithms.join(","),
+    }
+}
+
+/// Finding details of the PROTO-002 findings that judge a protocol's IKEv2
+/// transforms and its crypto references as a whole (one each per protocol,
+/// beside one per cipher suite).
+const IKEV2_TRANSFORMS_DETAIL: &str = "ikev2-transforms";
+const CRYPTO_REFS_DETAIL: &str = "crypto-refs";
+
 impl ComplianceChecker {
     // ════════════════════════════════════════════════════════════════════
     // CNSA 2.0 compliance checks
@@ -432,7 +449,7 @@ impl ComplianceChecker {
                                     counts: None,
                                     standard_refs: Vec::new(),
                                     remediation: None,
-                                    finding_detail: None,
+                                    finding_detail: Some(sig_ref.to_string()),
                                 });
                             }
                             // An unclassifiable signature ref fails closed —
@@ -456,7 +473,7 @@ impl ComplianceChecker {
                                     counts: None,
                                     standard_refs: Vec::new(),
                                     remediation: None,
-                                    finding_detail: None,
+                                    finding_detail: Some(sig_ref.to_string()),
                                 });
                             }
                         }
@@ -699,7 +716,8 @@ impl ComplianceChecker {
         let version_rejected = violations.len() > violations_before;
 
         // Collect non-allowlisted algorithms per source, deduplicated by label.
-        let mut push_proto_violation = |context: String, offenders: Vec<String>| {
+        // One finding per source on the protocol, which `detail` names.
+        let mut push_proto_violation = |context: String, detail: String, offenders: Vec<String>| {
             if offenders.is_empty() {
                 return;
             }
@@ -718,7 +736,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
-                finding_detail: None,
+                finding_detail: Some(detail),
             });
         };
         // References that resolve nowhere and carry no recognizable token
@@ -764,6 +782,7 @@ impl ComplianceChecker {
                     "cipher suite '{}' includes",
                     suite.name.as_deref().unwrap_or("(unnamed)")
                 ),
+                cipher_suite_detail(suite),
                 offenders,
             );
         }
@@ -777,7 +796,11 @@ impl ComplianceChecker {
                     Err(label) => unverifiable.push(label),
                 }
             }
-            push_proto_violation("IKEv2 transforms include".to_string(), offenders);
+            push_proto_violation(
+                "IKEv2 transforms include".to_string(),
+                IKEV2_TRANSFORMS_DETAIL.to_string(),
+                offenders,
+            );
         }
 
         // PROTO-002: crypto reference array. Only algorithm assets are judged
@@ -808,7 +831,11 @@ impl ComplianceChecker {
                 }
             }
         }
-        push_proto_violation("references".to_string(), offenders);
+        push_proto_violation(
+            "references".to_string(),
+            CRYPTO_REFS_DETAIL.to_string(),
+            offenders,
+        );
 
         // Fail closed when the protocol's algorithms cannot be verified:
         // opaque references, or nothing the classifier can name at all (a
@@ -938,7 +965,7 @@ impl ComplianceChecker {
                                 counts: None,
                                 standard_refs: Vec::new(),
                                 remediation: None,
-                                finding_detail: None,
+                                finding_detail: Some(sig_ref.to_string()),
                             });
                         } else if cls.class == AlgorithmClass::Unknown {
                             // An unclassifiable signature ref must warn, never
@@ -962,7 +989,7 @@ impl ComplianceChecker {
                                 counts: None,
                                 standard_refs: Vec::new(),
                                 remediation: None,
-                                finding_detail: None,
+                                finding_detail: Some(sig_ref.to_string()),
                             });
                         }
                     }
@@ -1293,7 +1320,8 @@ impl ComplianceChecker {
             unverifiable.push(format!("version '{version}'"));
         }
 
-        let mut push_proto_violation = |context: String, offenders: Vec<String>| {
+        // One finding per source on the protocol, which `detail` names.
+        let mut push_proto_violation = |context: String, detail: String, offenders: Vec<String>| {
             if offenders.is_empty() {
                 return;
             }
@@ -1312,7 +1340,7 @@ impl ComplianceChecker {
                 counts: None,
                 standard_refs: Vec::new(),
                 remediation: None,
-                finding_detail: None,
+                finding_detail: Some(detail),
             });
         };
         // How many algorithms the classifier could identify, ready or not.
@@ -1354,6 +1382,7 @@ impl ComplianceChecker {
                     "cipher suite '{}' includes",
                     suite.name.as_deref().unwrap_or("(unnamed)")
                 ),
+                cipher_suite_detail(suite),
                 offenders,
             );
         }
@@ -1366,7 +1395,11 @@ impl ComplianceChecker {
                     Err(label) => unverifiable.push(label),
                 }
             }
-            push_proto_violation("IKEv2 transforms include".to_string(), offenders);
+            push_proto_violation(
+                "IKEv2 transforms include".to_string(),
+                IKEV2_TRANSFORMS_DETAIL.to_string(),
+                offenders,
+            );
         }
 
         let mut offenders = Vec::new();
@@ -1390,7 +1423,11 @@ impl ComplianceChecker {
                 }
             }
         }
-        push_proto_violation("references".to_string(), offenders);
+        push_proto_violation(
+            "references".to_string(),
+            CRYPTO_REFS_DETAIL.to_string(),
+            offenders,
+        );
 
         // A protocol whose evidence is all opaque, or that documents nothing
         // evaluable at all, must warn rather than silently satisfying the
