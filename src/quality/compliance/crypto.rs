@@ -140,9 +140,18 @@ fn resolve_component<'a>(
 /// AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, and the SP 800-208
 /// stateful hash-based signatures (LMS/XMSS/HSS). `classical_bits` is the
 /// declared `classicalSecurityLevel`, accepted as evidence of the AES key
-/// size when no parameter set is present.
+/// size when no parameter set is present. A keyed construction (HMAC,
+/// HKDF, CMAC, …) is judged by the primitive it is built on: CNSA 2.0
+/// approves only SHA-384 and SHA-512 for hashing and AES-256 as the block
+/// cipher (CNSA 2.0 FAQ, Dec 2024), so HMAC-SHA-384 passes and
+/// HMAC-SHA-256 fails on its SHA-256.
 fn cnsa2_verdict(cls: &AlgorithmClassification, classical_bits: Option<u32>) -> CnsaVerdict {
     use AlgorithmClass as C;
+    if cls.family.is_none()
+        && let Some(construction) = cls.construction.as_deref()
+    {
+        return unspecified_construction_verdict(construction);
+    }
     match cls.class {
         C::Broken => CnsaVerdict::NotApproved {
             rule_id: "SBOM-CNSA2-ALG-005",
@@ -165,9 +174,16 @@ fn cnsa2_verdict(cls: &AlgorithmClassification, classical_bits: Option<u32>) -> 
                     CnsaVerdict::Approved
                 } else {
                     let shown = bits.map_or_else(|| "unspecified".to_string(), |b| b.to_string());
+                    let built_with = cls
+                        .construction
+                        .as_deref()
+                        .map(|c| format!("{c}-"))
+                        .unwrap_or_default();
                     CnsaVerdict::NotApproved {
                         rule_id: "SBOM-CNSA2-ALG-001",
-                        detail: format!("uses AES-{shown}, CNSA 2.0 requires AES-256 only"),
+                        detail: format!(
+                            "uses {built_with}AES-{shown}, CNSA 2.0 requires AES-256 only"
+                        ),
                     }
                 }
             } else {
@@ -182,16 +198,28 @@ fn cnsa2_verdict(cls: &AlgorithmClassification, classical_bits: Option<u32>) -> 
         }
         C::Sha2 => match cls.parameter_bits() {
             Some(384 | 512) => CnsaVerdict::Approved,
-            Some(_) => CnsaVerdict::NotApproved {
-                rule_id: "SBOM-CNSA2-ALG-002",
-                detail: "uses a SHA-2 digest < 384 bits, CNSA 2.0 requires SHA-384 or SHA-512"
-                    .to_string(),
-            },
+            Some(_) => {
+                // Name the digest itself, also when a construction wraps it:
+                // "HMAC-SHA-256, built on SHA-256, a SHA-2 digest …".
+                let subject = match cls.construction {
+                    Some(_) => format!("{}, built on {}", cls.label(), cls.primitive_label()),
+                    None => cls.label(),
+                };
+                CnsaVerdict::NotApproved {
+                    rule_id: "SBOM-CNSA2-ALG-002",
+                    detail: format!(
+                        "uses {subject}, a SHA-2 digest < 384 bits, CNSA 2.0 requires \
+                         SHA-384 or SHA-512"
+                    ),
+                }
+            }
             None => CnsaVerdict::NotApproved {
                 rule_id: "SBOM-CNSA2-ALG-002",
-                detail: "uses SHA-2 with an unspecified digest size, CNSA 2.0 requires \
-                         SHA-384 or SHA-512"
-                    .to_string(),
+                detail: format!(
+                    "uses {} with an unspecified digest size, CNSA 2.0 requires SHA-384 or \
+                     SHA-512",
+                    cls.label()
+                ),
             },
         },
         C::Sha3 | C::OtherHash => CnsaVerdict::NotApproved {
@@ -245,6 +273,34 @@ fn cnsa2_verdict(cls: &AlgorithmClassification, classical_bits: Option<u32>) -> 
             },
         },
         C::Unknown => CnsaVerdict::Unknown,
+    }
+}
+
+/// CNSA 2.0 verdict on a keyed construction that names no primitive: it
+/// cannot be shown to be built on an approved one. Like a SHA-2 or AES
+/// asset of unspecified size, it fails the rule of the primitive it is
+/// missing — the hash for HMAC and the constructions built on it, the
+/// block cipher for CMAC — and the general rule when it takes either.
+fn unspecified_construction_verdict(construction: &str) -> CnsaVerdict {
+    let (rule_id, primitive, required) = if construction.ends_with("CMAC") {
+        ("SBOM-CNSA2-ALG-001", "block cipher", "AES-256")
+    } else if ["HMAC", "HKDF", "PBKDF2", "PBMAC1"]
+        .iter()
+        .any(|hash_based| construction.ends_with(hash_based))
+    {
+        ("SBOM-CNSA2-ALG-002", "hash function", "SHA-384 or SHA-512")
+    } else {
+        (
+            "SBOM-CNSA2-ALG-008",
+            "hash function or block cipher",
+            "SHA-384, SHA-512 or AES-256",
+        )
+    };
+    CnsaVerdict::NotApproved {
+        rule_id,
+        detail: format!(
+            "uses {construction} with an unspecified {primitive}, CNSA 2.0 requires {required}"
+        ),
     }
 }
 

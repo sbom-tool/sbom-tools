@@ -482,21 +482,26 @@
       "id": "v6-unknown-algorithms",
       "review_id": "V6",
       "fixture": "v6-unknown-algorithms.cdx.json",
-      "note": "FFDH and two JCA signature names the classifier cannot name passed both crypto profiles with warnings only.",
+      "note": "FFDH and two JCA signature names passed both crypto profiles with warnings only, then failed both as unclassifiable. They are now named: FFDH and SHA256withRSA are quantum-vulnerable, SHA1withRSA is broken on its SHA-1.",
       "checks": [
         {
           "standard": "cnsa2",
           "expect": {
             "compliant": false,
+            "errors": 3,
             "rules_present": [
               {
-                "rule": "SBOM-CNSA2-ALG-UNKNOWN",
+                "rule": "SBOM-CNSA2-ALG-006",
                 "severity": "error"
               },
               {
-                "rule": "SBOM-CNSA2-000",
+                "rule": "SBOM-CNSA2-ALG-005",
                 "severity": "error"
               }
+            ],
+            "rules_absent": [
+              "SBOM-CNSA2-ALG-UNKNOWN",
+              "SBOM-CNSA2-000"
             ]
           }
         },
@@ -504,15 +509,293 @@
           "standard": "pqc",
           "expect": {
             "compliant": false,
+            "errors": 3,
             "rules_present": [
               {
-                "rule": "SBOM-PQC-ALG-UNKNOWN",
-                "severity": "warning"
+                "rule": "SBOM-PQC-001",
+                "severity": "error"
               },
               {
-                "rule": "SBOM-PQC-000",
+                "rule": "SBOM-PQC-005",
                 "severity": "error"
               }
+            ],
+            "rules_absent": [
+              "SBOM-PQC-ALG-UNKNOWN",
+              "SBOM-PQC-000"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v6-jca-signature-names",
+      "review_id": "V6",
+      "fixture": "v6-jca-signature-names.cdx.json",
+      "note": "JCA <digest>with<signature> names are judged by their weaker part: the classical signature, or a broken SHA-1/MD5 digest (also via the sha1WithRSAEncryption OID).",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": false,
+            "errors": 6,
+            "rules_present": [
+              {
+                "rule": "SBOM-CNSA2-ALG-006",
+                "severity": "error"
+              },
+              {
+                "rule": "SBOM-CNSA2-ALG-005",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-CNSA2-ALG-UNKNOWN",
+              "SBOM-CNSA2-000"
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": false,
+            "errors": 6,
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-001",
+                "severity": "error"
+              },
+              {
+                "rule": "SBOM-PQC-005",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-PQC-ALG-UNKNOWN",
+              "SBOM-PQC-000"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v6-curve-names",
+      "review_id": "V6",
+      "fixture": "v6-curve-names.cdx.json",
+      "note": "Assets named only by their curve (prime256v1, secp384r1, P-521, curve25519, x448, brainpoolP512r1) are classical elliptic-curve crypto.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": false,
+            "errors": 6,
+            "rules_present": [
+              {
+                "rule": "SBOM-CNSA2-ALG-006",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-CNSA2-ALG-UNKNOWN"
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": false,
+            "errors": 6,
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-001",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-PQC-ALG-UNKNOWN"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v6-mqv-pake-names",
+      "review_id": "V6",
+      "fixture": "v6-mqv-pake-names.cdx.json",
+      "note": "MQV (the CycloneDX 1.7 family), ECMQV and the PAKEs SPAKE2, SRP-6a, CPace and EC-JPAKE run over classical groups: quantum-vulnerable key agreement.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": false,
+            "errors": 6,
+            "rules_present": [
+              {
+                "rule": "SBOM-CNSA2-ALG-006",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-CNSA2-ALG-UNKNOWN"
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": false,
+            "errors": 6,
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-001",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-PQC-ALG-UNKNOWN"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v6-broken-legacy-names",
+      "review_id": "V6",
+      "fixture": "v6-broken-legacy-names.cdx.json",
+      "note": "A5/1, A5/2, CMEA and Dual_EC_DRBG are broken, not unknown.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": false,
+            "errors": 4,
+            "rules_present": [
+              {
+                "rule": "SBOM-CNSA2-ALG-005",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-CNSA2-ALG-UNKNOWN"
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": false,
+            "errors": 4,
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-005",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-PQC-ALG-UNKNOWN"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v6-mac-kdf-sha256",
+      "review_id": "V6",
+      "fixture": "v6-mac-kdf-sha256.cdx.json",
+      "note": "HMAC-SHA256, HKDF-SHA256 and PBKDF2WithHmacSHA256 failed CNSA 2.0 as unknown and warned under NIST PQC. CNSA 2.0 now rejects them on SHA-256; NIST PQC accepts them.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": false,
+            "errors": 3,
+            "rules_present": [
+              {
+                "rule": "SBOM-CNSA2-ALG-002",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-CNSA2-ALG-UNKNOWN"
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-PQC-ALG-UNKNOWN",
+              "SBOM-PQC-000"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v6-mac-kdf-sha384",
+      "review_id": "V6",
+      "fixture": "v6-mac-kdf-sha384.cdx.json",
+      "note": "HMAC and HKDF over SHA-384/SHA-512 and CMAC over AES-256, named by family plus parameter set, OID or name, pass both crypto profiles.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": true,
+            "errors": 0
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-PQC-ALG-UNKNOWN"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v6-bare-constructions",
+      "review_id": "V6",
+      "fixture": "v6-bare-constructions.cdx.json",
+      "note": "The CycloneDX 1.7 families HMAC, CMAC, SP800-108 and IKE-PRF without a named hash or cipher fail CNSA 2.0 on the missing primitive, not as unknown; NIST PQC accepts these symmetric constructions.",
+      "checks": [
+        {
+          "standard": "cnsa2",
+          "expect": {
+            "compliant": false,
+            "errors": 4,
+            "rules_present": [
+              {
+                "rule": "SBOM-CNSA2-ALG-002",
+                "severity": "error"
+              },
+              {
+                "rule": "SBOM-CNSA2-ALG-001",
+                "severity": "error"
+              },
+              {
+                "rule": "SBOM-CNSA2-ALG-008",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-CNSA2-ALG-UNKNOWN",
+              "SBOM-CNSA2-000"
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-PQC-ALG-UNKNOWN"
             ]
           }
         }
