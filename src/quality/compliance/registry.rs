@@ -1680,12 +1680,16 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         },
         // Art. 14 reporting readiness: one rule per channel, each read from
         // the CRA sidecar only. Formerly one SBOM-CRA-ART-14 rule whose four
-        // findings on the document shared a finding key.
+        // findings on the document shared a finding key. A missing PSIRT,
+        // early-warning or notification channel is a Warning since the
+        // 2026-09-11 deadline (an Info before it), escalated to Error for
+        // important class II and critical products; the ENISA platform id
+        // stays an Info.
         "SBOM-CRA-ART-14-PSIRT" => RuleMeta {
             sarif_id: "SBOM-CRA-GENERAL",
             name: "CraGeneralRequirement",
             short_description: "CRA general SBOM readiness requirement",
-            default_severity: ViolationSeverity::Info,
+            default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 14")],
             remediation: "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar.",
             advice: None,
@@ -1694,7 +1698,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             sarif_id: "SBOM-CRA-GENERAL",
             name: "CraGeneralRequirement",
             short_description: "CRA general SBOM readiness requirement",
-            default_severity: ViolationSeverity::Info,
+            default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 14(2)(a)"), (CRA, "Art. 14(4)(a)")],
             remediation: "Document the channel for the 24-hour early warning of an actively exploited vulnerability or a severe incident (Art. 14(2)(a) / 14(4)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar.",
             advice: None,
@@ -1703,7 +1707,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             sarif_id: "SBOM-CRA-GENERAL",
             name: "CraGeneralRequirement",
             short_description: "CRA general SBOM readiness requirement",
-            default_severity: ViolationSeverity::Info,
+            default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 14(2)(b)"), (CRA, "Art. 14(4)(b)")],
             remediation: "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar.",
             advice: None,
