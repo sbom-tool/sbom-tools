@@ -165,7 +165,7 @@ source: tests/compliance_snapshots.rs
             "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
           }
         ],
-        "remediation": "Sign the SBOM with a digital signature attributable to the SBOM author, using an algorithm approved per NIST DSS, ISO/IEC 14888-4:2024, or the ENISA Agreed Cryptographic Mechanisms. Detached signatures are invisible to this check, and not every format can carry one in-document — hence Warning, not Error. CycloneDX: sign the BOM with a JSF signature object (algorithm and value) at the document root.",
+        "remediation": "Sign the SBOM with a digital signature attributable to the SBOM author, using an algorithm approved per NIST DSS, ISO/IEC 14888-4:2024, or the ENISA Agreed Cryptographic Mechanisms. Detached signatures are invisible to this check, and not every format can carry one in-document — hence Warning, not Error. CycloneDX: sign the BOM: in JSON, a JSF signature object (algorithm and value) at the document root; in XML, an enveloped XML-DSig <Signature> element on <bom>.",
         "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
       },
       {

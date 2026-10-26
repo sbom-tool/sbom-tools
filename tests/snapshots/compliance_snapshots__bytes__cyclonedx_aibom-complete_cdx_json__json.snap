@@ -32,7 +32,7 @@ source: tests/compliance_snapshots.rs
             "help_uri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
           }
         ],
-        "remediation": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed. CycloneDX: sign the BOM with a JSF signature object (algorithm and value) at the document root.",
+        "remediation": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed. CycloneDX: sign the BOM: in JSON, a JSF signature object (algorithm and value) at the document root; in XML, an enveloped XML-DSig <Signature> element on <bom>.",
         "help_uri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
       },
       {

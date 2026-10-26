@@ -759,7 +759,7 @@ const ADVICE_LIFECYCLE_PHASE: FormatAdvice = FormatAdvice {
 /// In-document SBOM signature; SPDX 2.x has none.
 const ADVICE_SIGNATURE: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "sign the BOM with a JSF signature object (algorithm and value) at the document root.",
+        text: "sign the BOM: in JSON, a JSF signature object (algorithm and value) at the document root; in XML, an enveloped XML-DSig <Signature> element on <bom>.",
         field: Some("signature"),
     },
     spdx2: FieldAdvice {
