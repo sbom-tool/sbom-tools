@@ -31,7 +31,7 @@ source: tests/compliance_snapshots.rs
           "component_id": "pkg:cargo/lib-a@2.3.4",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -44,7 +44,7 @@ source: tests/compliance_snapshots.rs
           "component_id": "pkg:cargo/lib-b@0.9.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -139,7 +139,7 @@ source: tests/compliance_snapshots.rs
           "component_id": "pkg:cargo/lib-a@2.3.4",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -152,7 +152,7 @@ source: tests/compliance_snapshots.rs
           "component_id": "pkg:cargo/lib-b@0.9.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {

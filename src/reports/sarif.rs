@@ -1,13 +1,150 @@
 //! SARIF 2.1.0 report generator for CI/CD integration.
+//!
+//! Every result names its rule (`ruleId`, `ruleIndex`), points at the SBOM
+//! line of the component it is about (or of the document's metadata) when
+//! the writer is given the SBOM file ([`SarifArtifact`]), adds the
+//! component's purl as a logical location, and carries a fingerprint of its
+//! finding identity (`partialFingerprints`), so a code-scanning alert
+//! survives the SBOM's lines moving. `automationDetails.id` gives each kind
+//! of run a stable analysis category.
 
 use super::{ReportConfig, ReportError, ReportFormat, ReportGenerator, ReportType};
 use crate::diff::{DiffResult, SlaStatus, VulnerabilityDetail};
 use crate::model::NormalizedSbom;
 use crate::quality::{
-    ComplianceLevel, ComplianceResult, StandardRef, ViolationSeverity, generic_rule_id_for_level,
-    rule_meta,
+    ComplianceLevel, ComplianceResult, StandardRef, ViolationSeverity, compose_finding_key,
+    finding_fingerprint, finding_id, generic_rule_id_for_level, rule_meta, standard_key,
 };
 use serde::Serialize;
+use std::collections::{BTreeMap, HashMap, HashSet};
+
+mod artifact;
+mod locator;
+mod rules;
+
+pub use artifact::{SARIF_SRCROOT, SarifArtifact, SarifArtifactLocation};
+pub use locator::SbomLocator;
+use rules::SarifRule;
+
+/// The `$schema` every SARIF log declares: the OASIS SARIF 2.1.0 schema
+/// (Errata 01 edition), at the URL the schema itself gives as its `id`.
+/// tests/fixtures/schemas/sarif/2.1.0/ keeps a verbatim copy.
+pub const SARIF_SCHEMA_URI: &str =
+    "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json";
+
+/// The most results one SARIF run may carry by default: GitHub code scanning
+/// rejects a SARIF file with more than 25,000 results in a run (and shows
+/// only the 5,000 most severe). See [`SarifOptions::with_max_results`].
+pub const DEFAULT_SARIF_MAX_RESULTS: usize = 25_000;
+
+/// Options of the SARIF writers.
+///
+/// Without an artifact, results carry no physical location (only the
+/// component's logical location), and GitHub code scanning drops them: the
+/// CLI always passes the SBOM file.
+#[derive(Debug, Clone)]
+pub struct SarifOptions {
+    artifact: Option<SarifArtifact>,
+    category: Option<String>,
+    include_passes: bool,
+    max_results: usize,
+}
+
+impl Default for SarifOptions {
+    fn default() -> Self {
+        Self {
+            artifact: None,
+            category: None,
+            include_passes: false,
+            max_results: DEFAULT_SARIF_MAX_RESULTS,
+        }
+    }
+}
+
+impl SarifOptions {
+    /// Options with no artifact, no category, no passes and the default cap
+    /// of [`DEFAULT_SARIF_MAX_RESULTS`] results.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Point every result at its line in `artifact`, the SBOM file the run
+    /// checked.
+    #[must_use]
+    pub fn with_artifact(mut self, artifact: SarifArtifact) -> Self {
+        self.artifact = Some(artifact);
+        self
+    }
+
+    /// Report the run under the code-scanning category `category` instead of
+    /// the default one, which names only the kind of run and its standards
+    /// or profile (`sbom-tools/cra+ntia/`, `sbom-tools/quality/security/`).
+    ///
+    /// The category is the run's `automationDetails.id`, with a `/`
+    /// appended when `category` does not end in one, as GitHub's
+    /// `upload-sarif` action does with its own `category` input. That input
+    /// never replaces an id the SARIF already carries, so a workflow that
+    /// uploads results for several SBOMs checked against the same standards
+    /// gives each SBOM its category here. A blank `category` keeps the
+    /// default.
+    #[must_use]
+    pub fn with_category(mut self, category: impl Into<String>) -> Self {
+        self.category = Some(category.into());
+        self
+    }
+
+    /// Also report every check the SBOM passed
+    /// ([`ComplianceResult::passed`]) as a result of `kind: "pass"` at level
+    /// `none` (`validate --sarif-include-passes`), with the location,
+    /// fingerprints and finding identity a violation's result carries. Off by
+    /// default: code scanning lists every result it receives, so a pass
+    /// would read as an alert.
+    #[must_use]
+    pub const fn with_passes(mut self, include_passes: bool) -> Self {
+        self.include_passes = include_passes;
+        self
+    }
+
+    /// Keep at most `max_results` results in the run (`--sarif-max-results`;
+    /// `0` keeps every result). A run that would hold more keeps the most
+    /// severe ones (error, then warning, then note, then none, each level in
+    /// report order), says in `invocations[0].toolExecutionNotifications` how
+    /// many it omitted, and logs the same warning. GitHub code scanning
+    /// rejects a run of more than [`DEFAULT_SARIF_MAX_RESULTS`] results and
+    /// shows only its 5,000 most severe, so the default cap changes nothing
+    /// GitHub would display.
+    #[must_use]
+    pub const fn with_max_results(mut self, max_results: usize) -> Self {
+        self.max_results = max_results;
+        self
+    }
+
+    /// The SBOM file results point into.
+    #[must_use]
+    pub const fn artifact(&self) -> Option<&SarifArtifact> {
+        self.artifact.as_ref()
+    }
+
+    /// The category given with [`Self::with_category`].
+    #[must_use]
+    pub fn category(&self) -> Option<&str> {
+        self.category.as_deref()
+    }
+
+    /// Whether passed checks are reported (see [`Self::with_passes`]).
+    #[must_use]
+    pub const fn include_passes(&self) -> bool {
+        self.include_passes
+    }
+
+    /// The most results a run keeps; `0` means no cap (see
+    /// [`Self::with_max_results`]).
+    #[must_use]
+    pub const fn max_results(&self) -> usize {
+        self.max_results
+    }
+}
 
 /// SARIF report generator
 pub struct SarifReporter {
@@ -36,52 +173,66 @@ impl Default for SarifReporter {
     }
 }
 
+/// The finding-key scope of the results of `diff -o sarif` that are not
+/// compliance findings.
+const DIFF_SCOPE: &str = "diff";
+/// The finding-key scope of the vulnerability results of `view -o sarif`.
+const VIEW_SCOPE: &str = "view";
+/// The finding-key scope of quality recommendations.
+const QUALITY_SCOPE: &str = "quality";
+/// The finding-key scope of AI-readiness check results.
+const AI_READINESS_SCOPE: &str = "ai-readiness";
+
 impl ReportGenerator for SarifReporter {
+    /// A diff reports into the new SBOM only: a code-scanning alert belongs
+    /// to the file in the repository, and the old SBOM is usually a copy of
+    /// an earlier revision outside it. Results about the old side point at
+    /// the new SBOM (see [`locate_old_component`]), and the old SBOM's own
+    /// CRA findings are not results. The JSON and human-readable diff
+    /// reports keep both sides.
     fn generate_diff_report(
         &self,
         result: &DiffResult,
-        old_sbom: &NormalizedSbom,
+        _old_sbom: &NormalizedSbom,
         new_sbom: &NormalizedSbom,
         config: &ReportConfig,
     ) -> Result<String, ReportError> {
+        let new = config.sarif.artifact();
+        let mut new_keys = KeyBook::default();
         let mut results = Vec::new();
 
         // Add component change results
         if config.includes(ReportType::Components) {
             for comp in &result.components.added {
                 if self.include_info {
-                    results.push(SarifResult {
-                        kind: None,
-                        rule_id: "SBOM-TOOLS-001".to_string(),
-                        level: SarifLevel::Note,
-                        message: SarifMessage {
-                            text: format!(
-                                "Component added: {} {}",
-                                comp.name,
-                                comp.new_version.as_deref().unwrap_or("")
-                            ),
-                        },
-                        locations: vec![],
-                        properties: None,
-                    });
+                    results.push(sarif_result(
+                        "SBOM-TOOLS-001",
+                        SarifLevel::Note,
+                        format!(
+                            "Component added: {} {}",
+                            comp.name,
+                            comp.new_version.as_deref().unwrap_or("")
+                        ),
+                        new_keys.claim(DIFF_SCOPE, "SBOM-TOOLS-001", None, Some(&comp.id)),
+                        locate(new, Some(&comp.id)),
+                        SarifResultProperties::default(),
+                    ));
                 }
             }
 
             for comp in &result.components.removed {
-                results.push(SarifResult {
-                    kind: None,
-                    rule_id: "SBOM-TOOLS-002".to_string(),
-                    level: SarifLevel::Warning,
-                    message: SarifMessage {
-                        text: format!(
-                            "Component removed: {} {}",
-                            comp.name,
-                            comp.old_version.as_deref().unwrap_or("")
-                        ),
-                    },
-                    locations: vec![],
-                    properties: None,
-                });
+                results.push(sarif_result(
+                    "SBOM-TOOLS-002",
+                    SarifLevel::Warning,
+                    format!(
+                        "Component removed: {} {}",
+                        comp.name,
+                        comp.old_version.as_deref().unwrap_or("")
+                    ),
+                    new_keys.claim(DIFF_SCOPE, "SBOM-TOOLS-002", None, Some(&comp.id)),
+                    locate_old_component(new, &comp.id),
+                    SarifResultProperties::default(),
+                ));
             }
 
             for comp in &result.components.modified {
@@ -92,21 +243,19 @@ impl ReportGenerator for SarifReporter {
                     continue;
                 }
                 if self.include_info {
-                    results.push(SarifResult {
-                        kind: None,
-                        rule_id: "SBOM-TOOLS-003".to_string(),
-                        level: SarifLevel::Note,
-                        message: SarifMessage {
-                            text: format!(
-                                "Component modified: {} {} -> {}",
-                                comp.name,
-                                comp.old_version.as_deref().unwrap_or("unknown"),
-                                comp.new_version.as_deref().unwrap_or("unknown")
-                            ),
-                        },
-                        locations: vec![],
-                        properties: None,
-                    });
+                    results.push(sarif_result(
+                        "SBOM-TOOLS-003",
+                        SarifLevel::Note,
+                        format!(
+                            "Component modified: {} {} -> {}",
+                            comp.name,
+                            comp.old_version.as_deref().unwrap_or("unknown"),
+                            comp.new_version.as_deref().unwrap_or("unknown")
+                        ),
+                        new_keys.claim(DIFF_SCOPE, "SBOM-TOOLS-003", None, Some(&comp.id)),
+                        locate(new, Some(&comp.id)),
+                        SarifResultProperties::default(),
+                    ));
                 }
             }
         }
@@ -121,25 +270,28 @@ impl ReportGenerator for SarifReporter {
                 };
                 let sla_label = format_sla_label(vuln);
                 let vex_label = format_vex_label(vuln.vex_state.as_ref());
-                results.push(SarifResult {
-                    kind: None,
-                    rule_id: "SBOM-TOOLS-005".to_string(),
-                    level: severity_to_level(&vuln.severity),
-                    message: SarifMessage {
-                        text: format!(
-                            "Vulnerability introduced: {} ({}){}{}{} in {} {}",
-                            vuln.id,
-                            vuln.severity,
-                            depth_label,
-                            sla_label,
-                            vex_label,
-                            vuln.component_name,
-                            vuln.version.as_deref().unwrap_or("")
-                        ),
-                    },
-                    locations: vec![],
-                    properties: None,
-                });
+                results.push(sarif_result(
+                    "SBOM-TOOLS-005",
+                    severity_to_level(&vuln.severity),
+                    format!(
+                        "Vulnerability introduced: {} ({}){}{}{} in {} {}",
+                        vuln.id,
+                        vuln.severity,
+                        depth_label,
+                        sla_label,
+                        vex_label,
+                        vuln.component_name,
+                        vuln.version.as_deref().unwrap_or("")
+                    ),
+                    new_keys.claim(
+                        DIFF_SCOPE,
+                        "SBOM-TOOLS-005",
+                        Some(&vuln.id),
+                        Some(&vuln.component_id),
+                    ),
+                    locate(new, Some(&vuln.component_id)),
+                    SarifResultProperties::default(),
+                ));
             }
 
             for vuln in &result.vulnerabilities.resolved {
@@ -151,147 +303,146 @@ impl ReportGenerator for SarifReporter {
                     };
                     let sla_label = format_sla_label(vuln);
                     let vex_label = format_vex_label(vuln.vex_state.as_ref());
-                    results.push(SarifResult {
-                        kind: None,
-                        rule_id: "SBOM-TOOLS-006".to_string(),
-                        level: SarifLevel::Note,
-                        message: SarifMessage {
-                            text: format!(
-                                "Vulnerability resolved: {} ({}){}{}{} was in {}",
-                                vuln.id,
-                                vuln.severity,
-                                depth_label,
-                                sla_label,
-                                vex_label,
-                                vuln.component_name
-                            ),
-                        },
-                        locations: vec![],
-                        properties: None,
-                    });
+                    results.push(sarif_result(
+                        "SBOM-TOOLS-006",
+                        SarifLevel::Note,
+                        format!(
+                            "Vulnerability resolved: {} ({}){}{}{} was in {}",
+                            vuln.id,
+                            vuln.severity,
+                            depth_label,
+                            sla_label,
+                            vex_label,
+                            vuln.component_name
+                        ),
+                        new_keys.claim(
+                            DIFF_SCOPE,
+                            "SBOM-TOOLS-006",
+                            Some(&vuln.id),
+                            Some(&vuln.component_id),
+                        ),
+                        locate_old_component(new, &vuln.component_id),
+                        SarifResultProperties::default(),
+                    ));
                 }
             }
         }
 
-        // Add license change results
+        // Add license change results. A new license points at the first
+        // component of the new SBOM that declares it.
         if config.includes(ReportType::Licenses) {
             for license in &result.licenses.new_licenses {
-                results.push(SarifResult {
-                    kind: None,
-                    rule_id: "SBOM-TOOLS-004".to_string(),
-                    level: SarifLevel::Warning,
-                    message: SarifMessage {
-                        text: format!(
-                            "New license introduced: {} in components: {}",
-                            license.license,
-                            license.components.join(", ")
-                        ),
-                    },
-                    locations: vec![],
-                    properties: None,
-                });
+                let declaring = new_sbom
+                    .components
+                    .iter()
+                    .find(|(_, c)| {
+                        c.licenses
+                            .declared
+                            .iter()
+                            .any(|l| l.expression == license.license)
+                    })
+                    .map(|(id, _)| id.value());
+                results.push(sarif_result(
+                    "SBOM-TOOLS-004",
+                    SarifLevel::Warning,
+                    format!(
+                        "New license introduced: {} in components: {}",
+                        license.license,
+                        license.components.join(", ")
+                    ),
+                    new_keys.claim(DIFF_SCOPE, "SBOM-TOOLS-004", Some(&license.license), None),
+                    locate(new, declaring),
+                    SarifResultProperties::default(),
+                ));
             }
         }
 
         // Add document-metadata change results (author/tool/timestamp/spec-version/etc.)
         for change in &result.metadata_changes {
-            let old = change.old_value.as_deref().unwrap_or("(none)");
-            let new = change.new_value.as_deref().unwrap_or("(none)");
-            results.push(SarifResult {
-                kind: None,
-                rule_id: "SBOM-TOOLS-008".to_string(),
-                level: SarifLevel::Note,
-                message: SarifMessage {
-                    text: format!(
-                        "Metadata {}: {} ({old} -> {new})",
-                        change.kind, change.field
-                    ),
-                },
-                locations: vec![],
-                properties: None,
-            });
+            let old_value = change.old_value.as_deref().unwrap_or("(none)");
+            let new_value = change.new_value.as_deref().unwrap_or("(none)");
+            results.push(sarif_result(
+                "SBOM-TOOLS-008",
+                SarifLevel::Note,
+                format!(
+                    "Metadata {}: {} ({old_value} -> {new_value})",
+                    change.kind, change.field
+                ),
+                new_keys.claim(DIFF_SCOPE, "SBOM-TOOLS-008", Some(&change.field), None),
+                locate(new, None),
+                SarifResultProperties::default(),
+            ));
         }
 
         // Add EOL results (from new SBOM)
         for comp in new_sbom.components.values() {
-            if let Some(eol) = &comp.eol {
-                match eol.status {
-                    crate::model::EolStatus::EndOfLife => {
-                        let eol_date_str = eol
-                            .eol_date
-                            .map_or_else(String::new, |d| format!(" (EOL: {d})"));
-                        results.push(SarifResult {
-                            kind: None,
-                            rule_id: "SBOM-EOL-001".to_string(),
-                            level: SarifLevel::Error,
-                            message: SarifMessage {
-                                text: format!(
-                                    "Component '{}' version '{}' has reached end-of-life{} (product: {})",
-                                    comp.name,
-                                    comp.version.as_deref().unwrap_or("unknown"),
-                                    eol_date_str,
-                                    eol.product,
-                                ),
-                            },
-                            locations: vec![],
-                            properties: None,
-                        });
-                    }
-                    crate::model::EolStatus::ApproachingEol => {
-                        let days_str = eol
-                            .days_until_eol
-                            .map_or_else(String::new, |d| format!(" ({d} days remaining)"));
-                        results.push(SarifResult {
-                            kind: None,
-                            rule_id: "SBOM-EOL-002".to_string(),
-                            level: SarifLevel::Warning,
-                            message: SarifMessage {
-                                text: format!(
-                                    "Component '{}' version '{}' is approaching end-of-life{} (product: {})",
-                                    comp.name,
-                                    comp.version.as_deref().unwrap_or("unknown"),
-                                    days_str,
-                                    eol.product,
-                                ),
-                            },
-                            locations: vec![],
-                            properties: None,
-                        });
-                    }
-                    _ => {}
+            let Some(eol) = &comp.eol else {
+                continue;
+            };
+            let id = comp.canonical_id.value();
+            match eol.status {
+                crate::model::EolStatus::EndOfLife => {
+                    let eol_date_str = eol
+                        .eol_date
+                        .map_or_else(String::new, |d| format!(" (EOL: {d})"));
+                    results.push(sarif_result(
+                        "SBOM-EOL-001",
+                        SarifLevel::Error,
+                        format!(
+                            "Component '{}' version '{}' has reached end-of-life{} (product: {})",
+                            comp.name,
+                            comp.version.as_deref().unwrap_or("unknown"),
+                            eol_date_str,
+                            eol.product,
+                        ),
+                        new_keys.claim(DIFF_SCOPE, "SBOM-EOL-001", None, Some(id)),
+                        locate(new, Some(id)),
+                        SarifResultProperties::default(),
+                    ));
                 }
+                crate::model::EolStatus::ApproachingEol => {
+                    let days_str = eol
+                        .days_until_eol
+                        .map_or_else(String::new, |d| format!(" ({d} days remaining)"));
+                    results.push(sarif_result(
+                        "SBOM-EOL-002",
+                        SarifLevel::Warning,
+                        format!(
+                            "Component '{}' version '{}' is approaching end-of-life{} (product: {})",
+                            comp.name,
+                            comp.version.as_deref().unwrap_or("unknown"),
+                            days_str,
+                            eol.product,
+                        ),
+                        new_keys.claim(DIFF_SCOPE, "SBOM-EOL-002", None, Some(id)),
+                        locate(new, Some(id)),
+                        SarifResultProperties::default(),
+                    ));
+                }
+                _ => {}
             }
         }
 
-        // Add CRA compliance results for old and new SBOMs (use pre-computed if available)
-        let cra_old = config.old_cra_compliance_or_bare(old_sbom);
+        // CRA compliance results for the new SBOM (pre-computed if available).
         let cra_new = config.new_cra_compliance_or_bare(new_sbom);
-        results.extend(compliance_results_to_sarif(&cra_old, Some("Old SBOM")));
-        results.extend(compliance_results_to_sarif(&cra_new, Some("New SBOM")));
+        results.extend(compliance_results_to_sarif(
+            &cra_new,
+            Some("New SBOM"),
+            new,
+            &mut new_keys,
+        ));
 
         // Guarantee every emitted ruleId has a descriptor (the static table
         // predates rules like SBOM-CRA-CYCLES) and descriptor ids are unique.
-        let rules = complete_rule_catalogue(get_sarif_rules(), &results);
-
-        let sarif = SarifReport {
-            schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
-            version: "2.1.0".to_string(),
-            runs: vec![SarifRun {
-                tool: SarifTool {
-                    driver: SarifDriver {
-                        name: "sbom-tools".to_string(),
-                        version: env!("CARGO_PKG_VERSION").to_string(),
-                        information_uri: env!("CARGO_PKG_REPOSITORY").to_string(),
-                        rules: SarifRuleWithUri::wrap_all(rules),
-                    },
-                },
-                results,
-                properties: None,
-            }],
-        };
-
-        serde_json::to_string_pretty(&sarif)
-            .map_err(|e| ReportError::SerializationError(e.to_string()))
+        let rules = rules::complete_rule_catalogue(rules::diff_rules(), &results);
+        render_log(
+            automation_id(config.sarif.category(), format!("sbom-tools/{DIFF_SCOPE}/")),
+            rules,
+            results,
+            uses_srcroot([new]),
+            None,
+            config.sarif.max_results(),
+        )
     }
 
     fn generate_view_report(
@@ -299,6 +450,8 @@ impl ReportGenerator for SarifReporter {
         sbom: &NormalizedSbom,
         config: &ReportConfig,
     ) -> Result<String, ReportError> {
+        let artifact = config.sarif.artifact();
+        let mut keys = KeyBook::default();
         let mut results = Vec::new();
 
         // Report vulnerabilities in the SBOM
@@ -313,187 +466,48 @@ impl ReportGenerator for SarifReporter {
                 .map(|v| &v.status)
                 .or_else(|| comp.vex_status.as_ref().map(|v| &v.status));
             let vex_label = format_vex_label(vex_state);
-            results.push(SarifResult {
-                kind: None,
-                rule_id: "SBOM-VIEW-001".to_string(),
-                level: severity_to_level(&severity_str),
-                message: SarifMessage {
-                    text: format!(
-                        "Vulnerability {} ({}){} in {} {}",
-                        vuln.id,
-                        severity_str,
-                        vex_label,
-                        comp.name,
-                        comp.version.as_deref().unwrap_or("")
-                    ),
-                },
-                locations: vec![],
-                properties: None,
-            });
+            let id = comp.canonical_id.value();
+            results.push(sarif_result(
+                "SBOM-VIEW-001",
+                severity_to_level(&severity_str),
+                format!(
+                    "Vulnerability {} ({}){} in {} {}",
+                    vuln.id,
+                    severity_str,
+                    vex_label,
+                    comp.name,
+                    comp.version.as_deref().unwrap_or("")
+                ),
+                keys.claim(VIEW_SCOPE, "SBOM-VIEW-001", Some(&vuln.id), Some(id)),
+                locate(artifact, Some(id)),
+                SarifResultProperties::default(),
+            ));
         }
 
         // Add CRA compliance results (use pre-computed if available)
         let cra_result = config.view_cra_compliance_or_bare(sbom);
-        results.extend(compliance_results_to_sarif(&cra_result, None));
+        results.extend(compliance_results_to_sarif(
+            &cra_result,
+            None,
+            artifact,
+            &mut keys,
+        ));
 
         // Same descriptor guarantee as the diff path (see above).
-        let rules = complete_rule_catalogue(get_sarif_view_rules(), &results);
-
-        let sarif = SarifReport {
-            schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
-            version: "2.1.0".to_string(),
-            runs: vec![SarifRun {
-                tool: SarifTool {
-                    driver: SarifDriver {
-                        name: "sbom-tools".to_string(),
-                        version: env!("CARGO_PKG_VERSION").to_string(),
-                        information_uri: env!("CARGO_PKG_REPOSITORY").to_string(),
-                        rules: SarifRuleWithUri::wrap_all(rules),
-                    },
-                },
-                results,
-                properties: None,
-            }],
-        };
-
-        serde_json::to_string_pretty(&sarif)
-            .map_err(|e| ReportError::SerializationError(e.to_string()))
+        let rules = rules::complete_rule_catalogue(rules::view_rules(), &results);
+        render_log(
+            automation_id(config.sarif.category(), format!("sbom-tools/{VIEW_SCOPE}/")),
+            rules,
+            results,
+            uses_srcroot([artifact]),
+            None,
+            config.sarif.max_results(),
+        )
     }
 
     fn format(&self) -> ReportFormat {
         ReportFormat::Sarif
     }
-}
-
-/// Map an AI-readiness check ID (`AI-001`..`AI-011`) to its SARIF rule ID.
-/// Unknown IDs fall back to the `SBOM-AIBOM-GENERAL` rule so a future check
-/// never silently drops (`AiCheck`/`AiReadinessMetrics` are `#[non_exhaustive]`).
-fn ai_check_to_rule_id(check_id: &str) -> &'static str {
-    match check_id {
-        "AI-001" => "SBOM-AIBOM-001",
-        "AI-002" => "SBOM-AIBOM-002",
-        "AI-003" => "SBOM-AIBOM-003",
-        "AI-004" => "SBOM-AIBOM-004",
-        "AI-005" => "SBOM-AIBOM-005",
-        "AI-006" => "SBOM-AIBOM-006",
-        "AI-007" => "SBOM-AIBOM-007",
-        "AI-008" => "SBOM-AIBOM-008",
-        "AI-009" => "SBOM-AIBOM-009",
-        "AI-010" => "SBOM-AIBOM-010",
-        "AI-011" => "SBOM-AIBOM-011",
-        _ => "SBOM-AIBOM-GENERAL",
-    }
-}
-
-/// Default SARIF severity for each AI-readiness check. AI transparency is a
-/// best-practice (not a mandated minimum element), so there are no hard
-/// `error`s; documentation gaps are `warning`, softer/contextual gaps `note`.
-/// This is the single source of truth shared by the rule table and the results.
-fn aibom_level(check_id: &str) -> SarifLevel {
-    match check_id {
-        // AI-010 is the weight-hash integrity check and AI-011 the
-        // exploitability/advisory-reference check: both are load-bearing
-        // security signals (tamper verification and vulnerability tooling
-        // linkage), so they are `warning` like the other load-bearing checks
-        // rather than a soft `note`.
-        "AI-001" | "AI-002" | "AI-003" | "AI-005" | "AI-009" | "AI-010" | "AI-011" => {
-            SarifLevel::Warning
-        }
-        _ => SarifLevel::Note,
-    }
-}
-
-/// SARIF rule table for the AI BOM model-card completeness checks. The
-/// `short_description` text matches the scorer's `CHECK_DEFS` names exactly.
-fn get_sarif_aibom_rules() -> Vec<SarifRule> {
-    // (rule id, AI check id for level lookup, PascalCase name, description).
-    // Descriptions match the scorer's CHECK_DEFS names exactly.
-    [
-        (
-            "SBOM-AIBOM-001",
-            "AI-001",
-            "AibomModelCardUrl",
-            "Model card URL present",
-        ),
-        (
-            "SBOM-AIBOM-002",
-            "AI-002",
-            "AibomArchitectureFamily",
-            "Architecture family declared",
-        ),
-        (
-            "SBOM-AIBOM-003",
-            "AI-003",
-            "AibomTrainingDatasets",
-            "Training datasets referenced",
-        ),
-        (
-            "SBOM-AIBOM-004",
-            "AI-004",
-            "AibomQuantitativeAnalysis",
-            "Quantitative analysis present",
-        ),
-        (
-            "SBOM-AIBOM-005",
-            "AI-005",
-            "AibomFairnessAssessment",
-            "Fairness assessments included",
-        ),
-        (
-            "SBOM-AIBOM-006",
-            "AI-006",
-            "AibomEnergyConsumption",
-            "Energy consumption disclosed",
-        ),
-        (
-            "SBOM-AIBOM-007",
-            "AI-007",
-            "AibomUseCases",
-            "Use-cases documented",
-        ),
-        (
-            "SBOM-AIBOM-008",
-            "AI-008",
-            "AibomLimitations",
-            "Known limitations stated",
-        ),
-        (
-            "SBOM-AIBOM-009",
-            "AI-009",
-            "AibomEthicalConsiderations",
-            "Ethical considerations present",
-        ),
-        (
-            "SBOM-AIBOM-010",
-            "AI-010",
-            "AibomModelWeightHashes",
-            "Model weight hashes present",
-        ),
-        (
-            "SBOM-AIBOM-011",
-            "AI-011",
-            "AibomExploitabilityReference",
-            "Exploitability/advisory reference present",
-        ),
-        (
-            "SBOM-AIBOM-GENERAL",
-            "AI-GENERAL",
-            "AibomGeneral",
-            "AI BOM model-card completeness",
-        ),
-    ]
-    .into_iter()
-    .map(|(rule_id, check_id, name, desc)| SarifRule {
-        id: rule_id.to_string(),
-        name: name.to_string(),
-        short_description: SarifMessage {
-            text: desc.to_string(),
-        },
-        default_configuration: SarifConfiguration {
-            level: aibom_level(check_id),
-        },
-    })
-    .collect()
 }
 
 /// Generate a SARIF 2.1.0 report for an AI-readiness assessment, emitting one
@@ -507,144 +521,105 @@ pub fn generate_ai_readiness_sarif(
     overall_score: Option<f32>,
     grade: &str,
 ) -> Result<String, ReportError> {
+    generate_ai_readiness_sarif_with(
+        metrics,
+        sbom_name,
+        profile,
+        overall_score,
+        grade,
+        &SarifOptions::default(),
+    )
+}
+
+/// [`generate_ai_readiness_sarif`] with options: every result points at the
+/// document line of `options`' artifact (a check result covers every model).
+pub fn generate_ai_readiness_sarif_with(
+    metrics: &crate::quality::AiReadinessMetrics,
+    sbom_name: &str,
+    profile: &str,
+    overall_score: Option<f32>,
+    grade: &str,
+    options: &SarifOptions,
+) -> Result<String, ReportError> {
+    let artifact = options.artifact();
+    let mut keys = KeyBook::default();
     let results: Vec<SarifResult> = metrics
         .checks
         .iter()
         .filter(|check| !check.passed)
         .map(|check| {
-            let rule_id = ai_check_to_rule_id(&check.id);
+            let rule_id = rules::ai_check_to_rule_id(&check.id);
             let detail_suffix = check
                 .detail
                 .as_ref()
                 .map(|d| format!(" — {d}"))
                 .unwrap_or_default();
-            SarifResult {
-                kind: None,
-                rule_id: rule_id.to_string(),
-                level: aibom_level(&check.id),
-                message: SarifMessage {
-                    text: format!(
-                        "AIBOM check {} failed: {} ({:.0}% weight){detail_suffix}",
-                        check.id,
-                        check.name,
-                        check.weight * 100.0
-                    ),
-                },
-                locations: vec![],
-                properties: Some(SarifResultProperties {
+            // The fallback rule covers checks newer than the catalogue: the
+            // check id tells its findings apart.
+            let detail = (rule_id == "SBOM-AIBOM-GENERAL").then_some(check.id.as_str());
+            sarif_result(
+                rule_id,
+                rules::aibom_level(&check.id),
+                format!(
+                    "AIBOM check {} failed: {} ({:.0}% weight){detail_suffix}",
+                    check.id,
+                    check.name,
+                    check.weight * 100.0
+                ),
+                keys.claim(AI_READINESS_SCOPE, rule_id, detail, None),
+                locate(artifact, None),
+                SarifResultProperties {
                     standard_ids: vec![format!("AIBOM:{}", check.id)],
-                    standard_help_uris: rule_help_uri(rule_id)
+                    standard_help_uris: rules::rule_help_uri(rule_id)
                         .map(|u| vec![u.to_string()])
                         .unwrap_or_default(),
                     ..SarifResultProperties::default()
-                }),
-            }
+                },
+            )
         })
         .collect();
 
-    let sarif = SarifReport {
-        schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
-        version: "2.1.0".to_string(),
-        runs: vec![SarifRun {
-            tool: SarifTool {
-                driver: SarifDriver {
-                    name: "sbom-tools".to_string(),
-                    version: env!("CARGO_PKG_VERSION").to_string(),
-                    information_uri: env!("CARGO_PKG_REPOSITORY").to_string(),
-                    rules: SarifRuleWithUri::wrap_all(get_sarif_aibom_rules()),
-                },
-            },
-            results,
-            properties: Some(SarifRunProperties {
-                applicable: !metrics.is_not_applicable(),
-                // Same contract as the compliance N/A surfaces: an N/A run
-                // carries its human-readable reason (`AiReadinessMetrics`
-                // populates `na_reason` exactly when `not_applicable`).
-                not_applicable_reason: metrics.na_reason.clone(),
-                overall_score,
-                grade: Some(grade.to_string()),
-                sbom: Some(sbom_name.to_string()),
-                profile: Some(profile.to_string()),
-                compliant: None,
-                standards: Vec::new(),
-            }),
-        }],
+    let properties = SarifRunProperties {
+        applicable: !metrics.is_not_applicable(),
+        // Same contract as the compliance N/A surfaces: an N/A run
+        // carries its human-readable reason (`AiReadinessMetrics`
+        // populates `na_reason` exactly when `not_applicable`).
+        not_applicable_reason: metrics.na_reason.clone(),
+        overall_score,
+        grade: Some(grade.to_string()),
+        sbom: Some(sbom_name.to_string()),
+        profile: Some(profile.to_string()),
+        compliant: None,
+        standards: Vec::new(),
     };
-
-    serde_json::to_string_pretty(&sarif).map_err(|e| ReportError::SerializationError(e.to_string()))
+    render_log(
+        automation_id(options.category(), quality_category(profile)),
+        rules::aibom_rules(),
+        results,
+        uses_srcroot([artifact]),
+        Some(properties),
+        options.max_results(),
+    )
 }
 
-/// Dedup the rule catalogue by id and synthesize a reportingDescriptor for
-/// any result ruleId the hand-maintained per-standard tables don't declare.
-/// SARIF 2.1.0 requires descriptor ids to be unique, and GitHub code
-/// scanning drops rule metadata for results whose ruleId has no descriptor —
-/// this guarantees both invariants no matter which checks fired.
-fn complete_rule_catalogue(mut rules: Vec<SarifRule>, results: &[SarifResult]) -> Vec<SarifRule> {
-    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
-    rules.retain(|r| seen.insert(r.id.clone()));
-    for res in results {
-        if seen.contains(&res.rule_id) {
-            continue;
-        }
-        seen.insert(res.rule_id.clone());
-        // Prefer the registry's descriptor identity when the emitted ruleId
-        // is a registered self-descriptor (e.g. the CNSA/PQC rule families,
-        // which have no curated per-standard slice).
-        if let Some(meta) = rule_meta(&res.rule_id)
-            && meta.sarif_id == res.rule_id
-        {
-            rules.push(registry_sarif_rule(res.rule_id.clone(), meta));
-            continue;
-        }
-        // CamelCase-ish name derived from the id (SBOM-EO14028-NAME → SbomEo14028Name)
-        let name: String = res
-            .rule_id
-            .split(|c: char| !c.is_ascii_alphanumeric())
-            .filter(|seg| !seg.is_empty())
-            .map(|seg| {
-                let mut cs = seg.chars();
-                cs.next()
-                    .map(|f| f.to_ascii_uppercase().to_string() + &cs.as_str().to_ascii_lowercase())
-                    .unwrap_or_default()
-            })
-            .collect();
-        rules.push(SarifRule {
-            id: res.rule_id.clone(),
-            name,
-            short_description: SarifMessage {
-                text: format!("Compliance rule {}", res.rule_id),
-            },
-            default_configuration: SarifConfiguration { level: res.level },
-        });
-    }
-    rules
-}
-
-/// Options for the compliance SARIF writers
-/// ([`generate_compliance_sarif_with`], [`generate_multi_compliance_sarif_with`]).
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct ComplianceSarifOptions {
-    /// Also emit every passed check ([`ComplianceResult::passed`]) as a
-    /// result of `kind: "pass"` at level `none` (`validate
-    /// --sarif-include-passes`). Off by default: code scanning lists every
-    /// result it receives, so a pass reported as one would read as an alert.
-    pub include_passes: bool,
-}
-
-/// SARIF for one compliance result: its violations, and none of its passed
-/// checks (see [`generate_compliance_sarif_with`]).
+/// SARIF for one compliance standard: its violations, and none of its
+/// passed checks (see [`generate_compliance_sarif_with`]).
 pub fn generate_compliance_sarif(result: &ComplianceResult) -> Result<String, ReportError> {
-    generate_compliance_sarif_with(result, ComplianceSarifOptions::default())
+    generate_compliance_sarif_with(result, &SarifOptions::default())
 }
 
-/// [`generate_compliance_sarif`] with `options`.
+/// [`generate_compliance_sarif`] with options: results point at their lines
+/// in `options`' artifact, and the passed checks follow the violations when
+/// [`SarifOptions::include_passes`].
 pub fn generate_compliance_sarif_with(
     result: &ComplianceResult,
-    options: ComplianceSarifOptions,
+    options: &SarifOptions,
 ) -> Result<String, ReportError> {
-    let mut results = compliance_results_to_sarif(result, None);
-    if options.include_passes {
-        results.extend(passed_checks_to_sarif(result));
+    let artifact = options.artifact();
+    let mut keys = KeyBook::default();
+    let mut results = compliance_results_to_sarif(result, None, artifact, &mut keys);
+    if options.include_passes() {
+        results.extend(passed_checks_to_sarif(result, artifact, &mut keys));
     }
     // Surface applicability at run level: a readiness standard that never
     // evaluated the SBOM must be machine-distinguishable from a pass.
@@ -652,7 +627,7 @@ pub fn generate_compliance_sarif_with(
         crate::quality::Applicability::NotApplicable(reason) => Some(reason.clone()),
         crate::quality::Applicability::Applicable => None,
     };
-    let run_properties = Some(SarifRunProperties {
+    let properties = SarifRunProperties {
         applicable: result.is_applicable(),
         not_applicable_reason,
         overall_score: result.score().map(f32::from),
@@ -661,29 +636,19 @@ pub fn generate_compliance_sarif_with(
         profile: Some(result.level.name().to_string()),
         compliant: None,
         standards: Vec::new(),
-    });
-    let rules = SarifRuleWithUri::wrap_all(complete_rule_catalogue(
-        get_sarif_rules_for_standard(result.level),
-        &results,
-    ));
-    let sarif = SarifReport {
-        schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
-        version: "2.1.0".to_string(),
-        runs: vec![SarifRun {
-            tool: SarifTool {
-                driver: SarifDriver {
-                    name: "sbom-tools".to_string(),
-                    version: env!("CARGO_PKG_VERSION").to_string(),
-                    information_uri: env!("CARGO_PKG_REPOSITORY").to_string(),
-                    rules,
-                },
-            },
-            results,
-            properties: run_properties,
-        }],
     };
-
-    serde_json::to_string_pretty(&sarif).map_err(|e| ReportError::SerializationError(e.to_string()))
+    let rules = rules::complete_rule_catalogue(rules::rules_for_standard(result.level), &results);
+    render_log(
+        automation_id(
+            options.category(),
+            standards_category(std::iter::once(result.level)),
+        ),
+        rules,
+        results,
+        uses_srcroot([artifact]),
+        Some(properties),
+        options.max_results(),
+    )
 }
 
 /// Generate SARIF output for multiple compliance standards merged into one
@@ -692,36 +657,43 @@ pub fn generate_compliance_sarif_with(
 pub fn generate_multi_compliance_sarif(
     results: &[ComplianceResult],
 ) -> Result<String, ReportError> {
-    generate_multi_compliance_sarif_with(results, ComplianceSarifOptions::default())
+    generate_multi_compliance_sarif_with(results, &SarifOptions::default())
 }
 
-/// [`generate_multi_compliance_sarif`] with `options`.
+/// [`generate_multi_compliance_sarif`] with options: results point at their
+/// lines in `options`' artifact, and each standard's passed checks follow its
+/// violations when [`SarifOptions::include_passes`].
 pub fn generate_multi_compliance_sarif_with(
     results: &[ComplianceResult],
-    options: ComplianceSarifOptions,
+    options: &SarifOptions,
 ) -> Result<String, ReportError> {
+    let artifact = options.artifact();
     // Merge rules from all standards; `complete_rule_catalogue` dedups the
     // descriptors (two standards sharing the generic table used to emit
     // every descriptor twice, which SARIF validators reject) and covers any
-    // emitted ruleId the static tables miss.
+    // emitted ruleId the static tables miss. Finding keys name their
+    // standard, so one key book serves every standard.
+    let mut keys = KeyBook::default();
     let mut all_rules = Vec::new();
     let mut all_results = Vec::new();
 
     for result in results {
-        all_rules.extend(get_sarif_rules_for_standard(result.level));
-        all_results.extend(compliance_results_to_sarif(result, None));
-        if options.include_passes {
-            all_results.extend(passed_checks_to_sarif(result));
+        all_rules.extend(rules::rules_for_standard(result.level));
+        all_results.extend(compliance_results_to_sarif(
+            result, None, artifact, &mut keys,
+        ));
+        if options.include_passes() {
+            all_results.extend(passed_checks_to_sarif(result, artifact, &mut keys));
         }
     }
-    let all_rules = complete_rule_catalogue(all_rules, &all_results);
+    let all_rules = rules::complete_rule_catalogue(all_rules, &all_results);
 
     // Per-standard applicability/score/verdict ride on `properties.standards`
     // — without them a not-applicable standard in a merged run is
     // machine-indistinguishable from a pass (the single-standard run's flat
     // properties don't fit N standards). The flat per-standard fields stay
     // unset; `applicable` reports whether any standard evaluated the SBOM.
-    let run_properties = Some(SarifRunProperties {
+    let properties = SarifRunProperties {
         applicable: results.iter().any(ComplianceResult::is_applicable),
         not_applicable_reason: None,
         overall_score: None,
@@ -733,26 +705,18 @@ pub fn generate_multi_compliance_sarif_with(
             .iter()
             .map(StandardRunSummary::from_result)
             .collect(),
-    });
-
-    let sarif = SarifReport {
-        schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
-        version: "2.1.0".to_string(),
-        runs: vec![SarifRun {
-            tool: SarifTool {
-                driver: SarifDriver {
-                    name: "sbom-tools".to_string(),
-                    version: env!("CARGO_PKG_VERSION").to_string(),
-                    information_uri: env!("CARGO_PKG_REPOSITORY").to_string(),
-                    rules: SarifRuleWithUri::wrap_all(all_rules),
-                },
-            },
-            results: all_results,
-            properties: run_properties,
-        }],
     };
-
-    serde_json::to_string_pretty(&sarif).map_err(|e| ReportError::SerializationError(e.to_string()))
+    render_log(
+        automation_id(
+            options.category(),
+            standards_category(results.iter().map(|r| r.level)),
+        ),
+        all_rules,
+        all_results,
+        uses_srcroot([artifact]),
+        Some(properties),
+        options.max_results(),
+    )
 }
 
 /// Generate SARIF 2.1.0 output for the `quality` command (non-AI-readiness
@@ -768,8 +732,30 @@ pub fn generate_quality_sarif(
     sbom_name: &str,
     profile: &str,
 ) -> Result<String, ReportError> {
-    let mut results = compliance_results_to_sarif(&report.compliance, None);
-    let mut rules = get_sarif_rules_for_standard(report.compliance.level);
+    generate_quality_sarif_with(report, sbom_name, profile, &SarifOptions::default())
+}
+
+/// [`generate_quality_sarif`] with options: compliance results point at
+/// their lines in `options`' artifact, recommendations (which count across
+/// the document) at its document line. The embedded standard's passed checks
+/// follow its violations when [`SarifOptions::include_passes`].
+pub fn generate_quality_sarif_with(
+    report: &crate::quality::QualityReport,
+    sbom_name: &str,
+    profile: &str,
+    options: &SarifOptions,
+) -> Result<String, ReportError> {
+    let artifact = options.artifact();
+    let mut keys = KeyBook::default();
+    let mut results = compliance_results_to_sarif(&report.compliance, None, artifact, &mut keys);
+    if options.include_passes() {
+        results.extend(passed_checks_to_sarif(
+            &report.compliance,
+            artifact,
+            &mut keys,
+        ));
+    }
+    let mut catalogue = rules::rules_for_standard(report.compliance.level);
 
     // Quality recommendations: one advisory result each, plus a descriptor
     // per emitted recommendation category.
@@ -780,47 +766,294 @@ pub fn generate_quality_sarif(
             rec.category.name().to_uppercase().replace(' ', "-")
         );
         if rec_rule_ids.insert(rule_id.clone()) {
-            rules.push(SarifRule {
-                id: rule_id.clone(),
-                name: format!(
-                    "QualityRecommendation{}",
-                    rec.category.name().replace(' ', "")
-                ),
-                short_description: SarifMessage {
-                    text: format!("Quality recommendation: {}", rec.category.name()),
-                },
-                default_configuration: SarifConfiguration {
-                    level: SarifLevel::Note,
-                },
-            });
+            catalogue.push(rules::quality_recommendation_rule(
+                &rule_id,
+                rec.category.name(),
+            ));
         }
-        results.push(SarifResult {
-            kind: None,
+        // A category holds several recommendations, told apart by their
+        // message. Its numbers (counts, the standard's name) are masked so a
+        // count that changes keeps the fingerprint.
+        let key = keys.claim(
+            QUALITY_SCOPE,
+            &rule_id,
+            Some(&mask_digits(&rec.message)),
+            None,
+        );
+        results.push(sarif_result(
             rule_id,
-            level: recommendation_level(rec.priority),
-            message: SarifMessage {
-                text: format!(
-                    "{} ({} affected, +{:.1} impact)",
-                    rec.message, rec.affected_count, rec.impact
-                ),
-            },
-            locations: vec![],
-            properties: Some(SarifResultProperties {
+            recommendation_level(rec.priority),
+            format!(
+                "{} ({} affected, +{:.1} impact)",
+                rec.message, rec.affected_count, rec.impact
+            ),
+            key,
+            locate(artifact, None),
+            SarifResultProperties {
                 priority: Some(rec.priority),
                 affected_count: Some(rec.affected_count),
                 impact: Some(rec.impact),
                 ..SarifResultProperties::default()
-            }),
-        });
+            },
+        ));
     }
 
-    let rules = SarifRuleWithUri::wrap_all(complete_rule_catalogue(rules, &results));
+    let catalogue = rules::complete_rule_catalogue(catalogue, &results);
     let not_applicable_reason = match &report.compliance.applicability {
         crate::quality::Applicability::NotApplicable(reason) => Some(reason.clone()),
         crate::quality::Applicability::Applicable => None,
     };
+    let properties = SarifRunProperties {
+        applicable: report.compliance.is_applicable(),
+        not_applicable_reason,
+        overall_score: Some(report.overall_score),
+        grade: Some(report.grade.letter().to_string()),
+        sbom: Some(sbom_name.to_string()),
+        profile: Some(profile.to_string()),
+        compliant: Some(report.compliance.is_compliant),
+        standards: Vec::new(),
+    };
+    render_log(
+        automation_id(options.category(), quality_category(profile)),
+        catalogue,
+        results,
+        uses_srcroot([artifact]),
+        Some(properties),
+        options.max_results(),
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Result identity and location
+// ---------------------------------------------------------------------------
+
+/// The finding keys one SBOM's results of a run have used. A key that
+/// repeats (an SBOM listing one vulnerability twice for a component) gets
+/// `#2`, `#3`, … appended to its detail, so no two results of one SBOM share
+/// a fingerprint. Compliance finding keys are unique per standard already
+/// (see `quality::finding_key`), so they come out unchanged.
+#[derive(Default)]
+struct KeyBook {
+    taken: HashSet<String>,
+}
+
+impl KeyBook {
+    fn claim(
+        &mut self,
+        scope: &str,
+        rule_id: &str,
+        detail: Option<&str>,
+        component_id: Option<&str>,
+    ) -> String {
+        let key = compose_finding_key(scope, rule_id, detail, component_id);
+        if self.taken.insert(key.clone()) {
+            return key;
+        }
+        let mut n = 2usize;
+        loop {
+            let numbered = detail.map_or_else(|| format!("#{n}"), |d| format!("{d}#{n}"));
+            let key = compose_finding_key(scope, rule_id, Some(&numbered), component_id);
+            if self.taken.insert(key.clone()) {
+                return key;
+            }
+            n += 1;
+        }
+    }
+}
+
+/// `message` with every run of ASCII digits written `#`.
+fn mask_digits(message: &str) -> String {
+    let mut masked = String::with_capacity(message.len());
+    let mut in_digits = false;
+    for c in message.chars() {
+        if c.is_ascii_digit() {
+            if !in_digits {
+                masked.push('#');
+            }
+            in_digits = true;
+        } else {
+            masked.push(c);
+            in_digits = false;
+        }
+    }
+    masked
+}
+
+/// The analysis category of a compliance run: the canonical `--standard`
+/// values of its standards, sorted and joined by `+`, so the same set of
+/// standards gives the same category whatever order they were asked in.
+/// GitHub code scanning reads everything before the last `/` of
+/// `automationDetails.id` as the category; the trailing `/` leaves the run
+/// id empty.
+fn standards_category(levels: impl Iterator<Item = ComplianceLevel>) -> String {
+    let mut keys: Vec<&str> = levels.map(standard_key).collect();
+    keys.sort_unstable();
+    keys.dedup();
+    if keys.is_empty() {
+        "sbom-tools/compliance/".to_string()
+    } else {
+        format!("sbom-tools/{}/", keys.join("+"))
+    }
+}
+
+/// The analysis category of a `quality` run: its scoring profile.
+fn quality_category(profile: &str) -> String {
+    format!("sbom-tools/quality/{}/", profile.replace('/', "-"))
+}
+
+/// A run's `automationDetails.id`: the caller's `category`, ending in `/`
+/// (see [`SarifOptions::with_category`]), else `default`, the category of
+/// its kind of run.
+fn automation_id(category: Option<&str>, default: String) -> String {
+    match category {
+        Some(category) if category.trim().is_empty() => default,
+        Some(category) if category.ends_with('/') => category.to_string(),
+        Some(category) => format!("{category}/"),
+        None => default,
+    }
+}
+
+/// Whether any of `artifacts` has a URI relative to the source root, so the
+/// run must declare the `SRCROOT` base.
+fn uses_srcroot<'a>(artifacts: impl IntoIterator<Item = Option<&'a SarifArtifact>>) -> bool {
+    artifacts
+        .into_iter()
+        .flatten()
+        .any(|a| a.location().uri_base_id().is_some())
+}
+
+/// The location of a result about the component whose canonical id is
+/// `component_id`, or about the document when it is `None`:
+///
+/// - with an artifact, the SBOM file and the line of the component's id
+///   (line 1 when the text states none: GitHub drops a result without a
+///   physical location) or of the document's metadata;
+/// - a component result also names the component as a logical location,
+///   by its purl, else its format id (its canonical id without an
+///   artifact).
+fn locate(artifact: Option<&SarifArtifact>, component_id: Option<&str>) -> Vec<SarifLocation> {
+    let logical_locations: Vec<SarifLogicalLocation> = component_id
+        .map(|id| SarifLogicalLocation {
+            name: artifact
+                .and_then(|a| a.logical_name(id))
+                .unwrap_or(id)
+                .to_string(),
+            kind: "component",
+        })
+        .into_iter()
+        .collect();
+    let physical_location = artifact.map(|a| {
+        let line = component_id.map_or(a.document_line(), |id| a.component_line(id).unwrap_or(1));
+        SarifPhysicalLocation {
+            artifact_location: SarifArtifactLocationJson {
+                uri: a.location().uri().to_string(),
+                uri_base_id: a.location().uri_base_id().map(str::to_string),
+            },
+            region: SarifRegion { start_line: line },
+        }
+    });
+    if physical_location.is_none() && logical_locations.is_empty() {
+        return Vec::new();
+    }
+    vec![SarifLocation {
+        physical_location,
+        logical_locations,
+    }]
+}
+
+/// The location of a diff result about a component of the old SBOM (a
+/// removal, a resolved vulnerability) in the new SBOM the diff reports into:
+/// the component's line when the new SBOM still lists it, else the new
+/// SBOM's document line, as a removal is a change to the new file. The
+/// component stays the logical location.
+fn locate_old_component(new: Option<&SarifArtifact>, component_id: &str) -> Vec<SarifLocation> {
+    let mut locations = locate(new, Some(component_id));
+    if let (Some(artifact), Some(location)) = (new, locations.first_mut())
+        && artifact.component_line(component_id).is_none()
+        && let Some(physical) = location.physical_location.as_mut()
+    {
+        physical.region.start_line = artifact.document_line();
+    }
+    locations
+}
+
+/// One result. Its fingerprint and `properties.findingKey` /
+/// `properties.findingId` come from `key`, its finding identity; the
+/// `ruleIndex` is set once the run's rule catalogue is known.
+fn sarif_result(
+    rule_id: impl Into<String>,
+    level: SarifLevel,
+    message: String,
+    key: String,
+    locations: Vec<SarifLocation>,
+    mut properties: SarifResultProperties,
+) -> SarifResult {
+    let fingerprint = finding_fingerprint(&key);
+    properties.finding_id = finding_id(&key);
+    properties.finding_key = key;
+    SarifResult {
+        rule_id: rule_id.into(),
+        rule_index: None,
+        kind: None,
+        level,
+        message: SarifMessage::new(message),
+        locations,
+        partial_fingerprints: SarifFingerprints::new(fingerprint),
+        properties,
+    }
+}
+
+/// Serialize one run: at most `max_results` results (see
+/// [`cap_results`]), each with its `ruleIndex` set from `rules`, and the
+/// `SRCROOT` base declared when an artifact URI is relative to it.
+fn render_log(
+    automation_id: String,
+    rules: Vec<SarifRule>,
+    mut results: Vec<SarifResult>,
+    relative_to_srcroot: bool,
+    properties: Option<SarifRunProperties>,
+    max_results: usize,
+) -> Result<String, ReportError> {
+    let total = results.len();
+    let omitted = cap_results(&mut results, max_results);
+    let invocations = (omitted > 0).then(|| {
+        let text = format!(
+            "{omitted} of {total} results were omitted to keep the run within {max_results} \
+             results (--sarif-max-results; GitHub code scanning rejects a run of more than \
+             {DEFAULT_SARIF_MAX_RESULTS}). The most severe were kept. Use -o json for the full \
+             list."
+        );
+        tracing::warn!("{text}");
+        vec![SarifInvocation {
+            execution_successful: true,
+            tool_execution_notifications: vec![SarifNotification {
+                level: SarifLevel::Warning,
+                message: SarifMessage::new(text),
+            }],
+        }]
+    });
+    let index: HashMap<&str, usize> = rules
+        .iter()
+        .enumerate()
+        .map(|(i, rule)| (rule.id.as_str(), i))
+        .collect();
+    for result in &mut results {
+        result.rule_index = index.get(result.rule_id.as_str()).copied();
+    }
+    let original_uri_base_ids = relative_to_srcroot.then(|| {
+        BTreeMap::from([(
+            SARIF_SRCROOT,
+            SarifBaseDescription {
+                description: SarifMessage::new(
+                    "The root of the source tree relative artifact URIs resolve against: \
+                     the repository the SBOM file is in, or the directory given as \
+                     --sarif-base.",
+                ),
+            },
+        )])
+    });
     let sarif = SarifReport {
-        schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
+        schema: SARIF_SCHEMA_URI.to_string(),
         version: "2.1.0".to_string(),
         runs: vec![SarifRun {
             tool: SarifTool {
@@ -831,21 +1064,54 @@ pub fn generate_quality_sarif(
                     rules,
                 },
             },
+            invocations,
+            automation_details: SarifAutomationDetails { id: automation_id },
+            original_uri_base_ids,
             results,
-            properties: Some(SarifRunProperties {
-                applicable: report.compliance.is_applicable(),
-                not_applicable_reason,
-                overall_score: Some(report.overall_score),
-                grade: Some(report.grade.letter().to_string()),
-                sbom: Some(sbom_name.to_string()),
-                profile: Some(profile.to_string()),
-                compliant: Some(report.compliance.is_compliant),
-                standards: Vec::new(),
-            }),
+            properties,
         }],
     };
-
     serde_json::to_string_pretty(&sarif).map_err(|e| ReportError::SerializationError(e.to_string()))
+}
+
+/// Keep at most `max_results` of `results`; `0` keeps them all. The kept
+/// results are the most severe — every error, then warnings, notes and
+/// `none` (passes) while room is left — and, within the level the cap falls
+/// in, the first in report order; they stay in report order. Returns how
+/// many were omitted.
+fn cap_results(results: &mut Vec<SarifResult>, max_results: usize) -> usize {
+    if max_results == 0 || results.len() <= max_results {
+        return 0;
+    }
+    let mut per_level = [0usize; 4];
+    for result in results.iter() {
+        per_level[severity_rank(result.level)] += 1;
+    }
+    let mut room = max_results;
+    let mut keep = [0usize; 4];
+    for (kept, count) in keep.iter_mut().zip(per_level) {
+        *kept = count.min(room);
+        room -= *kept;
+    }
+    let omitted = results.len() - max_results;
+    let mut kept_so_far = [0usize; 4];
+    results.retain(|result| {
+        let rank = severity_rank(result.level);
+        let keep_it = kept_so_far[rank] < keep[rank];
+        kept_so_far[rank] += usize::from(keep_it);
+        keep_it
+    });
+    omitted
+}
+
+/// The order in which [`cap_results`] keeps levels: error first.
+const fn severity_rank(level: SarifLevel) -> usize {
+    match level {
+        SarifLevel::Error => 0,
+        SarifLevel::Warning => 1,
+        SarifLevel::Note => 2,
+        SarifLevel::None => 3,
+    }
 }
 
 /// SARIF level for a quality recommendation. Recommendations are advisory —
@@ -898,7 +1164,15 @@ const fn violation_severity_to_level(severity: ViolationSeverity) -> SarifLevel 
     }
 }
 
-fn compliance_results_to_sarif(result: &ComplianceResult, label: Option<&str>) -> Vec<SarifResult> {
+/// The SARIF results of one compliance result: one per violation, at the
+/// line of the component it is about (or the document's), keyed by its
+/// finding identity (`quality::finding_key`).
+fn compliance_results_to_sarif(
+    result: &ComplianceResult,
+    label: Option<&str>,
+    artifact: Option<&SarifArtifact>,
+    keys: &mut KeyBook,
+) -> Vec<SarifResult> {
     let prefix = label.map(|l| format!("{l} - ")).unwrap_or_default();
     result
         .violations
@@ -907,12 +1181,11 @@ fn compliance_results_to_sarif(result: &ComplianceResult, label: Option<&str>) -
             let element = v.element.as_deref().unwrap_or("unknown");
             // The externally-visible SARIF rule ID comes from the rule
             // registry keyed by the violation's stable `rule_id` — never from
-            // re-parsing the human-readable requirement string. Check sites
-            // with no specific mapping stamp the generic `SBOM-CRA-GENERAL`
-            // key regardless of which checker ran; re-bucket that fallback
-            // (and any unregistered key) onto the running standard's own
-            // generic rule so NTIA/quality/... findings never surface under
-            // a CRA identity. Specifically-mapped rules keep their identity.
+            // re-parsing the human-readable requirement string. Every check
+            // is its own rule; a violation built outside the checkers carries
+            // the `SBOM-CRA-GENERAL` default or an unregistered key, and is
+            // re-bucketed onto the running standard's fallback rule so
+            // NTIA/quality/... findings never surface under a CRA identity.
             let is_unmapped = v.rule_id == "SBOM-CRA-GENERAL" || rule_meta(v.rule_id).is_none();
             let sarif_rule_id = if is_unmapped {
                 generic_rule_id_for_level(result.level)
@@ -943,49 +1216,52 @@ fn compliance_results_to_sarif(result: &ComplianceResult, label: Option<&str>) -
                 .collect();
             let standard_help_uris: Vec<String> =
                 refs.iter().filter_map(|sr| sr.help_uri.clone()).collect();
-            let properties = if standard_ids.is_empty()
-                && standard_help_uris.is_empty()
-                && v.component_id.is_none()
-                && v.counts.is_none()
-            {
-                None
-            } else {
-                Some(SarifResultProperties {
+            // The finding key is `finding_key(level, v)`; the key book only
+            // numbers a key that would repeat.
+            let key = keys.claim(
+                standard_key(result.level),
+                v.rule_id,
+                v.finding_detail.as_deref(),
+                v.component_id.as_deref(),
+            );
+            sarif_result(
+                sarif_rule_id,
+                violation_severity_to_level(v.severity),
+                format!(
+                    "{}{}: {} (Requirement: {}) [Element: {}]",
+                    prefix,
+                    result.level.name(),
+                    v.message,
+                    v.requirement,
+                    element
+                ),
+                key,
+                locate(artifact, v.component_id.as_deref()),
+                SarifResultProperties {
                     standard_ids,
                     standard_help_uris,
                     component_id: v.component_id.clone(),
                     affected: v.counts.map(|c| c.affected),
                     total: v.counts.map(|c| c.total),
                     ..SarifResultProperties::default()
-                })
-            };
-            SarifResult {
-                kind: None,
-                rule_id: sarif_rule_id.to_string(),
-                level: violation_severity_to_level(v.severity),
-                message: SarifMessage {
-                    text: format!(
-                        "{}{}: {} (Requirement: {}) [Element: {}]",
-                        prefix,
-                        result.level.name(),
-                        v.message,
-                        v.requirement,
-                        element
-                    ),
                 },
-                locations: vec![],
-                properties,
-            }
+            )
         })
         .collect()
 }
 
-/// One SARIF result per check `result` passed: `kind: "pass"` at level
-/// `none` (SARIF 2.1.0 §3.27.9: a result whose kind is not `fail` has level
-/// `none`), under the pass-only rule's registry SARIF id, with the
-/// properties a violation's result carries. Emitted only under
-/// [`ComplianceSarifOptions::include_passes`].
-fn passed_checks_to_sarif(result: &ComplianceResult) -> Vec<SarifResult> {
+/// One result per check `result` passed, emitted only under
+/// [`SarifOptions::include_passes`]: `kind: "pass"` at level `none` (SARIF
+/// 2.1.0 §3.27.10: a result whose kind is not `fail` has level `none`), under
+/// the pass-only rule, with the location, fingerprints and properties a
+/// violation's result carries. Passes and violations share one key space
+/// (a rule reports one or the other) and one key book, so no pass shares a
+/// violation's fingerprint.
+fn passed_checks_to_sarif(
+    result: &ComplianceResult,
+    artifact: Option<&SarifArtifact>,
+    keys: &mut KeyBook,
+) -> Vec<SarifResult> {
     result
         .passed
         .iter()
@@ -1001,97 +1277,35 @@ fn passed_checks_to_sarif(result: &ComplianceResult) -> Vec<SarifResult> {
                 .iter()
                 .filter_map(|sr| sr.help_uri.clone())
                 .collect();
-            let properties = (!standard_ids.is_empty()
-                || !standard_help_uris.is_empty()
-                || pass.component_id.is_some())
-            .then(|| SarifResultProperties {
-                standard_ids,
-                standard_help_uris,
-                component_id: pass.component_id.clone(),
-                ..SarifResultProperties::default()
-            });
-            SarifResult {
-                kind: Some(SarifKind::Pass),
-                rule_id: pass.sarif_rule_id().to_string(),
-                level: SarifLevel::None,
-                message: SarifMessage {
-                    text: format!(
-                        "{}: {} (Requirement: {}) [Element: {}]",
-                        result.level.name(),
-                        pass.message,
-                        pass.requirement,
-                        element
-                    ),
+            let key = keys.claim(
+                standard_key(result.level),
+                pass.rule_id,
+                pass.finding_detail.as_deref(),
+                pass.component_id.as_deref(),
+            );
+            let mut sarif = sarif_result(
+                pass.sarif_rule_id(),
+                SarifLevel::None,
+                format!(
+                    "{}: {} (Requirement: {}) [Element: {}]",
+                    result.level.name(),
+                    pass.message,
+                    pass.requirement,
+                    element
+                ),
+                key,
+                locate(artifact, pass.component_id.as_deref()),
+                SarifResultProperties {
+                    standard_ids,
+                    standard_help_uris,
+                    component_id: pass.component_id.clone(),
+                    ..SarifResultProperties::default()
                 },
-                locations: vec![],
-                properties,
-            }
+            );
+            sarif.kind = Some(SarifKind::Pass);
+            sarif
         })
         .collect()
-}
-
-/// Canonical URL for a SARIF rule, derived from its ID prefix. Returns
-/// `None` for rule families that do not map to a single regulation /
-/// specification (e.g., `SBOM-TOOLS-*` change-tracking rules).
-fn rule_help_uri(rule_id: &str) -> Option<&'static str> {
-    // EUCC before any more-generic prefix: these rules cite Implementing
-    // Regulation (EU) 2024/482, not the CRA regulation.
-    if rule_id.starts_with("SBOM-EUCC") {
-        Some("https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng")
-    } else if rule_id.starts_with("SBOM-CRA-") {
-        Some("https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng")
-    } else if rule_id.starts_with("SBOM-BSI-") {
-        // BSI's stable English shortlink for TR-03183 (printed in the
-        // v2.1.0 document imprint).
-        Some("https://bsi.bund.de/dok/TR-03183-en")
-    } else if rule_id.starts_with("SBOM-NIST-SSDF-") || rule_id.starts_with("SBOM-SSDF-") {
-        Some("https://doi.org/10.6028/NIST.SP.800-218")
-    } else if rule_id.starts_with("SBOM-EO14028-") || rule_id.starts_with("SBOM-EO-14028-") {
-        Some("https://www.federalregister.gov/d/2021-10460")
-    } else if rule_id.starts_with("SBOM-FDA-") {
-        // Current edition: "Quality Management System Considerations…"
-        // (final, 2026-02-03); FDA's media id is the stable handle.
-        Some("https://www.fda.gov/media/119933/download")
-    } else if rule_id.starts_with("SBOM-NTIA-") {
-        Some("https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom")
-    } else if rule_id.starts_with("SBOM-PQC-") || rule_id.starts_with("SBOM-NIST-PQC-") {
-        Some("https://csrc.nist.gov/projects/post-quantum-cryptography")
-    } else if rule_id.starts_with("SBOM-QUALITY-") {
-        // Tool-defined quality rules (Minimum / Standard / Comprehensive)
-        // follow no external standard; link the tool's own documentation.
-        Some(concat!(env!("CARGO_PKG_REPOSITORY"), "#validate"))
-    } else if rule_id.starts_with("SBOM-CNSA2-") {
-        Some(
-            "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
-        )
-    } else if rule_id.starts_with("SBOM-CSAF-") {
-        Some("https://docs.oasis-open.org/csaf/csaf/v2.0/csaf-v2.0.html")
-    } else if rule_id.starts_with("SBOM-AIBOM-") {
-        Some("https://cyclonedx.org/capabilities/mlbom/")
-    } else if rule_id.starts_with("SBOM-AIACT-") {
-        Some("https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng")
-    } else if rule_id.starts_with("SBOM-BSIAI-") {
-        Some(
-            "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-        )
-    } else if rule_id.starts_with("SBOM-CISA2026-") {
-        // 2026 Minimum Elements for an SBOM — CISA's resource page is the
-        // stable handle (the PDF path under /sites/default/files churns).
-        Some(
-            "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
-        )
-    } else if rule_id.starts_with("SBOM-PCI-") {
-        // PCI DSS v4.0.1 is license-gated; the document library is the
-        // stable public home.
-        Some("https://www.pcisecuritystandards.org/document_library/")
-    } else if rule_id.starts_with("SBOM-FSCT-") {
-        // CISA Framing Software Component Transparency (3rd ed., 2024).
-        Some(
-            "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
-        )
-    } else {
-        None
-    }
 }
 
 /// Compact, hyphen-safe label for a `StandardKind` used in SARIF
@@ -1120,223 +1334,6 @@ fn sarif_standard_label(kind: crate::quality::StandardKind) -> &'static str {
     }
 }
 
-fn get_sarif_rules() -> Vec<SarifRule> {
-    let mut rules = vec![
-        SarifRule {
-            id: "SBOM-TOOLS-001".to_string(),
-            name: "ComponentAdded".to_string(),
-            short_description: SarifMessage {
-                text: "A new component was added to the SBOM".to_string(),
-            },
-            default_configuration: SarifConfiguration {
-                level: SarifLevel::Note,
-            },
-        },
-        SarifRule {
-            id: "SBOM-TOOLS-002".to_string(),
-            name: "ComponentRemoved".to_string(),
-            short_description: SarifMessage {
-                text: "A component was removed from the SBOM".to_string(),
-            },
-            default_configuration: SarifConfiguration {
-                level: SarifLevel::Warning,
-            },
-        },
-        SarifRule {
-            id: "SBOM-TOOLS-003".to_string(),
-            name: "VersionChanged".to_string(),
-            short_description: SarifMessage {
-                text: "A component version was changed".to_string(),
-            },
-            default_configuration: SarifConfiguration {
-                level: SarifLevel::Note,
-            },
-        },
-        SarifRule {
-            id: "SBOM-TOOLS-004".to_string(),
-            name: "LicenseChanged".to_string(),
-            short_description: SarifMessage {
-                text: "A license was added or changed".to_string(),
-            },
-            default_configuration: SarifConfiguration {
-                level: SarifLevel::Warning,
-            },
-        },
-        SarifRule {
-            id: "SBOM-TOOLS-005".to_string(),
-            name: "VulnerabilityIntroduced".to_string(),
-            short_description: SarifMessage {
-                text: "A new vulnerability was introduced".to_string(),
-            },
-            default_configuration: SarifConfiguration {
-                level: SarifLevel::Error,
-            },
-        },
-        SarifRule {
-            id: "SBOM-TOOLS-006".to_string(),
-            name: "VulnerabilityResolved".to_string(),
-            short_description: SarifMessage {
-                text: "A vulnerability was resolved".to_string(),
-            },
-            default_configuration: SarifConfiguration {
-                level: SarifLevel::Note,
-            },
-        },
-        SarifRule {
-            id: "SBOM-TOOLS-007".to_string(),
-            name: "SupplierChanged".to_string(),
-            short_description: SarifMessage {
-                text: "A component supplier was changed".to_string(),
-            },
-            default_configuration: SarifConfiguration {
-                level: SarifLevel::Warning,
-            },
-        },
-        SarifRule {
-            id: "SBOM-TOOLS-008".to_string(),
-            name: "MetadataChanged".to_string(),
-            short_description: SarifMessage {
-                text: "A document-level metadata field was changed".to_string(),
-            },
-            default_configuration: SarifConfiguration {
-                level: SarifLevel::Note,
-            },
-        },
-        SarifRule {
-            id: "SBOM-EOL-001".to_string(),
-            name: "ComponentEndOfLife".to_string(),
-            short_description: SarifMessage {
-                text: "A component has reached end-of-life".to_string(),
-            },
-            default_configuration: SarifConfiguration {
-                level: SarifLevel::Error,
-            },
-        },
-        SarifRule {
-            id: "SBOM-EOL-002".to_string(),
-            name: "ComponentApproachingEol".to_string(),
-            short_description: SarifMessage {
-                text: "A component is approaching end-of-life".to_string(),
-            },
-            default_configuration: SarifConfiguration {
-                level: SarifLevel::Warning,
-            },
-        },
-    ];
-    rules.extend(get_sarif_compliance_rules());
-    rules
-}
-
-fn get_sarif_view_rules() -> Vec<SarifRule> {
-    let mut rules = vec![SarifRule {
-        id: "SBOM-VIEW-001".to_string(),
-        name: "VulnerabilityPresent".to_string(),
-        short_description: SarifMessage {
-            text: "A vulnerability is present in a component".to_string(),
-        },
-        default_configuration: SarifConfiguration {
-            level: SarifLevel::Warning,
-        },
-    }];
-    rules.extend(get_sarif_compliance_rules());
-    rules
-}
-
-/// Get the appropriate compliance rules based on the standard being checked.
-fn get_sarif_rules_for_standard(level: ComplianceLevel) -> Vec<SarifRule> {
-    match level {
-        ComplianceLevel::NtiaMinimum => get_sarif_ntia_rules(),
-        ComplianceLevel::FdaMedicalDevice => get_sarif_fda_rules(),
-        ComplianceLevel::NistSsdf => get_sarif_ssdf_rules(),
-        ComplianceLevel::Eo14028 => get_sarif_eo14028_rules(),
-        ComplianceLevel::Cnsa2 => get_sarif_cnsa2_rules(),
-        ComplianceLevel::NistPqc => get_sarif_pqc_rules(),
-        ComplianceLevel::Cisa2026 => get_sarif_cisa2026_rules(),
-        ComplianceLevel::PciDss632 => get_sarif_pcidss_rules(),
-        ComplianceLevel::Fsct => get_sarif_fsct_rules(),
-        // The remaining levels (Minimum/Standard/Comprehensive, the CRA
-        // profiles, BSI TR-03183-2, EUCC, and the AI readiness profiles)
-        // genuinely emit rules from the shared CRA-family catalogue.
-        _ => get_sarif_compliance_rules(),
-    }
-}
-
-fn get_sarif_ntia_rules() -> Vec<SarifRule> {
-    registry_sarif_rules(crate::quality::NTIA_SARIF_RULE_IDS)
-}
-
-fn get_sarif_fda_rules() -> Vec<SarifRule> {
-    registry_sarif_rules(crate::quality::FDA_SARIF_RULE_IDS)
-}
-
-fn get_sarif_ssdf_rules() -> Vec<SarifRule> {
-    registry_sarif_rules(crate::quality::SSDF_SARIF_RULE_IDS)
-}
-
-fn get_sarif_eo14028_rules() -> Vec<SarifRule> {
-    registry_sarif_rules(crate::quality::EO14028_SARIF_RULE_IDS)
-}
-
-fn get_sarif_cnsa2_rules() -> Vec<SarifRule> {
-    registry_sarif_rules(crate::quality::CNSA2_SARIF_RULE_IDS)
-}
-
-fn get_sarif_pqc_rules() -> Vec<SarifRule> {
-    registry_sarif_rules(crate::quality::PQC_SARIF_RULE_IDS)
-}
-
-fn get_sarif_cisa2026_rules() -> Vec<SarifRule> {
-    registry_sarif_rules(crate::quality::CISA2026_SARIF_RULE_IDS)
-}
-
-fn get_sarif_pcidss_rules() -> Vec<SarifRule> {
-    registry_sarif_rules(crate::quality::PCIDSS_SARIF_RULE_IDS)
-}
-
-fn get_sarif_fsct_rules() -> Vec<SarifRule> {
-    registry_sarif_rules(crate::quality::FSCT_SARIF_RULE_IDS)
-}
-
-fn get_sarif_compliance_rules() -> Vec<SarifRule> {
-    registry_sarif_rules(crate::quality::COMPLIANCE_SARIF_RULE_IDS)
-}
-
-/// Render SARIF reportingDescriptors for a curated slice of registry rule
-/// ids. The registry — not a hand-maintained table — is the single source of
-/// truth for descriptor id, name, shortDescription, and default level, so
-/// the catalogue can no longer drift from `rule_meta`. Slice ids must be
-/// self-descriptors (`rule_meta(id).sarif_id == id`); this is enforced by
-/// `sarif_rule_slices_are_self_descriptors` in the registry tests.
-fn registry_sarif_rules(ids: &[&str]) -> Vec<SarifRule> {
-    ids.iter()
-        .filter_map(|id| {
-            let Some(meta) = rule_meta(id) else {
-                debug_assert!(false, "SARIF rule slice id {id} missing from registry");
-                return None;
-            };
-            debug_assert_eq!(
-                meta.sarif_id, *id,
-                "SARIF rule slices must list self-descriptor ids"
-            );
-            Some(registry_sarif_rule((*id).to_string(), meta))
-        })
-        .collect()
-}
-
-/// Build one SARIF reportingDescriptor from its registry metadata.
-fn registry_sarif_rule(id: String, meta: crate::quality::RuleMeta) -> SarifRule {
-    SarifRule {
-        id,
-        name: meta.name.to_string(),
-        short_description: SarifMessage {
-            text: meta.short_description.to_string(),
-        },
-        default_configuration: SarifConfiguration {
-            level: violation_severity_to_level(meta.default_severity),
-        },
-    }
-}
-
 // SARIF structures
 
 #[derive(Serialize)]
@@ -1352,9 +1349,45 @@ struct SarifReport {
 #[serde(rename_all = "camelCase")]
 struct SarifRun {
     tool: SarifTool,
+    /// Present only when results were omitted (see [`cap_results`]).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    invocations: Option<Vec<SarifInvocation>>,
+    automation_details: SarifAutomationDetails,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    original_uri_base_ids: Option<BTreeMap<&'static str, SarifBaseDescription>>,
     results: Vec<SarifResult>,
     #[serde(skip_serializing_if = "Option::is_none")]
     properties: Option<SarifRunProperties>,
+}
+
+/// `run.invocations[]`: the run succeeded, and its notifications say what
+/// it left out.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SarifInvocation {
+    execution_successful: bool,
+    tool_execution_notifications: Vec<SarifNotification>,
+}
+
+/// One `toolExecutionNotifications` entry.
+#[derive(Serialize)]
+struct SarifNotification {
+    level: SarifLevel,
+    message: SarifMessage,
+}
+
+/// `run.automationDetails`: `id` is `sbom-tools/<category>/`.
+#[derive(Serialize)]
+struct SarifAutomationDetails {
+    id: String,
+}
+
+/// An `originalUriBaseIds` entry. The base's absolute URI is left out: it
+/// would put a local path (and user name) into the log, and GitHub resolves
+/// relative URIs against the repository root without it.
+#[derive(Serialize)]
+struct SarifBaseDescription {
+    description: SarifMessage,
 }
 
 /// Run-level properties shared by every sbom-tools SARIF surface (`validate`
@@ -1451,40 +1484,7 @@ struct SarifDriver {
     name: String,
     version: String,
     information_uri: String,
-    rules: Vec<SarifRuleWithUri>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct SarifRule {
-    id: String,
-    name: String,
-    short_description: SarifMessage,
-    default_configuration: SarifConfiguration,
-}
-
-/// SarifRule plus a derived `helpUri` (CRA-P5.1). Wraps the existing rule
-/// definitions at serialization time so we don't need to thread the URL
-/// through every call site that constructs a `SarifRule`. Computed via
-/// `rule_help_uri()` based on the rule-ID prefix.
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct SarifRuleWithUri {
-    #[serde(flatten)]
-    inner: SarifRule,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    help_uri: Option<&'static str>,
-}
-
-impl SarifRuleWithUri {
-    fn wrap(inner: SarifRule) -> Self {
-        let help_uri = rule_help_uri(&inner.id);
-        Self { inner, help_uri }
-    }
-
-    fn wrap_all(rules: Vec<SarifRule>) -> Vec<Self> {
-        rules.into_iter().map(Self::wrap).collect()
-    }
+    rules: Vec<SarifRule>,
 }
 
 #[derive(Serialize)]
@@ -1497,6 +1497,9 @@ struct SarifConfiguration {
 #[serde(rename_all = "camelCase")]
 struct SarifResult {
     rule_id: String,
+    /// Index of the rule in the run's `rules`; set by [`render_log`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rule_index: Option<usize>,
     /// The result's kind; omitted for a failed check (SARIF's default
     /// `fail`). Only a passed check under `--sarif-include-passes` sets it.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1504,16 +1507,50 @@ struct SarifResult {
     level: SarifLevel,
     message: SarifMessage,
     locations: Vec<SarifLocation>,
-    /// Standard references (CRA Article, prEN 40000-1-3 ID, BSI section, …)
-    /// Surfaced in `properties.standardIds` so downstream GRC/CI tooling can
-    /// map a finding to the exact harmonised-standard clause.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    properties: Option<SarifResultProperties>,
+    partial_fingerprints: SarifFingerprints,
+    /// Finding identity, standard references (CRA Article, prEN 40000-1-3
+    /// ID, BSI section, …) and the other per-result data.
+    properties: SarifResultProperties,
+}
+
+/// `result.partialFingerprints`. Both keys derive from the finding identity
+/// key, never from the SBOM text, so an alert survives the SBOM's lines
+/// moving.
+#[derive(Serialize)]
+struct SarifFingerprints {
+    /// The full SHA-256 hex of the finding identity key.
+    #[serde(rename = "sbomToolsFinding/v1")]
+    finding: String,
+    /// GitHub code scanning matches alerts on this key alone, and its
+    /// upload action fills it from the text of the result's line when it is
+    /// absent — which re-keys alerts whenever that text or its neighbours
+    /// change, and puts every result of a minified SBOM on one line. Setting
+    /// it from the identity keeps alerts stable; the value has the action's
+    /// shape (16 hex digits, `:1`).
+    #[serde(rename = "primaryLocationLineHash")]
+    primary_location_line_hash: String,
+}
+
+impl SarifFingerprints {
+    fn new(fingerprint: String) -> Self {
+        let primary_location_line_hash = format!("{}:1", &fingerprint[..16]);
+        Self {
+            finding: fingerprint,
+            primary_location_line_hash,
+        }
+    }
 }
 
 #[derive(Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 struct SarifResultProperties {
+    /// The finding identity key (`quality::finding_key` for compliance
+    /// results; the same shape with a surface name — `diff`, `view`,
+    /// `quality`, `ai-readiness` — in place of the standard otherwise).
+    finding_key: String,
+    /// `sbomtools:v1:` + the first 16 hex digits of the key's SHA-256
+    /// (`quality::finding_id`).
+    finding_id: String,
     /// Standard reference IDs in the form `<standard>:<id>`
     /// (e.g., `prEN-40000-1-3:PRE-7-RQ-07`, `CRA:Art. 13(8)`).
     /// Plural to match SARIF `properties` extensibility convention.
@@ -1554,25 +1591,52 @@ struct SarifMessage {
     text: String,
 }
 
+impl SarifMessage {
+    fn new(text: impl Into<String>) -> Self {
+        Self { text: text.into() }
+    }
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SarifLocation {
+    #[serde(skip_serializing_if = "Option::is_none")]
     physical_location: Option<SarifPhysicalLocation>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    logical_locations: Vec<SarifLogicalLocation>,
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SarifPhysicalLocation {
-    artifact_location: SarifArtifactLocation,
+    artifact_location: SarifArtifactLocationJson,
+    region: SarifRegion,
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct SarifArtifactLocation {
+struct SarifArtifactLocationJson {
     uri: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    uri_base_id: Option<String>,
 }
 
-#[derive(Serialize, Clone, Copy, Debug)]
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SarifRegion {
+    start_line: u32,
+}
+
+/// A top-level logical location: SARIF requires a top-level location's
+/// `fullyQualifiedName`, when present, to equal its `name`, so only `name`
+/// is written.
+#[derive(Serialize)]
+struct SarifLogicalLocation {
+    name: String,
+    kind: &'static str,
+}
+
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 enum SarifLevel {
     /// The level of a result whose kind is not `fail` (SARIF 2.1.0
@@ -1592,66 +1656,171 @@ enum SarifKind {
 }
 
 #[cfg(test)]
-mod registry_consistency_tests {
+mod tests {
     use super::*;
-    use crate::quality::rule_meta;
 
-    fn expected_level(sev: crate::quality::ViolationSeverity) -> SarifLevel {
-        use crate::quality::ViolationSeverity as V;
-        match sev {
-            V::Error => SarifLevel::Error,
-            V::Warning => SarifLevel::Warning,
-            V::Info => SarifLevel::Note,
+    #[test]
+    fn repeated_keys_are_numbered() {
+        let mut keys = KeyBook::default();
+        assert_eq!(
+            keys.claim("view", "SBOM-VIEW-001", Some("CVE-1"), Some("pkg:a")),
+            "view|SBOM-VIEW-001:CVE-1|pkg:a"
+        );
+        assert_eq!(
+            keys.claim("view", "SBOM-VIEW-001", Some("CVE-1"), Some("pkg:a")),
+            "view|SBOM-VIEW-001:CVE-1#2|pkg:a"
+        );
+        assert_eq!(
+            keys.claim("diff", "SBOM-TOOLS-001", None, Some("pkg:a")),
+            "diff|SBOM-TOOLS-001|pkg:a"
+        );
+        assert_eq!(
+            keys.claim("diff", "SBOM-TOOLS-001", None, Some("pkg:a")),
+            "diff|SBOM-TOOLS-001:#2|pkg:a"
+        );
+    }
+
+    #[test]
+    fn digits_are_masked_in_recommendation_details() {
+        assert_eq!(
+            mask_digits("Fix 12 compliance error(s) to meet CRA Phase 2 requirements"),
+            "Fix # compliance error(s) to meet CRA Phase # requirements"
+        );
+        assert_eq!(mask_digits("no digits"), "no digits");
+    }
+
+    #[test]
+    fn categories_are_stable_whatever_the_order() {
+        assert_eq!(
+            standards_category(
+                [ComplianceLevel::NtiaMinimum, ComplianceLevel::Cisa2026].into_iter()
+            ),
+            "sbom-tools/cisa-2026+ntia/"
+        );
+        assert_eq!(
+            standards_category(
+                [ComplianceLevel::Cisa2026, ComplianceLevel::NtiaMinimum].into_iter()
+            ),
+            "sbom-tools/cisa-2026+ntia/"
+        );
+        assert_eq!(
+            standards_category(std::iter::empty()),
+            "sbom-tools/compliance/"
+        );
+        assert_eq!(quality_category("cra"), "sbom-tools/quality/cra/");
+    }
+
+    fn result_at(level: SarifLevel, n: usize) -> SarifResult {
+        sarif_result(
+            "SBOM-TOOLS-001",
+            level,
+            format!("result {n}"),
+            format!("test|SBOM-TOOLS-001:{n}|document"),
+            Vec::new(),
+            SarifResultProperties::default(),
+        )
+    }
+
+    fn messages(results: &[SarifResult]) -> Vec<&str> {
+        results.iter().map(|r| r.message.text.as_str()).collect()
+    }
+
+    #[test]
+    fn the_cap_keeps_the_most_severe_results_in_report_order() {
+        use SarifLevel::{Error, None, Note, Warning};
+        let levels = [Note, Error, None, Warning, Error, Note, Warning, Error];
+        let run = || -> Vec<SarifResult> {
+            levels
+                .iter()
+                .enumerate()
+                .map(|(n, level)| result_at(*level, n))
+                .collect()
+        };
+
+        // Room for every error and one warning: the first warning in
+        // report order, and the kept results stay in report order.
+        let mut results = run();
+        assert_eq!(cap_results(&mut results, 4), 4);
+        assert_eq!(
+            messages(&results),
+            ["result 1", "result 3", "result 4", "result 7"]
+        );
+
+        // Room for errors, warnings and one note; `none` goes first.
+        let mut results = run();
+        assert_eq!(cap_results(&mut results, 6), 2);
+        assert_eq!(
+            messages(&results),
+            [
+                "result 0", "result 1", "result 3", "result 4", "result 6", "result 7"
+            ]
+        );
+
+        // No cap, or a cap the run fits in, keeps everything.
+        for cap in [0, 8, 9] {
+            let mut results = run();
+            assert_eq!(cap_results(&mut results, cap), 0, "cap {cap}");
+            assert_eq!(results.len(), 8, "cap {cap}");
         }
     }
 
-    /// The registry's `default_severity` and the hand-maintained SARIF rule
-    /// catalogues must agree — the registry is documentation, the catalogue
-    /// is what GitHub code scanning displays, and they had already drifted
-    /// apart once (audit finding: registry.rs default_severity dead + wrong).
-    /// Rules whose id is not a registry key (e.g. SBOM-TOOLS-* change
-    /// tracking) are exempt, as are registry keys whose sarif_id differs
-    /// from the key (aliased identities).
     #[test]
-    fn registry_severity_matches_sarif_catalogue() {
-        let mut tables: Vec<(&str, Vec<SarifRule>)> = vec![
-            ("ntia", get_sarif_ntia_rules()),
-            ("fda", get_sarif_fda_rules()),
-            ("ssdf", get_sarif_ssdf_rules()),
-            ("eo14028", get_sarif_eo14028_rules()),
-            ("cnsa2", get_sarif_cnsa2_rules()),
-            ("pqc", get_sarif_pqc_rules()),
-            ("compliance", get_sarif_compliance_rules()),
-        ];
-        let mut mismatches = Vec::new();
-        for (table_name, rules) in &mut tables {
-            for rule in rules.iter() {
-                let Some(meta) = rule_meta(&rule.id) else {
-                    continue;
-                };
-                if meta.sarif_id != rule.id {
-                    continue;
-                }
-                let expected = expected_level(meta.default_severity);
-                let actual = rule.default_configuration.level;
-                if !matches!(
-                    (&expected, &actual),
-                    (SarifLevel::Error, SarifLevel::Error)
-                        | (SarifLevel::Warning, SarifLevel::Warning)
-                        | (SarifLevel::Note, SarifLevel::Note)
-                        | (SarifLevel::None, SarifLevel::None)
-                ) {
-                    mismatches.push(format!(
-                        "{table_name}: {} registry={expected:?} catalogue={actual:?}",
-                        rule.id
-                    ));
-                }
-            }
-        }
-        assert!(
-            mismatches.is_empty(),
-            "registry default_severity and SARIF catalogue drifted:\n{}",
-            mismatches.join("\n")
+    fn a_capped_run_says_how_many_results_it_omitted() {
+        let results: Vec<SarifResult> = (0..5).map(|n| result_at(SarifLevel::Note, n)).collect();
+        let sarif = render_log(
+            "sbom-tools/test/".to_string(),
+            Vec::new(),
+            results,
+            false,
+            None,
+            2,
+        )
+        .expect("serializes");
+        let doc: serde_json::Value = serde_json::from_str(&sarif).expect("JSON");
+        let run = &doc["runs"][0];
+        assert_eq!(run["results"].as_array().map(Vec::len), Some(2));
+        let invocation = &run["invocations"][0];
+        assert_eq!(invocation["executionSuccessful"], true);
+        let notification = &invocation["toolExecutionNotifications"][0];
+        assert_eq!(notification["level"], "warning");
+        let text = notification["message"]["text"].as_str().expect("text");
+        assert!(text.starts_with("3 of 5 results were omitted"), "{text}");
+        assert!(text.contains("-o json"), "{text}");
+
+        // An uncapped run has no invocations.
+        let results: Vec<SarifResult> = (0..5).map(|n| result_at(SarifLevel::Note, n)).collect();
+        let sarif = render_log(
+            "sbom-tools/test/".to_string(),
+            Vec::new(),
+            results,
+            false,
+            None,
+            DEFAULT_SARIF_MAX_RESULTS,
+        )
+        .expect("serializes");
+        assert!(!sarif.contains("invocations"), "{sarif}");
+    }
+
+    #[test]
+    fn a_given_category_replaces_the_default_and_ends_in_a_slash() {
+        let default = || "sbom-tools/cra/".to_string();
+        assert_eq!(automation_id(None, default()), "sbom-tools/cra/");
+        assert_eq!(
+            automation_id(Some("services/api/cra"), default()),
+            "services/api/cra/"
+        );
+        assert_eq!(automation_id(Some("sbom-api/"), default()), "sbom-api/");
+        assert_eq!(automation_id(Some(" "), default()), "sbom-tools/cra/");
+    }
+
+    #[test]
+    fn fingerprints_derive_from_the_key() {
+        let key = "ntia|SBOM-NTIA-AUTHOR|document";
+        let fingerprints = SarifFingerprints::new(finding_fingerprint(key));
+        assert_eq!(fingerprints.finding, finding_fingerprint(key));
+        assert_eq!(
+            fingerprints.primary_location_line_hash,
+            "60072ae05d1ef4b8:1"
         );
     }
 }
@@ -1702,12 +1871,10 @@ mod passed_check_tests {
     #[test]
     fn include_passes_emits_kind_pass_at_level_none() {
         let result = pqc_with_one_pass();
-        let options = ComplianceSarifOptions {
-            include_passes: true,
-        };
+        let options = SarifOptions::new().with_passes(true);
         for sarif in [
-            generate_compliance_sarif_with(&result, options).expect("serializes"),
-            generate_multi_compliance_sarif_with(std::slice::from_ref(&result), options)
+            generate_compliance_sarif_with(&result, &options).expect("serializes"),
+            generate_multi_compliance_sarif_with(std::slice::from_ref(&result), &options)
                 .expect("serializes"),
         ] {
             let results = results(&sarif);
@@ -1759,13 +1926,8 @@ mod passed_check_tests {
                 finding_detail: None,
             }],
         );
-        let sarif = generate_compliance_sarif_with(
-            &result,
-            ComplianceSarifOptions {
-                include_passes: true,
-            },
-        )
-        .expect("serializes");
+        let sarif = generate_compliance_sarif_with(&result, &SarifOptions::new().with_passes(true))
+            .expect("serializes");
         let results = results(&sarif);
         assert_eq!(results.len(), 1);
         assert!(results[0].get("kind").is_none(), "{sarif}");

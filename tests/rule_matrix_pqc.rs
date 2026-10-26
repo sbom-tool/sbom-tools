@@ -374,12 +374,6 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 );
             }),
         ),
-        RuleEntry::skipped(
-            "SBOM-PQC-GENERAL",
-            "registry catch-all for the NIST PQC family: no check site in \
-             check_nist_pqc emits it (it is the SARIF re-bucketing target \
-             only); it cannot fire from document content",
-        ),
     ];
 
     run_matrix(LEVEL, PQC_SARIF_RULE_IDS, &entries);

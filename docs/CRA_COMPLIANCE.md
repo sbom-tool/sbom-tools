@@ -396,10 +396,11 @@ stems also tried (`app.cdx.json` → `app.cra.json` works).
   string → `(StandardKind, id)` mapping. Drives SARIF
   `properties.standardIds`.
 - `StandardKind::canonical_help_uri()` in `src/quality/compliance/mod.rs` —
-  `(StandardKind, id)` → URL. Drives SARIF `helpUri` and
-  `properties.standardHelpUris`.
-- `rule_help_uri()` in `src/reports/sarif.rs` — rule-ID prefix → URL
-  for `runs[].tool.driver.rules[].helpUri`.
+  `(StandardKind, id)` → URL. Drives SARIF `helpUri` (a rule links the
+  first of its references that has a URL) and `properties.standardHelpUris`.
+- `rule_help_uri()` in `src/reports/sarif/rules.rs` — rule-ID prefix → URL,
+  the `runs[].tool.driver.rules[].helpUri` of a rule none of whose
+  references has a URL, and of the rules outside the registry.
 - `ComplianceChecker::class_severity()` in `src/quality/compliance/mod.rs` —
   P3.2 calibration table.
 - `cli::run_cra_docs` in `src/cli/cra_docs.rs` — Annex V DoC + Annex VII tech-doc dossier

@@ -346,6 +346,11 @@ On the Compliance tab the export is routed to the compliance exporter. In the
 multi-comparison modes only JSON is supported; other picks close the dialog and
 report an explanatory "Export failed" status instead of writing a file.
 
+A SARIF export carries no physical location: the TUI does not keep the SBOM
+file, so its results name components only logically, and GitHub code scanning
+drops them. Produce SARIF for code scanning with the CLI (`sbom-tools validate
+… -o sarif`); see [compliance-output.md](compliance-output.md#sarif).
+
 ### Color legend (`l`)
 
 Any key closes it, exactly as its footer promises. Diff mode only — it is not

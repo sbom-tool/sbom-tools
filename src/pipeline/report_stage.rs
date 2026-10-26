@@ -25,6 +25,19 @@ pub fn output_report(
     old_sbom: &NormalizedSbom,
     new_sbom: &NormalizedSbom,
 ) -> Result<()> {
+    output_report_with_sarif(config, result, old_sbom, new_sbom, None)
+}
+
+/// [`output_report`] with the new SBOM file `-o sarif` results point into
+/// (a diff reports into the new SBOM only). Without it, SARIF results carry
+/// no physical location.
+pub fn output_report_with_sarif(
+    config: &DiffConfig,
+    result: &DiffResult,
+    old_sbom: &NormalizedSbom,
+    new_sbom: &NormalizedSbom,
+    sarif: Option<crate::reports::SarifArtifact>,
+) -> Result<()> {
     let output_target = OutputTarget::from_option(config.output.file.clone());
     let effective_output = auto_detect_format(config.output.format, &output_target);
 
@@ -44,16 +57,23 @@ pub fn output_report(
     // Each side resolves its own CRA sidecar (auto-discovered next to that
     // SBOM), matching the TUI path in `cli/diff.rs`, so `diff -o json|md|html|
     // sarif` renders the same sidecar-driven verdicts as the interactive TUI.
+    // SARIF reports into the new SBOM only, so it needs no old-side
+    // compliance.
     let (old_cra, new_cra) = if !use_streaming && format_uses_compliance(effective_output) {
+        let old_cra = if effective_output == ReportFormat::Sarif {
+            None
+        } else {
+            Some(cra_phase2_check(&config.paths.old, old_sbom)?)
+        };
         (
-            Some(cra_phase2_check(&config.paths.old, old_sbom)?),
+            old_cra,
             Some(cra_phase2_check(&config.paths.new, new_sbom)?),
         )
     } else {
         (None, None)
     };
 
-    let report_config = ReportConfig {
+    let mut report_config = ReportConfig {
         report_types: vec![config.output.report_types],
         only_changes: config.filtering.only_changes,
         min_severity: config
@@ -68,8 +88,12 @@ pub fn output_report(
         },
         old_cra_compliance: old_cra,
         new_cra_compliance: new_cra,
+        sarif: config.output.sarif_options(),
         ..Default::default()
     };
+    if let Some(new_artifact) = sarif {
+        report_config.sarif = report_config.sarif.with_artifact(new_artifact);
+    }
 
     if use_streaming {
         if !config.behavior.quiet {
@@ -133,7 +157,7 @@ fn cra_phase2_check(
 /// Whether a report format renders the pre-computed CRA compliance results.
 ///
 /// Only Markdown, HTML, non-streaming JSON, and SARIF read
-/// `ReportConfig::{old,new}_cra_compliance`; every other format
+/// `ReportConfig::{old,new}_cra_compliance` (SARIF only the new side); every other format
 /// (summary/table/csv/side-by-side/ndjson/streaming-JSON, plus TUI/auto which
 /// don't reach this stage) ignores them, so pre-computing compliance for those
 /// is wasted work. Consuming reporters fall back to computing compliance

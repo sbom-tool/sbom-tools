@@ -294,7 +294,7 @@ fn fsct_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.component_mut("liba").licenses.clear()),
             base(),
         ),
-        RuleEntry::key_skipped(
+        RuleEntry::skipped(
             "SBOM-FSCT-LICENSE-CONCLUDED",
             "the concluded-license prong of §2.2.2.7 is evidence-gated to SPDX \
              (PackageLicenseConcluded; the CycloneDX licenses[].acknowledgement field is \
@@ -357,13 +357,6 @@ fn fsct_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "signature without a value",
             Sev::Info,
             broken(|s| s.signature = Some(("ES256".to_string(), String::new()))),
-        ),
-        RuleEntry::skipped(
-            "SBOM-FSCT-GENERAL",
-            "registry catch-all for the FSCT family: no check site in \
-             check_fsct emits it (registry.rs keeps it so the SARIF rule \
-             catalogue mirrors the slice); it cannot fire from document \
-             content",
         ),
     ];
 
@@ -732,8 +725,8 @@ fn fsct_dynamic_deps_is_spdx_gated_with_firing_and_silent_states() {
 
 #[test]
 fn fsct_license_concluded_is_spdx_gated_with_firing_and_silent_states() {
-    // SBOM-FSCT-LICENSE-CONCLUDED shares the LICENSE-ALL SARIF rule, so the
-    // findings are told apart by their key.
+    // SBOM-FSCT-LICENSE-CONCLUDED is a rule of its own beside LICENSE-ALL
+    // (the two shared one SARIF rule until v0.4.0).
     let concluded = |result: &ComplianceResult| -> Vec<Sev> {
         result
             .violations

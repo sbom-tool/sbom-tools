@@ -31,7 +31,7 @@ use sbom_tools::quality::{
     ViolationSeverity, all_rule_ids, rule_kind, rule_meta,
 };
 use sbom_tools::reports::{
-    ComplianceSarifOptions, generate_compliance_sarif, generate_compliance_sarif_with,
+    SarifOptions, generate_compliance_sarif, generate_compliance_sarif_with,
 };
 use serde_json::Value;
 
@@ -272,13 +272,9 @@ fn cbom_quantum_ready_reports_no_info_and_eight_passes() {
         // No SARIF result describes a pass, unless asked to.
         let plain = generate_compliance_sarif(&result).expect("SARIF");
         assert!(sarif_results(&plain).is_empty(), "{rel}: {plain}");
-        let with_passes = generate_compliance_sarif_with(
-            &result,
-            ComplianceSarifOptions {
-                include_passes: true,
-            },
-        )
-        .expect("SARIF");
+        let with_passes =
+            generate_compliance_sarif_with(&result, &SarifOptions::new().with_passes(true))
+                .expect("SARIF");
         let passes = sarif_results(&with_passes);
         assert_eq!(passes.len(), 8, "{rel}");
         assert!(

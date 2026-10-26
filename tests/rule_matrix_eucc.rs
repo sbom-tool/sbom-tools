@@ -2,9 +2,8 @@
 //! (Reg. (EU) 2024/482, reference-only profile).
 //!
 //! EUCC shares the CRA-family `COMPLIANCE_SARIF_RULE_IDS` catalogue; its
-//! universe is that slice's `SBOM-EUCC-*` ids plus the slice-less family
-//! catch-all `SBOM-EUCC-GENERAL`. Every id gets a firing fixture and a
-//! silent fixture (real CycloneDX JSON through the real parser, with the
+//! universe is that slice's `SBOM-EUCC-*` ids. Every id gets a firing
+//! fixture and a silent fixture (real CycloneDX JSON through the real parser, with the
 //! evidence fields in an attached CRA sidecar), or an explicit
 //! skip-with-reason.
 //!
@@ -29,14 +28,12 @@ use sbom_tools::quality::{
 
 const LEVEL: ComplianceLevel = ComplianceLevel::EuccSubstantial;
 
-/// The EUCC rules of the shared CRA-family SARIF catalogue, plus the
-/// slice-less family catch-all.
+/// The EUCC rules of the shared CRA-family SARIF catalogue.
 fn eucc_universe() -> Vec<&'static str> {
     COMPLIANCE_SARIF_RULE_IDS
         .iter()
         .copied()
         .filter(|id| id.starts_with("SBOM-EUCC-"))
-        .chain(std::iter::once("SBOM-EUCC-GENERAL"))
         .collect()
 }
 
@@ -214,12 +211,6 @@ fn eucc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     )];
                 }),
             ),
-        RuleEntry::skipped(
-            "SBOM-EUCC-GENERAL",
-            "registry catch-all for the EUCC family: no check site in \
-             check_eucc_substantial emits it (it is the SARIF re-bucketing \
-             target only); it cannot fire from document content",
-        ),
     ];
 
     run_matrix(LEVEL, &eucc_universe(), &entries);

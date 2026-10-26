@@ -15,21 +15,23 @@ use crate::model::{DocumentMetadata, SbomFormat};
 pub struct RuleMeta {
     /// Externally-visible SARIF rule ID (e.g., `SBOM-CRA-MACHINE-READABLE`).
     /// GitHub code scanning dedups on this value, so it must stay stable.
+    ///
+    /// Every registered key is its own SARIF rule: `sarif_id` equals the key
+    /// (`every_rule_is_its_own_sarif_rule` checks it), so each check has
+    /// help text of its own. Until v0.4.0 dozens of keys shared a bucket
+    /// rule such as `SBOM-QUALITY-GENERAL` or `SBOM-CRA-ANNEX-I`.
     pub sarif_id: &'static str,
-    /// PascalCase SARIF `reportingDescriptor.name` for the externally-visible
-    /// rule identified by [`RuleMeta::sarif_id`]. Internal keys that alias to
-    /// a shared SARIF rule (key != `sarif_id`) carry the canonical
-    /// descriptor's name, so every alias renders identically.
+    /// PascalCase SARIF `reportingDescriptor.name` of the rule. Unique
+    /// across the registry.
     pub name: &'static str,
-    /// SARIF `reportingDescriptor.shortDescription` text for the
-    /// externally-visible rule. Like [`RuleMeta::name`], aliased keys share
-    /// the canonical descriptor's text.
+    /// SARIF `reportingDescriptor.shortDescription` text of the rule: what
+    /// the check looks for. Unique across the registry.
     pub short_description: &'static str,
     /// Documentation-default severity for the rule. Push sites may still
     /// escalate/relax the concrete [`Violation::severity`] by product class or
     /// CRA phase. The SARIF rule catalogue is generated from this value (see
     /// `registry_severity_matches_sarif_catalogue` in
-    /// tests/sarif_rule_catalogue_tests.rs).
+    /// src/reports/sarif/rules.rs).
     pub default_severity: ViolationSeverity,
     /// Harmonised-standard / regulation cross-references, in display order.
     pub refs: &'static [(StandardKind, &'static str)],
@@ -941,22 +943,6 @@ const ADVICE_DYNAMIC_DEPS: FormatAdvice = FormatAdvice {
     },
 };
 
-/// Hardware component producer, identifier and version (prEN 40000-1-3 [PRE-8-RQ-02]).
-const ADVICE_HARDWARE: FormatAdvice = FormatAdvice {
-    cyclonedx: FieldAdvice {
-        text: "on device, firmware and device-driver components set components[].supplier.name (or manufacturer.name), purl or cpe, and version; a dependencies[] entry links a device to its firmware.",
-        field: Some("components[].supplier.name"),
-    },
-    spdx2: FieldAdvice {
-        text: "on packages whose primaryPackagePurpose is DEVICE or FIRMWARE set packages[].supplier, a PACKAGE-MANAGER purl or SECURITY cpe23Type externalRefs[] entry, and versionInfo; a DEPENDS_ON relationship links a device to its firmware.",
-        field: Some("packages[].supplier"),
-    },
-    spdx3: FieldAdvice {
-        text: "on packages whose software_primaryPurpose is device or firmware set suppliedBy, software_packageUrl (or a cpe23 externalIdentifier[] entry) and software_packageVersion; a dependsOn Relationship links a device to its firmware.",
-        field: Some("suppliedBy"),
-    },
-};
-
 /// A device's version, or its dependency on the firmware it runs.
 const ADVICE_DEVICE_FIRMWARE: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
@@ -1075,22 +1061,6 @@ const ADVICE_UNTYPED_ML: FormatAdvice = FormatAdvice {
     },
 };
 
-/// AI model description and intended purpose (Annex IV §1).
-const ADVICE_AI_GENERAL: FormatAdvice = FormatAdvice {
-    cyclonedx: FieldAdvice {
-        text: "set components[].description or modelCard.modelParameters.architectureFamily, and modelCard.considerations.useCases[].",
-        field: Some("modelCard.modelParameters.architectureFamily"),
-    },
-    spdx2: FieldAdvice {
-        text: "no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.",
-        field: None,
-    },
-    spdx3: FieldAdvice {
-        text: "set description or ai_typeOfModel, and ai_informationAboutApplication, on the ai_AIPackage.",
-        field: Some("ai_typeOfModel"),
-    },
-};
-
 /// AI model general description.
 const ADVICE_AI_DESCRIPTION: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
@@ -1120,22 +1090,6 @@ const ADVICE_AI_PURPOSE: FormatAdvice = FormatAdvice {
     spdx3: FieldAdvice {
         text: "set ai_informationAboutApplication (or ai_domain) on the ai_AIPackage.",
         field: Some("ai_informationAboutApplication"),
-    },
-};
-
-/// Training datasets and their sensitivity (Annex IV §2(d)).
-const ADVICE_AI_2D: FormatAdvice = FormatAdvice {
-    cyclonedx: FieldAdvice {
-        text: "list modelCard.modelParameters.datasets[] entries with a ref to each data component, and set data[].sensitiveData[] on each data component.",
-        field: Some("modelCard.modelParameters.datasets[]"),
-    },
-    spdx2: FieldAdvice {
-        text: "no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.",
-        field: None,
-    },
-    spdx3: FieldAdvice {
-        text: "add a trainedOn Relationship from the ai_AIPackage to each dataset_DatasetPackage, and set dataset_confidentialityLevel on each dataset.",
-        field: Some("trainedOn"),
     },
 };
 
@@ -1409,9 +1363,9 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
     let meta = match rule_id {
         // ---- CRA Articles ------------------------------------------------
         "SBOM-CRA-ART-13-2" => RuleMeta {
-            sarif_id: "SBOM-CRA-GENERAL",
-            name: "CraGeneralRequirement",
-            short_description: "CRA general SBOM readiness requirement",
+            sarif_id: "SBOM-CRA-ART-13-2",
+            name: "CraRiskAssessment",
+            short_description: "CRA Art. 13(2): Reference to the documented cybersecurity risk assessment",
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 13(2)")],
             remediation: "Reference the documented cybersecurity risk assessment Art. 13(2) requires: set riskAssessmentUrl in the CRA sidecar to its URL or document reference.",
@@ -1458,9 +1412,9 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // The SPDX 3.0 SimpleLicensing profile declaration, a document-level
         // check apart from the licence coverage above.
         "SBOM-CRA-ART-13-5-PROFILE" => RuleMeta {
-            sarif_id: "SBOM-CRA-ART-13-5",
-            name: "CraLicensedComponentTracking",
-            short_description: "CRA Art. 13(5): Third-party due diligence — license information for all components",
+            sarif_id: "SBOM-CRA-ART-13-5-PROFILE",
+            name: "CraLicensingProfileConformance",
+            short_description: "CRA Art. 13(5): SPDX 3.0 SimpleLicensing profile declared for a document that carries license data",
             default_severity: ViolationSeverity::Info,
             refs: &[(CRA, "Art. 13(5)")],
             remediation: "Declare SPDX 3.0 SimpleLicensing profile conformance when the document carries license data, so its Art. 13(5) licence evidence is conveyed completely.",
@@ -1493,25 +1447,25 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-CRA-VULN-METADATA" => RuleMeta {
             sarif_id: "SBOM-CRA-VULN-METADATA",
             name: "CraVulnerabilityMetadata",
-            short_description: "CRA Annex I Part II (4): Vulnerability severity and remediation metadata completeness",
+            short_description: "CRA Annex I Part II (4): Vulnerability entries carry a severity or CVSS score",
             default_severity: ViolationSeverity::Warning,
             refs: &[(ANNEX, "Annex I Part II (4)")],
             remediation: "Give every vulnerability entry a severity or CVSS score (Annex I Part II (4)).",
             advice: Some(&ADVICE_VULN_SEVERITY),
         },
         "SBOM-CRA-VULN-METADATA-REMEDIATION" => RuleMeta {
-            sarif_id: "SBOM-CRA-VULN-METADATA",
-            name: "CraVulnerabilityMetadata",
-            short_description: "CRA Annex I Part II (4): Vulnerability severity and remediation metadata completeness",
+            sarif_id: "SBOM-CRA-VULN-METADATA-REMEDIATION",
+            name: "CraVulnerabilityRemediationDetail",
+            short_description: "CRA Annex I Part II (4): Vulnerability remediations name a fixed version or describe the fix",
             default_severity: ViolationSeverity::Info,
             refs: &[(ANNEX, "Annex I Part II (4)")],
             remediation: "Give every vulnerability remediation a fixed version or a description of the fix (Annex I Part II (4)).",
             advice: Some(&ADVICE_VULN_REMEDIATION),
         },
         "SBOM-CRA-VULN-METADATA-PROFILE" => RuleMeta {
-            sarif_id: "SBOM-CRA-VULN-METADATA",
-            name: "CraVulnerabilityMetadata",
-            short_description: "CRA Annex I Part II (4): Vulnerability severity and remediation metadata completeness",
+            sarif_id: "SBOM-CRA-VULN-METADATA-PROFILE",
+            name: "CraSecurityProfileConformance",
+            short_description: "CRA Annex I Part II (4): SPDX 3.0 Security profile declared for a document that carries vulnerabilities",
             default_severity: ViolationSeverity::Info,
             refs: &[(ANNEX, "Annex I Part II (4)")],
             remediation: "Declare SPDX 3.0 Security profile conformance when the document carries vulnerabilities, so the vulnerability information it conveys is complete (Annex I Part II (4)).",
@@ -1549,9 +1503,9 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // Components the end-of-life data marks as no longer supported: a
         // document-level count apart from the missing support end date.
         "SBOM-CRA-ART-13-8-EOL" => RuleMeta {
-            sarif_id: "SBOM-CRA-ART-13-8",
-            name: "CraSupportPeriod",
-            short_description: "CRA Art. 13(8) / 13(19): Support period and security update end date (Annex II (7))",
+            sarif_id: "SBOM-CRA-ART-13-8-EOL",
+            name: "CraEndOfLifeComponents",
+            short_description: "CRA Art. 13(8): Components past end-of-life, which receive no more security updates",
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 13(8)")],
             remediation: "Upgrade or replace the components the end-of-life data marks as no longer supported: they receive no more security updates (Art. 13(8)).",
@@ -1586,9 +1540,9 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // six months: a document-level count apart from the missing
         // lifecycle evidence.
         "SBOM-CRA-LIFECYCLE-APPROACHING-EOL" => RuleMeta {
-            sarif_id: "SBOM-CRA-LIFECYCLE",
-            name: "CraComponentLifecycle",
-            short_description: "CRA Art. 13(8) / Annex II (7): Component lifecycle and end-of-support status",
+            sarif_id: "SBOM-CRA-LIFECYCLE-APPROACHING-EOL",
+            name: "CraApproachingEndOfLife",
+            short_description: "CRA Art. 13(8) / Annex II (7): Components reaching end-of-life within six months",
             default_severity: ViolationSeverity::Info,
             refs: &[(CRA, "Art. 13(8)"), (ANNEX, "Annex II (7)")],
             remediation: "Plan replacements for the components the end-of-life data shows reaching end-of-life within six months (Art. 13(8) / Annex II (7)).",
@@ -1668,36 +1622,36 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // important class II and critical products; the ENISA platform id
         // stays an Info.
         "SBOM-CRA-ART-14-PSIRT" => RuleMeta {
-            sarif_id: "SBOM-CRA-GENERAL",
-            name: "CraGeneralRequirement",
-            short_description: "CRA general SBOM readiness requirement",
+            sarif_id: "SBOM-CRA-ART-14-PSIRT",
+            name: "CraPsirtUrl",
+            short_description: "CRA Art. 14: Public PSIRT URL that receives external vulnerability reports",
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 14")],
             remediation: "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar.",
             advice: None,
         },
         "SBOM-CRA-ART-14-EARLY-WARNING" => RuleMeta {
-            sarif_id: "SBOM-CRA-GENERAL",
-            name: "CraGeneralRequirement",
-            short_description: "CRA general SBOM readiness requirement",
+            sarif_id: "SBOM-CRA-ART-14-EARLY-WARNING",
+            name: "CraEarlyWarningChannel",
+            short_description: "CRA Art. 14(2)(a) / 14(4)(a): Channel for the 24-hour early warning",
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 14(2)(a)"), (CRA, "Art. 14(4)(a)")],
             remediation: "Document the channel for the 24-hour early warning of an actively exploited vulnerability or a severe incident (Art. 14(2)(a) / 14(4)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar.",
             advice: None,
         },
         "SBOM-CRA-ART-14-NOTIFICATION" => RuleMeta {
-            sarif_id: "SBOM-CRA-GENERAL",
-            name: "CraGeneralRequirement",
-            short_description: "CRA general SBOM readiness requirement",
+            sarif_id: "SBOM-CRA-ART-14-NOTIFICATION",
+            name: "CraNotificationChannel",
+            short_description: "CRA Art. 14(2)(b) / 14(4)(b): Channel for the 72-hour vulnerability and incident notifications",
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 14(2)(b)"), (CRA, "Art. 14(4)(b)")],
             remediation: "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar.",
             advice: None,
         },
         "SBOM-CRA-ART-14-ENISA" => RuleMeta {
-            sarif_id: "SBOM-CRA-GENERAL",
-            name: "CraGeneralRequirement",
-            short_description: "CRA general SBOM readiness requirement",
+            sarif_id: "SBOM-CRA-ART-14-ENISA",
+            name: "CraEnisaPlatformIdentifier",
+            short_description: "CRA Art. 14(7): Manufacturer identifier on the ENISA single reporting platform",
             default_severity: ViolationSeverity::Info,
             refs: &[(CRA, "Art. 14(7)")],
             remediation: "Record the manufacturer's identifier on the ENISA single reporting platform (Art. 14(7)) once ENISA publishes it: set enisaReportingPlatformId in the CRA sidecar. This check reads only the sidecar.",
@@ -1706,43 +1660,32 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // The steward's vulnerability-handling floor is the one Art. 24
         // obligation the profile gates on: always an Error.
         "SBOM-CRA-ART-24" => RuleMeta {
-            sarif_id: "SBOM-CRA-GENERAL",
-            name: "CraGeneralRequirement",
-            short_description: "CRA general SBOM readiness requirement",
+            sarif_id: "SBOM-CRA-ART-24",
+            name: "CraStewardVulnerabilityHandling",
+            short_description: "CRA Art. 24: Open-source steward vulnerability-handling process (security contact or disclosure URL)",
             default_severity: ViolationSeverity::Error,
             refs: &[],
             remediation: "Show the open-source steward's vulnerability-handling process (Art. 24): reference a security contact or vulnerability-disclosure URL from the product component, or set psirtUrl or vulnerabilityDisclosureUrl in the CRA sidecar.",
             advice: Some(&ADVICE_SECURITY_CONTACT),
         },
         // ---- CRA Annexes -------------------------------------------------
-        // Self-descriptor for the shared SBOM-CRA-ANNEX-I SARIF rule the
-        // SBOM-CRA-ANNEX-I-* keys below alias to. Never emitted by a check
-        // site; it anchors the SARIF reportingDescriptor generated from the
-        // registry (see `COMPLIANCE_SARIF_RULE_IDS`).
-        "SBOM-CRA-ANNEX-I" => RuleMeta {
-            sarif_id: "SBOM-CRA-ANNEX-I",
-            name: "CraTechnicalDocumentation",
-            short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
-            default_severity: ViolationSeverity::Warning,
-            refs: &[(ANNEX, "Annex I")],
-            remediation: "Complete the Annex I technical documentation in the SBOM: a unique identifier (PURL, CPE, SWHID or SWID) on every component, the supplier of every direct dependency, component hashes, dependency relationships and the primary product component, plus an evidenceUrl for every Annex I Part I control the CRA sidecar claims satisfied. Each SBOM-CRA-ANNEX-I-* finding names the element it lacks.",
-            advice: None,
-        },
+        // The Annex I technical-documentation checks. They shared one SARIF
+        // rule, SBOM-CRA-ANNEX-I, until v0.4.0; each is now its own.
         // Every CRA profile (both phases and the steward) emits a missing
         // component identifier as an Error.
         "SBOM-CRA-ANNEX-I-IDENTIFIER" => RuleMeta {
-            sarif_id: "SBOM-CRA-ANNEX-I",
-            name: "CraTechnicalDocumentation",
-            short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
+            sarif_id: "SBOM-CRA-ANNEX-I-IDENTIFIER",
+            name: "CraComponentIdentifier",
+            short_description: "CRA Annex I: Unique identifier (PURL, CPE, SWHID or SWID) on every component",
             default_severity: ViolationSeverity::Error,
             refs: &[(ANNEX, "Annex I"), (PREN, "PRE-7-RQ-07")],
             remediation: "Add a PURL, CPE, SWHID or SWID to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21).",
             advice: Some(&ADVICE_IDENTIFIER),
         },
         "SBOM-CRA-ANNEX-I-TRACEABILITY" => RuleMeta {
-            sarif_id: "SBOM-CRA-ANNEX-I",
-            name: "CraTechnicalDocumentation",
-            short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
+            sarif_id: "SBOM-CRA-ANNEX-I-TRACEABILITY",
+            name: "CraPrimaryTraceability",
+            short_description: "CRA Annex I Part II (1): Primary product component traceable across updates by a PURL or CPE",
             default_severity: ViolationSeverity::Warning,
             refs: &[(ANNEX, "Annex I Part II"), (PREN, "PRE-7-RQ-07")],
             remediation: "Give the primary product component a PURL or CPE so it can be traced across updates (Annex I Part II (1)); a SWHID or SWID alone does not satisfy this check.",
@@ -1758,9 +1701,9 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             advice: Some(&ADVICE_INVENTORY),
         },
         "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN" => RuleMeta {
-            sarif_id: "SBOM-CRA-ANNEX-I",
-            name: "CraTechnicalDocumentation",
-            short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
+            sarif_id: "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
+            name: "CraDirectDependencySupplier",
+            short_description: "CRA Annex I Part II: Supplier of every direct dependency identified (PRE-7-RQ-03, mandatory)",
             default_severity: ViolationSeverity::Warning,
             refs: &[
                 (ANNEX, "Annex I Part II"),
@@ -1776,9 +1719,9 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // The transitive-dependency supplier check (recommended), a second
         // document-level finding beside the direct one.
         "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE" => RuleMeta {
-            sarif_id: "SBOM-CRA-ANNEX-I",
-            name: "CraTechnicalDocumentation",
-            short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
+            sarif_id: "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
+            name: "CraTransitiveDependencySupplier",
+            short_description: "CRA Annex I Part II: Suppliers of transitive dependencies identified (PRE-7-RQ-03, recommended)",
             default_severity: ViolationSeverity::Info,
             refs: &[
                 (ANNEX, "Annex I Part II"),
@@ -1789,18 +1732,18 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             advice: Some(&ADVICE_PRODUCER),
         },
         "SBOM-CRA-ANNEX-I-INTEGRITY" => RuleMeta {
-            sarif_id: "SBOM-CRA-ANNEX-I",
-            name: "CraTechnicalDocumentation",
-            short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
+            sarif_id: "SBOM-CRA-ANNEX-I-INTEGRITY",
+            name: "CraComponentHash",
+            short_description: "CRA Annex I Part I (2)(f): Component hashes (SHA-256 or stronger) for integrity verification",
             default_severity: ViolationSeverity::Info,
             refs: &[(ANNEX, "Annex I Part I (2)(f)")],
             remediation: "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification.",
             advice: Some(&ADVICE_HASH),
         },
         "SBOM-CRA-ANNEX-I-DEPENDENCY" => RuleMeta {
-            sarif_id: "SBOM-CRA-ANNEX-I",
-            name: "CraTechnicalDocumentation",
-            short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
+            sarif_id: "SBOM-CRA-ANNEX-I-DEPENDENCY",
+            name: "CraDependencyRelationships",
+            short_description: "CRA Annex I: Dependency relationships connect the primary component to its dependencies",
             default_severity: ViolationSeverity::Error,
             refs: &[(ANNEX, "Annex I")],
             remediation: "Add dependency relationships between components: connect the primary component to its direct dependencies and keep most components inside the dependency graph.",
@@ -1809,27 +1752,27 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // Several roots and no primary component: a document-level finding
         // beside the relationship gaps above.
         "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS" => RuleMeta {
-            sarif_id: "SBOM-CRA-ANNEX-I",
-            name: "CraTechnicalDocumentation",
-            short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
+            sarif_id: "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS",
+            name: "CraAmbiguousDependencyRoots",
+            short_description: "CRA Annex I: Primary component identified when the dependency graph has several roots",
             default_severity: ViolationSeverity::Warning,
             refs: &[(ANNEX, "Annex I")],
             remediation: "Identify the primary product component when the dependency graph has several roots, so the product's top-level dependencies are unambiguous.",
             advice: Some(&ADVICE_PRIMARY),
         },
         "SBOM-CRA-ANNEX-I-PRIMARY" => RuleMeta {
-            sarif_id: "SBOM-CRA-ANNEX-I",
-            name: "CraTechnicalDocumentation",
-            short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
+            sarif_id: "SBOM-CRA-ANNEX-I-PRIMARY",
+            name: "CraPrimaryComponent",
+            short_description: "CRA Annex I: Top-level product component identified",
             default_severity: ViolationSeverity::Warning,
             refs: &[(ANNEX, "Annex I")],
             remediation: "Identify the top-level product component.",
             advice: Some(&ADVICE_PRIMARY),
         },
         "SBOM-CRA-ANNEX-I-CONTROLS" => RuleMeta {
-            sarif_id: "SBOM-CRA-ANNEX-I",
-            name: "CraTechnicalDocumentation",
-            short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
+            sarif_id: "SBOM-CRA-ANNEX-I-CONTROLS",
+            name: "CraAnnexIControlEvidence",
+            short_description: "CRA Annex I Part I: Evidence URL for every control the CRA sidecar marks satisfied",
             default_severity: ViolationSeverity::Warning,
             refs: &[(ANNEX, "Annex I")],
             remediation: "Give every control the CRA sidecar's annexIPartIControls block marks satisfied an evidenceUrl pointing at its evidence (test report, design review, scan output), or set satisfied to false until the evidence exists.",
@@ -1849,9 +1792,9 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             advice: Some(&ADVICE_SERIAL),
         },
         "SBOM-CRA-ANNEX-IV" => RuleMeta {
-            sarif_id: "SBOM-CRA-GENERAL",
-            name: "CraGeneralRequirement",
-            short_description: "CRA general SBOM readiness requirement",
+            sarif_id: "SBOM-CRA-ANNEX-IV",
+            name: "CraEuccCertification",
+            short_description: "CRA Annex IV: EUCC (Common Criteria) certification the product class requires",
             default_severity: ViolationSeverity::Info,
             refs: &[(ANNEX, "Annex IV")],
             remediation: "Reference the EUCC (Common Criteria) certification the product class requires: set euccProtectionProfileId, euccTargetOfEvaluation, euccItsefIdentifier or an unexpired euccValidUntil in the CRA sidecar. Once euccValidUntil has passed, the certificate is expired and none of these keys counts.",
@@ -1889,50 +1832,40 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Reference the notified-body or certification-body certificate the conformity-assessment route requires — the EU-type examination certificate (Module B+C), the quality-system approval (Module H) or the EUCC certificate — as a certification external reference on the product component. An attestation reference does not count here, since it may be a self-attestation; it still serves as the Annex V Declaration of Conformity reference.",
             advice: Some(&ADVICE_CONFORMITY_EVIDENCE),
         },
-        "SBOM-CRA-PRE-8-RQ-02" => RuleMeta {
-            sarif_id: "SBOM-CRA-PRE-8-RQ-02",
-            name: "CraHardwareInventory",
-            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware components must be inventoried with producer, name, identifier, and firmware version",
-            default_severity: ViolationSeverity::Error,
-            refs: &[(PREN, "PRE-8-RQ-02")],
-            remediation: "Inventory every hardware component — device, firmware or device driver — with its producer, a unique identifier (PURL, CPE, SWHID or SWID) and, for firmware, the firmware version; give a device either a version or a dependency on its firmware component.",
-            advice: Some(&ADVICE_HARDWARE),
-        },
         // The four [PRE-8-RQ-02] checks on a hardware component, one id each
         // so several gaps on one component never share a finding key. They
-        // alias the SBOM-CRA-PRE-8-RQ-02 SARIF rule above, which no check
-        // site emits any more.
+        // shared one SARIF rule, SBOM-CRA-PRE-8-RQ-02, until v0.4.0.
         "SBOM-CRA-PRE-8-RQ-02-PRODUCER" => RuleMeta {
-            sarif_id: "SBOM-CRA-PRE-8-RQ-02",
-            name: "CraHardwareInventory",
-            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware components must be inventoried with producer, name, identifier, and firmware version",
+            sarif_id: "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
+            name: "CraHardwareProducer",
+            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Producer of every hardware component (device, firmware, driver)",
             default_severity: ViolationSeverity::Error,
             refs: &[(PREN, "PRE-8-RQ-02")],
             remediation: "Name the producer (supplier or author) of every hardware component: device, firmware or device driver.",
             advice: Some(&ADVICE_PRODUCER),
         },
         "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER" => RuleMeta {
-            sarif_id: "SBOM-CRA-PRE-8-RQ-02",
-            name: "CraHardwareInventory",
-            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware components must be inventoried with producer, name, identifier, and firmware version",
+            sarif_id: "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
+            name: "CraHardwareIdentifier",
+            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Unique identifier on every hardware component",
             default_severity: ViolationSeverity::Error,
             refs: &[(PREN, "PRE-8-RQ-02")],
             remediation: "Give every hardware component a unique identifier: a PURL, CPE, SWHID or SWID.",
             advice: Some(&ADVICE_IDENTIFIER),
         },
         "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION" => RuleMeta {
-            sarif_id: "SBOM-CRA-PRE-8-RQ-02",
-            name: "CraHardwareInventory",
-            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware components must be inventoried with producer, name, identifier, and firmware version",
+            sarif_id: "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
+            name: "CraFirmwareVersion",
+            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Version of every firmware component",
             default_severity: ViolationSeverity::Error,
             refs: &[(PREN, "PRE-8-RQ-02")],
             remediation: "Give every firmware component its firmware version.",
             advice: Some(&ADVICE_VERSION),
         },
         "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE" => RuleMeta {
-            sarif_id: "SBOM-CRA-PRE-8-RQ-02",
-            name: "CraHardwareInventory",
-            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware components must be inventoried with producer, name, identifier, and firmware version",
+            sarif_id: "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
+            name: "CraDeviceFirmware",
+            short_description: "CRA prEN 40000-1-3 [PRE-8-RQ-02]: Every device has a version or a dependency on its firmware",
             default_severity: ViolationSeverity::Warning,
             refs: &[(PREN, "PRE-8-RQ-02")],
             remediation: "Give every device a version, or a dependency on the firmware component it runs.",
@@ -1962,66 +1895,67 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             advice: Some(&ADVICE_CRA_GENERAL),
         },
         // The generic path's checks under the CRA profiles, one id each so
-        // that two of them on one subject never share a finding key. All
-        // alias the SBOM-CRA-GENERAL SARIF rule they reported as before.
+        // that two of them on one subject never share a finding key. They
+        // reported as SBOM-CRA-GENERAL until v0.4.0.
         "SBOM-CRA-CREATOR" => RuleMeta {
-            sarif_id: "SBOM-CRA-GENERAL",
-            name: "CraGeneralRequirement",
-            short_description: "CRA general SBOM readiness requirement",
+            sarif_id: "SBOM-CRA-CREATOR",
+            name: "CraSbomCreator",
+            short_description: "CRA readiness: SBOM creator identified (person, organization or tool)",
             default_severity: ViolationSeverity::Error,
             refs: &[],
             remediation: REMEDIATION_CREATOR,
             advice: Some(&ADVICE_CREATORS),
         },
         "SBOM-CRA-SERIAL" => RuleMeta {
-            sarif_id: "SBOM-CRA-GENERAL",
-            name: "CraGeneralRequirement",
-            short_description: "CRA general SBOM readiness requirement",
+            sarif_id: "SBOM-CRA-SERIAL",
+            name: "CraDocumentIdentifier",
+            short_description: "CRA readiness: SBOM carries a unique document identifier",
             default_severity: ViolationSeverity::Warning,
             refs: &[],
             remediation: REMEDIATION_SERIAL,
             advice: Some(&ADVICE_SERIAL),
         },
         "SBOM-CRA-COMPONENT-NAME" => RuleMeta {
-            sarif_id: "SBOM-CRA-GENERAL",
-            name: "CraGeneralRequirement",
-            short_description: "CRA general SBOM readiness requirement",
+            sarif_id: "SBOM-CRA-COMPONENT-NAME",
+            name: "CraComponentName",
+            short_description: "CRA readiness: Every component has a name",
             default_severity: ViolationSeverity::Error,
             refs: &[],
             remediation: REMEDIATION_COMPONENT_NAME,
             advice: Some(&ADVICE_NAME),
         },
         "SBOM-CRA-SPEC-VERSION" => RuleMeta {
-            sarif_id: "SBOM-CRA-GENERAL",
-            name: "CraGeneralRequirement",
-            short_description: "CRA general SBOM readiness requirement",
+            sarif_id: "SBOM-CRA-SPEC-VERSION",
+            name: "CraSpecVersion",
+            short_description: "CRA readiness: Spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0)",
             default_severity: ViolationSeverity::Warning,
             refs: &[],
             remediation: REMEDIATION_SPEC_VERSION,
             advice: Some(&ADVICE_SPEC_VERSION),
         },
         "SBOM-CRA-SPEC-VERSION-UNKNOWN" => RuleMeta {
-            sarif_id: "SBOM-CRA-GENERAL",
-            name: "CraGeneralRequirement",
-            short_description: "CRA general SBOM readiness requirement",
+            sarif_id: "SBOM-CRA-SPEC-VERSION-UNKNOWN",
+            name: "CraSpecVersionUnknown",
+            short_description: "CRA readiness: SPDX document declares a valid SPDX version",
             default_severity: ViolationSeverity::Warning,
             refs: &[],
             remediation: REMEDIATION_SPEC_VERSION_UNKNOWN,
             advice: Some(&ADVICE_SPEC_VERSION),
         },
         "SBOM-CRA-ELEMENT-ID" => RuleMeta {
-            sarif_id: "SBOM-CRA-GENERAL",
-            name: "CraGeneralRequirement",
-            short_description: "CRA general SBOM readiness requirement",
+            sarif_id: "SBOM-CRA-ELEMENT-ID",
+            name: "CraElementIdentifier",
+            short_description: "CRA readiness: Every element has its own well-formed identifier",
             default_severity: ViolationSeverity::Info,
             refs: &[],
             remediation: REMEDIATION_ELEMENT_ID,
             advice: Some(&ADVICE_ELEMENT_ID),
         },
-        // SARIF rule of the quality profiles (Minimum/Standard/Comprehensive):
-        // the SBOM-QUALITY-* checks below alias it, and the SARIF renderer
-        // re-buckets the `SBOM-CRA-GENERAL` fallback onto it for quality runs
-        // so they never surface under a CRA identity.
+        // Fallback SARIF rule of the quality profiles
+        // (Minimum/Standard/Comprehensive): no check emits it, but the SARIF
+        // renderer files a finding without a registered rule here for quality
+        // runs (the `SBOM-CRA-GENERAL` default included), so it never
+        // surfaces under a CRA identity.
         "SBOM-QUALITY-GENERAL" => RuleMeta {
             sarif_id: "SBOM-QUALITY-GENERAL",
             name: "QualityGeneralRequirement",
@@ -2032,90 +1966,90 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             advice: Some(&ADVICE_QUALITY_GENERAL),
         },
         "SBOM-QUALITY-CREATOR" => RuleMeta {
-            sarif_id: "SBOM-QUALITY-GENERAL",
-            name: "QualityGeneralRequirement",
-            short_description: "SBOM quality: general quality-profile requirement",
+            sarif_id: "SBOM-QUALITY-CREATOR",
+            name: "QualitySbomCreator",
+            short_description: "SBOM quality: SBOM creator identified (person, organization or tool)",
             default_severity: ViolationSeverity::Error,
             refs: &[],
             remediation: REMEDIATION_CREATOR,
             advice: Some(&ADVICE_CREATORS),
         },
         "SBOM-QUALITY-SERIAL" => RuleMeta {
-            sarif_id: "SBOM-QUALITY-GENERAL",
-            name: "QualityGeneralRequirement",
-            short_description: "SBOM quality: general quality-profile requirement",
+            sarif_id: "SBOM-QUALITY-SERIAL",
+            name: "QualityDocumentIdentifier",
+            short_description: "SBOM quality: SBOM carries a unique document identifier",
             default_severity: ViolationSeverity::Warning,
             refs: &[],
             remediation: REMEDIATION_SERIAL,
             advice: Some(&ADVICE_SERIAL),
         },
         "SBOM-QUALITY-INVENTORY" => RuleMeta {
-            sarif_id: "SBOM-QUALITY-GENERAL",
-            name: "QualityGeneralRequirement",
-            short_description: "SBOM quality: general quality-profile requirement",
+            sarif_id: "SBOM-QUALITY-INVENTORY",
+            name: "QualityInventory",
+            short_description: "SBOM quality: SBOM inventories at least one software component",
             default_severity: ViolationSeverity::Error,
             refs: &[],
             remediation: REMEDIATION_INVENTORY,
             advice: Some(&ADVICE_INVENTORY),
         },
         "SBOM-QUALITY-NAME" => RuleMeta {
-            sarif_id: "SBOM-QUALITY-GENERAL",
-            name: "QualityGeneralRequirement",
-            short_description: "SBOM quality: general quality-profile requirement",
+            sarif_id: "SBOM-QUALITY-NAME",
+            name: "QualityComponentName",
+            short_description: "SBOM quality: Every component has a name",
             default_severity: ViolationSeverity::Error,
             refs: &[],
             remediation: REMEDIATION_COMPONENT_NAME,
             advice: Some(&ADVICE_NAME),
         },
         "SBOM-QUALITY-IDENTIFIER" => RuleMeta {
-            sarif_id: "SBOM-QUALITY-GENERAL",
-            name: "QualityGeneralRequirement",
-            short_description: "SBOM quality: general quality-profile requirement",
+            sarif_id: "SBOM-QUALITY-IDENTIFIER",
+            name: "QualityComponentIdentifier",
+            short_description: "SBOM quality: Every component has a unique identifier (PURL, CPE, SWHID or SWID)",
             default_severity: ViolationSeverity::Warning,
             refs: &[],
             remediation: "Give every component a unique identifier: a PURL, CPE, SWHID or SWID.",
             advice: Some(&ADVICE_IDENTIFIER),
         },
         "SBOM-QUALITY-LICENSE" => RuleMeta {
-            sarif_id: "SBOM-QUALITY-GENERAL",
-            name: "QualityGeneralRequirement",
-            short_description: "SBOM quality: general quality-profile requirement",
+            sarif_id: "SBOM-QUALITY-LICENSE",
+            name: "QualityComponentLicense",
+            short_description: "SBOM quality: Every component records its license, declared or concluded",
             default_severity: ViolationSeverity::Warning,
             refs: &[],
             remediation: "Record every component's license, declared or concluded.",
             advice: Some(&ADVICE_LICENSE),
         },
         "SBOM-QUALITY-HASH" => RuleMeta {
-            sarif_id: "SBOM-QUALITY-GENERAL",
-            name: "QualityGeneralRequirement",
-            short_description: "SBOM quality: general quality-profile requirement",
+            sarif_id: "SBOM-QUALITY-HASH",
+            name: "QualityComponentHash",
+            short_description: "SBOM quality: Every component carries a cryptographic hash",
             default_severity: ViolationSeverity::Warning,
             refs: &[],
             remediation: "Give every component a cryptographic hash, preferably SHA-256 or stronger.",
             advice: Some(&ADVICE_HASH),
         },
         "SBOM-QUALITY-SPEC-VERSION" => RuleMeta {
-            sarif_id: "SBOM-QUALITY-GENERAL",
-            name: "QualityGeneralRequirement",
-            short_description: "SBOM quality: general quality-profile requirement",
+            sarif_id: "SBOM-QUALITY-SPEC-VERSION",
+            name: "QualitySpecVersion",
+            short_description: "SBOM quality: Spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0)",
             default_severity: ViolationSeverity::Warning,
             refs: &[],
             remediation: REMEDIATION_SPEC_VERSION,
             advice: Some(&ADVICE_SPEC_VERSION),
         },
         "SBOM-QUALITY-SPEC-VERSION-UNKNOWN" => RuleMeta {
-            sarif_id: "SBOM-QUALITY-GENERAL",
-            name: "QualityGeneralRequirement",
-            short_description: "SBOM quality: general quality-profile requirement",
+            sarif_id: "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
+            name: "QualitySpecVersionUnknown",
+            short_description: "SBOM quality: SPDX document declares a valid SPDX version",
             default_severity: ViolationSeverity::Warning,
             refs: &[],
             remediation: REMEDIATION_SPEC_VERSION_UNKNOWN,
             advice: Some(&ADVICE_SPEC_VERSION),
         },
         "SBOM-QUALITY-ELEMENT-ID" => RuleMeta {
-            sarif_id: "SBOM-QUALITY-GENERAL",
-            name: "QualityGeneralRequirement",
-            short_description: "SBOM quality: general quality-profile requirement",
+            sarif_id: "SBOM-QUALITY-ELEMENT-ID",
+            name: "QualityElementIdentifier",
+            short_description: "SBOM quality: Every element has its own well-formed identifier",
             default_severity: ViolationSeverity::Info,
             refs: &[],
             remediation: REMEDIATION_ELEMENT_ID,
@@ -2179,103 +2113,57 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             advice: None,
         },
         // ---- EU AI Act Annex IV technical-documentation readiness --------
-        // Self-descriptors for the shared SBOM-AIACT-ANNEX-IV-* SARIF rules
-        // that the per-element keys below alias to. Never emitted by a check
-        // site; they anchor the registry-generated SARIF descriptors.
-        "SBOM-AIACT-ANNEX-IV-1" => RuleMeta {
-            sarif_id: "SBOM-AIACT-ANNEX-IV-1",
-            name: "AiActGeneralDescription",
-            short_description: "EU AI Act Annex IV §1: general description of the AI system (architecture, intended purpose)",
-            default_severity: ViolationSeverity::Warning,
-            refs: &[(K::EuAiAct, "Annex IV §1")],
-            remediation: "Describe each AI model (Annex IV §1): a description, architecture or model-card reference, and its intended purpose or use cases.",
-            advice: Some(&ADVICE_AI_GENERAL),
-        },
-        "SBOM-AIACT-ANNEX-IV-2D" => RuleMeta {
-            sarif_id: "SBOM-AIACT-ANNEX-IV-2D",
-            name: "AiActTrainingData",
-            short_description: "EU AI Act Annex IV §2(d): training-data characteristics, provenance, and sensitivity classification",
-            default_severity: ViolationSeverity::Warning,
-            refs: &[(K::EuAiAct, "Annex IV §2(d)")],
-            remediation: "Document the training data (Annex IV §2(d)): reference the datasets each model was trained on, give every dataset a sensitivity classification, and document the GDPR lawful basis alongside the SBOM where training data involves personal data.",
-            advice: Some(&ADVICE_AI_2D),
-        },
-        "SBOM-AIACT-ANNEX-IV-2G" => RuleMeta {
-            sarif_id: "SBOM-AIACT-ANNEX-IV-2G",
-            name: "AiActValidationMetrics",
-            short_description: "EU AI Act Annex IV §2(g): validation/testing metrics (accuracy, robustness)",
-            default_severity: ViolationSeverity::Warning,
-            refs: &[(K::EuAiAct, "Annex IV §2(g)")],
-            remediation: "Record each model's validation and testing metrics (Annex IV §2(g)), such as accuracy and robustness.",
-            advice: Some(&ADVICE_AI_METRICS),
-        },
-        "SBOM-AIACT-ANNEX-IV-2C" => RuleMeta {
-            sarif_id: "SBOM-AIACT-ANNEX-IV-2C",
-            name: "AiActComputationalResources",
-            short_description: "EU AI Act Annex IV §2(c): computational resources / training-energy disclosure",
-            default_severity: ViolationSeverity::Info,
-            refs: &[(K::EuAiAct, "Annex IV §2(c)")],
-            remediation: "Disclose the computational resources used to train each model (Annex IV §2(c)), at least the training energy consumption.",
-            advice: Some(&ADVICE_AI_ENERGY),
-        },
-        "SBOM-AIACT-ANNEX-IV-3" => RuleMeta {
-            sarif_id: "SBOM-AIACT-ANNEX-IV-3",
-            name: "AiActLimitations",
-            short_description: "EU AI Act Annex IV §3: foreseeable limitations and risks",
-            default_severity: ViolationSeverity::Info,
-            refs: &[(K::EuAiAct, "Annex IV §3")],
-            remediation: "State each model's foreseeable limitations and risks (Annex IV §3), including ethical and fairness considerations.",
-            advice: Some(&ADVICE_AI_LIMITATIONS),
-        },
+        // The per-element checks below shared one SARIF rule per Annex IV
+        // paragraph (SBOM-AIACT-ANNEX-IV-1, -2C, -2D, -2G, -3) until v0.4.0.
         "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION" => RuleMeta {
-            sarif_id: "SBOM-AIACT-ANNEX-IV-1",
-            name: "AiActGeneralDescription",
-            short_description: "EU AI Act Annex IV §1: general description of the AI system (architecture, intended purpose)",
+            sarif_id: "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION",
+            name: "AiActModelDescription",
+            short_description: "EU AI Act Annex IV §1: General description of the AI model (description, architecture or model card)",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::EuAiAct, "Annex IV §1")],
             remediation: "Add a general description of the AI model: a description, its architecture family or name, or a model-card reference.",
             advice: Some(&ADVICE_AI_DESCRIPTION),
         },
         "SBOM-AIACT-ANNEX-IV-1-PURPOSE" => RuleMeta {
-            sarif_id: "SBOM-AIACT-ANNEX-IV-1",
-            name: "AiActGeneralDescription",
-            short_description: "EU AI Act Annex IV §1: general description of the AI system (architecture, intended purpose)",
+            sarif_id: "SBOM-AIACT-ANNEX-IV-1-PURPOSE",
+            name: "AiActIntendedPurpose",
+            short_description: "EU AI Act Annex IV §1: Intended purpose and use-cases of the AI model",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::EuAiAct, "Annex IV §1")],
             remediation: "Document the intended purpose / use-cases of the AI model.",
             advice: Some(&ADVICE_AI_PURPOSE),
         },
         "SBOM-AIACT-ANNEX-IV-2D-DATASETS" => RuleMeta {
-            sarif_id: "SBOM-AIACT-ANNEX-IV-2D",
-            name: "AiActTrainingData",
-            short_description: "EU AI Act Annex IV §2(d): training-data characteristics, provenance, and sensitivity classification",
+            sarif_id: "SBOM-AIACT-ANNEX-IV-2D-DATASETS",
+            name: "AiActTrainingDatasets",
+            short_description: "EU AI Act Annex IV §2(d): Training datasets referenced",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::EuAiAct, "Annex IV §2(d)")],
             remediation: "Reference the training datasets used.",
             advice: Some(&ADVICE_AI_DATASETS),
         },
         "SBOM-AIACT-ANNEX-IV-2D-SENSITIVITY" => RuleMeta {
-            sarif_id: "SBOM-AIACT-ANNEX-IV-2D",
-            name: "AiActTrainingData",
-            short_description: "EU AI Act Annex IV §2(d): training-data characteristics, provenance, and sensitivity classification",
+            sarif_id: "SBOM-AIACT-ANNEX-IV-2D-SENSITIVITY",
+            name: "AiActDatasetSensitivity",
+            short_description: "EU AI Act Annex IV §2(d): Sensitivity classification of each dataset",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::EuAiAct, "Annex IV §2(d)")],
             remediation: "Declare a sensitivity classification for each dataset (e.g. 'none', 'pii', 'personal').",
             advice: Some(&ADVICE_AI_SENSITIVITY),
         },
         "SBOM-AIACT-ANNEX-IV-2D-PERSONAL-DATA" => RuleMeta {
-            sarif_id: "SBOM-AIACT-ANNEX-IV-2D",
-            name: "AiActTrainingData",
-            short_description: "EU AI Act Annex IV §2(d): training-data characteristics, provenance, and sensitivity classification",
+            sarif_id: "SBOM-AIACT-ANNEX-IV-2D-PERSONAL-DATA",
+            name: "AiActPersonalData",
+            short_description: "EU AI Act Annex IV §2(d): Training data involving personal data (GDPR lawful basis and safeguards)",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::EuAiAct, "Annex IV §2(d)")],
             remediation: "Where training data involves personal data, document the GDPR lawful basis and data-protection measures alongside the SBOM (AI Act and GDPR apply in parallel).",
             advice: None,
         },
         "SBOM-AIACT-ANNEX-IV-2G-METRICS" => RuleMeta {
-            sarif_id: "SBOM-AIACT-ANNEX-IV-2G",
+            sarif_id: "SBOM-AIACT-ANNEX-IV-2G-METRICS",
             name: "AiActValidationMetrics",
-            short_description: "EU AI Act Annex IV §2(g): validation/testing metrics (accuracy, robustness)",
+            short_description: "EU AI Act Annex IV §2(g): Validation and testing metrics (accuracy, robustness)",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::EuAiAct, "Annex IV §2(g)")],
             remediation: "Record validation/testing metrics (accuracy, robustness).",
@@ -2287,18 +2175,18 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // and testing procedures/metrics. Explicit energy reporting is the
         // GPAI technical documentation (Annex XI).
         "SBOM-AIACT-ANNEX-IV-2C-ENERGY" => RuleMeta {
-            sarif_id: "SBOM-AIACT-ANNEX-IV-2C",
+            sarif_id: "SBOM-AIACT-ANNEX-IV-2C-ENERGY",
             name: "AiActComputationalResources",
-            short_description: "EU AI Act Annex IV §2(c): computational resources / training-energy disclosure",
+            short_description: "EU AI Act Annex IV §2(c): Computational resources and training-energy disclosure",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::EuAiAct, "Annex IV §2(c)")],
             remediation: "Disclose computational resources / training energy.",
             advice: Some(&ADVICE_AI_ENERGY),
         },
         "SBOM-AIACT-ANNEX-IV-3-LIMITATIONS" => RuleMeta {
-            sarif_id: "SBOM-AIACT-ANNEX-IV-3",
+            sarif_id: "SBOM-AIACT-ANNEX-IV-3-LIMITATIONS",
             name: "AiActLimitations",
-            short_description: "EU AI Act Annex IV §3: foreseeable limitations and risks",
+            short_description: "EU AI Act Annex IV §3: Foreseeable limitations and risks of the model",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::EuAiAct, "Annex IV §3")],
             remediation: "State the foreseeable limitations and risks of the model, including ethical and fairness considerations.",
@@ -2325,63 +2213,9 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             advice: None,
         },
         // ---- BSI/G7 SBOM-for-AI Minimum Elements readiness ---------------
-        // Self-descriptors for the shared per-cluster SARIF rules the
-        // element-level keys below alias to. Never emitted by a check site;
-        // they anchor the registry-generated SARIF descriptors.
-        "SBOM-BSIAI-META" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-META",
-            name: "BsiSbomForAiMetadata",
-            short_description: "BSI/G7 SBOM-for-AI Metadata cluster: author, data-format name + version, timestamp, generation tool, signature",
-            default_severity: ViolationSeverity::Error,
-            refs: &[(K::BsiSbomForAi, "Metadata")],
-            remediation: REMEDIATION_BSIAI_GENERAL,
-            advice: None,
-        },
-        "SBOM-BSIAI-SYS" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-SYS",
-            name: "BsiSbomForAiSystemLevel",
-            short_description: "BSI/G7 SBOM-for-AI System-Level cluster: primary AI system, producer, data flow & usage",
-            default_severity: ViolationSeverity::Warning,
-            refs: &[(K::BsiSbomForAi, "System-Level")],
-            remediation: REMEDIATION_BSIAI_GENERAL,
-            advice: None,
-        },
-        "SBOM-BSIAI-MODEL" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-MODEL",
-            name: "BsiSbomForAiModels",
-            short_description: "BSI/G7 SBOM-for-AI Models cluster: name, version, identifier, weight hash (NIST-approved algorithm), model card, architecture, datasets, limitations, license",
-            default_severity: ViolationSeverity::Error,
-            refs: &[(K::BsiSbomForAi, "Models")],
-            remediation: REMEDIATION_BSIAI_MODELS,
-            advice: None,
-        },
-        "SBOM-BSIAI-DATASET" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-DATASET",
-            name: "BsiSbomForAiDatasets",
-            short_description: "BSI/G7 SBOM-for-AI Datasets cluster: name, identifier, hash, license, sensitivity classification, provenance & intended use",
-            default_severity: ViolationSeverity::Error,
-            refs: &[(K::BsiSbomForAi, "Datasets")],
-            remediation: REMEDIATION_BSIAI_DATASETS,
-            advice: None,
-        },
-        "SBOM-BSIAI-INFRA" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-INFRA",
-            name: "BsiSbomForAiInfrastructure",
-            short_description: "BSI/G7 SBOM-for-AI Infrastructure cluster: runtime / framework dependency links",
-            default_severity: ViolationSeverity::Info,
-            refs: &[(K::BsiSbomForAi, "Infrastructure")],
-            remediation: REMEDIATION_BSIAI_GENERAL,
-            advice: None,
-        },
-        "SBOM-BSIAI-SEC" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-SEC",
-            name: "BsiSbomForAiSecurity",
-            short_description: "BSI/G7 SBOM-for-AI Security cluster: AI-specific security controls, exploitability references",
-            default_severity: ViolationSeverity::Info,
-            refs: &[(K::BsiSbomForAi, "Security")],
-            remediation: REMEDIATION_BSIAI_GENERAL,
-            advice: None,
-        },
+        // The element-level checks below shared one SARIF rule per cluster
+        // (SBOM-BSIAI-META, -SYS, -MODEL, -DATASET, -INFRA, -SEC) until
+        // v0.4.0.
         "SBOM-BSIAI-UNTYPED-ML" => RuleMeta {
             sarif_id: "SBOM-BSIAI-UNTYPED-ML",
             name: "BsiSbomForAiUntypedMlContent",
@@ -2393,45 +2227,45 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         },
         // Metadata cluster
         "SBOM-BSIAI-META-AUTHOR" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-META",
-            name: "BsiSbomForAiMetadata",
-            short_description: "BSI/G7 SBOM-for-AI Metadata cluster: author, data-format name + version, timestamp, generation tool, signature",
+            sarif_id: "SBOM-BSIAI-META-AUTHOR",
+            name: "BsiSbomForAiAuthor",
+            short_description: "BSI/G7 SBOM-for-AI Metadata: SBOM author",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::BsiSbomForAi, "Metadata / Author")],
             remediation: REMEDIATION_BSIAI_GENERAL,
             advice: Some(&ADVICE_CREATORS),
         },
         "SBOM-BSIAI-META-FORMAT" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-META",
-            name: "BsiSbomForAiMetadata",
-            short_description: "BSI/G7 SBOM-for-AI Metadata cluster: author, data-format name + version, timestamp, generation tool, signature",
+            sarif_id: "SBOM-BSIAI-META-FORMAT",
+            name: "BsiSbomForAiDataFormat",
+            short_description: "BSI/G7 SBOM-for-AI Metadata: Data-format name and version",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::BsiSbomForAi, "Metadata / Data format name + version")],
             remediation: REMEDIATION_BSIAI_GENERAL,
             advice: None,
         },
         "SBOM-BSIAI-META-TIMESTAMP" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-META",
-            name: "BsiSbomForAiMetadata",
-            short_description: "BSI/G7 SBOM-for-AI Metadata cluster: author, data-format name + version, timestamp, generation tool, signature",
+            sarif_id: "SBOM-BSIAI-META-TIMESTAMP",
+            name: "BsiSbomForAiTimestamp",
+            short_description: "BSI/G7 SBOM-for-AI Metadata: SBOM timestamp",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::BsiSbomForAi, "Metadata / Timestamp")],
             remediation: REMEDIATION_BSIAI_GENERAL,
             advice: Some(&ADVICE_TIMESTAMP),
         },
         "SBOM-BSIAI-META-TOOL" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-META",
-            name: "BsiSbomForAiMetadata",
-            short_description: "BSI/G7 SBOM-for-AI Metadata cluster: author, data-format name + version, timestamp, generation tool, signature",
+            sarif_id: "SBOM-BSIAI-META-TOOL",
+            name: "BsiSbomForAiGenerationTool",
+            short_description: "BSI/G7 SBOM-for-AI Metadata: Generation tool",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::BsiSbomForAi, "Metadata / Generation tool")],
             remediation: REMEDIATION_BSIAI_GENERAL,
             advice: Some(&ADVICE_TOOL),
         },
         "SBOM-BSIAI-META-SIGNATURE" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-META",
-            name: "BsiSbomForAiMetadata",
-            short_description: "BSI/G7 SBOM-for-AI Metadata cluster: author, data-format name + version, timestamp, generation tool, signature",
+            sarif_id: "SBOM-BSIAI-META-SIGNATURE",
+            name: "BsiSbomForAiSignature",
+            short_description: "BSI/G7 SBOM-for-AI Metadata: SBOM signature",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::BsiSbomForAi, "Metadata / Signature")],
             remediation: REMEDIATION_BSIAI_GENERAL,
@@ -2439,27 +2273,27 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         },
         // System-Level cluster
         "SBOM-BSIAI-SYS-PRIMARY" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-SYS",
-            name: "BsiSbomForAiSystemLevel",
-            short_description: "BSI/G7 SBOM-for-AI System-Level cluster: primary AI system, producer, data flow & usage",
+            sarif_id: "SBOM-BSIAI-SYS-PRIMARY",
+            name: "BsiSbomForAiPrimarySystem",
+            short_description: "BSI/G7 SBOM-for-AI System-Level: Primary AI system identified",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::BsiSbomForAi, "System-Level / Primary AI system")],
             remediation: REMEDIATION_BSIAI_GENERAL,
             advice: Some(&ADVICE_PRIMARY),
         },
         "SBOM-BSIAI-SYS-PRODUCER" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-SYS",
-            name: "BsiSbomForAiSystemLevel",
-            short_description: "BSI/G7 SBOM-for-AI System-Level cluster: primary AI system, producer, data flow & usage",
+            sarif_id: "SBOM-BSIAI-SYS-PRODUCER",
+            name: "BsiSbomForAiProducer",
+            short_description: "BSI/G7 SBOM-for-AI System-Level: Producer of the AI system",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::BsiSbomForAi, "System-Level / Producer")],
             remediation: REMEDIATION_BSIAI_GENERAL,
             advice: Some(&ADVICE_PRODUCER),
         },
         "SBOM-BSIAI-SYS-DATAFLOW" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-SYS",
-            name: "BsiSbomForAiSystemLevel",
-            short_description: "BSI/G7 SBOM-for-AI System-Level cluster: primary AI system, producer, data flow & usage",
+            sarif_id: "SBOM-BSIAI-SYS-DATAFLOW",
+            name: "BsiSbomForAiDataFlow",
+            short_description: "BSI/G7 SBOM-for-AI System-Level: Data flow and usage of the AI system",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::BsiSbomForAi, "System-Level / Data flow & usage")],
             remediation: REMEDIATION_BSIAI_GENERAL,
@@ -2467,90 +2301,90 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         },
         // Models cluster
         "SBOM-BSIAI-MODEL-NAME" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-MODEL",
-            name: "BsiSbomForAiModels",
-            short_description: "BSI/G7 SBOM-for-AI Models cluster: name, version, identifier, weight hash (NIST-approved algorithm), model card, architecture, datasets, limitations, license",
+            sarif_id: "SBOM-BSIAI-MODEL-NAME",
+            name: "BsiSbomForAiModelName",
+            short_description: "BSI/G7 SBOM-for-AI Models: Model name",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::BsiSbomForAi, "Models / Model name")],
             remediation: REMEDIATION_BSIAI_MODELS,
             advice: Some(&ADVICE_NAME),
         },
         "SBOM-BSIAI-MODEL-VERSION" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-MODEL",
-            name: "BsiSbomForAiModels",
-            short_description: "BSI/G7 SBOM-for-AI Models cluster: name, version, identifier, weight hash (NIST-approved algorithm), model card, architecture, datasets, limitations, license",
+            sarif_id: "SBOM-BSIAI-MODEL-VERSION",
+            name: "BsiSbomForAiModelVersion",
+            short_description: "BSI/G7 SBOM-for-AI Models: Model version",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::BsiSbomForAi, "Models / Model version")],
             remediation: REMEDIATION_BSIAI_MODELS,
             advice: Some(&ADVICE_VERSION),
         },
         "SBOM-BSIAI-MODEL-IDENTIFIER" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-MODEL",
-            name: "BsiSbomForAiModels",
-            short_description: "BSI/G7 SBOM-for-AI Models cluster: name, version, identifier, weight hash (NIST-approved algorithm), model card, architecture, datasets, limitations, license",
+            sarif_id: "SBOM-BSIAI-MODEL-IDENTIFIER",
+            name: "BsiSbomForAiModelIdentifier",
+            short_description: "BSI/G7 SBOM-for-AI Models: Unique model identifier (PURL, CPE, SWHID or SWID)",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::BsiSbomForAi, "Models / Model identifier")],
             remediation: REMEDIATION_BSIAI_MODELS,
             advice: Some(&ADVICE_IDENTIFIER),
         },
         "SBOM-BSIAI-MODEL-HASH" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-MODEL",
-            name: "BsiSbomForAiModels",
-            short_description: "BSI/G7 SBOM-for-AI Models cluster: name, version, identifier, weight hash (NIST-approved algorithm), model card, architecture, datasets, limitations, license",
+            sarif_id: "SBOM-BSIAI-MODEL-HASH",
+            name: "BsiSbomForAiModelHash",
+            short_description: "BSI/G7 SBOM-for-AI Models: Model-weight hash value",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::BsiSbomForAi, "Models / Model hash value")],
             remediation: REMEDIATION_BSIAI_MODELS,
             advice: Some(&ADVICE_HASH),
         },
         "SBOM-BSIAI-MODEL-HASH-ALGO" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-MODEL",
-            name: "BsiSbomForAiModels",
-            short_description: "BSI/G7 SBOM-for-AI Models cluster: name, version, identifier, weight hash (NIST-approved algorithm), model card, architecture, datasets, limitations, license",
+            sarif_id: "SBOM-BSIAI-MODEL-HASH-ALGO",
+            name: "BsiSbomForAiModelHashAlgorithm",
+            short_description: "BSI/G7 SBOM-for-AI Models: Model-weight hash uses a NIST-approved algorithm (SHA-256 or stronger)",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::BsiSbomForAi, "Models / Hash algorithm")],
             remediation: REMEDIATION_BSIAI_MODELS,
             advice: Some(&ADVICE_HASH),
         },
         "SBOM-BSIAI-MODEL-CARD" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-MODEL",
-            name: "BsiSbomForAiModels",
-            short_description: "BSI/G7 SBOM-for-AI Models cluster: name, version, identifier, weight hash (NIST-approved algorithm), model card, architecture, datasets, limitations, license",
+            sarif_id: "SBOM-BSIAI-MODEL-CARD",
+            name: "BsiSbomForAiModelCard",
+            short_description: "BSI/G7 SBOM-for-AI Models: Model card",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::BsiSbomForAi, "Models / Model card")],
             remediation: REMEDIATION_BSIAI_MODELS,
             advice: Some(&ADVICE_AI_MODEL_CARD),
         },
         "SBOM-BSIAI-MODEL-ARCHITECTURE" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-MODEL",
-            name: "BsiSbomForAiModels",
-            short_description: "BSI/G7 SBOM-for-AI Models cluster: name, version, identifier, weight hash (NIST-approved algorithm), model card, architecture, datasets, limitations, license",
+            sarif_id: "SBOM-BSIAI-MODEL-ARCHITECTURE",
+            name: "BsiSbomForAiModelArchitecture",
+            short_description: "BSI/G7 SBOM-for-AI Models: Model architecture",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::BsiSbomForAi, "Models / Architecture")],
             remediation: REMEDIATION_BSIAI_MODELS,
             advice: Some(&ADVICE_AI_ARCHITECTURE),
         },
         "SBOM-BSIAI-MODEL-DATASETS" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-MODEL",
-            name: "BsiSbomForAiModels",
-            short_description: "BSI/G7 SBOM-for-AI Models cluster: name, version, identifier, weight hash (NIST-approved algorithm), model card, architecture, datasets, limitations, license",
+            sarif_id: "SBOM-BSIAI-MODEL-DATASETS",
+            name: "BsiSbomForAiModelDatasets",
+            short_description: "BSI/G7 SBOM-for-AI Models: Training datasets referenced",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::BsiSbomForAi, "Models / Training datasets")],
             remediation: REMEDIATION_BSIAI_MODELS,
             advice: Some(&ADVICE_AI_TRAINING_DATASETS),
         },
         "SBOM-BSIAI-MODEL-LIMITATIONS" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-MODEL",
-            name: "BsiSbomForAiModels",
-            short_description: "BSI/G7 SBOM-for-AI Models cluster: name, version, identifier, weight hash (NIST-approved algorithm), model card, architecture, datasets, limitations, license",
+            sarif_id: "SBOM-BSIAI-MODEL-LIMITATIONS",
+            name: "BsiSbomForAiModelLimitations",
+            short_description: "BSI/G7 SBOM-for-AI Models: Model limitations",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::BsiSbomForAi, "Models / Limitations")],
             remediation: REMEDIATION_BSIAI_MODELS,
             advice: Some(&ADVICE_AI_LIMITATION),
         },
         "SBOM-BSIAI-MODEL-LICENSE" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-MODEL",
-            name: "BsiSbomForAiModels",
-            short_description: "BSI/G7 SBOM-for-AI Models cluster: name, version, identifier, weight hash (NIST-approved algorithm), model card, architecture, datasets, limitations, license",
+            sarif_id: "SBOM-BSIAI-MODEL-LICENSE",
+            name: "BsiSbomForAiModelLicense",
+            short_description: "BSI/G7 SBOM-for-AI Models: Model license",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::BsiSbomForAi, "Models / Model license")],
             remediation: REMEDIATION_BSIAI_MODELS,
@@ -2558,54 +2392,54 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         },
         // Datasets cluster
         "SBOM-BSIAI-DATASET-NAME" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-DATASET",
-            name: "BsiSbomForAiDatasets",
-            short_description: "BSI/G7 SBOM-for-AI Datasets cluster: name, identifier, hash, license, sensitivity classification, provenance & intended use",
+            sarif_id: "SBOM-BSIAI-DATASET-NAME",
+            name: "BsiSbomForAiDatasetName",
+            short_description: "BSI/G7 SBOM-for-AI Datasets: Dataset name",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::BsiSbomForAi, "Datasets / Dataset name")],
             remediation: REMEDIATION_BSIAI_DATASETS,
             advice: Some(&ADVICE_NAME),
         },
         "SBOM-BSIAI-DATASET-IDENTIFIER" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-DATASET",
-            name: "BsiSbomForAiDatasets",
-            short_description: "BSI/G7 SBOM-for-AI Datasets cluster: name, identifier, hash, license, sensitivity classification, provenance & intended use",
+            sarif_id: "SBOM-BSIAI-DATASET-IDENTIFIER",
+            name: "BsiSbomForAiDatasetIdentifier",
+            short_description: "BSI/G7 SBOM-for-AI Datasets: Unique dataset identifier",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::BsiSbomForAi, "Datasets / Dataset identifier")],
             remediation: REMEDIATION_BSIAI_DATASETS,
             advice: Some(&ADVICE_IDENTIFIER),
         },
         "SBOM-BSIAI-DATASET-HASH" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-DATASET",
-            name: "BsiSbomForAiDatasets",
-            short_description: "BSI/G7 SBOM-for-AI Datasets cluster: name, identifier, hash, license, sensitivity classification, provenance & intended use",
+            sarif_id: "SBOM-BSIAI-DATASET-HASH",
+            name: "BsiSbomForAiDatasetHash",
+            short_description: "BSI/G7 SBOM-for-AI Datasets: Dataset hash value",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::BsiSbomForAi, "Datasets / Dataset hash value")],
             remediation: REMEDIATION_BSIAI_DATASETS,
             advice: Some(&ADVICE_HASH),
         },
         "SBOM-BSIAI-DATASET-LICENSE" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-DATASET",
-            name: "BsiSbomForAiDatasets",
-            short_description: "BSI/G7 SBOM-for-AI Datasets cluster: name, identifier, hash, license, sensitivity classification, provenance & intended use",
+            sarif_id: "SBOM-BSIAI-DATASET-LICENSE",
+            name: "BsiSbomForAiDatasetLicense",
+            short_description: "BSI/G7 SBOM-for-AI Datasets: Dataset license",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::BsiSbomForAi, "Datasets / Dataset license")],
             remediation: REMEDIATION_BSIAI_DATASETS,
             advice: Some(&ADVICE_LICENSE),
         },
         "SBOM-BSIAI-DATASET-SENSITIVITY" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-DATASET",
-            name: "BsiSbomForAiDatasets",
-            short_description: "BSI/G7 SBOM-for-AI Datasets cluster: name, identifier, hash, license, sensitivity classification, provenance & intended use",
+            sarif_id: "SBOM-BSIAI-DATASET-SENSITIVITY",
+            name: "BsiSbomForAiDatasetSensitivity",
+            short_description: "BSI/G7 SBOM-for-AI Datasets: Sensitivity classification",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::BsiSbomForAi, "Datasets / Sensitivity classification")],
             remediation: REMEDIATION_BSIAI_DATASETS,
             advice: Some(&ADVICE_AI_SENSITIVITY),
         },
         "SBOM-BSIAI-DATASET-PROVENANCE" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-DATASET",
-            name: "BsiSbomForAiDatasets",
-            short_description: "BSI/G7 SBOM-for-AI Datasets cluster: name, identifier, hash, license, sensitivity classification, provenance & intended use",
+            sarif_id: "SBOM-BSIAI-DATASET-PROVENANCE",
+            name: "BsiSbomForAiDatasetProvenance",
+            short_description: "BSI/G7 SBOM-for-AI Datasets: Provenance and intended use",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::BsiSbomForAi, "Datasets / Provenance & intended use")],
             remediation: REMEDIATION_BSIAI_DATASETS,
@@ -2613,9 +2447,9 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         },
         // Infrastructure cluster
         "SBOM-BSIAI-INFRA-RUNTIME" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-INFRA",
-            name: "BsiSbomForAiInfrastructure",
-            short_description: "BSI/G7 SBOM-for-AI Infrastructure cluster: runtime / framework dependency links",
+            sarif_id: "SBOM-BSIAI-INFRA-RUNTIME",
+            name: "BsiSbomForAiRuntime",
+            short_description: "BSI/G7 SBOM-for-AI Infrastructure: Runtime and framework dependency links",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::BsiSbomForAi, "Infrastructure / Runtime & framework")],
             remediation: REMEDIATION_BSIAI_GENERAL,
@@ -2623,18 +2457,18 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         },
         // Security cluster
         "SBOM-BSIAI-SEC-CONTROLS" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-SEC",
-            name: "BsiSbomForAiSecurity",
-            short_description: "BSI/G7 SBOM-for-AI Security cluster: AI-specific security controls, exploitability references",
+            sarif_id: "SBOM-BSIAI-SEC-CONTROLS",
+            name: "BsiSbomForAiSecurityControls",
+            short_description: "BSI/G7 SBOM-for-AI Security: AI-specific security controls",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::BsiSbomForAi, "Security / AI security controls")],
             remediation: REMEDIATION_BSIAI_GENERAL,
             advice: None,
         },
         "SBOM-BSIAI-SEC-EXPLOITABILITY" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-SEC",
-            name: "BsiSbomForAiSecurity",
-            short_description: "BSI/G7 SBOM-for-AI Security cluster: AI-specific security controls, exploitability references",
+            sarif_id: "SBOM-BSIAI-SEC-EXPLOITABILITY",
+            name: "BsiSbomForAiExploitability",
+            short_description: "BSI/G7 SBOM-for-AI Security: Exploitability reference",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::BsiSbomForAi, "Security / Exploitability reference")],
             remediation: REMEDIATION_BSIAI_GENERAL,
@@ -2701,7 +2535,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-FDA-SUPPORT" => RuleMeta {
             sarif_id: "SBOM-FDA-SUPPORT",
             name: "FdaSupport",
-            short_description: "FDA Medical Device: Component support/contact information",
+            short_description: "FDA Medical Device: Level-of-support and end-of-support information",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
             remediation: "State the components' level of support and end-of-support date (FD&C §524B); the information may also accompany the SBOM.",
@@ -2710,18 +2544,18 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // The creator contact-email check, a second document-level finding
         // beside the support information above.
         "SBOM-FDA-CONTACT" => RuleMeta {
-            sarif_id: "SBOM-FDA-SUPPORT",
-            name: "FdaSupport",
-            short_description: "FDA Medical Device: Component support/contact information",
+            sarif_id: "SBOM-FDA-CONTACT",
+            name: "FdaCreatorContact",
+            short_description: "FDA Medical Device: SBOM creator contact email",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
             remediation: "Give the SBOM creator a contact email (FDA premarket guidance).",
             advice: Some(&ADVICE_FDA_CONTACT),
         },
         "SBOM-FDA-NAME" => RuleMeta {
-            sarif_id: "SBOM-FDA-GENERAL",
-            name: "FdaGeneralRequirement",
-            short_description: "FDA Medical Device: General SBOM requirement",
+            sarif_id: "SBOM-FDA-NAME",
+            name: "FdaDocumentName",
+            short_description: "FDA Medical Device: SBOM document name",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
             remediation: "Give the SBOM a document name (FDA premarket guidance).",
@@ -2813,38 +2647,38 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             advice: Some(&ADVICE_FDA_GENERAL),
         },
         // The generic path's checks under FDA that have no FDA rule of their
-        // own, one id each; all alias the SBOM-FDA-GENERAL SARIF rule.
+        // own, one id each; they reported as SBOM-FDA-GENERAL until v0.4.0.
         "SBOM-FDA-COMPONENT-NAME" => RuleMeta {
-            sarif_id: "SBOM-FDA-GENERAL",
-            name: "FdaGeneralRequirement",
-            short_description: "FDA Medical Device: General SBOM requirement",
+            sarif_id: "SBOM-FDA-COMPONENT-NAME",
+            name: "FdaComponentName",
+            short_description: "FDA Medical Device: Every component has a name (NTIA baseline element)",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
             remediation: "Give every component a name (an NTIA baseline element the FDA guidance incorporates); empty names and placeholders such as NOASSERTION do not count.",
             advice: Some(&ADVICE_NAME),
         },
         "SBOM-FDA-SPEC-VERSION" => RuleMeta {
-            sarif_id: "SBOM-FDA-GENERAL",
-            name: "FdaGeneralRequirement",
-            short_description: "FDA Medical Device: General SBOM requirement",
+            sarif_id: "SBOM-FDA-SPEC-VERSION",
+            name: "FdaSpecVersion",
+            short_description: "FDA Medical Device: Spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0)",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
             remediation: REMEDIATION_SPEC_VERSION,
             advice: Some(&ADVICE_SPEC_VERSION),
         },
         "SBOM-FDA-SPEC-VERSION-UNKNOWN" => RuleMeta {
-            sarif_id: "SBOM-FDA-GENERAL",
-            name: "FdaGeneralRequirement",
-            short_description: "FDA Medical Device: General SBOM requirement",
+            sarif_id: "SBOM-FDA-SPEC-VERSION-UNKNOWN",
+            name: "FdaSpecVersionUnknown",
+            short_description: "FDA Medical Device: SPDX document declares a valid SPDX version",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
             remediation: REMEDIATION_SPEC_VERSION_UNKNOWN,
             advice: Some(&ADVICE_SPEC_VERSION),
         },
         "SBOM-FDA-ELEMENT-ID" => RuleMeta {
-            sarif_id: "SBOM-FDA-GENERAL",
-            name: "FdaGeneralRequirement",
-            short_description: "FDA Medical Device: General SBOM requirement",
+            sarif_id: "SBOM-FDA-ELEMENT-ID",
+            name: "FdaElementIdentifier",
+            short_description: "FDA Medical Device: Every element has its own well-formed identifier",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
             remediation: REMEDIATION_ELEMENT_ID,
@@ -2897,29 +2731,29 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             advice: Some(&ADVICE_FORMAT_GENERAL),
         },
         // The generic path's format-level checks under NTIA, one id each;
-        // all alias the SBOM-NTIA-GENERAL SARIF rule.
+        // they reported as SBOM-NTIA-GENERAL until v0.4.0.
         "SBOM-NTIA-SPEC-VERSION" => RuleMeta {
-            sarif_id: "SBOM-NTIA-GENERAL",
-            name: "NtiaGeneralRequirement",
-            short_description: "NTIA Minimum Elements: General requirement",
+            sarif_id: "SBOM-NTIA-SPEC-VERSION",
+            name: "NtiaSpecVersion",
+            short_description: "NTIA Minimum Elements: Spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0)",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
             remediation: REMEDIATION_SPEC_VERSION,
             advice: Some(&ADVICE_SPEC_VERSION),
         },
         "SBOM-NTIA-SPEC-VERSION-UNKNOWN" => RuleMeta {
-            sarif_id: "SBOM-NTIA-GENERAL",
-            name: "NtiaGeneralRequirement",
-            short_description: "NTIA Minimum Elements: General requirement",
+            sarif_id: "SBOM-NTIA-SPEC-VERSION-UNKNOWN",
+            name: "NtiaSpecVersionUnknown",
+            short_description: "NTIA Minimum Elements: SPDX document declares a valid SPDX version",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
             remediation: REMEDIATION_SPEC_VERSION_UNKNOWN,
             advice: Some(&ADVICE_SPEC_VERSION),
         },
         "SBOM-NTIA-ELEMENT-ID" => RuleMeta {
-            sarif_id: "SBOM-NTIA-GENERAL",
-            name: "NtiaGeneralRequirement",
-            short_description: "NTIA Minimum Elements: General requirement",
+            sarif_id: "SBOM-NTIA-ELEMENT-ID",
+            name: "NtiaElementIdentifier",
+            short_description: "NTIA Minimum Elements: Every element has its own well-formed identifier",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
             remediation: REMEDIATION_ELEMENT_ID,
@@ -2950,7 +2784,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-SSDF-PS1" => RuleMeta {
             sarif_id: "SBOM-SSDF-PS1",
             name: "SsdfProvenance",
-            short_description: "NIST SSDF PS.1: Provenance and creator identification",
+            short_description: "NIST SSDF PS.1: Provenance — SBOM creator identified",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::NistSsdf, "PS.1")],
             remediation: REMEDIATION_SSDF,
@@ -2959,9 +2793,9 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // The PS.1 generation-tool check, a second document-level finding
         // beside the creator check above.
         "SBOM-SSDF-PS1-TOOL" => RuleMeta {
-            sarif_id: "SBOM-SSDF-PS1",
-            name: "SsdfProvenance",
-            short_description: "NIST SSDF PS.1: Provenance and creator identification",
+            sarif_id: "SBOM-SSDF-PS1-TOOL",
+            name: "SsdfGenerationTool",
+            short_description: "NIST SSDF PS.1: Tool that generated the SBOM identified",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::NistSsdf, "PS.1")],
             remediation: "Identify the tool that generated the SBOM, so its provenance shows how it was produced (NIST SSDF PS.1).",
@@ -4098,7 +3932,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-FSCT-LICENSE-ALL" => RuleMeta {
             sarif_id: "SBOM-FSCT-LICENSE-ALL",
             name: "FsctLicenseAll",
-            short_description: "CISA FSCT 3e §2.2.2.7 (Aspirational): license information incl. concluded-license attestation for ALL components",
+            short_description: "CISA FSCT 3e §2.2.2.7 (Aspirational): license information for ALL listed components",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::CisaFsct, "§2.2.2.7")],
             remediation: "Provide license information for all listed components.",
@@ -4107,9 +3941,9 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // The concluded-licence attestation, a second document-level finding
         // beside the all-components coverage above.
         "SBOM-FSCT-LICENSE-CONCLUDED" => RuleMeta {
-            sarif_id: "SBOM-FSCT-LICENSE-ALL",
-            name: "FsctLicenseAll",
-            short_description: "CISA FSCT 3e §2.2.2.7 (Aspirational): license information incl. concluded-license attestation for ALL components",
+            sarif_id: "SBOM-FSCT-LICENSE-CONCLUDED",
+            name: "FsctConcludedLicense",
+            short_description: "CISA FSCT 3e §2.2.2.7 (Aspirational): concluded-license attestation alongside declared licenses",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::CisaFsct, "§2.2.2.7")],
             remediation: "Record a concluded-license attestation for the listed components, alongside their declared license information.",
@@ -4215,7 +4049,6 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-CRA-ART-14-NOTIFICATION",
     "SBOM-CRA-ART-14-ENISA",
     "SBOM-CRA-ART-24",
-    "SBOM-CRA-ANNEX-I",
     "SBOM-CRA-ANNEX-I-IDENTIFIER",
     "SBOM-CRA-ANNEX-I-TRACEABILITY",
     "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
@@ -4231,7 +4064,6 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-CRA-ANNEX-V",
     "SBOM-CRA-CYCLES",
     "SBOM-CRA-ANNEX-VIII",
-    "SBOM-CRA-PRE-8-RQ-02",
     "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
     "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
     "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
@@ -4261,11 +4093,6 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-EUCC-VALIDITY",
     "SBOM-EUCC-CERTREF",
     "SBOM-EUCC-GENERAL",
-    "SBOM-AIACT-ANNEX-IV-1",
-    "SBOM-AIACT-ANNEX-IV-2D",
-    "SBOM-AIACT-ANNEX-IV-2G",
-    "SBOM-AIACT-ANNEX-IV-2C",
-    "SBOM-AIACT-ANNEX-IV-3",
     "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION",
     "SBOM-AIACT-ANNEX-IV-1-PURPOSE",
     "SBOM-AIACT-ANNEX-IV-2D-DATASETS",
@@ -4276,12 +4103,6 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-AIACT-ANNEX-IV-3-LIMITATIONS",
     "SBOM-AIACT-UNTYPED-ML",
     "SBOM-AIACT-GENERAL",
-    "SBOM-BSIAI-META",
-    "SBOM-BSIAI-SYS",
-    "SBOM-BSIAI-MODEL",
-    "SBOM-BSIAI-DATASET",
-    "SBOM-BSIAI-INFRA",
-    "SBOM-BSIAI-SEC",
     "SBOM-BSIAI-UNTYPED-ML",
     "SBOM-BSIAI-META-AUTHOR",
     "SBOM-BSIAI-META-FORMAT",
@@ -4524,12 +4345,17 @@ pub(crate) fn lookup_static_rule_id(rule_id: &str) -> Option<&'static str> {
 // Per-standard SARIF rule catalogues.
 //
 // Each slice lists, in display order, the externally-visible SARIF rule ids a
-// standard's report declares as reportingDescriptors. Every id must be a
-// registry key whose `sarif_id` equals the key itself (a self-descriptor);
-// the `sarif_rule_slices_are_self_descriptors` test enforces this. The SARIF
-// generator (src/reports/sarif.rs) renders these through `rule_meta`, so
-// name / shortDescription / defaultConfiguration.level can no longer drift
-// from the registry.
+// standard's report declares as reportingDescriptors: one per check the
+// standard runs. Every id must be a registry key whose `sarif_id` equals the
+// key itself (a self-descriptor); the `sarif_rule_slices_are_self_descriptors`
+// test enforces this. The SARIF generator (src/reports/sarif.rs) renders
+// these through `rule_meta`, so name / shortDescription /
+// defaultConfiguration.level can no longer drift from the registry.
+//
+// The `SBOM-<FAMILY>-GENERAL` fallback rules are in no slice: no check emits
+// one. The SARIF generator files a finding without a registered rule under
+// its family's fallback (`generic_rule_id_for_level` in mod.rs) and declares
+// that rule when it does.
 // ---------------------------------------------------------------------------
 
 /// NTIA Minimum Elements SARIF rule catalogue.
@@ -4542,7 +4368,9 @@ pub const NTIA_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-NTIA-IDENTIFIER",
     "SBOM-NTIA-DEPENDENCY",
     "SBOM-NTIA-TIMESTAMP",
-    "SBOM-NTIA-GENERAL",
+    "SBOM-NTIA-SPEC-VERSION",
+    "SBOM-NTIA-SPEC-VERSION-UNKNOWN",
+    "SBOM-NTIA-ELEMENT-ID",
 ];
 
 /// FDA premarket SARIF rule catalogue. The FDA baseline check reuses the
@@ -4553,19 +4381,25 @@ pub const FDA_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-FDA-INVENTORY",
     "SBOM-FDA-CREATOR",
     "SBOM-FDA-NAMESPACE",
+    "SBOM-FDA-NAME",
     "SBOM-FDA-SUPPLIER",
     "SBOM-FDA-HASH",
     "SBOM-FDA-IDENTIFIER",
     "SBOM-FDA-VERSION",
     "SBOM-FDA-DEPENDENCY",
     "SBOM-FDA-SUPPORT",
+    "SBOM-FDA-CONTACT",
     "SBOM-FDA-SECURITY",
-    "SBOM-FDA-GENERAL",
+    "SBOM-FDA-COMPONENT-NAME",
+    "SBOM-FDA-SPEC-VERSION",
+    "SBOM-FDA-SPEC-VERSION-UNKNOWN",
+    "SBOM-FDA-ELEMENT-ID",
 ];
 
 /// NIST SSDF (SP 800-218) SARIF rule catalogue.
 pub const SSDF_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-SSDF-PS1",
+    "SBOM-SSDF-PS1-TOOL",
     "SBOM-SSDF-PS2",
     "SBOM-SSDF-PS3",
     "SBOM-SSDF-INVENTORY",
@@ -4574,7 +4408,6 @@ pub const SSDF_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-SSDF-PW4",
     "SBOM-SSDF-PW6",
     "SBOM-SSDF-RV1",
-    "SBOM-SSDF-GENERAL",
 ];
 
 /// EO 14028 Section 4 SARIF rule catalogue.
@@ -4591,7 +4424,6 @@ pub const EO14028_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-EO14028-DISCLOSURE",
     "SBOM-EO14028-SUPPLIER",
     "SBOM-EO14028-INVENTORY",
-    "SBOM-EO14028-GENERAL",
 ];
 
 /// Shared CRA / EUCC / BSI TR-03183-2 / EU AI Act / BSI-G7 SBOM-for-AI SARIF
@@ -4601,22 +4433,50 @@ pub const COMPLIANCE_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-CRA-MACHINE-READABLE",
     "SBOM-CRA-ART-13-17-CONTACT",
     "SBOM-CRA-VULN-METADATA",
+    "SBOM-CRA-VULN-METADATA-REMEDIATION",
+    "SBOM-CRA-VULN-METADATA-PROFILE",
     "SBOM-CRA-ART-13-5",
+    "SBOM-CRA-ART-13-5-PROFILE",
     "SBOM-CRA-CVD-POLICY",
     "SBOM-CRA-ART-13-8",
+    "SBOM-CRA-ART-13-8-EOL",
     "SBOM-CRA-LIFECYCLE",
+    "SBOM-CRA-LIFECYCLE-APPROACHING-EOL",
     "SBOM-CRA-ART-13-15-PRODUCT",
     "SBOM-CRA-COMPONENT-VERSION",
     "SBOM-CRA-ART-13-16",
     "SBOM-CRA-ART-13-16-EMAIL",
     "SBOM-CRA-COMPONENT-SUPPLIER",
     "SBOM-CRA-VULN-STATEMENT",
-    "SBOM-CRA-ANNEX-I",
+    "SBOM-CRA-ANNEX-I-IDENTIFIER",
+    "SBOM-CRA-ANNEX-I-TRACEABILITY",
+    "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
+    "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
+    "SBOM-CRA-ANNEX-I-INTEGRITY",
+    "SBOM-CRA-ANNEX-I-DEPENDENCY",
+    "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS",
+    "SBOM-CRA-ANNEX-I-PRIMARY",
+    "SBOM-CRA-ANNEX-I-CONTROLS",
     "SBOM-CRA-INVENTORY",
     "SBOM-CRA-DOC-INTEGRITY",
     "SBOM-CRA-ANNEX-V",
-    "SBOM-CRA-GENERAL",
-    "SBOM-CRA-PRE-8-RQ-02",
+    "SBOM-CRA-ART-13-2",
+    "SBOM-CRA-ART-14-PSIRT",
+    "SBOM-CRA-ART-14-EARLY-WARNING",
+    "SBOM-CRA-ART-14-NOTIFICATION",
+    "SBOM-CRA-ART-14-ENISA",
+    "SBOM-CRA-ART-24",
+    "SBOM-CRA-ANNEX-IV",
+    "SBOM-CRA-CREATOR",
+    "SBOM-CRA-SERIAL",
+    "SBOM-CRA-COMPONENT-NAME",
+    "SBOM-CRA-SPEC-VERSION",
+    "SBOM-CRA-SPEC-VERSION-UNKNOWN",
+    "SBOM-CRA-ELEMENT-ID",
+    "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
+    "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
+    "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
+    "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
     "SBOM-CRA-PRE-7-RQ-07-RE",
     "SBOM-EUCC-PP",
     "SBOM-EUCC-TOE",
@@ -4639,19 +4499,42 @@ pub const COMPLIANCE_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS",
     "SBOM-BSI-TR-03183-2-5-2-4",
     "SBOM-BSI-TR-03183-2-3-1",
-    "SBOM-BSI-TR-03183-2-GENERAL",
-    "SBOM-AIACT-ANNEX-IV-1",
-    "SBOM-AIACT-ANNEX-IV-2D",
-    "SBOM-AIACT-ANNEX-IV-2G",
-    "SBOM-AIACT-ANNEX-IV-2C",
-    "SBOM-AIACT-ANNEX-IV-3",
+    "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION",
+    "SBOM-AIACT-ANNEX-IV-1-PURPOSE",
+    "SBOM-AIACT-ANNEX-IV-2D-DATASETS",
+    "SBOM-AIACT-ANNEX-IV-2D-SENSITIVITY",
+    "SBOM-AIACT-ANNEX-IV-2D-PERSONAL-DATA",
+    "SBOM-AIACT-ANNEX-IV-2G-METRICS",
+    "SBOM-AIACT-ANNEX-IV-2C-ENERGY",
+    "SBOM-AIACT-ANNEX-IV-3-LIMITATIONS",
     "SBOM-AIACT-UNTYPED-ML",
-    "SBOM-BSIAI-META",
-    "SBOM-BSIAI-SYS",
-    "SBOM-BSIAI-MODEL",
-    "SBOM-BSIAI-DATASET",
-    "SBOM-BSIAI-INFRA",
-    "SBOM-BSIAI-SEC",
+    "SBOM-BSIAI-META-AUTHOR",
+    "SBOM-BSIAI-META-FORMAT",
+    "SBOM-BSIAI-META-TIMESTAMP",
+    "SBOM-BSIAI-META-TOOL",
+    "SBOM-BSIAI-META-SIGNATURE",
+    "SBOM-BSIAI-SYS-PRIMARY",
+    "SBOM-BSIAI-SYS-PRODUCER",
+    "SBOM-BSIAI-SYS-DATAFLOW",
+    "SBOM-BSIAI-MODEL-NAME",
+    "SBOM-BSIAI-MODEL-VERSION",
+    "SBOM-BSIAI-MODEL-IDENTIFIER",
+    "SBOM-BSIAI-MODEL-HASH",
+    "SBOM-BSIAI-MODEL-HASH-ALGO",
+    "SBOM-BSIAI-MODEL-CARD",
+    "SBOM-BSIAI-MODEL-ARCHITECTURE",
+    "SBOM-BSIAI-MODEL-DATASETS",
+    "SBOM-BSIAI-MODEL-LIMITATIONS",
+    "SBOM-BSIAI-MODEL-LICENSE",
+    "SBOM-BSIAI-DATASET-NAME",
+    "SBOM-BSIAI-DATASET-IDENTIFIER",
+    "SBOM-BSIAI-DATASET-HASH",
+    "SBOM-BSIAI-DATASET-LICENSE",
+    "SBOM-BSIAI-DATASET-SENSITIVITY",
+    "SBOM-BSIAI-DATASET-PROVENANCE",
+    "SBOM-BSIAI-INFRA-RUNTIME",
+    "SBOM-BSIAI-SEC-CONTROLS",
+    "SBOM-BSIAI-SEC-EXPLOITABILITY",
     "SBOM-BSIAI-UNTYPED-ML",
 ];
 
@@ -4675,7 +4558,6 @@ pub const CNSA2_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-CNSA2-PROTO-001",
     "SBOM-CNSA2-PROTO-002",
     "SBOM-CNSA2-PROTO-UNKNOWN",
-    "SBOM-CNSA2-GENERAL",
 ];
 
 /// NIST PQC readiness SARIF rule catalogue: every `SBOM-PQC-*`
@@ -4696,7 +4578,6 @@ pub const PQC_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-PQC-PROTO-001",
     "SBOM-PQC-PROTO-002",
     "SBOM-PQC-PROTO-UNKNOWN",
-    "SBOM-PQC-GENERAL",
 ];
 
 /// CISA 2026 Minimum Elements SARIF rule catalogue: every `SBOM-CISA2026-*`
@@ -4722,7 +4603,6 @@ pub const CISA2026_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-CISA2026-LICENSE",
     "SBOM-CISA2026-DEPENDENCY",
     "SBOM-CISA2026-COVERAGE",
-    "SBOM-CISA2026-GENERAL",
 ];
 
 /// PCI DSS v4.0.1 Req. 6.3.2 SARIF rule catalogue: every `SBOM-PCI-*`
@@ -4739,7 +4619,6 @@ pub const PCIDSS_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-PCI-6-3-2-FRESHNESS",
     "SBOM-PCI-6-3-2-VULN-EVIDENCE",
     "SBOM-PCI-11-3-1-1-SEVERITY",
-    "SBOM-PCI-GENERAL",
 ];
 
 /// CISA FSCT 3rd-edition SARIF rule catalogue: every `SBOM-FSCT-*`
@@ -4767,13 +4646,13 @@ pub const FSCT_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-FSCT-LICENSE-PRIMARY",
     "SBOM-FSCT-LICENSE-COVERAGE",
     "SBOM-FSCT-LICENSE-ALL",
+    "SBOM-FSCT-LICENSE-CONCLUDED",
     "SBOM-FSCT-COPYRIGHT-PRIMARY",
     "SBOM-FSCT-COPYRIGHT-COVERAGE",
     "SBOM-FSCT-COPYRIGHT-ALL",
     "SBOM-FSCT-NOASSERTION",
     "SBOM-FSCT-UPSTREAM-SBOM",
     "SBOM-FSCT-SIGNATURE",
-    "SBOM-FSCT-GENERAL",
 ];
 
 #[cfg(test)]
@@ -5113,11 +4992,19 @@ mod tests {
         }
     }
 
+    /// Whether `id` is a family fallback rule: the rule the SARIF writer
+    /// files a finding without a registered rule under. No check emits one.
+    fn is_fallback(id: &str) -> bool {
+        super::super::ComplianceLevel::all()
+            .iter()
+            .any(|level| super::super::generic_rule_id_for_level(*level) == id)
+    }
+
     /// The CNSA 2.0 / PQC catalogues must enumerate their entire rule
     /// family: a registry rule missing from its slice would only surface via
     /// the catalogue-completion backfill when it happens to fire, putting
     /// SARIF consumers' suppressions/baselines back on an incomplete
-    /// catalogue.
+    /// catalogue. The family's fallback rule is the one exception.
     #[test]
     fn cnsa2_and_pqc_slices_cover_their_rule_families() {
         for (prefix, slice) in [
@@ -5127,7 +5014,7 @@ mod tests {
             let expected: std::collections::BTreeSet<&str> = all_rule_ids()
                 .iter()
                 .copied()
-                .filter(|id| id.starts_with(prefix))
+                .filter(|id| id.starts_with(prefix) && !is_fallback(id))
                 .collect();
             let actual: std::collections::BTreeSet<&str> = slice.iter().copied().collect();
             assert_eq!(
@@ -5138,12 +5025,10 @@ mod tests {
     }
 
     /// The CISA 2026 / PCI DSS / FSCT catalogues must enumerate their entire
-    /// rule family (same guarantee as the CNSA 2.0 / PQC test above): the
-    /// parallel checker wave adds check sites but may not touch this file,
-    /// so a family rule missing from its slice would silently fall off the
-    /// upfront-declared SARIF catalogue. A family id that aliases another
-    /// family rule (SBOM-FSCT-LICENSE-CONCLUDED reports as
-    /// SBOM-FSCT-LICENSE-ALL) is covered by the rule it aliases.
+    /// rule family but its fallback rule (same guarantee as the CNSA 2.0 /
+    /// PQC test above): the parallel checker wave adds check sites but may
+    /// not touch this file, so a family rule missing from its slice would
+    /// silently fall off the upfront-declared SARIF catalogue.
     #[test]
     fn p4_profile_slices_cover_their_rule_families() {
         for (prefix, slice) in [
@@ -5154,8 +5039,7 @@ mod tests {
             let expected: std::collections::BTreeSet<&str> = all_rule_ids()
                 .iter()
                 .copied()
-                .filter(|id| id.starts_with(prefix))
-                .map(|id| rule_meta(id).expect("listed id resolves").sarif_id)
+                .filter(|id| id.starts_with(prefix) && !is_fallback(id))
                 .collect();
             let actual: std::collections::BTreeSet<&str> = slice.iter().copied().collect();
             assert_eq!(
@@ -5165,32 +5049,47 @@ mod tests {
         }
     }
 
-    /// Aliased keys (key != sarif_id) must carry the canonical descriptor's
-    /// name and short description, so every surface renders the shared SARIF
-    /// rule identically.
+    /// No slice declares a fallback rule: no check emits one, so a standard's
+    /// catalogue lists the checks it runs and nothing else.
     #[test]
-    fn aliased_keys_share_the_canonical_descriptor_text() {
+    fn no_slice_lists_a_fallback_rule() {
+        for slice in [
+            NTIA_SARIF_RULE_IDS,
+            FDA_SARIF_RULE_IDS,
+            SSDF_SARIF_RULE_IDS,
+            EO14028_SARIF_RULE_IDS,
+            COMPLIANCE_SARIF_RULE_IDS,
+            CNSA2_SARIF_RULE_IDS,
+            PQC_SARIF_RULE_IDS,
+            CISA2026_SARIF_RULE_IDS,
+            PCIDSS_SARIF_RULE_IDS,
+            FSCT_SARIF_RULE_IDS,
+        ] {
+            for id in slice {
+                assert!(!is_fallback(id), "slice lists the fallback rule {id}");
+            }
+        }
+    }
+
+    /// Every check is its own SARIF rule: each key's `sarif_id` is the key,
+    /// so no two checks share a rule (and its help text), and the rule names
+    /// and short descriptions a code-scanning UI lists them by are unique.
+    #[test]
+    fn every_rule_is_its_own_sarif_rule() {
+        let mut names = std::collections::BTreeMap::new();
+        let mut descriptions = std::collections::BTreeMap::new();
         for id in all_rule_ids() {
             let meta = rule_meta(id).expect("listed id resolves");
-            if meta.sarif_id == *id {
-                continue;
+            assert_eq!(meta.sarif_id, *id, "{id} reports under another rule");
+            if let Some(other) = names.insert(meta.name, *id) {
+                panic!("{id} and {other} share the rule name {}", meta.name);
             }
-            let canonical = rule_meta(meta.sarif_id).unwrap_or_else(|| {
+            if let Some(other) = descriptions.insert(meta.short_description, *id) {
                 panic!(
-                    "{id} aliases to {} which has no self-descriptor",
-                    meta.sarif_id
-                )
-            });
-            assert_eq!(
-                meta.name, canonical.name,
-                "{id} name differs from its canonical descriptor {}",
-                meta.sarif_id
-            );
-            assert_eq!(
-                meta.short_description, canonical.short_description,
-                "{id} short_description differs from its canonical descriptor {}",
-                meta.sarif_id
-            );
+                    "{id} and {other} share the short description {:?}",
+                    meta.short_description
+                );
+            }
         }
     }
 }

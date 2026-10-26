@@ -2,12 +2,10 @@
 //! Act Annex IV technical-documentation readiness).
 //!
 //! The AI Act shares the CRA-family `COMPLIANCE_SARIF_RULE_IDS` catalogue;
-//! its universe is that slice's `SBOM-AIACT-*` ids plus the slice-less
-//! family catch-all `SBOM-AIACT-GENERAL`. The Annex IV clusters
-//! (`SBOM-AIACT-ANNEX-IV-1`, `-2D`, `-2G`, `-2C`, `-3`) are emitted only
-//! through per-element alias keys, so each key also gets a per-key row. A
-//! declared high-risk system (CRA sidecar `isHighRiskAi`) escalates every
-//! documentation gap; those escalations are the departing firing cases.
+//! its universe is that slice's `SBOM-AIACT-*` ids, one per Annex IV
+//! element the profile checks. A declared high-risk system (CRA sidecar
+//! `isHighRiskAi`) escalates every documentation gap; those escalations are
+//! the departing firing cases.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
@@ -21,14 +19,12 @@ use sbom_tools::quality::{COMPLIANCE_SARIF_RULE_IDS, ComplianceLevel, ViolationS
 
 const LEVEL: ComplianceLevel = ComplianceLevel::EuAiAct;
 
-/// The AI Act rules of the shared CRA-family SARIF catalogue, plus the
-/// slice-less family catch-all.
+/// The AI Act rules of the shared CRA-family SARIF catalogue.
 fn ai_act_universe() -> Vec<&'static str> {
     COMPLIANCE_SARIF_RULE_IDS
         .iter()
         .copied()
         .filter(|id| id.starts_with("SBOM-AIACT-"))
-        .chain(std::iter::once("SBOM-AIACT-GENERAL"))
         .collect()
 }
 
@@ -156,37 +152,7 @@ fn ai_act_non_ai_sbom_is_not_applicable() {
 #[test]
 fn ai_act_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     let entries = vec![
-        // ── SARIF rows ────────────────────────────────────────────────────
-        RuleEntry::tested(
-            "SBOM-AIACT-ANNEX-IV-1",
-            Sev::Warning,
-            broken(|s| model(s).model_card_mut().use_cases.clear()),
-            base(),
-        ),
-        RuleEntry::tested(
-            "SBOM-AIACT-ANNEX-IV-2D",
-            Sev::Warning,
-            broken(|s| model(s).model_card_mut().datasets.clear()),
-            base(),
-        ),
-        RuleEntry::tested(
-            "SBOM-AIACT-ANNEX-IV-2G",
-            Sev::Warning,
-            broken(|s| model(s).model_card_mut().performance_metrics.clear()),
-            base(),
-        ),
-        RuleEntry::tested(
-            "SBOM-AIACT-ANNEX-IV-2C",
-            Sev::Info,
-            broken(|s| model(s).model_card_mut().training_energy_kwh = None),
-            base(),
-        ),
-        RuleEntry::tested(
-            "SBOM-AIACT-ANNEX-IV-3",
-            Sev::Info,
-            broken(|s| model(s).model_card_mut().technical_limitations.clear()),
-            base(),
-        ),
+        // ── Typing ───────────────────────────────────────────────────────
         // Untyping a model cannot dodge the assessment: the ML content is
         // surfaced, and alone it keeps the profile applicable.
         RuleEntry::tested(
@@ -206,15 +172,9 @@ fn ai_act_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 )];
             }),
         ),
-        RuleEntry::skipped(
-            "SBOM-AIACT-GENERAL",
-            "registry catch-all for the EU AI Act family: no check site in \
-             check_eu_ai_act emits it (it is the SARIF re-bucketing target \
-             only); it cannot fire from document content",
-        ),
-        // ── Per-key rows: the Annex IV elements ──────────────────────────
+        // ── The Annex IV elements ──────────────────────────────────────────
         // A model-card reference alone is a general description (silent).
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION",
             Sev::Warning,
             broken(strip_description),
@@ -234,7 +194,7 @@ fn ai_act_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 high_risk(s);
             }),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-AIACT-ANNEX-IV-1-PURPOSE",
             Sev::Warning,
             broken(|s| model(s).model_card_mut().use_cases.clear()),
@@ -248,7 +208,7 @@ fn ai_act_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 high_risk(s);
             }),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-AIACT-ANNEX-IV-2D-DATASETS",
             Sev::Warning,
             broken(|s| model(s).model_card_mut().datasets.clear()),
@@ -275,7 +235,7 @@ fn ai_act_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Warning,
             broken(|s| nest_dataset_under_model(s, false)),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-AIACT-ANNEX-IV-2D-SENSITIVITY",
             Sev::Warning,
             broken(|s| {
@@ -299,7 +259,7 @@ fn ai_act_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // Personal data is a disclosure note, not a gap: Info, or Warning
         // for a declared high-risk system.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-AIACT-ANNEX-IV-2D-PERSONAL-DATA",
             Sev::Info,
             broken(|s| {
@@ -326,7 +286,7 @@ fn ai_act_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 high_risk(s);
             }),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-AIACT-ANNEX-IV-2G-METRICS",
             Sev::Warning,
             broken(|s| model(s).model_card_mut().performance_metrics.clear()),
@@ -341,7 +301,7 @@ fn ai_act_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             }),
         ),
         // A recommendation about models: silent on a dataset-only AI-BOM.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-AIACT-ANNEX-IV-2C-ENERGY",
             Sev::Info,
             broken(|s| model(s).model_card_mut().training_energy_kwh = None),
@@ -353,7 +313,7 @@ fn ai_act_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 )];
             }),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-AIACT-ANNEX-IV-3-LIMITATIONS",
             Sev::Info,
             broken(|s| model(s).model_card_mut().technical_limitations.clear()),

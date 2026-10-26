@@ -241,3 +241,79 @@ fn multi_standard_sarif_carries_per_standard_run_summaries() {
         }
     }
 }
+
+/// Every declared rule carries what GitHub code scanning shows for it: a
+/// short and a full description within its 1,024-character limit, and help
+/// as plain text and Markdown. Each check is its own rule, so no two rules
+/// share a name.
+#[test]
+fn every_declared_rule_carries_descriptions_and_help() {
+    use sbom_tools::quality::{QualityScorer, ScoringProfile};
+    use sbom_tools::reports::{
+        ReportConfig, ReportGenerator, SarifReporter, generate_quality_sarif,
+    };
+    let sbom = violating_sbom();
+    let mut documents: Vec<(String, String)> = ComplianceLevel::all()
+        .iter()
+        .map(|level| {
+            let result = checker(*level).check(&sbom);
+            (
+                level.name().to_string(),
+                generate_compliance_sarif(&result).expect("sarif generation"),
+            )
+        })
+        .collect();
+    let report = QualityScorer::new(ScoringProfile::Standard).score(&sbom);
+    documents.push((
+        "quality".to_string(),
+        generate_quality_sarif(&report, "test.cdx.json", "standard").expect("sarif"),
+    ));
+    let config = ReportConfig::all();
+    let reporter = SarifReporter::new();
+    documents.push((
+        "view".to_string(),
+        reporter
+            .generate_view_report(&sbom, &config)
+            .expect("sarif"),
+    ));
+    let empty = NormalizedSbom::default();
+    let diff = sbom_tools::DiffEngine::new()
+        .diff(&sbom, &empty)
+        .expect("diff");
+    documents.push((
+        "diff".to_string(),
+        reporter
+            .generate_diff_report(&diff, &sbom, &empty, &config)
+            .expect("sarif"),
+    ));
+    for (label, sarif) in &documents {
+        let json: serde_json::Value = serde_json::from_str(sarif).expect("valid JSON");
+        let rules = json["runs"][0]["tool"]["driver"]["rules"]
+            .as_array()
+            .expect("rules array");
+        let mut names = HashSet::new();
+        for rule in rules {
+            let id = rule["id"].as_str().expect("rule id");
+            for pointer in [
+                "/shortDescription/text",
+                "/fullDescription/text",
+                "/help/text",
+                "/help/markdown",
+            ] {
+                let text = rule
+                    .pointer(pointer)
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or_default();
+                assert!(!text.trim().is_empty(), "[{label}] {id} lacks {pointer}");
+                if pointer.ends_with("Description/text") {
+                    assert!(
+                        text.chars().count() <= 1024,
+                        "[{label}] {id}: {pointer} exceeds 1,024 characters"
+                    );
+                }
+            }
+            let name = rule["name"].as_str().expect("rule name");
+            assert!(names.insert(name), "[{label}] two rules are named {name}");
+        }
+    }
+}

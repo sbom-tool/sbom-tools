@@ -9,6 +9,9 @@
 //!   80,000. Each direct dependency used to be checked against every edge,
 //!   which was quadratic on this shape (3.7 s at 80,000); the set of edge
 //!   sources is now computed once, so time grows linearly with N.
+//! * `sarif_locator_50k` — the `-o sarif` locator pass (SBOM ids to source
+//!   lines) on a 50,000-component CycloneDX JSON document, minified and
+//!   pretty-printed, against parsing the same text.
 //!
 //! Fixtures come from the shared, deterministic `benches/support` generators.
 
@@ -16,9 +19,13 @@ mod support;
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use sbom_tools::model::{Component, DependencyEdge, DependencyType, NormalizedSbom};
+use sbom_tools::parsers::parse_sbom_str;
 use sbom_tools::quality::{ComplianceChecker, ComplianceLevel};
+use sbom_tools::reports::{
+    SarifArtifact, SarifArtifactLocation, SarifOptions, SbomLocator, generate_compliance_sarif_with,
+};
 use std::hint::black_box;
-use support::{Topology, generate_flat_sbom, generate_graph_sbom};
+use support::{Topology, cyclonedx_json, generate_flat_sbom, generate_graph_sbom};
 
 fn bench_all_levels(c: &mut Criterion) {
     let sbom = generate_graph_sbom("cmp", 10_000, Topology::Mixed);
@@ -66,5 +73,55 @@ fn bench_fsct_wide(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_all_levels, bench_fsct_wide);
+/// The SARIF locator on a 50,000-component CycloneDX document, minified (one
+/// line) and pretty-printed: the scan alone, and the scan joined with the
+/// parsed components (`SarifArtifact::new`, what `-o sarif` runs once per
+/// SBOM). Parsing the same text is the reference: the locator is one linear
+/// pass and should stay well below it. The last two rows render NTIA SARIF
+/// for the same document, all 50,003 results (no `--sarif-max-results`
+/// cap), with and without locations.
+fn bench_sarif_locator(c: &mut Criterion) {
+    let minified = cyclonedx_json(50_000);
+    let value: serde_json::Value = serde_json::from_str(&minified).expect("generated JSON");
+    let pretty = serde_json::to_string_pretty(&value).expect("pretty JSON");
+    let sbom = parse_sbom_str(&minified).expect("generated SBOM parses");
+    let location = SarifArtifactLocation::relative("sbom.cdx.json");
+    let artifact = SarifArtifact::new(location.clone(), &sbom, &pretty);
+    assert!(
+        sbom.components
+            .keys()
+            .all(|id| artifact.component_line(id.value()).is_some()),
+        "the locator finds every generated component"
+    );
+    let mut group = c.benchmark_group("sarif_locator_50k");
+    group.sample_size(10);
+    group.bench_function("parse_minified", |b| {
+        b.iter(|| black_box(parse_sbom_str(black_box(&minified))));
+    });
+    for (label, text) in [("minified", &minified), ("pretty", &pretty)] {
+        group.bench_function(format!("scan_{label}"), |b| {
+            b.iter(|| black_box(SbomLocator::scan(black_box(text))));
+        });
+        group.bench_function(format!("artifact_{label}"), |b| {
+            b.iter(|| black_box(SarifArtifact::new(location.clone(), &sbom, black_box(text))));
+        });
+    }
+    let result = ComplianceChecker::new(ComplianceLevel::NtiaMinimum).check(&sbom);
+    let unlocated = SarifOptions::new().with_max_results(0);
+    let located = unlocated.clone().with_artifact(artifact);
+    group.bench_function("ntia_sarif_without_locations", |b| {
+        b.iter(|| black_box(generate_compliance_sarif_with(&result, &unlocated)));
+    });
+    group.bench_function("ntia_sarif_with_locations", |b| {
+        b.iter(|| black_box(generate_compliance_sarif_with(&result, &located)));
+    });
+    group.finish();
+}
+
+criterion_group!(
+    benches,
+    bench_all_levels,
+    bench_fsct_wide,
+    bench_sarif_locator
+);
 criterion_main!(benches);

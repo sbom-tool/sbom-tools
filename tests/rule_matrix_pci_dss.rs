@@ -249,12 +249,6 @@ fn pci_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 )];
             }),
         ),
-        RuleEntry::skipped(
-            "SBOM-PCI-GENERAL",
-            "registry catch-all for the PCI DSS family: no check site in \
-             check_pci_dss_6_3_2 emits it (registry.rs keeps it as the SARIF \
-             re-bucketing target); it cannot fire from document content",
-        ),
     ];
 
     run_matrix(LEVEL, PCIDSS_SARIF_RULE_IDS, &entries);

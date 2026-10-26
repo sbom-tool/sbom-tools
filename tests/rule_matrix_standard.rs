@@ -2,8 +2,9 @@
 //! (audit P3: no test anywhere instantiated the Standard profile).
 //!
 //! Standard has no dedicated SARIF slice in the registry: it runs on the
-//! generic checker path, and every rule it can emit reports under one of the
-//! two SARIF rules below. The universe is therefore declared locally
+//! generic checker path, and every check it runs is a rule of its own (the
+//! NTIA version rule and the `SBOM-QUALITY-*` rules below). The universe is
+//! therefore declared locally
 //! (derived from the Standard-level match arms in
 //! src/quality/compliance/generic.rs) and the matrix sweep enforces that no
 //! fixture ever emits an id outside it — if a new Standard-level check site
@@ -20,14 +21,23 @@ use sbom_tools::quality::{ComplianceLevel, ViolationSeverity as Sev};
 
 const LEVEL: ComplianceLevel = ComplianceLevel::Standard;
 
-/// Every SARIF rule id the Standard profile can emit (generic.rs):
-/// * `SBOM-NTIA-VERSION` — missing component version (Error);
-/// * `SBOM-QUALITY-GENERAL` — the quality-family SARIF rule of every other
-///   Standard-level check, each under its own `SBOM-QUALITY-*` id: document
-///   creator (Error), serial number (Warning), component name (Error),
-///   unique identifier (Warning), license (Warning), and the CycloneDX/SPDX
-///   format-specific Infos.
-const STANDARD_RULE_UNIVERSE: &[&str] = &["SBOM-NTIA-VERSION", "SBOM-QUALITY-GENERAL"];
+/// Every SARIF rule id the Standard profile can emit (generic.rs): the NTIA
+/// component version (Error), document creator (Error), serial number
+/// (Warning), component inventory and name (Error), unique identifier
+/// (Warning), license (Warning), and the CycloneDX/SPDX format-specific
+/// checks.
+const STANDARD_RULE_UNIVERSE: &[&str] = &[
+    "SBOM-NTIA-VERSION",
+    "SBOM-QUALITY-CREATOR",
+    "SBOM-QUALITY-SERIAL",
+    "SBOM-QUALITY-INVENTORY",
+    "SBOM-QUALITY-NAME",
+    "SBOM-QUALITY-IDENTIFIER",
+    "SBOM-QUALITY-LICENSE",
+    "SBOM-QUALITY-SPEC-VERSION",
+    "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
+    "SBOM-QUALITY-ELEMENT-ID",
+];
 
 /// A component that also satisfies the Standard-level license check.
 fn comp(name: &str) -> ComponentFixture {
@@ -78,23 +88,13 @@ fn standard_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.component_mut("libalpha").version = None),
             base(),
         ),
-        // The quality-family generic bucket: every other Standard-level
-        // check reports an alias key of its own (per-key rows below).
-        RuleEntry::skipped(
-            "SBOM-QUALITY-GENERAL",
-            "no check emits SBOM-QUALITY-GENERAL under its own key since WP 1.8b: every \
-             Standard-level check that shares the SARIF rule reports an alias key of its \
-             own (CREATOR, SERIAL, INVENTORY, NAME, IDENTIFIER, LICENSE, SPEC-VERSION, \
-             SPEC-VERSION-UNKNOWN, ELEMENT-ID), each with a per-key row",
-        ),
-        // ── Per-key rows ─────────────────────────────────────────────────
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-CREATOR",
             Sev::Error,
             broken(|s| s.tools.clear()),
             base(),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-SERIAL",
             Sev::Warning,
             broken(|s| s.serial_number = None),
@@ -102,7 +102,7 @@ fn standard_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // No software component at all: the per-component rules have
         // nothing to judge, which is a finding.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-INVENTORY",
             Sev::Error,
             broken(|s| {
@@ -113,19 +113,19 @@ fn standard_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // "unknown" without a corroborating PURL name segment does not count
         // as a real component name.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-NAME",
             Sev::Error,
             broken(|s| s.component_mut("libalpha").name = "unknown".to_string()),
             base(),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-IDENTIFIER",
             Sev::Warning,
             broken(|s| s.component_mut("libalpha").purl = None),
             base(),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-LICENSE",
             Sev::Warning,
             broken(|s| s.component_mut("libalpha").licenses.clear()),
@@ -133,7 +133,7 @@ fn standard_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // CycloneDX newer than the latest version read (1.7) warns; an
         // outdated version is an Info.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-SPEC-VERSION",
             Sev::Warning,
             broken(|s| s.spec_version = "1.8".to_string()),
@@ -144,14 +144,14 @@ fn standard_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Info,
             broken(|s| s.spec_version = "1.3".to_string()),
         ),
-        RuleEntry::key_skipped(
+        RuleEntry::skipped(
             "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
             "an SPDX version that is neither 2.x nor 3.x is an SPDX-only check, out of \
              the CycloneDX-only DSL's reach; standard_spec_version_unknown_reads_only_spdx \
              below fires it on SPDX 4.0 and keeps it silent on SPDX 2.3",
         ),
         // A component whose bom-ref collapses to its name.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-ELEMENT-ID",
             Sev::Info,
             broken(|s| {
@@ -165,7 +165,7 @@ fn standard_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     run_matrix(LEVEL, STANDARD_RULE_UNIVERSE, &entries);
 }
 
-/// SBOM-QUALITY-SPEC-VERSION-UNKNOWN reads only SPDX input, so its per-key
+/// SBOM-QUALITY-SPEC-VERSION-UNKNOWN reads only SPDX input, so its matrix
 /// row is skipped.
 #[test]
 fn standard_spec_version_unknown_reads_only_spdx() {

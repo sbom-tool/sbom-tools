@@ -77,16 +77,16 @@ fn ssdf_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             }),
             base(),
         ),
-        // PS.1 has two checks sharing the SARIF rule: a creator-less SBOM
+        // PS.1 has two checks, each its own rule: a creator-less SBOM
         // (Error, this row) and a missing tool creator (SBOM-SSDF-PS1-TOOL,
-        // per-key row below; a creator-less SBOM draws both).
+        // row below; a creator-less SBOM draws both).
         RuleEntry::tested(
             "SBOM-SSDF-PS1",
             Sev::Error,
             broken(|s| s.tools.clear()),
             base(),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-SSDF-PS1-TOOL",
             Sev::Warning,
             broken(|s| {
@@ -180,12 +180,6 @@ fn ssdf_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Warning,
             broken(|s| s.component_mut("libalpha").purl = None),
             base(),
-        ),
-        RuleEntry::skipped(
-            "SBOM-SSDF-GENERAL",
-            "registry catch-all for the SSDF family: no check site in \
-             check_nist_ssdf emits it (registry.rs keeps it so the SARIF rule \
-             catalogue mirrors the slice); it cannot fire from document content",
         ),
     ];
 

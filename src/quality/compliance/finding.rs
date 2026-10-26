@@ -11,10 +11,12 @@
 //!
 //! - `<standard>` is the canonical `validate --standard` value of the level
 //!   (see [`standard_key`]).
-//! - `<rule id>` is the stable internal [`Violation::rule_id`], not the
-//!   `sarif_rule_id`: dozens of registry keys alias a shared SARIF rule (the
-//!   ten `SBOM-BSIAI-MODEL-*` checks all report as `SBOM-BSIAI-MODEL`), so a
-//!   SARIF-keyed id would merge distinct findings about the same component.
+//! - `<rule id>` is the stable internal [`Violation::rule_id`]. Since v0.4.0
+//!   every check is its own SARIF rule, so it equals the `sarif_rule_id` of
+//!   every registered rule; until then dozens of keys shared a SARIF rule
+//!   (the ten `SBOM-BSIAI-MODEL-*` checks all reported as
+//!   `SBOM-BSIAI-MODEL`), and the key was built from the internal id so that
+//!   distinct findings about one component never merged.
 //! - `<detail>` is the [`Violation::finding_detail`] of a rule that reports
 //!   several findings on one subject (the vulnerability id, the cipher
 //!   suite, …), with `%`, `|` and `:` percent-encoded as `%25`, `%7C` and
@@ -153,7 +155,13 @@ pub const fn standard_key(level: ComplianceLevel) -> &'static str {
 /// finding.
 #[must_use]
 pub fn finding_subject<F: FindingIdentity + ?Sized>(finding: &F) -> Cow<'_, str> {
-    match finding.component_id() {
+    subject_of(finding.component_id())
+}
+
+/// The `<subject>` of a finding about the component whose canonical id is
+/// `component_id`, or about the document when it is `None`.
+fn subject_of(component_id: Option<&str>) -> Cow<'_, str> {
+    match component_id {
         None => Cow::Borrowed(DOCUMENT_SUBJECT),
         Some(id)
             if id == DOCUMENT_SUBJECT
@@ -172,8 +180,27 @@ pub fn finding_subject<F: FindingIdentity + ?Sized>(finding: &F) -> Cow<'_, str>
 /// see the module docs).
 #[must_use]
 pub fn finding_key<F: FindingIdentity + ?Sized>(level: ComplianceLevel, finding: &F) -> String {
-    let mut key = format!("{}|{}", standard_key(level), finding.rule_id());
-    if let Some(detail) = finding.finding_detail() {
+    compose_finding_key(
+        standard_key(level),
+        finding.rule_id(),
+        finding.finding_detail(),
+        finding.component_id(),
+    )
+}
+
+/// A key in the shape of [`finding_key`] from its parts: `scope` in place of
+/// the standard (SARIF results that are not compliance findings use a
+/// surface name such as `diff` or `view`), the rule id, the optional detail
+/// (percent-encoded) and the canonical id of the component the result is
+/// about, or `None` for the document.
+pub(crate) fn compose_finding_key(
+    scope: &str,
+    rule_id: &str,
+    detail: Option<&str>,
+    component_id: Option<&str>,
+) -> String {
+    let mut key = format!("{scope}|{rule_id}");
+    if let Some(detail) = detail {
         key.push(':');
         for c in detail.chars() {
             match c {
@@ -185,7 +212,7 @@ pub fn finding_key<F: FindingIdentity + ?Sized>(level: ComplianceLevel, finding:
         }
     }
     key.push('|');
-    key.push_str(&finding_subject(finding));
+    key.push_str(&subject_of(component_id));
     key
 }
 
@@ -236,14 +263,26 @@ pub(crate) fn number_repeated_details<F: NumberedDetail>(findings: &mut [F]) {
 /// first 16 lowercase hex digits of SHA-256 of the key's UTF-8 bytes.
 #[must_use]
 pub fn finding_id(finding_key: &str) -> String {
-    use sha2::{Digest, Sha256};
-    let digest = Sha256::digest(finding_key.as_bytes());
+    let fingerprint = finding_fingerprint(finding_key);
     let mut id = String::with_capacity(FINDING_ID_PREFIX.len() + 16);
     id.push_str(FINDING_ID_PREFIX);
-    for byte in &digest[..8] {
-        let _ = write!(id, "{byte:02x}");
-    }
+    id.push_str(&fingerprint[..16]);
     id
+}
+
+/// The full fingerprint of a finding key: the 64 lowercase hex digits of
+/// SHA-256 of the key's UTF-8 bytes. SARIF output carries it as the
+/// `sbomToolsFinding/v1` partial fingerprint; [`finding_id`] is its first 16
+/// digits behind a prefix.
+#[must_use]
+pub fn finding_fingerprint(finding_key: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let digest = Sha256::digest(finding_key.as_bytes());
+    let mut hex = String::with_capacity(64);
+    for byte in digest {
+        let _ = write!(hex, "{byte:02x}");
+    }
+    hex
 }
 
 #[cfg(test)]
@@ -526,6 +565,41 @@ mod tests {
         assert_eq!(
             finding_id("ntia|SBOM-NTIA-SUPPLIER|pkg:npm/lodash@4.17.21"),
             "sbomtools:v1:f863b422f8675d3b"
+        );
+    }
+
+    /// The fingerprint is the whole digest the id is cut from.
+    #[test]
+    fn fingerprint_is_the_full_sha256_of_the_key() {
+        let key = "ntia|SBOM-NTIA-AUTHOR|document";
+        let fingerprint = finding_fingerprint(key);
+        assert_eq!(fingerprint.len(), 64);
+        assert!(fingerprint.bytes().all(|b| b.is_ascii_hexdigit()));
+        assert!(fingerprint.starts_with("60072ae05d1ef4b8"), "{fingerprint}");
+        assert_eq!(
+            finding_id(key),
+            format!("{FINDING_ID_PREFIX}{}", &fingerprint[..16])
+        );
+    }
+
+    /// The composed key of a violation's parts is its finding key.
+    #[test]
+    fn composed_keys_match_finding_keys() {
+        let violations = ntia_violations();
+        for v in &violations {
+            assert_eq!(
+                compose_finding_key(
+                    standard_key(ComplianceLevel::NtiaMinimum),
+                    v.rule_id,
+                    v.finding_detail.as_deref(),
+                    v.component_id.as_deref(),
+                ),
+                finding_key(ComplianceLevel::NtiaMinimum, v)
+            );
+        }
+        assert_eq!(
+            compose_finding_key("diff", "SBOM-TOOLS-005", Some("CVE-1:x"), Some("document")),
+            "diff|SBOM-TOOLS-005:CVE-1%3Ax|component:document"
         );
     }
 

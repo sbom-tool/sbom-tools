@@ -420,6 +420,7 @@ Compares two SBOMs and reports added, removed, and modified components with vers
 | `--detect-typosquats` | Flag components that look like known-package typosquats |
 | `--explain-matches` | Show why each component pair was matched |
 | `--severity <level>` | Filter by minimum severity (`critical`, `high`, `medium`, `low`) |
+| `--sarif-base <dir>`, `--sarif-category <name>`, `--sarif-max-results <n>` | Where `-o sarif` results point, the code-scanning category they report under, and the most results a run keeps (25,000 by default); see [SARIF and code scanning](#sarif-and-code-scanning) |
 
 </details>
 
@@ -472,6 +473,7 @@ Launches an interactive TUI with component tree, vulnerability details, license 
 | `--enrich-eol` | Detect end-of-life status via endoflife.date API |
 | `--validate-ntia` | Validate against NTIA minimum elements |
 | `--bom-type <type>` | BOM type override (`sbom`, `cbom`, `aibom`). Auto-detected from content if omitted |
+| `--sarif-base <dir>`, `--sarif-category <name>`, `--sarif-max-results <n>` | Where `-o sarif` results point, the code-scanning category they report under, and the most results a run keeps (25,000 by default); see [SARIF and code scanning](#sarif-and-code-scanning) |
 
 </details>
 
@@ -494,6 +496,7 @@ Checks an SBOM against a compliance standard and reports missing fields or faili
 | `--require-applicable` | Exit `1` when a selected standard does not apply to the SBOM (e.g. `ai-act` on an SBOM without ML components); without it, such a standard is reported as N/A and exits `0` |
 | `--json-schema <v1\|v2>` | Layout of `-o json`: `v2` (default) is the `sbom-tools/compliance/v2` envelope; `v1` is the deprecated pre-0.4 layout, removed in v0.5.0 |
 | `--sarif-include-passes` | With `-o sarif`, also report every check the SBOM passed (e.g. an approved post-quantum algorithm) as a result of `kind: "pass"`, level `none`. Off by default, so code scanning shows no pass as an alert |
+| `--sarif-base <dir>`, `--sarif-category <name>`, `--sarif-max-results <n>` | Where `-o sarif` results point, the code-scanning category they report under, and the most results a run keeps (25,000 by default); see [SARIF and code scanning](#sarif-and-code-scanning) |
 
 `-o json` emits one object for any number of standards, with a stable
 `finding_id` on every violation and every passed check;
@@ -545,6 +548,7 @@ Documented quirks live in [`docs/STANDARDS_VERSIONS.md`](docs/STANDARDS_VERSIONS
 | `--fail-on-noncompliant` | Exit with code 1 if the profile's embedded compliance check reports the SBOM as non-compliant |
 | `--recommendations` | Show detailed improvement recommendations |
 | `--metrics` | Show detailed scoring metrics |
+| `--sarif-base <dir>`, `--sarif-category <name>`, `--sarif-max-results <n>` | Where `-o sarif` results point, the code-scanning category they report under, and the most results a run keeps (25,000 by default); see [SARIF and code scanning](#sarif-and-code-scanning) |
 
 </details>
 
@@ -837,6 +841,75 @@ Which JSON payloads are a compatibility contract, and how firm it is
   `"unknown"` both normalize to `primitive: "Unknown"`. A consumer that must
   tell "omitted" from "declared unknown" should read the raw CycloneDX
   document, which is the stable contract for that distinction.
+
+### SARIF and code scanning
+
+`-o sarif` (`diff`, `view`, `validate`, `quality`) writes a SARIF 2.1.0 log
+with one run, shaped for GitHub code scanning:
+
+- **Every result points into the SBOM file**: at the line of the component's
+  `bom-ref`, `SPDXID`, `spdxId` or `@id`, or, for a finding about the whole
+  document, at the CycloneDX `metadata` or the SPDX creation information. A
+  component whose id the text does not state points at line 1. A component
+  result also names the component, by its purl or else its id, as a logical
+  location. A minified SBOM is a single line, so all of its results point at
+  line 1.
+- **The SBOM path is relative to the repository** the file is in (the nearest
+  ancestor directory holding a `.git`), under the `SRCROOT` base, so code
+  scanning finds the file in the checkout. `--sarif-base <dir>` names another
+  root. A file outside the root is named by its absolute `file://` URI, with a
+  warning, and standard input is named `-`.
+- **Every check is its own rule.** `ruleId` is the violation's `rule_id` from
+  `validate -o json`. Each rule has a description, help text naming where the
+  fix goes in each SBOM format, and a `helpUri` to the standard's text where
+  one is known.
+- **Alerts survive edits.** `partialFingerprints` are derived from the
+  finding's identity (standard, rule, component; see
+  [finding identity](docs/compliance-output.md#finding-identity)), never from
+  its line or message, so moving, reformatting or reordering the SBOM keeps
+  its alerts. `properties.findingKey` and `properties.findingId` carry the
+  same identity.
+- **One category per kind of run.** `automationDetails.id` is
+  `sbom-tools/<standards>/` for `validate` (the canonical `--standard` values,
+  sorted and joined by `+`, as in `sbom-tools/cra+ntia/`),
+  `sbom-tools/quality/<profile>/`, `sbom-tools/diff/` or `sbom-tools/view/`.
+  Code scanning keeps one set of alerts per category, and each upload replaces
+  that set. Because the SARIF already names its category, `upload-sarif`
+  ignores its own `category` input, and it fails a job that uploads two files
+  with the same category. When one workflow checks several SBOMs against the
+  same standards, give each one its own category:
+
+  ```sh
+  sbom-tools validate services/api/sbom.cdx.json --standard cra \
+    -o sarif -O api.sarif --sarif-category sbom-tools/cra/api
+  sbom-tools validate services/web/sbom.cdx.json --standard cra \
+    -o sarif -O web.sarif --sarif-category sbom-tools/cra/web
+  ```
+- **At most 25,000 results per run**, the most GitHub accepts (it shows the
+  5,000 most severe). A run that would hold more keeps the most severe and
+  says in `invocations[0].toolExecutionNotifications`, and on stderr, how many
+  it omitted; `-o json` has the full list. `--sarif-max-results <n>` sets the
+  cap (`0` for none).
+- **Passed checks are no results**, so they raise no alert.
+  `validate --sarif-include-passes` adds each as a result of `kind: "pass"` at
+  level `none`, located and fingerprinted like a violation.
+- **`diff` reports into the new SBOM.** Its results point into the new file: a
+  removed component at the new SBOM's document line. The old SBOM's own CRA
+  findings are not results; `diff -o json` and the text reports keep both
+  sides.
+- **TUI exports carry no physical location**: the TUI's SARIF export (`e`,
+  then `s`) does not keep the SBOM file, so code scanning drops its results.
+  Produce SARIF for code scanning with the CLI.
+
+Upgrading from v0.3: SARIF results now carry locations and fingerprints, and
+every check has its own SARIF rule. The first upload after upgrading re-keys
+existing code-scanning alerts. `diff -o sarif` reports into the new SBOM
+only: the old SBOM's CRA findings are no longer results, and removed
+components point at the new SBOM. A run keeps at most 25,000 results unless
+`--sarif-max-results` says otherwise.
+
+The field-by-field mapping is in
+[docs/compliance-output.md](docs/compliance-output.md#sarif).
 
 ## CI/CD Integration
 

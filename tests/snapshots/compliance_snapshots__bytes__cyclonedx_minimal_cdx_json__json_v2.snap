@@ -136,7 +136,7 @@ source: tests/compliance_snapshots.rs
           "component_id": "test-app",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-NTIA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-NTIA-GENERAL",
+          "sarif_rule_id": "SBOM-NTIA-ELEMENT-ID",
           "standard_refs": [
             {
               "standard": "NtiaMinimum",

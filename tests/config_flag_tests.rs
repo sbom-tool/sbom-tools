@@ -332,6 +332,28 @@ fn config_compliance_min_score_gates_quality_exit_code() {
 }
 
 #[test]
+fn config_sarif_max_results_caps_validate_and_the_flag_overrides_it() {
+    let (_dir, cfg) = write_config("output:\n  sarif_max_results: 2\n");
+    let results = |extra: &[&str]| {
+        let output = base_command()
+            .args(["--config", cfg.to_str().unwrap(), "validate"])
+            .arg(fixture_path("demo-new.cdx.json"))
+            .args(["--standard", "ntia,cra", "-o", "sarif"])
+            .args(extra)
+            .output()
+            .expect("validate should run");
+        let json: serde_json::Value =
+            serde_json::from_str(stdout(&output).trim()).expect("SARIF should be JSON");
+        json["runs"][0]["results"].as_array().map_or(0, Vec::len)
+    };
+    assert_eq!(results(&[]), 2, "output.sarif_max_results: 2 caps the run");
+    assert!(
+        results(&["--sarif-max-results", "0"]) > 2,
+        "an explicit --sarif-max-results 0 lifts the cap"
+    );
+}
+
+#[test]
 fn config_compliance_fail_on_warning_takes_effect_on_validate() {
     // ntia-warnings-only has warnings but no errors, so exit code 2 can only
     // come from the config's fail_on_warning.

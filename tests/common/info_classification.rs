@@ -186,16 +186,8 @@ pub const INFO_FINDINGS: &[(&str, &str)] = &[
     ),
     // ── EU AI Act readiness ──────────────────────────────────────────────
     (
-        "SBOM-AIACT-ANNEX-IV-2C",
-        "SARIF anchor of the §2(c) cluster: reports only through SBOM-AIACT-ANNEX-IV-2C-ENERGY",
-    ),
-    (
         "SBOM-AIACT-ANNEX-IV-2C-ENERGY",
         "gap: no model declares its training energy",
-    ),
-    (
-        "SBOM-AIACT-ANNEX-IV-3",
-        "SARIF anchor of the §3 cluster: reports only through SBOM-AIACT-ANNEX-IV-3-LIMITATIONS",
     ),
     (
         "SBOM-AIACT-ANNEX-IV-3-LIMITATIONS",
@@ -212,16 +204,8 @@ pub const INFO_FINDINGS: &[(&str, &str)] = &[
         "gap: no AI-system data-flow description (no SBOM field carries one)",
     ),
     (
-        "SBOM-BSIAI-INFRA",
-        "SARIF anchor of the Infrastructure cluster: reports only through SBOM-BSIAI-INFRA-RUNTIME",
-    ),
-    (
         "SBOM-BSIAI-INFRA-RUNTIME",
         "gap: no ML component links to its runtime or framework",
-    ),
-    (
-        "SBOM-BSIAI-SEC",
-        "SARIF anchor of the Security cluster: reports only through its -SEC-* keys",
     ),
     (
         "SBOM-BSIAI-SEC-CONTROLS",

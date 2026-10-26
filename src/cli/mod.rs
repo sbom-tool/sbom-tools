@@ -114,6 +114,56 @@ pub(crate) fn parse_cra_product_class(
         .transpose()
 }
 
+/// Check the `--sarif-base` and `--sarif-category` values before any SBOM is
+/// read: the base must name a directory and the category must not be blank.
+/// Only `-o sarif` reads them, so other formats skip the check.
+pub(crate) fn check_sarif_flags(
+    output: crate::reports::ReportFormat,
+    base: Option<&std::path::Path>,
+    category: Option<&str>,
+) -> anyhow::Result<()> {
+    if output != crate::reports::ReportFormat::Sarif {
+        return Ok(());
+    }
+    if let Some(base) = base
+        && !base.is_dir()
+    {
+        anyhow::bail!("invalid --sarif-base {}: not a directory", base.display());
+    }
+    if category.is_some_and(|c| c.trim().is_empty()) {
+        anyhow::bail!("invalid --sarif-category: must not be blank");
+    }
+    Ok(())
+}
+
+/// The SBOM file a SARIF run's results point into: `sbom`, parsed from
+/// `content` read at `path`, named relative to `sarif_base` or, by default,
+/// to the repository the file is in (see
+/// [`crate::reports::SarifArtifactLocation::for_sbom_path`]).
+pub(crate) fn sarif_artifact(
+    path: &std::path::Path,
+    sarif_base: Option<&std::path::Path>,
+    sbom: &crate::model::NormalizedSbom,
+    content: &str,
+) -> anyhow::Result<crate::reports::SarifArtifact> {
+    let location =
+        crate::reports::SarifArtifactLocation::for_sbom_path(path, sarif_base).map_err(|e| {
+            anyhow::anyhow!(
+                "cannot name {} for SARIF output relative to {}: {e}",
+                path.display(),
+                sarif_base
+                    .map_or_else(|| "its repository".to_string(), |b| b.display().to_string())
+            )
+        })?;
+    if location.uri_base_id().is_none() && location.uri() != "-" {
+        tracing::warn!(
+            "{} is outside the SARIF base directory; results name it by its absolute path",
+            path.display()
+        );
+    }
+    Ok(crate::reports::SarifArtifact::new(location, sbom, content))
+}
+
 /// Parse an `--as-of` evaluation-clock value (shared by `validate` and
 /// `quality` so both commands accept the exact same spellings).
 ///

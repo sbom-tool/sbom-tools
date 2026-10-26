@@ -205,12 +205,6 @@ fn bsi_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             }),
             base(),
         ),
-        RuleEntry::skipped(
-            "SBOM-BSI-TR-03183-2-GENERAL",
-            "registry catch-all for the BSI family: no check site in \
-             check_bsi_tr_03183_2 emits it (it is the SARIF re-bucketing \
-             target only); it cannot fire from document content",
-        ),
     ];
 
     run_matrix(LEVEL, &bsi_universe(), &entries);

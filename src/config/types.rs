@@ -566,6 +566,21 @@ pub struct OutputConfig {
     /// `{format}` (json/md/html), `{command}` (diff/view).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub export_template: Option<String>,
+    /// Directory the artifact URIs of `-o sarif` output are relative to
+    /// (`--sarif-base`). When unset, the repository the SBOM file is in (the
+    /// nearest ancestor with a `.git` entry), else the current directory.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sarif_base: Option<PathBuf>,
+    /// Code-scanning category of `-o sarif` output, its
+    /// `automationDetails.id` (`--sarif-category`). When unset, one per
+    /// command and standard set or profile (`sbom-tools/cra/`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sarif_category: Option<String>,
+    /// The most results one `-o sarif` run keeps (`--sarif-max-results`);
+    /// `0` keeps every result. When unset, 25,000, the most GitHub code
+    /// scanning accepts in a run.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sarif_max_results: Option<usize>,
 }
 
 impl Default for OutputConfig {
@@ -577,7 +592,28 @@ impl Default for OutputConfig {
             no_color: false,
             streaming: StreamingConfig::default(),
             export_template: None,
+            sarif_base: None,
+            sarif_category: None,
+            sarif_max_results: None,
         }
+    }
+}
+
+impl OutputConfig {
+    /// The SARIF options these settings ask for, without an artifact: the
+    /// category (`--sarif-category`) and the cap on results
+    /// (`--sarif-max-results`, else
+    /// [`crate::reports::DEFAULT_SARIF_MAX_RESULTS`]).
+    #[must_use]
+    pub fn sarif_options(&self) -> crate::reports::SarifOptions {
+        let mut options = crate::reports::SarifOptions::new().with_max_results(
+            self.sarif_max_results
+                .unwrap_or(crate::reports::DEFAULT_SARIF_MAX_RESULTS),
+        );
+        if let Some(category) = &self.sarif_category {
+            options = options.with_category(category.clone());
+        }
+        options
     }
 }
 

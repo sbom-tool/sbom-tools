@@ -2,7 +2,7 @@
 source: tests/compliance_snapshots.rs
 ---
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
   "version": "2.1.0",
   "runs": [
     {
@@ -18,10 +18,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NTIA Minimum Elements: Author/creator information"
               },
+              "fullDescription": {
+                "text": "NTIA Minimum Elements: Author/creator information. References: NTIA Minimum Elements."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+              "help": {
+                "text": "Identify who created the SBOM (the NTIA Author data field): a person, organization or tool.\n\nWhere the fix goes:\n- CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools.\n- SPDX 2.x: add creationInfo.creators[] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- SPDX 3.0: set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element.\n\nReferences:\n- NTIA Minimum Elements (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
+                "markdown": "Identify who created the SBOM (the NTIA Author data field): a person, organization or tool.\n\n**Where the fix goes**\n\n- **CycloneDX:** add metadata.authors\\[\\] (name, email), metadata.manufacturer or metadata.tools.\n- **SPDX 2.x:** add creationInfo.creators\\[\\] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- **SPDX 3.0:** set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element.\n\n**References**\n\n- [NTIA Minimum Elements](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
+              }
             },
             {
               "id": "SBOM-NTIA-INVENTORY",
@@ -29,10 +36,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NTIA Minimum Elements: SBOM inventories at least one software component"
               },
+              "fullDescription": {
+                "text": "NTIA Minimum Elements: SBOM inventories at least one software component. References: NTIA Minimum Elements."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+              "help": {
+                "text": "List the software components the product is made of. A document with no components, or with only files, snippets or cryptographic assets, is not a software inventory; validate a CBOM with --standard cnsa2 or pqc instead.\n\nWhere the fix goes:\n- CycloneDX: set metadata.component and list the components in components[].\n- SPDX 2.x: list the packages in packages[] and name the product in documentDescribes.\n- SPDX 3.0: add software_Package elements and set the SpdxDocument's rootElement to the product package.\n\nReferences:\n- NTIA Minimum Elements (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
+                "markdown": "List the software components the product is made of. A document with no components, or with only files, snippets or cryptographic assets, is not a software inventory; validate a CBOM with --standard cnsa2 or pqc instead.\n\n**Where the fix goes**\n\n- **CycloneDX:** set metadata.component and list the components in components\\[\\].\n- **SPDX 2.x:** list the packages in packages\\[\\] and name the product in documentDescribes.\n- **SPDX 3.0:** add software\\_Package elements and set the SpdxDocument's rootElement to the product package.\n\n**References**\n\n- [NTIA Minimum Elements](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
+              }
             },
             {
               "id": "SBOM-NTIA-NAME",
@@ -40,10 +54,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NTIA Minimum Elements: Component name"
               },
+              "fullDescription": {
+                "text": "NTIA Minimum Elements: Component name. References: NTIA Minimum Elements."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+              "help": {
+                "text": "Give every component a name (an NTIA minimum data field); empty names and NOASSERTION do not count.\n\nWhere the fix goes:\n- CycloneDX: set components[].name.\n- SPDX 2.x: set packages[].name (PackageName), or files[].fileName for files.\n- SPDX 3.0: set name on the element.\n\nReferences:\n- NTIA Minimum Elements (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
+                "markdown": "Give every component a name (an NTIA minimum data field); empty names and NOASSERTION do not count.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].name.\n- **SPDX 2.x:** set packages\\[\\].name (PackageName), or files\\[\\].fileName for files.\n- **SPDX 3.0:** set name on the element.\n\n**References**\n\n- [NTIA Minimum Elements](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
+              }
             },
             {
               "id": "SBOM-NTIA-VERSION",
@@ -51,10 +72,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NTIA Minimum Elements: Component version string"
               },
+              "fullDescription": {
+                "text": "NTIA Minimum Elements: Component version string. References: NTIA Minimum Elements."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+              "help": {
+                "text": "Give every component the version its supplier assigned (an NTIA minimum data field); placeholders such as NOASSERTION, TBD or N/A do not count.\n\nWhere the fix goes:\n- CycloneDX: set components[].version.\n- SPDX 2.x: set packages[].versionInfo (PackageVersion).\n- SPDX 3.0: set software_packageVersion on the package.\n\nReferences:\n- NTIA Minimum Elements (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
+                "markdown": "Give every component the version its supplier assigned (an NTIA minimum data field); placeholders such as NOASSERTION, TBD or N/A do not count.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].version.\n- **SPDX 2.x:** set packages\\[\\].versionInfo (PackageVersion).\n- **SPDX 3.0:** set software\\_packageVersion on the package.\n\n**References**\n\n- [NTIA Minimum Elements](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
+              }
             },
             {
               "id": "SBOM-NTIA-SUPPLIER",
@@ -62,10 +90,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NTIA Minimum Elements: Supplier name"
               },
+              "fullDescription": {
+                "text": "NTIA Minimum Elements: Supplier name. References: NTIA Minimum Elements."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+              "help": {
+                "text": "Name the supplier of every component, the entity that creates, defines and identifies it (an NTIA minimum data field); placeholders such as NOASSERTION do not count.\n\nWhere the fix goes:\n- CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).\n- SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.\n\nReferences:\n- NTIA Minimum Elements (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
+                "markdown": "Name the supplier of every component, the entity that creates, defines and identifies it (an NTIA minimum data field); placeholders such as NOASSERTION do not count.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).\n- **SPDX 2.x:** set packages\\[\\].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages\\[\\].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- **SPDX 3.0:** set suppliedBy on the package to the spdxId of an Organization or Person element.\n\n**References**\n\n- [NTIA Minimum Elements](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
+              }
             },
             {
               "id": "SBOM-NTIA-IDENTIFIER",
@@ -73,10 +108,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NTIA Minimum Elements: Unique identifier (PURL/CPE/SWID)"
               },
+              "fullDescription": {
+                "text": "NTIA Minimum Elements: Unique identifier (PURL/CPE/SWID). References: NTIA Minimum Elements."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+              "help": {
+                "text": "Give every component another unique identifier (an NTIA minimum data field): a PURL, CPE, SWHID or SWID.\n\nWhere the fix goes:\n- CycloneDX: set components[].purl (or cpe, or swhid[]).\n- SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\nReferences:\n- NTIA Minimum Elements (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
+                "markdown": "Give every component another unique identifier (an NTIA minimum data field): a PURL, CPE, SWHID or SWID.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].purl (or cpe, or swhid\\[\\]).\n- **SPDX 2.x:** add a packages\\[\\].externalRefs\\[\\] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- **SPDX 3.0:** set software\\_packageUrl, or add an externalIdentifier\\[\\] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\n**References**\n\n- [NTIA Minimum Elements](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
+              }
             },
             {
               "id": "SBOM-NTIA-DEPENDENCY",
@@ -84,10 +126,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NTIA Minimum Elements: Dependency relationship"
               },
+              "fullDescription": {
+                "text": "NTIA Minimum Elements: Dependency relationship. References: NTIA Minimum Elements."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+              "help": {
+                "text": "Declare the dependency relationships between components (an NTIA minimum data field): connect the primary component to its direct dependencies and keep most components inside the dependency graph.\n\nWhere the fix goes:\n- CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.\n- SPDX 2.x: add relationships[] entries such as DEPENDS_ON (or DEPENDENCY_OF, CONTAINS) between the packages.\n- SPDX 3.0: add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\nReferences:\n- NTIA Minimum Elements (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
+                "markdown": "Declare the dependency relationships between components (an NTIA minimum data field): connect the primary component to its direct dependencies and keep most components inside the dependency graph.\n\n**Where the fix goes**\n\n- **CycloneDX:** add dependencies\\[\\] entries (ref plus dependsOn\\[\\]); an entry with an empty dependsOn records a component that has no dependencies.\n- **SPDX 2.x:** add relationships\\[\\] entries such as DEPENDS\\_ON (or DEPENDENCY\\_OF, CONTAINS) between the packages.\n- **SPDX 3.0:** add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\n**References**\n\n- [NTIA Minimum Elements](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
+              }
             },
             {
               "id": "SBOM-NTIA-TIMESTAMP",
@@ -95,21 +144,71 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NTIA Minimum Elements: Creation timestamp"
               },
+              "fullDescription": {
+                "text": "NTIA Minimum Elements: Creation timestamp. References: NTIA Minimum Elements."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+              "help": {
+                "text": "Record when the SBOM was created (the NTIA Timestamp data field).\n\nWhere the fix goes:\n- CycloneDX: set metadata.timestamp (RFC 3339, e.g. 2026-01-15T10:00:00Z).\n- SPDX 2.x: set creationInfo.created (Created).\n- SPDX 3.0: set creationInfo.created on the SpdxDocument.\n\nReferences:\n- NTIA Minimum Elements (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
+                "markdown": "Record when the SBOM was created (the NTIA Timestamp data field).\n\n**Where the fix goes**\n\n- **CycloneDX:** set metadata.timestamp (RFC 3339, e.g. 2026-01-15T10:00:00Z).\n- **SPDX 2.x:** set creationInfo.created (Created).\n- **SPDX 3.0:** set creationInfo.created on the SpdxDocument.\n\n**References**\n\n- [NTIA Minimum Elements](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
+              }
             },
             {
-              "id": "SBOM-NTIA-GENERAL",
-              "name": "NtiaGeneralRequirement",
+              "id": "SBOM-NTIA-SPEC-VERSION",
+              "name": "NtiaSpecVersion",
               "shortDescription": {
-                "text": "NTIA Minimum Elements: General requirement"
+                "text": "NTIA Minimum Elements: Spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0)"
+              },
+              "fullDescription": {
+                "text": "NTIA Minimum Elements: Spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0). References: NTIA Minimum Elements."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
-              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+              "help": {
+                "text": "Use a spec version sbom-tools reads: CycloneDX 1.4–1.7, SPDX 2.x or 3.0. An older version lacks fields the checks read, and what a newer version adds is not evaluated.\n\nWhere the fix goes:\n- CycloneDX: set specVersion 1.4–1.7.\n- SPDX 2.x: set spdxVersion SPDX-2.x.\n- SPDX 3.0: set creationInfo.specVersion 3.0.x.\n\nReferences:\n- NTIA Minimum Elements (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
+                "markdown": "Use a spec version sbom-tools reads: CycloneDX 1.4–1.7, SPDX 2.x or 3.0. An older version lacks fields the checks read, and what a newer version adds is not evaluated.\n\n**Where the fix goes**\n\n- **CycloneDX:** set specVersion 1.4–1.7.\n- **SPDX 2.x:** set spdxVersion SPDX-2.x.\n- **SPDX 3.0:** set creationInfo.specVersion 3.0.x.\n\n**References**\n\n- [NTIA Minimum Elements](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
+              }
+            },
+            {
+              "id": "SBOM-NTIA-SPEC-VERSION-UNKNOWN",
+              "name": "NtiaSpecVersionUnknown",
+              "shortDescription": {
+                "text": "NTIA Minimum Elements: SPDX document declares a valid SPDX version"
+              },
+              "fullDescription": {
+                "text": "NTIA Minimum Elements: SPDX document declares a valid SPDX version. References: NTIA Minimum Elements."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+              "help": {
+                "text": "Declare a valid SPDX version, 2.x or 3.0, so the document is read as the version it is.\n\nWhere the fix goes:\n- CycloneDX: set specVersion 1.4–1.7.\n- SPDX 2.x: set spdxVersion SPDX-2.x.\n- SPDX 3.0: set creationInfo.specVersion 3.0.x.\n\nReferences:\n- NTIA Minimum Elements (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
+                "markdown": "Declare a valid SPDX version, 2.x or 3.0, so the document is read as the version it is.\n\n**Where the fix goes**\n\n- **CycloneDX:** set specVersion 1.4–1.7.\n- **SPDX 2.x:** set spdxVersion SPDX-2.x.\n- **SPDX 3.0:** set creationInfo.specVersion 3.0.x.\n\n**References**\n\n- [NTIA Minimum Elements](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
+              }
+            },
+            {
+              "id": "SBOM-NTIA-ELEMENT-ID",
+              "name": "NtiaElementIdentifier",
+              "shortDescription": {
+                "text": "NTIA Minimum Elements: Every element has its own well-formed identifier"
+              },
+              "fullDescription": {
+                "text": "NTIA Minimum Elements: Every element has its own well-formed identifier. References: NTIA Minimum Elements."
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+              "help": {
+                "text": "Give every element its own well-formed identifier, the one dependency relationships refer to.\n\nWhere the fix goes:\n- CycloneDX: set a bom-ref on every component, one that differs from the component's name.\n- SPDX 2.x: give every element an SPDXID that starts with SPDXRef-.\n- SPDX 3.0: give every element an IRI spdxId.\n\nReferences:\n- NTIA Minimum Elements (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
+                "markdown": "Give every element its own well-formed identifier, the one dependency relationships refer to.\n\n**Where the fix goes**\n\n- **CycloneDX:** set a bom-ref on every component, one that differs from the component's name.\n- **SPDX 2.x:** give every element an SPDXID that starts with SPDXRef-.\n- **SPDX 3.0:** give every element an IRI spdxId.\n\n**References**\n\n- [NTIA Minimum Elements](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
+              }
             },
             {
               "id": "SBOM-FSCT-AUTHOR",
@@ -117,10 +216,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.1.1 (Minimum): Author Name — person/organization author, not tool-only"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.1.1 (Minimum): Author Name — person/organization author, not tool-only. References: CISA FSCT 3e: §2.2.1.1."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Name the entity that prompted the SBOM's creation (organization, project team, or individual) with unique identification (email address or website) where possible — a tool-only creator list does not satisfy the element.\n\nWhere the fix goes:\n- CycloneDX: add metadata.authors[] (name, email) or metadata.manufacturer (name, contact[].email); metadata.tools entries do not count.\n- SPDX 2.x: add a creationInfo.creators[] entry such as \"Person: Jane Doe (jane@example.com)\" or \"Organization: Example Ltd (sbom@example.com)\"; Tool: entries do not count.\n- SPDX 3.0: set creationInfo.createdBy to a Person or Organization element that has a name; createdUsing tools do not count.\n\nReferences:\n- CISA FSCT 3e: §2.2.1.1 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Name the entity that prompted the SBOM's creation (organization, project team, or individual) with unique identification (email address or website) where possible — a tool-only creator list does not satisfy the element.\n\n**Where the fix goes**\n\n- **CycloneDX:** add metadata.authors\\[\\] (name, email) or metadata.manufacturer (name, contact\\[\\].email); metadata.tools entries do not count.\n- **SPDX 2.x:** add a creationInfo.creators\\[\\] entry such as \"Person: Jane Doe (jane@example.com)\" or \"Organization: Example Ltd (sbom@example.com)\"; Tool: entries do not count.\n- **SPDX 3.0:** set creationInfo.createdBy to a Person or Organization element that has a name; createdUsing tools do not count.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.1.1](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-AUTHOR-TOOL",
@@ -128,10 +234,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.1.1 (Recommended): tool(s) and version(s) that assisted SBOM creation"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.1.1 (Recommended): tool(s) and version(s) that assisted SBOM creation. References: CISA FSCT 3e: §2.2.1.1."
+              },
               "defaultConfiguration": {
                 "level": "warning"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "In addition to the authoring entity, identify the tool(s) and version(s) that assisted in creating the SBOM.\n\nWhere the fix goes:\n- CycloneDX: add metadata.tools with the tool's name and version.\n- SPDX 2.x: add a creationInfo.creators[] entry \"Tool: <name>-<version>\".\n- SPDX 3.0: set creationInfo.createdUsing to a Tool element whose name includes the version.\n\nReferences:\n- CISA FSCT 3e: §2.2.1.1 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "In addition to the authoring entity, identify the tool(s) and version(s) that assisted in creating the SBOM.\n\n**Where the fix goes**\n\n- **CycloneDX:** add metadata.tools with the tool's name and version.\n- **SPDX 2.x:** add a creationInfo.creators\\[\\] entry \"Tool: \\<name\\>-\\<version\\>\".\n- **SPDX 3.0:** set creationInfo.createdUsing to a Tool element whose name includes the version.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.1.1](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-TIMESTAMP",
@@ -139,10 +252,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.1.2 (Minimum): creation timestamp in a common international format (ISO 8601)"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.1.2 (Minimum): creation timestamp in a common international format (ISO 8601). References: CISA FSCT 3e: §2.2.1.2."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Record the date and time the SBOM was produced in a common international format such as ISO 8601 (e.g., 2024-05-23T13:51:37Z), consistent across time zones and locales.\n\nWhere the fix goes:\n- CycloneDX: set metadata.timestamp (RFC 3339, e.g. 2026-01-15T10:00:00Z).\n- SPDX 2.x: set creationInfo.created (Created).\n- SPDX 3.0: set creationInfo.created on the SpdxDocument.\n\nReferences:\n- CISA FSCT 3e: §2.2.1.2 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Record the date and time the SBOM was produced in a common international format such as ISO 8601 (e.g., 2024-05-23T13:51:37Z), consistent across time zones and locales.\n\n**Where the fix goes**\n\n- **CycloneDX:** set metadata.timestamp (RFC 3339, e.g. 2026-01-15T10:00:00Z).\n- **SPDX 2.x:** set creationInfo.created (Created).\n- **SPDX 3.0:** set creationInfo.created on the SpdxDocument.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.1.2](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-SBOM-TYPE",
@@ -150,10 +270,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.1.3 (optional/aspirational): SBOM Type declared (design/source/build/analyzed/deployed/runtime)"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.1.3 (optional/aspirational): SBOM Type declared (design/source/build/analyzed/deployed/runtime). References: CISA FSCT 3e: §2.2.1.3."
+              },
               "defaultConfiguration": {
                 "level": "note"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Declare how/why the SBOM was created per the 'Types of SBOM' taxonomy (design, source, build, analyzed, deployed, runtime). The check runs on CycloneDX input only: this tool parses neither the SPDX 2.x CreatorComment mapping nor SPDX 3.0 sbomType.\n\nWhere the fix goes:\n- CycloneDX: set metadata.lifecycles[].phase, e.g. build (the first entry is read).\n- SPDX 2.x: no field records the lifecycle phase.\n- SPDX 3.0: software_sbomType is not read, so no field records the phase here.\n\nReferences:\n- CISA FSCT 3e: §2.2.1.3 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Declare how/why the SBOM was created per the 'Types of SBOM' taxonomy (design, source, build, analyzed, deployed, runtime). The check runs on CycloneDX input only: this tool parses neither the SPDX 2.x CreatorComment mapping nor SPDX 3.0 sbomType.\n\n**Where the fix goes**\n\n- **CycloneDX:** set metadata.lifecycles\\[\\].phase, e.g. build (the first entry is read).\n- **SPDX 2.x:** no field records the lifecycle phase.\n- **SPDX 3.0:** software\\_sbomType is not read, so no field records the phase here.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.1.3](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-PRIMARY",
@@ -161,10 +288,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.1.4: Primary Component (root of dependencies) identified as the subject of the SBOM"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.1.4: Primary Component (root of dependencies) identified as the subject of the SBOM. References: CISA FSCT 3e: §2.2.1.4."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Identify the Primary Component the SBOM is about.\n\nWhere the fix goes:\n- CycloneDX: set metadata.component to the product's component.\n- SPDX 2.x: name the product package in documentDescribes (or add a DESCRIBES relationship from SPDXRef-DOCUMENT).\n- SPDX 3.0: set rootElement on the SpdxDocument to the product package.\n\nReferences:\n- CISA FSCT 3e: §2.2.1.4 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Identify the Primary Component the SBOM is about.\n\n**Where the fix goes**\n\n- **CycloneDX:** set metadata.component to the product's component.\n- **SPDX 2.x:** name the product package in documentDescribes (or add a DESCRIBES relationship from SPDXRef-DOCUMENT).\n- **SPDX 3.0:** set rootElement on the SpdxDocument to the product package.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.1.4](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-DIRECT-DEPS",
@@ -172,10 +306,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2 / §2.3.3 (Minimum): all static direct dependencies of the Primary Component identified"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2 / §2.3.3 (Minimum): all static direct dependencies of the Primary Component identified. References: CISA FSCT 3e: §2.2.2; CISA FSCT 3e: §2.3.3."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Identify all static, direct dependencies of the Primary Component (or carry an explicit completeness declaration covering their absence), and indicate when the dependency list is incomplete. 'All' is not verifiable from the document alone — the check uses dependency edges from the primary plus the completeness declaration as its evidence.\n\nWhere the fix goes:\n- CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.\n- SPDX 2.x: add relationships[] entries such as DEPENDS_ON (or DEPENDENCY_OF, CONTAINS) between the packages.\n- SPDX 3.0: add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\nReferences:\n- CISA FSCT 3e: §2.2.2 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)\n- CISA FSCT 3e: §2.3.3 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Identify all static, direct dependencies of the Primary Component (or carry an explicit completeness declaration covering their absence), and indicate when the dependency list is incomplete. 'All' is not verifiable from the document alone — the check uses dependency edges from the primary plus the completeness declaration as its evidence.\n\n**Where the fix goes**\n\n- **CycloneDX:** add dependencies\\[\\] entries (ref plus dependsOn\\[\\]); an entry with an empty dependsOn records a component that has no dependencies.\n- **SPDX 2.x:** add relationships\\[\\] entries such as DEPENDS\\_ON (or DEPENDENCY\\_OF, CONTAINS) between the packages.\n- **SPDX 3.0:** add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)\n- [CISA FSCT 3e: §2.3.3](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-TRANSITIVE-DEPS",
@@ -183,10 +324,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2 (Recommended): subcomponent levels beyond direct dependencies identified"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2 (Recommended): subcomponent levels beyond direct dependencies identified. References: CISA FSCT 3e: §2.2.2."
+              },
               "defaultConfiguration": {
                 "level": "warning"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Identify as many levels of subcomponents beyond the direct dependencies as possible, or declare their absence via the completeness declaration. Heuristic: 'as many as possible' is not crisply verifiable — the depth>=2 threshold is profile policy.\n\nWhere the fix goes:\n- CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.\n- SPDX 2.x: add relationships[] entries such as DEPENDS_ON (or DEPENDENCY_OF, CONTAINS) between the packages.\n- SPDX 3.0: add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\nReferences:\n- CISA FSCT 3e: §2.2.2 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Identify as many levels of subcomponents beyond the direct dependencies as possible, or declare their absence via the completeness declaration. Heuristic: 'as many as possible' is not crisply verifiable — the depth\\>=2 threshold is profile policy.\n\n**Where the fix goes**\n\n- **CycloneDX:** add dependencies\\[\\] entries (ref plus dependsOn\\[\\]); an entry with an empty dependsOn records a component that has no dependencies.\n- **SPDX 2.x:** add relationships\\[\\] entries such as DEPENDS\\_ON (or DEPENDENCY\\_OF, CONTAINS) between the packages.\n- **SPDX 3.0:** add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-DYNAMIC-DEPS",
@@ -194,10 +342,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2 / §2.2.2.6 (Aspirational): dynamic and/or remote dependencies uniquely identified"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2 / §2.2.2.6 (Aspirational): dynamic and/or remote dependencies uniquely identified. References: CISA FSCT 3e: §2.2.2; CISA FSCT 3e: §2.2.2.6."
+              },
               "defaultConfiguration": {
                 "level": "note"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Make efforts to uniquely and unambiguously identify dependencies that are dynamic and/or remote. The check runs on SPDX input only (CycloneDX's parsed model cannot express the signal); absence surfaces as an informational readiness note, never a failure.\n\nWhere the fix goes:\n- CycloneDX: the check does not run on CycloneDX input.\n- SPDX 2.x: add relationships[] entries of type DYNAMIC_LINK, RUNTIME_DEPENDENCY_OF or PROVIDED_DEPENDENCY_OF.\n- SPDX 3.0: hasDynamicLink and hasProvidedDependency relationships are not yet mapped to dynamic dependencies, so SPDX 3.0 input cannot clear this note.\n\nReferences:\n- CISA FSCT 3e: §2.2.2 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)\n- CISA FSCT 3e: §2.2.2.6 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Make efforts to uniquely and unambiguously identify dependencies that are dynamic and/or remote. The check runs on SPDX input only (CycloneDX's parsed model cannot express the signal); absence surfaces as an informational readiness note, never a failure.\n\n**Where the fix goes**\n\n- **CycloneDX:** the check does not run on CycloneDX input.\n- **SPDX 2.x:** add relationships\\[\\] entries of type DYNAMIC\\_LINK, RUNTIME\\_DEPENDENCY\\_OF or PROVIDED\\_DEPENDENCY\\_OF.\n- **SPDX 3.0:** hasDynamicLink and hasProvidedDependency relationships are not yet mapped to dynamic dependencies, so SPDX 3.0 input cannot clear this note.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)\n- [CISA FSCT 3e: §2.2.2.6](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-COMPONENT-NAME",
@@ -205,10 +360,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2.1 (Minimum): commonly used public name declared for every component"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.1 (Minimum): commonly used public name declared for every component. References: CISA FSCT 3e: §2.2.2.1."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Declare the commonly used public name for every component (a namespace:name construct is acceptable for conveying the supplier); placeholder values do not satisfy the element.\n\nWhere the fix goes:\n- CycloneDX: set components[].name.\n- SPDX 2.x: set packages[].name (PackageName), or files[].fileName for files.\n- SPDX 3.0: set name on the element.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.1 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Declare the commonly used public name for every component (a namespace:name construct is acceptable for conveying the supplier); placeholder values do not satisfy the element.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].name.\n- **SPDX 2.x:** set packages\\[\\].name (PackageName), or files\\[\\].fileName for files.\n- **SPDX 3.0:** set name on the element.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.1](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-VERSION",
@@ -216,10 +378,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2.2 (Minimum): supplier-provided version string (or authored hash as the documented fallback)"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.2 (Minimum): supplier-provided version string (or authored hash as the documented fallback). References: CISA FSCT 3e: §2.2.2.2."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Record the version string as provided by the Supplier (semantic versioning preferred; accurate transcription is the primary goal). A component without a unique version passes only when an author-provided cryptographic hash is present — the element's documented fallback.\n\nWhere the fix goes:\n- CycloneDX: set components[].version.\n- SPDX 2.x: set packages[].versionInfo (PackageVersion).\n- SPDX 3.0: set software_packageVersion on the package.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.2 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Record the version string as provided by the Supplier (semantic versioning preferred; accurate transcription is the primary goal). A component without a unique version passes only when an author-provided cryptographic hash is present — the element's documented fallback.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].version.\n- **SPDX 2.x:** set packages\\[\\].versionInfo (PackageVersion).\n- **SPDX 3.0:** set software\\_packageVersion on the package.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.2](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-SUPPLIER",
@@ -227,10 +396,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2.3 (Minimum): Supplier Name declared for all components (explicit 'unknown' permitted)"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.3 (Minimum): Supplier Name declared for all components (explicit 'unknown' permitted). References: CISA FSCT 3e: §2.2.2.3."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Declare the Supplier Name for all components: the upstream supplier's legal-entity name (commercial) or project name (OSS); the domain URL / PURL namespace or an explicit 'unknown' are permitted last resorts. Silent absence fails; an explicit 'unknown' declaration satisfies the letter of the clause.\n\nWhere the fix goes:\n- CycloneDX: set components[].supplier.name.\n- SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\"; a NOASSERTION value is read as absent, so write an unknown supplier as \"Organization: unknown\".\n- SPDX 3.0: set suppliedBy on the package to an Organization or Person element.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.3 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Declare the Supplier Name for all components: the upstream supplier's legal-entity name (commercial) or project name (OSS); the domain URL / PURL namespace or an explicit 'unknown' are permitted last resorts. Silent absence fails; an explicit 'unknown' declaration satisfies the letter of the clause.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].supplier.name.\n- **SPDX 2.x:** set packages\\[\\].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\"; a NOASSERTION value is read as absent, so write an unknown supplier as \"Organization: unknown\".\n- **SPDX 3.0:** set suppliedBy on the package to an Organization or Person element.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.3](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-IDENTIFIER",
@@ -238,10 +414,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2.4 (Minimum): globally unique identifier per component (PURL/CPE/SWID/SWHID; hash accepted)"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.4 (Minimum): globally unique identifier per component (PURL/CPE/SWID/SWHID; hash accepted). References: CISA FSCT 3e: §2.2.2.4."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Declare a globally unique identifier for each component — PURL, CPE, SWID, SWHID, UUID/GUID, or OmniBOR Artifact ID; a cryptographic hash also functions as an intrinsic identifier. Profile policy: the document's letter is satisfied by format-native IDs (SPDX namespace + SPDXID, CycloneDX serialNumber + version) and only 'prefers' global uniqueness — this profile deliberately enforces the preferred clause.\n\nWhere the fix goes:\n- CycloneDX: set components[].purl (or cpe, or swhid[]).\n- SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.4 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Declare a globally unique identifier for each component — PURL, CPE, SWID, SWHID, UUID/GUID, or OmniBOR Artifact ID; a cryptographic hash also functions as an intrinsic identifier. Profile policy: the document's letter is satisfied by format-native IDs (SPDX namespace + SPDXID, CycloneDX serialNumber + version) and only 'prefers' global uniqueness — this profile deliberately enforces the preferred clause.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].purl (or cpe, or swhid\\[\\]).\n- **SPDX 2.x:** add a packages\\[\\].externalRefs\\[\\] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- **SPDX 3.0:** set software\\_packageUrl, or add an externalIdentifier\\[\\] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.4](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-IDENTIFIER-MULTI",
@@ -249,10 +432,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2.4 (Recommended): as many globally unique identifiers as available"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.4 (Recommended): as many globally unique identifiers as available. References: CISA FSCT 3e: §2.2.2.4."
+              },
               "defaultConfiguration": {
                 "level": "warning"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "List as many globally unique identifiers as are available for the component. Heuristic: the >=2-distinct-identifier-kinds (PURL/CPE/SWHID/SWID) threshold is profile policy — 'as available' is unverifiable from the document alone.\n\nWhere the fix goes:\n- CycloneDX: set components[].purl (or cpe, or swhid[]).\n- SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.4 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "List as many globally unique identifiers as are available for the component. Heuristic: the \\>=2-distinct-identifier-kinds (PURL/CPE/SWHID/SWID) threshold is profile policy — 'as available' is unverifiable from the document alone.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].purl (or cpe, or swhid\\[\\]).\n- **SPDX 2.x:** add a packages\\[\\].externalRefs\\[\\] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- **SPDX 3.0:** set software\\_packageUrl, or add an externalIdentifier\\[\\] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.4](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-HASH",
@@ -260,10 +450,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2.5 (Minimum): author-provided cryptographic hash with algorithm, or explicit unknown"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.5 (Minimum): author-provided cryptographic hash with algorithm, or explicit unknown. References: CISA FSCT 3e: §2.2.2.5."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Provide a hash (with its algorithm, for reproducibility) for any component whose hash was provided or can be generated; otherwise indicate it as unknown. Accepted at this tier: MD5, SHA1, and SHA2 families — MD5/SHA1 are no longer recommended and are formally discontinued in 2030. Only author-provided hashes count; tool-enriched hashes are not author evidence.\n\nWhere the fix goes:\n- CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- SPDX 2.x: add packages[].checksums[] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- SPDX 3.0: add verifiedUsing[] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.5 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Provide a hash (with its algorithm, for reproducibility) for any component whose hash was provided or can be generated; otherwise indicate it as unknown. Accepted at this tier: MD5, SHA1, and SHA2 families — MD5/SHA1 are no longer recommended and are formally discontinued in 2030. Only author-provided hashes count; tool-enriched hashes are not author evidence.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].hashes\\[\\] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- **SPDX 2.x:** add packages\\[\\].checksums\\[\\] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- **SPDX 3.0:** add verifiedUsing\\[\\] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.5](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-HASH-PRIMARY-SHA2",
@@ -271,10 +468,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2.5 (Recommended): Primary Component hashed; SHA-256-or-stronger SHA-2 hash on hashed components"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.5 (Recommended): Primary Component hashed; SHA-256-or-stronger SHA-2 hash on hashed components. References: CISA FSCT 3e: §2.2.2.5."
+              },
               "defaultConfiguration": {
                 "level": "warning"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Provide at least one hash of the Primary Component, and use the cryptographically secure SHA-2 family (SHA-256 and higher) for hashed components; wherever less-secure hashes (MD5/SHA1) appear, add an additional cryptographically secure hash.\n\nWhere the fix goes:\n- CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- SPDX 2.x: add packages[].checksums[] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- SPDX 3.0: add verifiedUsing[] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.5 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Provide at least one hash of the Primary Component, and use the cryptographically secure SHA-2 family (SHA-256 and higher) for hashed components; wherever less-secure hashes (MD5/SHA1) appear, add an additional cryptographically secure hash.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].hashes\\[\\] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- **SPDX 2.x:** add packages\\[\\].checksums\\[\\] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- **SPDX 3.0:** add verifiedUsing\\[\\] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.5](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-RELATIONSHIP",
@@ -282,10 +486,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2.6 (Minimum): relationships declared for the Primary Component and its direct dependencies"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.6 (Minimum): relationships declared for the Primary Component and its direct dependencies. References: CISA FSCT 3e: §2.2.2.6."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Declare relationships (primary, included-in/includes) and relationship completeness for the Primary Component and its direct dependencies — the primary must be identified and connected to its direct dependencies in the edge set.\n\nWhere the fix goes:\n- CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.\n- SPDX 2.x: add relationships[] entries such as DEPENDS_ON (or DEPENDENCY_OF, CONTAINS) between the packages.\n- SPDX 3.0: add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.6 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Declare relationships (primary, included-in/includes) and relationship completeness for the Primary Component and its direct dependencies — the primary must be identified and connected to its direct dependencies in the edge set.\n\n**Where the fix goes**\n\n- **CycloneDX:** add dependencies\\[\\] entries (ref plus dependsOn\\[\\]); an entry with an empty dependsOn records a component that has no dependencies.\n- **SPDX 2.x:** add relationships\\[\\] entries such as DEPENDS\\_ON (or DEPENDENCY\\_OF, CONTAINS) between the packages.\n- **SPDX 3.0:** add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.6](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-RELATIONSHIP-ALL",
@@ -293,10 +504,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2.6 (Recommended): relationships declared for ALL included components (no orphans)"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.6 (Recommended): relationships declared for ALL included components (no orphans). References: CISA FSCT 3e: §2.2.2.6."
+              },
               "defaultConfiguration": {
                 "level": "warning"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Declare relationships and relationship completeness for all included components — components that appear in the inventory but in no dependency edge are orphans.\n\nWhere the fix goes:\n- CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.\n- SPDX 2.x: add relationships[] entries such as DEPENDS_ON (or DEPENDENCY_OF, CONTAINS) between the packages.\n- SPDX 3.0: add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.6 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Declare relationships and relationship completeness for all included components — components that appear in the inventory but in no dependency edge are orphans.\n\n**Where the fix goes**\n\n- **CycloneDX:** add dependencies\\[\\] entries (ref plus dependsOn\\[\\]); an entry with an empty dependsOn records a component that has no dependencies.\n- **SPDX 2.x:** add relationships\\[\\] entries such as DEPENDS\\_ON (or DEPENDENCY\\_OF, CONTAINS) between the packages.\n- **SPDX 3.0:** add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.6](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-COMPLETENESS",
@@ -304,10 +522,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2.6.4 (supplemental/optional): relationship-completeness assertion recorded"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.6.4 (supplemental/optional): relationship-completeness assertion recorded. References: CISA FSCT 3e: §2.2.2.6.4; CISA FSCT 3e: §2.3.3."
+              },
               "defaultConfiguration": {
                 "level": "warning"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Record a relationship-completeness assertion (Unknown/None/Partial/Known) — mapped to the document-level completeness declaration. Warning, not Error: the document labels the attribute supplemental and optional, with Unknown as the open-world default.\n\nWhere the fix goes:\n- CycloneDX: set compositions[].aggregate (complete, incomplete, incomplete_first_party_only, …); the first composition is read.\n- SPDX 2.x: no field records completeness.\n- SPDX 3.0: set completeness (complete or incomplete) on the dependsOn Relationship elements.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.6.4 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)\n- CISA FSCT 3e: §2.3.3 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Record a relationship-completeness assertion (Unknown/None/Partial/Known) — mapped to the document-level completeness declaration. Warning, not Error: the document labels the attribute supplemental and optional, with Unknown as the open-world default.\n\n**Where the fix goes**\n\n- **CycloneDX:** set compositions\\[\\].aggregate (complete, incomplete, incomplete\\_first\\_party\\_only, …); the first composition is read.\n- **SPDX 2.x:** no field records completeness.\n- **SPDX 3.0:** set completeness (complete or incomplete) on the dependsOn Relationship elements.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.6.4](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)\n- [CISA FSCT 3e: §2.3.3](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-LICENSE-PRIMARY",
@@ -315,10 +540,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2.7 (Minimum): license information for the Primary Component"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.7 (Minimum): license information for the Primary Component. References: CISA FSCT 3e: §2.2.2.7."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Provide license information for the Primary Component, using SPDX license identifiers in standard form where available; NOASSERTION placeholders do not satisfy this check.\n\nWhere the fix goes:\n- CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).\n- SPDX 2.x: set packages[].licenseDeclared (PackageLicenseDeclared) or packages[].licenseConcluded; NOASSERTION and NONE are read as absent.\n- SPDX 3.0: add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing_LicenseExpression element.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.7 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Provide license information for the Primary Component, using SPDX license identifiers in standard form where available; NOASSERTION placeholders do not satisfy this check.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].licenses\\[\\] entries (license.id with an SPDX identifier, or an expression).\n- **SPDX 2.x:** set packages\\[\\].licenseDeclared (PackageLicenseDeclared) or packages\\[\\].licenseConcluded; NOASSERTION and NONE are read as absent.\n- **SPDX 3.0:** add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing\\_LicenseExpression element.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.7](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-LICENSE-COVERAGE",
@@ -326,21 +558,53 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2.7 (Recommended): license information for as many components as possible"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.7 (Recommended): license information for as many components as possible. References: CISA FSCT 3e: §2.2.2.7."
+              },
               "defaultConfiguration": {
                 "level": "warning"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Provide license information for as many components as possible. The coverage threshold is profile policy — 'as possible' is unverifiable from the document alone.\n\nWhere the fix goes:\n- CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).\n- SPDX 2.x: set packages[].licenseDeclared (PackageLicenseDeclared) or packages[].licenseConcluded; NOASSERTION and NONE are read as absent.\n- SPDX 3.0: add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing_LicenseExpression element.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.7 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Provide license information for as many components as possible. The coverage threshold is profile policy — 'as possible' is unverifiable from the document alone.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].licenses\\[\\] entries (license.id with an SPDX identifier, or an expression).\n- **SPDX 2.x:** set packages\\[\\].licenseDeclared (PackageLicenseDeclared) or packages\\[\\].licenseConcluded; NOASSERTION and NONE are read as absent.\n- **SPDX 3.0:** add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing\\_LicenseExpression element.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.7](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-LICENSE-ALL",
               "name": "FsctLicenseAll",
               "shortDescription": {
-                "text": "CISA FSCT 3e §2.2.2.7 (Aspirational): license information incl. concluded-license attestation for ALL components"
+                "text": "CISA FSCT 3e §2.2.2.7 (Aspirational): license information for ALL listed components"
+              },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.7 (Aspirational): license information for ALL listed components. References: CISA FSCT 3e: §2.2.2.7."
               },
               "defaultConfiguration": {
                 "level": "note"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Provide license information for all listed components.\n\nWhere the fix goes:\n- CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).\n- SPDX 2.x: set packages[].licenseDeclared (PackageLicenseDeclared) or packages[].licenseConcluded; NOASSERTION and NONE are read as absent.\n- SPDX 3.0: add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing_LicenseExpression element.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.7 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Provide license information for all listed components.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].licenses\\[\\] entries (license.id with an SPDX identifier, or an expression).\n- **SPDX 2.x:** set packages\\[\\].licenseDeclared (PackageLicenseDeclared) or packages\\[\\].licenseConcluded; NOASSERTION and NONE are read as absent.\n- **SPDX 3.0:** add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing\\_LicenseExpression element.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.7](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
+            },
+            {
+              "id": "SBOM-FSCT-LICENSE-CONCLUDED",
+              "name": "FsctConcludedLicense",
+              "shortDescription": {
+                "text": "CISA FSCT 3e §2.2.2.7 (Aspirational): concluded-license attestation alongside declared licenses"
+              },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.7 (Aspirational): concluded-license attestation alongside declared licenses. References: CISA FSCT 3e: §2.2.2.7."
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Record a concluded-license attestation for the listed components, alongside their declared license information.\n\nWhere the fix goes:\n- CycloneDX: licenses[].acknowledgement is not read, so the check does not run on CycloneDX input.\n- SPDX 2.x: record a concluded licence in packages[].licenseConcluded (PackageLicenseConcluded).\n- SPDX 3.0: add a hasConcludedLicense Relationship recording the concluded licence.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.7 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Record a concluded-license attestation for the listed components, alongside their declared license information.\n\n**Where the fix goes**\n\n- **CycloneDX:** licenses\\[\\].acknowledgement is not read, so the check does not run on CycloneDX input.\n- **SPDX 2.x:** record a concluded licence in packages\\[\\].licenseConcluded (PackageLicenseConcluded).\n- **SPDX 3.0:** add a hasConcludedLicense Relationship recording the concluded licence.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.7](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-COPYRIGHT-PRIMARY",
@@ -348,10 +612,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2.8 (Minimum): copyright notice for the Primary Component"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.8 (Minimum): copyright notice for the Primary Component. References: CISA FSCT 3e: §2.2.2.8."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Provide the copyright notice for the Primary Component — it identifies the legal rights holder, and conveying notices is a standard condition of many OSS licenses.\n\nWhere the fix goes:\n- CycloneDX: set components[].copyright.\n- SPDX 2.x: set packages[].copyrightText (PackageCopyrightText); NOASSERTION does not count.\n- SPDX 3.0: set software_copyrightText on the package.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.8 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Provide the copyright notice for the Primary Component — it identifies the legal rights holder, and conveying notices is a standard condition of many OSS licenses.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].copyright.\n- **SPDX 2.x:** set packages\\[\\].copyrightText (PackageCopyrightText); NOASSERTION does not count.\n- **SPDX 3.0:** set software\\_copyrightText on the package.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.8](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-COPYRIGHT-COVERAGE",
@@ -359,10 +630,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2.8 (Recommended): copyright notices for as many components as possible"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.8 (Recommended): copyright notices for as many components as possible. References: CISA FSCT 3e: §2.2.2.8."
+              },
               "defaultConfiguration": {
                 "level": "warning"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Provide copyright notices for as many components as possible. The coverage threshold is profile policy — 'as possible' is unverifiable from the document alone.\n\nWhere the fix goes:\n- CycloneDX: set components[].copyright.\n- SPDX 2.x: set packages[].copyrightText (PackageCopyrightText); NOASSERTION does not count.\n- SPDX 3.0: set software_copyrightText on the package.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.8 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Provide copyright notices for as many components as possible. The coverage threshold is profile policy — 'as possible' is unverifiable from the document alone.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].copyright.\n- **SPDX 2.x:** set packages\\[\\].copyrightText (PackageCopyrightText); NOASSERTION does not count.\n- **SPDX 3.0:** set software\\_copyrightText on the package.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.8](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-COPYRIGHT-ALL",
@@ -370,10 +648,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.2.2.8 (Aspirational): copyright notice on every listed component"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.2.2.8 (Aspirational): copyright notice on every listed component. References: CISA FSCT 3e: §2.2.2.8."
+              },
               "defaultConfiguration": {
                 "level": "note"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Provide a copyright notice for every listed SBOM component.\n\nWhere the fix goes:\n- CycloneDX: set components[].copyright.\n- SPDX 2.x: set packages[].copyrightText (PackageCopyrightText); NOASSERTION does not count.\n- SPDX 3.0: set software_copyrightText on the package.\n\nReferences:\n- CISA FSCT 3e: §2.2.2.8 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Provide a copyright notice for every listed SBOM component.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].copyright.\n- **SPDX 2.x:** set packages\\[\\].copyrightText (PackageCopyrightText); NOASSERTION does not count.\n- **SPDX 3.0:** set software\\_copyrightText on the package.\n\n**References**\n\n- [CISA FSCT 3e: §2.2.2.8](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-NOASSERTION",
@@ -381,10 +666,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.3.1 (Minimum): baseline attributes populated or explicitly declared no-assertion/no-value"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.3.1 (Minimum): baseline attributes populated or explicitly declared no-assertion/no-value. References: CISA FSCT 3e: §2.3.1."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Provide every baseline attribute, or explicitly differentiate 'no assertion' (data missing) from 'no value' (not applicable). This rule fires only where an attribute is neither populated nor explicitly (or format-default) declared — the document sanctions explicit declarations as the recommended graceful handling and lets formats treat missing attributes as default no-assertion. Placeholders never satisfy the other SBOM-FSCT-* checks.\n\nReferences:\n- CISA FSCT 3e: §2.3.1 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Provide every baseline attribute, or explicitly differentiate 'no assertion' (data missing) from 'no value' (not applicable). This rule fires only where an attribute is neither populated nor explicitly (or format-default) declared — the document sanctions explicit declarations as the recommended graceful handling and lets formats treat missing attributes as default no-assertion. Placeholders never satisfy the other SBOM-FSCT-\\* checks.\n\n**References**\n\n- [CISA FSCT 3e: §2.3.1](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-UPSTREAM-SBOM",
@@ -392,10 +684,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.3.3 (Recommended): upstream supplier SBOM data provided or linked for third-party direct dependencies"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.3.3 (Recommended): upstream supplier SBOM data provided or linked for third-party direct dependencies. References: CISA FSCT 3e: §2.3.3."
+              },
               "defaultConfiguration": {
                 "level": "warning"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Obtain the upstream Supplier's SBOM and provide the component data nested within the Primary Component's SBOM or linked separately. Advisory heuristic — contacting suppliers is unobservable in the document.\n\nWhere the fix goes:\n- CycloneDX: add a components[].externalReferences[] entry of type bom linking the supplier's SBOM, or a dependencies[] entry for the dependency itself (an empty dependsOn records that it has none).\n- SPDX 2.x: declare the dependency's own DEPENDS_ON relationships[] entries (no reference is read as a linked SBOM).\n- SPDX 3.0: declare the dependency's own Relationship elements with relationshipType dependsOn.\n\nReferences:\n- CISA FSCT 3e: §2.3.3 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Obtain the upstream Supplier's SBOM and provide the component data nested within the Primary Component's SBOM or linked separately. Advisory heuristic — contacting suppliers is unobservable in the document.\n\n**Where the fix goes**\n\n- **CycloneDX:** add a components\\[\\].externalReferences\\[\\] entry of type bom linking the supplier's SBOM, or a dependencies\\[\\] entry for the dependency itself (an empty dependsOn records that it has none).\n- **SPDX 2.x:** declare the dependency's own DEPENDS\\_ON relationships\\[\\] entries (no reference is read as a linked SBOM).\n- **SPDX 3.0:** declare the dependency's own Relationship elements with relationshipType dependsOn.\n\n**References**\n\n- [CISA FSCT 3e: §2.3.3](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             },
             {
               "id": "SBOM-FSCT-SIGNATURE",
@@ -403,34 +702,65 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CISA FSCT 3e §2.4 (supplemental): SBOM carries a verifiable digital signature"
               },
+              "fullDescription": {
+                "text": "CISA FSCT 3e §2.4 (supplemental): SBOM carries a verifiable digital signature. References: CISA FSCT 3e: §2.4."
+              },
               "defaultConfiguration": {
                 "level": "note"
               },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
-            },
-            {
-              "id": "SBOM-FSCT-GENERAL",
-              "name": "FsctGeneralRequirement",
-              "shortDescription": {
-                "text": "CISA FSCT 3e: general baseline-attribute requirement"
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+              "help": {
+                "text": "Digitally sign the SBOM so consumers can verify authenticity and integrity (requires a digital signature plus PKI). Info severity: §2.4 is a supplemental element, not a Baseline Attribute; the check runs on CycloneDX input only.\n\nWhere the fix goes:\n- CycloneDX: sign the BOM: in JSON, a JSF signature object (algorithm and value) at the document root; in XML, an enveloped XML-DSig <Signature> element on <bom>.\n- SPDX 2.x: no in-document signature field exists.\n- SPDX 3.0: add a verifiedUsing[] entry of type signature (algorithm, hashValue) to the SpdxDocument.\n\nReferences:\n- CISA FSCT 3e: §2.4 (https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024)",
+                "markdown": "Digitally sign the SBOM so consumers can verify authenticity and integrity (requires a digital signature plus PKI). Info severity: §2.4 is a supplemental element, not a Baseline Attribute; the check runs on CycloneDX input only.\n\n**Where the fix goes**\n\n- **CycloneDX:** sign the BOM: in JSON, a JSF signature object (algorithm and value) at the document root; in XML, an enveloped XML-DSig \\<Signature\\> element on \\<bom\\>.\n- **SPDX 2.x:** no in-document signature field exists.\n- **SPDX 3.0:** add a verifiedUsing\\[\\] entry of type signature (algorithm, hashValue) to the SpdxDocument.\n\n**References**\n\n- [CISA FSCT 3e: §2.4](<https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024>)"
+              }
             }
           ]
+        }
+      },
+      "automationDetails": {
+        "id": "sbom-tools/fsct+ntia/"
+      },
+      "originalUriBaseIds": {
+        "SRCROOT": {
+          "description": {
+            "text": "The root of the source tree relative artifact URIs resolve against: the repository the SBOM file is in, or the directory given as --sarif-base."
+          }
         }
       },
       "results": [
         {
           "ruleId": "SBOM-NTIA-SUPPLIER",
+          "ruleIndex": 4,
           "level": "error",
           "message": {
             "text": "NTIA Minimum Elements: Component 'lodash' missing supplier/manufacturer (Requirement: NTIA: Supplier information) [Element: lodash]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 17
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/lodash@4.17.21",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "f863b422f8675d3bb0212f3b31445b83955cf890c899f3bff31fa550ce90b2eb",
+            "primaryLocationLineHash": "f863b422f8675d3b:1"
+          },
           "properties": {
+            "findingKey": "ntia|SBOM-NTIA-SUPPLIER|pkg:npm/lodash@4.17.21",
+            "findingId": "sbomtools:v1:f863b422f8675d3b",
             "standardIds": [
               "NTIA:NTIA Minimum Elements"
             ],
@@ -442,12 +772,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-NTIA-SUPPLIER",
+          "ruleIndex": 4,
           "level": "error",
           "message": {
             "text": "NTIA Minimum Elements: Component 'express' missing supplier/manufacturer (Requirement: NTIA: Supplier information) [Element: express]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 40
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/express@4.18.2",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "3ac7f51e13b33edfc7dd477f886d1137745e86097c85d7e121b86f96d38d5458",
+            "primaryLocationLineHash": "3ac7f51e13b33edf:1"
+          },
           "properties": {
+            "findingKey": "ntia|SBOM-NTIA-SUPPLIER|pkg:npm/express@4.18.2",
+            "findingId": "sbomtools:v1:3ac7f51e13b33edf",
             "standardIds": [
               "NTIA:NTIA Minimum Elements"
             ],
@@ -459,12 +814,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-DIRECT-DEPS",
+          "ruleIndex": 16,
           "level": "error",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2/§2.3.3] No direct dependencies of the Primary Component are identified, and no completeness declaration covers their absence — identify all static direct dependencies or declare the enumeration's completeness (Requirement: CISA FSCT 3e §2.2.2/§2.3.3: Direct dependencies (Minimum Expected)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "7b4c886ebbfb65d0abe29895c29c278bd87aa1f60e8a2fb208d3fc67def2b55a",
+            "primaryLocationLineHash": "7b4c886ebbfb65d0:1"
+          },
           "properties": {
+            "findingKey": "fsct|SBOM-FSCT-DIRECT-DEPS|document",
+            "findingId": "sbomtools:v1:7b4c886ebbfb65d0",
             "standardIds": [
               "CISA-FSCT-3e:§2.2.2",
               "CISA-FSCT-3e:§2.3.3"
@@ -477,12 +851,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-SUPPLIER",
+          "ruleIndex": 21,
           "level": "error",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.3] 2/2 component(s) declare no Supplier Name (an explicit 'unknown' is a permitted last resort; silent absence is not): lodash, express (Requirement: CISA FSCT 3e §2.2.2.3: Supplier Name (Minimum Expected)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "d012930a8be22ac44d775191d9b6ab30b329c1bee154684d97ac573206198aca",
+            "primaryLocationLineHash": "d012930a8be22ac4:1"
+          },
           "properties": {
+            "findingKey": "fsct|SBOM-FSCT-SUPPLIER|document",
+            "findingId": "sbomtools:v1:d012930a8be22ac4",
             "standardIds": [
               "CISA-FSCT-3e:§2.2.2.3"
             ],
@@ -495,12 +888,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-HASH",
+          "ruleIndex": 24,
           "level": "error",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.5] 1/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): express (Requirement: CISA FSCT 3e §2.2.2.5: Cryptographic Hash (Minimum Expected)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "36df4e88c1e15649902ae99f6fc0172af5eb316a0c201b1602ea3713d458f879",
+            "primaryLocationLineHash": "36df4e88c1e15649:1"
+          },
           "properties": {
+            "findingKey": "fsct|SBOM-FSCT-HASH|document",
+            "findingId": "sbomtools:v1:36df4e88c1e15649",
             "standardIds": [
               "CISA-FSCT-3e:§2.2.2.5"
             ],
@@ -513,12 +925,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-IDENTIFIER-MULTI",
+          "ruleIndex": 23,
           "level": "warning",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.4] 2/2 component(s) declare fewer than two globally unique identifier kinds (PURL/CPE/SWHID/SWID) — list as many as are available (heuristic threshold; profile policy): lodash, express (Requirement: CISA FSCT 3e §2.2.2.4: Unique Identifier multiplicity (Recommended Practice)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "df83bce274c1f9fd01dcfbe698be738ca2682693fc32cebc94f6a791523c6abc",
+            "primaryLocationLineHash": "df83bce274c1f9fd:1"
+          },
           "properties": {
+            "findingKey": "fsct|SBOM-FSCT-IDENTIFIER-MULTI|document",
+            "findingId": "sbomtools:v1:df83bce274c1f9fd",
             "standardIds": [
               "CISA-FSCT-3e:§2.2.2.4"
             ],
@@ -531,12 +962,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-COMPLETENESS",
+          "ruleIndex": 28,
           "level": "warning",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.6.4] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate) (Requirement: CISA FSCT 3e §2.2.2.6.4: Relationship completeness (supplemental, optional)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "bb72efb8c507e7b70b9d8c60c62398c9ee6545e0886b9c1d42154c4fb0f0e1b2",
+            "primaryLocationLineHash": "bb72efb8c507e7b7:1"
+          },
           "properties": {
+            "findingKey": "fsct|SBOM-FSCT-COMPLETENESS|document",
+            "findingId": "sbomtools:v1:bb72efb8c507e7b7",
             "standardIds": [
               "CISA-FSCT-3e:§2.2.2.6.4",
               "CISA-FSCT-3e:§2.3.3"
@@ -549,12 +999,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-DYNAMIC-DEPS",
+          "ruleIndex": 18,
           "level": "note",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2/§2.2.2.6] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC_LINK / RUNTIME_DEPENDENCY_OF / PROVIDED_DEPENDENCY_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies (Requirement: CISA FSCT 3e §2.2.2/§2.2.2.6: Dynamic and remote dependencies (Aspirational Goal)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "d2ef39d6479191537bc1b2da210e4d16a579bfab570767ca16041780ac5c6e73",
+            "primaryLocationLineHash": "d2ef39d647919153:1"
+          },
           "properties": {
+            "findingKey": "fsct|SBOM-FSCT-DYNAMIC-DEPS|document",
+            "findingId": "sbomtools:v1:d2ef39d647919153",
             "standardIds": [
               "CISA-FSCT-3e:§2.2.2",
               "CISA-FSCT-3e:§2.2.2.6"

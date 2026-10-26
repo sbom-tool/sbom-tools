@@ -148,12 +148,6 @@ fn eo14028_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.component_mut("libalpha").supplier = None),
             base(),
         ),
-        RuleEntry::skipped(
-            "SBOM-EO14028-GENERAL",
-            "registry catch-all for the EO 14028 family: no check site in \
-             check_eo14028 emits it (registry.rs keeps it so the SARIF rule \
-             catalogue mirrors the slice); it cannot fire from document content",
-        ),
     ];
 
     run_matrix(LEVEL, EO14028_SARIF_RULE_IDS, &entries);

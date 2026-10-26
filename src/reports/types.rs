@@ -161,6 +161,12 @@ pub struct ReportConfig {
     /// Pre-computed CRA compliance for single SBOM in view mode
     #[serde(skip)]
     pub view_cra_compliance: Option<crate::quality::ComplianceResult>,
+    /// How `-o sarif` renders a diff or a view: the SBOM file its results
+    /// point into (the new SBOM of a diff, the SBOM of a view), the
+    /// code-scanning category in place of `sbom-tools/diff/` or
+    /// `sbom-tools/view/`, and the cap on the number of results.
+    #[serde(skip)]
+    pub sarif: crate::reports::SarifOptions,
 }
 
 impl Default for ReportConfig {
@@ -176,6 +182,7 @@ impl Default for ReportConfig {
             old_cra_compliance: None,
             new_cra_compliance: None,
             view_cra_compliance: None,
+            sarif: crate::reports::SarifOptions::default(),
         }
     }
 }

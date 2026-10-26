@@ -176,9 +176,9 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 )];
             }),
         ),
-        // Two checks report under the SBOM-FDA-SUPPORT SARIF rule at Warning:
-        // level-of-support / end-of-support evidence (this row) and the
-        // creator contact email (SBOM-FDA-CONTACT, per-key row below).
+        // Level-of-support / end-of-support evidence. The creator contact
+        // email, which shared this SARIF rule until v0.4.0, is
+        // SBOM-FDA-CONTACT (row below).
         RuleEntry::tested(
             "SBOM-FDA-SUPPORT",
             Sev::Warning,
@@ -209,19 +209,8 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 )];
             }),
         ),
-        // The FDA generic bucket: the document name, component name and
-        // format checks each report an alias key of its own (per-key rows
-        // below).
-        RuleEntry::skipped(
-            "SBOM-FDA-GENERAL",
-            "no check emits SBOM-FDA-GENERAL under its own key since WP 1.8b: every \
-             check that shares the SARIF rule reports an alias key of its own (NAME, \
-             COMPONENT-NAME, SPEC-VERSION, SPEC-VERSION-UNKNOWN, ELEMENT-ID), each with a \
-             per-key row",
-        ),
-        // ── Per-key rows ─────────────────────────────────────────────────
         // A missing document name (no primary component to lift it from).
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-FDA-NAME",
             Sev::Warning,
             broken(|s| s.primary = None),
@@ -229,7 +218,7 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // "unknown" without a corroborating PURL name segment does not count
         // as a real component name.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-FDA-COMPONENT-NAME",
             Sev::Error,
             broken(|s| s.component_mut("libalpha").name = "unknown".to_string()),
@@ -237,7 +226,7 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // A CycloneDX version newer than any this tool reads warns; an
         // outdated version is an Info.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-FDA-SPEC-VERSION",
             Sev::Warning,
             broken(|s| s.spec_version = "1.8".to_string()),
@@ -248,14 +237,14 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Info,
             broken(|s| s.spec_version = "1.3".to_string()),
         ),
-        RuleEntry::key_skipped(
+        RuleEntry::skipped(
             "SBOM-FDA-SPEC-VERSION-UNKNOWN",
             "an SPDX version that is neither 2.x nor 3.x is an SPDX-only check, out of \
              the CycloneDX-only DSL's reach; fda_spec_version_unknown_reads_only_spdx \
              below fires it on SPDX 4.0 and keeps it silent on SPDX 2.3",
         ),
         // A component whose bom-ref collapses to its name.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-FDA-ELEMENT-ID",
             Sev::Info,
             broken(|s| {
@@ -269,7 +258,7 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // No creator carries a contact email; a person author's email
         // counts as well as the manufacturer's.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-FDA-CONTACT",
             Sev::Warning,
             broken(|s| {
@@ -293,7 +282,7 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     run_matrix(LEVEL, FDA_SARIF_RULE_IDS, &entries);
 }
 
-/// SBOM-FDA-SPEC-VERSION-UNKNOWN reads only SPDX input, so its per-key row
+/// SBOM-FDA-SPEC-VERSION-UNKNOWN reads only SPDX input, so its matrix row
 /// is skipped.
 #[test]
 fn fda_spec_version_unknown_reads_only_spdx() {

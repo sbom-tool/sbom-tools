@@ -238,6 +238,17 @@ impl AppConfig {
                 .export_template
                 .clone_from(&other.output.export_template);
         }
+        if other.output.sarif_base.is_some() {
+            self.output.sarif_base.clone_from(&other.output.sarif_base);
+        }
+        if other.output.sarif_category.is_some() {
+            self.output
+                .sarif_category
+                .clone_from(&other.output.sarif_category);
+        }
+        if other.output.sarif_max_results.is_some() {
+            self.output.sarif_max_results = other.output.sarif_max_results;
+        }
 
         // Filtering config
         if other.filtering.only_changes {

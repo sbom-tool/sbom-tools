@@ -2,10 +2,9 @@
 //! (BSI/G7 "SBOM for AI — Minimum Elements" readiness).
 //!
 //! BSI-AI shares the CRA-family `COMPLIANCE_SARIF_RULE_IDS` catalogue; its
-//! universe is that slice's `SBOM-BSIAI-*` ids plus the slice-less family
-//! catch-all `SBOM-BSIAI-GENERAL`. The seven clusters (`-META`, `-SYS`,
-//! `-MODEL`, `-DATASET`, `-INFRA`, `-SEC`) are emitted only through
-//! per-element alias keys, so each key also gets a per-key row.
+//! universe is that slice's `SBOM-BSIAI-*` ids, one per minimum element the
+//! profile checks, grouped below by the document's clusters (Metadata,
+//! System-Level, Models, Datasets, Infrastructure, Security).
 //!
 //! Three elements have no SBOM field today (system data flow, AI security
 //! controls, exploitability references): they fire as Info on every
@@ -22,14 +21,12 @@ use std::collections::BTreeMap;
 
 const LEVEL: ComplianceLevel = ComplianceLevel::BsiSbomForAi;
 
-/// The BSI-AI rules of the shared CRA-family SARIF catalogue, plus the
-/// slice-less family catch-all.
+/// The BSI-AI rules of the shared CRA-family SARIF catalogue.
 fn bsi_ai_universe() -> Vec<&'static str> {
     COMPLIANCE_SARIF_RULE_IDS
         .iter()
         .copied()
         .filter(|id| id.starts_with("SBOM-BSIAI-"))
-        .chain(std::iter::once("SBOM-BSIAI-GENERAL"))
         .collect()
 }
 
@@ -175,49 +172,15 @@ fn bsi_ai_non_ai_sbom_is_not_applicable() {
 #[test]
 fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     let entries = vec![
-        // ── SARIF rows: the clusters ─────────────────────────────────────
-        RuleEntry::tested(
-            "SBOM-BSIAI-META",
-            Sev::Error,
-            broken(|s| s.timestamp = None),
-            base(),
-        ),
-        // The system cluster always carries the data-flow Info when the
-        // profile applies; only an out-of-scope SBOM is silent.
-        RuleEntry::tested("SBOM-BSIAI-SYS", Sev::Warning, dataset_only(), non_ai()),
-        RuleEntry::tested(
-            "SBOM-BSIAI-MODEL",
-            Sev::Error,
-            broken(|s| model(s).hashes.clear()),
-            base(),
-        ),
-        RuleEntry::tested(
-            "SBOM-BSIAI-DATASET",
-            Sev::Error,
-            broken(|s| dataset(s).purl = None),
-            base(),
-        ),
-        RuleEntry::tested(
-            "SBOM-BSIAI-INFRA",
-            Sev::Info,
-            broken(|s| s.dependencies.clear()),
-            base(),
-        ),
-        RuleEntry::tested("SBOM-BSIAI-SEC", Sev::Info, base(), non_ai()),
+        // ── Typing ───────────────────────────────────────────────────────
         RuleEntry::tested(
             "SBOM-BSIAI-UNTYPED-ML",
             Sev::Warning,
             broken(|s| s.components.push(untyped_hf_model())),
             base(),
         ),
-        RuleEntry::skipped(
-            "SBOM-BSIAI-GENERAL",
-            "registry catch-all for the BSI/G7 SBOM-for-AI family: no check \
-             site in check_bsi_sbom_for_ai emits it (it is the SARIF \
-             re-bucketing target only); it cannot fire from document content",
-        ),
-        // ── Per-key rows: Metadata cluster ───────────────────────────────
-        RuleEntry::key_tested(
+        // ── Metadata cluster ───────────────────────────────────────────────
+        RuleEntry::tested(
             "SBOM-BSIAI-META-AUTHOR",
             Sev::Error,
             broken(|s| {
@@ -227,39 +190,39 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             base(),
         ),
         // The parser keeps an empty specVersion verbatim.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-META-FORMAT",
             Sev::Error,
             broken(|s| s.spec_version = String::new()),
             base(),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-META-TIMESTAMP",
             Sev::Error,
             broken(|s| s.timestamp = None),
             base(),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-META-TOOL",
             Sev::Warning,
             broken(|s| s.tools.clear()),
             base(),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-META-SIGNATURE",
             Sev::Info,
             broken(|s| s.signature = None),
             base(),
         ),
-        // ── Per-key rows: System-Level cluster ───────────────────────────
-        RuleEntry::key_tested(
+        // ── System-Level cluster ───────────────────────────────────────────
+        RuleEntry::tested(
             "SBOM-BSIAI-SYS-PRIMARY",
             Sev::Warning,
             dataset_only(),
             base(),
         ),
         // Silent: an organization creator stands in for the producer.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-SYS-PRODUCER",
             Sev::Warning,
             broken(|s| {
@@ -272,10 +235,10 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 s.manufacturer = Some(("Acme AI GmbH".to_string(), None));
             }),
         ),
-        RuleEntry::key_tested("SBOM-BSIAI-SYS-DATAFLOW", Sev::Info, base(), non_ai()),
-        // ── Per-key rows: Models cluster ─────────────────────────────────
+        RuleEntry::tested("SBOM-BSIAI-SYS-DATAFLOW", Sev::Info, base(), non_ai()),
+        // ── Models cluster ─────────────────────────────────────────────────
         with_placeholders(
-            RuleEntry::key_tested(
+            RuleEntry::tested(
                 "SBOM-BSIAI-MODEL-NAME",
                 Sev::Error,
                 broken(|s| model(s).name = String::new()),
@@ -290,7 +253,7 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             |s, v| model(s).name = v.to_string(),
         ),
         with_placeholders(
-            RuleEntry::key_tested(
+            RuleEntry::tested(
                 "SBOM-BSIAI-MODEL-VERSION",
                 Sev::Error,
                 broken(|s| model(s).version = None),
@@ -304,20 +267,20 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             ],
             |s, v| model(s).version = Some(v.to_string()),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-MODEL-IDENTIFIER",
             Sev::Error,
             broken(|s| model(s).purl = None),
             base(),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-MODEL-HASH",
             Sev::Error,
             broken(|s| model(s).hashes.clear()),
             base(),
         ),
         // A weight hash that no NIST-approved algorithm produced.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-MODEL-HASH-ALGO",
             Sev::Error,
             broken(|s| model(s).hashes = vec![("MD5".to_string(), MD5_FILLER.to_string())]),
@@ -325,13 +288,13 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // The model card object alone does not reference a card: the URL
         // comes from the model-card external reference.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-MODEL-CARD",
             Sev::Warning,
             broken(|s| model(s).external_refs.clear()),
             base(),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-MODEL-ARCHITECTURE",
             Sev::Warning,
             broken(|s| {
@@ -343,7 +306,7 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // Silent: a dataset component with data[] evidence nested under the
         // model is the second spec-legal shape (no modelParameters.datasets).
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-MODEL-DATASETS",
             Sev::Warning,
             broken(|s| model(s).model_card_mut().datasets.clear()),
@@ -358,14 +321,14 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 m.children.push(ds);
             }),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-MODEL-LIMITATIONS",
             Sev::Warning,
             broken(|s| model(s).model_card_mut().technical_limitations.clear()),
             base(),
         ),
         with_placeholders(
-            RuleEntry::key_tested(
+            RuleEntry::tested(
                 "SBOM-BSIAI-MODEL-LICENSE",
                 Sev::Warning,
                 broken(|s| model(s).licenses.clear()),
@@ -379,9 +342,9 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             ],
             |s, v| model(s).licenses = vec![v.to_string()],
         ),
-        // ── Per-key rows: Datasets cluster ───────────────────────────────
+        // ── Datasets cluster ───────────────────────────────────────────────
         with_placeholders(
-            RuleEntry::key_tested(
+            RuleEntry::tested(
                 "SBOM-BSIAI-DATASET-NAME",
                 Sev::Error,
                 broken(|s| dataset(s).name = String::new()),
@@ -395,20 +358,20 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             ],
             |s, v| dataset(s).name = v.to_string(),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-DATASET-IDENTIFIER",
             Sev::Error,
             broken(|s| dataset(s).purl = None),
             base(),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-DATASET-HASH",
             Sev::Warning,
             broken(|s| dataset(s).hashes.clear()),
             base(),
         ),
         with_placeholders(
-            RuleEntry::key_tested(
+            RuleEntry::tested(
                 "SBOM-BSIAI-DATASET-LICENSE",
                 Sev::Warning,
                 broken(|s| dataset(s).licenses.clear()),
@@ -422,7 +385,7 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             ],
             |s, v| dataset(s).licenses = vec![v.to_string()],
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-DATASET-SENSITIVITY",
             Sev::Warning,
             broken(|s| dataset(s).dataset_mut().sensitive_data.clear()),
@@ -430,15 +393,15 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // CycloneDX carries provenance only as governance owners (intended
         // use / preprocessing / anonymization are SPDX 3.0 fields).
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-DATASET-PROVENANCE",
             Sev::Warning,
             broken(|s| dataset(s).dataset_mut().governance_owners.clear()),
             base(),
         ),
-        // ── Per-key rows: Infrastructure and Security clusters ───────────
+        // ── Infrastructure and Security clusters ───────────────────────────
         // Silent: a BOM link on the model stands in for a dependency edge.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-BSIAI-INFRA-RUNTIME",
             Sev::Info,
             broken(|s| s.dependencies.clear()),
@@ -450,8 +413,8 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 ));
             }),
         ),
-        RuleEntry::key_tested("SBOM-BSIAI-SEC-CONTROLS", Sev::Info, base(), non_ai()),
-        RuleEntry::key_tested("SBOM-BSIAI-SEC-EXPLOITABILITY", Sev::Info, base(), non_ai()),
+        RuleEntry::tested("SBOM-BSIAI-SEC-CONTROLS", Sev::Info, base(), non_ai()),
+        RuleEntry::tested("SBOM-BSIAI-SEC-EXPLOITABILITY", Sev::Info, base(), non_ai()),
     ];
 
     run_matrix(LEVEL, &bsi_ai_universe(), &entries);

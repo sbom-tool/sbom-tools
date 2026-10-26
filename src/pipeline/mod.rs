@@ -15,7 +15,7 @@ pub use diff_stage::{
 pub use enrich::{AggregatedEnrichmentStats, enrich_sbom_full, enrich_sboms};
 pub use output::{OutputTarget, auto_detect_format, should_use_color, write_output};
 pub use parse::{ParsedSbom, STDIN_PATH, is_stdin_path, parse_sbom_with_context, read_input};
-pub use report_stage::{discover_cra_sidecar, output_report};
+pub use report_stage::{discover_cra_sidecar, output_report, output_report_with_sarif};
 
 #[cfg(feature = "enrichment")]
 pub use parse::{

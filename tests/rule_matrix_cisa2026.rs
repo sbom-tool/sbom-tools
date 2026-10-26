@@ -258,12 +258,6 @@ fn cisa2026_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Warning,
             broken(|s| s.completeness = Some("incomplete".to_string())),
         ),
-        RuleEntry::skipped(
-            "SBOM-CISA2026-GENERAL",
-            "registry catch-all for the CISA 2026 family: no check site in \
-             check_cisa2026 emits it (registry.rs keeps it so the SARIF rule \
-             catalogue mirrors the slice); it cannot fire from document content",
-        ),
     ];
 
     run_matrix(LEVEL, CISA2026_SARIF_RULE_IDS, &entries);

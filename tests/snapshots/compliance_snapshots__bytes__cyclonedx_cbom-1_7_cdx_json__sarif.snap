@@ -2,7 +2,7 @@
 source: tests/compliance_snapshots.rs
 ---
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
   "version": "2.1.0",
   "runs": [
     {
@@ -18,10 +18,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CNSA 2.0: cryptographic inventory (CBOM) with evaluable assets required — compliance cannot be verified without one"
               },
+              "fullDescription": {
+                "text": "CNSA 2.0: cryptographic inventory (CBOM) with evaluable assets required — compliance cannot be verified without one. References: CNSA 2.0."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+              "help": {
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+              }
             },
             {
               "id": "SBOM-CNSA2-ALG-001",
@@ -29,10 +36,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CNSA 2.0: symmetric encryption must be AES-256"
               },
+              "fullDescription": {
+                "text": "CNSA 2.0: symmetric encryption must be AES-256. References: CNSA 2.0."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+              "help": {
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+              }
             },
             {
               "id": "SBOM-CNSA2-ALG-002",
@@ -40,10 +54,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CNSA 2.0: hashing must be SHA-384 or SHA-512"
               },
+              "fullDescription": {
+                "text": "CNSA 2.0: hashing must be SHA-384 or SHA-512. References: CNSA 2.0."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+              "help": {
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+              }
             },
             {
               "id": "SBOM-CNSA2-ALG-003",
@@ -51,10 +72,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CNSA 2.0: key establishment must be ML-KEM-1024"
               },
+              "fullDescription": {
+                "text": "CNSA 2.0: key establishment must be ML-KEM-1024. References: CNSA 2.0."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+              "help": {
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+              }
             },
             {
               "id": "SBOM-CNSA2-ALG-004",
@@ -62,10 +90,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CNSA 2.0: digital signatures must be ML-DSA-87 or SP 800-208 stateful hash-based signatures"
               },
+              "fullDescription": {
+                "text": "CNSA 2.0: digital signatures must be ML-DSA-87 or SP 800-208 stateful hash-based signatures. References: CNSA 2.0."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+              "help": {
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+              }
             },
             {
               "id": "SBOM-CNSA2-ALG-005",
@@ -73,10 +108,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CNSA 2.0: broken legacy algorithm (SHA-1, MD5, DES, RC4, …) in use"
               },
+              "fullDescription": {
+                "text": "CNSA 2.0: broken legacy algorithm (SHA-1, MD5, DES, RC4, …) in use. References: CNSA 2.0."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+              "help": {
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+              }
             },
             {
               "id": "SBOM-CNSA2-ALG-006",
@@ -84,10 +126,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CNSA 2.0: quantum-vulnerable classical algorithm must migrate to the CNSA 2.0 suite"
               },
+              "fullDescription": {
+                "text": "CNSA 2.0: quantum-vulnerable classical algorithm must migrate to the CNSA 2.0 suite. References: CNSA 2.0."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+              "help": {
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+              }
             },
             {
               "id": "SBOM-CNSA2-ALG-007",
@@ -95,10 +144,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CNSA 2.0: declared quantum security level below Level 5"
               },
+              "fullDescription": {
+                "text": "CNSA 2.0: declared quantum security level below Level 5. References: CNSA 2.0."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+              "help": {
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+              }
             },
             {
               "id": "SBOM-CNSA2-ALG-008",
@@ -106,10 +162,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CNSA 2.0: recognized algorithm that is not on the CNSA 2.0 allowlist"
               },
+              "fullDescription": {
+                "text": "CNSA 2.0: recognized algorithm that is not on the CNSA 2.0 allowlist. References: CNSA 2.0."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+              "help": {
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+              }
             },
             {
               "id": "SBOM-CNSA2-ALG-UNKNOWN",
@@ -117,10 +180,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CNSA 2.0: algorithm cannot be classified, so it cannot be shown to be on the allowlist"
               },
+              "fullDescription": {
+                "text": "CNSA 2.0: algorithm cannot be classified, so it cannot be shown to be on the allowlist. References: CNSA 2.0."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+              "help": {
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+              }
             },
             {
               "id": "SBOM-CNSA2-CERT-001",
@@ -128,10 +198,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CNSA 2.0: certificate signature algorithm must be CNSA 2.0 approved"
               },
+              "fullDescription": {
+                "text": "CNSA 2.0: certificate signature algorithm must be CNSA 2.0 approved. References: CNSA 2.0."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+              "help": {
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+              }
             },
             {
               "id": "SBOM-CNSA2-CERT-UNKNOWN",
@@ -139,10 +216,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CNSA 2.0: certificate signature algorithm cannot be resolved, so it cannot be shown to be on the allowlist"
               },
+              "fullDescription": {
+                "text": "CNSA 2.0: certificate signature algorithm cannot be resolved, so it cannot be shown to be on the allowlist. References: CNSA 2.0."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+              "help": {
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+              }
             },
             {
               "id": "SBOM-CNSA2-PROTO-001",
@@ -150,10 +234,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CNSA 2.0: network protocols must use TLS 1.3"
               },
+              "fullDescription": {
+                "text": "CNSA 2.0: network protocols must use TLS 1.3. References: CNSA 2.0."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+              "help": {
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+              }
             },
             {
               "id": "SBOM-CNSA2-PROTO-002",
@@ -161,10 +252,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CNSA 2.0: protocol cipher suites / IKEv2 transforms must use CNSA 2.0 algorithms"
               },
+              "fullDescription": {
+                "text": "CNSA 2.0: protocol cipher suites / IKEv2 transforms must use CNSA 2.0 algorithms. References: CNSA 2.0."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+              "help": {
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+              }
             },
             {
               "id": "SBOM-CNSA2-PROTO-UNKNOWN",
@@ -172,21 +270,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "CNSA 2.0: protocol names no algorithm the classifier can identify, so it cannot be shown to be on the allowlist"
               },
+              "fullDescription": {
+                "text": "CNSA 2.0: protocol names no algorithm the classifier can identify, so it cannot be shown to be on the allowlist. References: CNSA 2.0."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
-            },
-            {
-              "id": "SBOM-CNSA2-GENERAL",
-              "name": "Cnsa2GeneralRequirement",
-              "shortDescription": {
-                "text": "CNSA 2.0: general algorithm-suite requirement"
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+              "help": {
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+              }
             },
             {
               "id": "SBOM-PQC-000",
@@ -194,10 +288,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NIST PQC: cryptographic inventory (CBOM) with evaluable assets required — readiness cannot be verified without one"
               },
+              "fullDescription": {
+                "text": "NIST PQC: cryptographic inventory (CBOM) with evaluable assets required — readiness cannot be verified without one. References: NIST PQC: IR 8547 ipd."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+              "help": {
+                "text": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\nReferences:\n- NIST PQC: IR 8547 ipd (https://csrc.nist.gov/projects/post-quantum-cryptography)",
+                "markdown": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\n**References**\n\n- [NIST PQC: IR 8547 ipd](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
+              }
             },
             {
               "id": "SBOM-PQC-001",
@@ -205,10 +306,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NIST IR 8547: quantum-vulnerable algorithm must migrate to a NIST PQC standard"
               },
+              "fullDescription": {
+                "text": "NIST IR 8547: quantum-vulnerable algorithm must migrate to a NIST PQC standard. References: NIST PQC: IR 8547 ipd; NIST PQC: SP 800-131A Rev. 2."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+              "help": {
+                "text": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\nReferences:\n- NIST PQC: IR 8547 ipd (https://csrc.nist.gov/projects/post-quantum-cryptography)\n- NIST PQC: SP 800-131A Rev. 2 (https://csrc.nist.gov/projects/post-quantum-cryptography)",
+                "markdown": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\n**References**\n\n- [NIST PQC: IR 8547 ipd](<https://csrc.nist.gov/projects/post-quantum-cryptography>)\n- [NIST PQC: SP 800-131A Rev. 2](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
+              }
             },
             {
               "id": "SBOM-PQC-005",
@@ -216,10 +324,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NIST SP 800-131A: disallowed (broken) algorithm in use"
               },
+              "fullDescription": {
+                "text": "NIST SP 800-131A: disallowed (broken) algorithm in use. References: NIST PQC: SP 800-131A Rev. 2."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+              "help": {
+                "text": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\nReferences:\n- NIST PQC: SP 800-131A Rev. 2 (https://csrc.nist.gov/projects/post-quantum-cryptography)",
+                "markdown": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\n**References**\n\n- [NIST PQC: SP 800-131A Rev. 2](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
+              }
             },
             {
               "id": "SBOM-PQC-008",
@@ -227,10 +342,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NIST SP 800-131A: ECB mode of operation disallowed"
               },
+              "fullDescription": {
+                "text": "NIST SP 800-131A: ECB mode of operation disallowed. References: NIST PQC: SP 800-131A Rev. 2."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+              "help": {
+                "text": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\nReferences:\n- NIST PQC: SP 800-131A Rev. 2 (https://csrc.nist.gov/projects/post-quantum-cryptography)",
+                "markdown": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\n**References**\n\n- [NIST PQC: SP 800-131A Rev. 2](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
+              }
             },
             {
               "id": "SBOM-PQC-009",
@@ -238,10 +360,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NIST PQC: NIST-approved post-quantum algorithm in use (FIPS 203/204/205, SP 800-208)"
               },
+              "fullDescription": {
+                "text": "NIST PQC: NIST-approved post-quantum algorithm in use (FIPS 203/204/205, SP 800-208). References: NIST PQC: FIPS 203/204/205; NIST PQC: SP 800-208."
+              },
               "defaultConfiguration": {
                 "level": "note"
               },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+              "help": {
+                "text": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\nReferences:\n- NIST PQC: FIPS 203/204/205 (https://csrc.nist.gov/projects/post-quantum-cryptography)\n- NIST PQC: SP 800-208 (https://csrc.nist.gov/projects/post-quantum-cryptography)",
+                "markdown": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\n**References**\n\n- [NIST PQC: FIPS 203/204/205](<https://csrc.nist.gov/projects/post-quantum-cryptography>)\n- [NIST PQC: SP 800-208](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
+              }
             },
             {
               "id": "SBOM-PQC-010",
@@ -249,10 +378,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NIST PQC: PQ/T hybrid with a NIST-approved post-quantum part — approved combination (SP 800-227, IR 8547)"
               },
+              "fullDescription": {
+                "text": "NIST PQC: PQ/T hybrid with a NIST-approved post-quantum part — approved combination (SP 800-227, IR 8547). References: NIST PQC: SP 800-227; NIST PQC: IR 8547 ipd."
+              },
               "defaultConfiguration": {
                 "level": "note"
               },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+              "help": {
+                "text": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\nReferences:\n- NIST PQC: SP 800-227 (https://csrc.nist.gov/projects/post-quantum-cryptography)\n- NIST PQC: IR 8547 ipd (https://csrc.nist.gov/projects/post-quantum-cryptography)",
+                "markdown": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\n**References**\n\n- [NIST PQC: SP 800-227](<https://csrc.nist.gov/projects/post-quantum-cryptography>)\n- [NIST PQC: IR 8547 ipd](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
+              }
             },
             {
               "id": "SBOM-PQC-012",
@@ -260,10 +396,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NIST IR 8547: missing quantum security level assessment (nistQuantumSecurityLevel)"
               },
+              "fullDescription": {
+                "text": "NIST IR 8547: missing quantum security level assessment (nistQuantumSecurityLevel). References: NIST PQC: IR 8547 ipd."
+              },
               "defaultConfiguration": {
                 "level": "warning"
               },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+              "help": {
+                "text": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\nReferences:\n- NIST PQC: IR 8547 ipd (https://csrc.nist.gov/projects/post-quantum-cryptography)",
+                "markdown": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\n**References**\n\n- [NIST PQC: IR 8547 ipd](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
+              }
             },
             {
               "id": "SBOM-PQC-ALG-UNKNOWN",
@@ -271,10 +414,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NIST PQC: algorithm cannot be classified — readiness cannot be verified"
               },
+              "fullDescription": {
+                "text": "NIST PQC: algorithm cannot be classified — readiness cannot be verified. References: NIST PQC: IR 8547 ipd."
+              },
               "defaultConfiguration": {
                 "level": "warning"
               },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+              "help": {
+                "text": "Declare the asset's algorithm identity (algorithmFamily, OID, or a recognizable name), make bom-refs resolvable within the SBOM, and use parseable protocol versions so signature algorithms, cipher suites, and protocol references can be verified for PQC readiness.\n\nReferences:\n- NIST PQC: IR 8547 ipd (https://csrc.nist.gov/projects/post-quantum-cryptography)",
+                "markdown": "Declare the asset's algorithm identity (algorithmFamily, OID, or a recognizable name), make bom-refs resolvable within the SBOM, and use parseable protocol versions so signature algorithms, cipher suites, and protocol references can be verified for PQC readiness.\n\n**References**\n\n- [NIST PQC: IR 8547 ipd](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
+              }
             },
             {
               "id": "SBOM-PQC-KEY-001",
@@ -282,10 +432,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NIST SP 800-131A: key size below the approved minimum"
               },
+              "fullDescription": {
+                "text": "NIST SP 800-131A: key size below the approved minimum. References: NIST PQC: SP 800-131A Rev. 2."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+              "help": {
+                "text": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\nReferences:\n- NIST PQC: SP 800-131A Rev. 2 (https://csrc.nist.gov/projects/post-quantum-cryptography)",
+                "markdown": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.\n\n**References**\n\n- [NIST PQC: SP 800-131A Rev. 2](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
+              }
             },
             {
               "id": "SBOM-PQC-CERT-001",
@@ -293,10 +450,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NIST IR 8547: certificate signed with a broken or quantum-vulnerable algorithm"
               },
+              "fullDescription": {
+                "text": "NIST IR 8547: certificate signed with a broken or quantum-vulnerable algorithm. References: NIST PQC: IR 8547 ipd."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+              "help": {
+                "text": "Re-issue the certificate with a NIST-approved post-quantum signature algorithm (FIPS 204 ML-DSA, FIPS 205 SLH-DSA, or SP 800-208 LMS/XMSS/HSS).\n\nReferences:\n- NIST PQC: IR 8547 ipd (https://csrc.nist.gov/projects/post-quantum-cryptography)",
+                "markdown": "Re-issue the certificate with a NIST-approved post-quantum signature algorithm (FIPS 204 ML-DSA, FIPS 205 SLH-DSA, or SP 800-208 LMS/XMSS/HSS).\n\n**References**\n\n- [NIST PQC: IR 8547 ipd](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
+              }
             },
             {
               "id": "SBOM-PQC-CERT-UNKNOWN",
@@ -304,10 +468,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NIST PQC: certificate signature algorithm cannot be resolved — readiness cannot be verified"
               },
+              "fullDescription": {
+                "text": "NIST PQC: certificate signature algorithm cannot be resolved — readiness cannot be verified. References: NIST PQC: IR 8547 ipd."
+              },
               "defaultConfiguration": {
                 "level": "warning"
               },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+              "help": {
+                "text": "Declare the asset's algorithm identity (algorithmFamily, OID, or a recognizable name), make bom-refs resolvable within the SBOM, and use parseable protocol versions so signature algorithms, cipher suites, and protocol references can be verified for PQC readiness.\n\nReferences:\n- NIST PQC: IR 8547 ipd (https://csrc.nist.gov/projects/post-quantum-cryptography)",
+                "markdown": "Declare the asset's algorithm identity (algorithmFamily, OID, or a recognizable name), make bom-refs resolvable within the SBOM, and use parseable protocol versions so signature algorithms, cipher suites, and protocol references can be verified for PQC readiness.\n\n**References**\n\n- [NIST PQC: IR 8547 ipd](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
+              }
             },
             {
               "id": "SBOM-PQC-PROTO-001",
@@ -315,10 +486,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NIST SP 800-52 Rev. 2: SSL and TLS below 1.2 are disallowed"
               },
+              "fullDescription": {
+                "text": "NIST SP 800-52 Rev. 2: SSL and TLS below 1.2 are disallowed. References: NIST PQC: SP 800-52 Rev. 2."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+              "help": {
+                "text": "Disable SSL and TLS versions below 1.2 (SP 800-52 Rev. 2) and remove broken (SP 800-131A) or quantum-vulnerable (IR 8547) algorithms from negotiated cipher suites and IKEv2 transforms.\n\nReferences:\n- NIST PQC: SP 800-52 Rev. 2 (https://csrc.nist.gov/projects/post-quantum-cryptography)",
+                "markdown": "Disable SSL and TLS versions below 1.2 (SP 800-52 Rev. 2) and remove broken (SP 800-131A) or quantum-vulnerable (IR 8547) algorithms from negotiated cipher suites and IKEv2 transforms.\n\n**References**\n\n- [NIST PQC: SP 800-52 Rev. 2](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
+              }
             },
             {
               "id": "SBOM-PQC-PROTO-002",
@@ -326,10 +504,17 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NIST PQC: protocol negotiates broken or quantum-vulnerable algorithms (SP 800-131A / IR 8547)"
               },
+              "fullDescription": {
+                "text": "NIST PQC: protocol negotiates broken or quantum-vulnerable algorithms (SP 800-131A / IR 8547). References: NIST PQC: SP 800-131A / IR 8547."
+              },
               "defaultConfiguration": {
                 "level": "error"
               },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+              "help": {
+                "text": "Disable SSL and TLS versions below 1.2 (SP 800-52 Rev. 2) and remove broken (SP 800-131A) or quantum-vulnerable (IR 8547) algorithms from negotiated cipher suites and IKEv2 transforms.\n\nReferences:\n- NIST PQC: SP 800-131A / IR 8547 (https://csrc.nist.gov/projects/post-quantum-cryptography)",
+                "markdown": "Disable SSL and TLS versions below 1.2 (SP 800-52 Rev. 2) and remove broken (SP 800-131A) or quantum-vulnerable (IR 8547) algorithms from negotiated cipher suites and IKEv2 transforms.\n\n**References**\n\n- [NIST PQC: SP 800-131A / IR 8547](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
+              }
             },
             {
               "id": "SBOM-PQC-PROTO-UNKNOWN",
@@ -337,34 +522,65 @@ source: tests/compliance_snapshots.rs
               "shortDescription": {
                 "text": "NIST PQC: protocol crypto references cannot be verified — readiness cannot be verified"
               },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            },
-            {
-              "id": "SBOM-PQC-GENERAL",
-              "name": "PqcGeneralRequirement",
-              "shortDescription": {
-                "text": "NIST PQC: general post-quantum readiness requirement"
+              "fullDescription": {
+                "text": "NIST PQC: protocol crypto references cannot be verified — readiness cannot be verified. References: NIST PQC: IR 8547 ipd."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+              "help": {
+                "text": "Declare the asset's algorithm identity (algorithmFamily, OID, or a recognizable name), make bom-refs resolvable within the SBOM, and use parseable protocol versions so signature algorithms, cipher suites, and protocol references can be verified for PQC readiness.\n\nReferences:\n- NIST PQC: IR 8547 ipd (https://csrc.nist.gov/projects/post-quantum-cryptography)",
+                "markdown": "Declare the asset's algorithm identity (algorithmFamily, OID, or a recognizable name), make bom-refs resolvable within the SBOM, and use parseable protocol versions so signature algorithms, cipher suites, and protocol references can be verified for PQC readiness.\n\n**References**\n\n- [NIST PQC: IR 8547 ipd](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
+              }
             }
           ]
+        }
+      },
+      "automationDetails": {
+        "id": "sbom-tools/cnsa2+pqc/"
+      },
+      "originalUriBaseIds": {
+        "SRCROOT": {
+          "description": {
+            "text": "The root of the source tree relative artifact URIs resolve against: the repository the SBOM file is in, or the directory given as --sarif-base."
+          }
         }
       },
       "results": [
         {
           "ruleId": "SBOM-CNSA2-ALG-007",
+          "ruleIndex": 7,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'ML-KEM-768' quantum level 3 < 5, CNSA 2.0 requires Level 5 (Requirement: CNSA 2.0 Level 5) [Element: ML-KEM-768]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 79
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ml-kem-768",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "db8f934f12fe2eaff03bc623c9fa787719457ddd229d310c0845f3e428146537",
+            "primaryLocationLineHash": "db8f934f12fe2eaf:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-007|crypto/algorithm/ml-kem-768",
+            "findingId": "sbomtools:v1:db8f934f12fe2eaf",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -376,12 +592,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-003",
+          "ruleIndex": 3,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'ML-KEM-768' uses ML-KEM-768, CNSA 2.0 requires ML-KEM-1024 only (Requirement: CNSA 2.0 KEM) [Element: ML-KEM-768]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 79
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ml-kem-768",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "f6f3e69908944371049b68936b94482e366804a8b51fb409d4b0ef012b9d5a76",
+            "primaryLocationLineHash": "f6f3e69908944371:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-003|crypto/algorithm/ml-kem-768",
+            "findingId": "sbomtools:v1:f6f3e69908944371",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -393,12 +634,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-007",
+          "ruleIndex": 7,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'ML-DSA-65' quantum level 3 < 5, CNSA 2.0 requires Level 5 (Requirement: CNSA 2.0 Level 5) [Element: ML-DSA-65]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 119
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ml-dsa-65",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "326a99536d9bc8784f74309216045a862f1c254b0026db68833c382204071143",
+            "primaryLocationLineHash": "326a99536d9bc878:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-007|crypto/algorithm/ml-dsa-65",
+            "findingId": "sbomtools:v1:326a99536d9bc878",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -410,12 +676,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-004",
+          "ruleIndex": 4,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'ML-DSA-65' uses ML-DSA-65, CNSA 2.0 requires ML-DSA-87 only (Requirement: CNSA 2.0 Signature) [Element: ML-DSA-65]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 119
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ml-dsa-65",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "059cf70a9ae9a775b11055296ed6382ca19b626214e198c7c4633bf4ceaec90a",
+            "primaryLocationLineHash": "059cf70a9ae9a775:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-004|crypto/algorithm/ml-dsa-65",
+            "findingId": "sbomtools:v1:059cf70a9ae9a775",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -427,12 +718,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-008",
+          "ruleIndex": 8,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'SLH-DSA-SHAKE-256s' uses SLH-DSA, which is NIST-approved (FIPS 205) but not part of CNSA 2.0 (Requirement: CNSA 2.0 Approved Algorithms) [Element: SLH-DSA-SHAKE-256s]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 139
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/slh-dsa-shake-256s",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "83cc7dc911fdae9eabe311943026ec12d1c4d2916495714246ccb0904cd8064b",
+            "primaryLocationLineHash": "83cc7dc911fdae9e:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-008|crypto/algorithm/slh-dsa-shake-256s",
+            "findingId": "sbomtools:v1:83cc7dc911fdae9e",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -444,12 +760,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-006",
+          "ruleIndex": 6,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'X25519' (ECDH) is quantum-vulnerable, must migrate to CNSA 2.0 approved algorithm (Requirement: CNSA 2.0 PQC Migration) [Element: X25519]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 198
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/x25519",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9682dc81d044cfe27b7efff99cb171614149cacfb45a308a9f1b282246e598e3",
+            "primaryLocationLineHash": "9682dc81d044cfe2:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-006|crypto/algorithm/x25519",
+            "findingId": "sbomtools:v1:9682dc81d044cfe2",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -461,12 +802,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-007",
+          "ruleIndex": 7,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'X25519-ML-KEM-768' quantum level 3 < 5, CNSA 2.0 requires Level 5 (Requirement: CNSA 2.0 Level 5) [Element: X25519-ML-KEM-768]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 216
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/hybrid-kem",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "ee8a3c54afb74d2d70023a172a76876daf91efb6d0e630d44d7fc65854d5488b",
+            "primaryLocationLineHash": "ee8a3c54afb74d2d:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-007|crypto/algorithm/hybrid-kem",
+            "findingId": "sbomtools:v1:ee8a3c54afb74d2d",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -478,12 +844,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-003",
+          "ruleIndex": 3,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'X25519-ML-KEM-768' uses the hybrid X25519 + ML-KEM-768, which CNSA 2.0 does not approve: ML-KEM-768 is not ML-KEM-1024, and X25519 is not a CNSA 1.0 algorithm (ECDH or ECDSA over P-384, or RSA or DH of 3072 bits or more) (Requirement: CNSA 2.0 KEM) [Element: X25519-ML-KEM-768]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 216
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/hybrid-kem",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "3a93e421ce43b0275324657eeb6cf6dddeb43f3b95653b24ad67194682951d2b",
+            "primaryLocationLineHash": "3a93e421ce43b027:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-003|crypto/algorithm/hybrid-kem",
+            "findingId": "sbomtools:v1:3a93e421ce43b027",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -495,12 +886,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-006",
+          "ruleIndex": 6,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'ECDSA-P521' (ECDSA) is quantum-vulnerable, must migrate to CNSA 2.0 approved algorithm (Requirement: CNSA 2.0 PQC Migration) [Element: ECDSA-P521]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 235
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ecdsa-p521",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "3d1e46793ae574a2918e2bec7c35fb29098e6ffbc789379c5ffec3c3a125c014",
+            "primaryLocationLineHash": "3d1e46793ae574a2:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-006|crypto/algorithm/ecdsa-p521",
+            "findingId": "sbomtools:v1:3d1e46793ae574a2",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -512,12 +928,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-PROTO-002",
+          "ruleIndex": 13,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384_ML_KEM_768' includes non-CNSA 2.0 algorithms: X25519 + ML-KEM-768, ML-KEM-768 (Requirement: CNSA 2.0 Protocol) [Element: TLS 1.3 (PQC Hybrid)]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 332
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/protocol/tls13-pqc",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "994d5a495641e8abe77b389a55a8610175b1a143b257b895cf8ec77284f36923",
+            "primaryLocationLineHash": "994d5a495641e8ab:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-PROTO-002:TLS_AES_256_GCM_SHA384_ML_KEM_768|crypto/protocol/tls13-pqc",
+            "findingId": "sbomtools:v1:994d5a495641e8ab",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -529,12 +970,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-PROTO-002",
+          "ruleIndex": 13,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384' includes non-CNSA 2.0 algorithms: ECDH (Requirement: CNSA 2.0 Protocol) [Element: TLS 1.3 (PQC Hybrid)]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 332
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/protocol/tls13-pqc",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "a5d96550a9b92abdbf49c7e265b3134c1771bac52abad9f200537a86bee58c1c",
+            "primaryLocationLineHash": "a5d96550a9b92abd:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-PROTO-002:TLS_AES_256_GCM_SHA384|crypto/protocol/tls13-pqc",
+            "findingId": "sbomtools:v1:a5d96550a9b92abd",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -546,12 +1012,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-PQC-001",
+          "ruleIndex": 16,
           "level": "error",
           "message": {
             "text": "NIST PQC Readiness: 'X25519' (ECDH) is quantum-vulnerable and must migrate to PQC (IR 8547) (Requirement: IR 8547: quantum-vulnerable) [Element: X25519]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 198
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/x25519",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9f9263b04c514a5f94a3a8fcd8658939d9b5b460c8d315729d22d9ab95b87bb8",
+            "primaryLocationLineHash": "9f9263b04c514a5f:1"
+          },
           "properties": {
+            "findingKey": "pqc|SBOM-PQC-001|crypto/algorithm/x25519",
+            "findingId": "sbomtools:v1:9f9263b04c514a5f",
             "standardIds": [
               "NIST-PQC:IR 8547 ipd",
               "NIST-PQC:SP 800-131A Rev. 2"
@@ -565,12 +1056,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-PQC-001",
+          "ruleIndex": 16,
           "level": "error",
           "message": {
             "text": "NIST PQC Readiness: 'ECDSA-P521' (ECDSA) is quantum-vulnerable and must migrate to PQC (IR 8547) (Requirement: IR 8547: quantum-vulnerable) [Element: ECDSA-P521]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 235
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ecdsa-p521",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "461158e579e9d249206116cad0a61746cf2bc2c24902421e28066375a5a56642",
+            "primaryLocationLineHash": "461158e579e9d249:1"
+          },
           "properties": {
+            "findingKey": "pqc|SBOM-PQC-001|crypto/algorithm/ecdsa-p521",
+            "findingId": "sbomtools:v1:461158e579e9d249",
             "standardIds": [
               "NIST-PQC:IR 8547 ipd",
               "NIST-PQC:SP 800-131A Rev. 2"
@@ -584,12 +1100,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-PQC-PROTO-002",
+          "ruleIndex": 27,
           "level": "error",
           "message": {
             "text": "NIST PQC Readiness: Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384' includes broken or quantum-vulnerable algorithms: ECDH (quantum-vulnerable) (Requirement: IR 8547 / SP 800-131A: protocol algorithms) [Element: TLS 1.3 (PQC Hybrid)]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 332
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/protocol/tls13-pqc",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "19df590ce505e4d795f1afab20cf5fa516ae132da581819ec4d2c6c7700990c3",
+            "primaryLocationLineHash": "19df590ce505e4d7:1"
+          },
           "properties": {
+            "findingKey": "pqc|SBOM-PQC-PROTO-002:TLS_AES_256_GCM_SHA384|crypto/protocol/tls13-pqc",
+            "findingId": "sbomtools:v1:19df590ce505e4d7",
             "standardIds": [
               "NIST-PQC:SP 800-131A / IR 8547"
             ],
