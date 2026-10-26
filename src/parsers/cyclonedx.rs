@@ -77,7 +77,9 @@ impl CycloneDxParser {
         let cdx: CycloneDxBomXml =
             quick_xml::de::from_str(content).map_err(|e| ParseError::XmlError(e.to_string()))?;
 
-        // Convert XML structure to common BOM structure
+        // Convert XML structure to common BOM structure. Metadata,
+        // compositions and the signature land in the same fields the JSON
+        // path fills, so `convert_metadata` treats both encodings alike.
         let bom = CycloneDxBom {
             bom_format: Some("CycloneDX".to_string()),
             spec_version: xml_spec_version(cdx.xmlns.as_deref(), cdx.version.as_deref()),
@@ -85,13 +87,13 @@ impl CycloneDxParser {
             version: cdx.version.as_deref().and_then(|v| v.parse().ok()),
             metadata: cdx.metadata.map(|m| CdxMetadata {
                 timestamp: m.timestamp,
-                tools: m.tools.map(|t| t.tool),
-                authors: None,
-                manufacturer: None,
-                manufacture: None,
+                tools: m.tools.map(CdxToolsXml::into_tools),
+                authors: m.authors.map(|w| w.author),
+                manufacturer: m.manufacturer,
+                manufacture: m.manufacture,
                 component: m.component.map(Into::into),
-                lifecycles: None,
-                distribution_constraints: None,
+                lifecycles: m.lifecycles.map(|w| w.lifecycle),
+                distribution_constraints: m.distribution_constraints,
             }),
             components: cdx
                 .components
@@ -105,8 +107,13 @@ impl CycloneDxParser {
             vulnerabilities: cdx
                 .vulnerabilities
                 .map(|v| v.vulnerability.into_iter().map(Into::into).collect()),
-            compositions: None,
-            signature: None,
+            compositions: cdx
+                .compositions
+                .map(|c| c.composition.into_iter().map(Into::into).collect()),
+            // JSON carries one JSF signature object; XML may append several
+            // enveloped signatures, and the first stands for the document.
+            signature: cdx.signatures.into_iter().next().map(Into::into),
+            // 1.7 `<citations>` are not read from XML yet.
             citations: None,
             // CDXA declarations exist in the 1.6 XML schema too, but their
             // XML normalization is deferred: phase 1 ingests JSON only.
@@ -3494,28 +3501,164 @@ struct CycloneDxBomXml {
     dependencies: Option<CdxDependenciesXml>,
     /// Vulnerabilities wrapper element
     vulnerabilities: Option<CdxVulnerabilitiesXml>,
+    /// Compositions wrapper element
+    compositions: Option<CdxCompositionsXml>,
+    /// Enveloped XML Signatures: CycloneDX XML is signed with XML-DSig
+    /// (`<ds:Signature>`, admitted by the root's `##other` extension point),
+    /// where JSON uses JSF. Element names match on their local name, so any
+    /// namespace prefix is accepted.
+    #[serde(rename = "Signature", default)]
+    signatures: Vec<CdxXmlSignature>,
 }
 
 /// Metadata element for XML format
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CdxMetadataXml {
     timestamp: Option<String>,
+    /// Lifecycles wrapper element (1.5+)
+    lifecycles: Option<CdxLifecyclesXml>,
     tools: Option<CdxToolsXml>,
+    /// The people/organizations responsible for the BOM
+    authors: Option<CdxAuthorsXml>,
     component: Option<CdxComponentXml>,
+    /// Organization that created the BOM (1.6+)
+    manufacturer: Option<CdxOrgEntity>,
+    /// Deprecated pre-1.6 spelling, accepted as a fallback as in JSON
+    manufacture: Option<CdxOrgEntity>,
+    /// Distribution constraints (1.7+) with TLP classification
+    distribution_constraints: Option<CdxDistributionConstraints>,
 }
 
-/// `<authors>` wrapper element of an XML component.
+/// `<authors>` wrapper element of the XML metadata or of a component.
 #[derive(Debug, Deserialize)]
 struct CdxAuthorsXml {
     #[serde(default)]
     author: Vec<CdxAuthor>,
 }
 
-/// Tools wrapper element for XML format
+/// Lifecycles wrapper element for XML format: repeated `<lifecycle>`
+/// elements, each a `<phase>` or a `<name>` with optional `<description>`.
+#[derive(Debug, Deserialize)]
+struct CdxLifecyclesXml {
+    #[serde(rename = "lifecycle", default)]
+    lifecycle: Vec<CdxLifecycle>,
+}
+
+/// Tools wrapper element for XML format: the legacy repeated `<tool>`
+/// (deprecated since 1.5) or the 1.5+ `<components>` / `<services>` lists.
 #[derive(Debug, Deserialize)]
 struct CdxToolsXml {
     #[serde(rename = "tool", default)]
     tool: Vec<CdxTool>,
+    components: Option<CdxToolComponentsXml>,
+    services: Option<CdxToolServicesXml>,
+}
+
+impl CdxToolsXml {
+    /// Flatten either form into tool entries, components before services
+    /// like the JSON path's `deserialize_tools`.
+    fn into_tools(self) -> Vec<CdxTool> {
+        let components = self
+            .components
+            .into_iter()
+            .flat_map(|w| w.component)
+            .map(|c| CdxTool {
+                name: c.name,
+                version: c.version,
+            });
+        let services = self
+            .services
+            .into_iter()
+            .flat_map(|w| w.service)
+            .map(|s| CdxTool {
+                name: s.name,
+                version: s.version,
+            });
+        self.tool
+            .into_iter()
+            .chain(components)
+            .chain(services)
+            .collect()
+    }
+}
+
+/// `<tools><components>` wrapper element (1.5+)
+#[derive(Debug, Deserialize)]
+struct CdxToolComponentsXml {
+    #[serde(rename = "component", default)]
+    component: Vec<CdxToolComponent>,
+}
+
+/// `<tools><services>` wrapper element (1.5+)
+#[derive(Debug, Deserialize)]
+struct CdxToolServicesXml {
+    #[serde(rename = "service", default)]
+    service: Vec<CdxToolService>,
+}
+
+/// Compositions wrapper element for XML format
+#[derive(Debug, Deserialize)]
+struct CdxCompositionsXml {
+    #[serde(rename = "composition", default)]
+    composition: Vec<CdxCompositionXml>,
+}
+
+/// Composition element for XML format. Only `aggregate` is read: assembly
+/// references feed no check, so a malformed `<assembly>` cannot fail the
+/// document.
+#[derive(Debug, Deserialize)]
+struct CdxCompositionXml {
+    aggregate: Option<String>,
+}
+
+impl From<CdxCompositionXml> for CdxComposition {
+    fn from(xml: CdxCompositionXml) -> Self {
+        Self {
+            aggregate: xml.aggregate,
+            assemblies: None,
+        }
+    }
+}
+
+/// Enveloped XML-DSig `<Signature>` element. Read for its shape only, as
+/// the JSF signature is in JSON: the declared method and whether a value is
+/// present. Nothing is canonicalized or verified.
+#[derive(Debug, Deserialize)]
+struct CdxXmlSignature {
+    #[serde(rename = "SignedInfo")]
+    signed_info: Option<CdxXmlSignedInfo>,
+    #[serde(rename = "SignatureValue")]
+    signature_value: Option<String>,
+}
+
+/// `<SignedInfo>` of an XML-DSig signature
+#[derive(Debug, Deserialize)]
+struct CdxXmlSignedInfo {
+    #[serde(rename = "SignatureMethod")]
+    signature_method: Option<CdxXmlSignatureMethod>,
+}
+
+/// `<SignatureMethod Algorithm="…"/>` of an XML-DSig signature
+#[derive(Debug, Deserialize)]
+struct CdxXmlSignatureMethod {
+    #[serde(rename = "@Algorithm")]
+    algorithm: Option<String>,
+}
+
+impl From<CdxXmlSignature> for CdxSignature {
+    fn from(xml: CdxXmlSignature) -> Self {
+        Self {
+            // The algorithm URI as declared (e.g.
+            // `http://www.w3.org/2001/04/xmldsig-more#rsa-sha256`), kept
+            // verbatim just as JSON keeps the JSF algorithm name.
+            algorithm: xml
+                .signed_info
+                .and_then(|si| si.signature_method)
+                .and_then(|m| m.algorithm),
+            value: xml.signature_value,
+        }
+    }
 }
 
 /// Components wrapper element for XML format
@@ -4510,6 +4653,187 @@ mod tests {
         assert_eq!(
             sbom.components.get(primary_id).map(|c| c.name.as_str()),
             Some("acme-app")
+        );
+    }
+
+    /// Review finding V10: XML metadata reaches the document fields JSON
+    /// fills. Authors become Person creators, `manufacturer` an Organization
+    /// creator (winning over the deprecated `manufacture`), the first
+    /// lifecycle names the phase, the first composition's aggregate sets the
+    /// completeness declaration, and the TLP is read.
+    #[test]
+    fn xml_metadata_maps_to_the_json_document_fields() {
+        let sbom = parse(
+            r#"<bom xmlns="http://cyclonedx.org/schema/bom/1.7" version="1">
+  <metadata>
+    <lifecycles>
+      <lifecycle><name>staging</name><description>Pre-release soak</description></lifecycle>
+      <lifecycle><phase>operations</phase></lifecycle>
+    </lifecycles>
+    <tools><tool><vendor>Example</vendor><name>legacy-gen</name><version>1.0</version></tool></tools>
+    <authors>
+      <author><name>Jane Doe</name><email>jane@example.com</email></author>
+      <author><email>ops@example.com</email></author>
+    </authors>
+    <manufacturer>
+      <name>Maker Corp</name>
+      <url>https://maker.example</url>
+      <contact><name>SBOM desk</name></contact>
+      <contact><email>sbom@maker.example</email></contact>
+    </manufacturer>
+    <manufacture><name>Legacy Corp</name></manufacture>
+    <distributionConstraints><tlp>AMBER</tlp></distributionConstraints>
+  </metadata>
+  <compositions>
+    <composition><aggregate>incomplete_first_party_only</aggregate></composition>
+    <composition><aggregate>complete</aggregate></composition>
+  </compositions>
+</bom>"#,
+        );
+        let doc = &sbom.document;
+        let creators: Vec<(&CreatorType, &str, Option<&str>)> = doc
+            .creators
+            .iter()
+            .map(|c| (&c.creator_type, c.name.as_str(), c.email.as_deref()))
+            .collect();
+        assert_eq!(
+            creators,
+            [
+                (&CreatorType::Tool, "legacy-gen 1.0", None),
+                (&CreatorType::Person, "Jane Doe", Some("jane@example.com")),
+                (
+                    &CreatorType::Person,
+                    "ops@example.com",
+                    Some("ops@example.com")
+                ),
+                (
+                    &CreatorType::Organization,
+                    "Maker Corp",
+                    Some("sbom@maker.example")
+                ),
+            ]
+        );
+        assert_eq!(doc.lifecycle_phase.as_deref(), Some("staging"));
+        assert_eq!(
+            doc.completeness_declaration,
+            CompletenessDeclaration::IncompleteFirstPartyOnly
+        );
+        assert_eq!(doc.distribution_classification.as_deref(), Some("AMBER"));
+    }
+
+    /// The 1.5+ `<tools>` form lists components, then services, like the
+    /// JSON object form; tool detail beyond name and version is ignored, and
+    /// an empty `<tools/>` names no tool.
+    #[test]
+    fn xml_tools_components_and_services_become_tool_creators() {
+        let tools = |metadata: &str| -> Vec<String> {
+            parse(&format!(
+                r#"<bom xmlns="http://cyclonedx.org/schema/bom/1.5" version="1">
+  <metadata>{metadata}</metadata>
+</bom>"#
+            ))
+            .document
+            .creators
+            .into_iter()
+            .filter(|c| c.creator_type == CreatorType::Tool)
+            .map(|c| c.name)
+            .collect()
+        };
+        assert_eq!(
+            tools(
+                r#"<tools>
+      <components>
+        <component type="application" bom-ref="gen">
+          <group>org.example</group>
+          <name>gen</name>
+          <version>2.0</version>
+          <hashes><hash alg="SHA-256">aa</hash></hashes>
+        </component>
+        <component type="library"><name>plugin</name></component>
+      </components>
+      <services>
+        <service><name>enricher</name><version>2026.09</version></service>
+      </services>
+    </tools>"#
+            ),
+            ["gen 2.0", "plugin", "enricher 2026.09"]
+        );
+        assert!(tools("<tools/>").is_empty());
+    }
+
+    /// An enveloped XML-DSig signature maps to the document signature the
+    /// way JSF does in JSON: the declared SignatureMethod algorithm and
+    /// whether a SignatureValue is present. Nothing is verified. Prefixed
+    /// and default-namespace spellings both count, the first of several
+    /// signatures stands for the document, and an unsigned BOM has none.
+    #[test]
+    fn xml_enveloped_signature_reads_method_and_value_presence() {
+        let signature = |xml: &str| {
+            parse(&format!(
+                r#"<bom xmlns="http://cyclonedx.org/schema/bom/1.6" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" version="1">
+  <components><component type="library"><name>lib</name></component></components>
+  {xml}
+</bom>"#
+            ))
+            .document
+            .signature
+            .map(|s| (s.algorithm, s.has_value))
+        };
+        let rsa = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
+        let signed = Some((rsa.to_string(), true));
+        assert_eq!(
+            signature(&format!(
+                r#"<ds:Signature>
+    <ds:SignedInfo><ds:SignatureMethod Algorithm="{rsa}"/></ds:SignedInfo>
+    <ds:SignatureValue Id="sv">
+      QUJD
+      REVG
+    </ds:SignatureValue>
+    <ds:KeyInfo><ds:KeyName>release</ds:KeyName></ds:KeyInfo>
+  </ds:Signature>"#
+            )),
+            signed
+        );
+        assert_eq!(
+            signature(&format!(
+                r#"<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+    <SignedInfo><SignatureMethod Algorithm="{rsa}"/></SignedInfo>
+    <SignatureValue>QUJD</SignatureValue>
+  </Signature>"#
+            )),
+            signed
+        );
+        assert_eq!(
+            signature("<ds:Signature><ds:SignedInfo/><ds:SignatureValue/></ds:Signature>"),
+            Some(("unknown".to_string(), false))
+        );
+        assert_eq!(
+            signature(&format!(
+                r#"<ds:Signature><ds:SignatureValue>QUJD</ds:SignatureValue></ds:Signature>
+  <ds:Signature><ds:SignedInfo><ds:SignatureMethod Algorithm="{rsa}"/></ds:SignedInfo></ds:Signature>"#
+            )),
+            Some(("unknown".to_string(), true))
+        );
+        assert_eq!(signature(""), None);
+    }
+
+    /// Composition assemblies feed no check, so only the aggregate is read
+    /// from XML: an `<assembly>` without its `ref` cannot fail a document.
+    #[test]
+    fn xml_composition_reads_only_the_aggregate() {
+        let sbom = parse(
+            r#"<bom xmlns="http://cyclonedx.org/schema/bom/1.6" version="1">
+  <compositions>
+    <composition>
+      <aggregate>complete</aggregate>
+      <assemblies><assembly ref="lib"/><assembly/></assemblies>
+    </composition>
+  </compositions>
+</bom>"#,
+        );
+        assert_eq!(
+            sbom.document.completeness_declaration,
+            CompletenessDeclaration::Complete
         );
     }
 
