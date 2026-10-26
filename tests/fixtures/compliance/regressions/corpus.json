@@ -1122,6 +1122,42 @@
           }
         }
       ]
+    },
+    {
+      "id": "b4-placeholder-model",
+      "review_id": "B4",
+      "fixture": "b4-placeholder-model.cdx.json",
+      "note": "A model named TBD with version N/A and licence NOASSERTION, and a dataset named NOASSERTION with licence TBD. The BSI/G7 SBOM-for-AI model and dataset clusters tested raw emptiness, so these values declaring nothing satisfied five elements the other profiles' presence checks reject.",
+      "checks": [
+        {
+          "standard": "bsi-ai",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-BSIAI-MODEL-NAME",
+                "severity": "error"
+              },
+              {
+                "rule": "SBOM-BSIAI-MODEL-VERSION",
+                "severity": "error"
+              },
+              {
+                "rule": "SBOM-BSIAI-MODEL-LICENSE",
+                "severity": "warning"
+              },
+              {
+                "rule": "SBOM-BSIAI-DATASET-NAME",
+                "severity": "error"
+              },
+              {
+                "rule": "SBOM-BSIAI-DATASET-LICENSE",
+                "severity": "warning"
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

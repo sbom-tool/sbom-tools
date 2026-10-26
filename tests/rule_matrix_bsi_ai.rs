@@ -79,14 +79,22 @@ fn broken(mutate: impl FnOnce(&mut SbomFixture)) -> SbomFixture {
     fixture
 }
 
-/// The model and dataset clusters test raw emptiness instead of the shared
-/// known-value predicate, so a placeholder satisfies the element.
-const PLACEHOLDER_BUG: &str = "bug: check_bsiai_models_cluster / \
-     check_bsiai_datasets_cluster test raw emptiness (name.trim().is_empty(), an \
-     empty version, empty licence lists) instead of the shared known-value predicate \
-     (shared::known_value / has_known_license), so a placeholder or sentinel (TBD, N/A, \
-     NOASSERTION) satisfies this element; WP 0.5 (a71686c) made placeholders fail \
-     every other presence check";
+/// Add one firing case per value that declares nothing — the placeholders
+/// `TBD` and `N/A` and the sentinel `NOASSERTION` — written by `set`;
+/// `labels` names the three cases in that order. Like every other presence
+/// check, the model and dataset name, version and licence elements need a
+/// known value.
+fn with_placeholders(
+    mut entry: RuleEntry,
+    severity: Sev,
+    labels: [&'static str; 3],
+    set: fn(&mut SbomFixture, &str),
+) -> RuleEntry {
+    for (label, value) in labels.into_iter().zip(["TBD", "N/A", "NOASSERTION"]) {
+        entry = entry.with_firing(label, severity, broken(|s| set(s, value)));
+    }
+    entry
+}
 
 /// A plain software SBOM: out of the profile's scope.
 fn non_ai() -> SbomFixture {
@@ -268,25 +276,35 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         RuleEntry::key_tested("SBOM-BSIAI-SYS-DATAFLOW", Sev::Info, base(), non_ai()),
         // ── Per-key rows: Models cluster ─────────────────────────────────
-        RuleEntry::key_tested(
-            "SBOM-BSIAI-MODEL-NAME",
+        with_placeholders(
+            RuleEntry::key_tested(
+                "SBOM-BSIAI-MODEL-NAME",
+                Sev::Error,
+                broken(|s| model(s).name = String::new()),
+                base(),
+            ),
             Sev::Error,
-            broken(|s| model(s).name = String::new()),
-            base(),
-        )
-        .with_skipped_case(
-            "placeholder model name (TBD / N/A / NOASSERTION)",
-            PLACEHOLDER_BUG,
+            [
+                "model named TBD",
+                "model named N/A",
+                "model named NOASSERTION",
+            ],
+            |s, v| model(s).name = v.to_string(),
         ),
-        RuleEntry::key_tested(
-            "SBOM-BSIAI-MODEL-VERSION",
+        with_placeholders(
+            RuleEntry::key_tested(
+                "SBOM-BSIAI-MODEL-VERSION",
+                Sev::Error,
+                broken(|s| model(s).version = None),
+                base(),
+            ),
             Sev::Error,
-            broken(|s| model(s).version = None),
-            base(),
-        )
-        .with_skipped_case(
-            "placeholder model version (TBD / N/A / NOASSERTION)",
-            PLACEHOLDER_BUG,
+            [
+                "model version TBD",
+                "model version N/A",
+                "model version NOASSERTION",
+            ],
+            |s, v| model(s).version = Some(v.to_string()),
         ),
         RuleEntry::key_tested(
             "SBOM-BSIAI-MODEL-IDENTIFIER",
@@ -348,26 +366,36 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| model(s).model_card_mut().technical_limitations.clear()),
             base(),
         ),
-        RuleEntry::key_tested(
-            "SBOM-BSIAI-MODEL-LICENSE",
+        with_placeholders(
+            RuleEntry::key_tested(
+                "SBOM-BSIAI-MODEL-LICENSE",
+                Sev::Warning,
+                broken(|s| model(s).licenses.clear()),
+                base(),
+            ),
             Sev::Warning,
-            broken(|s| model(s).licenses.clear()),
-            base(),
-        )
-        .with_skipped_case(
-            "placeholder model licence (TBD / N/A / NOASSERTION)",
-            PLACEHOLDER_BUG,
+            [
+                "model licence TBD",
+                "model licence N/A",
+                "model licence NOASSERTION",
+            ],
+            |s, v| model(s).licenses = vec![v.to_string()],
         ),
         // ── Per-key rows: Datasets cluster ───────────────────────────────
-        RuleEntry::key_tested(
-            "SBOM-BSIAI-DATASET-NAME",
+        with_placeholders(
+            RuleEntry::key_tested(
+                "SBOM-BSIAI-DATASET-NAME",
+                Sev::Error,
+                broken(|s| dataset(s).name = String::new()),
+                base(),
+            ),
             Sev::Error,
-            broken(|s| dataset(s).name = String::new()),
-            base(),
-        )
-        .with_skipped_case(
-            "placeholder dataset name (TBD / N/A / NOASSERTION)",
-            PLACEHOLDER_BUG,
+            [
+                "dataset named TBD",
+                "dataset named N/A",
+                "dataset named NOASSERTION",
+            ],
+            |s, v| dataset(s).name = v.to_string(),
         ),
         RuleEntry::key_tested(
             "SBOM-BSIAI-DATASET-IDENTIFIER",
@@ -381,15 +409,20 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| dataset(s).hashes.clear()),
             base(),
         ),
-        RuleEntry::key_tested(
-            "SBOM-BSIAI-DATASET-LICENSE",
+        with_placeholders(
+            RuleEntry::key_tested(
+                "SBOM-BSIAI-DATASET-LICENSE",
+                Sev::Warning,
+                broken(|s| dataset(s).licenses.clear()),
+                base(),
+            ),
             Sev::Warning,
-            broken(|s| dataset(s).licenses.clear()),
-            base(),
-        )
-        .with_skipped_case(
-            "placeholder dataset licence (TBD / N/A / NOASSERTION)",
-            PLACEHOLDER_BUG,
+            [
+                "dataset licence TBD",
+                "dataset licence N/A",
+                "dataset licence NOASSERTION",
+            ],
+            |s, v| dataset(s).licenses = vec![v.to_string()],
         ),
         RuleEntry::key_tested(
             "SBOM-BSIAI-DATASET-SENSITIVITY",
