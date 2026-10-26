@@ -131,7 +131,7 @@ detail) in either path; it is no justification.
 | `CRA Art. 14: PSIRT contact for external vulnerability reports` | Art. 14    | RLS-2-RQ-03         | `psirtUrl`                            |
 | `CRA Art. 14(2)(a): 24-hour early-warning channel`          | Art. 14(2)(a) / 14(4)(a) | RLS-2-RQ-03 | `earlyWarningContact`                 |
 | `CRA Art. 14(2)(b): 72-hour notification channel`           | Art. 14(2)(b) / 14(4)(b) | RLS-2-RQ-03 | `incidentReportContact`               |
-| `CRA Art. 14(7): ENISA single reporting platform`           | Art. 14(7)     | RLS-2-RQ-03-RE      | `enisaReportingPlatformId`            |
+| `CRA Art. 14(7): ENISA single reporting platform`           | Art. 14(7)     | RLS-2-RQ-03-RE      | `enisaReportingPlatformId` (the CSIRT designated as coordinator is enough) |
 
 Pre-deadline findings are emitted as `Info`; post-deadline they become
 `Warning` (or `Error` at `ImportantClass2`/`Critical` per the
@@ -148,13 +148,22 @@ State where the manufacturers have their main establishment"; Art. 14
 applies from 11 September 2026 (Art. 71(2)), the day ENISA launched the
 platform ("The CRA Single Reporting Platform is launched", ENISA, 11
 September 2026, <https://www.enisa.europa.eu/cra-srp/>; portal
-<https://portal.cra-srp.enisa.europa.eu/>). The CRA names no manufacturer
-identifier on the platform, and ENISA advises manufacturers "to register
-and initiate the validation process only when they need to submit a
-notification" (SRP FAQ, updated 2026-10-15), so `enisaReportingPlatformId`
-can hold either the registration or the CSIRT designated as coordinator
-whose end-point the manufacturer will use. Before v0.4.0 the finding was
-`Info` on both sides of the deadline.
+<https://portal.cra-srp.enisa.europa.eu/>).
+
+Naming the CSIRT designated as coordinator in `enisaReportingPlatformId`
+satisfies the finding. Do not register on the platform early to clear it:
+no registration is needed before a notification is due. The CRA names no
+manufacturer identifier on the platform, and ENISA's SRP FAQ (updated 15
+October 2026,
+<https://www.enisa.europa.eu/topics/product-security/single-reporting-platform-srp/frequently-asked-questions>)
+advises manufacturers "to register and initiate the validation process
+only when they need to submit a notification" (FAQ 9). It makes them
+"responsible for identifying the correct CSIRT designated as coordinator
+(CDaC) in accordance with Art. 14(7) of the CRA and selecting it when
+submitting a notification through the SRP" (FAQ 18), in general the CSIRT
+of the Member State of the main establishment. A registration already made
+may be recorded instead. Before v0.4.0 the finding was `Info` on both sides
+of the deadline.
 
 ### CRA Annexes
 

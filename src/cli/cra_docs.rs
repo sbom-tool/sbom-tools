@@ -543,7 +543,7 @@ fn render_vuln_policy(sbom: &NormalizedSbom, sidecar: Option<&CraSidecarMetadata
     let enisa = sidecar
         .and_then(|s| s.enisa_reporting_platform_id.as_deref())
         .map_or_else(
-            || "_TBD: how you reach the ENISA single reporting platform (Art. 14(7)): your registration on it, or the CSIRT designated as coordinator_".to_string(),
+            || "_TBD: the CSIRT designated as coordinator your notifications select on the ENISA single reporting platform (Art. 14(7)); no registration is needed before a notification is due_".to_string(),
             escape_markdown_inline,
         );
 

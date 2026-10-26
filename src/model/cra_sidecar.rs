@@ -78,10 +78,13 @@ pub struct CraSidecarMetadata {
 
     /// How the manufacturer reaches the ENISA Single Reporting Platform
     /// (Art. 14(7); live since 2026-09-11 at
-    /// <https://portal.cra-srp.enisa.europa.eu/>): its registration on the
-    /// platform, or the CSIRT designated as coordinator whose end-point it
-    /// will use (ENISA advises registering only when a notification is due).
-    /// Free text; the platform publishes no machine-readable identifier.
+    /// <https://portal.cra-srp.enisa.europa.eu/>). Naming the CSIRT
+    /// designated as coordinator is enough: the one Art. 14(7) assigns by
+    /// the manufacturer's main establishment and every notification selects
+    /// on the platform. No registration on the platform is needed before a
+    /// notification is due, and ENISA advises registering only then; a
+    /// registration already made may be recorded instead. Free text; the
+    /// platform publishes no machine-readable identifier.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enisa_reporting_platform_id: Option<String>,
 
