@@ -268,20 +268,20 @@ fn declared_rule_ids(run: &serde_json::Value) -> BTreeSet<String> {
 fn with_unregistered_violation(
     mut result: sbom_tools::quality::ComplianceResult,
 ) -> sbom_tools::quality::ComplianceResult {
-    use sbom_tools::quality::{Violation, ViolationCategory, ViolationSeverity};
-    result.violations.push(Violation {
-        severity: ViolationSeverity::Warning,
-        category: ViolationCategory::DocumentMetadata,
-        message: "finding from an external source".to_string(),
-        element: None,
-        requirement: "external requirement".to_string(),
-        rule_id: "SBOM-CRA-GENERAL",
-        component_id: None,
-        counts: None,
-        standard_refs: Vec::new(),
-        remediation: None,
-        finding_detail: None,
-    });
+    // Built the one way code outside the crate can (`Violation` is
+    // non_exhaustive): deserialized, with a rule id the registry does not
+    // know.
+    let violation: sbom_tools::quality::Violation = serde_json::from_value(serde_json::json!({
+        "severity": "Warning",
+        "category": "DocumentMetadata",
+        "message": "finding from an external source",
+        "element": null,
+        "requirement": "external requirement",
+        "rule_id": "SBOM-EXTERNAL-UNREGISTERED",
+    }))
+    .expect("an external violation deserializes");
+    assert_eq!(violation.rule_id, "SBOM-CRA-GENERAL");
+    result.violations.push(violation);
     result
 }
 
