@@ -31,7 +31,7 @@ pub struct RuleMeta {
     /// escalate/relax the concrete [`Violation::severity`] by product class or
     /// CRA phase. The SARIF rule catalogue is generated from this value (see
     /// `registry_severity_matches_sarif_catalogue` in
-    /// tests/sarif_rule_catalogue_tests.rs).
+    /// src/reports/sarif/rules.rs).
     pub default_severity: ViolationSeverity,
     /// Harmonised-standard / regulation cross-references, in display order.
     pub refs: &'static [(StandardKind, &'static str)],
