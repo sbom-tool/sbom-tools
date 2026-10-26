@@ -45,11 +45,15 @@ pub use registry::{
 };
 use registry::{REMEDIATION_UNREGISTERED, lookup_static_rule_id};
 pub use selector::StandardSelector;
+// The vendor-hash metric behind SBOM-CRA-PRE-7-RQ-07-RE
+// (quality/metrics.rs) classifies vendor components with the same
+// sentinel-aware producer test the checks use.
+pub(crate) use shared::has_known_producer;
 use shared::{
-    ValueState, creator_identified, future_timestamp_violation, has_known_license,
-    has_known_producer, has_known_value, inventory_absent_violation, is_declared_unknown,
-    is_placeholder, is_valid_email_format, known_component_name, known_value,
-    manufacturer_scope_components, package_components, truncate_list, value_state,
+    ValueState, creator_identified, future_timestamp_violation, has_known_license, has_known_value,
+    inventory_absent_violation, is_declared_unknown, is_placeholder, is_valid_email_format,
+    known_component_name, known_value, manufacturer_scope_components, package_components,
+    truncate_list, value_state,
 };
 
 /// CRA enforcement phase
@@ -4331,6 +4335,28 @@ mod tests {
             v.is_some(),
             "40% vendor-hash coverage should produce an Error under CraPhase2"
         );
+    }
+
+    /// A supplier named NOASSERTION (or a placeholder) names no vendor: such
+    /// a component is classified like one with no supplier, so it neither
+    /// lowers nor props up the [PRE-7-RQ-07-RE] coverage. The raw presence
+    /// test counted it as a vendor component.
+    #[test]
+    fn vendor_hash_coverage_ignores_sentinel_suppliers() {
+        use crate::model::Organization;
+        use crate::quality::HashQualityMetrics;
+        let mut sbom = NormalizedSbom::default();
+        let known = vendor_component("known", false);
+        sbom.components.insert(known.canonical_id.clone(), known);
+        for (name, supplier) in [("sentinel", "NOASSERTION"), ("placeholder", "TBD")] {
+            let mut c = vendor_component(name, true);
+            c.supplier = Some(Organization::new(supplier.to_string()));
+            sbom.components.insert(c.canonical_id.clone(), c);
+        }
+        let m = HashQualityMetrics::from_sbom(&sbom);
+        assert_eq!(m.vendor_components_total, 1, "only the known supplier");
+        assert_eq!(m.vendor_components_with_hash, 0);
+        assert_eq!(m.vendor_hash_coverage(), Some(0.0));
     }
 
     #[test]

@@ -1289,6 +1289,40 @@
           }
         }
       ]
+    },
+    {
+      "id": "i4-noassertion-vendor-hash",
+      "review_id": "I4",
+      "fixture": "v4-noassertion-supplier.cdx.json",
+      "note": "libfoo's supplier is NOASSERTION. The vendor-hash metric used the raw producer test, so libfoo counted as a vendor-supplied component and its hash lifted the PRE-7-RQ-07-RE coverage to 1/2. It names no vendor, like a missing supplier: the only vendor component, app, carries no hash (0/1).",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "rule_counts": [
+              {
+                "rule": "SBOM-CRA-PRE-7-RQ-07-RE",
+                "severity": "error",
+                "affected": 0,
+                "total": 1
+              }
+            ]
+          }
+        },
+        {
+          "standard": "cra-phase1",
+          "expect": {
+            "rule_counts": [
+              {
+                "rule": "SBOM-CRA-PRE-7-RQ-07-RE",
+                "severity": "warning",
+                "affected": 0,
+                "total": 1
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

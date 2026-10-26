@@ -251,13 +251,19 @@ fn non_package_components_never_draw_package_findings() {
 /// Source scan: compliance checks never use the raw presence test
 /// `Component::has_producer`, which lets a NOASSERTION supplier satisfy a
 /// rule (review finding V4). They use the sentinel-aware
-/// `has_known_producer`.
+/// `has_known_producer` — and so does the vendor-hash metric in
+/// quality/metrics.rs, which SBOM-CRA-PRE-7-RQ-07-RE reads.
 #[test]
 fn checkers_never_use_the_raw_producer_test() {
-    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/quality/compliance");
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut sources: Vec<std::path::PathBuf> =
+        std::fs::read_dir(root.join("src/quality/compliance"))
+            .expect("compliance sources")
+            .map(|entry| entry.expect("dir entry").path())
+            .collect();
+    sources.push(root.join("src/quality/metrics.rs"));
     let mut offenders = Vec::new();
-    for entry in std::fs::read_dir(&dir).expect("compliance sources") {
-        let path = entry.expect("dir entry").path();
+    for path in sources {
         if path.extension().is_none_or(|e| e != "rs") {
             continue;
         }
