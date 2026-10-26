@@ -266,24 +266,15 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
 
         run_tui(&mut app, config.output.no_color)?;
     } else {
-        // SARIF results point at the lines of their components in the two
-        // files, found in the text before it is dropped.
+        // SARIF reports into the new SBOM only: its results point at the
+        // lines of the new file, found in the text before it is dropped.
         let sarif = if effective_output == ReportFormat::Sarif {
-            let base = config.output.sarif_base.as_deref();
-            Some((
-                super::sarif_artifact(
-                    &config.paths.old,
-                    base,
-                    &old_parsed.sbom,
-                    &old_parsed.raw_content,
-                )?,
-                super::sarif_artifact(
-                    &config.paths.new,
-                    base,
-                    &new_parsed.sbom,
-                    &new_parsed.raw_content,
-                )?,
-            ))
+            Some(super::sarif_artifact(
+                &config.paths.new,
+                config.output.sarif_base.as_deref(),
+                &new_parsed.sbom,
+                &new_parsed.raw_content,
+            )?)
         } else {
             None
         };

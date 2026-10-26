@@ -222,7 +222,6 @@ fn diff_and_view_sarif_match_the_schema() {
         let diff = DiffEngine::new().diff(&old, &new).expect("diff succeeds");
         let reporter = SarifReporter::new();
         let config = ReportConfig {
-            old_sarif_artifact: Some(old_artifact.clone()),
             sarif: SarifOptions::new().with_artifact(new_artifact.clone()),
             ..ReportConfig::all()
         };

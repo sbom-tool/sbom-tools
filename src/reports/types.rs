@@ -161,10 +161,6 @@ pub struct ReportConfig {
     /// Pre-computed CRA compliance for single SBOM in view mode
     #[serde(skip)]
     pub view_cra_compliance: Option<crate::quality::ComplianceResult>,
-    /// The old SBOM file of a diff, which `-o sarif` results about the old
-    /// SBOM point into. Without it they carry no physical location.
-    #[serde(skip)]
-    pub old_sarif_artifact: Option<crate::reports::SarifArtifact>,
     /// How `-o sarif` renders a diff or a view: the SBOM file its results
     /// point into (the new SBOM of a diff, the SBOM of a view), the
     /// code-scanning category in place of `sbom-tools/diff/` or
@@ -186,7 +182,6 @@ impl Default for ReportConfig {
             old_cra_compliance: None,
             new_cra_compliance: None,
             view_cra_compliance: None,
-            old_sarif_artifact: None,
             sarif: crate::reports::SarifOptions::default(),
         }
     }

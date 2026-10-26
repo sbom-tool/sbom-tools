@@ -184,16 +184,20 @@ const QUALITY_SCOPE: &str = "quality";
 const AI_READINESS_SCOPE: &str = "ai-readiness";
 
 impl ReportGenerator for SarifReporter {
+    /// A diff reports into the new SBOM only: a code-scanning alert belongs
+    /// to the file in the repository, and the old SBOM is usually a copy of
+    /// an earlier revision outside it. Results about the old side point at
+    /// the new SBOM (see [`locate_old_component`]), and the old SBOM's own
+    /// CRA findings are not results. The JSON and human-readable diff
+    /// reports keep both sides.
     fn generate_diff_report(
         &self,
         result: &DiffResult,
-        old_sbom: &NormalizedSbom,
+        _old_sbom: &NormalizedSbom,
         new_sbom: &NormalizedSbom,
         config: &ReportConfig,
     ) -> Result<String, ReportError> {
-        let old = config.old_sarif_artifact.as_ref();
         let new = config.sarif.artifact();
-        let mut old_keys = KeyBook::default();
         let mut new_keys = KeyBook::default();
         let mut results = Vec::new();
 
@@ -225,8 +229,8 @@ impl ReportGenerator for SarifReporter {
                         comp.name,
                         comp.old_version.as_deref().unwrap_or("")
                     ),
-                    old_keys.claim(DIFF_SCOPE, "SBOM-TOOLS-002", None, Some(&comp.id)),
-                    locate(old, Some(&comp.id)),
+                    new_keys.claim(DIFF_SCOPE, "SBOM-TOOLS-002", None, Some(&comp.id)),
+                    locate_old_component(new, &comp.id),
                     SarifResultProperties::default(),
                 ));
             }
@@ -311,13 +315,13 @@ impl ReportGenerator for SarifReporter {
                             vex_label,
                             vuln.component_name
                         ),
-                        old_keys.claim(
+                        new_keys.claim(
                             DIFF_SCOPE,
                             "SBOM-TOOLS-006",
                             Some(&vuln.id),
                             Some(&vuln.component_id),
                         ),
-                        locate(old, Some(&vuln.component_id)),
+                        locate_old_component(new, &vuln.component_id),
                         SarifResultProperties::default(),
                     ));
                 }
@@ -419,15 +423,8 @@ impl ReportGenerator for SarifReporter {
             }
         }
 
-        // Add CRA compliance results for old and new SBOMs (use pre-computed if available)
-        let cra_old = config.old_cra_compliance_or_bare(old_sbom);
+        // CRA compliance results for the new SBOM (pre-computed if available).
         let cra_new = config.new_cra_compliance_or_bare(new_sbom);
-        results.extend(compliance_results_to_sarif(
-            &cra_old,
-            Some("Old SBOM"),
-            old,
-            &mut old_keys,
-        ));
         results.extend(compliance_results_to_sarif(
             &cra_new,
             Some("New SBOM"),
@@ -442,7 +439,7 @@ impl ReportGenerator for SarifReporter {
             automation_id(config.sarif.category(), format!("sbom-tools/{DIFF_SCOPE}/")),
             rules,
             results,
-            uses_srcroot([old, new]),
+            uses_srcroot([new]),
             None,
             config.sarif.max_results(),
         )
@@ -962,6 +959,22 @@ fn locate(artifact: Option<&SarifArtifact>, component_id: Option<&str>) -> Vec<S
         physical_location,
         logical_locations,
     }]
+}
+
+/// The location of a diff result about a component of the old SBOM (a
+/// removal, a resolved vulnerability) in the new SBOM the diff reports into:
+/// the component's line when the new SBOM still lists it, else the new
+/// SBOM's document line, as a removal is a change to the new file. The
+/// component stays the logical location.
+fn locate_old_component(new: Option<&SarifArtifact>, component_id: &str) -> Vec<SarifLocation> {
+    let mut locations = locate(new, Some(component_id));
+    if let (Some(artifact), Some(location)) = (new, locations.first_mut())
+        && artifact.component_line(component_id).is_none()
+        && let Some(physical) = location.physical_location.as_mut()
+    {
+        physical.region.start_line = artifact.document_line();
+    }
+    locations
 }
 
 /// One result. Its fingerprint and `properties.findingKey` /

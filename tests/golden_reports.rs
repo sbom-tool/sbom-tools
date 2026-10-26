@@ -56,13 +56,8 @@ fn stable_config() -> ReportConfig {
     config.new_cra_compliance = Some(checker.check(&new));
     config.metadata.old_sbom_path = Some("tests/fixtures/demo-old.cdx.json".to_string());
     config.metadata.new_sbom_path = Some("tests/fixtures/demo-new.cdx.json".to_string());
-    // SARIF results point at the lines of the two files, named as the CLI
-    // names them from the repository root.
-    config.old_sarif_artifact = Some(SarifArtifact::new(
-        SarifArtifactLocation::relative("tests/fixtures/demo-old.cdx.json"),
-        &old,
-        DEMO_OLD,
-    ));
+    // SARIF reports into the new SBOM, named as the CLI names it from the
+    // repository root.
     config.sarif = SarifOptions::new().with_artifact(SarifArtifact::new(
         SarifArtifactLocation::relative("tests/fixtures/demo-new.cdx.json"),
         &new,

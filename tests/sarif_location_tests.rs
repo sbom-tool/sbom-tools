@@ -302,9 +302,9 @@ fn every_diff_and_view_result_has_a_location_and_a_fingerprint() {
         let (old, old_raw) = read(old_rel);
         let (new, new_raw) = read(new_rel);
         let diff = DiffEngine::new().diff(&old, &new).expect("diff");
+        let new_artifact = artifact(new_rel, &new, &new_raw);
         let config = ReportConfig {
-            old_sarif_artifact: Some(artifact(old_rel, &old, &old_raw)),
-            sarif: SarifOptions::new().with_artifact(artifact(new_rel, &new, &new_raw)),
+            sarif: SarifOptions::new().with_artifact(new_artifact.clone()),
             ..ReportConfig::all()
         };
         let sarif = reporter
@@ -313,12 +313,36 @@ fn every_diff_and_view_result_has_a_location_and_a_fingerprint() {
         let located =
             assert_located_and_fingerprinted(&sarif, &format!("diff {old_rel} {new_rel}"));
         assert!(!located.is_empty());
-        // Results about the old SBOM point into the old file.
-        for (key, uri, _) in &located {
-            if key.starts_with("diff|SBOM-TOOLS-002") || key.starts_with("diff|SBOM-TOOLS-006") {
-                assert_eq!(uri, &format!("tests/fixtures/{old_rel}"), "{key}");
+        // A diff reports into the new SBOM only: a removed component points
+        // at the new SBOM's document line, and the old SBOM's own CRA
+        // findings are no results.
+        for (key, uri, line) in &located {
+            assert_eq!(uri, &format!("tests/fixtures/{new_rel}"), "{key}");
+            if key.starts_with("diff|SBOM-TOOLS-002") {
+                assert_eq!(*line, u64::from(new_artifact.document_line()), "{key}");
             }
         }
+        let doc: Value = serde_json::from_str(&sarif).expect("JSON");
+        assert!(
+            doc["runs"][0]["results"]
+                .as_array()
+                .expect("results")
+                .iter()
+                .all(|r| !r["message"]["text"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .starts_with("Old SBOM")),
+            "diff {old_rel} {new_rel}: an old-SBOM compliance result"
+        );
+        let removed = located
+            .iter()
+            .filter(|(key, _, _)| key.starts_with("diff|SBOM-TOOLS-002"))
+            .count();
+        assert_eq!(
+            removed,
+            diff.components.removed.len(),
+            "{old_rel} {new_rel}"
+        );
         for (rel, sbom, raw) in [(old_rel, &old, &old_raw), (new_rel, &new, &new_raw)] {
             let config = ReportConfig {
                 sarif: SarifOptions::new().with_artifact(artifact(rel, sbom, raw)),
@@ -621,10 +645,8 @@ fn cli_names_the_sbom_relative_to_its_repository_or_sarif_base() {
         .expect("runs");
     assert_eq!(
         sarif_uris(&output.stdout),
-        HashSet::from([
-            "sboms/old.cdx.json".to_string(),
-            "sboms/app.cdx.json".to_string()
-        ])
+        HashSet::from(["sboms/app.cdx.json".to_string()]),
+        "a diff reports into the new SBOM only"
     );
 }
 
