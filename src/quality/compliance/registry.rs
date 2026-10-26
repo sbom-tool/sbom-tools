@@ -1362,7 +1362,7 @@ const ADVICE_SPEC_VERSION: FormatAdvice = FormatAdvice {
 /// Per-element format identifier (bom-ref, SPDXID, spdxId).
 const ADVICE_ELEMENT_ID: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "set a bom-ref on every component.",
+        text: "set a bom-ref on every component, one that differs from the component's name.",
         field: Some("bom-ref"),
     },
     spdx2: FieldAdvice {
@@ -1533,11 +1533,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraSupportPeriod",
             short_description: "CRA Art. 13(8) / 13(19): Support period and security update end date (Annex II (7))",
             default_severity: ViolationSeverity::Warning,
-            refs: &[
-                (CRA, "Art. 13(8)"),
-                (CRA, "Art. 13(19)"),
-                (ANNEX, "Annex II (7)"),
-            ],
+            refs: &[(CRA, "Art. 13(8)")],
             remediation: "Upgrade or replace the components the end-of-life data marks as no longer supported: they receive no more security updates (Art. 13(8)).",
             advice: None,
         },
@@ -1661,8 +1657,8 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraGeneralRequirement",
             short_description: "CRA general SBOM readiness requirement",
             default_severity: ViolationSeverity::Info,
-            refs: &[(CRA, "Art. 14(2)(a)")],
-            remediation: "Document the channel for the 24-hour early warning of an actively exploited vulnerability (Art. 14(2)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar.",
+            refs: &[(CRA, "Art. 14(2)(a)"), (CRA, "Art. 14(4)(a)")],
+            remediation: "Document the channel for the 24-hour early warning of an actively exploited vulnerability or a severe incident (Art. 14(2)(a) / 14(4)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar.",
             advice: None,
         },
         "SBOM-CRA-ART-14-NOTIFICATION" => RuleMeta {
@@ -1746,7 +1742,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             // Emitted only by the direct-dependency supplier check in cra.rs
             // (mandatory); the guidance must talk about suppliers, not
             // dependency relationships (#347).
-            remediation: "Identify the supplier of every direct dependency of the primary component (mandatory under PRE-7-RQ-03).",
+            remediation: "Identify the supplier of every direct dependency, one hop from the primary component or, when none is declared, from a root of the dependency graph (mandatory under PRE-7-RQ-03).",
             advice: Some(&ADVICE_PRODUCER),
         },
         // The transitive-dependency supplier check (recommended), a second
