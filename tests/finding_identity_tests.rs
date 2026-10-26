@@ -338,3 +338,159 @@ fn repeat_prone_documents_keep_unique_keys() {
     }
     assert!(numbered > 0, "no repeated entry was numbered");
 }
+
+/// Whether `detail` ends in the `#n` that numbers an entry the SBOM repeats.
+fn is_numbered(detail: &str) -> bool {
+    detail
+        .rsplit_once('#')
+        .is_some_and(|(_, n)| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+}
+
+/// The numbered details among `result`'s violations and passed checks, as
+/// `<rule id> <detail>`, sorted.
+fn numbered_details(result: &ComplianceResult) -> Vec<String> {
+    let violations = result
+        .violations
+        .iter()
+        .map(|v| (v.rule_id, v.finding_detail.as_deref()));
+    let passes = result
+        .passed
+        .iter()
+        .map(|p| (p.rule_id, p.finding_detail.as_deref()));
+    let mut numbered: Vec<String> = violations
+        .chain(passes)
+        .filter_map(|(rule_id, detail)| {
+            let detail = detail.filter(|d| is_numbered(d))?;
+            Some(format!("{rule_id} {detail}"))
+        })
+        .collect();
+    numbered.sort();
+    numbered
+}
+
+/// Check `sbom` at every level: the numbered details are `numbered` at CRA
+/// Phase 2 and none elsewhere, and SBOM-CRA-VULN-METADATA reports `metadata`
+/// at CRA Phase 2, as (subject, detail).
+fn assert_numbering(
+    name: &str,
+    sbom: &NormalizedSbom,
+    numbered: &[&str],
+    metadata: &[(&str, &str)],
+) {
+    for (label, checker) in checkers(None) {
+        let result = checker.check(sbom);
+        let expected: &[&str] = if result.level == ComplianceLevel::CraPhase2 {
+            numbered
+        } else {
+            &[]
+        };
+        assert_eq!(
+            numbered_details(&result),
+            expected,
+            "{name} [{label}]: numbered details"
+        );
+        if label == "CraPhase2" {
+            let found: Vec<(&str, &str)> = result
+                .violations
+                .iter()
+                .filter(|v| v.rule_id == "SBOM-CRA-VULN-METADATA")
+                .map(|v| {
+                    (
+                        v.component_id.as_deref().unwrap_or("-"),
+                        v.finding_detail.as_deref().unwrap_or("-"),
+                    )
+                })
+                .collect();
+            assert_eq!(found, metadata, "{name}: SBOM-CRA-VULN-METADATA");
+        }
+    }
+}
+
+/// Numbering is for entries the SBOM itself repeats, and in SPDX 3.0 for
+/// statements that contradict each other.
+///
+/// spdx3/security-profile.spdx3.json attaches CVE-2025-0001 to logging-lib
+/// by an AFFECTS relationship and scores it by a CVSS assessment: one entry
+/// that carries the score, so SBOM-CRA-VULN-METADATA does not report it. It
+/// attaches CVE-2025-0002 to crypto-lib by an AFFECTS relationship and
+/// assesses it `not_affected` with a justification: the two contradict each
+/// other and stay two entries, and the justified `not_affected` one needs
+/// no severity (CRA FAQ v1.4, 4.3.1), so only the AFFECTS entry is reported
+/// and nothing is numbered. Without the justification both entries are
+/// reported, `CVE-2025-0002` and `CVE-2025-0002#2`. Made an `affected`
+/// assessment, it agrees with the relationship: one entry, and nothing in
+/// the document is numbered at any level. The CycloneDX fixture that lists
+/// four vulnerabilities twice for one component keeps its numbering.
+#[test]
+fn only_entries_the_sbom_repeats_are_numbered() {
+    const CRYPTO_LIB: &str = "pkg:npm/crypto-lib@3.0.1";
+    let read = |rel: &str| {
+        std::fs::read_to_string(Path::new(FIXTURES_DIR).join(rel)).expect("fixture readable")
+    };
+
+    let fixture = read("spdx3/security-profile.spdx3.json");
+    let as_is = parse_sbom_str(&fixture).expect("fixture parses");
+    assert_numbering(
+        "security-profile",
+        &as_is,
+        &[],
+        &[(CRYPTO_LIB, "CVE-2025-0002")],
+    );
+
+    let mut unjustified: serde_json::Value =
+        serde_json::from_str(&fixture).expect("fixture is JSON");
+    unjustified["element"]
+        .as_array_mut()
+        .expect("element array")
+        .iter_mut()
+        .find(|e| e["spdxId"] == "urn:spdx:assessment:vex-vuln2")
+        .expect("the crypto-lib VEX assessment")
+        .as_object_mut()
+        .expect("assessment object")
+        .remove("justification");
+    let unjustified = parse_sbom_str(&unjustified.to_string()).expect("variant parses");
+    assert_numbering(
+        "security-profile, crypto-lib assessed not_affected without a justification",
+        &unjustified,
+        &["SBOM-CRA-VULN-METADATA CVE-2025-0002#2"],
+        &[
+            (CRYPTO_LIB, "CVE-2025-0002"),
+            (CRYPTO_LIB, "CVE-2025-0002#2"),
+        ],
+    );
+
+    let mut affected: serde_json::Value = serde_json::from_str(&fixture).expect("fixture is JSON");
+    let assessment = affected["element"]
+        .as_array_mut()
+        .expect("element array")
+        .iter_mut()
+        .find(|e| e["spdxId"] == "urn:spdx:assessment:vex-vuln2")
+        .expect("the crypto-lib VEX assessment");
+    assessment["type"] = "security_VexAffectedVulnAssessmentRelationship".into();
+    assessment
+        .as_object_mut()
+        .expect("assessment object")
+        .remove("justification");
+    let affected = parse_sbom_str(&affected.to_string()).expect("variant parses");
+    assert_numbering(
+        "security-profile, crypto-lib assessed affected",
+        &affected,
+        &[],
+        &[(CRYPTO_LIB, "CVE-2025-0002")],
+    );
+
+    let cdx = parse_sbom_str(&read(
+        "cyclonedx/sbom-cyclone-dx-json-01-kef-56-j-7-wc-3-hbket-0-rqa-1-qgbm-01-kef-58-v-9-j-8-smskdv-5-yb-7-qje-6-v.json",
+    ))
+    .expect("fixture parses");
+    assert_eq!(
+        numbered_details(&clock::checker(ComplianceLevel::CraPhase2).check(&cdx)),
+        [
+            "SBOM-CRA-VULN-METADATA CVE-2023-52425#2",
+            "SBOM-CRA-VULN-METADATA CVE-2024-5535#2",
+            "SBOM-CRA-VULN-METADATA CVE-2024-9681#2",
+            "SBOM-CRA-VULN-METADATA CVE-2025-0725#2",
+        ],
+        "the CycloneDX fixture lists these vulnerabilities twice for one component"
+    );
+}

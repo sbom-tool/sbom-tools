@@ -182,7 +182,9 @@ impl ComplianceChecker {
                 }
             }
 
-            if sbom.document.name.is_none() {
+            // An empty or placeholder name names no product (an SPDX 2.x
+            // document always has a DocumentName field, maybe empty).
+            if !has_known_value(&sbom.document.name) {
                 let sidecar_has_product_name = self
                     .sidecar
                     .as_ref()
@@ -532,8 +534,9 @@ impl ComplianceChecker {
                 });
             }
 
-            // FDA: Document name required
-            if sbom.document.name.is_none() {
+            // FDA: Document name required; an empty or placeholder name is
+            // no name.
+            if !has_known_value(&sbom.document.name) {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::DocumentMetadata,

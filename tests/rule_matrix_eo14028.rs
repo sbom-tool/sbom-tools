@@ -3,14 +3,17 @@
 //! fixture ever passed the framework).
 //!
 //! Every rule id in `EO14028_SARIF_RULE_IDS` gets a firing fixture and a
-//! silent fixture (real CycloneDX JSON through the real parser), or an
-//! explicit skip-with-reason; exhaustiveness is enforced against the
-//! registry slice.
+//! silent fixture (rendered in each of the four encodings and run through
+//! the real parser), or an explicit skip-with-reason; exhaustiveness is
+//! enforced against the registry slice.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
-use rule_matrix::{ComponentFixture, RuleEntry, SbomFixture, assert_no_violations, run_matrix};
+use rule_matrix::{
+    CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, RuleEntry, SPDX_VERSION_CASE, SbomFixture,
+    assert_no_violations_in, run_matrix,
+};
 use sbom_tools::quality::{ComplianceLevel, EO14028_SARIF_RULE_IDS, ViolationSeverity as Sev};
 
 const LEVEL: ComplianceLevel = ComplianceLevel::Eo14028;
@@ -48,11 +51,12 @@ fn broken(mutate: impl FnOnce(&mut SbomFixture)) -> SbomFixture {
     fixture
 }
 
-/// The conforming EO 14028 fixture must pass with a clean verdict — no test
-/// previously observed `is_compliant == true` for this framework.
+/// The conforming EO 14028 fixture must pass with a clean verdict in every
+/// encoding — no test previously observed `is_compliant == true` for this
+/// framework.
 #[test]
 fn eo14028_conforming_fixture_is_compliant_with_zero_violations() {
-    assert_no_violations(LEVEL, &base());
+    assert_no_violations_in(LEVEL, &base(), Encoding::ALL);
 }
 
 #[test]
@@ -85,12 +89,24 @@ fn eo14028_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.component_mut("libalpha").name = "unknown".to_string()),
             base(),
         ),
-        // The §4(e) machine-readable gate: CycloneDX <= 1.3 must fail.
+        // The §4(e) machine-readable gate: CycloneDX <= 1.3 and SPDX
+        // before 2.2 must fail.
         RuleEntry::tested(
             "SBOM-EO14028-FORMAT",
             Sev::Error,
             broken(|s| s.spec_version = "1.3".to_string()),
             base(),
+        )
+        .with_firing(
+            "SPDX 2.1 is below the SPDX 2.2 floor",
+            Sev::Error,
+            broken(|s| s.spdx_version = Some("2.1".to_string())),
+        )
+        .case_only("firing", Encoding::CYCLONEDX, CYCLONEDX_VERSION_CASE)
+        .case_only(
+            "SPDX 2.1 is below the SPDX 2.2 floor",
+            Encoding::SPDX,
+            SPDX_VERSION_CASE,
         ),
         RuleEntry::tested(
             "SBOM-EO14028-AUTOGEN",

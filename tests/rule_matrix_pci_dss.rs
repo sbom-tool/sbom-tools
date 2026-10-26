@@ -2,10 +2,11 @@
 //! (PCI DSS v4.0.1 Requirement 6.3.2 software-inventory profile).
 //!
 //! Every rule id in `PCIDSS_SARIF_RULE_IDS` gets a firing fixture (a minimal
-//! CycloneDX document, parsed through the real parser, that must surface the
-//! rule) and a silent fixture (one that must not), or an explicit
-//! skip-with-reason. The runner enforces exhaustiveness against the
-//! registry's PCI SARIF slice, so a new PCI rule cannot land untested.
+//! SBOM, rendered in each of the four encodings and parsed through the real
+//! parser, that must surface the rule) and a silent fixture (one that must
+//! not), or an explicit skip-with-reason. The runner enforces exhaustiveness
+//! against the registry's PCI SARIF slice, so a new PCI rule cannot land
+//! untested.
 //!
 //! One profile-specific wrinkle: the checker treats an absent CycloneDX
 //! compositions aggregate (`CompletenessDeclaration::Unknown`, the serde
@@ -15,14 +16,16 @@
 //! fixture built from it carries exactly that one Info; the fully-conforming
 //! zero-violation fixture declares its inventory Complete, and the
 //! SBOM-PCI-6-3-2-COMPLETENESS row (plus the tests at the bottom of this
-//! file) covers the declaration variants.
+//! file) covers the declaration variants. SPDX 2.3 has no completeness
+//! declaration, so every SPDX 2.3 rendering carries that Info.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
 use rule_matrix::clock::as_of;
 use rule_matrix::{
-    ComponentFixture, RuleEntry, SbomFixture, assert_no_violations, check, render_violations,
+    ComponentFixture, Encoding, Outcome, RuleEntry, SPDX23_HAS_NO_COMPLETENESS,
+    SPDX23_HAS_NO_VULNERABILITIES, SbomFixture, assert_no_violations_in, check, render_violations,
     run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, PCIDSS_SARIF_RULE_IDS, ViolationSeverity as Sev};
@@ -87,10 +90,11 @@ fn declared(aggregate: &str) -> SbomFixture {
 
 /// The conforming PCI fixture must pass with a clean verdict. It declares
 /// its inventory Complete (compositions aggregate) on top of `base()`; an
-/// undeclared inventory keeps an Info-level completeness finding by design.
+/// undeclared inventory keeps an Info-level completeness finding by design,
+/// which is why no SPDX 2.3 rendering is clean.
 #[test]
 fn pci_conforming_fixture_is_compliant_with_zero_violations() {
-    assert_no_violations(LEVEL, &declared("complete"));
+    assert_no_violations_in(LEVEL, &declared("complete"), Encoding::ALL_BUT_SPDX23);
 }
 
 #[test]
@@ -188,6 +192,18 @@ fn pci_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "aggregate not_specified",
             Sev::Info,
             declared("not_specified"),
+        )
+        .case_differs(
+            "firing",
+            &[Encoding::Spdx23Json],
+            Outcome::Fires(Sev::Info),
+            SPDX23_HAS_NO_COMPLETENESS,
+        )
+        .case_differs(
+            "silent",
+            &[Encoding::Spdx23Json],
+            Outcome::Fires(Sev::Info),
+            SPDX23_HAS_NO_COMPLETENESS,
         ),
         // Missing timestamp (epoch sentinel) warns, and so does one dated
         // after the evaluation instant; the stale-timestamp Info advisory is
@@ -226,6 +242,13 @@ fn pci_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     )];
                 }
             }),
+        )
+        .case_differs(
+            "vulnerability-assertion (VDR) reference as the only hook",
+            &[Encoding::Spdx23Json],
+            Outcome::Fires(Sev::Info),
+            "SPDX 2.3 has no reference category for a VDR: an OTHER vulnerability-assertion \
+             reference is unrecognized",
         ),
         // An embedded entry whose only rating severity is "unknown" (and no
         // CVSS score) is unranked; a "medium" entry is ranked and must stay
@@ -248,7 +271,8 @@ fn pci_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     "ref-libalpha".to_string(),
                 )];
             }),
-        ),
+        )
+        .only(Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_VULNERABILITIES),
     ];
 
     run_matrix(LEVEL, PCIDSS_SARIF_RULE_IDS, &entries);

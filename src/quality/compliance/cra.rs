@@ -455,10 +455,11 @@ impl ComplianceChecker {
         }
 
         // B4b: prEN 40000-1-3 [PRE-7-RQ-07-RE] — vendor hash carry-through
-        // Vendor-supplied components (those with supplier/author and a non-synthetic
-        // identifier) must carry the upstream-supplied cryptographic hash through
-        // into the SBOM. Synthetic / format-specific IDs are excluded because they
-        // typically aren't tied to an upstream artefact at all.
+        // Vendor-supplied components (those with a supplier, manufacturer or
+        // author and a PURL/CPE/SWHID/SWID) must carry the upstream-supplied
+        // cryptographic hash through into the SBOM. Components without one of
+        // those identifiers are excluded because nothing ties them to an
+        // upstream artefact.
         {
             let metrics = crate::quality::HashQualityMetrics::from_sbom(sbom);
             if let Some(coverage) = metrics.vendor_hash_coverage() {
@@ -1088,7 +1089,7 @@ impl ComplianceChecker {
         sbom: &NormalizedSbom,
         violations: &mut Vec<Violation>,
     ) {
-        use crate::model::{ComponentType, IdSource};
+        use crate::model::ComponentType;
 
         let is_hardware_kind = |t: &ComponentType| {
             matches!(
@@ -1129,11 +1130,12 @@ impl ComplianceChecker {
                 });
             }
 
-            // 2) Identifier must be a real (non-synthetic / non-format-specific) one
-            if matches!(
-                comp.canonical_id.source(),
-                IdSource::Synthetic | IdSource::FormatSpecific
-            ) {
+            // 2) A unique identifier: a PURL, CPE, SWHID or SWID, as the
+            // other CRA identifier checks require. Read the identifiers, not
+            // the canonical id's source: a component re-keyed after a
+            // canonical-id collision has a format-specific canonical id and
+            // still has its purl.
+            if !comp.identifiers.has_cra_identifier() {
                 violations.push(Violation {
                     severity: ViolationSeverity::Error,
                     category: ViolationCategory::ComponentIdentification,

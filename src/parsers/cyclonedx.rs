@@ -3911,6 +3911,9 @@ struct CdxComponentXml {
     /// absent. Read as text, so a malformed value cannot fail the document.
     #[serde(rename = "@isExternal")]
     is_external: Option<String>,
+    /// ML model card (CycloneDX 1.5+)
+    #[serde(rename = "modelCard")]
+    model_card: Option<CdxModelCardXml>,
     /// Dataset metadata (CycloneDX 1.5+): repeated `<data>` componentData
     /// elements directly under `<component>` (no wrapper element in XML).
     #[serde(rename = "data", default)]
@@ -3999,11 +4002,10 @@ impl From<CdxComponentXml> for CdxComponent {
                 .as_deref()
                 .is_some_and(|v| matches!(v.trim(), "true" | "1")),
             version_range: xml.version_range,
-            // XML deserialization of modelCard is not supported yet; ML-model
-            // metadata is only parsed from JSON documents. Dataset evidence
-            // (`<data>` componentData) IS parsed, so the AI compliance gates
-            // see XML AI-BOM datasets exactly like their JSON equivalents.
-            model_card: None,
+            // The model card and the dataset evidence (`<data>`
+            // componentData) read like their JSON forms, so the AI
+            // compliance gates see an XML AI-BOM as its JSON twin.
+            model_card: xml.model_card.map(Into::into),
             data_components: xml.data.into_iter().map(CdxDataComponent::from).collect(),
             crypto_properties: xml.crypto_properties.map(Into::into),
             components: xml
@@ -4183,6 +4185,204 @@ impl From<CdxGovPartyXml> for CdxGovParty {
             contact: xml.contact,
         })
     }
+}
+
+/// modelCard element for XML format (CycloneDX 1.5+): the fields of the
+/// JSON model card, with each list wrapped (`<datasets>`,
+/// `<performanceMetrics><performanceMetric>`, `<useCases><useCase>`,
+/// `<technicalLimitations><technicalLimitation>`, …). It converts into the
+/// JSON structures, so both encodings build the same model metadata.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CdxModelCardXml {
+    model_parameters: Option<CdxModelParametersXml>,
+    quantitative_analysis: Option<CdxQuantitativeAnalysisXml>,
+    considerations: Option<CdxConsiderationsXml>,
+}
+
+impl From<CdxModelCardXml> for CdxMlModelCard {
+    fn from(xml: CdxModelCardXml) -> Self {
+        Self {
+            model_parameters: xml.model_parameters.map(Into::into),
+            considerations: xml.considerations.map(Into::into),
+            quantitative_analysis: xml.quantitative_analysis.map(|q| CdxQuantitativeAnalysis {
+                performance_metrics: q.performance_metrics.map_or_else(Vec::new, |w| {
+                    w.performance_metric.into_iter().map(Into::into).collect()
+                }),
+            }),
+        }
+    }
+}
+
+/// `<modelParameters>` of an XML model card
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CdxModelParametersXml {
+    approach: Option<CdxMlApproach>,
+    task: Option<String>,
+    architecture_family: Option<String>,
+    model_architecture: Option<String>,
+    datasets: Option<CdxModelDatasetsXml>,
+}
+
+impl From<CdxModelParametersXml> for CdxModelParameters {
+    fn from(xml: CdxModelParametersXml) -> Self {
+        Self {
+            approach: xml.approach,
+            task: xml.task,
+            architecture_family: xml.architecture_family,
+            model_architecture: xml.model_architecture,
+            architecture: None,
+            datasets: xml.datasets.map_or_else(Vec::new, |w| {
+                w.datasets
+                    .into_iter()
+                    .map(|dataset| match dataset {
+                        CdxModelDatasetXml::Ref(reference) => {
+                            CdxDatasetChoice::Reference { reference }
+                        }
+                        CdxModelDatasetXml::Dataset(inline) => CdxDatasetChoice::Inline(inline),
+                    })
+                    .collect()
+            }),
+        }
+    }
+}
+
+/// `<datasets>` of XML model parameters: data references (`<ref>`) and
+/// inline componentData (`<dataset>`), in any order.
+#[derive(Debug, Deserialize)]
+struct CdxModelDatasetsXml {
+    #[serde(rename = "$value", default)]
+    datasets: Vec<CdxModelDatasetXml>,
+}
+
+/// One `<datasets>` entry: the XSD choice of `<ref>` and `<dataset>`
+#[derive(Debug, Deserialize)]
+enum CdxModelDatasetXml {
+    #[serde(rename = "ref")]
+    Ref(String),
+    #[serde(rename = "dataset")]
+    Dataset(CdxDatasetInline),
+}
+
+/// `<quantitativeAnalysis>` of an XML model card
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CdxQuantitativeAnalysisXml {
+    performance_metrics: Option<CdxPerformanceMetricsXml>,
+}
+
+/// `<performanceMetrics>` wrapper element of an XML model card
+#[derive(Debug, Deserialize)]
+struct CdxPerformanceMetricsXml {
+    #[serde(rename = "performanceMetric", default)]
+    performance_metric: Vec<CdxPerformanceMetricXml>,
+}
+
+/// `<performanceMetric>` of an XML model card: the value is element text
+#[derive(Debug, Deserialize)]
+struct CdxPerformanceMetricXml {
+    #[serde(rename = "type")]
+    metric_type: Option<String>,
+    value: Option<String>,
+    slice: Option<String>,
+}
+
+impl From<CdxPerformanceMetricXml> for CdxPerformanceMetric {
+    fn from(xml: CdxPerformanceMetricXml) -> Self {
+        Self {
+            metric_type: xml.metric_type,
+            value: xml.value,
+            slice: xml.slice,
+        }
+    }
+}
+
+/// `<considerations>` of an XML model card
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CdxConsiderationsXml {
+    use_cases: Option<CdxUseCasesXml>,
+    technical_limitations: Option<CdxTechnicalLimitationsXml>,
+    ethical_considerations: Option<CdxEthicalConsiderationsXml>,
+    environmental_considerations: Option<CdxEnvironmentalConsiderationsXml>,
+    fairness_assessments: Option<CdxFairnessAssessmentsXml>,
+}
+
+impl From<CdxConsiderationsXml> for CdxConsiderations {
+    fn from(xml: CdxConsiderationsXml) -> Self {
+        Self {
+            technical_limitations: xml
+                .technical_limitations
+                .map_or_else(Vec::new, |w| w.technical_limitation),
+            environmental_considerations: xml.environmental_considerations.map(|env| {
+                CdxEnvironmentalConsiderations {
+                    energy_consumptions: env
+                        .energy_consumptions
+                        .into_iter()
+                        .flat_map(|w| w.energy_consumption)
+                        .collect(),
+                }
+            }),
+            fairness_assessments: xml.fairness_assessments.map_or_else(Vec::new, |w| {
+                w.fairness_assessment
+                    .into_iter()
+                    .map(CdxFairnessAssessment::Structured)
+                    .collect()
+            }),
+            ethical_considerations: xml.ethical_considerations.map_or_else(Vec::new, |w| {
+                w.ethical_consideration
+                    .into_iter()
+                    .map(CdxEthicalConsideration::Structured)
+                    .collect()
+            }),
+            use_cases: xml.use_cases.map_or_else(Vec::new, |w| w.use_case),
+        }
+    }
+}
+
+/// `<useCases>` wrapper element of XML model-card considerations
+#[derive(Debug, Deserialize)]
+struct CdxUseCasesXml {
+    #[serde(rename = "useCase", default)]
+    use_case: Vec<String>,
+}
+
+/// `<technicalLimitations>` wrapper element of XML model-card considerations
+#[derive(Debug, Deserialize)]
+struct CdxTechnicalLimitationsXml {
+    #[serde(rename = "technicalLimitation", default)]
+    technical_limitation: Vec<String>,
+}
+
+/// `<ethicalConsiderations>` wrapper element of XML model-card considerations
+#[derive(Debug, Deserialize)]
+struct CdxEthicalConsiderationsXml {
+    #[serde(rename = "ethicalConsideration", default)]
+    ethical_consideration: Vec<CdxEthicalObj>,
+}
+
+/// `<fairnessAssessments>` wrapper element of XML model-card considerations
+#[derive(Debug, Deserialize)]
+struct CdxFairnessAssessmentsXml {
+    #[serde(rename = "fairnessAssessment", default)]
+    fairness_assessment: Vec<CdxFairnessObj>,
+}
+
+/// `<environmentalConsiderations>` of XML model-card considerations:
+/// repeated `<energyConsumptions>` wrappers of `<energyConsumption>`
+/// elements, read with the JSON energy-consumption structure.
+#[derive(Debug, Deserialize)]
+struct CdxEnvironmentalConsiderationsXml {
+    #[serde(rename = "energyConsumptions", default)]
+    energy_consumptions: Vec<CdxEnergyConsumptionsXml>,
+}
+
+/// `<energyConsumptions>` wrapper element of XML environmental considerations
+#[derive(Debug, Deserialize)]
+struct CdxEnergyConsumptionsXml {
+    #[serde(rename = "energyConsumption", default)]
+    energy_consumption: Vec<CdxEnergyConsumption>,
 }
 
 /// cryptoProperties element for XML format (1.6+). Algorithm and protocol
@@ -5757,6 +5957,128 @@ mod tests {
                 .swhid
                 .iter()
                 .any(|s| s.to_string().contains("swh:1:rel:"))
+        );
+    }
+
+    /// The XML `<modelCard>` must build the model metadata its JSON twin
+    /// builds. Regression: the XML converter hardcoded `model_card: None`,
+    /// so an XML AI-BOM lost its architecture, training datasets, use cases,
+    /// limitations, metrics and training energy, and the EU AI Act and
+    /// BSI-AI profiles reported gaps the JSON encoding of the same model
+    /// fills (found by the rule-matrix format axis).
+    #[test]
+    fn xml_model_card_reads_like_json() {
+        let json = parse_json(
+            r#"{
+              "bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
+              "components": [{
+                "type": "machine-learning-model", "bom-ref": "m1", "name": "m1",
+                "modelCard": {
+                  "modelParameters": {
+                    "approach": { "type": "supervised" },
+                    "task": "text-classification",
+                    "architectureFamily": "transformer",
+                    "modelArchitecture": "BERT-base",
+                    "datasets": [{ "ref": "ds-1" }, { "name": "inline-corpus" }]
+                  },
+                  "quantitativeAnalysis": {
+                    "performanceMetrics": [
+                      { "type": "accuracy", "value": "0.97", "slice": "overall" }
+                    ]
+                  },
+                  "considerations": {
+                    "useCases": ["triage", "moderation"],
+                    "technicalLimitations": ["English only", "short texts"],
+                    "ethicalConsiderations": [
+                      { "name": "bias risk", "mitigationStrategy": "human review" }
+                    ],
+                    "fairnessAssessments": [
+                      { "groupAtRisk": "minors", "mitigationStrategy": "age gating" }
+                    ],
+                    "environmentalConsiderations": {
+                      "energyConsumptions": [{
+                        "activity": "training",
+                        "energyProviders": [{ "organization": { "name": "Grid" }, "energySource": "wind", "energyProvided": { "value": 1.5, "unit": "MWh" } }],
+                        "activityEnergyCost": { "value": 1.5, "unit": "MWh" }
+                      }]
+                    }
+                  }
+                }
+              }]
+            }"#,
+        );
+        let xml = parse(
+            r#"<bom xmlns="http://cyclonedx.org/schema/bom/1.6" version="1">
+  <components>
+    <component type="machine-learning-model" bom-ref="m1">
+      <name>m1</name>
+      <modelCard>
+        <modelParameters>
+          <approach><type>supervised</type></approach>
+          <task>text-classification</task>
+          <architectureFamily>transformer</architectureFamily>
+          <modelArchitecture>BERT-base</modelArchitecture>
+          <datasets>
+            <ref>ds-1</ref>
+            <dataset><type>dataset</type><name>inline-corpus</name></dataset>
+          </datasets>
+        </modelParameters>
+        <quantitativeAnalysis>
+          <performanceMetrics>
+            <performanceMetric>
+              <type>accuracy</type><value>0.97</value><slice>overall</slice>
+            </performanceMetric>
+          </performanceMetrics>
+        </quantitativeAnalysis>
+        <considerations>
+          <useCases><useCase>triage</useCase><useCase>moderation</useCase></useCases>
+          <technicalLimitations>
+            <technicalLimitation>English only</technicalLimitation>
+            <technicalLimitation>short texts</technicalLimitation>
+          </technicalLimitations>
+          <ethicalConsiderations>
+            <ethicalConsideration>
+              <name>bias risk</name><mitigationStrategy>human review</mitigationStrategy>
+            </ethicalConsideration>
+          </ethicalConsiderations>
+          <environmentalConsiderations>
+            <energyConsumptions>
+              <energyConsumption>
+                <activity>training</activity>
+                <energyProviders>
+                  <organization><name>Grid</name></organization>
+                  <energySource>wind</energySource>
+                  <energyProvided><value>1.5</value><unit>MWh</unit></energyProvided>
+                </energyProviders>
+                <activityEnergyCost><value>1.5</value><unit>MWh</unit></activityEnergyCost>
+              </energyConsumption>
+            </energyConsumptions>
+          </environmentalConsiderations>
+          <fairnessAssessments>
+            <fairnessAssessment>
+              <groupAtRisk>minors</groupAtRisk><mitigationStrategy>age gating</mitigationStrategy>
+            </fairnessAssessment>
+          </fairnessAssessments>
+        </considerations>
+      </modelCard>
+    </component>
+  </components>
+</bom>"#,
+        );
+        let from_json = component(&json, "m1").ml_model.clone();
+        let from_xml = component(&xml, "m1").ml_model.clone();
+        let ml = from_xml
+            .as_ref()
+            .expect("the XML model card builds ml_model");
+        assert_eq!(ml.architecture_family.as_deref(), Some("transformer"));
+        assert_eq!(ml.architecture_name.as_deref(), Some("BERT-base"));
+        assert_eq!(ml.training_datasets.len(), 2);
+        assert_eq!(ml.use_cases, vec!["triage", "moderation"]);
+        assert_eq!(ml.limitations.as_deref(), Some("English only; short texts"));
+        assert_eq!(ml.energy_kwh_training, Some(1500.0));
+        assert_eq!(
+            from_xml, from_json,
+            "the XML model card must build the JSON twin's model metadata"
         );
     }
 

@@ -3,9 +3,9 @@
 //!
 //! EUCC shares the CRA-family `COMPLIANCE_SARIF_RULE_IDS` catalogue; its
 //! universe is that slice's `SBOM-EUCC-*` ids. Every id gets a firing
-//! fixture and a silent fixture (real CycloneDX JSON through the real parser, with the
-//! evidence fields in an attached CRA sidecar), or an explicit
-//! skip-with-reason.
+//! fixture and a silent fixture (rendered in each of the four encodings and
+//! run through the real parser, with the evidence fields in an attached CRA
+//! sidecar), or an explicit skip-with-reason.
 //!
 //! SBOM-EUCC-CERTREF reads the document: a `certification-report` or
 //! `attestation` external reference whose URL names EUCC or Common
@@ -17,8 +17,8 @@ mod rule_matrix;
 
 use rule_matrix::clock::{as_of, checker};
 use rule_matrix::{
-    ComponentFixture, RuleEntry, SbomFixture, assert_no_violations, check, render_violations,
-    run_matrix,
+    ComponentFixture, Encoding, Outcome, RuleEntry, SbomFixture, assert_no_violations_in, check,
+    render_violations, run_matrix,
 };
 use sbom_tools::model::CraSidecarMetadata;
 use sbom_tools::parsers::parse_sbom_str;
@@ -91,11 +91,17 @@ fn without_certref() -> SbomFixture {
     broken(|s| s.primary_mut().external_refs.clear())
 }
 
-/// The sidecar evidence and the certificate reference make a clean verdict.
+/// The sidecar evidence and the certificate reference make a clean verdict,
+/// in every encoding that has a certificate reference (SPDX 2.3 has none).
 #[test]
 fn eucc_conforming_fixture_is_compliant_with_zero_violations() {
-    assert_no_violations(LEVEL, &base());
+    assert_no_violations_in(LEVEL, &base(), Encoding::ALL_BUT_SPDX23);
 }
+
+/// SPDX 2.3 names no certificate reference.
+const SPDX23_NO_CERTIFICATE_REFERENCE: &str = "SPDX 2.3 has no certification-report or \
+     attestation reference category (an OTHER reference is unrecognized), so no SPDX 2.3 field \
+     references the certificate";
 
 /// Pinned scope decision: the EUCC profile is reference-only. It reads the
 /// certificate evidence (sidecar fields, a certificate reference, CDXA) and
@@ -210,6 +216,18 @@ fn eucc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                         "https://common-criteria.example/certificates/CC-2026-0042.pdf".to_string(),
                     )];
                 }),
+            )
+            .case_differs(
+                "silent",
+                &[Encoding::Spdx23Json],
+                Outcome::Fires(Sev::Warning),
+                SPDX23_NO_CERTIFICATE_REFERENCE,
+            )
+            .case_differs(
+                "attestation reference to a Common Criteria certificate",
+                &[Encoding::Spdx23Json],
+                Outcome::Fires(Sev::Warning),
+                SPDX23_NO_CERTIFICATE_REFERENCE,
             ),
     ];
 
