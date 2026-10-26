@@ -80,8 +80,9 @@ pass-only rules report into `passed`, never into `violations`: a pass has no
 severity and counts toward neither `counts.info` nor the score. `-o sarif`
 reports no pass, so code scanning raises no alert for one;
 `--sarif-include-passes` adds each as a SARIF result of `kind: "pass"` at
-level `none`, under the rule's `sarif_rule_id`. Each entry carries the fields
-a violation has, except the severity-related ones, plus its finding identity:
+level `none`, under the rule's `sarif_rule_id`. Each entry carries a
+violation's identifying and descriptive fields (not `severity`, `category`,
+`counts`, `remediation` or `help_uri`), plus its finding identity:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -218,7 +219,9 @@ violations and a lower `info_count`. The not-applicable markers
 | — (Info violations before v0.4.0) | `passed[]`, `counts.passed` |
 
 `--summary` is a separate compact format (the verdict and counts per standard,
-with `standard` holding the display name) and is not affected.
+with `standard` holding the display name) and keeps its shape. Its `info`
+count, like `counts.info`, counts Info violations only, so passed checks are
+not in it.
 
 ## OSCAL assessment results
 

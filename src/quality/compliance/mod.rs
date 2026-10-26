@@ -3,9 +3,10 @@
 //! Validates SBOMs against format requirements and industry standards.
 //!
 //! The public surface ([`ComplianceChecker`], [`ComplianceLevel`],
-//! [`ComplianceResult`], [`Violation`], the rule registry, …) lives here; the
-//! per-standard check logic is split across sibling submodules and dispatched
-//! through the [`StandardChecker`] trait in [`context`].
+//! [`ComplianceResult`], [`Violation`], [`PassedCheck`], the rule registry,
+//! …) lives here; the per-standard check logic is split across sibling
+//! submodules and dispatched through the [`StandardChecker`] trait in
+//! [`context`].
 
 use crate::model::{NormalizedSbom, SbomFormat};
 use serde::{Deserialize, Serialize};
