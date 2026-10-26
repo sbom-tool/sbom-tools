@@ -45,6 +45,7 @@ fn base() -> SbomFixture {
         components: vec![libalpha, ComponentFixture::conforming("libbeta")],
         dependencies: vec![("ref-libalpha".to_string(), vec!["ref-libbeta".to_string()])],
         vulnerabilities: Vec::new(),
+        ..SbomFixture::default()
     }
 }
 

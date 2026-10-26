@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.7" serialNumber="urn:uuid:9d2f4b71-0c3e-4a58-b6e1-2a7c8f5d9e34" version="1">
+  <metadata>
+    <timestamp>2026-09-29T00:00:00Z</timestamp>
+    <component type="application" bom-ref="related-assets-service">
+      <name>related-assets-service</name>
+      <version>1.0.0</version>
+    </component>
+  </metadata>
+  <components>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/rsa-2048">
+      <name>RSA-2048</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>signature</primitive>
+          <algorithmFamily>RSA</algorithmFamily>
+          <parameterSetIdentifier>2048</parameterSetIdentifier>
+        </algorithmProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/ml-dsa-87">
+      <name>ML-DSA-87</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>signature</primitive>
+          <algorithmFamily>ML-DSA</algorithmFamily>
+          <parameterSetIdentifier>87</parameterSetIdentifier>
+          <nistQuantumSecurityLevel>5</nistQuantumSecurityLevel>
+        </algorithmProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/key/server-public-key">
+      <name>server-public-key</name>
+      <cryptoProperties>
+        <assetType>related-crypto-material</assetType>
+        <relatedCryptoMaterialProperties>
+          <type>public-key</type>
+          <size>2048</size>
+          <relatedCryptographicAssets>
+            <relatedCryptographicAsset>
+              <type>algorithm</type>
+              <ref>crypto/algorithm/rsa-2048</ref>
+            </relatedCryptographicAsset>
+          </relatedCryptographicAssets>
+        </relatedCryptoMaterialProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/certificate/mixed-cert">
+      <name>mixed-cert</name>
+      <cryptoProperties>
+        <assetType>certificate</assetType>
+        <certificateProperties>
+          <subjectName>CN=mixed.example.com</subjectName>
+          <issuerName>CN=Example CA</issuerName>
+          <certificateFormat>X.509</certificateFormat>
+          <certificateFileExtension>pem</certificateFileExtension>
+          <relatedCryptographicAssets>
+            <relatedCryptographicAsset>
+              <type>algorithm</type>
+              <ref>crypto/algorithm/ml-dsa-87</ref>
+            </relatedCryptographicAsset>
+            <relatedCryptographicAsset>
+              <type>algorithm</type>
+              <ref>crypto/algorithm/rsa-2048</ref>
+            </relatedCryptographicAsset>
+            <relatedCryptographicAsset>
+              <type>publicKey</type>
+              <ref>crypto/key/server-public-key</ref>
+            </relatedCryptographicAsset>
+          </relatedCryptographicAssets>
+        </certificateProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/certificate/pqc-cert">
+      <name>pqc-cert</name>
+      <cryptoProperties>
+        <assetType>certificate</assetType>
+        <certificateProperties>
+          <subjectName>CN=pqc.example.com</subjectName>
+          <issuerName>CN=Example CA</issuerName>
+          <certificateFormat>X.509</certificateFormat>
+          <relatedCryptographicAssets>
+            <relatedCryptographicAsset>
+              <type>algorithm</type>
+              <ref>crypto/algorithm/ml-dsa-87</ref>
+            </relatedCryptographicAsset>
+          </relatedCryptographicAssets>
+        </certificateProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/protocol/ssh">
+      <name>ssh-endpoint</name>
+      <cryptoProperties>
+        <assetType>protocol</assetType>
+        <protocolProperties>
+          <type>ssh</type>
+          <version>2.0</version>
+          <relatedCryptographicAssets>
+            <relatedCryptographicAsset>
+              <type>algorithm</type>
+              <ref>crypto/algorithm/rsa-2048</ref>
+            </relatedCryptographicAsset>
+          </relatedCryptographicAssets>
+        </protocolProperties>
+      </cryptoProperties>
+    </component>
+  </components>
+</bom>

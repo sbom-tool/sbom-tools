@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:c3d4e5f6-a7b8-9012-cdef-345678901234" version="1">
+  <metadata>
+    <timestamp>2026-03-01T08:00:00Z</timestamp>
+    <tools>
+      <components>
+        <component type="application">
+          <name>legacy-scanner</name>
+          <version>1.0.0</version>
+        </component>
+      </components>
+    </tools>
+    <component type="application" bom-ref="legacy-app">
+      <name>legacy-insecure-app</name>
+      <version>1.0.0</version>
+      <purl>pkg:npm/legacy-insecure-app@1.0.0</purl>
+    </component>
+  </metadata>
+  <components>
+    <component type="library" bom-ref="old-crypto-lib">
+      <name>old-crypto</name>
+      <version>0.2.0</version>
+      <purl>pkg:npm/old-crypto@0.2.0</purl>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/md5">
+      <name>MD5</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>hash</primitive>
+          <parameterSetIdentifier>128</parameterSetIdentifier>
+          <certificationLevel>none</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>digest</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>64</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>0</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.2.840.113549.2.5</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/sha1">
+      <name>SHA-1</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>hash</primitive>
+          <parameterSetIdentifier>160</parameterSetIdentifier>
+          <certificationLevel>none</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>digest</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>80</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>0</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.3.14.3.2.26</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/des">
+      <name>DES</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>block-cipher</primitive>
+          <parameterSetIdentifier>56</parameterSetIdentifier>
+          <certificationLevel>none</certificationLevel>
+          <mode>cbc</mode>
+          <padding>pkcs5</padding>
+          <cryptoFunctions>
+            <cryptoFunction>encrypt</cryptoFunction>
+            <cryptoFunction>decrypt</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>56</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>0</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.3.14.3.2.7</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/3des">
+      <name>3DES-EDE</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>block-cipher</primitive>
+          <parameterSetIdentifier>168</parameterSetIdentifier>
+          <certificationLevel>none</certificationLevel>
+          <mode>cbc</mode>
+          <cryptoFunctions>
+            <cryptoFunction>encrypt</cryptoFunction>
+            <cryptoFunction>decrypt</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>112</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>0</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.2.840.113549.3.7</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/rc4">
+      <name>RC4</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>stream-cipher</primitive>
+          <parameterSetIdentifier>128</parameterSetIdentifier>
+          <certificationLevel>none</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>encrypt</cryptoFunction>
+            <cryptoFunction>decrypt</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>0</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>0</nistQuantumSecurityLevel>
+        </algorithmProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/rsa-1024">
+      <name>RSA-1024</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>pke</primitive>
+          <parameterSetIdentifier>1024</parameterSetIdentifier>
+          <certificationLevel>none</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>encrypt</cryptoFunction>
+            <cryptoFunction>decrypt</cryptoFunction>
+            <cryptoFunction>sign</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>80</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>0</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>1.2.840.113549.1.1.1</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/dsa-1024">
+      <name>DSA-1024</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>signature</primitive>
+          <parameterSetIdentifier>1024</parameterSetIdentifier>
+          <certificationLevel>none</certificationLevel>
+          <cryptoFunctions>
+            <cryptoFunction>keygen</cryptoFunction>
+            <cryptoFunction>sign</cryptoFunction>
+            <cryptoFunction>verify</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>80</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>0</nistQuantumSecurityLevel>
+        </algorithmProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/blowfish">
+      <name>Blowfish</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>block-cipher</primitive>
+          <parameterSetIdentifier>128</parameterSetIdentifier>
+          <certificationLevel>none</certificationLevel>
+          <mode>cbc</mode>
+          <cryptoFunctions>
+            <cryptoFunction>encrypt</cryptoFunction>
+            <cryptoFunction>decrypt</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>128</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>0</nistQuantumSecurityLevel>
+        </algorithmProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/aes-ecb">
+      <name>AES-128-ECB</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>block-cipher</primitive>
+          <parameterSetIdentifier>128</parameterSetIdentifier>
+          <certificationLevel>none</certificationLevel>
+          <mode>ecb</mode>
+          <cryptoFunctions>
+            <cryptoFunction>encrypt</cryptoFunction>
+            <cryptoFunction>decrypt</cryptoFunction>
+          </cryptoFunctions>
+          <classicalSecurityLevel>128</classicalSecurityLevel>
+          <nistQuantumSecurityLevel>1</nistQuantumSecurityLevel>
+        </algorithmProperties>
+        <oid>2.16.840.1.101.3.4.1.1</oid>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/certificate/expired-cert">
+      <name>expired.legacy-app.example.com</name>
+      <cryptoProperties>
+        <assetType>certificate</assetType>
+        <certificateProperties>
+          <subjectName>CN = expired.legacy-app.example.com, O = Legacy Corp</subjectName>
+          <issuerName>CN = Legacy CA, O = Legacy Corp</issuerName>
+          <notValidBefore>2020-01-01T00:00:00Z</notValidBefore>
+          <notValidAfter>2023-01-01T23:59:59Z</notValidAfter>
+          <signatureAlgorithmRef>crypto/algorithm/rsa-1024</signatureAlgorithmRef>
+          <subjectPublicKeyRef>crypto/key/expired-pubkey</subjectPublicKeyRef>
+          <certificateFormat>X.509</certificateFormat>
+          <certificateExtension>pem</certificateExtension>
+        </certificateProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/certificate/sha1-signed">
+      <name>sha1-signed.legacy-app.example.com</name>
+      <cryptoProperties>
+        <assetType>certificate</assetType>
+        <certificateProperties>
+          <subjectName>CN = sha1-signed.legacy-app.example.com</subjectName>
+          <issuerName>CN = Old CA</issuerName>
+          <notValidBefore>2025-01-01T00:00:00Z</notValidBefore>
+          <notValidAfter>2027-01-01T23:59:59Z</notValidAfter>
+          <signatureAlgorithmRef>crypto/algorithm/sha1</signatureAlgorithmRef>
+          <subjectPublicKeyRef>crypto/key/sha1-pubkey</subjectPublicKeyRef>
+          <certificateFormat>X.509</certificateFormat>
+          <certificateExtension>crt</certificateExtension>
+        </certificateProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/key/expired-pubkey">
+      <name>rsa-1024-expired-key</name>
+      <cryptoProperties>
+        <assetType>related-crypto-material</assetType>
+        <relatedCryptoMaterialProperties>
+          <type>public-key</type>
+          <id>aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee</id>
+          <state>deactivated</state>
+          <algorithmRef>crypto/algorithm/rsa-1024</algorithmRef>
+          <size>1024</size>
+        </relatedCryptoMaterialProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/key/sha1-pubkey">
+      <name>rsa-2048-sha1-signed-key</name>
+      <cryptoProperties>
+        <assetType>related-crypto-material</assetType>
+        <relatedCryptoMaterialProperties>
+          <type>public-key</type>
+          <id>11111111-2222-3333-4444-555555555555</id>
+          <state>active</state>
+          <algorithmRef>crypto/algorithm/rsa-1024</algorithmRef>
+          <size>2048</size>
+        </relatedCryptoMaterialProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/key/compromised-key">
+      <name>compromised-symmetric-key</name>
+      <cryptoProperties>
+        <assetType>related-crypto-material</assetType>
+        <relatedCryptoMaterialProperties>
+          <type>symmetric-key</type>
+          <id>66666666-7777-8888-9999-aaaaaaaaaaaa</id>
+          <state>compromised</state>
+          <algorithmRef>crypto/algorithm/des</algorithmRef>
+          <creationDate>2018-01-01T00:00:00Z</creationDate>
+          <size>56</size>
+        </relatedCryptoMaterialProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/protocol/tls10">
+      <name>TLS 1.0</name>
+      <cryptoProperties>
+        <assetType>protocol</assetType>
+        <protocolProperties>
+          <type>tls</type>
+          <version>1.0</version>
+          <cipherSuites>
+            <cipherSuite>
+              <name>TLS_RSA_WITH_RC4_128_SHA</name>
+              <algorithms>
+                <algorithm>crypto/algorithm/rsa-1024</algorithm>
+                <algorithm>crypto/algorithm/rc4</algorithm>
+                <algorithm>crypto/algorithm/sha1</algorithm>
+              </algorithms>
+              <identifiers>
+                <identifier>0x00</identifier>
+                <identifier>0x05</identifier>
+              </identifiers>
+            </cipherSuite>
+            <cipherSuite>
+              <name>TLS_RSA_WITH_3DES_EDE_CBC_SHA</name>
+              <algorithms>
+                <algorithm>crypto/algorithm/rsa-1024</algorithm>
+                <algorithm>crypto/algorithm/3des</algorithm>
+                <algorithm>crypto/algorithm/sha1</algorithm>
+              </algorithms>
+              <identifiers>
+                <identifier>0x00</identifier>
+                <identifier>0x0A</identifier>
+              </identifiers>
+            </cipherSuite>
+            <cipherSuite>
+              <name>TLS_RSA_WITH_DES_CBC_SHA</name>
+              <algorithms>
+                <algorithm>crypto/algorithm/rsa-1024</algorithm>
+                <algorithm>crypto/algorithm/des</algorithm>
+                <algorithm>crypto/algorithm/sha1</algorithm>
+              </algorithms>
+              <identifiers>
+                <identifier>0x00</identifier>
+                <identifier>0x09</identifier>
+              </identifiers>
+            </cipherSuite>
+          </cipherSuites>
+          <cryptoRef>crypto/certificate/expired-cert</cryptoRef>
+        </protocolProperties>
+      </cryptoProperties>
+    </component>
+  </components>
+  <dependencies>
+    <dependency ref="legacy-app">
+      <dependency ref="old-crypto-lib"/>
+      <dependency ref="crypto/protocol/tls10"/>
+    </dependency>
+    <dependency ref="old-crypto-lib">
+      <dependency ref="crypto/algorithm/md5"/>
+      <dependency ref="crypto/algorithm/sha1"/>
+      <dependency ref="crypto/algorithm/des"/>
+      <dependency ref="crypto/algorithm/3des"/>
+      <dependency ref="crypto/algorithm/rc4"/>
+      <dependency ref="crypto/algorithm/rsa-1024"/>
+      <dependency ref="crypto/algorithm/dsa-1024"/>
+      <dependency ref="crypto/algorithm/blowfish"/>
+      <dependency ref="crypto/algorithm/aes-ecb"/>
+    </dependency>
+    <dependency ref="crypto/protocol/tls10">
+      <dependency ref="crypto/certificate/expired-cert"/>
+      <dependency ref="crypto/algorithm/rsa-1024"/>
+      <dependency ref="crypto/algorithm/rc4"/>
+      <dependency ref="crypto/algorithm/3des"/>
+      <dependency ref="crypto/algorithm/des"/>
+      <dependency ref="crypto/algorithm/sha1"/>
+    </dependency>
+    <dependency ref="crypto/certificate/expired-cert">
+      <dependency ref="crypto/key/expired-pubkey"/>
+      <dependency ref="crypto/algorithm/rsa-1024"/>
+    </dependency>
+  </dependencies>
+</bom>

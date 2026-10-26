@@ -27,7 +27,9 @@ fn fixture_dir(name: &str) -> PathBuf {
 }
 
 /// Representative fixtures that, between them, trigger violations across the
-/// CRA / BSI / CNSA / PQC / SPDX / CycloneDX surfaces.
+/// CRA / BSI / CNSA / PQC / SPDX / CycloneDX surfaces. A listed fixture that
+/// is missing on disk fails the test: skipping it would shrink the sweep
+/// silently.
 fn fixtures() -> Vec<PathBuf> {
     let mut v = Vec::new();
     for (dir, files) in [
@@ -55,9 +57,8 @@ fn fixtures() -> Vec<PathBuf> {
     ] {
         for f in files {
             let p = fixture_dir(dir).join(f);
-            if p.exists() {
-                v.push(p);
-            }
+            assert!(p.exists(), "listed fixture is missing: {}", p.display());
+            v.push(p);
         }
     }
     v

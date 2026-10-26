@@ -1,0 +1,151 @@
+---
+source: tests/compliance_snapshots.rs
+---
+fixture: cyclonedx/cbom-weak-crypto.cdx.xml
+as_of: 2026-10-12T00:00:00Z
+
+[Minimum] compliant · E0 W0 I0
+[Standard] compliant · E0 W2 I0
+  W SBOM-QUALITY-GENERAL  pkg:npm/legacy-insecure-app@1.0.0
+  W SBOM-QUALITY-GENERAL  pkg:npm/old-crypto@0.2.0
+[NtiaMinimum] NON-COMPLIANT · E2 W0 I0
+  E SBOM-NTIA-SUPPLIER  pkg:npm/legacy-insecure-app@1.0.0
+  E SBOM-NTIA-SUPPLIER  pkg:npm/old-crypto@0.2.0
+[CraPhase1] compliant · E0 W10 I6
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/legacy-insecure-app@1.0.0
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/old-crypto@0.2.0
+  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/2)
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
+  W SBOM-CRA-ART-13-16  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-13-5  - (2/2)
+  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/legacy-insecure-app@1.0.0
+  W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/old-crypto@0.2.0
+  W SBOM-CRA-SBOM-FRESHNESS  -
+[CraPhase2] NON-COMPLIANT · E1 W12 I7
+  E SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/legacy-insecure-app@1.0.0
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/old-crypto@0.2.0
+  I SBOM-CRA-ANNEX-V  -
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-LIFECYCLE  -
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/2)
+  W SBOM-CRA-ART-13-16  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-13-2  -
+  W SBOM-CRA-ART-13-5  - (2/2)
+  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/legacy-insecure-app@1.0.0
+  W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/old-crypto@0.2.0
+  W SBOM-CRA-CVD-POLICY  -
+  W SBOM-CRA-SBOM-FRESHNESS  -
+[FdaMedicalDevice] NON-COMPLIANT · E4 W3 I0
+  E SBOM-FDA-HASH  pkg:npm/legacy-insecure-app@1.0.0
+  E SBOM-FDA-HASH  pkg:npm/old-crypto@0.2.0
+  E SBOM-FDA-SUPPLIER  pkg:npm/legacy-insecure-app@1.0.0
+  E SBOM-FDA-SUPPLIER  pkg:npm/old-crypto@0.2.0
+  W SBOM-FDA-SUPPLIER  -
+  W SBOM-FDA-SUPPORT  - ×2
+[NistSsdf] NON-COMPLIANT · E1 W2 I2
+  E SBOM-SSDF-PS2  - (2/2)
+  I SBOM-SSDF-PO3  -
+  I SBOM-SSDF-PW6  -
+  W SBOM-SSDF-PO1  -
+  W SBOM-SSDF-PS3  - (2/2)
+[Eo14028] NON-COMPLIANT · E1 W2 I0
+  E SBOM-EO14028-SUPPLIER  - (2/2)
+  W SBOM-EO14028-DISCLOSURE  -
+  W SBOM-EO14028-INTEGRITY  - (2/2)
+[Cnsa2] NON-COMPLIANT · E16 W0 I0
+  E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-ecb
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/3des
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/blowfish
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/des
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/md5
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/rc4
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/sha1
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/dsa-1024
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rc4
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-1024
+  E SBOM-CNSA2-CERT-001  crypto/certificate/expired-cert
+  E SBOM-CNSA2-CERT-001  crypto/certificate/sha1-signed
+  E SBOM-CNSA2-PROTO-001  crypto/protocol/tls10
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls10 ×3
+[NistPqc] NON-COMPLIANT · E16 W0 I0
+  E SBOM-PQC-001  crypto/algorithm/dsa-1024
+  E SBOM-PQC-001  crypto/algorithm/rsa-1024
+  E SBOM-PQC-005  crypto/algorithm/3des
+  E SBOM-PQC-005  crypto/algorithm/blowfish
+  E SBOM-PQC-005  crypto/algorithm/des
+  E SBOM-PQC-005  crypto/algorithm/md5
+  E SBOM-PQC-005  crypto/algorithm/rc4
+  E SBOM-PQC-005  crypto/algorithm/sha1
+  E SBOM-PQC-008  crypto/algorithm/aes-ecb
+  E SBOM-PQC-CERT-001  crypto/certificate/expired-cert
+  E SBOM-PQC-CERT-001  crypto/certificate/sha1-signed
+  E SBOM-PQC-KEY-001  crypto/key/compromised-key
+  E SBOM-PQC-PROTO-001  crypto/protocol/tls10
+  E SBOM-PQC-PROTO-002  crypto/protocol/tls10 ×3
+[BsiTr03183_2] NON-COMPLIANT · E2 W3 I0
+  E SBOM-BSI-TR-03183-2-5-1  -
+  E SBOM-BSI-TR-03183-2-LICENSE  - (2/2)
+  W SBOM-BSI-TR-03183-2-5-4-MISSING  - (2/2)
+  W SBOM-BSI-TR-03183-2-5-5-COMPLETENESS  -
+  W SBOM-BSI-TR-03183-2-CREATOR  - (2/2)
+[CraOssSteward] NON-COMPLIANT · E1 W3 I2
+  E SBOM-CRA-ART-24  -
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/legacy-insecure-app@1.0.0
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/old-crypto@0.2.0
+  W SBOM-CRA-ART-24-SUPPLIER  pkg:npm/legacy-insecure-app@1.0.0
+  W SBOM-CRA-ART-24-SUPPLIER  pkg:npm/old-crypto@0.2.0
+  W SBOM-CRA-CVD-POLICY  -
+[EuccSubstantial] NON-COMPLIANT · E4 W1 I0
+  E SBOM-EUCC-ITSEF  -
+  E SBOM-EUCC-PP  -
+  E SBOM-EUCC-TOE  -
+  E SBOM-EUCC-VALIDITY  -
+  W SBOM-EUCC-CERTREF  -
+[EuAiAct] not applicable · E0 W0 I1
+  I SBOM-AIACT-NA  -
+[BsiSbomForAi] not applicable · E0 W0 I1
+  I SBOM-BSIAI-NA  -
+[Cisa2026] NON-COMPLIANT · E7 W3 I0
+  E SBOM-CISA2026-AUTHOR  -
+  E SBOM-CISA2026-HASH  pkg:npm/legacy-insecure-app@1.0.0
+  E SBOM-CISA2026-HASH  pkg:npm/old-crypto@0.2.0
+  E SBOM-CISA2026-LICENSE  pkg:npm/legacy-insecure-app@1.0.0
+  E SBOM-CISA2026-LICENSE  pkg:npm/old-crypto@0.2.0
+  E SBOM-CISA2026-PRODUCER  pkg:npm/legacy-insecure-app@1.0.0
+  E SBOM-CISA2026-PRODUCER  pkg:npm/old-crypto@0.2.0
+  W SBOM-CISA2026-COVERAGE  -
+  W SBOM-CISA2026-GENERATION-CONTEXT  -
+  W SBOM-CISA2026-SIGNATURE  -
+[PciDss632] compliant · E0 W0 I2
+  I SBOM-PCI-6-3-2-COMPLETENESS  -
+  I SBOM-PCI-6-3-2-VULN-EVIDENCE  -
+[Fsct] NON-COMPLIANT · E5 W5 I4
+  E SBOM-FSCT-AUTHOR  -
+  E SBOM-FSCT-COPYRIGHT-PRIMARY  pkg:npm/legacy-insecure-app@1.0.0
+  E SBOM-FSCT-HASH  - (2/2)
+  E SBOM-FSCT-LICENSE-PRIMARY  pkg:npm/legacy-insecure-app@1.0.0
+  E SBOM-FSCT-SUPPLIER  - (2/2)
+  I SBOM-FSCT-COPYRIGHT-ALL  - (2/2)
+  I SBOM-FSCT-LICENSE-ALL  - (2/2)
+  I SBOM-FSCT-SBOM-TYPE  -
+  I SBOM-FSCT-SIGNATURE  -
+  W SBOM-FSCT-COMPLETENESS  -
+  W SBOM-FSCT-COPYRIGHT-COVERAGE  - (0/2)
+  W SBOM-FSCT-HASH-PRIMARY-SHA2  pkg:npm/legacy-insecure-app@1.0.0
+  W SBOM-FSCT-IDENTIFIER-MULTI  - (2/2)
+  W SBOM-FSCT-LICENSE-COVERAGE  - (0/2)
+[Comprehensive] NON-COMPLIANT · E2 W4 I0
+  E SBOM-NTIA-SUPPLIER  pkg:npm/legacy-insecure-app@1.0.0
+  E SBOM-NTIA-SUPPLIER  pkg:npm/old-crypto@0.2.0
+  W SBOM-QUALITY-GENERAL  pkg:npm/legacy-insecure-app@1.0.0 ×2
+  W SBOM-QUALITY-GENERAL  pkg:npm/old-crypto@0.2.0 ×2

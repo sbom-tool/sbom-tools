@@ -1,0 +1,145 @@
+---
+source: tests/compliance_snapshots.rs
+---
+fixture: cyclonedx/cbom-cnsa2-violations.cdx.xml
+as_of: 2026-10-12T00:00:00Z
+
+[Minimum] compliant · E0 W0 I0
+[Standard] compliant · E0 W2 I0
+  W SBOM-QUALITY-GENERAL  pkg:cargo/mixed-crypto@1.0.0
+  W SBOM-QUALITY-GENERAL  pkg:cargo/noncompliant-nss-app@0.5.0
+[NtiaMinimum] NON-COMPLIANT · E2 W0 I0
+  E SBOM-NTIA-SUPPLIER  pkg:cargo/mixed-crypto@1.0.0
+  E SBOM-NTIA-SUPPLIER  pkg:cargo/noncompliant-nss-app@0.5.0
+[CraPhase1] compliant · E0 W10 I6
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/mixed-crypto@1.0.0
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/noncompliant-nss-app@0.5.0
+  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/2)
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
+  W SBOM-CRA-ART-13-16  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-13-5  - (2/2)
+  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/mixed-crypto@1.0.0
+  W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/noncompliant-nss-app@0.5.0
+  W SBOM-CRA-SBOM-FRESHNESS  -
+[CraPhase2] NON-COMPLIANT · E1 W12 I7
+  E SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/mixed-crypto@1.0.0
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/noncompliant-nss-app@0.5.0
+  I SBOM-CRA-ANNEX-V  -
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-LIFECYCLE  -
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/2)
+  W SBOM-CRA-ART-13-16  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-13-2  -
+  W SBOM-CRA-ART-13-5  - (2/2)
+  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/mixed-crypto@1.0.0
+  W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/noncompliant-nss-app@0.5.0
+  W SBOM-CRA-CVD-POLICY  -
+  W SBOM-CRA-SBOM-FRESHNESS  -
+[FdaMedicalDevice] NON-COMPLIANT · E4 W3 I0
+  E SBOM-FDA-HASH  pkg:cargo/mixed-crypto@1.0.0
+  E SBOM-FDA-HASH  pkg:cargo/noncompliant-nss-app@0.5.0
+  E SBOM-FDA-SUPPLIER  pkg:cargo/mixed-crypto@1.0.0
+  E SBOM-FDA-SUPPLIER  pkg:cargo/noncompliant-nss-app@0.5.0
+  W SBOM-FDA-SUPPLIER  -
+  W SBOM-FDA-SUPPORT  - ×2
+[NistSsdf] NON-COMPLIANT · E1 W2 I2
+  E SBOM-SSDF-PS2  - (2/2)
+  I SBOM-SSDF-PO3  -
+  I SBOM-SSDF-PW6  -
+  W SBOM-SSDF-PO1  -
+  W SBOM-SSDF-PS3  - (2/2)
+[Eo14028] NON-COMPLIANT · E1 W2 I0
+  E SBOM-EO14028-SUPPLIER  - (2/2)
+  W SBOM-EO14028-DISCLOSURE  -
+  W SBOM-EO14028-INTEGRITY  - (2/2)
+[Cnsa2] NON-COMPLIANT · E17 W0 I0
+  E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-128-gcm
+  E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-192-cbc
+  E SBOM-CNSA2-ALG-002  crypto/algorithm/sha-256
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-512
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-768
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-44
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-65
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p256
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p256
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-2048
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-44
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-65
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-512
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768
+  E SBOM-CNSA2-CERT-001  crypto/certificate/rsa-signed
+  E SBOM-CNSA2-PROTO-001  crypto/protocol/tls12-legacy
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12-legacy
+[NistPqc] NON-COMPLIANT · E5 W0 I4
+  E SBOM-PQC-001  crypto/algorithm/ecdh-p256
+  E SBOM-PQC-001  crypto/algorithm/ecdsa-p256
+  E SBOM-PQC-001  crypto/algorithm/rsa-2048
+  E SBOM-PQC-CERT-001  crypto/certificate/rsa-signed
+  E SBOM-PQC-PROTO-002  crypto/protocol/tls12-legacy
+  I SBOM-PQC-009  crypto/algorithm/ml-dsa-44
+  I SBOM-PQC-009  crypto/algorithm/ml-dsa-65
+  I SBOM-PQC-009  crypto/algorithm/ml-kem-512
+  I SBOM-PQC-009  crypto/algorithm/ml-kem-768
+[BsiTr03183_2] NON-COMPLIANT · E2 W2 I0
+  E SBOM-BSI-TR-03183-2-5-1  -
+  E SBOM-BSI-TR-03183-2-LICENSE  - (2/2)
+  W SBOM-BSI-TR-03183-2-5-4-MISSING  - (2/2)
+  W SBOM-BSI-TR-03183-2-CREATOR  - (2/2)
+[CraOssSteward] NON-COMPLIANT · E1 W3 I2
+  E SBOM-CRA-ART-24  -
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/mixed-crypto@1.0.0
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/noncompliant-nss-app@0.5.0
+  W SBOM-CRA-ART-24-SUPPLIER  pkg:cargo/mixed-crypto@1.0.0
+  W SBOM-CRA-ART-24-SUPPLIER  pkg:cargo/noncompliant-nss-app@0.5.0
+  W SBOM-CRA-CVD-POLICY  -
+[EuccSubstantial] NON-COMPLIANT · E4 W1 I0
+  E SBOM-EUCC-ITSEF  -
+  E SBOM-EUCC-PP  -
+  E SBOM-EUCC-TOE  -
+  E SBOM-EUCC-VALIDITY  -
+  W SBOM-EUCC-CERTREF  -
+[EuAiAct] not applicable · E0 W0 I1
+  I SBOM-AIACT-NA  -
+[BsiSbomForAi] not applicable · E0 W0 I1
+  I SBOM-BSIAI-NA  -
+[Cisa2026] NON-COMPLIANT · E7 W2 I0
+  E SBOM-CISA2026-AUTHOR  -
+  E SBOM-CISA2026-HASH  pkg:cargo/mixed-crypto@1.0.0
+  E SBOM-CISA2026-HASH  pkg:cargo/noncompliant-nss-app@0.5.0
+  E SBOM-CISA2026-LICENSE  pkg:cargo/mixed-crypto@1.0.0
+  E SBOM-CISA2026-LICENSE  pkg:cargo/noncompliant-nss-app@0.5.0
+  E SBOM-CISA2026-PRODUCER  pkg:cargo/mixed-crypto@1.0.0
+  E SBOM-CISA2026-PRODUCER  pkg:cargo/noncompliant-nss-app@0.5.0
+  W SBOM-CISA2026-GENERATION-CONTEXT  -
+  W SBOM-CISA2026-SIGNATURE  -
+[PciDss632] compliant · E0 W0 I1
+  I SBOM-PCI-6-3-2-VULN-EVIDENCE  -
+[Fsct] NON-COMPLIANT · E5 W4 I4
+  E SBOM-FSCT-AUTHOR  -
+  E SBOM-FSCT-COPYRIGHT-PRIMARY  pkg:cargo/noncompliant-nss-app@0.5.0
+  E SBOM-FSCT-HASH  - (2/2)
+  E SBOM-FSCT-LICENSE-PRIMARY  pkg:cargo/noncompliant-nss-app@0.5.0
+  E SBOM-FSCT-SUPPLIER  - (2/2)
+  I SBOM-FSCT-COPYRIGHT-ALL  - (2/2)
+  I SBOM-FSCT-LICENSE-ALL  - (2/2)
+  I SBOM-FSCT-SBOM-TYPE  -
+  I SBOM-FSCT-SIGNATURE  -
+  W SBOM-FSCT-COPYRIGHT-COVERAGE  - (0/2)
+  W SBOM-FSCT-HASH-PRIMARY-SHA2  pkg:cargo/noncompliant-nss-app@0.5.0
+  W SBOM-FSCT-IDENTIFIER-MULTI  - (2/2)
+  W SBOM-FSCT-LICENSE-COVERAGE  - (0/2)
+[Comprehensive] NON-COMPLIANT · E2 W4 I0
+  E SBOM-NTIA-SUPPLIER  pkg:cargo/mixed-crypto@1.0.0
+  E SBOM-NTIA-SUPPLIER  pkg:cargo/noncompliant-nss-app@0.5.0
+  W SBOM-QUALITY-GENERAL  pkg:cargo/mixed-crypto@1.0.0 ×2
+  W SBOM-QUALITY-GENERAL  pkg:cargo/noncompliant-nss-app@0.5.0 ×2

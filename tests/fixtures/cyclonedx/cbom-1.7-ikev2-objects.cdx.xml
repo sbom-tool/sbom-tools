@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.7" serialNumber="urn:uuid:5e8a1c3f-2b7d-4f90-a6c4-0d9e3b71f285" version="1">
+  <metadata>
+    <timestamp>2026-10-04T00:00:00Z</timestamp>
+    <component type="application" bom-ref="vpn-gateway">
+      <name>vpn-gateway</name>
+      <version>3.1.0</version>
+    </component>
+  </metadata>
+  <components>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/aes-256-gcm">
+      <name>AES-256-GCM</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>ae</primitive>
+          <algorithmFamily>AES</algorithmFamily>
+          <parameterSetIdentifier>256</parameterSetIdentifier>
+          <mode>gcm</mode>
+        </algorithmProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/algorithm/sha-384">
+      <name>SHA-384</name>
+      <cryptoProperties>
+        <assetType>algorithm</assetType>
+        <algorithmProperties>
+          <primitive>hash</primitive>
+          <algorithmFamily>SHA-2</algorithmFamily>
+          <parameterSetIdentifier>384</parameterSetIdentifier>
+        </algorithmProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/protocol/ipsec-legacy">
+      <name>ipsec-legacy</name>
+      <cryptoProperties>
+        <assetType>protocol</assetType>
+        <protocolProperties>
+          <type>ikev2</type>
+          <version>2</version>
+          <ikev2TransformTypes>
+            <encr>
+              <name>ENCR_AES_CBC</name>
+              <keyLength>128</keyLength>
+            </encr>
+            <prf>
+              <name>PRF_HMAC_SHA1</name>
+            </prf>
+            <integ>
+              <name>AUTH_HMAC_SHA2_384_192</name>
+              <algorithm>crypto/algorithm/sha-384</algorithm>
+            </integ>
+            <ke>
+              <group>14</group>
+            </ke>
+            <esn>false</esn>
+            <auth>
+              <name>RSA Digital Signature</name>
+            </auth>
+          </ikev2TransformTypes>
+        </protocolProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/protocol/ipsec-cnsa">
+      <name>ipsec-cnsa</name>
+      <cryptoProperties>
+        <assetType>protocol</assetType>
+        <protocolProperties>
+          <type>ikev2</type>
+          <version>2</version>
+          <ikev2TransformTypes>
+            <encr>
+              <name>ENCR_AES_GCM_16</name>
+              <keyLength>256</keyLength>
+              <algorithm>crypto/algorithm/aes-256-gcm</algorithm>
+            </encr>
+            <prf>
+              <name>PRF_HMAC_SHA2_384</name>
+            </prf>
+            <integ>crypto/algorithm/sha-384</integ>
+            <ke>
+              <group>37</group>
+            </ke>
+          </ikev2TransformTypes>
+        </protocolProperties>
+      </cryptoProperties>
+    </component>
+    <component type="cryptographic-asset" bom-ref="crypto/protocol/ipsec-opaque">
+      <name>ipsec-opaque</name>
+      <cryptoProperties>
+        <assetType>protocol</assetType>
+        <protocolProperties>
+          <type>ikev2</type>
+          <version>2</version>
+          <ikev2TransformTypes>
+            <ke>
+              <group>1000</group>
+            </ke>
+          </ikev2TransformTypes>
+        </protocolProperties>
+      </cryptoProperties>
+    </component>
+  </components>
+</bom>
