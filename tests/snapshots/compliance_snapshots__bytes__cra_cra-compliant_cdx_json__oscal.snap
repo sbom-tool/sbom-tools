@@ -3,12 +3,58 @@ source: tests/compliance_snapshots.rs
 ---
 {
   "assessment-results": {
+    "back-matter": {
+      "resources": [
+        {
+          "description": "The SBOM document this assessment examined. Every observation names it as a subject.",
+          "document-ids": [
+            {
+              "identifier": "urn:uuid:fc1234ab-cdef-4567-89ab-cdef01234567"
+            }
+          ],
+          "props": [
+            {
+              "name": "type",
+              "value": "artifact"
+            },
+            {
+              "name": "sha256",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "1071fc3ec39be2934a57c9b8d40aaa286f0bec8a0dd87fed65d4671b8260f2bb"
+            },
+            {
+              "name": "format",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "CycloneDX"
+            },
+            {
+              "name": "spec-version",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "1.6"
+            }
+          ],
+          "rlinks": [
+            {
+              "hashes": [
+                {
+                  "algorithm": "SHA-256",
+                  "value": "1071fc3ec39be2934a57c9b8d40aaa286f0bec8a0dd87fed65d4671b8260f2bb"
+                }
+              ],
+              "href": "urn:uuid:fc1234ab-cdef-4567-89ab-cdef01234567"
+            }
+          ],
+          "title": "example-app (CycloneDX 1.6 SBOM)",
+          "uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4"
+        }
+      ]
+    },
     "import-ap": {
       "href": "urn:sbom-tools:assessment-plan:validation"
     },
     "metadata": {
       "last-modified": "2026-10-12T00:00:00Z",
-      "oscal-version": "1.1.2",
+      "oscal-version": "1.2.3",
       "title": "sbom-tools validation assessment results",
       "version": "[VERSION]"
     },
@@ -39,10 +85,10 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "sbom-cra-element-id",
+              "target-id": "sbom-cra-general",
               "type": "objective-id"
             },
-            "title": "SBOM-CRA-ELEMENT-ID",
+            "title": "SBOM-CRA-GENERAL",
             "uuid": "cc10ec5d-5ae6-5283-b99c-a94766bc9e70"
           },
           {
@@ -56,14 +102,14 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "sbom-cra-element-id",
+              "target-id": "sbom-cra-general",
               "type": "objective-id"
             },
-            "title": "SBOM-CRA-ELEMENT-ID",
+            "title": "SBOM-CRA-GENERAL",
             "uuid": "4b947eea-3541-57a1-a42f-f42adf51a359"
           },
           {
-            "description": "[CRA Art. 13(7) / Annex I Part II (1)] SBOM is 269 days old; keep the documented component inventory current when components change",
+            "description": "\\[CRA Art. 13(7) / Annex I Part II (1)\\] SBOM is 269 days old; keep the documented component inventory current when components change",
             "related-observations": [
               {
                 "observation-uuid": "44efd5b3-f88f-5d85-b596-bafeb9f8b220"
@@ -80,7 +126,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "c480d6bd-6540-5ed1-8f9e-282a2048b95c"
           },
           {
-            "description": "[CRA Annex I Part II (1)] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
+            "description": "\\[CRA Annex I Part II (1)\\] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
             "related-observations": [
               {
                 "observation-uuid": "232e4b30-9a47-5949-8f3a-13210eb3d37b"
@@ -97,6 +143,62 @@ source: tests/compliance_snapshots.rs
             "uuid": "3e4845b8-f3aa-56b7-a9fd-d1b48acb3460"
           }
         ],
+        "local-definitions": {
+          "components": [
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "2.3.4"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:cargo/lib-a@2.3.4"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "lib-a 2.3.4",
+              "type": "software",
+              "uuid": "2bab3458-b959-54f3-b44d-adba1ba39a41"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "0.9.1"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:cargo/lib-b@0.9.1"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "lib-b 0.9.1",
+              "type": "software",
+              "uuid": "2f1fd1ab-3215-552c-ba77-a80d478d192d"
+            }
+          ]
+        },
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -118,7 +220,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CRA-ELEMENT-ID"
+                "value": "SBOM-CRA-GENERAL"
               },
               {
                 "name": "sarif-rule-id",
@@ -131,9 +233,21 @@ source: tests/compliance_snapshots.rs
                 "value": "lib-a"
               }
             ],
-            "title": "SBOM-CRA-ELEMENT-ID",
+            "subjects": [
+              {
+                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "title": "example-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "2bab3458-b959-54f3-b44d-adba1ba39a41",
+                "title": "lib-a 2.3.4",
+                "type": "component"
+              }
+            ],
+            "title": "SBOM-CRA-GENERAL",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "2f3b6e76-23a8-568b-94be-c6c41587f753"
           },
@@ -157,7 +271,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CRA-ELEMENT-ID"
+                "value": "SBOM-CRA-GENERAL"
               },
               {
                 "name": "sarif-rule-id",
@@ -170,15 +284,27 @@ source: tests/compliance_snapshots.rs
                 "value": "lib-b"
               }
             ],
-            "title": "SBOM-CRA-ELEMENT-ID",
+            "subjects": [
+              {
+                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "title": "example-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "2f1fd1ab-3215-552c-ba77-a80d478d192d",
+                "title": "lib-b 0.9.1",
+                "type": "component"
+              }
+            ],
+            "title": "SBOM-CRA-GENERAL",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "f7143079-792a-5830-8376-ff623d09d9ee"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CRA Art. 13(7) / Annex I Part II (1)] SBOM is 269 days old; keep the documented component inventory current when components change",
+            "description": "\\[CRA Art. 13(7) / Annex I Part II (1)\\] SBOM is 269 days old; keep the documented component inventory current when components change",
             "methods": [
               "EXAMINE"
             ],
@@ -204,15 +330,22 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-CRA-SBOM-FRESHNESS"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "title": "example-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-CRA-SBOM-FRESHNESS",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "44efd5b3-f88f-5d85-b596-bafeb9f8b220"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CRA Annex I Part II (1)] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
+            "description": "\\[CRA Annex I Part II (1)\\] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
             "methods": [
               "EXAMINE"
             ],
@@ -238,9 +371,16 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-CRA-VULN-STATEMENT"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "title": "example-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-CRA-VULN-STATEMENT",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "232e4b30-9a47-5949-8f3a-13210eb3d37b"
           }
@@ -325,10 +465,10 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "sbom-cra-element-id",
+              "target-id": "sbom-cra-general",
               "type": "objective-id"
             },
-            "title": "SBOM-CRA-ELEMENT-ID",
+            "title": "SBOM-CRA-GENERAL",
             "uuid": "fe342c04-0fe3-5202-85e7-1f423a0bbf37"
           },
           {
@@ -342,14 +482,14 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "sbom-cra-element-id",
+              "target-id": "sbom-cra-general",
               "type": "objective-id"
             },
-            "title": "SBOM-CRA-ELEMENT-ID",
+            "title": "SBOM-CRA-GENERAL",
             "uuid": "1039793f-84fa-562b-b44b-effea742eb2f"
           },
           {
-            "description": "[CRA Art. 13(7) / Annex I Part II (1)] SBOM is 269 days old; keep the documented component inventory current when components change",
+            "description": "\\[CRA Art. 13(7) / Annex I Part II (1)\\] SBOM is 269 days old; keep the documented component inventory current when components change",
             "related-observations": [
               {
                 "observation-uuid": "6bed1632-5ce6-5055-8810-3bd2b1c2795d"
@@ -366,7 +506,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "303eab50-71d2-5625-ab7b-6ea487b987d1"
           },
           {
-            "description": "[CRA Annex I Part II (1)] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
+            "description": "\\[CRA Annex I Part II (1)\\] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
             "related-observations": [
               {
                 "observation-uuid": "49983ea9-77ff-572b-a5a5-2e6afb309a5c"
@@ -383,6 +523,62 @@ source: tests/compliance_snapshots.rs
             "uuid": "e3aa9f4c-2590-513c-911e-29fbddc37de6"
           }
         ],
+        "local-definitions": {
+          "components": [
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "2.3.4"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:cargo/lib-a@2.3.4"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "lib-a 2.3.4",
+              "type": "software",
+              "uuid": "2bab3458-b959-54f3-b44d-adba1ba39a41"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "0.9.1"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:cargo/lib-b@0.9.1"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "lib-b 0.9.1",
+              "type": "software",
+              "uuid": "2f1fd1ab-3215-552c-ba77-a80d478d192d"
+            }
+          ]
+        },
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -404,7 +600,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CRA-ELEMENT-ID"
+                "value": "SBOM-CRA-GENERAL"
               },
               {
                 "name": "sarif-rule-id",
@@ -417,9 +613,21 @@ source: tests/compliance_snapshots.rs
                 "value": "lib-a"
               }
             ],
-            "title": "SBOM-CRA-ELEMENT-ID",
+            "subjects": [
+              {
+                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "title": "example-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "2bab3458-b959-54f3-b44d-adba1ba39a41",
+                "title": "lib-a 2.3.4",
+                "type": "component"
+              }
+            ],
+            "title": "SBOM-CRA-GENERAL",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "363e158c-aba2-5f2c-a82c-e5f26f931c8f"
           },
@@ -443,7 +651,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CRA-ELEMENT-ID"
+                "value": "SBOM-CRA-GENERAL"
               },
               {
                 "name": "sarif-rule-id",
@@ -456,15 +664,27 @@ source: tests/compliance_snapshots.rs
                 "value": "lib-b"
               }
             ],
-            "title": "SBOM-CRA-ELEMENT-ID",
+            "subjects": [
+              {
+                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "title": "example-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "2f1fd1ab-3215-552c-ba77-a80d478d192d",
+                "title": "lib-b 0.9.1",
+                "type": "component"
+              }
+            ],
+            "title": "SBOM-CRA-GENERAL",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "17dc5857-1cfb-5740-afa3-66cc7a7a1696"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CRA Art. 13(7) / Annex I Part II (1)] SBOM is 269 days old; keep the documented component inventory current when components change",
+            "description": "\\[CRA Art. 13(7) / Annex I Part II (1)\\] SBOM is 269 days old; keep the documented component inventory current when components change",
             "methods": [
               "EXAMINE"
             ],
@@ -490,15 +710,22 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-CRA-SBOM-FRESHNESS"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "title": "example-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-CRA-SBOM-FRESHNESS",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "6bed1632-5ce6-5055-8810-3bd2b1c2795d"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CRA Annex I Part II (1)] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
+            "description": "\\[CRA Annex I Part II (1)\\] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
             "methods": [
               "EXAMINE"
             ],
@@ -524,9 +751,16 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-CRA-VULN-STATEMENT"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "title": "example-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-CRA-VULN-STATEMENT",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "49983ea9-77ff-572b-a5a5-2e6afb309a5c"
           }

@@ -3,12 +3,42 @@ source: tests/compliance_snapshots.rs
 ---
 {
   "assessment-results": {
+    "back-matter": {
+      "resources": [
+        {
+          "description": "The SBOM document this assessment examined. Every observation names it as a subject.",
+          "props": [
+            {
+              "name": "type",
+              "value": "artifact"
+            },
+            {
+              "name": "sha256",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "be7995c235de8f84244baf2d5cd4a217deb705904ffe2e874647f3e3c0824d96"
+            },
+            {
+              "name": "format",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "CycloneDX"
+            },
+            {
+              "name": "spec-version",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "1.5"
+            }
+          ],
+          "title": "test-app (CycloneDX 1.5 SBOM)",
+          "uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0"
+        }
+      ]
+    },
     "import-ap": {
       "href": "urn:sbom-tools:assessment-plan:validation"
     },
     "metadata": {
       "last-modified": "2026-10-12T00:00:00Z",
-      "oscal-version": "1.1.2",
+      "oscal-version": "1.2.3",
       "title": "sbom-tools validation assessment results",
       "version": "[VERSION]"
     },
@@ -124,13 +154,95 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "sbom-ntia-element-id",
+              "target-id": "sbom-ntia-general",
               "type": "objective-id"
             },
-            "title": "SBOM-NTIA-ELEMENT-ID",
+            "title": "SBOM-NTIA-GENERAL",
             "uuid": "35e7c5e3-94cd-5f27-8736-51c6386bf8c5"
           }
         ],
+        "local-definitions": {
+          "components": [
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "1.0.0"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "test-app"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "application"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "test-app 1.0.0",
+              "type": "software",
+              "uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "4.17.21"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:npm/lodash@4.17.21"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "lodash 4.17.21",
+              "type": "software",
+              "uuid": "fb518702-6d3b-5c67-badc-be492fac6536"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "4.18.2"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:npm/express@4.18.2"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "express 4.18.2",
+              "type": "software",
+              "uuid": "014dbcfd-9b69-551a-a9d3-36303cb427c1"
+            }
+          ]
+        },
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -165,9 +277,21 @@ source: tests/compliance_snapshots.rs
                 "value": "test-app"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-NTIA-IDENTIFIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "eb4dde64-c238-557e-b2bc-d5effda09d52"
           },
@@ -204,9 +328,21 @@ source: tests/compliance_snapshots.rs
                 "value": "test-app"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-NTIA-SUPPLIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "93f57206-5d01-5e31-a2f3-bfdd374dfc84"
           },
@@ -243,9 +379,21 @@ source: tests/compliance_snapshots.rs
                 "value": "lodash"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "fb518702-6d3b-5c67-badc-be492fac6536",
+                "title": "lodash 4.17.21",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-NTIA-SUPPLIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "a08ef9c3-94c0-52e2-88f3-2bd9af8485a0"
           },
@@ -282,9 +430,21 @@ source: tests/compliance_snapshots.rs
                 "value": "express"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "014dbcfd-9b69-551a-a9d3-36303cb427c1",
+                "title": "express 4.18.2",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-NTIA-SUPPLIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "21eb9ca5-ebb9-5cb9-8b28-f924acf02a3c"
           },
@@ -321,9 +481,21 @@ source: tests/compliance_snapshots.rs
                 "value": "test-app"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-NTIA-DEPENDENCY",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "7da54341-077d-587b-b781-b2bf1cc12b06"
           },
@@ -347,7 +519,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-NTIA-ELEMENT-ID"
+                "value": "SBOM-NTIA-GENERAL"
               },
               {
                 "name": "sarif-rule-id",
@@ -360,9 +532,21 @@ source: tests/compliance_snapshots.rs
                 "value": "test-app"
               }
             ],
-            "title": "SBOM-NTIA-ELEMENT-ID",
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
+              }
+            ],
+            "title": "SBOM-NTIA-GENERAL",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "d910703c-7964-5005-a221-6cbd42678f9e"
           }
@@ -437,7 +621,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "ea63db51-26f7-594c-8f33-436b55dadaf3"
           },
           {
-            "description": "[CISA 2026] SBOM Author missing: no Person or Organization creator names the entity that created the SBOM data (tool-only creator lists do not satisfy the element — the author is the entity operating the tool, not the tool itself)",
+            "description": "\\[CISA 2026\\] SBOM Author missing: no Person or Organization creator names the entity that created the SBOM data (tool-only creator lists do not satisfy the element — the author is the entity operating the tool, not the tool itself)",
             "related-observations": [
               {
                 "observation-uuid": "e56bcb5d-e88a-55b1-95c6-aa5e316b1b87"
@@ -454,7 +638,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "b1440af9-98f0-5678-81d0-0e70c39f7511"
           },
           {
-            "description": "[CISA 2026] No SBOM Author Signature found in the document (CycloneDX JSF signature or SPDX 3 verifiedUsing signature); SPDX 2.x cannot express one in-document and detached signatures are invisible to this check",
+            "description": "\\[CISA 2026\\] No SBOM Author Signature found in the document (CycloneDX JSF signature or SPDX 3 verifiedUsing signature); SPDX 2.x cannot express one in-document and detached signatures are invisible to this check",
             "related-observations": [
               {
                 "observation-uuid": "fb2e8002-8c70-5a1b-b53b-40e48c26390d"
@@ -471,7 +655,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "ee45aab2-0684-58e5-b9b9-c25b5bb895e7"
           },
           {
-            "description": "[CISA 2026] SBOM Generation Context missing: no software lifecycle phase is declared (CycloneDX 1.5+ metadata.lifecycles, e.g. 'pre-build', 'build', 'post-build'; SPDX 2.x has no standard field)",
+            "description": "\\[CISA 2026\\] SBOM Generation Context missing: no software lifecycle phase is declared (CycloneDX 1.5+ metadata.lifecycles, e.g. 'pre-build', 'build', 'post-build'; SPDX 2.x has no standard field)",
             "related-observations": [
               {
                 "observation-uuid": "aa14f4ec-c005-5640-9006-0f8abb41de19"
@@ -488,7 +672,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "b9fb3bbf-979b-5c18-916f-35cebf29185d"
           },
           {
-            "description": "[CISA 2026] Component 'test-app' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
+            "description": "\\[CISA 2026\\] Component 'test-app' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
             "related-observations": [
               {
                 "observation-uuid": "ddab5b0f-3d24-5b07-9705-9f302419db17"
@@ -505,7 +689,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "970ffdf1-4949-534e-92bc-42673d3a1337"
           },
           {
-            "description": "[CISA 2026] Component 'test-app' has no machine-processable identifier (CPE or PURL are named by the element; SWHID/SWID also qualify)",
+            "description": "\\[CISA 2026\\] Component 'test-app' has no machine-processable identifier (CPE or PURL are named by the element; SWHID/SWID also qualify)",
             "related-observations": [
               {
                 "observation-uuid": "ac20ff1c-bdea-53a4-b911-0a83f4e884cf"
@@ -522,7 +706,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "eed6d01e-4582-54b0-8427-9cfcb38707a7"
           },
           {
-            "description": "[CISA 2026] Component 'test-app' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
+            "description": "\\[CISA 2026\\] Component 'test-app' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
             "related-observations": [
               {
                 "observation-uuid": "2ba41766-867a-5496-a544-82fcb3a87b1f"
@@ -539,7 +723,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "04e7a2cc-0bd3-5688-bf31-95d8190f5fd3"
           },
           {
-            "description": "[CISA 2026] Component 'test-app' has no license information and no explicit unknown indication (prefer SPDX identifiers; use NOASSERTION when the license is unknown to the author)",
+            "description": "\\[CISA 2026\\] Component 'test-app' has no license information and no explicit unknown indication (prefer SPDX identifiers; use NOASSERTION when the license is unknown to the author)",
             "related-observations": [
               {
                 "observation-uuid": "87b0137c-f184-53d2-a60a-1a8b7576f243"
@@ -556,7 +740,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "7e516bb7-69be-5a82-96c2-ed52fc54c4ce"
           },
           {
-            "description": "[CISA 2026] Component 'lodash' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
+            "description": "\\[CISA 2026\\] Component 'lodash' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
             "related-observations": [
               {
                 "observation-uuid": "c1b3a7f7-192a-5a68-8802-84eee074c58b"
@@ -573,7 +757,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "b67f9b2d-2467-54e4-87a3-8bfe4e15bc02"
           },
           {
-            "description": "[CISA 2026] Component 'lodash' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
+            "description": "\\[CISA 2026\\] Component 'lodash' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
             "related-observations": [
               {
                 "observation-uuid": "c25c118c-4fea-5651-a39b-900f9fb97ef8"
@@ -590,7 +774,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "3775dbe4-ff98-5ebd-bb06-dcadd89d0cef"
           },
           {
-            "description": "[CISA 2026] Component 'express' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
+            "description": "\\[CISA 2026\\] Component 'express' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
             "related-observations": [
               {
                 "observation-uuid": "acb8419b-3694-50a0-a9ad-c23c56832511"
@@ -607,7 +791,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "e9d97f1d-7fc8-5955-9d7c-dc5f011807b2"
           },
           {
-            "description": "[CISA 2026] Component 'express' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
+            "description": "\\[CISA 2026\\] Component 'express' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
             "related-observations": [
               {
                 "observation-uuid": "e3915823-a79a-55ed-8b62-b1e5b108f7cc"
@@ -624,7 +808,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "2b52ac4d-5fba-53b8-8782-b482ba5f2508"
           },
           {
-            "description": "[CISA 2026] Coverage: the SBOM does not declare its completeness (CycloneDX compositions aggregate); information gaps must be explicitly stated as unknown or deliberately withheld",
+            "description": "\\[CISA 2026\\] Coverage: the SBOM does not declare its completeness (CycloneDX compositions aggregate); information gaps must be explicitly stated as unknown or deliberately withheld",
             "related-observations": [
               {
                 "observation-uuid": "7740ac5b-aad5-581c-815f-b234e360e15b"
@@ -641,10 +825,92 @@ source: tests/compliance_snapshots.rs
             "uuid": "d251da9f-fd8b-504f-bbcc-9f2a45942843"
           }
         ],
+        "local-definitions": {
+          "components": [
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "1.0.0"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "test-app"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "application"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "test-app 1.0.0",
+              "type": "software",
+              "uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "4.17.21"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:npm/lodash@4.17.21"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "lodash 4.17.21",
+              "type": "software",
+              "uuid": "fb518702-6d3b-5c67-badc-be492fac6536"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "4.18.2"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:npm/express@4.18.2"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "express 4.18.2",
+              "type": "software",
+              "uuid": "014dbcfd-9b69-551a-a9d3-36303cb427c1"
+            }
+          ]
+        },
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA 2026] SBOM Author missing: no Person or Organization creator names the entity that created the SBOM data (tool-only creator lists do not satisfy the element — the author is the entity operating the tool, not the tool itself)",
+            "description": "\\[CISA 2026\\] SBOM Author missing: no Person or Organization creator names the entity that created the SBOM data (tool-only creator lists do not satisfy the element — the author is the entity operating the tool, not the tool itself)",
             "methods": [
               "EXAMINE"
             ],
@@ -670,15 +936,22 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-CISA2026-AUTHOR"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-CISA2026-AUTHOR",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "e56bcb5d-e88a-55b1-95c6-aa5e316b1b87"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA 2026] No SBOM Author Signature found in the document (CycloneDX JSF signature or SPDX 3 verifiedUsing signature); SPDX 2.x cannot express one in-document and detached signatures are invisible to this check",
+            "description": "\\[CISA 2026\\] No SBOM Author Signature found in the document (CycloneDX JSF signature or SPDX 3 verifiedUsing signature); SPDX 2.x cannot express one in-document and detached signatures are invisible to this check",
             "methods": [
               "EXAMINE"
             ],
@@ -704,15 +977,22 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-CISA2026-SIGNATURE"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-CISA2026-SIGNATURE",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "fb2e8002-8c70-5a1b-b53b-40e48c26390d"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA 2026] SBOM Generation Context missing: no software lifecycle phase is declared (CycloneDX 1.5+ metadata.lifecycles, e.g. 'pre-build', 'build', 'post-build'; SPDX 2.x has no standard field)",
+            "description": "\\[CISA 2026\\] SBOM Generation Context missing: no software lifecycle phase is declared (CycloneDX 1.5+ metadata.lifecycles, e.g. 'pre-build', 'build', 'post-build'; SPDX 2.x has no standard field)",
             "methods": [
               "EXAMINE"
             ],
@@ -738,15 +1018,22 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-CISA2026-GENERATION-CONTEXT"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-CISA2026-GENERATION-CONTEXT",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "aa14f4ec-c005-5640-9006-0f8abb41de19"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA 2026] Component 'test-app' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
+            "description": "\\[CISA 2026\\] Component 'test-app' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
             "methods": [
               "EXAMINE"
             ],
@@ -777,15 +1064,27 @@ source: tests/compliance_snapshots.rs
                 "value": "test-app"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CISA2026-PRODUCER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "ddab5b0f-3d24-5b07-9705-9f302419db17"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA 2026] Component 'test-app' has no machine-processable identifier (CPE or PURL are named by the element; SWHID/SWID also qualify)",
+            "description": "\\[CISA 2026\\] Component 'test-app' has no machine-processable identifier (CPE or PURL are named by the element; SWHID/SWID also qualify)",
             "methods": [
               "EXAMINE"
             ],
@@ -816,15 +1115,27 @@ source: tests/compliance_snapshots.rs
                 "value": "test-app"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CISA2026-IDENTIFIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "ac20ff1c-bdea-53a4-b911-0a83f4e884cf"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA 2026] Component 'test-app' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
+            "description": "\\[CISA 2026\\] Component 'test-app' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
             "methods": [
               "EXAMINE"
             ],
@@ -855,15 +1166,27 @@ source: tests/compliance_snapshots.rs
                 "value": "test-app"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CISA2026-HASH",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "2ba41766-867a-5496-a544-82fcb3a87b1f"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA 2026] Component 'test-app' has no license information and no explicit unknown indication (prefer SPDX identifiers; use NOASSERTION when the license is unknown to the author)",
+            "description": "\\[CISA 2026\\] Component 'test-app' has no license information and no explicit unknown indication (prefer SPDX identifiers; use NOASSERTION when the license is unknown to the author)",
             "methods": [
               "EXAMINE"
             ],
@@ -894,15 +1217,27 @@ source: tests/compliance_snapshots.rs
                 "value": "test-app"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "8104c220-bbfc-52da-8ca9-46be6a2007e6",
+                "title": "test-app 1.0.0",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CISA2026-LICENSE",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "87b0137c-f184-53d2-a60a-1a8b7576f243"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA 2026] Component 'lodash' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
+            "description": "\\[CISA 2026\\] Component 'lodash' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
             "methods": [
               "EXAMINE"
             ],
@@ -933,15 +1268,27 @@ source: tests/compliance_snapshots.rs
                 "value": "lodash"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "fb518702-6d3b-5c67-badc-be492fac6536",
+                "title": "lodash 4.17.21",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CISA2026-PRODUCER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "c1b3a7f7-192a-5a68-8802-84eee074c58b"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA 2026] Component 'lodash' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
+            "description": "\\[CISA 2026\\] Component 'lodash' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
             "methods": [
               "EXAMINE"
             ],
@@ -972,15 +1319,27 @@ source: tests/compliance_snapshots.rs
                 "value": "lodash"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "fb518702-6d3b-5c67-badc-be492fac6536",
+                "title": "lodash 4.17.21",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CISA2026-HASH",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "c25c118c-4fea-5651-a39b-900f9fb97ef8"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA 2026] Component 'express' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
+            "description": "\\[CISA 2026\\] Component 'express' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
             "methods": [
               "EXAMINE"
             ],
@@ -1011,15 +1370,27 @@ source: tests/compliance_snapshots.rs
                 "value": "express"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "014dbcfd-9b69-551a-a9d3-36303cb427c1",
+                "title": "express 4.18.2",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CISA2026-PRODUCER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "acb8419b-3694-50a0-a9ad-c23c56832511"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA 2026] Component 'express' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
+            "description": "\\[CISA 2026\\] Component 'express' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
             "methods": [
               "EXAMINE"
             ],
@@ -1050,15 +1421,27 @@ source: tests/compliance_snapshots.rs
                 "value": "express"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "014dbcfd-9b69-551a-a9d3-36303cb427c1",
+                "title": "express 4.18.2",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-CISA2026-HASH",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "e3915823-a79a-55ed-8b62-b1e5b108f7cc"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA 2026] Coverage: the SBOM does not declare its completeness (CycloneDX compositions aggregate); information gaps must be explicitly stated as unknown or deliberately withheld",
+            "description": "\\[CISA 2026\\] Coverage: the SBOM does not declare its completeness (CycloneDX compositions aggregate); information gaps must be explicitly stated as unknown or deliberately withheld",
             "methods": [
               "EXAMINE"
             ],
@@ -1084,9 +1467,16 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-CISA2026-COVERAGE"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "a2a1ba4c-d956-5eff-a3a5-07e3de5af3c0",
+                "title": "test-app (CycloneDX 1.5 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-CISA2026-COVERAGE",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "7740ac5b-aad5-581c-815f-b234e360e15b"
           }

@@ -178,7 +178,7 @@ jq '.summary' /tmp/release-diff.json
 
 Use `-o sarif` when the result will be uploaded to a code-scanning system.
 Use `-o oscal-json` when assessment tooling needs the same validation findings
-as an OSCAL 1.1.2 `assessment-results` document:
+as an OSCAL 1.2.3 `assessment-results` document:
 
 ```sh
 cargo run --release -- validate \
@@ -193,6 +193,12 @@ jq '."assessment-results" | {
   finding_count: (.results[0].findings | length)
 }' /tmp/validation-results.oscal.json
 ```
+
+Each observation names its subjects: the SBOM document, described in
+`back-matter` with its SHA-256, and for a component finding the component,
+defined in the result's `local-definitions`. The mapping, and what changed
+from the OSCAL 1.1.2 export of earlier releases, is in
+[`compliance-output.md`](compliance-output.md#oscal-assessment-results).
 
 The export maps existing findings; it does not generate an assessment plan,
 SSP, authorization package, attestation, or evidence absent from the BOM.

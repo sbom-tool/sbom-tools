@@ -33,7 +33,7 @@ pub enum ReportFormat {
     /// SARIF 2.1.0 for CI/CD
     #[serde(alias = "Sarif")]
     Sarif,
-    /// OSCAL 1.1.2 assessment-results JSON
+    /// OSCAL 1.2.3 assessment-results JSON
     #[serde(alias = "OscalJson")]
     OscalJson,
     /// Human-readable Markdown

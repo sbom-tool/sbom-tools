@@ -3,12 +3,58 @@ source: tests/compliance_snapshots.rs
 ---
 {
   "assessment-results": {
+    "back-matter": {
+      "resources": [
+        {
+          "description": "The SBOM document this assessment examined. Every observation names it as a subject.",
+          "document-ids": [
+            {
+              "identifier": "https://example.com/test-app-1.0.0"
+            }
+          ],
+          "props": [
+            {
+              "name": "type",
+              "value": "artifact"
+            },
+            {
+              "name": "sha256",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "112025cca042383bb7172ffe41f60033816a7f49e8be3d21de6b1955bcdb9b4e"
+            },
+            {
+              "name": "format",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "SPDX"
+            },
+            {
+              "name": "spec-version",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "2.3"
+            }
+          ],
+          "rlinks": [
+            {
+              "hashes": [
+                {
+                  "algorithm": "SHA-256",
+                  "value": "112025cca042383bb7172ffe41f60033816a7f49e8be3d21de6b1955bcdb9b4e"
+                }
+              ],
+              "href": "https://example.com/test-app-1.0.0"
+            }
+          ],
+          "title": "test-app (SPDX 2.3 SBOM)",
+          "uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8"
+        }
+      ]
+    },
     "import-ap": {
       "href": "urn:sbom-tools:assessment-plan:validation"
     },
     "metadata": {
       "last-modified": "2026-10-12T00:00:00Z",
-      "oscal-version": "1.1.2",
+      "oscal-version": "1.2.3",
       "title": "sbom-tools validation assessment results",
       "version": "[VERSION]"
     },
@@ -63,6 +109,62 @@ source: tests/compliance_snapshots.rs
             "uuid": "e610869d-32e4-5ff7-9328-b8f317b34495"
           }
         ],
+        "local-definitions": {
+          "components": [
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "4.17.21"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:npm/lodash@4.17.21"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "lodash 4.17.21",
+              "type": "software",
+              "uuid": "1dba761d-d7ef-5034-8c82-3b07ded59fa5"
+            },
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "4.18.2"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:npm/express@4.18.2"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "express 4.18.2",
+              "type": "software",
+              "uuid": "611079a2-8d1e-5d63-8251-fa79cf8a27f2"
+            }
+          ]
+        },
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -97,9 +199,21 @@ source: tests/compliance_snapshots.rs
                 "value": "lodash"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "1dba761d-d7ef-5034-8c82-3b07ded59fa5",
+                "title": "lodash 4.17.21",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-NTIA-SUPPLIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "65034028-3201-5dc3-ac61-1bf9fd8d60ee"
           },
@@ -136,9 +250,21 @@ source: tests/compliance_snapshots.rs
                 "value": "express"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "611079a2-8d1e-5d63-8251-fa79cf8a27f2",
+                "title": "express 4.18.2",
+                "type": "component"
+              }
+            ],
             "title": "SBOM-NTIA-SUPPLIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "c2e6d62f-5e44-5ec6-b930-22a928ba89f9"
           }
@@ -213,7 +339,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "534f4ee5-128b-5e78-99b2-0d0397a593c0"
           },
           {
-            "description": "[CISA FSCT 3e §2.2.2/§2.3.3] No direct dependencies of the Primary Component are identified, and no completeness declaration covers their absence — identify all static direct dependencies or declare the enumeration's completeness",
+            "description": "\\[CISA FSCT 3e §2.2.2/§2.3.3\\] No direct dependencies of the Primary Component are identified, and no completeness declaration covers their absence — identify all static direct dependencies or declare the enumeration's completeness",
             "related-observations": [
               {
                 "observation-uuid": "ed5d063e-d06c-5ab6-bd8e-dfb2c7df4ee9"
@@ -230,7 +356,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "7d719f46-acf1-57f6-8eed-af19b5972fa9"
           },
           {
-            "description": "[CISA FSCT 3e §2.2.2.3] 2/2 component(s) declare no Supplier Name (an explicit 'unknown' is a permitted last resort; silent absence is not): lodash, express",
+            "description": "\\[CISA FSCT 3e §2.2.2.3\\] 2/2 component(s) declare no Supplier Name (an explicit 'unknown' is a permitted last resort; silent absence is not): lodash, express",
             "related-observations": [
               {
                 "observation-uuid": "e878837f-d1c9-5f2c-9e12-fc234802afa3"
@@ -247,7 +373,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "9a81d228-93d3-5baa-ac60-1aa69e65c72b"
           },
           {
-            "description": "[CISA FSCT 3e §2.2.2.5] 1/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): express",
+            "description": "\\[CISA FSCT 3e §2.2.2.5\\] 1/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): express",
             "related-observations": [
               {
                 "observation-uuid": "e3660acb-753a-5863-8587-4f7cd5086109"
@@ -264,7 +390,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "f09ea2c7-5be5-5d7d-a2f8-1f93627d9091"
           },
           {
-            "description": "[CISA FSCT 3e §2.2.2.4] 2/2 component(s) declare fewer than two globally unique identifier kinds (PURL/CPE/SWHID/SWID) — list as many as are available (heuristic threshold; profile policy): lodash, express",
+            "description": "\\[CISA FSCT 3e §2.2.2.4\\] 2/2 component(s) declare fewer than two globally unique identifier kinds (PURL/CPE/SWHID/SWID) — list as many as are available (heuristic threshold; profile policy): lodash, express",
             "related-observations": [
               {
                 "observation-uuid": "533d84eb-ca2d-54b2-b5dc-13d171b41cb8"
@@ -281,7 +407,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "088e6bb5-7411-5892-8d36-fdb8b0ec1edb"
           },
           {
-            "description": "[CISA FSCT 3e §2.2.2.6.4] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate)",
+            "description": "\\[CISA FSCT 3e §2.2.2.6.4\\] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate)",
             "related-observations": [
               {
                 "observation-uuid": "62f16653-5544-579d-a7df-15016613a890"
@@ -298,7 +424,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "e05493c3-b5d5-5193-9dd8-d4b7a7a015ec"
           },
           {
-            "description": "[CISA FSCT 3e §2.2.2/§2.2.2.6] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC_LINK / RUNTIME_DEPENDENCY_OF / PROVIDED_DEPENDENCY_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies",
+            "description": "\\[CISA FSCT 3e §2.2.2/§2.2.2.6\\] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC\\_LINK / RUNTIME\\_DEPENDENCY\\_OF / PROVIDED\\_DEPENDENCY\\_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies",
             "related-observations": [
               {
                 "observation-uuid": "3881b69c-21d7-50c6-9c95-4b66c16edda7"
@@ -318,7 +444,7 @@ source: tests/compliance_snapshots.rs
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA FSCT 3e §2.2.2/§2.3.3] No direct dependencies of the Primary Component are identified, and no completeness declaration covers their absence — identify all static direct dependencies or declare the enumeration's completeness",
+            "description": "\\[CISA FSCT 3e §2.2.2/§2.3.3\\] No direct dependencies of the Primary Component are identified, and no completeness declaration covers their absence — identify all static direct dependencies or declare the enumeration's completeness",
             "methods": [
               "EXAMINE"
             ],
@@ -344,15 +470,22 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-FSCT-DIRECT-DEPS"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-FSCT-DIRECT-DEPS",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "ed5d063e-d06c-5ab6-bd8e-dfb2c7df4ee9"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA FSCT 3e §2.2.2.3] 2/2 component(s) declare no Supplier Name (an explicit 'unknown' is a permitted last resort; silent absence is not): lodash, express",
+            "description": "\\[CISA FSCT 3e §2.2.2.3\\] 2/2 component(s) declare no Supplier Name (an explicit 'unknown' is a permitted last resort; silent absence is not): lodash, express",
             "methods": [
               "EXAMINE"
             ],
@@ -378,15 +511,22 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-FSCT-SUPPLIER"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-FSCT-SUPPLIER",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "e878837f-d1c9-5f2c-9e12-fc234802afa3"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA FSCT 3e §2.2.2.5] 1/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): express",
+            "description": "\\[CISA FSCT 3e §2.2.2.5\\] 1/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): express",
             "methods": [
               "EXAMINE"
             ],
@@ -412,15 +552,22 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-FSCT-HASH"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-FSCT-HASH",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "e3660acb-753a-5863-8587-4f7cd5086109"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA FSCT 3e §2.2.2.4] 2/2 component(s) declare fewer than two globally unique identifier kinds (PURL/CPE/SWHID/SWID) — list as many as are available (heuristic threshold; profile policy): lodash, express",
+            "description": "\\[CISA FSCT 3e §2.2.2.4\\] 2/2 component(s) declare fewer than two globally unique identifier kinds (PURL/CPE/SWHID/SWID) — list as many as are available (heuristic threshold; profile policy): lodash, express",
             "methods": [
               "EXAMINE"
             ],
@@ -446,15 +593,22 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-FSCT-IDENTIFIER-MULTI"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-FSCT-IDENTIFIER-MULTI",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "533d84eb-ca2d-54b2-b5dc-13d171b41cb8"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA FSCT 3e §2.2.2.6.4] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate)",
+            "description": "\\[CISA FSCT 3e §2.2.2.6.4\\] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate)",
             "methods": [
               "EXAMINE"
             ],
@@ -480,15 +634,22 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-FSCT-COMPLETENESS"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-FSCT-COMPLETENESS",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "62f16653-5544-579d-a7df-15016613a890"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "[CISA FSCT 3e §2.2.2/§2.2.2.6] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC_LINK / RUNTIME_DEPENDENCY_OF / PROVIDED_DEPENDENCY_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies",
+            "description": "\\[CISA FSCT 3e §2.2.2/§2.2.2.6\\] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC\\_LINK / RUNTIME\\_DEPENDENCY\\_OF / PROVIDED\\_DEPENDENCY\\_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies",
             "methods": [
               "EXAMINE"
             ],
@@ -514,9 +675,16 @@ source: tests/compliance_snapshots.rs
                 "value": "SBOM-FSCT-DYNAMIC-DEPS"
               }
             ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
+              }
+            ],
             "title": "SBOM-FSCT-DYNAMIC-DEPS",
             "types": [
-              "finding"
+              "discovery"
             ],
             "uuid": "3881b69c-21d7-50c6-9c95-4b66c16edda7"
           }

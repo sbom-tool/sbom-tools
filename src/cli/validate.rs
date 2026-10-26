@@ -141,8 +141,10 @@ pub fn run_validate(
     }
 
     // Inputs that make machine output reproducible: OSCAL derives its UUIDs
-    // from the SBOM digest and stamps the --as-of instant.
+    // from the SBOM digest and stamps the --as-of instant. It also describes
+    // the SBOM document and the components its findings are about.
     let provenance = OutputProvenance {
+        sbom: parsed.sbom(),
         sbom_digest: sha256_hex(parsed.raw_content.as_bytes()),
         as_of,
     };
@@ -186,7 +188,9 @@ pub fn run_validate(
 }
 
 /// What a machine-readable report needs to know about the run itself.
-struct OutputProvenance {
+struct OutputProvenance<'a> {
+    /// The validated SBOM.
+    sbom: &'a NormalizedSbom,
     /// Lowercase hex SHA-256 of the SBOM bytes as read.
     sbom_digest: String,
     /// The pinned evaluation instant (`--as-of`), if any.
@@ -205,7 +209,7 @@ fn write_compliance_output(
     result: &ComplianceResult,
     output: ReportFormat,
     output_file: Option<PathBuf>,
-    provenance: &OutputProvenance,
+    provenance: &OutputProvenance<'_>,
     json_schema: ValidateJsonSchema,
 ) -> Result<()> {
     let target = OutputTarget::from_option(output_file);
@@ -219,6 +223,7 @@ fn write_compliance_output(
         ReportFormat::Sarif => generate_compliance_sarif(result)?,
         ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results_at(
             std::slice::from_ref(result),
+            provenance.sbom,
             &provenance.sbom_digest,
             provenance.as_of,
         )?,
@@ -276,7 +281,7 @@ fn write_multi_compliance_output(
     results: &[ComplianceResult],
     output: ReportFormat,
     output_file: Option<PathBuf>,
-    provenance: &OutputProvenance,
+    provenance: &OutputProvenance<'_>,
     json_schema: ValidateJsonSchema,
 ) -> Result<()> {
     let target = OutputTarget::from_option(output_file);
@@ -290,6 +295,7 @@ fn write_multi_compliance_output(
         ReportFormat::Sarif => crate::reports::generate_multi_compliance_sarif(results)?,
         ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results_at(
             results,
+            provenance.sbom,
             &provenance.sbom_digest,
             provenance.as_of,
         )?,
