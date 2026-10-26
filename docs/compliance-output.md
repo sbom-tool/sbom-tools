@@ -84,9 +84,9 @@ reports no pass, so code scanning raises no alert for one;
 `--sarif-include-passes` adds each as a SARIF result of `kind: "pass"` at
 level `none`, under the rule's `sarif_rule_id`, with the location,
 fingerprints and finding identity of a violation's result (see
-[SARIF](#sarif)). Each entry carries a
-violation's identifying and descriptive fields (not `severity`, `category`,
-`counts`, `remediation` or `help_uri`), plus its finding identity:
+[SARIF](#sarif)). Each entry carries a violation's identifying and
+descriptive fields (not `severity`, `category`, `counts`, `remediation` or
+`help_uri`), plus its finding identity:
 
 | Field | Type | Meaning |
 |---|---|---|
