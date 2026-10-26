@@ -102,7 +102,13 @@ pub fn fixtures() -> Vec<Fixture> {
     paths
         .into_iter()
         .filter_map(|path| {
-            let rel = path.strip_prefix(root).ok()?.to_string_lossy().into_owned();
+            // `/`-separated on every platform: tests look fixtures up by this
+            // path and build SARIF URIs from it.
+            let rel = path
+                .strip_prefix(root)
+                .ok()?
+                .to_string_lossy()
+                .replace('\\', "/");
             if is_non_sbom(&rel) {
                 return None;
             }
