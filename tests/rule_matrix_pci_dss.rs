@@ -9,22 +9,23 @@
 //!
 //! One profile-specific wrinkle: the checker treats an absent CycloneDX
 //! compositions aggregate (`CompletenessDeclaration::Unknown`, the serde
-//! default) as an Info-level "no completeness declaration" finding, so every
-//! DSL-built fixture in this matrix carries exactly that one Info. The
-//! fully-conforming zero-violation fixture therefore declares its inventory
-//! Complete via a raw-JSON compositions injection (the shared DSL cannot
-//! render compositions), and the SBOM-PCI-6-3-2-COMPLETENESS variants are
-//! covered by the dedicated raw-JSON tests at the bottom of this file.
+//! default) as an Info-level "no completeness declaration" finding, and a
+//! declared-Complete primary-only inventory suppresses the third-party
+//! inference. `base()` therefore leaves the aggregate undeclared, so every
+//! fixture built from it carries exactly that one Info; the fully-conforming
+//! zero-violation fixture declares its inventory Complete, and the
+//! SBOM-PCI-6-3-2-COMPLETENESS row (plus the tests at the bottom of this
+//! file) covers the declaration variants.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
-use rule_matrix::clock::{as_of, checker};
-use rule_matrix::{ComponentFixture, RuleEntry, SbomFixture, render_violations, run_matrix};
-use sbom_tools::parsers::parse_sbom_str;
-use sbom_tools::quality::{
-    ComplianceLevel, ComplianceResult, PCIDSS_SARIF_RULE_IDS, ViolationSeverity as Sev,
+use rule_matrix::clock::as_of;
+use rule_matrix::{
+    ComponentFixture, RuleEntry, SbomFixture, assert_no_violations, check, render_violations,
+    run_matrix,
 };
+use sbom_tools::quality::{ComplianceLevel, PCIDSS_SARIF_RULE_IDS, ViolationSeverity as Sev};
 
 const LEVEL: ComplianceLevel = ComplianceLevel::PciDss632;
 
@@ -35,8 +36,8 @@ fn recent_timestamp() -> String {
 }
 
 /// A fixture that satisfies every PCI DSS 6.3.2 element the engine checks —
-/// except the completeness declaration, which the DSL cannot express (see
-/// the module docs): named/versioned/identified primary with an advisories
+/// except the completeness declaration, which it leaves undeclared (see the
+/// module docs): named/versioned/identified primary with an advisories
 /// reference (vulnerability-management hook), supplier-attributed
 /// third-party components, and a fresh timestamp.
 fn base() -> SbomFixture {
@@ -73,19 +74,9 @@ fn broken(mutate: impl FnOnce(&mut SbomFixture)) -> SbomFixture {
     fixture
 }
 
-/// Render the fixture and inject a CycloneDX compositions aggregate — the
-/// one document feature the shared DSL cannot express — then re-serialize.
-fn json_with_compositions(fixture: &SbomFixture, aggregate: &str) -> String {
-    let mut doc: serde_json::Value =
-        serde_json::from_str(&fixture.to_json_string()).expect("fixture JSON re-parses");
-    doc["compositions"] = serde_json::json!([{ "aggregate": aggregate }]);
-    serde_json::to_string(&doc).expect("augmented fixture serializes")
-}
-
-/// Run the PCI profile over raw CycloneDX JSON through the real parser.
-fn check_json(json: &str) -> ComplianceResult {
-    let sbom = parse_sbom_str(json).expect("raw fixture must parse as CycloneDX");
-    checker(LEVEL).check(&sbom)
+/// `base()` with the given compositions aggregate declared.
+fn declared(aggregate: &str) -> SbomFixture {
+    broken(|s| s.completeness = Some(aggregate.to_string()))
 }
 
 /// The conforming PCI fixture must pass with a clean verdict. It declares
@@ -93,14 +84,7 @@ fn check_json(json: &str) -> ComplianceResult {
 /// undeclared inventory keeps an Info-level completeness finding by design.
 #[test]
 fn pci_conforming_fixture_is_compliant_with_zero_violations() {
-    let result = check_json(&json_with_compositions(&base(), "complete"));
-    assert!(
-        result.violations.is_empty() && result.is_compliant,
-        "[{LEVEL:?}] conforming fixture must pass with zero violations; got \
-         is_compliant={compliant}:\n{violations}",
-        compliant = result.is_compliant,
-        violations = render_violations(&result)
-    );
+    assert_no_violations(LEVEL, &declared("complete"));
 }
 
 #[test]
@@ -184,13 +168,20 @@ fn pci_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 }
             }),
         ),
-        RuleEntry::skipped(
+        // Explicit incomplete* aggregates are self-declared inventory gaps
+        // (TP 6.3.2.b) and warn; an absent or not_specified declaration is
+        // informational; complete is silent.
+        RuleEntry::tested(
             "SBOM-PCI-6-3-2-COMPLETENESS",
-            "requires a CycloneDX compositions aggregate, which the shared fixture \
-             DSL cannot render; all declaration variants (Complete silent, \
-             Incomplete* Warning, Unknown/NotSpecified Info) are covered by the \
-             dedicated raw-JSON tests in this file and the unit tests in \
-             src/quality/compliance/pci_dss.rs",
+            Sev::Warning,
+            declared("incomplete"),
+            declared("complete"),
+        )
+        .with_departing_firing("no declaration", Sev::Info, base())
+        .with_departing_firing(
+            "aggregate not_specified",
+            Sev::Info,
+            declared("not_specified"),
         ),
         // Missing timestamp (epoch sentinel) warns; the stale-timestamp Info
         // advisory is pinned-clock-tested in pci_dss.rs unit tests (fixtures
@@ -247,7 +238,7 @@ fn pci_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
 }
 
 // ────────────────────────────────────────────────────────────────────────
-// SBOM-PCI-6-3-2-COMPLETENESS coverage (raw-JSON compositions, real parser)
+// SBOM-PCI-6-3-2-COMPLETENESS declaration variants
 // ────────────────────────────────────────────────────────────────────────
 
 /// Explicit `incomplete*` aggregates are self-declared inventory gaps
@@ -259,7 +250,7 @@ fn pci_completeness_incomplete_declarations_warn() {
         "incomplete_first_party_only",
         "incomplete_third_party_only",
     ] {
-        let result = check_json(&json_with_compositions(&base(), aggregate));
+        let result = check(LEVEL, &declared(aggregate));
         assert!(
             result
                 .violations
@@ -277,7 +268,7 @@ fn pci_completeness_incomplete_declarations_warn() {
 /// not gaps; `complete` is silent (proved by the conforming-fixture test).
 #[test]
 fn pci_completeness_not_specified_and_absent_are_informational() {
-    let not_specified = check_json(&json_with_compositions(&base(), "not_specified"));
+    let not_specified = check(LEVEL, &declared("not_specified"));
     assert!(
         not_specified
             .violations
@@ -287,7 +278,7 @@ fn pci_completeness_not_specified_and_absent_are_informational() {
         render_violations(&not_specified)
     );
 
-    let absent = check_json(&base().to_json_string());
+    let absent = check(LEVEL, &base());
     assert!(
         absent
             .violations

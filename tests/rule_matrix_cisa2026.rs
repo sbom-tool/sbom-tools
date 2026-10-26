@@ -6,11 +6,10 @@
 //! explicit skip-with-reason; exhaustiveness is enforced against the
 //! registry slice.
 //!
-//! Four rules cannot be exercised through the shared fixture DSL (it has no
-//! hooks for `signature`, `metadata.lifecycles`, `compositions`, or an
-//! omitted top-level `version`); their firing/silent behaviour is covered by
-//! the dedicated raw-JSON tests at the bottom of this file, which drive the
-//! same real parser and checker.
+//! Two rules cannot be exercised through the shared fixture DSL (it has no
+//! hook for `metadata.lifecycles` or an omitted top-level `version`); their
+//! firing/silent behaviour is covered by the dedicated raw-JSON tests at the
+//! bottom of this file, which drive the same real parser and checker.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
@@ -39,12 +38,12 @@ fn conforming_component(name: &str) -> ComponentFixture {
 
 /// A fixture satisfying every CISA 2026 element the DSL can express: Person
 /// author + versioned tool creator, timestamp, current format release,
-/// serial number, fully-populated components, and a dependency edge.
+/// serial number, a JSF signature, fully-populated components, a dependency
+/// edge, and a complete compositions declaration.
 ///
-/// Three Warnings are unavoidable on every DSL fixture — SIGNATURE,
-/// GENERATION-CONTEXT, and COVERAGE — because the DSL cannot express a JSF
-/// signature, `metadata.lifecycles`, or `compositions`. They are all inside
-/// the declared universe, so the matrix's per-rule and sweep assertions are
+/// One Warning is unavoidable on every DSL fixture — GENERATION-CONTEXT —
+/// because the DSL cannot express `metadata.lifecycles`. It is inside the
+/// declared universe, so the matrix's per-rule and sweep assertions are
 /// unaffected; the zero-violation conforming case uses the raw-JSON document
 /// below instead.
 fn base() -> SbomFixture {
@@ -65,6 +64,8 @@ fn base() -> SbomFixture {
         ],
         dependencies: vec![("ref-libalpha".to_string(), vec!["ref-libbeta".to_string()])],
         vulnerabilities: Vec::new(),
+        completeness: Some("complete".to_string()),
+        signature: Some(("ES256".to_string(), "MEUCIQDx7q1FILLERSIGVALUE".to_string())),
         ..SbomFixture::default()
     }
 }
@@ -99,12 +100,17 @@ fn cisa2026_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.authors.clear()),
             base(),
         ),
-        RuleEntry::skipped(
+        // A signature object without a value is no signature evidence.
+        RuleEntry::tested(
             "SBOM-CISA2026-SIGNATURE",
-            "the fixture DSL cannot express a CycloneDX JSF signature, so every \
-             DSL fixture fires this Warning and no DSL silent case exists; \
-             firing and silent behaviour are covered by the raw-JSON tests \
-             signature_missing_fires_warning / conforming document in this file",
+            Sev::Warning,
+            broken(|s| s.signature = None),
+            base(),
+        )
+        .with_firing(
+            "signature without a value",
+            Sev::Warning,
+            broken(|s| s.signature = Some(("ES256".to_string(), String::new()))),
         ),
         RuleEntry::tested(
             "SBOM-CISA2026-FORMAT",
@@ -228,12 +234,18 @@ fn cisa2026_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.dependencies.clear()),
             base(),
         ),
-        RuleEntry::skipped(
+        // Undeclared and declared-incomplete coverage both warn; a complete
+        // declaration is silent.
+        RuleEntry::tested(
             "SBOM-CISA2026-COVERAGE",
-            "the fixture DSL has no compositions hook, so every DSL fixture \
-             fires this Warning (undeclared completeness) and no DSL silent \
-             case exists; not-declared / declared-incomplete / declared-complete \
-             behaviour is covered by the raw-JSON tests coverage_* in this file",
+            Sev::Warning,
+            broken(|s| s.completeness = None),
+            base(),
+        )
+        .with_firing(
+            "declared incomplete",
+            Sev::Warning,
+            broken(|s| s.completeness = Some("incomplete".to_string())),
         ),
         RuleEntry::skipped(
             "SBOM-CISA2026-GENERAL",
@@ -247,9 +259,11 @@ fn cisa2026_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
 }
 
 // ---------------------------------------------------------------------------
-// Raw-JSON cases for the elements the fixture DSL cannot express
-// (signature, lifecycles, compositions, omitted top-level version), plus the
-// escape-hatch and scoping semantics specific to the 2026 elements.
+// Raw-JSON cases for the elements the fixture DSL cannot express (lifecycles,
+// omitted top-level version), signature and coverage pairs on the fully
+// conforming document (the matrix rows cover those two through the DSL as
+// well), plus the escape-hatch and scoping semantics specific to the 2026
+// elements.
 // ---------------------------------------------------------------------------
 
 /// A fully conforming CycloneDX 1.6 document: JSF signature, lifecycle

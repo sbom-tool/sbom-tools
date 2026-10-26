@@ -9,11 +9,11 @@
 //! → Warning, Aspirational Goal → Info) is asserted against the registry
 //! defaults — no entry departs from them.
 //!
-//! The shared fixture DSL cannot express `metadata.lifecycles`, the JSF
-//! `signature`, `compositions`, component `copyright`/`cpe`, or SPDX input.
-//! Rules whose silent (or firing) state needs those fields are explicitly
-//! skipped in the matrix with the dedicated raw-JSON / SPDX tag-value test
-//! (below) that covers both states named in the reason.
+//! The shared fixture DSL cannot express `metadata.lifecycles`, component
+//! `copyright`/`cpe`, or SPDX input. Rules whose silent (or firing) state
+//! needs those fields are explicitly skipped in the matrix with the
+//! dedicated raw-JSON / SPDX tag-value test (below) that covers both states
+//! named in the reason.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
@@ -31,15 +31,17 @@ use std::collections::BTreeMap;
 const LEVEL: ComplianceLevel = ComplianceLevel::Fsct;
 
 /// The DSL-expressible conforming core: person author with email, versioned
-/// generation tool, timestamp, primary component wired to a depth-2
-/// dependency chain, and components carrying version + PURL + supplier +
-/// SHA-256 hash + license.
+/// generation tool, timestamp, JSF signature, primary component wired to a
+/// depth-2 dependency chain, and components carrying version + PURL +
+/// supplier + SHA-256 hash + license.
 ///
 /// NOT fully conforming — the DSL cannot express copyright, a second
-/// identifier kind, lifecycles, compositions, or a signature, so
-/// `SBOM-FSCT-{COPYRIGHT-*,IDENTIFIER-MULTI,SBOM-TYPE,COMPLETENESS,
-/// SIGNATURE}` fire on every DSL fixture (all inside the declared universe;
-/// the fully conforming document lives in `conforming_doc()` below).
+/// identifier kind, or lifecycles, and the base leaves the relationship
+/// completeness undeclared (a declaration counts as direct-dependency
+/// evidence and would mask SBOM-FSCT-DIRECT-DEPS), so
+/// `SBOM-FSCT-{COPYRIGHT-*,IDENTIFIER-MULTI,SBOM-TYPE,COMPLETENESS}` fire on
+/// every DSL fixture (all inside the declared universe; the fully conforming
+/// document lives in `conforming_doc()` below).
 fn base() -> SbomFixture {
     let mut app = ComponentFixture::conforming("acme-app");
     app.licenses = vec!["Apache-2.0".to_string()];
@@ -64,6 +66,7 @@ fn base() -> SbomFixture {
             ("ref-liba".to_string(), vec!["ref-libb".to_string()]),
         ],
         vulnerabilities: Vec::new(),
+        signature: Some(("ES256".to_string(), "c2lnbmF0dXJlLXZhbHVl".to_string())),
         ..SbomFixture::default()
     }
 }
@@ -248,12 +251,18 @@ fn fsct_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             }),
             base(),
         ),
-        RuleEntry::skipped(
+        // The base leaves the aggregate undeclared (see base()); a
+        // not_specified aggregate is no assertion either, a complete one is.
+        RuleEntry::tested(
             "SBOM-FSCT-COMPLETENESS",
-            "the DSL cannot express compositions.aggregate, so the Warning \
-             fires on every DSL document and no silent case exists here; \
-             fsct_completeness_fires_without_compositions_and_silences_with \
-             covers both states through the real parser",
+            Sev::Warning,
+            base(),
+            broken(|s| s.completeness = Some("complete".to_string())),
+        )
+        .with_firing(
+            "aggregate not_specified",
+            Sev::Warning,
+            broken(|s| s.completeness = Some("not_specified".to_string())),
         ),
         RuleEntry::tested(
             "SBOM-FSCT-LICENSE-PRIMARY",
@@ -330,12 +339,16 @@ fn fsct_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             }),
             base(),
         ),
-        RuleEntry::skipped(
+        RuleEntry::tested(
             "SBOM-FSCT-SIGNATURE",
-            "the DSL cannot express the top-level JSF signature, so the Info \
-             fires on every DSL document and no silent case exists here; \
-             fsct_signature_fires_without_signature_and_silences_with covers \
-             both states through the real parser",
+            Sev::Info,
+            broken(|s| s.signature = None),
+            base(),
+        )
+        .with_firing(
+            "signature without a value",
+            Sev::Info,
+            broken(|s| s.signature = Some(("ES256".to_string(), String::new()))),
         ),
         RuleEntry::skipped(
             "SBOM-FSCT-GENERAL",
@@ -544,7 +557,9 @@ fn fsct_minimum_only_fixture_fires_exactly_recommended_and_aspirational_rules() 
 
 // ════════════════════════════════════════════════════════════════════════
 // Dedicated firing/silent pairs for the rules the fixture DSL cannot
-// reach (each named in its matrix skip-with-reason entry above).
+// reach (each named in its matrix skip-with-reason entry above), plus the
+// signature and completeness pairs on the raw conforming document (the
+// matrix rows cover those two through the DSL as well).
 // ════════════════════════════════════════════════════════════════════════
 
 fn fired_severities(result: &ComplianceResult, id: &str) -> Vec<Sev> {
