@@ -85,10 +85,10 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "sbom-cra-general",
+              "target-id": "sbom-cra-element-id",
               "type": "objective-id"
             },
-            "title": "SBOM-CRA-GENERAL",
+            "title": "SBOM-CRA-ELEMENT-ID",
             "uuid": "cc10ec5d-5ae6-5283-b99c-a94766bc9e70"
           },
           {
@@ -102,10 +102,10 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "sbom-cra-general",
+              "target-id": "sbom-cra-element-id",
               "type": "objective-id"
             },
-            "title": "SBOM-CRA-GENERAL",
+            "title": "SBOM-CRA-ELEMENT-ID",
             "uuid": "4b947eea-3541-57a1-a42f-f42adf51a359"
           },
           {
@@ -220,7 +220,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CRA-GENERAL"
+                "value": "SBOM-CRA-ELEMENT-ID"
               },
               {
                 "name": "sarif-rule-id",
@@ -245,7 +245,7 @@ source: tests/compliance_snapshots.rs
                 "type": "component"
               }
             ],
-            "title": "SBOM-CRA-GENERAL",
+            "title": "SBOM-CRA-ELEMENT-ID",
             "types": [
               "discovery"
             ],
@@ -271,7 +271,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CRA-GENERAL"
+                "value": "SBOM-CRA-ELEMENT-ID"
               },
               {
                 "name": "sarif-rule-id",
@@ -296,7 +296,7 @@ source: tests/compliance_snapshots.rs
                 "type": "component"
               }
             ],
-            "title": "SBOM-CRA-GENERAL",
+            "title": "SBOM-CRA-ELEMENT-ID",
             "types": [
               "discovery"
             ],
@@ -465,10 +465,10 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "sbom-cra-general",
+              "target-id": "sbom-cra-element-id",
               "type": "objective-id"
             },
-            "title": "SBOM-CRA-GENERAL",
+            "title": "SBOM-CRA-ELEMENT-ID",
             "uuid": "fe342c04-0fe3-5202-85e7-1f423a0bbf37"
           },
           {
@@ -482,10 +482,10 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "sbom-cra-general",
+              "target-id": "sbom-cra-element-id",
               "type": "objective-id"
             },
-            "title": "SBOM-CRA-GENERAL",
+            "title": "SBOM-CRA-ELEMENT-ID",
             "uuid": "1039793f-84fa-562b-b44b-effea742eb2f"
           },
           {
@@ -600,7 +600,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CRA-GENERAL"
+                "value": "SBOM-CRA-ELEMENT-ID"
               },
               {
                 "name": "sarif-rule-id",
@@ -625,7 +625,7 @@ source: tests/compliance_snapshots.rs
                 "type": "component"
               }
             ],
-            "title": "SBOM-CRA-GENERAL",
+            "title": "SBOM-CRA-ELEMENT-ID",
             "types": [
               "discovery"
             ],
@@ -651,7 +651,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CRA-GENERAL"
+                "value": "SBOM-CRA-ELEMENT-ID"
               },
               {
                 "name": "sarif-rule-id",
@@ -676,7 +676,7 @@ source: tests/compliance_snapshots.rs
                 "type": "component"
               }
             ],
-            "title": "SBOM-CRA-GENERAL",
+            "title": "SBOM-CRA-ELEMENT-ID",
             "types": [
               "discovery"
             ],
