@@ -57,7 +57,7 @@ identity.
 | `message` | string | Human-readable explanation. Its wording may change in any release. |
 | `element` | string or null | Human-readable label of the offending element (usually a component name). Not unique. |
 | `component_id` | string | Canonical id of the offending component. Absent for document-level and aggregate findings. |
-| `finding_detail` | string | What tells this finding apart from the rule's other findings on the same subject: a value from the SBOM, such as the vulnerability id or the cipher suite. Absent when the rule reports at most one finding per subject. |
+| `finding_detail` | string | What tells this finding apart from the rule's other findings on the same subject: a value from the SBOM, such as the vulnerability id or the cipher suite (see [Uniqueness](#finding-identity)). Absent when the rule reports at most one finding per subject. |
 | `counts` | object | `affected` and `total` components of an aggregate finding. Absent otherwise. |
 | `requirement` | string | The requirement, as text. |
 | `rule_id` | string | Stable internal rule key, e.g. `SBOM-NTIA-SUPPLIER`. |
@@ -121,11 +121,25 @@ later one in the document is re-keyed by appending `#` and its `bom-ref` or
 `finding_detail` also changes id with its detail, which comes from the SBOM's
 own data (a vulnerability id, a cipher suite name), never from the message.
 
-**Uniqueness.** The key identifies one rule on one subject. Some rules report
-several findings on the same subject, and those share key and id: one
-`SBOM-CRA-VULN-METADATA` finding per vulnerability of a component, the four
-`SBOM-CRA-ART-14` reporting-channel checks on the document, or the generic
-`SBOM-QUALITY-GENERAL` and `SBOM-CRA-GENERAL` buckets.
+**Uniqueness.** No two findings in one result share a key, so no two share an
+id. Each distinct check has a rule id of its own (the four CRA Art. 14
+reporting channels are `SBOM-CRA-ART-14-PSIRT`, `-EARLY-WARNING`,
+`-NOTIFICATION` and `-ENISA`, for example), so a rule without a
+`finding_detail` reports at most one finding per subject. A rule that reports
+one finding per item on a subject sets `finding_detail` to the item:
+
+| Rule | One finding per | `finding_detail` |
+|---|---|---|
+| `SBOM-CRA-VULN-METADATA`, `SBOM-CRA-VULN-METADATA-REMEDIATION` | vulnerability of a component | the vulnerability id |
+| `SBOM-CNSA2-PROTO-002`, `SBOM-PQC-PROTO-002` | cipher suite of a protocol, plus its IKEv2 transforms and its crypto references | the suite's name, else its IANA identifiers, else its algorithm refs; `ikev2-transforms`; `crypto-refs` |
+| `SBOM-CNSA2-CERT-001`, `SBOM-CNSA2-CERT-UNKNOWN`, `SBOM-PQC-CERT-001`, `SBOM-PQC-CERT-UNKNOWN` | signature-algorithm candidate of a certificate | the candidate's bom-ref |
+| `SBOM-CRA-ANNEX-I-CONTROLS` | sidecar control claimed without evidence | the control id |
+| `SBOM-CRA-ART-13-16-EMAIL` | invalid manufacturer email | the address |
+
+When the SBOM itself lists an entry twice (two `vulnerabilities[]` entries
+with one id for the same component, say), both findings are reported, and the
+second one's detail is numbered: `CVE-2024-3094`, then `CVE-2024-3094#2`. The
+test suite checks the guarantee on every fixture at every level.
 
 ## Compatibility
 

@@ -63,7 +63,7 @@
         "message": {"type": "string"},
         "element": {"type": ["string", "null"], "description": "Human-readable label of the offending element; not unique."},
         "component_id": {"type": "string", "description": "Canonical id of the offending component; absent for document-level and aggregate findings."},
-        "finding_detail": {"type": "string", "description": "What tells this finding apart from the rule's other findings on the same subject: a value from the SBOM, such as the vulnerability id or the cipher suite. Absent when the rule reports at most one finding per subject."},
+        "finding_detail": {"type": "string", "description": "What tells this finding apart from the rule's other findings on the same subject: a value from the SBOM, such as the vulnerability id or the cipher suite, numbered (`#2`, `#3`, …) where the SBOM lists the entry twice. Absent when the rule reports at most one finding per subject."},
         "counts": {"$ref": "#/$defs/violation_counts"},
         "requirement": {"type": "string"},
         "rule_id": {"type": "string", "minLength": 1, "description": "Stable internal rule key."},

@@ -36,6 +36,12 @@
 //! and a key changes exactly when its component's canonical id does — a purl
 //! added or changed, a bom-ref renamed.
 //!
+//! No two findings of one result share a key: every distinct check has a
+//! rule id of its own, a rule reports at most one finding per subject unless
+//! it sets a detail, and `number_repeated_details` numbers the detail of an
+//! entry the SBOM lists twice. tests/finding_identity_tests.rs checks this
+//! for every fixture at every level.
+//!
 //! [`finding_id`] digests the key into a fixed-length opaque id for SARIF
 //! fingerprints and baselines.
 
