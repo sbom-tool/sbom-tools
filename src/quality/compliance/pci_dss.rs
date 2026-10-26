@@ -88,6 +88,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
     }
@@ -128,6 +129,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -152,6 +154,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -177,6 +180,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -210,6 +214,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
@@ -277,6 +282,7 @@ impl ComplianceChecker {
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -324,14 +330,17 @@ impl ComplianceChecker {
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
     /// SBOM-PCI-6-3-2-FRESHNESS: "is maintained" — the document must carry a
     /// creation timestamp (Warning when missing: maintenance cadence is
-    /// unverifiable). A stale-but-present timestamp is an Info advisory
-    /// only, and the threshold is explicitly tool policy, not PCI DSS text:
-    /// the SBOM proves generation time, not the inventory process.
+    /// unverifiable). A timestamp later than the evaluation instant evidences
+    /// no more than a missing one and warns the same way. A stale-but-present
+    /// timestamp is an Info advisory only, and the threshold is explicitly
+    /// tool policy, not PCI DSS text: the SBOM proves generation time, not the
+    /// inventory process.
     fn check_pci_freshness(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
         if !sbom.document.has_known_timestamp() {
             violations.push(Violation {
@@ -348,10 +357,22 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
             return;
         }
-        let age_days = (self.now() - sbom.document.created).num_days();
+        let now = self.now();
+        if let Some(future) = future_timestamp_violation(
+            sbom,
+            now,
+            "SBOM-PCI-6-3-2-FRESHNESS",
+            "[PCI DSS 6.3.2]",
+            "PCI DSS v4.0.1 Req. 6.3.2: inventory 'is maintained' — creation timestamp",
+        ) {
+            violations.push(future);
+            return;
+        }
+        let age_days = (now - sbom.document.created).num_days();
         if age_days > PCI_STALE_AFTER_DAYS {
             violations.push(Violation {
                 severity: ViolationSeverity::Info,
@@ -369,6 +390,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
     }
@@ -417,6 +439,7 @@ impl ComplianceChecker {
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 
@@ -474,6 +497,7 @@ impl ComplianceChecker {
                 total: all.len(),
             }),
             standard_refs: Vec::new(),
+            remediation: None,
         });
     }
 }
@@ -492,8 +516,9 @@ mod tests {
             .with_timezone(&chrono::Utc)
     }
 
+    /// Pinned to the shared test clock (tests/common/clock.rs).
     fn checker() -> ComplianceChecker {
-        ComplianceChecker::new(ComplianceLevel::PciDss632)
+        ComplianceChecker::new(ComplianceLevel::PciDss632).with_as_of(ts("2026-10-12T00:00:00Z"))
     }
 
     fn run(sbom: &NormalizedSbom) -> Vec<Violation> {
@@ -520,7 +545,9 @@ mod tests {
     /// primary + third-party components with suppliers, a Complete
     /// declaration, a fresh timestamp, and a security contact.
     fn conforming_sbom() -> NormalizedSbom {
-        let mut sbom = NormalizedSbom::default(); // created = now → fresh
+        let mut sbom = NormalizedSbom::default();
+        // The day before the pinned clock: fresh, and not future-dated.
+        sbom.document.created = ts("2026-10-11T00:00:00Z");
         sbom.document.completeness_declaration = CompletenessDeclaration::Complete;
         sbom.document.security_contact = Some("security@acme.example".to_string());
         let primary = conforming_component("acme-payments");
@@ -866,6 +893,49 @@ mod tests {
                 .iter()
                 .any(|v| v.rule_id == "SBOM-PCI-6-3-2-FRESHNESS"),
             "fresh timestamp must stay silent"
+        );
+    }
+
+    /// A timestamp after the evaluation instant gave a negative age and
+    /// passed as fresh (review finding V14). It evidences no more than a
+    /// missing timestamp, so it warns like one.
+    #[test]
+    fn future_timestamp_warns_instead_of_counting_as_fresh() {
+        let mut sbom = conforming_sbom();
+        sbom.document.created = ts("2026-10-13T00:00:00Z");
+        let result = checker()
+            .with_as_of(ts("2026-10-12T00:00:00Z"))
+            .check(&sbom);
+        let freshness: Vec<_> = result
+            .violations
+            .iter()
+            .filter(|v| v.rule_id == "SBOM-PCI-6-3-2-FRESHNESS")
+            .collect();
+        assert_eq!(
+            freshness.len(),
+            1,
+            "exactly one freshness finding, got {:?}",
+            rules_of(&result.violations)
+        );
+        assert_eq!(freshness[0].severity, ViolationSeverity::Warning);
+        assert!(
+            freshness[0]
+                .message
+                .contains("later than the evaluation instant"),
+            "{}",
+            freshness[0].message
+        );
+        // Warning, not Error: the inventory itself is still compliant.
+        assert!(result.is_compliant);
+
+        // The same document evaluated after its timestamp is fresh again.
+        let result = checker()
+            .with_as_of(ts("2026-10-14T00:00:00Z"))
+            .check(&sbom);
+        assert!(
+            result.violations.is_empty(),
+            "got {:?}",
+            rules_of(&result.violations)
         );
     }
 

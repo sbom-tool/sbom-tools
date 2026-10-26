@@ -102,25 +102,28 @@ cargo run --release -- validate \
   --standard ntia \
   -o json > /tmp/validation.json
 
-jq '.summary // .' /tmp/validation.json
+jq '.results[0] | {standard, compliant, counts}' /tmp/validation.json
 ```
 
 Validation checks the supplied BOM. It does not certify the product or create
-evidence that is absent from the input.
+evidence that is absent from the input. `-o json` is one
+`sbom-tools/compliance/v2` envelope whatever the number of standards, and every
+violation carries a stable `finding_id`; [compliance-output.md](compliance-output.md)
+describes the fields.
 
 `--standard` accepts one profile or a comma-separated list. Recent additions
 are `cisa-2026` (CISA 2026 Minimum Elements for an SBOM, v2.1, successor to
 the NTIA 2021 elements), `pci-dss` (PCI DSS v4.0.1 Requirement 6.3.2 software
 inventory), and `fsct` (CISA Framing Software Component Transparency, 3rd
-edition). A list returns one result object per standard, identified by
-`level`:
+edition). A list returns one entry of `results` per standard, identified by
+`standard`:
 
 ```sh
 cargo run --release -- validate \
   tests/fixtures/showcase/fleet-v1.cdx.json \
   --standard ntia,cisa-2026 \
   -o json |
-  jq -c '.[] | {level, error_count, warning_count}'
+  jq -c '.results[] | {standard, error: .counts.error, warning: .counts.warning}'
 ```
 
 That fixture reports 4 errors under `ntia` and 9 errors with 3 warnings under
@@ -213,10 +216,12 @@ cargo run --release -- validate \
 With the repository's deliberately minimal fixture, the quality command exits
 with code 1 because its score is below 70, and validation exits with code 1
 because the engine-backed NTIA check reports compliance errors (code 2 signals
-a warnings-only result under `--fail-on-warning`; the same code also covers
-command-line usage errors and vulnerabilities introduced under
-`--fail-on-vuln`). Those non-zero results demonstrate the gates; they are not
-command failures.
+a warnings-only result under `--fail-on-warning`, as it signals vulnerabilities
+introduced under `--fail-on-vuln` in `diff`; command-line usage errors exit 3,
+like operational errors). Those non-zero results demonstrate the gates; they
+are not command failures. Add `--require-applicable` when a standard that does
+not apply to the BOM (an AI readiness profile on a BOM without ML components)
+must fail the gate rather than pass as N/A.
 
 Exit codes are part of the CLI contract. A pipeline should gate on the selected
 flag and exit code, then retain the JSON or SARIF output for diagnosis. See
@@ -304,7 +309,7 @@ cargo run --release -- timeline \
   -o markdown
 # error: invalid value 'markdown' for '--output <OUTPUT>'
 #   [possible values: auto, tui, json]
-# exit code 2
+# exit code 3
 ```
 
 In the TUI, `?` opens the shortcut overlay, `e` opens the export menu, and `q`

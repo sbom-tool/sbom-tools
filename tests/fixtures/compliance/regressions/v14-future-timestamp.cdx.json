@@ -1,0 +1,88 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:7d4e2a10-3b5c-4f6d-9e8a-1c2b3a4d5e6f",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2027-01-01T00:00:00Z",
+    "authors": [
+      {
+        "name": "Example Corp",
+        "email": "sbom@example.com"
+      }
+    ],
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "example-generator",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    "manufacturer": {
+      "name": "Example Corp",
+      "url": [
+        "https://example.com"
+      ]
+    },
+    "component": {
+      "type": "application",
+      "bom-ref": "app",
+      "name": "app",
+      "version": "1.0.0",
+      "purl": "pkg:generic/app@1.0.0",
+      "supplier": {
+        "name": "Example Corp"
+      },
+      "externalReferences": [
+        {
+          "type": "advisories",
+          "url": "https://example.com/security/advisories"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "libfoo",
+      "name": "libfoo",
+      "version": "2.1.0",
+      "purl": "pkg:npm/libfoo@2.1.0",
+      "supplier": {
+        "name": "Foo Maintainers"
+      },
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1f2e3d4c5b6a79881f2e3d4c5b6a79881f2e3d4c5b6a79881f2e3d4c5b6a7988"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "app",
+      "dependsOn": [
+        "libfoo"
+      ]
+    },
+    {
+      "ref": "libfoo",
+      "dependsOn": []
+    }
+  ],
+  "compositions": [
+    {
+      "aggregate": "complete"
+    }
+  ]
+}

@@ -3,10 +3,12 @@
 //! (SARIF 2.1.0 requirement; GitHub code scanning drops rule metadata for
 //! undeclared ids and rejects duplicate descriptors).
 
+#[path = "common/clock.rs"]
+mod clock;
+
+use clock::checker;
 use sbom_tools::model::{Component, DocumentMetadata, NormalizedSbom};
-use sbom_tools::quality::{
-    CNSA2_SARIF_RULE_IDS, ComplianceChecker, ComplianceLevel, PQC_SARIF_RULE_IDS,
-};
+use sbom_tools::quality::{CNSA2_SARIF_RULE_IDS, ComplianceLevel, PQC_SARIF_RULE_IDS};
 use sbom_tools::reports::{generate_compliance_sarif, generate_multi_compliance_sarif};
 use std::collections::HashSet;
 
@@ -62,7 +64,7 @@ fn single_standard_sarif_declares_every_emitted_rule() {
         ComplianceLevel::BsiTr03183_2,
         ComplianceLevel::EuccSubstantial,
     ] {
-        let result = ComplianceChecker::new(level).check(&sbom);
+        let result = checker(level).check(&sbom);
         let sarif = generate_compliance_sarif(&result).expect("sarif generation");
         assert_catalogue_complete(&sarif, level.name());
     }
@@ -74,7 +76,7 @@ fn single_standard_sarif_declares_every_emitted_rule() {
 #[test]
 fn eucc_sarif_declares_per_check_rule_ids() {
     let sbom = NormalizedSbom::default();
-    let result = ComplianceChecker::new(ComplianceLevel::EuccSubstantial).check(&sbom);
+    let result = checker(ComplianceLevel::EuccSubstantial).check(&sbom);
     let sarif = generate_compliance_sarif(&result).expect("sarif generation");
     let json: serde_json::Value = serde_json::from_str(&sarif).expect("valid JSON");
     let run = &json["runs"][0];
@@ -123,7 +125,7 @@ fn multi_standard_sarif_has_unique_descriptors() {
         ComplianceLevel::NtiaMinimum,
     ]
     .into_iter()
-    .map(|l| ComplianceChecker::new(l).check(&sbom))
+    .map(|l| checker(l).check(&sbom))
     .collect();
     let sarif = generate_multi_compliance_sarif(&results).expect("sarif generation");
     assert_catalogue_complete(&sarif, "multi cra,bsi,ntia");
@@ -139,7 +141,7 @@ fn cnsa2_and_pqc_sarif_declare_only_their_own_rule_family() {
         (ComplianceLevel::Cnsa2, "SBOM-CNSA2-", CNSA2_SARIF_RULE_IDS),
         (ComplianceLevel::NistPqc, "SBOM-PQC-", PQC_SARIF_RULE_IDS),
     ] {
-        let result = ComplianceChecker::new(level).check(&sbom);
+        let result = checker(level).check(&sbom);
         let sarif = generate_compliance_sarif(&result).expect("sarif generation");
         assert_catalogue_complete(&sarif, level.name());
         let json: serde_json::Value = serde_json::from_str(&sarif).expect("valid JSON");
@@ -175,7 +177,7 @@ fn multi_standard_sarif_carries_per_standard_run_summaries() {
     let sbom = violating_sbom();
     let results: Vec<_> = [ComplianceLevel::EuAiAct, ComplianceLevel::NtiaMinimum]
         .into_iter()
-        .map(|l| ComplianceChecker::new(l).check(&sbom))
+        .map(|l| checker(l).check(&sbom))
         .collect();
     assert!(
         !results[0].is_applicable() && results[1].is_applicable(),

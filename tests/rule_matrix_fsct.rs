@@ -18,13 +18,13 @@
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
+use rule_matrix::clock::checker;
 use rule_matrix::{
     ComponentFixture, MD5_FILLER, RuleEntry, SHA256_FILLER, SbomFixture, run_matrix,
 };
 use sbom_tools::parsers::parse_sbom_str;
 use sbom_tools::quality::{
-    ComplianceChecker, ComplianceLevel, ComplianceResult, FSCT_SARIF_RULE_IDS,
-    ViolationSeverity as Sev,
+    ComplianceLevel, ComplianceResult, FSCT_SARIF_RULE_IDS, ViolationSeverity as Sev,
 };
 use std::collections::BTreeMap;
 
@@ -408,7 +408,7 @@ fn check_doc(doc: &serde_json::Value) -> ComplianceResult {
     let json = serde_json::to_string_pretty(doc).expect("fixture JSON must serialize");
     let sbom = parse_sbom_str(&json)
         .unwrap_or_else(|e| panic!("fixture must parse as CycloneDX: {e}\n{json}"));
-    ComplianceChecker::new(LEVEL).check(&sbom)
+    checker(LEVEL).check(&sbom)
 }
 
 fn render(result: &ComplianceResult) -> String {
@@ -668,7 +668,7 @@ Relationship: SPDXRef-app DEPENDS_ON SPDXRef-liba
 fn check_str(content: &str) -> ComplianceResult {
     let sbom = parse_sbom_str(content)
         .unwrap_or_else(|e| panic!("fixture must parse as SPDX tag-value: {e}"));
-    ComplianceChecker::new(LEVEL).check(&sbom)
+    checker(LEVEL).check(&sbom)
 }
 
 #[test]

@@ -8,7 +8,7 @@ use crate::quality::{
     ComplianceChecker, ComplianceLevel, ComplianceResult, StandardSelector, ViolationSeverity,
 };
 use crate::reports::escape::sanitize_line;
-use crate::reports::{ReportFormat, generate_compliance_sarif};
+use crate::reports::{ReportFormat, generate_compliance_json, generate_compliance_sarif};
 use anyhow::Result;
 use std::path::PathBuf;
 
@@ -24,12 +24,26 @@ pub const VALIDATE_OUTPUT_FORMATS: &[ReportFormat] = &[
     ReportFormat::OscalJson,
 ];
 
+/// Layout of `validate -o json` (`--json-schema`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, clap::ValueEnum)]
+pub enum ValidateJsonSchema {
+    /// Deprecated pre-0.4 layout, removed in v0.5.0: a bare result object
+    /// for one standard, an array of them for several
+    V1,
+    /// The `sbom-tools/compliance/v2` envelope: one object for any number
+    /// of standards
+    #[default]
+    V2,
+}
+
 /// Run the validate command, returning the desired exit code.
 ///
 /// # Exit codes
 /// - [`exit_codes::SUCCESS`] (0): compliant (no errors; no warnings when
-///   `--fail-on-warning` is set)
-/// - [`exit_codes::COMPLIANCE_ERRORS`] (1): one or more compliance errors found
+///   `--fail-on-warning` is set). A standard that does not apply to the SBOM
+///   counts as compliant unless `require_applicable` is set.
+/// - [`exit_codes::COMPLIANCE_ERRORS`] (1): one or more compliance errors
+///   found, or (with `require_applicable`) a standard did not apply
 /// - [`exit_codes::COMPLIANCE_WARNINGS`] (2): warnings found with
 ///   `--fail-on-warning`
 ///
@@ -37,9 +51,8 @@ pub const VALIDATE_OUTPUT_FORMATS: &[ReportFormat] = &[
 /// usage/configuration error surfaced from this function (unsupported output
 /// format, invalid `--as-of` or `--cra-product-class`, broken explicit
 /// sidecar) propagates as an `Err`, which the binary's `main()` maps to
-/// [`exit_codes::ERROR`] (3). Clap's own argument-parse errors exit 2, the
-/// same number as the warnings gate, so CI pipelines must not read exit 2 as
-/// a compliance verdict unless the expected report was produced.
+/// [`exit_codes::ERROR`] (3) — the code clap's own argument-parse errors
+/// exit with too, so exit 2 only ever means the warnings gate.
 ///
 /// The caller is responsible for calling `std::process::exit()` with the
 /// returned code when it is non-zero.
@@ -54,6 +67,8 @@ pub fn run_validate(
     cra_sidecar_path: Option<PathBuf>,
     cra_product_class: Option<String>,
     as_of: Option<&str>,
+    require_applicable: bool,
+    json_schema: ValidateJsonSchema,
 ) -> Result<i32> {
     // `--summary` overrides `--output` (documented on the flag), so the
     // requested format is never rendered and must not be gated.
@@ -132,36 +147,39 @@ pub fn run_validate(
         as_of,
     };
 
+    if !summary && output == ReportFormat::Json && json_schema == ValidateJsonSchema::V1 {
+        tracing::warn!(
+            "--json-schema v1 is deprecated and will be removed in v0.5.0; the default \
+             v2 envelope is described in docs/compliance-output.md"
+        );
+    }
+
     if results.len() == 1 {
         let result = &results[0];
         if summary {
             write_compliance_summary(result, output_file)?;
         } else {
-            write_compliance_output(result, output, output_file, &provenance)?;
-        }
-
-        if result.error_count > 0 {
-            return Ok(exit_codes::COMPLIANCE_ERRORS);
-        }
-        if fail_on_warning && result.warning_count > 0 {
-            return Ok(exit_codes::COMPLIANCE_WARNINGS);
+            write_compliance_output(result, output, output_file, &provenance, json_schema)?;
         }
     } else {
         // Multi-standard: merge results for output
         if summary {
             write_multi_compliance_summary(&results, output_file)?;
         } else {
-            write_multi_compliance_output(&results, output, output_file, &provenance)?;
+            write_multi_compliance_output(&results, output, output_file, &provenance, json_schema)?;
         }
+    }
 
-        let has_errors = results.iter().any(|r| r.error_count > 0);
-        let has_warnings = results.iter().any(|r| r.warning_count > 0);
-        if has_errors {
-            return Ok(exit_codes::COMPLIANCE_ERRORS);
-        }
-        if fail_on_warning && has_warnings {
-            return Ok(exit_codes::COMPLIANCE_WARNINGS);
-        }
+    let has_errors = results.iter().any(|r| r.error_count > 0);
+    let has_warnings = results.iter().any(|r| r.warning_count > 0);
+    // `--require-applicable`: a standard that did not evaluate the SBOM is
+    // a failed gate, not a pass.
+    let not_applicable = require_applicable && results.iter().any(|r| !r.is_applicable());
+    if has_errors || not_applicable {
+        return Ok(exit_codes::COMPLIANCE_ERRORS);
+    }
+    if fail_on_warning && has_warnings {
+        return Ok(exit_codes::COMPLIANCE_WARNINGS);
     }
 
     Ok(exit_codes::SUCCESS)
@@ -188,12 +206,16 @@ fn write_compliance_output(
     output: ReportFormat,
     output_file: Option<PathBuf>,
     provenance: &OutputProvenance,
+    json_schema: ValidateJsonSchema,
 ) -> Result<()> {
     let target = OutputTarget::from_option(output_file);
 
     let content = match output {
-        ReportFormat::Json => serde_json::to_string_pretty(result)
-            .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
+        ReportFormat::Json => match json_schema {
+            ValidateJsonSchema::V2 => generate_compliance_json(std::slice::from_ref(result))?,
+            ValidateJsonSchema::V1 => serde_json::to_string_pretty(result)
+                .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
+        },
         ReportFormat::Sarif => generate_compliance_sarif(result)?,
         ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results_at(
             std::slice::from_ref(result),
@@ -255,12 +277,16 @@ fn write_multi_compliance_output(
     output: ReportFormat,
     output_file: Option<PathBuf>,
     provenance: &OutputProvenance,
+    json_schema: ValidateJsonSchema,
 ) -> Result<()> {
     let target = OutputTarget::from_option(output_file);
 
     let content = match output {
-        ReportFormat::Json => serde_json::to_string_pretty(results)
-            .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
+        ReportFormat::Json => match json_schema {
+            ValidateJsonSchema::V2 => generate_compliance_json(results)?,
+            ValidateJsonSchema::V1 => serde_json::to_string_pretty(results)
+                .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
+        },
         ReportFormat::Sarif => crate::reports::generate_multi_compliance_sarif(results)?,
         ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results_at(
             results,
@@ -293,13 +319,17 @@ fn write_multi_compliance_summary(
     Ok(())
 }
 
-/// Render a compliance result as plain text, one finding per two lines.
+/// Render a compliance result as plain text, one finding per three lines:
+/// the finding, its message, and a `fix:` line with the remediation for the
+/// SBOM's format.
 ///
 /// Requirement, element, message and the N/A reason can carry SBOM-supplied
 /// text (component names, versions, purls), so each passes through
 /// [`sanitize_line`]: a crafted name must not be able to start a new line
 /// (CI runners such as GitHub Actions parse a line beginning with `::error`
-/// as a workflow command) or smuggle terminal escape or bidi sequences.
+/// as a workflow command) or smuggle terminal escape or bidi sequences. The
+/// remediation is sanitized too: a deserialized violation carries whatever
+/// text its payload held.
 fn format_compliance_text(result: &ComplianceResult) -> String {
     let mut lines = Vec::new();
     lines.push(format!("Compliance ({})", result.level.name()));
@@ -343,14 +373,18 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
             sanitize_line(element)
         ));
         lines.push(format!("  {}", sanitize_line(&v.message)));
+        lines.push(format!(
+            "  fix: {}",
+            sanitize_line(&v.remediation_guidance())
+        ));
     }
 
     lines.join("\n")
 }
 
 /// Run the engine's NtiaMinimum check and print a compact PASSED/FAILED
-/// summary. Used by `view --validate-ntia`; gating errors are listed,
-/// warnings go to the log.
+/// summary. Used by `view --validate-ntia`; gating errors are listed, each
+/// with a `fix:` line, and warnings go to the log.
 pub fn print_ntia_validation(sbom: &NormalizedSbom) {
     let result = ComplianceChecker::new(ComplianceLevel::NtiaMinimum).check(sbom);
     for v in result.violations_by_severity(ViolationSeverity::Warning) {
@@ -364,6 +398,7 @@ pub fn print_ntia_validation(sbom: &NormalizedSbom) {
         println!("NTIA Validation: FAILED");
         for v in result.violations_by_severity(ViolationSeverity::Error) {
             println!("  - {}", sanitize_line(&v.message));
+            println!("    fix: {}", sanitize_line(&v.remediation_guidance()));
         }
     }
 }
@@ -401,6 +436,8 @@ mod tests {
                 None,
                 None,
                 None,
+                false,
+                ValidateJsonSchema::V2,
             )
             .expect_err("unsupported format must be rejected");
             let msg = err.to_string();
@@ -427,6 +464,8 @@ mod tests {
             None,
             None,
             None,
+            false,
+            ValidateJsonSchema::V2,
         )
         .expect_err("empty standard list must be rejected");
         assert!(err.to_string().contains("no compliance standard selected"));
@@ -454,6 +493,8 @@ mod tests {
             None,
             None,
             None,
+            false,
+            ValidateJsonSchema::V2,
         )
         .expect("--summary must override -o html instead of hard-erroring");
         let content = std::fs::read_to_string(out).unwrap();
@@ -483,6 +524,8 @@ mod tests {
             None,
             Some("critcal".to_string()),
             None,
+            false,
+            ValidateJsonSchema::V2,
         )
         .expect_err("typo'd --cra-product-class must be a hard error");
         let msg = err.to_string();
@@ -514,6 +557,8 @@ mod tests {
             None,
             None,
             Some("2027-01-01T00:00:00"),
+            false,
+            ValidateJsonSchema::V2,
         )
         .expect("offset-less --as-of datetime must parse (assumed UTC)");
     }
@@ -539,6 +584,8 @@ mod tests {
             Some(dir.path().join("missing.cra.json")),
             None,
             None,
+            false,
+            ValidateJsonSchema::V2,
         )
         .expect_err("broken explicit sidecar must be a hard error");
         assert!(err.to_string().contains("Failed to load CRA sidecar"));

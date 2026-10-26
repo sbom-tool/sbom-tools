@@ -431,6 +431,7 @@ impl ComplianceChecker {
                                     component_id: Some(comp.canonical_id.value().to_string()),
                                     counts: None,
                                     standard_refs: Vec::new(),
+                                    remediation: None,
                                 });
                             }
                             // An unclassifiable signature ref fails closed —
@@ -453,6 +454,7 @@ impl ComplianceChecker {
                                     component_id: Some(comp.canonical_id.value().to_string()),
                                     counts: None,
                                     standard_refs: Vec::new(),
+                                    remediation: None,
                                 });
                             }
                         }
@@ -492,6 +494,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
     }
@@ -539,6 +542,7 @@ impl ComplianceChecker {
                             component_id: Some(comp.canonical_id.value().to_string()),
                             counts: None,
                             standard_refs: Vec::new(),
+                            remediation: None,
                         });
                     }
                 } else {
@@ -555,6 +559,7 @@ impl ComplianceChecker {
                         component_id: Some(comp.canonical_id.value().to_string()),
                         counts: None,
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 }
             }
@@ -582,6 +587,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
                 true
             }
@@ -614,6 +620,7 @@ impl ComplianceChecker {
                         component_id: Some(comp.canonical_id.value().to_string()),
                         counts: None,
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 }
                 declared_vulnerable
@@ -649,6 +656,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         } else if matches!(proto.protocol_type, ProtocolType::Tls | ProtocolType::Dtls)
             && proto.version.as_deref().and_then(parse_tls_version) != Some((1, 3))
@@ -676,6 +684,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
         let version_rejected = violations.len() > violations_before;
@@ -699,6 +708,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         };
         // References that resolve nowhere and carry no recognizable token
@@ -816,6 +826,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         } else if judged == 0 && !version_rejected {
             let detail = if substantive {
@@ -839,6 +850,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
         version_rejected || judged > 0
@@ -913,6 +925,7 @@ impl ComplianceChecker {
                                 component_id: Some(comp.canonical_id.value().to_string()),
                                 counts: None,
                                 standard_refs: Vec::new(),
+                                remediation: None,
                             });
                         } else if cls.class == AlgorithmClass::Unknown {
                             // An unclassifiable signature ref must warn, never
@@ -935,6 +948,7 @@ impl ComplianceChecker {
                                 component_id: Some(comp.canonical_id.value().to_string()),
                                 counts: None,
                                 standard_refs: Vec::new(),
+                                remediation: None,
                             });
                         }
                     }
@@ -977,6 +991,7 @@ impl ComplianceChecker {
                                     component_id: Some(comp.canonical_id.value().to_string()),
                                     counts: None,
                                     standard_refs: Vec::new(),
+                                    remediation: None,
                                 });
                             }
                         }
@@ -1004,6 +1019,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
     }
@@ -1041,6 +1057,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -1070,6 +1087,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -1085,6 +1103,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -1106,6 +1125,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -1124,6 +1144,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -1153,6 +1174,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
@@ -1172,6 +1194,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
         cls.class != AlgorithmClass::Unknown || ql == Some(0) || hybrid
@@ -1208,6 +1231,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         } else if matches!(proto.protocol_type, ProtocolType::Tls | ProtocolType::Dtls)
             && let Some(version) = proto.version.as_deref()
@@ -1228,6 +1252,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
         let version_rejected = violations.len() > violations_before;
@@ -1261,6 +1286,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         };
         // How many algorithms the classifier could identify, ready or not.
@@ -1371,6 +1397,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         } else if judged.get() == 0 && !version_rejected {
             // Nothing the classifier can name: a TLS 1.3 asset whose suites
@@ -1394,6 +1421,7 @@ impl ComplianceChecker {
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
         version_rejected || judged.get() > 0

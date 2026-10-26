@@ -6,10 +6,14 @@
 //! manufacturer email, EU DoC, conformity-assessment module, and Article 14
 //! reporting channels are NOT enforced.
 
+#[path = "common/clock.rs"]
+mod clock;
+
+use clock::checker;
 use sbom_tools::model::{
     Component, CraSidecarMetadata, ExternalRefType, ExternalReference, NormalizedSbom,
 };
-use sbom_tools::quality::{ComplianceChecker, ComplianceLevel, ViolationSeverity};
+use sbom_tools::quality::{ComplianceLevel, ViolationSeverity};
 
 fn empty_sbom() -> NormalizedSbom {
     NormalizedSbom::default()
@@ -66,8 +70,8 @@ fn oss_steward_does_not_require_manufacturer_email() {
     // vulnerability-handling process.
     let sbom = sbom_with_security_contact();
 
-    let res_steward = ComplianceChecker::new(ComplianceLevel::CraOssSteward).check(&sbom);
-    let res_phase2 = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&sbom);
+    let res_steward = checker(ComplianceLevel::CraOssSteward).check(&sbom);
+    let res_phase2 = checker(ComplianceLevel::CraPhase2).check(&sbom);
 
     // Steward profile: should not fire manufacturer-identification Art. 13(16)
     assert!(
@@ -123,7 +127,7 @@ fn oss_steward_requires_vulnerability_handling_process() {
     // Bare SBOM with no SecurityContact / Advisories / sidecar PSIRT URL:
     // steward floor must fire an Error.
     let sbom = empty_sbom();
-    let res = ComplianceChecker::new(ComplianceLevel::CraOssSteward).check(&sbom);
+    let res = checker(ComplianceLevel::CraOssSteward).check(&sbom);
     let v = res
         .violations
         .iter()
@@ -135,7 +139,7 @@ fn oss_steward_requires_vulnerability_handling_process() {
 #[test]
 fn oss_steward_vuln_handling_satisfied_by_security_contact() {
     let sbom = sbom_with_security_contact();
-    let res = ComplianceChecker::new(ComplianceLevel::CraOssSteward).check(&sbom);
+    let res = checker(ComplianceLevel::CraOssSteward).check(&sbom);
     assert!(
         !res.violations
             .iter()
@@ -151,7 +155,7 @@ fn oss_steward_vuln_handling_satisfied_by_sidecar_psirt() {
         psirt_url: Some("https://example.org/psirt".to_string()),
         ..Default::default()
     };
-    let res = ComplianceChecker::new(ComplianceLevel::CraOssSteward)
+    let res = checker(ComplianceLevel::CraOssSteward)
         .with_sidecar(sidecar)
         .check(&sbom);
     assert!(
@@ -166,7 +170,7 @@ fn oss_steward_vuln_handling_satisfied_by_sidecar_psirt() {
 fn oss_steward_recommends_cvd_policy_as_warning() {
     // No Advisories ref, no sidecar coordinated_disclosure_policy_url
     let sbom = sbom_with_security_contact();
-    let res = ComplianceChecker::new(ComplianceLevel::CraOssSteward).check(&sbom);
+    let res = checker(ComplianceLevel::CraOssSteward).check(&sbom);
     let v = res
         .violations
         .iter()
@@ -178,7 +182,7 @@ fn oss_steward_recommends_cvd_policy_as_warning() {
 #[test]
 fn oss_steward_cvd_satisfied_by_advisories_ref() {
     let sbom = sbom_with_advisories();
-    let res = ComplianceChecker::new(ComplianceLevel::CraOssSteward).check(&sbom);
+    let res = checker(ComplianceLevel::CraOssSteward).check(&sbom);
     assert!(
         !res.violations
             .iter()
@@ -196,7 +200,7 @@ fn oss_steward_cvd_satisfied_by_sidecar_policy_url() {
         ),
         ..Default::default()
     };
-    let res = ComplianceChecker::new(ComplianceLevel::CraOssSteward)
+    let res = checker(ComplianceLevel::CraOssSteward)
         .with_sidecar(sidecar)
         .check(&sbom);
     assert!(
@@ -217,7 +221,7 @@ fn oss_steward_does_not_run_hardware_check() {
     device.component_type = sbom_tools::model::ComponentType::Device;
     sbom.add_component(device);
 
-    let res = ComplianceChecker::new(ComplianceLevel::CraOssSteward).check(&sbom);
+    let res = checker(ComplianceLevel::CraOssSteward).check(&sbom);
     assert!(
         !res.violations
             .iter()

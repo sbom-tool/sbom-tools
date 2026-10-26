@@ -195,7 +195,7 @@ flowchart TD
 
 Note: Typed `MultiDiffConfig`; enrichment supported; no streaming; output
 limited to JSON or TUI. `-o` is a restricted clap enum on these three commands,
-so an unsupported value is a usage error (exit 2) before any SBOM is parsed.
+so an unsupported value is a usage error (exit 3) before any SBOM is parsed.
 
 Scale conventions across the multi-SBOM results (test-pinned):
 

@@ -121,11 +121,11 @@ fn diff_multi_rejects_unsupported_output_format() {
 
     // Rejected by the parser now, not at runtime: the multi commands declare
     // a restricted value enum, so `--help` only advertises what they render
-    // and a bad value is a usage error (exit 2) naming the real choices --
-    // it no longer parses every SBOM first only to fail with exit 3.
+    // and a bad value is a usage error (exit 3) naming the real choices --
+    // it no longer parses every SBOM first.
     assert_eq!(
         output.status.code(),
-        Some(2),
+        Some(3),
         "an unsupported -o value should be a usage error: {}",
         stderr(&output)
     );
@@ -155,7 +155,7 @@ fn matrix_rejects_unsupported_output_format() {
 
     assert_eq!(
         output.status.code(),
-        Some(2),
+        Some(3),
         "an unsupported -o value should be a usage error: {}",
         stderr(&output)
     );

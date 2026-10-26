@@ -8,11 +8,15 @@
 //! - SBOM-side ExternalRefType::RiskAssessment satisfies Art. 13(2)
 //! - multi-standard `--standard bsi,cra,ntia` produces independent results
 
+#[path = "common/clock.rs"]
+mod clock;
+
+use clock::checker;
 use sbom_tools::model::{
     Component, CraSidecarMetadata, DependencyEdge, DependencyType, ExternalRefType,
     ExternalReference, NormalizedSbom, Organization, SwhidKind,
 };
-use sbom_tools::quality::{ComplianceChecker, ComplianceLevel, ViolationSeverity};
+use sbom_tools::quality::{ComplianceLevel, ViolationSeverity};
 use std::path::PathBuf;
 
 fn fixtures_dir() -> PathBuf {
@@ -106,7 +110,7 @@ fn cra_phase1_transitive_supplier_is_warning_or_softer() {
         DependencyType::DependsOn,
     ));
 
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase1).check(&sbom);
+    let result = checker(ComplianceLevel::CraPhase1).check(&sbom);
     let direct_err = result.violations.iter().any(|v| {
         v.requirement.contains("Direct dependency supplier")
             && v.severity == ViolationSeverity::Error
@@ -142,7 +146,7 @@ fn art_13_2_external_reference_satisfies_check() {
     });
     sbom.add_component(comp);
 
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&sbom);
+    let result = checker(ComplianceLevel::CraPhase2).check(&sbom);
     assert!(
         !result
             .violations
@@ -156,9 +160,9 @@ fn art_13_2_external_reference_satisfies_check() {
 fn multi_standard_bsi_cra_ntia_produces_independent_results() {
     // Empty SBOM exercises all three checks producing distinct violation sets.
     let sbom = NormalizedSbom::default();
-    let bsi = ComplianceChecker::new(ComplianceLevel::BsiTr03183_2).check(&sbom);
-    let cra = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&sbom);
-    let ntia = ComplianceChecker::new(ComplianceLevel::NtiaMinimum).check(&sbom);
+    let bsi = checker(ComplianceLevel::BsiTr03183_2).check(&sbom);
+    let cra = checker(ComplianceLevel::CraPhase2).check(&sbom);
+    let ntia = checker(ComplianceLevel::NtiaMinimum).check(&sbom);
 
     // Each level produces violations
     assert!(!bsi.violations.is_empty());
@@ -217,7 +221,7 @@ fn hardware_fixture_passes_pre_8_rq_02() {
     let path = fixtures_dir().join("router-hardware.cdx.json");
     assert!(path.exists(), "fixture missing: {}", path.display());
     let parsed = sbom_tools::parsers::parse_sbom(&path).expect("parse hardware fixture");
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&parsed);
+    let result = checker(ComplianceLevel::CraPhase2).check(&parsed);
 
     // The fixture is intentionally well-formed for hardware: every device/
     // firmware component has producer + identifier + version (firmware).
@@ -310,7 +314,7 @@ fn bsi_fixture_with_sidecar_passes() {
     let sidecar = CraSidecarMetadata::from_file(&sidecar_path).expect("load BSI fixture sidecar");
 
     // BSI level: the fixture itself satisfies all §5 mandatory rules
-    let bsi = ComplianceChecker::new(ComplianceLevel::BsiTr03183_2).check(&parsed);
+    let bsi = checker(ComplianceLevel::BsiTr03183_2).check(&parsed);
     let errors: Vec<_> = bsi
         .violations
         .iter()
@@ -324,7 +328,7 @@ fn bsi_fixture_with_sidecar_passes() {
     // CRA level + sidecar: should not produce Warning-level manufacturer
     // (Art. 13(16)), product (Art. 13(15)), or CVD-policy (Annex I Part
     // II (5)) findings
-    let cra_with_sc = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let cra_with_sc = checker(ComplianceLevel::CraPhase2)
         .with_sidecar(sidecar)
         .check(&parsed);
     let warnings_for: Vec<_> = cra_with_sc

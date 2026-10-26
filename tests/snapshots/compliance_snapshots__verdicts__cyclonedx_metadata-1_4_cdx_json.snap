@@ -1,0 +1,84 @@
+---
+source: tests/compliance_snapshots.rs
+---
+fixture: cyclonedx/metadata-1.4.cdx.json
+as_of: 2026-10-12T00:00:00Z
+
+[Minimum] compliant · E0 W0 I3
+  I SBOM-QUALITY-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-QUALITY-GENERAL  pkg:generic/libyaml@0.2.5
+  I SBOM-QUALITY-GENERAL  pkg:generic/zlib@1.3.1
+[Standard] compliant · E0 W0 I3
+  I SBOM-QUALITY-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-QUALITY-GENERAL  pkg:generic/libyaml@0.2.5
+  I SBOM-QUALITY-GENERAL  pkg:generic/zlib@1.3.1
+[NtiaMinimum] compliant · E0 W0 I3
+  I SBOM-NTIA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-NTIA-GENERAL  pkg:generic/libyaml@0.2.5
+  I SBOM-NTIA-GENERAL  pkg:generic/zlib@1.3.1
+[CraPhase1] compliant · E0 W4 I6
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-CRA-GENERAL  pkg:generic/libyaml@0.2.5
+  I SBOM-CRA-GENERAL  pkg:generic/zlib@1.3.1
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-14  - ×3
+[CraPhase2] compliant · E0 W6 I8
+  I SBOM-CRA-ANNEX-V  -
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-CRA-GENERAL  pkg:generic/libyaml@0.2.5
+  I SBOM-CRA-GENERAL  pkg:generic/zlib@1.3.1
+  I SBOM-CRA-LIFECYCLE  -
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-13-2  -
+  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-CVD-POLICY  -
+[FdaMedicalDevice] compliant · E0 W1 I3
+  I SBOM-FDA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-FDA-GENERAL  pkg:generic/libyaml@0.2.5
+  I SBOM-FDA-GENERAL  pkg:generic/zlib@1.3.1
+  W SBOM-FDA-SUPPORT  -
+[NistSsdf] compliant · E0 W1 I2
+  I SBOM-SSDF-PO3  -
+  I SBOM-SSDF-PW6  -
+  W SBOM-SSDF-PO1  -
+[Eo14028] compliant · E0 W1 I0
+  W SBOM-EO14028-DISCLOSURE  -
+[Cnsa2] NON-COMPLIANT · E1 W0 I0
+  E SBOM-CNSA2-000  -
+[NistPqc] NON-COMPLIANT · E1 W0 I0
+  E SBOM-PQC-000  -
+[BsiTr03183_2] NON-COMPLIANT · E1 W0 I0
+  E SBOM-BSI-TR-03183-2-4  -
+[CraOssSteward] NON-COMPLIANT · E1 W1 I3
+  E SBOM-CRA-ART-24  -
+  I SBOM-CRA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-CRA-GENERAL  pkg:generic/libyaml@0.2.5
+  I SBOM-CRA-GENERAL  pkg:generic/zlib@1.3.1
+  W SBOM-CRA-CVD-POLICY  -
+[EuccSubstantial] NON-COMPLIANT · E4 W1 I0
+  E SBOM-EUCC-ITSEF  -
+  E SBOM-EUCC-PP  -
+  E SBOM-EUCC-TOE  -
+  E SBOM-EUCC-VALIDITY  -
+  W SBOM-EUCC-CERTREF  -
+[EuAiAct] not applicable · E0 W0 I1
+  I SBOM-AIACT-NA  -
+[BsiSbomForAi] not applicable · E0 W0 I1
+  I SBOM-BSIAI-NA  -
+[Cisa2026] compliant · E0 W1 I0
+  W SBOM-CISA2026-GENERATION-CONTEXT  -
+[PciDss632] compliant · E0 W0 I1
+  I SBOM-PCI-6-3-2-VULN-EVIDENCE  -
+[Fsct] compliant · E0 W1 I1
+  I SBOM-FSCT-SBOM-TYPE  -
+  W SBOM-FSCT-IDENTIFIER-MULTI  - (3/3)
+[Comprehensive] compliant · E0 W0 I3
+  I SBOM-QUALITY-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-QUALITY-GENERAL  pkg:generic/libyaml@0.2.5
+  I SBOM-QUALITY-GENERAL  pkg:generic/zlib@1.3.1
