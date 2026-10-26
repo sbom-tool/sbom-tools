@@ -164,6 +164,19 @@ fn cnsa2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                         .quantum_level(5),
                 );
             }),
+        )
+        // A PQ/T hybrid is judged by both parts: X25519MLKEM768 fails on
+        // ML-KEM-768 and on X25519, which is not a CNSA 1.0 algorithm.
+        .with_firing(
+            "hybrid of X25519 and ML-KEM-768",
+            Sev::Error,
+            broken(|s| {
+                s.crypto_assets.push(
+                    CryptoAssetFixture::algorithm("algo-hybrid", "X25519MLKEM768")
+                        .primitive("combiner")
+                        .quantum_level(3),
+                );
+            }),
         ),
         RuleEntry::tested(
             "SBOM-CNSA2-ALG-004",
@@ -313,7 +326,7 @@ fn cnsa2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             broken(|s| {
                 s.crypto_assets.push(
-                    CryptoAssetFixture::algorithm("algo-hybrid", "X25519MLKEM768")
+                    CryptoAssetFixture::algorithm("algo-hybrid", "acme-hybrid-kem")
                         .primitive("combiner")
                         .quantum_level(5),
                 );
