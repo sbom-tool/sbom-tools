@@ -363,12 +363,16 @@ with `2.`. CSAF emit support: `sbom-tools vex export --format csaf`
 |-------------------------------------------|-----------------------------------------------|
 | `vulnerabilities[].cve`                   | `Vulnerability.id`                            |
 | `vulnerabilities[].ids[].text` (fallback) | `Vulnerability.id` (e.g., GHSA)               |
-| `product_status.known_affected`           | `VexState::Affected`                          |
-| `product_status.known_not_affected`       | `VexState::NotAffected`                       |
-| `product_status.fixed`, `first_fixed`, `last_affected` | `VexState::Fixed`                |
+| `product_status.known_affected`, `first_affected`, `last_affected` | `VexState::Affected`  |
+| `product_status.known_not_affected`       | `VexState::NotAffected`, with no justification |
+| `product_status.fixed`, `first_fixed`, `recommended` | `VexState::Fixed`                  |
 | `product_status.under_investigation`      | `VexState::UnderInvestigation`                |
-| `product_status.recommended`              | `VexState::Affected` (with note)              |
+| `vulnerabilities[].flags`, `threats`, `notes` | not read                                  |
 | `product_tree.full_product_names[].product_identification_helper.purl` | `(vuln_id, purl)` lookup key |
+
+Because `flags` are not read, a `known_not_affected` entry carries no
+justification, and the CRA vulnerability checks do not take it as evidence
+(see [VEX `not_affected` statements](#vex-not_affected-statements)).
 
 ## CLI cheat sheet
 
