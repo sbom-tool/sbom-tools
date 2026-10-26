@@ -15,8 +15,8 @@ use std::path::{Path, PathBuf};
 use sbom_tools::model::{CraSidecarMetadata, NormalizedSbom};
 use sbom_tools::parse_sbom_str;
 use sbom_tools::quality::{
-    ComplianceChecker, ComplianceLevel, ComplianceResult, DOCUMENT_SUBJECT, finding_id,
-    standard_key,
+    ComplianceChecker, ComplianceLevel, ComplianceResult, DOCUMENT_SUBJECT, RuleKind, finding_id,
+    rule_kind, standard_key,
 };
 use sbom_tools::reports::{COMPLIANCE_JSON_SCHEMA, generate_compliance_json};
 use serde_json::{Value, json};
@@ -156,8 +156,31 @@ fn assert_envelope_invariants(envelope: &Value, results: &[ComplianceResult], la
                 "{label}: counts.{severity}"
             );
         }
+        let passed = entry["passed"].as_array().expect("passed");
+        assert_eq!(entry["counts"]["passed"], passed.len(), "{label}");
+        assert_eq!(passed.len(), result.passed.len(), "{label}");
         for v in violations {
+            let rule = v["rule_id"].as_str().expect("rule_id");
+            assert_eq!(
+                rule_kind(rule),
+                Some(RuleKind::Finding),
+                "{label}: {rule} is a pass-only rule reported as a violation"
+            );
+        }
+        for p in passed {
+            let rule = p["rule_id"].as_str().expect("rule_id");
+            assert_eq!(
+                rule_kind(rule),
+                Some(RuleKind::Pass),
+                "{label}: {rule} reports a pass but is no pass-only rule"
+            );
+        }
+        // Violations and passes share one key space: SARIF and OSCAL key
+        // both by finding id.
+        let mut keys = std::collections::BTreeSet::new();
+        for v in violations.iter().chain(passed) {
             let key = v["finding_key"].as_str().expect("finding_key");
+            assert!(keys.insert(key), "{label}: {key} repeats");
             assert_eq!(v["finding_id"], finding_id(key).as_str(), "{label}");
             let subject = match v["component_id"].as_str() {
                 None => DOCUMENT_SUBJECT.to_string(),
@@ -303,19 +326,30 @@ fn published_schema_accepts_unknown_fields() {
     assert_valid(&schema, &document, "unknown fields");
 }
 
-/// The fields later releases will populate are declared already.
+/// The optional violation fields are declared.
 #[test]
 fn schema_declares_the_announced_optional_fields() {
     let schema = schema();
     let mut document = minimal_envelope();
-    document["results"][0]["passed"] = json!([]);
-    document["results"][0]["counts"]["passed"] = json!(3);
     document["results"][0]["violations"][0]["remediation"] = json!("Add a supplier.");
     document["results"][0]["violations"][0]["help_uri"] = json!("https://example.com/rule");
     assert_valid(
         &json_schema::strict_copy(&schema),
         &document,
         "announced fields",
+    );
+}
+
+/// A passed check, with every field it can carry, is declared.
+#[test]
+fn schema_declares_passed_checks() {
+    let schema = schema();
+    let document = envelope_with_pass();
+    assert_valid(&schema, &document, "passed check");
+    assert_valid(
+        &json_schema::strict_copy(&schema),
+        &document,
+        "passed check (strict)",
     );
 }
 
@@ -347,7 +381,7 @@ fn minimal_envelope() -> Value {
             "applicable": true,
             "compliant": false,
             "score": 50,
-            "counts": {"error": 1, "warning": 0, "info": 0},
+            "counts": {"error": 1, "warning": 0, "info": 0, "passed": 0},
             "violations": [{
                 "finding_id": "sbomtools:v1:60072ae05d1ef4b8",
                 "finding_key": "ntia|SBOM-NTIA-AUTHOR|document",
@@ -358,9 +392,31 @@ fn minimal_envelope() -> Value {
                 "requirement": "NTIA Minimum Elements: Author",
                 "rule_id": "SBOM-NTIA-AUTHOR",
                 "sarif_rule_id": "SBOM-NTIA-AUTHOR"
-            }]
+            }],
+            "passed": []
         }]
     })
+}
+
+/// [`minimal_envelope`] with one passed check carrying every field a pass
+/// can carry.
+fn envelope_with_pass() -> Value {
+    let key = "ntia|SBOM-PQC-009:alg%3A1|crypto/algorithm/ml-kem-1024";
+    let mut document = minimal_envelope();
+    document["results"][0]["counts"]["passed"] = json!(1);
+    document["results"][0]["passed"] = json!([{
+        "finding_id": finding_id(key),
+        "finding_key": key,
+        "message": "'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+        "element": "ML-KEM-1024",
+        "component_id": "crypto/algorithm/ml-kem-1024",
+        "finding_detail": "alg:1",
+        "requirement": "FIPS 203/204/205: approved",
+        "rule_id": "SBOM-PQC-009",
+        "sarif_rule_id": "SBOM-PQC-009",
+        "standard_refs": [{"standard": "NistPqc", "id": "FIPS 203/204/205"}]
+    }]);
+    document
 }
 
 // ---------------------------------------------------------------------------
@@ -413,6 +469,22 @@ fn validator_rejects_each_kind_of_violation() {
                 .expect("object")
                 .remove("finding_key");
         }),
+        ("passed missing", |d| {
+            d["results"][0]
+                .as_object_mut()
+                .expect("object")
+                .remove("passed");
+        }),
+        ("passed count missing", |d| {
+            d["results"][0]["counts"]
+                .as_object_mut()
+                .expect("object")
+                .remove("passed");
+        }),
+        ("passed check without identity", |d| {
+            d["results"][0]["passed"] = json!([{"message": "m", "element": null,
+                "requirement": "r", "rule_id": "SBOM-PQC-009", "sarif_rule_id": "SBOM-PQC-009"}]);
+        }),
     ];
     for (what, mutate) in cases {
         let mut document = minimal_envelope();
@@ -433,8 +505,9 @@ fn strict_copy_rejects_undeclared_fields_at_every_level() {
         "/results/0",
         "/results/0/counts",
         "/results/0/violations/0",
+        "/results/0/passed/0",
     ] {
-        let mut document = minimal_envelope();
+        let mut document = envelope_with_pass();
         document
             .pointer_mut(pointer)
             .and_then(Value::as_object_mut)

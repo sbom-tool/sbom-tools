@@ -8,8 +8,9 @@
 //!
 //! The matrix half (WP 1.2): every compliance level has a rule matrix, and
 //! every registered rule key but the fallback rules sits in some
-//! `tests/rule_matrix_*.rs` row — tested, or skipped with a reason that names
-//! the bug or limitation.
+//! `tests/rule_matrix_*.rs` row — tested (by firing cases, or passing cases
+//! for a pass-only rule), or skipped with a reason that names the bug or
+//! limitation.
 
 use sbom_tools::quality::{
     CISA2026_SARIF_RULE_IDS, CNSA2_SARIF_RULE_IDS, COMPLIANCE_SARIF_RULE_IDS, ComplianceLevel,
@@ -250,8 +251,9 @@ fn matrix_sources() -> Vec<(String, String)> {
     sources
 }
 
-/// The row constructors of tests/common/rule_matrix.rs.
-const ROW_CONSTRUCTORS: &[&str] = &["tested", "tested_departing", "skipped"];
+/// The row constructors of tests/common/rule_matrix.rs: firing rows for
+/// finding rules, passing rows for pass-only rules, skipped rows for both.
+const ROW_CONSTRUCTORS: &[&str] = &["tested", "tested_departing", "passing", "skipped"];
 
 /// One `RuleEntry::<constructor>("<id>", …)` row of a matrix source.
 struct MatrixRow {
@@ -322,11 +324,12 @@ fn every_compliance_level_has_a_rule_matrix() {
     );
 }
 
-/// Every registered rule key sits in some matrix — `tested`, or `skipped`
-/// with a reason, enforced non-empty by `run_matrix`, that names the bug or
-/// limitation — so nothing is left out silently. The fallback rules are the
-/// exception, and no row may name one: no check emits them. Rows may not
-/// name unregistered ids either.
+/// Every registered rule key sits in some matrix — `tested`, `passing` for a
+/// pass-only rule (which `run_matrix` holds to the rule's kind), or
+/// `skipped` with a reason, enforced non-empty by `run_matrix`, that names
+/// the bug or limitation — so nothing is left out silently. The fallback
+/// rules are the exception, and no row may name one: no check emits them.
+/// Rows may not name unregistered ids either.
 #[test]
 fn every_registered_rule_sits_in_a_matrix_or_is_skipped_with_a_reason() {
     let rows: Vec<MatrixRow> = matrix_sources()

@@ -34,11 +34,11 @@ sbom-tools  VIEW  │ quantum-ready-app │ CycloneDX 1.7 │ [CBOM]
 │                                                                                                                      │
 └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ┌ ML-KEM-1024 ─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│[NIST PQC] 'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205)                                          │
-│  Req: FIPS 203/204/205: approved                                                                                     │
-│  NIST PQC: FIPS 203/204/205                                                                                          │
-│  NIST PQC: SP 800-208                                                                                                │
-│  Status: informational — no action needed                                                                            │
+│✓ Compliant — no violations for this algorithm.                                                                       │
+│✓ [NIST PQC] 'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205)                                        │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
 └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
  Algo: 11 │ Certs: 1 │ Keys: 2 │ Quantum: 82%
                                ↑↓ select │  Tab switch  / search  e export  ? help  q quit

@@ -359,6 +359,16 @@ fn compliance_score_label(r: &crate::quality::ComplianceResult) -> String {
         .map_or_else(|| "N/A".to_string(), |s| format!("{s}%"))
 }
 
+/// ` | Passed: N` for the summary line of a result that passed checks, empty
+/// otherwise. Passed checks are counted, never listed among the violations.
+fn passed_suffix(r: &crate::quality::ComplianceResult) -> String {
+    if r.passed.is_empty() {
+        String::new()
+    } else {
+        format!(" | Passed: {}", r.passed.len())
+    }
+}
+
 /// Human-readable reason when a standard did not evaluate the SBOM.
 fn not_applicable_reason(r: &crate::quality::ComplianceResult) -> Option<&str> {
     match &r.applicability {
@@ -404,8 +414,11 @@ fn compliance_to_markdown(results: &[crate::quality::ComplianceResult], selected
         }
         md.push_str(&format!("Score: {}\n\n", compliance_score_label(r)));
         md.push_str(&format!(
-            "Errors: {} | Warnings: {} | Info: {}\n\n",
-            r.error_count, r.warning_count, r.info_count
+            "Errors: {} | Warnings: {} | Info: {}{}\n\n",
+            r.error_count,
+            r.warning_count,
+            r.info_count,
+            passed_suffix(r)
         ));
 
         if r.violations.is_empty() {
@@ -448,8 +461,7 @@ fn compliance_to_csv(results: &[crate::quality::ComplianceResult], selected: usi
         let status = compliance_status_label(r);
         if !r.is_applicable() {
             // One status row: an unevaluated standard has no actionable
-            // violations, and its N/A placeholder finding must not be
-            // mistaken for one.
+            // violations; the row carries the reason it did not apply.
             let reason = not_applicable_reason(r).unwrap_or("");
             lines.push(format!(
                 "\"{std_name}\",\"{status}\",\"\",\"\",\"\",\"\",\"\",\"{}\",\"\"",
@@ -524,11 +536,12 @@ th { background: #313244; color: #89b4fa; font-weight: 600; }
             continue;
         }
         html.push_str(&format!(
-            "<p>Score: {} | Errors: {} | Warnings: {} | Info: {}</p>\n",
+            "<p>Score: {} | Errors: {} | Warnings: {} | Info: {}{}</p>\n",
             compliance_score_label(r),
             r.error_count,
             r.warning_count,
-            r.info_count
+            r.info_count,
+            passed_suffix(r)
         ));
 
         if r.violations.is_empty() {
@@ -866,6 +879,8 @@ mod compliance_export_tests {
     };
 
     const RULE_ID: &str = "SBOM-BSI-TR-03183-2-VERSION";
+    /// Why the fixture's readiness standard did not apply.
+    const NA_REASON: &str = "SBOM contains no ML components";
 
     fn violation(rule_id: &'static str, severity: ViolationSeverity) -> Violation {
         Violation {
@@ -889,12 +904,7 @@ mod compliance_export_tests {
             ComplianceLevel::BsiTr03183_2,
             vec![violation(RULE_ID, ViolationSeverity::Error)],
         );
-        // "SBOM-AIACT-NA" is the readiness profiles' N/A marker rule;
-        // ComplianceResult::new derives Applicability::NotApplicable from it.
-        let not_applicable = ComplianceResult::new(
-            ComplianceLevel::EuAiAct,
-            vec![violation("SBOM-AIACT-NA", ViolationSeverity::Info)],
-        );
+        let not_applicable = ComplianceResult::not_applicable(ComplianceLevel::EuAiAct, NA_REASON);
         assert!(!not_applicable.is_applicable(), "fixture must be N/A");
         vec![applicable, not_applicable]
     }
@@ -976,6 +986,38 @@ mod compliance_export_tests {
         );
     }
 
+    /// Passed checks are counted on the summary line and listed nowhere.
+    #[test]
+    fn exports_count_passed_checks_and_list_none() {
+        let pass = crate::quality::PassedCheck {
+            rule_id: "SBOM-PQC-009",
+            message: "'ML-KEM-1024' uses NIST-approved PQC algorithm".to_string(),
+            element: Some("ML-KEM-1024".to_string()),
+            component_id: Some("crypto/algorithm/ml-kem-1024".to_string()),
+            finding_detail: None,
+            requirement: "FIPS 203/204/205: approved".to_string(),
+            standard_refs: Vec::new(),
+        };
+        let results = vec![
+            ComplianceResult::new(ComplianceLevel::NistPqc, Vec::new()).with_passed(vec![pass]),
+        ];
+        let md = compliance_to_markdown(&results, 0);
+        assert!(
+            md.contains("Errors: 0 | Warnings: 0 | Info: 0 | Passed: 1"),
+            "{md}"
+        );
+        assert!(!md.contains("NIST-approved"), "no pass is listed: {md}");
+        let html = compliance_to_html(&results, 0);
+        assert!(html.contains("| Info: 0 | Passed: 1</p>"), "{html}");
+        assert!(!html.contains("NIST-approved"), "{html}");
+        let csv = compliance_to_csv(&results, 0);
+        assert!(!csv.contains("SBOM-PQC-009"), "{csv}");
+
+        // A result that passed nothing keeps its summary line.
+        let md = compliance_to_markdown(&fixture(), 0);
+        assert!(!md.contains("Passed"), "{md}");
+    }
+
     #[test]
     fn markdown_renders_not_applicable_instead_of_compliant() {
         let results = fixture();
@@ -988,7 +1030,7 @@ mod compliance_export_tests {
             !md.contains("COMPLIANT"),
             "an unevaluated standard must not render as a pass: {md}"
         );
-        assert!(md.contains("test finding message"), "reason surfaced");
+        assert!(md.contains(NA_REASON), "reason surfaced");
     }
 
     #[test]

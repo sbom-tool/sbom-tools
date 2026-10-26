@@ -63,8 +63,13 @@ struct Expect {
     /// Exact error count.
     #[serde(default)]
     errors: Option<usize>,
+    /// Rules that must report a violation (at the severity, when given).
     #[serde(default)]
     rules_present: Vec<RuleMatch>,
+    /// Pass-only rules that must report a passed check.
+    #[serde(default)]
+    rules_passed: Vec<String>,
+    /// Rules that must report neither a violation nor a passed check.
     #[serde(default)]
     rules_absent: Vec<String>,
     #[serde(default)]
@@ -155,8 +160,15 @@ fn failures(result: &ComplianceResult, expect: &Expect) -> Vec<String> {
             ));
         }
     }
+    for rule in &expect.rules_passed {
+        if !result.passed.iter().any(|p| p.rule_id == rule) {
+            out.push(format!("passed check {rule} expected but absent"));
+        }
+    }
     for rule in &expect.rules_absent {
-        if result.violations.iter().any(|v| v.rule_id == rule) {
+        if result.violations.iter().any(|v| v.rule_id == rule)
+            || result.passed.iter().any(|p| p.rule_id == rule)
+        {
             out.push(format!("rule {rule} expected absent but present"));
         }
     }

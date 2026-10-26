@@ -157,15 +157,14 @@ fn bsi_ai_complete_fixture_fires_only_the_unmodeled_elements() {
     );
 }
 
-/// A non-AI SBOM is not applicable: one Info, and the result says N/A.
+/// A plain software SBOM is out of scope: the result says N/A and reports
+/// no finding, never a failure.
 #[test]
 fn bsi_ai_non_ai_sbom_is_not_applicable() {
     let result = check(LEVEL, &non_ai());
     assert!(
-        !result.is_applicable()
-            && result.violations.len() == 1
-            && result.violations[0].rule_id == "SBOM-BSIAI-NA",
-        "[{LEVEL:?}] a non-AI SBOM must be N/A with the single NA Info:\n{}",
+        !result.is_applicable() && result.is_compliant && result.violations.is_empty(),
+        "[{LEVEL:?}] a non-AI SBOM must be N/A with no finding:\n{}",
         render_violations(&result)
     );
 }
@@ -173,8 +172,7 @@ fn bsi_ai_non_ai_sbom_is_not_applicable() {
 #[test]
 fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     let entries = vec![
-        // ── Applicability and typing ───────────────────────────────────────
-        RuleEntry::tested("SBOM-BSIAI-NA", Sev::Info, non_ai(), base()),
+        // ── Typing ───────────────────────────────────────────────────────
         RuleEntry::tested(
             "SBOM-BSIAI-UNTYPED-ML",
             Sev::Warning,

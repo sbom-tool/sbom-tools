@@ -66,10 +66,8 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-EUCC-TOE  -
   E SBOM-EUCC-VALIDITY  -
   W SBOM-EUCC-CERTREF  -
-[EuAiAct] not applicable · E0 W0 I1
-  I SBOM-AIACT-NA  -
-[BsiSbomForAi] not applicable · E0 W0 I1
-  I SBOM-BSIAI-NA  -
+[EuAiAct] not applicable · E0 W0 I0
+[BsiSbomForAi] not applicable · E0 W0 I0
 [Cisa2026] NON-COMPLIANT · E1 W3 I0
   E SBOM-CISA2026-INVENTORY  -
   W SBOM-CISA2026-COVERAGE  -

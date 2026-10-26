@@ -17,7 +17,8 @@ source: tests/compliance_snapshots.rs
       "counts": {
         "error": 4,
         "warning": 1,
-        "info": 1
+        "info": 1,
+        "passed": 0
       },
       "violations": [
         {
@@ -146,7 +147,8 @@ source: tests/compliance_snapshots.rs
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
           "help_uri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
         }
-      ]
+      ],
+      "passed": []
     },
     {
       "standard": "cisa-2026",
@@ -157,7 +159,8 @@ source: tests/compliance_snapshots.rs
       "counts": {
         "error": 9,
         "warning": 3,
-        "info": 0
+        "info": 0,
+        "passed": 0
       },
       "violations": [
         {
@@ -413,7 +416,8 @@ source: tests/compliance_snapshots.rs
           "remediation": "Declare the SBOM's completeness: the 2026 Coverage element expects all components including transitive dependencies, and information gaps must be explicitly stated as unknown or deliberately withheld. This rule verifies the declaration, not actual completeness — the document itself points to external repositories / binary analysis for that. SPDX 2.x has no completeness declaration, so the rule is not evaluated for SPDX 2.x documents. CycloneDX: set compositions[].aggregate (complete, incomplete, incomplete_first_party_only, …); the first composition is read.",
           "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
         }
-      ]
+      ],
+      "passed": []
     }
   ]
 }

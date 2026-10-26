@@ -96,6 +96,11 @@ source: tests/compliance_snapshots.rs
             "value": "0"
           },
           {
+            "name": "passed-count",
+            "ns": "https://sbom.tools/ns/oscal",
+            "value": "0"
+          },
+          {
             "name": "score",
             "ns": "https://sbom.tools/ns/oscal",
             "value": "100"
@@ -892,6 +897,11 @@ source: tests/compliance_snapshots.rs
             "name": "info-count",
             "ns": "https://sbom.tools/ns/oscal",
             "value": "5"
+          },
+          {
+            "name": "passed-count",
+            "ns": "https://sbom.tools/ns/oscal",
+            "value": "0"
           },
           {
             "name": "score",

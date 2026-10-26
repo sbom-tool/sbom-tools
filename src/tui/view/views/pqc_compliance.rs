@@ -233,9 +233,9 @@ pub fn render_pqc_compliance(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
             };
 
             // Check NIST PQC status for this algorithm. One green verdict
-            // only: the old "OK" (an Info-severity approval note exists) vs
-            // "PASS" (no violation at all) split was two unexplained green
-            // vocabularies — the approval note still shows in the detail pane.
+            // only: the old "OK" (an approval exists) vs "PASS" (no
+            // violation at all) split was two unexplained green vocabularies
+            // — the approval, a passed check, shows in the detail pane.
             let pqc_status = if pqc_result.violations.iter().any(|v| {
                 v.element.as_deref() == Some(&comp.name) && v.severity == ViolationSeverity::Error
             }) {
@@ -302,7 +302,8 @@ pub fn render_pqc_compliance(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
 
 /// Detail pane for the selected algorithm: every CNSA 2.0 / NIST PQC
 /// violation naming it, with requirement, standard references, and
-/// remediation guidance — the data the bare PASS/FAIL cells discard.
+/// remediation guidance — the data the bare PASS/FAIL cells discard — then
+/// one line per check it passed (an approval), which is no violation.
 fn render_violation_detail(
     frame: &mut Frame,
     area: Rect,
@@ -368,8 +369,7 @@ fn render_violation_detail(
                 )));
             }
             // Remediation is for findings that need remediating: an
-            // Info-severity approval note ("uses NIST-approved PQC
-            // algorithm") must not be followed by "Fix: Migrate…".
+            // informational finding must not be followed by "Fix: Migrate…".
             if v.severity == ViolationSeverity::Info {
                 lines.push(Line::from(vec![
                     Span::styled("  Status: ", Style::default().fg(scheme.success)),
@@ -398,6 +398,33 @@ fn render_violation_detail(
             "\u{2713} Compliant \u{2014} no violations for this algorithm.",
             Style::default().fg(scheme.success),
         ));
+    }
+
+    // The checks the algorithm passed (NIST PQC approvals), after its
+    // violations and apart from them.
+    for (tag, result) in [("[CNSA 2.0]", cnsa2_result), ("[NIST PQC]", pqc_result)] {
+        for pass in result
+            .passed
+            .iter()
+            .filter(|p| p.component_id.as_deref() == Some(comp.canonical_id.value()))
+        {
+            let prefix = format!("\u{2713} {tag} ");
+            lines.push(Line::from(vec![
+                Span::styled(
+                    prefix.clone(),
+                    Style::default()
+                        .fg(scheme.success)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    crate::tui::widgets::truncate_str(
+                        &pass.message,
+                        inner_w.saturating_sub(prefix.chars().count()),
+                    ),
+                    Style::default().fg(scheme.text),
+                ),
+            ]));
+        }
     }
 
     // Never clip silently: dual-failing algorithms produce more detail than

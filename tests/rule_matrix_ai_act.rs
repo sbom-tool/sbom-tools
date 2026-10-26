@@ -137,15 +137,14 @@ fn ai_act_conforming_fixture_is_compliant_with_zero_violations() {
     assert_no_violations(LEVEL, &base());
 }
 
-/// A non-AI SBOM is not applicable: one Info, and the result says N/A.
+/// A plain software SBOM is out of scope: the result says N/A and reports
+/// no finding, never a failure.
 #[test]
 fn ai_act_non_ai_sbom_is_not_applicable() {
     let result = check(LEVEL, &non_ai());
     assert!(
-        !result.is_applicable()
-            && result.violations.len() == 1
-            && result.violations[0].rule_id == "SBOM-AIACT-NA",
-        "[{LEVEL:?}] a non-AI SBOM must be N/A with the single NA Info:\n{}",
+        !result.is_applicable() && result.is_compliant && result.violations.is_empty(),
+        "[{LEVEL:?}] a non-AI SBOM must be N/A with no finding:\n{}",
         render_violations(&result)
     );
 }
@@ -153,9 +152,7 @@ fn ai_act_non_ai_sbom_is_not_applicable() {
 #[test]
 fn ai_act_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     let entries = vec![
-        // ── Applicability and typing ───────────────────────────────────────
-        // A plain software SBOM is out of scope: one Info, never a failure.
-        RuleEntry::tested("SBOM-AIACT-NA", Sev::Info, non_ai(), base()),
+        // ── Typing ───────────────────────────────────────────────────────
         // Untyping a model cannot dodge the assessment: the ML content is
         // surfaced, and alone it keeps the profile applicable.
         RuleEntry::tested(

@@ -176,7 +176,6 @@ const REMEDIATION_SSDF: &str = "Follow NIST SP 800-218 SSDF practices: include t
 /// EO 14028 §4 requirements share one remediation paragraph.
 const REMEDIATION_EO14028: &str = "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.";
 
-/// EU AI Act not-applicable remediation.
 /// Remediation for every `*-INVENTORY` rule: the document must list the
 /// software components it describes.
 const REMEDIATION_INVENTORY: &str = "List the software components the product is made of. A document with no components, or with only files, snippets or cryptographic assets, is not a software inventory; validate a CBOM with --standard cnsa2 or pqc instead.";
@@ -207,11 +206,6 @@ const REMEDIATION_SPEC_VERSION_UNKNOWN: &str =
 /// (SBOM-{QUALITY,NTIA,CRA,FDA}-ELEMENT-ID).
 const REMEDIATION_ELEMENT_ID: &str =
     "Give every element its own well-formed identifier, the one dependency relationships refer to.";
-
-const REMEDIATION_AIACT_NA: &str = "EU AI Act Annex IV readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components to enable the assessment.";
-
-/// BSI/G7 SBOM-for-AI not-applicable remediation.
-const REMEDIATION_BSIAI_NA: &str = "BSI/G7 SBOM-for-AI minimum-elements readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components to enable the assessment.";
 
 /// Mistyped-ML remediation, shared by the EU AI Act and BSI/G7 SBOM-for-AI
 /// applicability guards.
@@ -1048,22 +1042,6 @@ const ADVICE_CONFORMITY_EVIDENCE: FormatAdvice = FormatAdvice {
     spdx3: FieldAdvice {
         text: "add an externalRef[] entry with externalRefType certificationReport to the root package; secureSoftwareAttestation does not count.",
         field: Some("externalRef[]"),
-    },
-};
-
-/// AI-BOM content: ML-model and dataset components.
-const ADVICE_AI_COMPONENTS: FormatAdvice = FormatAdvice {
-    cyclonedx: FieldAdvice {
-        text: "set components[].type to machine-learning-model (with a modelCard) for models, and give dataset components a data[] block.",
-        field: Some("components[].type"),
-    },
-    spdx2: FieldAdvice {
-        text: "no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.",
-        field: None,
-    },
-    spdx3: FieldAdvice {
-        text: "describe models as ai_AIPackage and datasets as dataset_DatasetPackage elements.",
-        field: Some("ai_AIPackage"),
     },
 };
 
@@ -2137,15 +2115,6 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // ---- EU AI Act Annex IV technical-documentation readiness --------
         // The per-element checks below shared one SARIF rule per Annex IV
         // paragraph (SBOM-AIACT-ANNEX-IV-1, -2C, -2D, -2G, -3) until v0.4.0.
-        "SBOM-AIACT-NA" => RuleMeta {
-            sarif_id: "SBOM-AIACT-NA",
-            name: "AiActNotApplicable",
-            short_description: "EU AI Act Annex IV readiness not applicable — SBOM has no ML-model or dataset components",
-            default_severity: ViolationSeverity::Info,
-            refs: &[(K::EuAiAct, "Annex IV")],
-            remediation: REMEDIATION_AIACT_NA,
-            advice: Some(&ADVICE_AI_COMPONENTS),
-        },
         "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION" => RuleMeta {
             sarif_id: "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION",
             name: "AiActModelDescription",
@@ -2247,15 +2216,6 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // The element-level checks below shared one SARIF rule per cluster
         // (SBOM-BSIAI-META, -SYS, -MODEL, -DATASET, -INFRA, -SEC) until
         // v0.4.0.
-        "SBOM-BSIAI-NA" => RuleMeta {
-            sarif_id: "SBOM-BSIAI-NA",
-            name: "BsiSbomForAiNotApplicable",
-            short_description: "BSI/G7 SBOM-for-AI minimum-elements readiness not applicable — SBOM has no ML-model or dataset components",
-            default_severity: ViolationSeverity::Info,
-            refs: &[(K::BsiSbomForAi, "Applicability")],
-            remediation: REMEDIATION_BSIAI_NA,
-            advice: Some(&ADVICE_AI_COMPONENTS),
-        },
         "SBOM-BSIAI-UNTYPED-ML" => RuleMeta {
             sarif_id: "SBOM-BSIAI-UNTYPED-ML",
             name: "BsiSbomForAiUntypedMlContent",
@@ -3378,7 +3338,8 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // A PQ/T hybrid (hybrid key exchange or composite signature) whose
         // post-quantum part NIST approves: an approved combination (SP
         // 800-227 §4.6.2 key combiners, IR 8547 ipd §3.2.2 composite
-        // signatures). Informational, as every check site emits it.
+        // signatures). A pass-only rule (`PASS_RULE_IDS`): its Info default
+        // is the SARIF catalogue's `note`; the check site reports a pass.
         "SBOM-PQC-010" => RuleMeta {
             sarif_id: "SBOM-PQC-010",
             name: "PqcHybridCombiner",
@@ -3406,6 +3367,8 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: REMEDIATION_PQC,
             advice: None,
         },
+        // An algorithm NIST approves for post-quantum use. A pass-only rule
+        // (`PASS_RULE_IDS`), like SBOM-PQC-010.
         "SBOM-PQC-009" => RuleMeta {
             sarif_id: "SBOM-PQC-009",
             name: "PqcApprovedAlgorithm",
@@ -4130,7 +4093,6 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-EUCC-VALIDITY",
     "SBOM-EUCC-CERTREF",
     "SBOM-EUCC-GENERAL",
-    "SBOM-AIACT-NA",
     "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION",
     "SBOM-AIACT-ANNEX-IV-1-PURPOSE",
     "SBOM-AIACT-ANNEX-IV-2D-DATASETS",
@@ -4141,7 +4103,6 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-AIACT-ANNEX-IV-3-LIMITATIONS",
     "SBOM-AIACT-UNTYPED-ML",
     "SBOM-AIACT-GENERAL",
-    "SBOM-BSIAI-NA",
     "SBOM-BSIAI-UNTYPED-ML",
     "SBOM-BSIAI-META-AUTHOR",
     "SBOM-BSIAI-META-FORMAT",
@@ -4339,6 +4300,38 @@ pub fn all_rule_ids() -> &'static [&'static str] {
     ALL_RULE_IDS
 }
 
+/// What a rule reports.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum RuleKind {
+    /// A gap or an advisory: a [`Violation`](super::Violation) at a
+    /// severity.
+    Finding,
+    /// A check the SBOM passed: a [`PassedCheck`](super::PassedCheck), never
+    /// a violation.
+    Pass,
+}
+
+/// The pass-only rules ([`RuleKind::Pass`]): each only ever affirms a check
+/// the SBOM passed. Every other registered rule is a [`RuleKind::Finding`].
+///
+/// A pass-only rule keeps the registry's `Info` default severity by
+/// convention: the SARIF rule catalogue declares it at `note` as before,
+/// while its results (emitted only under `--sarif-include-passes`) carry
+/// `kind: "pass"` and level `none`. It shares its SARIF identity with no
+/// finding rule.
+pub const PASS_RULE_IDS: &[&str] = &["SBOM-PQC-009", "SBOM-PQC-010"];
+
+/// The kind of the registered rule `rule_id`; `None` for an unregistered id.
+#[must_use]
+pub fn rule_kind(rule_id: &str) -> Option<RuleKind> {
+    rule_meta(rule_id)?;
+    Some(if PASS_RULE_IDS.contains(&rule_id) {
+        RuleKind::Pass
+    } else {
+        RuleKind::Finding
+    })
+}
+
 /// Map an owned rule-id string back to the registry's `&'static str` key.
 /// Used when deserializing payloads that carry a serialized `rule_id`, so a
 /// round-tripped violation keeps its registry identity instead of collapsing
@@ -4506,7 +4499,6 @@ pub const COMPLIANCE_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS",
     "SBOM-BSI-TR-03183-2-5-2-4",
     "SBOM-BSI-TR-03183-2-3-1",
-    "SBOM-AIACT-NA",
     "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION",
     "SBOM-AIACT-ANNEX-IV-1-PURPOSE",
     "SBOM-AIACT-ANNEX-IV-2D-DATASETS",
@@ -4516,7 +4508,6 @@ pub const COMPLIANCE_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-AIACT-ANNEX-IV-2C-ENERGY",
     "SBOM-AIACT-ANNEX-IV-3-LIMITATIONS",
     "SBOM-AIACT-UNTYPED-ML",
-    "SBOM-BSIAI-NA",
     "SBOM-BSIAI-META-AUTHOR",
     "SBOM-BSIAI-META-FORMAT",
     "SBOM-BSIAI-META-TIMESTAMP",
@@ -4667,6 +4658,30 @@ pub const FSCT_SARIF_RULE_IDS: &[&str] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Pass-only rules are registered, keep the `Info` default the SARIF
+    /// catalogue declares as `note`, and share their SARIF identity with no
+    /// finding rule, so a SARIF rule is never both a pass and a finding.
+    #[test]
+    fn pass_rules_are_info_rules_with_a_sarif_identity_of_their_own() {
+        for id in PASS_RULE_IDS {
+            let meta = rule_meta(id).unwrap_or_else(|| panic!("{id} is registered"));
+            assert_eq!(meta.default_severity, ViolationSeverity::Info, "{id}");
+            assert_eq!(rule_kind(id), Some(RuleKind::Pass), "{id}");
+            for other in ALL_RULE_IDS {
+                let other_meta = rule_meta(other).expect("listed ids resolve");
+                if other_meta.sarif_id == meta.sarif_id {
+                    assert_eq!(
+                        rule_kind(other),
+                        Some(RuleKind::Pass),
+                        "{other} shares the SARIF rule of pass-only {id}"
+                    );
+                }
+            }
+        }
+        assert_eq!(rule_kind("SBOM-NTIA-AUTHOR"), Some(RuleKind::Finding));
+        assert_eq!(rule_kind("SBOM-NO-SUCH-RULE"), None);
+    }
 
     /// `ALL_RULE_IDS` and the `rule_meta` match arms must stay in lockstep:
     /// every listed id resolves, every match arm is listed, no duplicates.

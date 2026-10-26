@@ -1445,24 +1445,6 @@ expression: "render(&SarifReporter::new())"
               }
             },
             {
-              "id": "SBOM-AIACT-NA",
-              "name": "AiActNotApplicable",
-              "shortDescription": {
-                "text": "EU AI Act Annex IV readiness not applicable — SBOM has no ML-model or dataset components"
-              },
-              "fullDescription": {
-                "text": "EU AI Act Annex IV readiness not applicable — SBOM has no ML-model or dataset components. References: EU AI Act: Annex IV."
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
-              "help": {
-                "text": "EU AI Act Annex IV readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components to enable the assessment.\n\nWhere the fix goes:\n- CycloneDX: set components[].type to machine-learning-model (with a modelCard) for models, and give dataset components a data[] block.\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: describe models as ai_AIPackage and datasets as dataset_DatasetPackage elements.\n\nReferences:\n- EU AI Act: Annex IV (https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng)",
-                "markdown": "EU AI Act Annex IV readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components to enable the assessment.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].type to machine-learning-model (with a modelCard) for models, and give dataset components a data\\[\\] block.\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** describe models as ai\\_AIPackage and datasets as dataset\\_DatasetPackage elements.\n\n**References**\n\n- [EU AI Act: Annex IV](<https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng>)"
-              }
-            },
-            {
               "id": "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION",
               "name": "AiActModelDescription",
               "shortDescription": {
@@ -1622,24 +1604,6 @@ expression: "render(&SarifReporter::new())"
               "help": {
                 "text": "Components with pkg:huggingface PURLs or model-card references look like ML models; leaving them untyped hides them from every AI-BOM readiness check. Type them as machine-learning models and attach the AI metadata.\n\nWhere the fix goes:\n- CycloneDX: set components[].type to machine-learning-model and add a modelCard.\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: make the element an ai_AIPackage (or set software_primaryPurpose to model).\n\nReferences:\n- EU AI Act: Annex IV: applicability (https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng)",
                 "markdown": "Components with pkg:huggingface PURLs or model-card references look like ML models; leaving them untyped hides them from every AI-BOM readiness check. Type them as machine-learning models and attach the AI metadata.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].type to machine-learning-model and add a modelCard.\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** make the element an ai\\_AIPackage (or set software\\_primaryPurpose to model).\n\n**References**\n\n- [EU AI Act: Annex IV: applicability](<https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-NA",
-              "name": "BsiSbomForAiNotApplicable",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI minimum-elements readiness not applicable — SBOM has no ML-model or dataset components"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI minimum-elements readiness not applicable — SBOM has no ML-model or dataset components. References: BSI/G7 AI-SBOM: Applicability."
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "BSI/G7 SBOM-for-AI minimum-elements readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components to enable the assessment.\n\nWhere the fix goes:\n- CycloneDX: set components[].type to machine-learning-model (with a modelCard) for models, and give dataset components a data[] block.\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: describe models as ai_AIPackage and datasets as dataset_DatasetPackage elements.\n\nReferences:\n- BSI/G7 AI-SBOM: Applicability (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "BSI/G7 SBOM-for-AI minimum-elements readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components to enable the assessment.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].type to machine-learning-model (with a modelCard) for models, and give dataset components a data\\[\\] block.\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** describe models as ai\\_AIPackage and datasets as dataset\\_DatasetPackage elements.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Applicability](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
               }
             },
             {

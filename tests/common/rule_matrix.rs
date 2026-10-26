@@ -14,14 +14,18 @@
 //!    in a standard's rule universe gets at least one *firing* case (a
 //!    minimal SBOM that must surface the rule, with the expected severity)
 //!    and one *silent* case (a minimal SBOM that must not surface it), or an
-//!    explicit skip-with-reason entry. No silent omissions: the runner fails
-//!    if the entry table and the declared universe differ. Every check is its
-//!    own SARIF rule, so a row matches one check.
+//!    explicit skip-with-reason entry. A pass-only rule (`RuleKind::Pass`,
+//!    such as SBOM-PQC-009) gets *passing* cases instead of firing ones: the
+//!    rule must appear among the result's passed checks, never among its
+//!    violations. No silent omissions: the runner fails if the entry table
+//!    and the declared universe differ. Every check is its own SARIF rule, so
+//!    a row matches one check.
 //!
-//! 3. **A universe sweep**: every violation emitted by every fixture in a
-//!    matrix must map (via its registry SARIF identity) into the standard's
-//!    declared rule universe — a new check site that emits a new rule id
-//!    forces the matrix to be extended instead of silently escaping it.
+//! 3. **A universe sweep**: every violation and every passed check emitted
+//!    by every fixture in a matrix must map (via its registry SARIF identity)
+//!    into the standard's declared rule universe — a new check site that
+//!    emits a new rule id forces the matrix to be extended instead of
+//!    silently escaping it.
 
 // Each per-standard matrix binary uses a subset of the DSL (mirrors the
 // existing tests/common/ffi_helpers.rs posture).
@@ -30,9 +34,15 @@
 #[path = "clock.rs"]
 pub mod clock;
 
+#[path = "info_classification.rs"]
+pub mod info_classification;
+
 use sbom_tools::model::{CraSidecarMetadata, EolInfo, EolStatus, NormalizedSbom};
 use sbom_tools::parsers::parse_sbom_str;
-use sbom_tools::quality::{ComplianceLevel, ComplianceResult, ViolationSeverity, rule_meta};
+use sbom_tools::quality::{
+    ComplianceLevel, ComplianceResult, PassedCheck, RuleKind, Violation, ViolationSeverity,
+    rule_kind, rule_meta,
+};
 use std::collections::BTreeSet;
 
 /// Filler SHA-256 digest (64 hex chars) for conforming components.
@@ -963,25 +973,30 @@ pub fn check(level: ComplianceLevel, fixture: &SbomFixture) -> ComplianceResult 
     checker.check(&fixture.parse())
 }
 
-/// Render a result's violations for assertion messages.
+/// Render a result's violations, then its passed checks, for assertion
+/// messages.
 pub fn render_violations(result: &ComplianceResult) -> String {
-    if result.violations.is_empty() {
+    if result.violations.is_empty() && result.passed.is_empty() {
         return "  (no violations)".to_string();
     }
-    result
-        .violations
-        .iter()
-        .map(|v| {
-            format!(
-                "  [{sev}] {rule} (sarif {sarif}): {msg}",
-                sev = v.severity.name(),
-                rule = v.rule_id,
-                sarif = v.sarif_rule_id(),
-                msg = v.message
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
+    let violations = result.violations.iter().map(|v| {
+        format!(
+            "  [{sev}] {rule} (sarif {sarif}): {msg}",
+            sev = v.severity.name(),
+            rule = v.rule_id,
+            sarif = v.sarif_rule_id(),
+            msg = v.message
+        )
+    });
+    let passes = result.passed.iter().map(|p| {
+        format!(
+            "  [Pass] {rule} (sarif {sarif}): {msg}",
+            rule = p.rule_id,
+            sarif = p.sarif_rule_id(),
+            msg = p.message
+        )
+    });
+    violations.chain(passes).collect::<Vec<_>>().join("\n")
 }
 
 /// A minimal SPDX tag-value document whose `SPDXVersion` line reads
@@ -1084,6 +1099,14 @@ pub struct SilentCase {
     pub fixture: SbomFixture,
 }
 
+/// One passing case of a pass-only rule: a minimal fixture whose SBOM passes
+/// the check, so the rule must be reported among the result's passed checks
+/// (and never among its violations).
+pub struct PassingCase {
+    pub label: &'static str,
+    pub fixture: SbomFixture,
+}
+
 /// Coverage for one rule of a standard's universe. The silent fixture is
 /// boxed to keep the variants comparable in size
 /// (clippy::large_enum_variant).
@@ -1093,6 +1116,15 @@ pub enum RuleCoverage {
         silent: Box<SbomFixture>,
         extra_silent: Vec<SilentCase>,
         skipped_cases: Vec<SkippedCase>,
+    },
+    /// A pass-only rule (`RuleKind::Pass`): each passing case must report
+    /// the rule among the result's passed checks, and the silent cases must
+    /// report it nowhere. A pass has no severity; see [`run_matrix`] for
+    /// what the registry-default rule means here.
+    Passing {
+        passing: Vec<PassingCase>,
+        silent: Box<SbomFixture>,
+        extra_silent: Vec<SilentCase>,
     },
     /// The rule genuinely cannot fire from document content alone (or has no
     /// emitting check site, or a bug blocks it); the reason is part of the
@@ -1154,6 +1186,36 @@ impl RuleEntry {
         Self::tested_case(sarif_id, severity, true, firing, silent)
     }
 
+    fn passing_case(id: &'static str, passing: SbomFixture, silent: SbomFixture) -> Self {
+        Self {
+            id,
+            coverage: RuleCoverage::Passing {
+                passing: vec![PassingCase {
+                    label: "passing",
+                    fixture: passing,
+                }],
+                silent: Box::new(silent),
+                extra_silent: Vec::new(),
+            },
+        }
+    }
+
+    /// Pass-only rule (`RuleKind::Pass`): a passing case, whose SBOM passes
+    /// the check, plus a silent case.
+    pub fn passing(sarif_id: &'static str, passing: SbomFixture, silent: SbomFixture) -> Self {
+        Self::passing_case(sarif_id, passing, silent)
+    }
+
+    /// Additional passing case of a pass-only row.
+    #[must_use]
+    pub fn with_passing(mut self, label: &'static str, fixture: SbomFixture) -> Self {
+        match &mut self.coverage {
+            RuleCoverage::Passing { passing, .. } => passing.push(PassingCase { label, fixture }),
+            _ => panic!("{} is no pass-only row; add a firing case instead", self.id),
+        }
+        self
+    }
+
     /// Additional firing case at the registry's default severity.
     #[must_use]
     pub fn with_firing(
@@ -1194,7 +1256,8 @@ impl RuleEntry {
     #[must_use]
     pub fn with_silent(mut self, label: &'static str, fixture: SbomFixture) -> Self {
         match &mut self.coverage {
-            RuleCoverage::Tested { extra_silent, .. } => {
+            RuleCoverage::Tested { extra_silent, .. }
+            | RuleCoverage::Passing { extra_silent, .. } => {
                 extra_silent.push(SilentCase { label, fixture });
             }
             RuleCoverage::Skipped { .. } => {
@@ -1212,6 +1275,9 @@ impl RuleEntry {
             RuleCoverage::Tested { skipped_cases, .. } => {
                 skipped_cases.push(SkippedCase { label, reason });
             }
+            RuleCoverage::Passing { .. } => {
+                panic!("pass-only row {} takes no skipped case", self.id)
+            }
             RuleCoverage::Skipped { .. } => {
                 panic!("cannot add a skipped case to skipped rule {}", self.id)
             }
@@ -1222,6 +1288,12 @@ impl RuleEntry {
     fn push_firing(&mut self, case: FiringCase) {
         match &mut self.coverage {
             RuleCoverage::Tested { firing, .. } => firing.push(case),
+            RuleCoverage::Passing { .. } => {
+                panic!(
+                    "pass-only row {} fires no violation; add a passing case",
+                    self.id
+                )
+            }
             RuleCoverage::Skipped { .. } => {
                 panic!("cannot add a firing case to skipped rule {}", self.id)
             }
@@ -1237,8 +1309,13 @@ impl RuleEntry {
     }
 
     /// Whether `v` carries this row's identity.
-    fn matches(&self, v: &sbom_tools::quality::Violation) -> bool {
+    fn matches(&self, v: &Violation) -> bool {
         v.sarif_rule_id() == self.id
+    }
+
+    /// Whether the passed check `p` carries this row's identity.
+    fn matches_pass(&self, p: &PassedCheck) -> bool {
+        p.sarif_rule_id() == self.id
     }
 }
 
@@ -1247,9 +1324,22 @@ impl RuleEntry {
 /// 1. exhaustiveness — the rows must cover `universe` exactly (every rule id
 ///    tested or explicitly skipped, no duplicates, no strays);
 /// 2. per rule — each firing fixture surfaces the row's id at the expected
-///    severity (with registry-default consistency enforced), each silent
-///    fixture stays silent for that id;
-/// 3. sweep — every violation any fixture emits maps into `universe`.
+///    severity (with registry-default consistency enforced), each passing
+///    fixture of a pass-only row reports the row's id among its passed
+///    checks and never as a violation, and each silent fixture stays silent
+///    for that id (no violation, no pass);
+/// 3. sweep — every violation and every passed check any fixture emits maps
+///    into `universe`, and every Info violation is a rule classified in
+///    tests/common/info_classification.rs.
+///
+/// The registry default severity is what the SARIF rule catalogue
+/// advertises, so a finding row needs a firing case at it (WP 1.2 finding
+/// B6). A pass has no severity: a pass-only row instead needs a passing
+/// case, its rule must be a `RuleKind::Pass` rule of the registry (and a
+/// finding row's a `RuleKind::Finding` one), and its registry default must
+/// be `Info`, the convention under which the catalogue declares a pass-only
+/// rule at `note` while its `--sarif-include-passes` results carry
+/// `kind: "pass"` at level `none`.
 pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntry]) {
     let universe_set: BTreeSet<&str> = universe.iter().copied().collect();
     assert_eq!(
@@ -1281,6 +1371,7 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
                     );
                 }
             }
+            RuleCoverage::Passing { .. } => {}
         }
     }
     assert_eq!(
@@ -1291,18 +1382,32 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
     );
 
     for entry in entries {
-        let RuleCoverage::Tested {
-            firing,
-            silent,
-            extra_silent,
-            ..
-        } = &entry.coverage
-        else {
-            continue; // skip-with-reason rows carry their justification inline
+        let (firing, silent, extra_silent) = match &entry.coverage {
+            RuleCoverage::Tested {
+                firing,
+                silent,
+                extra_silent,
+                ..
+            } => (firing, silent, extra_silent),
+            RuleCoverage::Passing {
+                passing,
+                silent,
+                extra_silent,
+            } => {
+                check_passing_row(level, entry, passing, silent, extra_silent);
+                continue;
+            }
+            // Skip-with-reason rows carry their justification inline.
+            RuleCoverage::Skipped { .. } => continue,
         };
         let id = entry.id;
         let meta = rule_meta(id)
             .unwrap_or_else(|| panic!("[{level:?}] {id} does not resolve in the rule registry"));
+        assert_eq!(
+            rule_kind(id),
+            Some(RuleKind::Finding),
+            "[{level:?}] {id} is a pass-only rule: give it a RuleEntry::passing row"
+        );
 
         assert!(!firing.is_empty(), "[{level:?}] {id} has no firing case");
         // The registry default is what the SARIF rule catalogue advertises,
@@ -1360,17 +1465,7 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
             );
         }
 
-        let silent_cases = std::iter::once(("silent", silent.as_ref()))
-            .chain(extra_silent.iter().map(|c| (c.label, &c.fixture)));
-        for (label, fixture) in silent_cases {
-            let result = check(level, fixture);
-            assert!(
-                result.violations.iter().all(|v| !entry.matches(v)),
-                "[{level:?}] {id} ({label}): the satisfying fixture must not fire this rule; \
-                 emitted:\n{violations}",
-                violations = render_violations(&result)
-            );
-        }
+        assert_silent(level, entry, silent, extra_silent);
     }
 
     // Universe sweep: no fixture in this matrix may emit a rule outside the
@@ -1378,39 +1473,133 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
     // standard must extend the universe (and therefore the matrix) instead
     // of escaping it.
     for entry in entries {
-        let RuleCoverage::Tested {
-            firing,
-            silent,
-            extra_silent,
-            ..
-        } = &entry.coverage
-        else {
-            continue;
+        let fixtures: Vec<(&str, &SbomFixture)> = match &entry.coverage {
+            RuleCoverage::Tested {
+                firing,
+                silent,
+                extra_silent,
+                ..
+            } => firing
+                .iter()
+                .map(|c| (c.label, &c.fixture))
+                .chain(std::iter::once(("silent", silent.as_ref())))
+                .chain(extra_silent.iter().map(|c| (c.label, &c.fixture)))
+                .collect(),
+            RuleCoverage::Passing {
+                passing,
+                silent,
+                extra_silent,
+            } => passing
+                .iter()
+                .map(|c| (c.label, &c.fixture))
+                .chain(std::iter::once(("silent", silent.as_ref())))
+                .chain(extra_silent.iter().map(|c| (c.label, &c.fixture)))
+                .collect(),
+            RuleCoverage::Skipped { .. } => continue,
         };
-        let fixtures = firing
-            .iter()
-            .map(|c| (c.label, &c.fixture))
-            .chain(std::iter::once(("silent", silent.as_ref())))
-            .chain(extra_silent.iter().map(|c| (c.label, &c.fixture)));
         for (label, fixture) in fixtures {
             let result = check(level, fixture);
+            // An Info violation is a reviewed gap or advice; an affirmation
+            // would be a passed check instead.
             for v in &result.violations {
                 assert!(
-                    universe_set.contains(v.sarif_rule_id()),
+                    v.severity != ViolationSeverity::Info
+                        || info_classification::info_finding_reason(v.rule_id).is_some(),
+                    "[{level:?}] fixture for {id} ({label}) reported {rule} at Info, which \
+                     tests/common/info_classification.rs does not classify: list it with the \
+                     reason it stays a violation, or make it a pass-only rule",
+                    id = entry.id,
+                    rule = v.rule_id,
+                );
+            }
+            let emitted = result
+                .violations
+                .iter()
+                .map(|v| (v.rule_id, v.sarif_rule_id()))
+                .chain(result.passed.iter().map(|p| (p.rule_id, p.sarif_rule_id())));
+            for (rule, sarif) in emitted {
+                assert!(
+                    universe_set.contains(sarif),
                     "[{level:?}] fixture for {id} ({label}) emitted rule {rule} \
                      (sarif {sarif}) outside the declared rule universe {universe_set:?} — \
                      new check site? extend the universe and the matrix",
                     id = entry.id,
-                    rule = v.rule_id,
-                    sarif = v.sarif_rule_id(),
                 );
                 assert!(
-                    rule_meta(v.rule_id).is_some(),
+                    rule_meta(rule).is_some(),
                     "[{level:?}] fixture for {id} ({label}) emitted unregistered rule {rule}",
                     id = entry.id,
-                    rule = v.rule_id
                 );
             }
         }
     }
+}
+
+/// The silent cases of a row: none may surface the row's rule, as a
+/// violation or as a passed check.
+fn assert_silent(
+    level: ComplianceLevel,
+    entry: &RuleEntry,
+    silent: &SbomFixture,
+    extra_silent: &[SilentCase],
+) {
+    let id = entry.id;
+    let silent_cases = std::iter::once(("silent", silent))
+        .chain(extra_silent.iter().map(|c| (c.label, &c.fixture)));
+    for (label, fixture) in silent_cases {
+        let result = check(level, fixture);
+        assert!(
+            result.violations.iter().all(|v| !entry.matches(v))
+                && result.passed.iter().all(|p| !entry.matches_pass(p)),
+            "[{level:?}] {id} ({label}): the silent fixture must not surface this rule; \
+             emitted:\n{violations}",
+            violations = render_violations(&result)
+        );
+    }
+}
+
+/// A pass-only row: the rule is a registered pass-only rule declared at the
+/// `Info` default (see [`run_matrix`]), every passing fixture reports it
+/// among its passed checks and never as a violation, and the silent
+/// fixtures surface it nowhere.
+fn check_passing_row(
+    level: ComplianceLevel,
+    entry: &RuleEntry,
+    passing: &[PassingCase],
+    silent: &SbomFixture,
+    extra_silent: &[SilentCase],
+) {
+    let id = entry.id;
+    let meta = rule_meta(id)
+        .unwrap_or_else(|| panic!("[{level:?}] {id} does not resolve in the rule registry"));
+    assert_eq!(
+        rule_kind(id),
+        Some(RuleKind::Pass),
+        "[{level:?}] {id} has a passing row but is no pass-only rule (PASS_RULE_IDS)"
+    );
+    assert_eq!(
+        meta.default_severity,
+        ViolationSeverity::Info,
+        "[{level:?}] {id}: a pass-only rule keeps the Info registry default, which the \
+         SARIF catalogue declares as `note`"
+    );
+    assert!(!passing.is_empty(), "[{level:?}] {id} has no passing case");
+    for case in passing {
+        let result = check(level, &case.fixture);
+        assert!(
+            result.passed.iter().any(|p| entry.matches_pass(p)),
+            "[{level:?}] {id} ({label}): the passing fixture must pass this check; \
+             emitted:\n{violations}",
+            label = case.label,
+            violations = render_violations(&result)
+        );
+        assert!(
+            result.violations.iter().all(|v| !entry.matches(v)),
+            "[{level:?}] {id} ({label}): a pass-only rule must never report a violation; \
+             emitted:\n{violations}",
+            label = case.label,
+            violations = render_violations(&result)
+        );
+    }
+    assert_silent(level, entry, silent, extra_silent);
 }

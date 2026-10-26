@@ -1,0 +1,4 @@
+# Vendored schemas are pinned by SHA-256 (see the README beside each one),
+# so their bytes must stay as published: no line-ending conversion on
+# checkout, which Windows runners otherwise apply.
+tests/fixtures/schemas/** -text

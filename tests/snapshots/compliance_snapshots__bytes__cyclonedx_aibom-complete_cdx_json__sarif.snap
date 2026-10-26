@@ -1273,24 +1273,6 @@ source: tests/compliance_snapshots.rs
               }
             },
             {
-              "id": "SBOM-AIACT-NA",
-              "name": "AiActNotApplicable",
-              "shortDescription": {
-                "text": "EU AI Act Annex IV readiness not applicable — SBOM has no ML-model or dataset components"
-              },
-              "fullDescription": {
-                "text": "EU AI Act Annex IV readiness not applicable — SBOM has no ML-model or dataset components. References: EU AI Act: Annex IV."
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
-              "help": {
-                "text": "EU AI Act Annex IV readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components to enable the assessment.\n\nWhere the fix goes:\n- CycloneDX: set components[].type to machine-learning-model (with a modelCard) for models, and give dataset components a data[] block.\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: describe models as ai_AIPackage and datasets as dataset_DatasetPackage elements.\n\nReferences:\n- EU AI Act: Annex IV (https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng)",
-                "markdown": "EU AI Act Annex IV readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components to enable the assessment.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].type to machine-learning-model (with a modelCard) for models, and give dataset components a data\\[\\] block.\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** describe models as ai\\_AIPackage and datasets as dataset\\_DatasetPackage elements.\n\n**References**\n\n- [EU AI Act: Annex IV](<https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng>)"
-              }
-            },
-            {
               "id": "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION",
               "name": "AiActModelDescription",
               "shortDescription": {
@@ -1450,24 +1432,6 @@ source: tests/compliance_snapshots.rs
               "help": {
                 "text": "Components with pkg:huggingface PURLs or model-card references look like ML models; leaving them untyped hides them from every AI-BOM readiness check. Type them as machine-learning models and attach the AI metadata.\n\nWhere the fix goes:\n- CycloneDX: set components[].type to machine-learning-model and add a modelCard.\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: make the element an ai_AIPackage (or set software_primaryPurpose to model).\n\nReferences:\n- EU AI Act: Annex IV: applicability (https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng)",
                 "markdown": "Components with pkg:huggingface PURLs or model-card references look like ML models; leaving them untyped hides them from every AI-BOM readiness check. Type them as machine-learning models and attach the AI metadata.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].type to machine-learning-model and add a modelCard.\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** make the element an ai\\_AIPackage (or set software\\_primaryPurpose to model).\n\n**References**\n\n- [EU AI Act: Annex IV: applicability](<https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-NA",
-              "name": "BsiSbomForAiNotApplicable",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI minimum-elements readiness not applicable — SBOM has no ML-model or dataset components"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI minimum-elements readiness not applicable — SBOM has no ML-model or dataset components. References: BSI/G7 AI-SBOM: Applicability."
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "BSI/G7 SBOM-for-AI minimum-elements readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components to enable the assessment.\n\nWhere the fix goes:\n- CycloneDX: set components[].type to machine-learning-model (with a modelCard) for models, and give dataset components a data[] block.\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: describe models as ai_AIPackage and datasets as dataset_DatasetPackage elements.\n\nReferences:\n- BSI/G7 AI-SBOM: Applicability (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "BSI/G7 SBOM-for-AI minimum-elements readiness applies only to SBOMs that describe AI/ML systems. Add machine-learning-model or dataset components to enable the assessment.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].type to machine-learning-model (with a modelCard) for models, and give dataset components a data\\[\\] block.\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** describe models as ai\\_AIPackage and datasets as dataset\\_DatasetPackage elements.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Applicability](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
               }
             },
             {
@@ -1990,7 +1954,7 @@ source: tests/compliance_snapshots.rs
       "results": [
         {
           "ruleId": "SBOM-BSIAI-META-SIGNATURE",
-          "ruleIndex": 85,
+          "ruleIndex": 83,
           "level": "note",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Metadata readiness: SBOM carries no document signature (integrity attestation recommended) (Requirement: BSI/G7 SBOM-for-AI — Metadata / Signature) [Element: unknown]"
@@ -2025,7 +1989,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-SYS-PRODUCER",
-          "ruleIndex": 87,
+          "ruleIndex": 85,
           "level": "warning",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] System-Level readiness: no producer/supplier of the AI system is declared (Requirement: BSI/G7 SBOM-for-AI — System-Level / Producer) [Element: unknown]"
@@ -2060,7 +2024,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-SYS-DATAFLOW",
-          "ruleIndex": 88,
+          "ruleIndex": 86,
           "level": "note",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] System-Level readiness: AI-system data-flow / usage / input-output description is not declared (no SBOM field carries it today) (Requirement: BSI/G7 SBOM-for-AI — System-Level / Data flow & usage) [Element: unknown]"
@@ -2095,7 +2059,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-MODEL-IDENTIFIER",
-          "ruleIndex": 91,
+          "ruleIndex": 89,
           "level": "error",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Model identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): sentiment-classifier (Requirement: BSI/G7 SBOM-for-AI — Models / Model identifier) [Element: sentiment-classifier]"
@@ -2132,7 +2096,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-MODEL-LICENSE",
-          "ruleIndex": 98,
+          "ruleIndex": 96,
           "level": "warning",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Model license readiness: 1 component(s) declare no license: sentiment-classifier (Requirement: BSI/G7 SBOM-for-AI — Models / Model license) [Element: sentiment-classifier]"
@@ -2169,7 +2133,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-DATASET-IDENTIFIER",
-          "ruleIndex": 100,
+          "ruleIndex": 98,
           "level": "error",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Dataset identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): product-reviews-1M (Requirement: BSI/G7 SBOM-for-AI — Datasets / Dataset identifier) [Element: product-reviews-1M]"
@@ -2206,7 +2170,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-DATASET-HASH",
-          "ruleIndex": 101,
+          "ruleIndex": 99,
           "level": "warning",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Dataset hash value readiness: 1 component(s) carry no hash value: product-reviews-1M (Requirement: BSI/G7 SBOM-for-AI — Datasets / Dataset hash value) [Element: product-reviews-1M]"
@@ -2243,7 +2207,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-DATASET-LICENSE",
-          "ruleIndex": 102,
+          "ruleIndex": 100,
           "level": "warning",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Dataset license readiness: 1 component(s) declare no license: product-reviews-1M (Requirement: BSI/G7 SBOM-for-AI — Datasets / Dataset license) [Element: product-reviews-1M]"
@@ -2280,7 +2244,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-DATASET-PROVENANCE",
-          "ruleIndex": 104,
+          "ruleIndex": 102,
           "level": "warning",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Provenance & intended use readiness: 1 component(s) declare no provenance / intended-use: product-reviews-1M (Requirement: BSI/G7 SBOM-for-AI — Datasets / Provenance & intended use) [Element: product-reviews-1M]"
@@ -2317,7 +2281,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-INFRA-RUNTIME",
-          "ruleIndex": 105,
+          "ruleIndex": 103,
           "level": "note",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Infrastructure readiness: no ML component links to its runtime / framework dependencies (no dependency edge or BOM/HBOM reference) (Requirement: BSI/G7 SBOM-for-AI — Infrastructure / Runtime & framework) [Element: unknown]"
@@ -2352,7 +2316,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-SEC-CONTROLS",
-          "ruleIndex": 106,
+          "ruleIndex": 104,
           "level": "note",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Security readiness: no AI-specific security controls are declared (no SBOM field carries them today) (Requirement: BSI/G7 SBOM-for-AI — Security / AI security controls) [Element: unknown]"
@@ -2387,7 +2351,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-SEC-EXPLOITABILITY",
-          "ruleIndex": 107,
+          "ruleIndex": 105,
           "level": "note",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Security readiness: no exploitability reference is declared (no SBOM field carries it today) (Requirement: BSI/G7 SBOM-for-AI — Security / Exploitability reference) [Element: unknown]"

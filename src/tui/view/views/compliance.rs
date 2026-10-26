@@ -470,11 +470,20 @@ fn render_category_breakdown(frame: &mut Frame, area: Rect, result: &ComplianceR
         .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
         .split(area);
 
-    // Left panel: status line + top category breakdown bars
-    let mut lines: Vec<Line> = vec![Line::from(vec![Span::styled(
+    // Left panel: status line (with the passed-check count, if any) + top
+    // category breakdown bars
+    let mut status_line = vec![Span::styled(
         format!("  {status_text}"),
         Style::default().fg(status_color).bold(),
-    )])];
+    )];
+    if let Some(passed) = passed_count_span(result) {
+        status_line.push(Span::styled(
+            "  \u{00b7}  ",
+            Style::default().fg(scheme.muted),
+        ));
+        status_line.push(passed);
+    }
+    let mut lines: Vec<Line> = vec![Line::from(status_line)];
 
     // Conformity-assessment route (CRA-P4.3): only when product class pinned.
     if let Some(summary) = result.conformity_summary.as_ref() {
@@ -626,7 +635,7 @@ fn compact_verdict_line(result: &ComplianceResult) -> Line<'static> {
             format!("{count} {noun}s")
         }
     };
-    Line::from(vec![
+    let mut spans = vec![
         Span::styled(
             format!(" {status_text}"),
             Style::default().fg(status_color).bold(),
@@ -646,7 +655,24 @@ fn compact_verdict_line(result: &ComplianceResult) -> Line<'static> {
             format!("{} info", result.info_count),
             count_style(result.info_count, scheme.info),
         ),
-    ])
+    ];
+    if let Some(passed) = passed_count_span(result) {
+        spans.push(Span::raw("  "));
+        spans.push(passed);
+    }
+    Line::from(spans)
+}
+
+/// "N passed" in the success color, when `result` passed any check. Passed
+/// checks are no violations: the views count them and list none.
+fn passed_count_span(result: &ComplianceResult) -> Option<Span<'static>> {
+    let scheme = colors();
+    (!result.passed.is_empty()).then(|| {
+        Span::styled(
+            format!("{} passed", result.passed.len()),
+            Style::default().fg(scheme.success),
+        )
+    })
 }
 
 /// Compact one-line verdict for short terminals: standard name in the title,

@@ -250,12 +250,21 @@ fn rules(result: &ComplianceResult) -> Vec<(&'static str, ViolationSeverity)> {
         .collect()
 }
 
+/// The rules of the checks `result` passed.
+fn passes(result: &ComplianceResult) -> Vec<&'static str> {
+    result.passed.iter().map(|p| p.rule_id).collect()
+}
+
 fn findings(result: &ComplianceResult) -> Vec<String> {
-    result
+    let violations = result
         .violations
         .iter()
-        .map(|v| format!("{:?} {}: {}", v.severity, v.rule_id, v.message))
-        .collect()
+        .map(|v| format!("{:?} {}: {}", v.severity, v.rule_id, v.message));
+    let passes = result
+        .passed
+        .iter()
+        .map(|p| format!("Pass {}: {}", p.rule_id, p.message));
+    violations.chain(passes).collect()
 }
 
 /// The CNSA 2.0 outcome for one hybrid: approved, or the rule it fails and
@@ -269,7 +278,7 @@ enum Cnsa {
 /// ML-DSA-87 and its classical part is a CNSA 1.0 algorithm (ECDH/ECDSA
 /// P-384, RSA/DH of 3072 bits or more), and otherwise names the failing
 /// parts. NIST PQC accepts every hybrid whose post-quantum part it
-/// approves, with an Info, and warns on one whose post-quantum part it does
+/// approves, as a passed check, and warns on one whose post-quantum part it does
 /// not recognize instead of failing the classical part.
 #[test]
 fn hybrid_algorithm_verdicts_under_both_profiles() {
@@ -402,22 +411,26 @@ fn hybrid_algorithm_verdicts_under_both_profiles() {
             &[]
         };
         assert_eq!(errors, inventory_gate, "{name}: {:#?}", findings(&pqc));
-        let expected = if pq_unrecognized {
-            ("SBOM-PQC-ALG-UNKNOWN", ViolationSeverity::Warning)
+        // An unverifiable hybrid warns; an approved one is a passed check.
+        if pq_unrecognized {
+            assert!(
+                rules(&pqc).contains(&("SBOM-PQC-ALG-UNKNOWN", ViolationSeverity::Warning)),
+                "{name}: expected SBOM-PQC-ALG-UNKNOWN in {:#?}",
+                findings(&pqc)
+            );
         } else {
-            ("SBOM-PQC-010", ViolationSeverity::Info)
-        };
-        assert!(
-            rules(&pqc).contains(&expected),
-            "{name}: expected {expected:?} in {:#?}",
-            findings(&pqc)
-        );
+            assert!(
+                passes(&pqc).contains(&"SBOM-PQC-010"),
+                "{name}: expected the SBOM-PQC-010 pass in {:#?}",
+                findings(&pqc)
+            );
+        }
     }
 }
 
 /// A declared hybrid combiner whose family names no hybrid (or one of its
 /// parts) takes the hybrid its name names; one whose parts cannot be
-/// identified warns under NIST PQC instead of passing with an Info.
+/// identified warns under NIST PQC instead of passing the check.
 #[test]
 fn declared_combiners_take_the_hybrid_their_name_names() {
     let combiner = |name: &str, family: Option<&str>, parameter: Option<&str>| {
@@ -474,7 +487,7 @@ fn declared_combiners_take_the_hybrid_their_name_names() {
         findings(&pqc)
     );
     assert!(
-        !rules(&pqc).iter().any(|(rule, _)| *rule == "SBOM-PQC-010"),
+        !passes(&pqc).contains(&"SBOM-PQC-010"),
         "{:#?}",
         findings(&pqc)
     );
