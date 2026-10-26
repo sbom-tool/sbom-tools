@@ -205,7 +205,9 @@ pub fn escape_html_attr(s: &str) -> String {
 /// by unescaped pipe characters. This function also handles newlines
 /// and backticks that could break formatting, removes control characters and
 /// bidi controls, and escapes a leading `:` so a line of the report printed
-/// to a CI log cannot start a workflow command.
+/// to a CI log cannot start a workflow command. A backslash is escaped too:
+/// otherwise `\|` in the input would come out as `\\|`, an escaped backslash
+/// followed by a live pipe.
 ///
 /// # Examples
 ///
@@ -221,6 +223,7 @@ pub fn escape_markdown_table(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     for c in s.chars() {
         match c {
+            '\\' => result.push_str("\\\\"),
             '|' => result.push_str("\\|"),
             '\n' => result.push(' '),
             '\r' => {}
@@ -242,7 +245,10 @@ pub fn escape_markdown_table(s: &str) -> String {
 ///
 /// Escapes characters that have special meaning in Markdown, removes control
 /// characters and bidi controls, and escapes a leading `:` so a line of the
-/// report printed to a CI log cannot start a workflow command.
+/// report printed to a CI log cannot start a workflow command. The backslash
+/// is escaped as well: an input of `\<img …>` would otherwise come out as
+/// `\\<img …\>`, which CommonMark reads as an escaped backslash followed by a
+/// live HTML tag.
 ///
 /// # Examples
 ///
@@ -251,12 +257,14 @@ pub fn escape_markdown_table(s: &str) -> String {
 ///
 /// assert_eq!(escape_markdown_inline("**bold**"), "\\*\\*bold\\*\\*");
 /// assert_eq!(escape_markdown_inline("[link](url)"), "\\[link\\](url)");
+/// assert_eq!(escape_markdown_inline("\\*"), "\\\\\\*");
 /// ```
 #[must_use]
 pub fn escape_markdown_inline(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     for c in s.chars() {
         match c {
+            '\\' => result.push_str("\\\\"),
             '*' => result.push_str("\\*"),
             '_' => result.push_str("\\_"),
             '`' => result.push_str("\\`"),
@@ -284,13 +292,16 @@ pub fn escape_markdown_inline(s: &str) -> String {
 /// Escape a string for use in Markdown list items.
 ///
 /// Similar to inline escaping but preserves some formatting. Control
-/// characters and bidi controls are removed, and a leading `:` is escaped so a
-/// line of the report printed to a CI log cannot start a workflow command.
+/// characters and bidi controls are removed, a backslash is escaped (so it
+/// cannot cancel the escape of the character after it), and a leading `:` is
+/// escaped so a line of the report printed to a CI log cannot start a
+/// workflow command.
 #[must_use]
 pub fn escape_markdown_list(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     for c in s.chars() {
         match c {
+            '\\' => result.push_str("\\\\"),
             '*' => result.push_str("\\*"),
             '`' => result.push_str("\\`"),
             '[' => result.push_str("\\["),
@@ -413,6 +424,47 @@ mod tests {
         assert_eq!(escape_markdown_list("item"), "item");
         assert_eq!(escape_markdown_list("multi\nline"), "multi; line");
         assert_eq!(escape_markdown_list("[link]"), "\\[link\\]");
+    }
+
+    /// A backslash in the input must not cancel the escape of the character
+    /// after it: CommonMark reads `\\<` as an escaped backslash followed by a
+    /// live `<`, and `\\*` as one followed by an emphasis marker.
+    #[test]
+    fn test_markdown_escapers_escape_the_backslash_itself() {
+        let bypass = "\\<img src=x onerror=alert(1)>";
+        assert_eq!(
+            escape_markdown_inline(bypass),
+            "\\\\\\<img src=x onerror=alert(1)\\>"
+        );
+        assert_eq!(
+            escape_markdown_list(bypass),
+            "\\\\\\<img src=x onerror=alert(1)\\>"
+        );
+        assert_eq!(escape_markdown_table("a\\|b"), "a\\\\\\|b");
+        assert_eq!(escape_markdown_inline("\\*em\\*"), "\\\\\\*em\\\\\\*");
+        // A plain backslash, as in a Windows path, renders as itself.
+        assert_eq!(
+            escape_markdown_inline("C:\\Program Files"),
+            "C:\\\\Program Files"
+        );
+        for escaper in [
+            escape_markdown_inline as fn(&str) -> String,
+            escape_markdown_list,
+            escape_markdown_table,
+        ] {
+            for backslashes in 1..=3 {
+                let input = format!("{}[x](javascript:alert(1))", "\\".repeat(backslashes));
+                let out = escaper(&input);
+                // Every special character is preceded by an odd run of
+                // backslashes, so none of them is live.
+                for (at, c) in out.char_indices() {
+                    if matches!(c, '[' | ']' | '<' | '>') {
+                        let run = out[..at].chars().rev().take_while(|&b| b == '\\').count();
+                        assert_eq!(run % 2, 1, "{c:?} at {at} is live in {out:?}");
+                    }
+                }
+            }
+        }
     }
 
     #[test]
