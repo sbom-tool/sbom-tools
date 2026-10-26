@@ -531,6 +531,51 @@ fn compliance_overview_marks_na_standards_muted_not_green() {
     );
 }
 
+/// Passed checks are no violations: the compliance view counts them on the
+/// verdict line, in the full and the compact layout, and lists none.
+#[test]
+fn compliance_verdict_counts_passed_checks_and_lists_none() {
+    use crate::quality::{ComplianceLevel, ComplianceResult, PassedCheck};
+
+    let pass = |name: &str| PassedCheck {
+        rule_id: "SBOM-PQC-009",
+        message: format!("'{name}' uses NIST-approved PQC algorithm (FIPS 203/204/205)"),
+        element: Some(name.to_string()),
+        component_id: Some(format!("crypto/algorithm/{name}")),
+        finding_detail: None,
+        requirement: "FIPS 203/204/205: approved".to_string(),
+        standard_refs: Vec::new(),
+    };
+    let mut app = demo_view_app(ViewTab::Compliance);
+    let pqc_idx = ComplianceLevel::all()
+        .iter()
+        .position(|l| *l == ComplianceLevel::NistPqc)
+        .expect("NIST PQC must be in ComplianceLevel::all()");
+    let results: Vec<ComplianceResult> = ComplianceLevel::all()
+        .iter()
+        .map(|level| {
+            let result = ComplianceResult::new(*level, Vec::new());
+            if *level == ComplianceLevel::NistPqc {
+                result.with_passed(vec![pass("ML-KEM-1024"), pass("ML-DSA-87")])
+            } else {
+                result
+            }
+        })
+        .collect();
+    app.compliance_results = Some(results);
+    app.compliance_state.selected_standard = pqc_idx;
+
+    // 120x40 renders the full breakdown, 80x24 the compact verdict line.
+    for (width, height) in [(120, 40), (80, 24)] {
+        let text = render_to_text(width, height, |frame| render(frame, &mut app));
+        assert!(text.contains("2 passed"), "{width}x{height}:\n{text}");
+        assert!(
+            !text.contains("NIST-approved"),
+            "no pass is listed as a violation ({width}x{height}):\n{text}"
+        );
+    }
+}
+
 #[test]
 fn crypto_list_scrolls_the_selection_into_view() {
     let (sbom, profile) = crate::tui::test_support::cbom_single();

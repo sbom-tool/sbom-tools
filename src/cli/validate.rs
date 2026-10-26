@@ -348,6 +348,15 @@ fn write_multi_compliance_summary(
     Ok(())
 }
 
+/// The "N checks passed" line under a result's status, when it passed any.
+fn passed_checks_line(result: &ComplianceResult) -> Option<String> {
+    match result.passed.len() {
+        0 => None,
+        1 => Some("1 check passed".to_string()),
+        n => Some(format!("{n} checks passed")),
+    }
+}
+
 /// Render a compliance result as plain text, one finding per three lines:
 /// the finding, its message, and a `fix:` line with the remediation for the
 /// SBOM's format.
@@ -379,6 +388,10 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
             result.warning_count,
             result.info_count
         ));
+    }
+    // Passed checks are no findings: a count, never a finding line.
+    if let Some(passed) = passed_checks_line(result) {
+        lines.push(passed);
     }
     lines.push(String::new());
 
@@ -439,6 +452,40 @@ mod tests {
     #[test]
     fn print_ntia_validation_does_not_panic_on_empty_sbom() {
         print_ntia_validation(&NormalizedSbom::default());
+    }
+
+    /// The text report counts passed checks under the status and lists none
+    /// of them as a finding.
+    #[test]
+    fn text_counts_passed_checks_and_lists_no_pass() {
+        let pass = |name: &str| crate::quality::PassedCheck {
+            rule_id: "SBOM-PQC-009",
+            message: format!("'{name}' uses NIST-approved PQC algorithm (FIPS 203/204/205)"),
+            element: Some(name.to_string()),
+            component_id: Some(format!("crypto/algorithm/{name}")),
+            finding_detail: None,
+            requirement: "FIPS 203/204/205: approved".to_string(),
+            standard_refs: Vec::new(),
+        };
+        let result = ComplianceResult::new(ComplianceLevel::NistPqc, Vec::new())
+            .with_passed(vec![pass("ML-KEM-1024"), pass("ML-DSA-87")]);
+        let text = format_compliance_text(&result);
+        assert_eq!(
+            text.lines().take(3).collect::<Vec<_>>(),
+            [
+                "Compliance (NIST PQC Readiness)",
+                "Status: COMPLIANT (0 errors, 0 warnings, 0 info)",
+                "2 checks passed",
+            ],
+            "{text}"
+        );
+        assert!(text.contains("No violations found."), "{text}");
+        assert!(!text.contains("NIST-approved"), "no pass is listed: {text}");
+
+        let none = ComplianceResult::new(ComplianceLevel::NistPqc, Vec::new());
+        assert!(!format_compliance_text(&none).contains("passed"));
+        let one = none.with_passed(vec![pass("XMSS")]);
+        assert!(format_compliance_text(&one).contains("\n1 check passed\n"));
     }
 
     #[test]
