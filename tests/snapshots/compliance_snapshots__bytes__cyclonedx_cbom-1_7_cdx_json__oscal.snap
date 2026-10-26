@@ -26,13 +26,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "CNSA 2.0 compliance roll-up",
-            "uuid": "bcd09644-1307-5272-8f68-8fffb6ed5be8"
+            "uuid": "ada234fc-89a5-5ee5-9075-27f0395ac3f2"
           },
           {
             "description": "'ML-KEM-768' quantum level 3 < 5, CNSA 2.0 requires Level 5",
             "related-observations": [
               {
-                "observation-uuid": "6be70e47-0769-526e-8940-4a21fb306f91"
+                "observation-uuid": "fb8829fc-dc1a-5862-a940-31f0bd69cfdb"
               }
             ],
             "target": {
@@ -43,13 +43,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-007",
-            "uuid": "d9426183-2c5d-5ab3-bf01-e324deb110b0"
+            "uuid": "a2e50fd0-64da-5a0f-b99e-40e05dbb40c7"
           },
           {
             "description": "'ML-KEM-768' uses ML-KEM-768, CNSA 2.0 requires ML-KEM-1024 only",
             "related-observations": [
               {
-                "observation-uuid": "4c8bee07-1ca8-5b6a-991c-b08711c0828c"
+                "observation-uuid": "fb0e85db-b27a-5b9d-be1b-2465bd37a6b7"
               }
             ],
             "target": {
@@ -60,13 +60,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-003",
-            "uuid": "c26f6673-b16c-5486-aba0-ca9174514b32"
+            "uuid": "576aa26b-d05c-58ae-80ba-d16564d7e4ab"
           },
           {
             "description": "'ML-DSA-65' quantum level 3 < 5, CNSA 2.0 requires Level 5",
             "related-observations": [
               {
-                "observation-uuid": "1bb8239a-9274-51c6-9394-53f2135fa9a2"
+                "observation-uuid": "97c0dc15-d17a-5150-8cdd-c9d02750e64e"
               }
             ],
             "target": {
@@ -77,13 +77,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-007",
-            "uuid": "6b9d78a7-752e-528f-9f0b-e684c4fb3716"
+            "uuid": "f6a5571a-4b81-5219-beb8-a449262bc6c3"
           },
           {
             "description": "'ML-DSA-65' uses ML-DSA-65, CNSA 2.0 requires ML-DSA-87 only",
             "related-observations": [
               {
-                "observation-uuid": "845c61e8-97f7-5990-8991-b82fad7c2ccc"
+                "observation-uuid": "e6689049-6b50-5203-bbdb-026e9fe553b9"
               }
             ],
             "target": {
@@ -94,13 +94,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-004",
-            "uuid": "e5de9e56-81fb-57e9-acd4-7b68bd203f3a"
+            "uuid": "ab403f7d-91cc-5b73-b332-f91d996411a0"
           },
           {
             "description": "'SLH-DSA-SHAKE-256s' uses SLH-DSA, which is NIST-approved (FIPS 205) but not part of CNSA 2.0",
             "related-observations": [
               {
-                "observation-uuid": "6951efc0-aa6c-57b2-80c3-850a59d116c9"
+                "observation-uuid": "8aab58b5-d0ed-558f-89f5-f07778197876"
               }
             ],
             "target": {
@@ -111,13 +111,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-008",
-            "uuid": "7e6344a2-918c-5eff-95f9-155eeb65de3f"
+            "uuid": "4d902b2a-1026-56fd-8fc6-fcf54144c217"
           },
           {
             "description": "'X25519' (ECDH) is quantum-vulnerable, must migrate to CNSA 2.0 approved algorithm",
             "related-observations": [
               {
-                "observation-uuid": "97092ad5-dce6-5fa9-b754-864880da7f5f"
+                "observation-uuid": "219f2c5c-b79e-5624-9643-b8ee672b6215"
               }
             ],
             "target": {
@@ -128,13 +128,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-006",
-            "uuid": "aaa3afec-f1e1-56e9-8ae6-5f414311ed73"
+            "uuid": "28868e81-aeef-5565-b716-f6b8a3b55435"
           },
           {
             "description": "'X25519-ML-KEM-768' quantum level 3 < 5, CNSA 2.0 requires Level 5",
             "related-observations": [
               {
-                "observation-uuid": "46a975ee-69fe-59cb-96ec-0a61cd181641"
+                "observation-uuid": "62d42cf7-a0cd-53f5-b203-d8fefb9de912"
               }
             ],
             "target": {
@@ -145,13 +145,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-007",
-            "uuid": "1752f8da-ae41-5004-85b0-16a551e5c8b5"
+            "uuid": "0a09665e-98df-5e36-a44a-13c01f1dc1c6"
           },
           {
             "description": "'X25519-ML-KEM-768' is a hybrid combiner whose component algorithms cannot be identified, so it cannot be shown to be on the CNSA 2.0 allowlist",
             "related-observations": [
               {
-                "observation-uuid": "3220ae25-65d9-5fd3-9c05-68b65d7001f2"
+                "observation-uuid": "d5952ed0-0744-562c-9b87-525951bf3312"
               }
             ],
             "target": {
@@ -162,13 +162,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-UNKNOWN",
-            "uuid": "6473c02f-bbd6-5ffb-af73-12ae7420d5b6"
+            "uuid": "b540a580-74da-586e-95d1-6df5c4f6d2ec"
           },
           {
             "description": "'ECDSA-P521' (ECDSA) is quantum-vulnerable, must migrate to CNSA 2.0 approved algorithm",
             "related-observations": [
               {
-                "observation-uuid": "66047358-aa2c-5f10-bc3e-30dde9e425c5"
+                "observation-uuid": "b0c49624-58db-592f-84a7-a42f91e1afb2"
               }
             ],
             "target": {
@@ -179,13 +179,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-006",
-            "uuid": "bb1ab6e0-dd46-5b30-9063-e63b05431c7c"
+            "uuid": "42a3c7dd-4f3a-5628-9d21-295b6836e27f"
           },
           {
             "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384_ML_KEM_768' includes non-CNSA 2.0 algorithms: ML-KEM-768",
             "related-observations": [
               {
-                "observation-uuid": "ff54bd28-a0fe-56ed-a361-99fad599b420"
+                "observation-uuid": "7ecac478-b7bd-5bcd-ba3a-f37a718bcf42"
               }
             ],
             "target": {
@@ -196,13 +196,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-PROTO-002",
-            "uuid": "4ae0808c-e962-5516-ba17-369cefd7afa4"
+            "uuid": "bca247cf-f493-544c-ae48-7342f02db0fb"
           },
           {
             "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384' includes non-CNSA 2.0 algorithms: ECDH",
             "related-observations": [
               {
-                "observation-uuid": "2e7e0015-365b-5319-a78a-967485240b77"
+                "observation-uuid": "dab3033c-715b-5fc5-a477-b2e6cd29eb7c"
               }
             ],
             "target": {
@@ -213,13 +213,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-PROTO-002",
-            "uuid": "2646605e-b98e-5f95-b507-a67eac96b755"
+            "uuid": "ab380ede-c128-55d2-acdb-339fbc4947db"
           },
           {
             "description": "Protocol 'TLS 1.3 (PQC Hybrid)' has crypto references that cannot be resolved or classified: crypto/algorithm/hybrid-kem; they cannot be shown to be on the CNSA 2.0 allowlist",
             "related-observations": [
               {
-                "observation-uuid": "15fb8942-aed8-5e80-861b-bcacf34d49a8"
+                "observation-uuid": "e1df3a55-f69f-5bc6-b523-46e1d125c028"
               }
             ],
             "target": {
@@ -230,7 +230,7 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-PROTO-UNKNOWN",
-            "uuid": "091f565f-7cd7-5bad-95a8-6f90c25a050b"
+            "uuid": "2bf74a7b-9593-500d-9f36-5fe39e632634"
           }
         ],
         "observations": [
@@ -271,7 +271,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "6be70e47-0769-526e-8940-4a21fb306f91"
+            "uuid": "fb8829fc-dc1a-5862-a940-31f0bd69cfdb"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -310,7 +310,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "4c8bee07-1ca8-5b6a-991c-b08711c0828c"
+            "uuid": "fb0e85db-b27a-5b9d-be1b-2465bd37a6b7"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -349,7 +349,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "1bb8239a-9274-51c6-9394-53f2135fa9a2"
+            "uuid": "97c0dc15-d17a-5150-8cdd-c9d02750e64e"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -388,7 +388,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "845c61e8-97f7-5990-8991-b82fad7c2ccc"
+            "uuid": "e6689049-6b50-5203-bbdb-026e9fe553b9"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -427,7 +427,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "6951efc0-aa6c-57b2-80c3-850a59d116c9"
+            "uuid": "8aab58b5-d0ed-558f-89f5-f07778197876"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -466,7 +466,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "97092ad5-dce6-5fa9-b754-864880da7f5f"
+            "uuid": "219f2c5c-b79e-5624-9643-b8ee672b6215"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -505,7 +505,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "46a975ee-69fe-59cb-96ec-0a61cd181641"
+            "uuid": "62d42cf7-a0cd-53f5-b203-d8fefb9de912"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -544,7 +544,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "3220ae25-65d9-5fd3-9c05-68b65d7001f2"
+            "uuid": "d5952ed0-0744-562c-9b87-525951bf3312"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -583,7 +583,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "66047358-aa2c-5f10-bc3e-30dde9e425c5"
+            "uuid": "b0c49624-58db-592f-84a7-a42f91e1afb2"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -622,7 +622,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "ff54bd28-a0fe-56ed-a361-99fad599b420"
+            "uuid": "7ecac478-b7bd-5bcd-ba3a-f37a718bcf42"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -661,7 +661,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "2e7e0015-365b-5319-a78a-967485240b77"
+            "uuid": "dab3033c-715b-5fc5-a477-b2e6cd29eb7c"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -700,7 +700,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "15fb8942-aed8-5e80-861b-bcacf34d49a8"
+            "uuid": "e1df3a55-f69f-5bc6-b523-46e1d125c028"
           }
         ],
         "props": [
@@ -755,7 +755,7 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — CNSA 2.0",
-        "uuid": "b717b47d-0605-508b-8a7d-c805c02b1e0f"
+        "uuid": "c9f60d6e-8bcd-54f0-b7e1-483715f041ec"
       },
       {
         "description": "Validation results for NIST PQC Readiness, derived only from the supplied SBOM.",
@@ -770,13 +770,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "NIST PQC Readiness compliance roll-up",
-            "uuid": "3906409e-2309-5bf7-8c67-04c264bb61a3"
+            "uuid": "7b906c83-0cf0-590f-9e48-e47cd30e17df"
           },
           {
             "description": "'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
             "related-observations": [
               {
-                "observation-uuid": "6b681638-2fc2-5b09-9f47-950c083c156c"
+                "observation-uuid": "7e6fc5b3-68a0-536d-a214-d53fd3f1f600"
               }
             ],
             "target": {
@@ -787,13 +787,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-009",
-            "uuid": "377ca3cd-1750-5f6e-8f65-53c7d8333aaf"
+            "uuid": "5a41752c-1e7c-5a8f-8ea6-5ff838afe6c8"
           },
           {
             "description": "'ML-KEM-768' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
             "related-observations": [
               {
-                "observation-uuid": "79563017-05b7-5557-916e-fdc3c661e449"
+                "observation-uuid": "06be73b5-2084-5588-b1cf-56fb1f29bdbe"
               }
             ],
             "target": {
@@ -804,13 +804,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-009",
-            "uuid": "d8d4d54c-e74e-5237-bde1-2054e09ef801"
+            "uuid": "e1c6867f-0f0e-5f40-9159-f21400bc304a"
           },
           {
             "description": "'ML-DSA-87' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
             "related-observations": [
               {
-                "observation-uuid": "1781172a-b729-5e33-9331-8d226c2320e6"
+                "observation-uuid": "8eb9be32-0a20-5396-a2f1-24e160d75f0f"
               }
             ],
             "target": {
@@ -821,13 +821,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-009",
-            "uuid": "ca143101-b0fd-527b-8c90-e2526258a6e9"
+            "uuid": "6b2e9128-2148-51dc-93e2-ce5812bcd811"
           },
           {
             "description": "'ML-DSA-65' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
             "related-observations": [
               {
-                "observation-uuid": "6ad0e99a-03bf-5c0f-b2d1-93e3b065b350"
+                "observation-uuid": "44acb7c8-67a4-5456-9211-413c29591f22"
               }
             ],
             "target": {
@@ -838,13 +838,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-009",
-            "uuid": "e4b812e3-82a7-5413-b153-84fe203ac2e5"
+            "uuid": "2405840a-ebc3-532f-9a94-02c7921b8188"
           },
           {
             "description": "'SLH-DSA-SHAKE-256s' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
             "related-observations": [
               {
-                "observation-uuid": "837d87ff-5316-50f5-8972-8a3531b87c90"
+                "observation-uuid": "5fca561a-2a2b-550c-a47d-a4a30dbffe09"
               }
             ],
             "target": {
@@ -855,13 +855,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-009",
-            "uuid": "f64ce2aa-4b52-53a8-81ae-95672d470e6b"
+            "uuid": "893198dc-8115-57cf-963d-a323726b5f36"
           },
           {
             "description": "'X25519' (ECDH) is quantum-vulnerable and must migrate to PQC (IR 8547)",
             "related-observations": [
               {
-                "observation-uuid": "f2299261-287c-5275-834d-9c797e87e446"
+                "observation-uuid": "f7832ea4-184a-546f-b849-54fae5327766"
               }
             ],
             "target": {
@@ -872,13 +872,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-001",
-            "uuid": "7fc29e38-db32-5c61-bde5-ad060424ac2a"
+            "uuid": "5787679b-6754-54db-b07d-38fbffd1faed"
           },
           {
             "description": "'X25519-ML-KEM-768' is a hybrid PQC combiner — good migration practice",
             "related-observations": [
               {
-                "observation-uuid": "b3406bf7-ceae-522f-8339-d71c019b4944"
+                "observation-uuid": "83c08d48-4408-5b0c-a39a-ff2e3f2fce11"
               }
             ],
             "target": {
@@ -889,13 +889,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-010",
-            "uuid": "df250d74-0b28-5119-b59b-ac267b6c930c"
+            "uuid": "7dc0b351-146a-553f-962a-48c96c5183fe"
           },
           {
             "description": "'ECDSA-P521' (ECDSA) is quantum-vulnerable and must migrate to PQC (IR 8547)",
             "related-observations": [
               {
-                "observation-uuid": "07cb6768-fe12-549b-83cb-38c1e972d163"
+                "observation-uuid": "d42970ff-52c8-50ac-b6a1-c5f499fb9ef4"
               }
             ],
             "target": {
@@ -906,13 +906,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-001",
-            "uuid": "3b9ee5f3-b7d2-5cc8-898a-4abc2beac859"
+            "uuid": "5c906be7-9347-580a-91e1-a8780b176154"
           },
           {
             "description": "'XMSS' uses NIST-approved PQC algorithm (SP 800-208 stateful hash-based signature)",
             "related-observations": [
               {
-                "observation-uuid": "725d4b19-d292-5e41-bd25-5ec44e149880"
+                "observation-uuid": "b70fe4ab-87fd-5495-bb26-e25b217469fa"
               }
             ],
             "target": {
@@ -923,13 +923,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-009",
-            "uuid": "a8c60bcb-a940-56d9-b950-14fad86b358c"
+            "uuid": "28316281-d04c-5036-9e15-e10ddbd64805"
           },
           {
             "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384' includes broken or quantum-vulnerable algorithms: ECDH (quantum-vulnerable)",
             "related-observations": [
               {
-                "observation-uuid": "ec65c894-5bce-567a-a4a8-7e719570dc57"
+                "observation-uuid": "132d664a-82dc-5fc2-92e7-e0602565967d"
               }
             ],
             "target": {
@@ -940,13 +940,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-PROTO-002",
-            "uuid": "9be32148-29b2-5d85-a120-fea9de784139"
+            "uuid": "3eeb5d07-b95d-5ba5-a6af-305211d8c76a"
           },
           {
             "description": "Protocol 'TLS 1.3 (PQC Hybrid)' has crypto evidence that cannot be resolved or classified: crypto/algorithm/hybrid-kem; unable to verify PQC readiness",
             "related-observations": [
               {
-                "observation-uuid": "ea8df376-8e30-5c4f-aec0-b4eac59fe4b4"
+                "observation-uuid": "b076fa48-ee77-5ef5-8a76-cb809390766e"
               }
             ],
             "target": {
@@ -957,7 +957,7 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-PROTO-UNKNOWN",
-            "uuid": "40fc51bd-b017-59f2-ac53-2e61d3190e69"
+            "uuid": "9847b23d-fb74-5086-b838-45f83646bbb9"
           }
         ],
         "observations": [
@@ -998,7 +998,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "6b681638-2fc2-5b09-9f47-950c083c156c"
+            "uuid": "7e6fc5b3-68a0-536d-a214-d53fd3f1f600"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1037,7 +1037,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "79563017-05b7-5557-916e-fdc3c661e449"
+            "uuid": "06be73b5-2084-5588-b1cf-56fb1f29bdbe"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1076,7 +1076,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "1781172a-b729-5e33-9331-8d226c2320e6"
+            "uuid": "8eb9be32-0a20-5396-a2f1-24e160d75f0f"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1115,7 +1115,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "6ad0e99a-03bf-5c0f-b2d1-93e3b065b350"
+            "uuid": "44acb7c8-67a4-5456-9211-413c29591f22"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1154,7 +1154,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "837d87ff-5316-50f5-8972-8a3531b87c90"
+            "uuid": "5fca561a-2a2b-550c-a47d-a4a30dbffe09"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1193,7 +1193,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "f2299261-287c-5275-834d-9c797e87e446"
+            "uuid": "f7832ea4-184a-546f-b849-54fae5327766"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1232,7 +1232,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "b3406bf7-ceae-522f-8339-d71c019b4944"
+            "uuid": "83c08d48-4408-5b0c-a39a-ff2e3f2fce11"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1271,7 +1271,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "07cb6768-fe12-549b-83cb-38c1e972d163"
+            "uuid": "d42970ff-52c8-50ac-b6a1-c5f499fb9ef4"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1310,7 +1310,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "725d4b19-d292-5e41-bd25-5ec44e149880"
+            "uuid": "b70fe4ab-87fd-5495-bb26-e25b217469fa"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1349,7 +1349,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "ec65c894-5bce-567a-a4a8-7e719570dc57"
+            "uuid": "132d664a-82dc-5fc2-92e7-e0602565967d"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1388,7 +1388,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "ea8df376-8e30-5c4f-aec0-b4eac59fe4b4"
+            "uuid": "b076fa48-ee77-5ef5-8a76-cb809390766e"
           }
         ],
         "props": [
@@ -1443,9 +1443,9 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — NIST PQC Readiness",
-        "uuid": "8161bbe8-92af-5a4d-b96e-153310c8126d"
+        "uuid": "bb7ba507-a1e8-53e9-a0a7-82f808e8a5cd"
       }
     ],
-    "uuid": "e366246d-e126-58e6-afdb-c4736ad4ad88"
+    "uuid": "b4b61fdc-f0ab-5b31-b20f-b83ed5abf19d"
   }
 }
