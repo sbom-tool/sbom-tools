@@ -10,7 +10,8 @@
 //! unrecognizable is a Warning, never an implicit pass. Protocol assets
 //! (TLS version, cipher suites, IKEv2 transforms, crypto references) are
 //! evaluated under both standards by resolving bom-refs through the SBOM
-//! index and word-boundary-scanning cipher-suite names.
+//! index, word-boundary-scanning cipher-suite names, and looking up the TLS
+//! groups and signature schemes each suite offers in their IANA registries.
 //!
 //! A PQ/T hybrid (X25519MLKEM768, an RFC 9370 IKEv2 additional key
 //! exchange, composite ML-DSA) is judged by its parts, not by the weaker
@@ -21,11 +22,12 @@ use std::collections::BTreeMap;
 
 use super::*;
 use crate::model::{
-    AlgorithmClass, AlgorithmClassification, AlgorithmProperties, CertificateProperties, Component,
-    CryptoAssetType, HybridParts, Ikev2Transform, Ikev2TransformKind, Ikev2TransformTypes,
-    NormalizedSbomIndex, PqcKind, ProtocolProperties, ProtocolType, classify_algorithm,
-    classify_algorithm_names, classify_algorithm_names_guarded, ikev2_key_exchange_group,
-    worst_classification,
+    AlgorithmClass, AlgorithmClassification, AlgorithmProperties, CertificateProperties,
+    CipherSuite, Component, CryptoAssetType, HybridParts, Ikev2Transform, Ikev2TransformKind,
+    Ikev2TransformTypes, NormalizedSbomIndex, PqcKind, ProtocolProperties, ProtocolType,
+    TlsRegistryEntry, classify_algorithm, classify_algorithm_names,
+    classify_algorithm_names_guarded, ikev2_key_exchange_group, tls_named_group,
+    tls_signature_scheme, worst_classification,
 };
 
 /// Outcome of checking one classified algorithm against the CNSA 2.0
@@ -276,6 +278,56 @@ fn paired_key_exchanges(ke: &IkeJudged, add: &IkeJudged) -> Vec<IkeJudged> {
         }
         _ => vec![ke.clone(), add.clone()],
     }
+}
+
+/// One TLS group or signature scheme a cipher suite offers: the algorithm
+/// it stands for, or the label to report as unverifiable.
+type TlsOffer = Result<AlgorithmClassification, String>;
+
+/// The TLS groups and the TLS signature schemes a cipher suite offers
+/// (CycloneDX 1.7 `tlsGroups` and `tlsSignatureSchemes`), each list with the
+/// words that name it in a finding. TLS 1.3 negotiates its key exchange and
+/// its authentication through exactly these, so every entry — an
+/// alternative a peer may negotiate — is judged on its own, by the
+/// algorithm its IANA registry entry stands for. An entry the registry does
+/// not identify, or that names an obsolete pre-standard draft (the Kyber
+/// groups, which are not ML-KEM), is reported as unverifiable.
+fn tls_offers(suite: &CipherSuite) -> [(&'static str, Vec<TlsOffer>); 2] {
+    let judge = |kind: &str, ids: &[String], lookup: fn(&str) -> Option<TlsRegistryEntry>| {
+        ids.iter()
+            .map(|id| match lookup(id) {
+                Some(TlsRegistryEntry {
+                    classification: Some(cls),
+                    ..
+                }) => Ok(cls),
+                Some(entry) => {
+                    let named = if entry.name.eq_ignore_ascii_case(id.trim()) {
+                        String::new()
+                    } else {
+                        format!("{}, ", entry.name)
+                    };
+                    Err(format!(
+                        "{kind} '{id}' ({named}an obsolete pre-standard draft)"
+                    ))
+                }
+                None => Err(format!("{kind} '{id}'")),
+            })
+            .collect()
+    };
+    [
+        (
+            "TLS groups",
+            judge("TLS group", &suite.tls_groups, tls_named_group),
+        ),
+        (
+            "TLS signature schemes",
+            judge(
+                "TLS signature scheme",
+                &suite.tls_signature_schemes,
+                tls_signature_scheme,
+            ),
+        ),
+    ]
 }
 
 /// Resolve a bom-ref to the referenced component, if it exists.
@@ -929,8 +981,9 @@ impl ComplianceChecker {
     }
 
     /// Evaluate a protocol asset under CNSA 2.0: TLS 1.3 required, and every
-    /// resolvable cipher-suite algorithm / IKEv2 transform / crypto reference
-    /// must be on the allowlist. Returns whether the protocol was judged —
+    /// resolvable cipher-suite algorithm / offered TLS group or signature
+    /// scheme / IKEv2 transform / crypto reference must be on the
+    /// allowlist. Returns whether the protocol was judged —
     /// failed on its version, or had at least one algorithm classified —
     /// which is what the CNSA2-000 inventory gate counts.
     fn check_cnsa2_protocol(
@@ -1041,7 +1094,8 @@ impl ComplianceChecker {
         // PROTO-002: cipher suites — both the algorithm refs (resolved
         // through the index, with the referenced asset's declared
         // classicalSecurityLevel as key-size evidence, or token-scanned when
-        // unresolvable) and a word-boundary scan of the suite name.
+        // unresolvable) and a word-boundary scan of the suite name — and the
+        // TLS groups and signature schemes each suite offers.
         for suite in &proto.cipher_suites {
             let mut offenders = Vec::new();
             for algo_ref in &suite.algorithms {
@@ -1064,6 +1118,22 @@ impl ComplianceChecker {
                 ),
                 offenders,
             );
+            for (offered, offers) in tls_offers(suite) {
+                let mut offenders = Vec::new();
+                for offer in offers {
+                    match offer {
+                        Ok(cls) => record(&cls, None, &mut offenders),
+                        Err(label) => unverifiable.push(label),
+                    }
+                }
+                push_proto_violation(
+                    format!(
+                        "cipher suite '{}' offers {offered} with",
+                        suite.name.as_deref().unwrap_or("(unnamed)")
+                    ),
+                    offenders,
+                );
+            }
         }
 
         // PROTO-002: IKEv2 transform types, with RFC 9370 additional key
@@ -1557,8 +1627,9 @@ impl ComplianceChecker {
     }
 
     /// Evaluate a protocol asset for PQC readiness: no SSL / TLS below 1.2,
-    /// and no broken or quantum-vulnerable algorithms in cipher suites,
-    /// IKEv2 transforms, or crypto references.
+    /// and no broken or quantum-vulnerable algorithms in cipher suites, the
+    /// TLS groups and signature schemes they offer, IKEv2 transforms, or
+    /// crypto references.
     ///
     /// Returns whether the protocol was judged — failed on its version, or
     /// had at least one algorithm classified — which is what the PQC-000
@@ -1695,6 +1766,23 @@ impl ComplianceChecker {
                 ),
                 offenders,
             );
+            // The TLS groups and signature schemes offered with the suite.
+            for (offered, offers) in tls_offers(suite) {
+                let mut offenders = Vec::new();
+                for offer in offers {
+                    match offer {
+                        Ok(cls) => record(&cls, &mut offenders),
+                        Err(label) => unverifiable.push(label),
+                    }
+                }
+                push_proto_violation(
+                    format!(
+                        "cipher suite '{}' offers {offered} with",
+                        suite.name.as_deref().unwrap_or("(unnamed)")
+                    ),
+                    offenders,
+                );
+            }
         }
 
         if let Some(ike) = &proto.ikev2_transform_types {

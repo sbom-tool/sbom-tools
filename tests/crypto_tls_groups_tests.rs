@@ -1,11 +1,21 @@
 //! TLS 1.3 named groups and signature schemes (CycloneDX 1.7 `tlsGroups` and
 //! `tlsSignatureSchemes`): every assigned entry of the IANA "TLS Supported
 //! Groups" and "TLS SignatureScheme" registries is recognized by name and by
-//! codepoint and classified as the algorithm it stands for.
+//! codepoint and classified as the algorithm it stands for, and the crypto
+//! profiles judge each offered entry under PROTO-002 (review finding V7: a
+//! TLS 1.3 asset offering only x25519 and secp256r1 passed CNSA 2.0 and NIST
+//! PQC with zero findings).
 
+#[path = "common/clock.rs"]
+mod clock;
+
+use clock::checker;
 use sbom_tools::model::{
-    AlgorithmClass, PqcKind, TlsRegistryEntry, tls_named_group, tls_signature_scheme,
+    AlgorithmClass, NormalizedSbom, PqcKind, TlsRegistryEntry, tls_named_group,
+    tls_signature_scheme,
 };
+use sbom_tools::parse_sbom_str;
+use sbom_tools::quality::{ComplianceLevel, ComplianceResult, ViolationSeverity};
 
 // ── The IANA registries ─────────────────────────────────────────────────
 
@@ -363,4 +373,328 @@ fn tls_entries_classify_as_the_algorithm_they_stand_for() {
         };
         assert_eq!(class, expected, "TLS signature scheme {name}");
     }
+}
+
+// ── Profile verdicts ────────────────────────────────────────────────────
+
+/// A CycloneDX 1.7 CBOM of one TLS 1.3 protocol whose cipher suite
+/// (`TLS_AES_256_GCM_SHA384` unless `name` is `None`) offers the given
+/// groups and signature schemes.
+fn tls13(name: Option<&str>, groups: &[&str], schemes: &[&str]) -> NormalizedSbom {
+    let mut suite = serde_json::json!({
+        "identifiers": ["0x13", "0x02"],
+        "tlsGroups": groups,
+        "tlsSignatureSchemes": schemes,
+    });
+    if let Some(name) = name {
+        suite["name"] = name.into();
+    }
+    let doc = serde_json::json!({
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.7",
+        "serialNumber": "urn:uuid:3e1f4a1c-58f2-4c39-9d0b-7a1e6c2d9b40",
+        "version": 1,
+        "metadata": { "timestamp": "2026-10-01T00:00:00Z" },
+        "components": [{
+            "type": "cryptographic-asset",
+            "bom-ref": "crypto/protocol/tls13",
+            "name": "TLS 1.3",
+            "cryptoProperties": {
+                "assetType": "protocol",
+                "protocolProperties": { "type": "tls", "version": "1.3", "cipherSuites": [suite] },
+            },
+        }],
+    });
+    parse_sbom_str(&doc.to_string()).expect("CBOM parses")
+}
+
+fn suite(groups: &[&str], schemes: &[&str]) -> NormalizedSbom {
+    tls13(Some("TLS_AES_256_GCM_SHA384"), groups, schemes)
+}
+
+/// Every finding, for a readable failure.
+fn findings(result: &ComplianceResult) -> Vec<String> {
+    result
+        .violations
+        .iter()
+        .map(|v| format!("{:?} {}: {}", v.severity, v.rule_id, v.message))
+        .collect()
+}
+
+/// The protocol rules a profile reports, with their severity.
+fn protocol_rules(result: &ComplianceResult) -> Vec<(&'static str, ViolationSeverity)> {
+    result
+        .violations
+        .iter()
+        .filter(|v| v.rule_id.contains("PROTO"))
+        .map(|v| (v.rule_id, v.severity))
+        .collect()
+}
+
+/// The messages of the findings with rule `rule`, in order.
+fn messages<'a>(result: &'a ComplianceResult, rule: &str) -> Vec<&'a str> {
+    result
+        .violations
+        .iter()
+        .filter(|v| v.rule_id == rule)
+        .map(|v| v.message.as_str())
+        .collect()
+}
+
+/// The message of the one finding with rule `rule`.
+fn message(result: &ComplianceResult, rule: &str) -> String {
+    match messages(result, rule).as_slice() {
+        [one] => (*one).to_string(),
+        other => panic!(
+            "expected one {rule}, got {}: {:#?}",
+            other.len(),
+            findings(result)
+        ),
+    }
+}
+
+const CNSA_PROTO_002: (&str, ViolationSeverity) =
+    ("SBOM-CNSA2-PROTO-002", ViolationSeverity::Error);
+const CNSA_UNKNOWN: (&str, ViolationSeverity) =
+    ("SBOM-CNSA2-PROTO-UNKNOWN", ViolationSeverity::Error);
+const PQC_PROTO_002: (&str, ViolationSeverity) = ("SBOM-PQC-PROTO-002", ViolationSeverity::Error);
+const PQC_UNKNOWN: (&str, ViolationSeverity) =
+    ("SBOM-PQC-PROTO-UNKNOWN", ViolationSeverity::Warning);
+
+/// Every offered group and signature scheme is judged on its own, under
+/// PROTO-002: classical ones fail both profiles; CNSA 2.0 approves only
+/// MLKEM1024, SecP384r1MLKEM1024 (WP 2.4's hybrid verdict) and mldsa87,
+/// while NIST PQC accepts every ML-KEM and ML-DSA parameter set, SLH-DSA
+/// and the hybrids by their ML-KEM part. One classical alternative among
+/// approved ones fails. An entry the registry does not identify, and an
+/// obsolete Kyber draft group, cannot be verified.
+#[test]
+fn offered_tls_groups_and_signature_schemes_are_judged_one_by_one() {
+    type Case<'a> = (
+        &'a [&'a str],
+        &'a [&'a str],
+        &'a [(&'a str, ViolationSeverity)],
+        &'a [(&'a str, ViolationSeverity)],
+    );
+    let cases: &[Case] = &[
+        (&[], &[], &[], &[]),
+        (
+            &["x25519", "secp256r1"],
+            &[],
+            &[CNSA_PROTO_002],
+            &[PQC_PROTO_002],
+        ),
+        (&["secp384r1"], &[], &[CNSA_PROTO_002], &[PQC_PROTO_002]),
+        (&["ffdhe4096"], &[], &[CNSA_PROTO_002], &[PQC_PROTO_002]),
+        (&["X25519"], &[], &[CNSA_PROTO_002], &[PQC_PROTO_002]),
+        (&["MLKEM1024"], &[], &[], &[]),
+        (&["MLKEM768"], &[], &[CNSA_PROTO_002], &[]),
+        (&["MLKEM512"], &[], &[CNSA_PROTO_002], &[]),
+        (&["SecP384r1MLKEM1024"], &[], &[], &[]),
+        (&["X25519MLKEM768"], &[], &[CNSA_PROTO_002], &[]),
+        (&["SecP256r1MLKEM768"], &[], &[CNSA_PROTO_002], &[]),
+        (&["curveSM2MLKEM768"], &[], &[CNSA_PROTO_002], &[]),
+        (
+            &["MLKEM1024", "x25519"],
+            &[],
+            &[CNSA_PROTO_002],
+            &[PQC_PROTO_002],
+        ),
+        (&[], &["mldsa87"], &[], &[]),
+        (&[], &["mldsa65"], &[CNSA_PROTO_002], &[]),
+        (&[], &["mldsa44"], &[CNSA_PROTO_002], &[]),
+        (&[], &["slhdsa_sha2_128s"], &[CNSA_PROTO_002], &[]),
+        (
+            &[],
+            &["ecdsa_secp384r1_sha384"],
+            &[CNSA_PROTO_002],
+            &[PQC_PROTO_002],
+        ),
+        (
+            &[],
+            &["rsa_pss_rsae_sha256"],
+            &[CNSA_PROTO_002],
+            &[PQC_PROTO_002],
+        ),
+        (&[], &["ed25519"], &[CNSA_PROTO_002], &[PQC_PROTO_002]),
+        (
+            &[],
+            &["rsa_pkcs1_sha1"],
+            &[CNSA_PROTO_002],
+            &[PQC_PROTO_002],
+        ),
+        (
+            &[],
+            &["mldsa87", "ed25519"],
+            &[CNSA_PROTO_002],
+            &[PQC_PROTO_002],
+        ),
+        (
+            &["x25519"],
+            &["ecdsa_secp256r1_sha256"],
+            &[CNSA_PROTO_002, CNSA_PROTO_002],
+            &[PQC_PROTO_002, PQC_PROTO_002],
+        ),
+        (&["MLKEM1024", "SecP384r1MLKEM1024"], &["mldsa87"], &[], &[]),
+        (&["514", "0x11ED"], &["0x0906", "2310"], &[], &[]),
+        (
+            &["29", "0x0017"],
+            &["0x0403"],
+            &[CNSA_PROTO_002, CNSA_PROTO_002],
+            &[PQC_PROTO_002, PQC_PROTO_002],
+        ),
+        (
+            &["X25519Kyber768Draft00"],
+            &[],
+            &[CNSA_UNKNOWN],
+            &[PQC_UNKNOWN],
+        ),
+        (&["25498"], &[], &[CNSA_UNKNOWN], &[PQC_UNKNOWN]),
+        (&["acme-group"], &[], &[CNSA_UNKNOWN], &[PQC_UNKNOWN]),
+        (&["0x0A0A"], &[], &[CNSA_UNKNOWN], &[PQC_UNKNOWN]),
+        (&[], &["0x0402"], &[CNSA_UNKNOWN], &[PQC_UNKNOWN]),
+        (
+            &[],
+            &["mldsa87_ecdsa_secp384r1_sha384"],
+            &[CNSA_UNKNOWN],
+            &[PQC_UNKNOWN],
+        ),
+        (
+            &["MLKEM1024", "acme-group"],
+            &["mldsa87"],
+            &[CNSA_UNKNOWN],
+            &[PQC_UNKNOWN],
+        ),
+        (
+            &["x25519", "acme-group"],
+            &[],
+            &[CNSA_PROTO_002, CNSA_UNKNOWN],
+            &[PQC_PROTO_002, PQC_UNKNOWN],
+        ),
+    ];
+    for (groups, schemes, cnsa_rules, pqc_rules) in cases {
+        let sbom = suite(groups, schemes);
+        let label = format!("groups {groups:?}, schemes {schemes:?}");
+        let cnsa = checker(ComplianceLevel::Cnsa2).check(&sbom);
+        assert_eq!(
+            protocol_rules(&cnsa),
+            *cnsa_rules,
+            "{label} under CNSA 2.0: {:#?}",
+            findings(&cnsa)
+        );
+        assert_eq!(
+            cnsa.is_compliant,
+            cnsa_rules.is_empty(),
+            "{label} under CNSA 2.0"
+        );
+        let pqc = checker(ComplianceLevel::NistPqc).check(&sbom);
+        assert_eq!(
+            protocol_rules(&pqc),
+            *pqc_rules,
+            "{label} under NIST PQC: {:#?}",
+            findings(&pqc)
+        );
+        let pqc_fails = pqc_rules
+            .iter()
+            .any(|(_, s)| *s == ViolationSeverity::Error);
+        assert_eq!(pqc.is_compliant, !pqc_fails, "{label} under NIST PQC");
+    }
+}
+
+/// The findings name the field and the offending algorithms; a scheme's
+/// hash is not judged on its own.
+#[test]
+fn tls_findings_name_the_field_and_the_algorithms() {
+    let classical = suite(
+        &["x25519", "secp256r1"],
+        &[
+            "ecdsa_secp256r1_sha256",
+            "rsa_pss_rsae_sha256",
+            "rsa_pkcs1_sha256",
+        ],
+    );
+    let cnsa = checker(ComplianceLevel::Cnsa2).check(&classical);
+    assert_eq!(
+        messages(&cnsa, "SBOM-CNSA2-PROTO-002"),
+        [
+            "Protocol 'TLS 1.3' cipher suite 'TLS_AES_256_GCM_SHA384' offers TLS groups with \
+             non-CNSA 2.0 algorithms: X25519, ECDH-P-256",
+            "Protocol 'TLS 1.3' cipher suite 'TLS_AES_256_GCM_SHA384' offers TLS signature \
+             schemes with non-CNSA 2.0 algorithms: ECDSA-P-256, RSA",
+        ]
+    );
+    let pqc = checker(ComplianceLevel::NistPqc).check(&classical);
+    assert_eq!(
+        messages(&pqc, "SBOM-PQC-PROTO-002"),
+        [
+            "Protocol 'TLS 1.3' cipher suite 'TLS_AES_256_GCM_SHA384' offers TLS groups with \
+             broken or quantum-vulnerable algorithms: X25519 (quantum-vulnerable), ECDH-P-256 \
+             (quantum-vulnerable)",
+            "Protocol 'TLS 1.3' cipher suite 'TLS_AES_256_GCM_SHA384' offers TLS signature \
+             schemes with broken or quantum-vulnerable algorithms: ECDSA-P-256 \
+             (quantum-vulnerable), RSA (quantum-vulnerable)",
+        ]
+    );
+
+    // A hybrid is named by its parts, and SLH-DSA by its parameter set
+    // alone: its SHA-256 is no algorithm of its own.
+    let cnsa =
+        checker(ComplianceLevel::Cnsa2).check(&suite(&["X25519MLKEM768"], &["slhdsa_sha2_128s"]));
+    assert_eq!(
+        messages(&cnsa, "SBOM-CNSA2-PROTO-002"),
+        [
+            "Protocol 'TLS 1.3' cipher suite 'TLS_AES_256_GCM_SHA384' offers TLS groups with \
+             non-CNSA 2.0 algorithms: X25519 + ML-KEM-768",
+            "Protocol 'TLS 1.3' cipher suite 'TLS_AES_256_GCM_SHA384' offers TLS signature \
+             schemes with non-CNSA 2.0 algorithms: SLH-DSA-SHA2-128s",
+        ]
+    );
+
+    // An unverifiable entry is named as written, with the obsolete draft a
+    // codepoint stands for.
+    let drafts = suite(
+        &["X25519Kyber768Draft00", "25497", "acme-group"],
+        &["0x0402"],
+    );
+    let cnsa = checker(ComplianceLevel::Cnsa2).check(&drafts);
+    assert_eq!(
+        message(&cnsa, "SBOM-CNSA2-PROTO-UNKNOWN"),
+        "Protocol 'TLS 1.3' has crypto references that cannot be resolved or classified: TLS \
+         group 'X25519Kyber768Draft00' (an obsolete pre-standard draft), TLS group '25497' \
+         (X25519Kyber768Draft00, an obsolete pre-standard draft), TLS group 'acme-group', TLS \
+         signature scheme '0x0402'; they cannot be shown to be on the CNSA 2.0 allowlist"
+    );
+    let pqc = checker(ComplianceLevel::NistPqc).check(&drafts);
+    assert!(
+        message(&pqc, "SBOM-PQC-PROTO-UNKNOWN").contains("TLS group 'acme-group'"),
+        "{:#?}",
+        findings(&pqc)
+    );
+}
+
+/// Offered groups and signature schemes are evidence on their own: a suite
+/// with no name that offers only approved ones passes both profiles, and
+/// one that offers classical ones fails them, instead of the protocol
+/// being unverifiable.
+#[test]
+fn offered_entries_alone_judge_an_unnamed_suite() {
+    let approved = tls13(None, &["MLKEM1024"], &["mldsa87"]);
+    for level in [ComplianceLevel::Cnsa2, ComplianceLevel::NistPqc] {
+        let result = checker(level).check(&approved);
+        assert!(
+            result.is_compliant && result.warning_count == 0,
+            "{level:?}: {:#?}",
+            findings(&result)
+        );
+    }
+    let classical = tls13(None, &["x25519"], &[]);
+    let cnsa = checker(ComplianceLevel::Cnsa2).check(&classical);
+    assert_eq!(
+        message(&cnsa, "SBOM-CNSA2-PROTO-002"),
+        "Protocol 'TLS 1.3' cipher suite '(unnamed)' offers TLS groups with non-CNSA 2.0 \
+         algorithms: X25519"
+    );
+    assert_eq!(protocol_rules(&cnsa), [CNSA_PROTO_002]);
+    let pqc = checker(ComplianceLevel::NistPqc).check(&classical);
+    assert_eq!(protocol_rules(&pqc), [PQC_PROTO_002]);
 }

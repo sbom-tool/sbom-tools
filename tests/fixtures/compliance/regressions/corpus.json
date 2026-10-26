@@ -840,20 +840,38 @@
       "id": "v7-tls13-classical-groups",
       "review_id": "V7",
       "fixture": "v7-tls13-classical-groups.cdx.json",
-      "note": "A TLS 1.3 suite with an acceptable AEAD and hash, but only classical key-exchange groups (x25519, secp256r1).",
+      "note": "A TLS 1.3 suite with an acceptable AEAD and hash, but only classical key-exchange groups (x25519, secp256r1) and an ECDSA P-384 signature scheme, passed both profiles with zero findings: tlsGroups and tlsSignatureSchemes were not read. Each offered group and scheme is judged now, so both profiles fail it under PROTO-002.",
       "checks": [
         {
           "standard": "cnsa2",
-          "xfail": "2.3",
           "expect": {
-            "compliant": false
+            "compliant": false,
+            "errors": 2,
+            "rules_present": [
+              {
+                "rule": "SBOM-CNSA2-PROTO-002",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-CNSA2-PROTO-UNKNOWN"
+            ]
           }
         },
         {
           "standard": "pqc",
-          "xfail": "2.3",
           "expect": {
-            "compliant": false
+            "compliant": false,
+            "errors": 2,
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-PROTO-002",
+                "severity": "error"
+              }
+            ],
+            "rules_absent": [
+              "SBOM-PQC-PROTO-UNKNOWN"
+            ]
           }
         }
       ]
