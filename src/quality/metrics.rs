@@ -263,10 +263,9 @@ impl HashQualityMetrics {
         let mut vendor_with_strong = 0;
 
         for comp in sbom.components.values() {
-            // Vendor-component classification (independent of hash presence).
-            // The sentinel-aware producer test: a NOASSERTION supplier names
-            // no vendor, exactly as an absent one, so it neither enters nor
-            // leaves the PRE-7-RQ-07-RE cohort on its own.
+            // Vendor-component classification (independent of hash presence),
+            // with the sentinel-aware producer test: a NOASSERTION or
+            // placeholder supplier names no vendor, exactly like an absent one.
             let is_vendor = crate::quality::compliance::has_known_producer(comp)
                 && !matches!(
                     comp.canonical_id.source(),

@@ -464,7 +464,7 @@ pub enum ExternalRefType {
     Documentation,
     Support,
     /// CycloneDX `distribution`: a direct or repository download location
-    /// (the SPDX parsers store a package's download location here).
+    /// (the SPDX 2.x parser stores a package's download location here).
     SourceDistribution,
     /// CycloneDX `distribution-intake`: where the component was published.
     BinaryDistribution,

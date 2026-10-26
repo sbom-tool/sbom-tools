@@ -1609,14 +1609,15 @@ fn convert_cdx_external_reference(r: &CdxExternalReference) -> ExternalReference
 /// that same value, so a CycloneDX document round-trips through the model.
 /// The rest stay `Other`, verbatim: `source-distribution` (the model's
 /// `SourceDistribution` is CycloneDX `distribution`, which is also how the
-/// SPDX parsers store a download location), `poam`, `electronic-signature`,
-/// `digital-signature`, `rfc-9116`, `other`, and any unlisted string.
+/// SPDX 2.x parser stores a download location), `poam`,
+/// `electronic-signature`, `digital-signature`, `rfc-9116`, `other`, and any
+/// unlisted string.
 ///
 /// Until v0.4.0 only 16 values were mapped. Among the ones that were not,
 /// `attestation`, `certification-report`, `risk-assessment`,
 /// `vulnerability-assertion`, `exploitability-statement` and `build-system`
-/// are what the CRA, EUCC and SSDF checks look for, so no CycloneDX document
-/// could satisfy those checks through its external references.
+/// are what the CRA, EUCC, SSDF and PCI DSS checks look for, so no CycloneDX
+/// document could satisfy those checks through its external references.
 fn map_cdx_external_ref_type(ref_type: &str) -> ExternalRefType {
     match ref_type {
         // CycloneDX 1.4
