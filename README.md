@@ -909,7 +909,9 @@ components point at the new SBOM. A run keeps at most 25,000 results unless
 `--sarif-max-results` says otherwise.
 
 The field-by-field mapping is in
-[docs/compliance-output.md](docs/compliance-output.md#sarif).
+[docs/compliance-output.md](docs/compliance-output.md#sarif). Uploading to
+code scanning from a workflow, choosing categories, and troubleshooting are
+covered in [docs/github-code-scanning.md](docs/github-code-scanning.md).
 
 ## CI/CD Integration
 
