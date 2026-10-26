@@ -1833,6 +1833,73 @@ mod tests {
         );
     }
 
+    /// The SPDX 2.3 JSON schema spelled the operating-system purpose
+    /// `OPERATING_SYSTEM`, while the 2.3 text (7.24) spells it
+    /// `OPERATING-SYSTEM`; SPDX 2.3.1 corrected the schema to the hyphen and
+    /// also allows `PACKAGE_MANAGER` beside `PACKAGE-MANAGER`. Every spelling,
+    /// in JSON and in tag-value, must read the same.
+    #[test]
+    fn operating_system_purpose_reads_in_both_spellings() {
+        for purpose in ["OPERATING-SYSTEM", "OPERATING_SYSTEM"] {
+            for category in ["PACKAGE-MANAGER", "PACKAGE_MANAGER"] {
+                let json = format!(
+                    r#"{{
+                    "spdxVersion": "SPDX-2.3",
+                    "SPDXID": "SPDXRef-DOCUMENT",
+                    "name": "doc",
+                    "dataLicense": "CC0-1.0",
+                    "documentNamespace": "https://example.com/doc",
+                    "creationInfo": {{"created": "2026-01-01T00:00:00Z", "creators": ["Tool: gen-1.0"]}},
+                    "packages": [{{
+                        "name": "os",
+                        "SPDXID": "SPDXRef-os",
+                        "versionInfo": "1.0",
+                        "primaryPackagePurpose": "{purpose}",
+                        "externalRefs": [
+                            {{"referenceCategory": "{category}",
+                             "referenceType": "purl",
+                             "referenceLocator": "pkg:generic/os@1.0"}}
+                        ]
+                    }}]
+                }}"#
+                );
+                let sbom = SpdxParser::new()
+                    .parse_str(&json)
+                    .expect("json should parse");
+                let os = component(&sbom, "os");
+                assert_eq!(
+                    os.component_type,
+                    ComponentType::OperatingSystem,
+                    "JSON primaryPackagePurpose {purpose}"
+                );
+                assert_eq!(
+                    os.identifiers.purl.as_deref(),
+                    Some("pkg:generic/os@1.0"),
+                    "JSON referenceCategory {category}"
+                );
+            }
+
+            let sbom = parse_tv(&format!(
+                "SPDXVersion: SPDX-2.3\n\
+                 DataLicense: CC0-1.0\n\
+                 SPDXID: SPDXRef-DOCUMENT\n\
+                 DocumentName: doc\n\
+                 DocumentNamespace: https://example.com/doc\n\
+                 Creator: Tool: gen-1.0\n\
+                 Created: 2026-01-01T00:00:00Z\n\
+                 PackageName: os\n\
+                 SPDXID: SPDXRef-os\n\
+                 PackageVersion: 1.0\n\
+                 PrimaryPackagePurpose: {purpose}\n"
+            ));
+            assert_eq!(
+                component(&sbom, "os").component_type,
+                ComponentType::OperatingSystem,
+                "tag-value PrimaryPackagePurpose {purpose}"
+            );
+        }
+    }
+
     /// A bare CPE locator must never become the document-level vulnerability
     /// disclosure URL; only URL-shaped advisory locators qualify.
     #[test]
