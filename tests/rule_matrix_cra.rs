@@ -1684,6 +1684,69 @@ fn cra_hardware_identifier_reads_the_purl_of_a_re_keyed_component() {
     }
 }
 
+/// SBOM-CRA-PRE-7-RQ-07-RE counts a vendor component by its own
+/// identifiers, as the CRA identifier checks do, not by the source of its
+/// canonical id. Two vendor libraries that share a purl but differ in name
+/// collide on their canonical id, and the parser re-keys the second. Both
+/// are vendor components without a hash, so three of the five vendor
+/// components carry one: the product, libalpha and libbeta.
+#[test]
+fn cra_vendor_hash_coverage_counts_a_re_keyed_component() {
+    use sbom_tools::model::IdSource;
+    use sbom_tools::quality::HashQualityMetrics;
+    let fixture = broken(|s| {
+        for name in ["libgamma", "libgamma-fork"] {
+            let mut lib = comp(name);
+            lib.purl = Some("pkg:npm/libgamma@1.2.3".to_string());
+            lib.hashes.clear();
+            s.dependencies[0].1.push(lib.bom_ref.clone());
+            s.components.push(lib);
+        }
+    });
+
+    let sbom = fixture.parse();
+    let sources: Vec<(&str, &IdSource)> = sbom
+        .components
+        .values()
+        .filter(|c| c.name.starts_with("libgamma"))
+        .map(|c| (c.name.as_str(), c.canonical_id.source()))
+        .collect();
+    assert_eq!(
+        sources,
+        [
+            ("libgamma", &IdSource::Purl),
+            ("libgamma-fork", &IdSource::FormatSpecific)
+        ],
+        "the second library must be re-keyed on the collision"
+    );
+    let metrics = HashQualityMetrics::from_sbom(&sbom);
+    assert_eq!(
+        (
+            metrics.vendor_components_with_hash,
+            metrics.vendor_components_total
+        ),
+        (3, 5),
+        "both libgamma components are vendor components"
+    );
+
+    let result = check(PHASE2, &fixture);
+    let fired: Vec<(Sev, usize, usize)> = result
+        .violations
+        .iter()
+        .filter(|v| v.rule_id == "SBOM-CRA-PRE-7-RQ-07-RE")
+        .map(|v| {
+            let counts = v.counts.expect("a coverage finding carries counts");
+            (v.severity, counts.affected, counts.total)
+        })
+        .collect();
+    assert_eq!(
+        fired,
+        [(Sev::Warning, 3, 5)],
+        "3/5 vendor components carry a hash, below the 80% Phase 2 threshold:\n{}",
+        render_violations(&result)
+    );
+}
+
 /// SBOM-CRA-SPEC-VERSION-UNKNOWN reads only SPDX input (a version that is
 /// neither 2.x nor 3.x), so its matrix rows are skipped; every CRA level
 /// runs the format checks.

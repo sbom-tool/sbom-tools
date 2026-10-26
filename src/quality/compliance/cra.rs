@@ -455,10 +455,11 @@ impl ComplianceChecker {
         }
 
         // B4b: prEN 40000-1-3 [PRE-7-RQ-07-RE] — vendor hash carry-through
-        // Vendor-supplied components (those with supplier/author and a non-synthetic
-        // identifier) must carry the upstream-supplied cryptographic hash through
-        // into the SBOM. Synthetic / format-specific IDs are excluded because they
-        // typically aren't tied to an upstream artefact at all.
+        // Vendor-supplied components (those with a supplier, manufacturer or
+        // author and a PURL/CPE/SWHID/SWID) must carry the upstream-supplied
+        // cryptographic hash through into the SBOM. Components without one of
+        // those identifiers are excluded because nothing ties them to an
+        // upstream artefact.
         {
             let metrics = crate::quality::HashQualityMetrics::from_sbom(sbom);
             if let Some(coverage) = metrics.vendor_hash_coverage() {

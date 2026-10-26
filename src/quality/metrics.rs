@@ -238,10 +238,12 @@ pub struct HashQualityMetrics {
     /// Total hash entries across all components
     pub total_hashes: usize,
     /// Vendor-supplied components — a known supplier, manufacturer or author
-    /// (a `NOASSERTION` or placeholder name names no vendor) AND a
-    /// non-synthetic canonical identifier (PURL/CPE/SWHID/SWID).
-    /// Tracks how many such "upstream" components exist, used to verify
-    /// CRA prEN 40000-1-3 `[PRE-7-RQ-07-RE]` (carry-through of vendor hashes).
+    /// (a `NOASSERTION` or placeholder name names no vendor) AND a PURL,
+    /// CPE, SWHID or SWID (`has_cra_identifier`), whatever the component's
+    /// canonical id: one re-keyed after a canonical-id collision keeps its
+    /// identifiers. Tracks how many such "upstream" components exist, used
+    /// to verify CRA prEN 40000-1-3 `[PRE-7-RQ-07-RE]` (carry-through of
+    /// vendor hashes).
     pub vendor_components_total: usize,
     /// Vendor components that carry at least one hash entry.
     pub vendor_components_with_hash: usize,
@@ -266,13 +268,12 @@ impl HashQualityMetrics {
             // Vendor-component classification (independent of hash presence),
             // with the sentinel-aware producer test: a NOASSERTION or
             // placeholder supplier names no vendor, exactly like an absent one.
+            // The identifier test reads the component's identifiers, as the
+            // CRA identifier checks do, not the source of its canonical id: a
+            // component re-keyed after a canonical-id collision has a
+            // format-specific canonical id and still has its purl.
             let is_vendor = crate::quality::compliance::has_known_producer(comp)
-                && !matches!(
-                    comp.canonical_id.source(),
-                    crate::model::IdSource::Synthetic
-                        | crate::model::IdSource::FormatSpecific
-                        | crate::model::IdSource::NameVersion
-                );
+                && comp.identifiers.has_cra_identifier();
             if is_vendor {
                 vendor_total += 1;
             }
