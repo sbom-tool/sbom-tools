@@ -108,10 +108,6 @@ pub const SPDX3_VALID_UNTIL_NOT_READ: &str = "open gap: the SPDX 3 parser does n
 pub const SPDX3_SBOM_TYPE_NOT_READ: &str = "open gap: the SPDX 3 parser does not read \
      software_sbomType, as the registry advice says, so no SPDX 3 document declares a \
      lifecycle phase";
-/// WP 1.8c: the SPDX 3 parser attaches a vulnerability twice.
-pub const SPDX3_VULNERABILITY_ATTACHED_TWICE: &str = "bug (WP 1.8c fixes it): the SPDX 3 parser \
-     attaches a vulnerability once for its affects relationship and again for its CVSS \
-     assessment, so a rated vulnerability gains an unrated twin";
 
 /// One component of a [`SbomFixture`]: a CycloneDX `components[]` entry
 /// (or `metadata.component` for the primary), an SPDX package.

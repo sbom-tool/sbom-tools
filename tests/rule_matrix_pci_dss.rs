@@ -24,9 +24,9 @@ mod rule_matrix;
 
 use rule_matrix::clock::as_of;
 use rule_matrix::{
-    ComponentFixture, Encoding, Outcome, RuleEntry, SPDX3_VULNERABILITY_ATTACHED_TWICE,
-    SPDX23_HAS_NO_COMPLETENESS, SPDX23_HAS_NO_VULNERABILITIES, SbomFixture,
-    assert_no_violations_in, check, render_violations, run_matrix,
+    ComponentFixture, Encoding, Outcome, RuleEntry, SPDX23_HAS_NO_COMPLETENESS,
+    SPDX23_HAS_NO_VULNERABILITIES, SbomFixture, assert_no_violations_in, check, render_violations,
+    run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, PCIDSS_SARIF_RULE_IDS, ViolationSeverity as Sev};
 
@@ -272,12 +272,7 @@ fn pci_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 )];
             }),
         )
-        .only(Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_VULNERABILITIES)
-        .case_only(
-            "silent",
-            Encoding::CYCLONEDX,
-            SPDX3_VULNERABILITY_ATTACHED_TWICE,
-        ),
+        .only(Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_VULNERABILITIES),
     ];
 
     run_matrix(LEVEL, PCIDSS_SARIF_RULE_IDS, &entries);

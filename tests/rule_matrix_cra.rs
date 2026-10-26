@@ -30,9 +30,8 @@ use rule_matrix::clock::{as_of, checker};
 use rule_matrix::{
     CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, Outcome, RuleEntry, SHA256_FILLER,
     SPDX_REFERENCES_CARRY_NO_HASH, SPDX_VERSION_CASE, SPDX3_AGENT_EMAILS_NOT_READ,
-    SPDX3_VALID_UNTIL_NOT_READ, SPDX3_VULNERABILITY_ATTACHED_TWICE, SPDX23_HAS_NO_VULNERABILITIES,
-    SbomFixture, VulnAnalysisFixture, assert_no_violations_in, assert_spdx_version_unknown, check,
-    render_violations, run_matrix,
+    SPDX3_VALID_UNTIL_NOT_READ, SPDX23_HAS_NO_VULNERABILITIES, SbomFixture, VulnAnalysisFixture,
+    assert_no_violations_in, assert_spdx_version_unknown, check, render_violations, run_matrix,
 };
 use sbom_tools::model::{
     ConformityRoute, ControlAssertion, CraProductClass, CraSidecarMetadata, EolStatus,
@@ -1249,12 +1248,7 @@ fn cra_phase2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             }),
             base(),
         )
-        .only(Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_VULNERABILITIES)
-        .case_only(
-            "silent",
-            Encoding::CYCLONEDX,
-            SPDX3_VULNERABILITY_ATTACHED_TWICE,
-        ),
+        .only(Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_VULNERABILITIES),
         // A declared remediation (analysis.response update or
         // workaround_available) with no recommendation or workaround text
         // gives users nothing to apply: an Info. CycloneDX has no
