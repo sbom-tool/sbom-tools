@@ -114,6 +114,47 @@ pub fn finding_key(level: ComplianceLevel, violation: &Violation) -> String {
     key
 }
 
+/// Number the repeats among `violations` that carry the same rule, subject
+/// and [`Violation::finding_detail`]: the second gets `#2` appended to its
+/// detail, the third `#3`, and so on, in report order, skipping a numbered
+/// detail another finding already carries. Findings without a detail are
+/// left alone.
+///
+/// A repeat means the SBOM lists one entry twice — two CycloneDX
+/// `vulnerabilities[]` entries with the same id for one component, or an
+/// SPDX 3.0 vulnerability attached both by its `AFFECTS` relationship and by
+/// an assessment — and both entries are reported. Numbering keeps a finding
+/// key per finding, and the first occurrence keeps the plain detail.
+/// `ComplianceChecker::check()` runs this on every result.
+pub(crate) fn number_repeated_details(violations: &mut [Violation]) {
+    use std::collections::HashSet;
+    type Identity = (&'static str, Option<String>, String);
+    let identity =
+        |v: &Violation, detail: String| -> Identity { (v.rule_id, v.component_id.clone(), detail) };
+    let taken: HashSet<Identity> = violations
+        .iter()
+        .filter_map(|v| Some(identity(v, v.finding_detail.clone()?)))
+        .collect();
+    let mut seen: HashSet<Identity> = HashSet::new();
+    for v in violations.iter_mut() {
+        let Some(detail) = v.finding_detail.clone() else {
+            continue;
+        };
+        if seen.insert(identity(v, detail.clone())) {
+            continue;
+        }
+        let numbered = (2..)
+            .map(|n| format!("{detail}#{n}"))
+            .find(|candidate| {
+                let candidate = identity(v, candidate.clone());
+                !taken.contains(&candidate) && !seen.contains(&candidate)
+            })
+            .expect("an unbounded range yields a free number");
+        seen.insert(identity(v, numbered.clone()));
+        v.finding_detail = Some(numbered);
+    }
+}
+
 /// The opaque id of a finding key: [`FINDING_ID_PREFIX`] followed by the
 /// first 16 lowercase hex digits of SHA-256 of the key's UTF-8 bytes.
 #[must_use]
@@ -261,6 +302,72 @@ mod tests {
                 assert!(keys.insert(key.clone()), "two inputs share {key}");
             }
         }
+    }
+
+    fn with_detail(base: &Violation, detail: Option<&str>, subject: Option<&str>) -> Violation {
+        let mut v = base.clone();
+        v.finding_detail = detail.map(str::to_string);
+        v.component_id = subject.map(str::to_string);
+        v
+    }
+
+    fn details(violations: &[Violation]) -> Vec<Option<&str>> {
+        violations
+            .iter()
+            .map(|v| v.finding_detail.as_deref())
+            .collect()
+    }
+
+    /// A repeat of rule, subject and detail is numbered in report order; the
+    /// first occurrence, other subjects and findings without a detail keep
+    /// theirs.
+    #[test]
+    fn repeated_details_are_numbered_in_report_order() {
+        let violations = ntia_violations();
+        let base = find(&violations, "SBOM-NTIA-SUPPLIER");
+        let mut repeated = vec![
+            with_detail(base, Some("CVE-1"), Some("pkg:a")),
+            with_detail(base, Some("CVE-1"), Some("pkg:b")),
+            with_detail(base, Some("CVE-1"), Some("pkg:a")),
+            with_detail(base, None, Some("pkg:a")),
+            with_detail(base, Some("CVE-1"), Some("pkg:a")),
+            with_detail(base, Some("CVE-2"), Some("pkg:a")),
+        ];
+        number_repeated_details(&mut repeated);
+        assert_eq!(
+            details(&repeated),
+            [
+                Some("CVE-1"),
+                Some("CVE-1"),
+                Some("CVE-1#2"),
+                None,
+                Some("CVE-1#3"),
+                Some("CVE-2"),
+            ]
+        );
+    }
+
+    /// A number another finding's detail already spells is skipped, so the
+    /// numbered repeat cannot collide with it.
+    #[test]
+    fn numbering_skips_details_already_taken() {
+        let violations = ntia_violations();
+        let base = find(&violations, "SBOM-NTIA-SUPPLIER");
+        let mut repeated = vec![
+            with_detail(base, Some("suite"), None),
+            with_detail(base, Some("suite"), None),
+            with_detail(base, Some("suite#2"), None),
+        ];
+        number_repeated_details(&mut repeated);
+        assert_eq!(
+            details(&repeated),
+            [Some("suite"), Some("suite#3"), Some("suite#2")]
+        );
+        let keys: std::collections::BTreeSet<String> = repeated
+            .iter()
+            .map(|v| finding_key(ComplianceLevel::NtiaMinimum, v))
+            .collect();
+        assert_eq!(keys.len(), repeated.len(), "{keys:?}");
     }
 
     /// Known answers pin the digest, the truncation and the prefix, so the

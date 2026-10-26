@@ -541,7 +541,9 @@ pub struct Violation {
     /// same subject, for a rule that legitimately reports several: a value
     /// from the SBOM's own data, such as the vulnerability id of a
     /// per-vulnerability finding or the cipher suite of a per-suite one.
-    /// Never message text, so rewording a message cannot change it.
+    /// Never message text, so rewording a message cannot change it. Where
+    /// the SBOM lists one entry twice, `ComplianceChecker::check()` numbers
+    /// the repeat (`CVE-2024-3094#2`).
     ///
     /// Part of the finding key (see [`finding_key`]). `None` for rules that
     /// report at most one finding per subject. Serialized as
@@ -1304,9 +1306,11 @@ impl ComplianceChecker {
     /// Selects the [`StandardChecker`] for the configured level (the
     /// dedicated profiles get their own checker; the rest take the generic
     /// path), runs it, then back-fills harmonised-standard references and the
-    /// remediation for the SBOM's format from the rule registry, and attaches
-    /// the CRA Annex VIII conformity summary when a product class has been
-    /// pinned on a CRA profile.
+    /// remediation for the SBOM's format from the rule registry, numbers the
+    /// finding details of entries the SBOM repeats (so every finding keeps a
+    /// key of its own, see [`finding_key`]), and attaches the CRA Annex VIII
+    /// conformity summary when a product class has been pinned on a CRA
+    /// profile.
     #[must_use]
     pub fn check(&self, sbom: &NormalizedSbom) -> ComplianceResult {
         let ctx = ComplianceContext::new(self, sbom);
@@ -1329,6 +1333,9 @@ impl ComplianceChecker {
                 v.remediation = Some(v.registry_remediation(format));
             }
         }
+        // Every finding keeps a key of its own, also where the SBOM lists
+        // one entry twice.
+        finding::number_repeated_details(&mut violations);
 
         let mut result = ComplianceResult::new(self.level, violations);
         // Attach the CRA Annex VIII conformity summary when a product class
