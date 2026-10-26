@@ -76,9 +76,12 @@ pub struct CraSidecarMetadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub incident_report_contact: Option<String>,
 
-    /// Manufacturer-side identifier for the ENISA single reporting platform
-    /// (Art. 14(7)). Until ENISA publishes the technical interface this is a
-    /// placeholder string — typically a manufacturer registration ID.
+    /// How the manufacturer reaches the ENISA Single Reporting Platform
+    /// (Art. 14(7); live since 2026-09-11 at
+    /// <https://portal.cra-srp.enisa.europa.eu/>): its registration on the
+    /// platform, or the CSIRT designated as coordinator whose end-point it
+    /// will use (ENISA advises registering only when a notification is due).
+    /// Free text; the platform publishes no machine-readable identifier.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enisa_reporting_platform_id: Option<String>,
 

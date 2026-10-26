@@ -928,7 +928,7 @@ expression: "render(&JsonReporter::new())"
         {
           "severity": "[ART14_SEV]",
           "category": "SecurityInfo",
-          "message": "[CRA Art. 14(7)] No ENISA single reporting platform identifier — track ENISA publication and add `enisaReportingPlatformId` to the CRA sidecar when available",
+          "message": "[CRA Art. 14(7)] No record of how the manufacturer reaches the ENISA single reporting platform — Art. 14 notifications go through it from 2026-09-11; set `enisaReportingPlatformId` in the CRA sidecar",
           "element": null,
           "requirement": "CRA Art. 14(7): ENISA single reporting platform",
           "rule_id": "SBOM-CRA-ART-14-ENISA",
@@ -940,7 +940,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Record the manufacturer's identifier on the ENISA single reporting platform (Art. 14(7)) once ENISA publishes it: set enisaReportingPlatformId in the CRA sidecar. This check reads only the sidecar.",
+          "remediation": "Record how the manufacturer reaches the ENISA Single Reporting Platform, through which Art. 14(1), (3) and (7) route every notification since 2026-09-11 (https://portal.cra-srp.enisa.europa.eu/): set enisaReportingPlatformId in the CRA sidecar to the manufacturer's registration on the platform or, as ENISA advises registering only when a notification is due, to the CSIRT designated as coordinator whose end-point Art. 14(7) assigns by main establishment. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         }
       ],
@@ -1853,7 +1853,7 @@ expression: "render(&JsonReporter::new())"
         {
           "severity": "[ART14_SEV]",
           "category": "SecurityInfo",
-          "message": "[CRA Art. 14(7)] No ENISA single reporting platform identifier — track ENISA publication and add `enisaReportingPlatformId` to the CRA sidecar when available",
+          "message": "[CRA Art. 14(7)] No record of how the manufacturer reaches the ENISA single reporting platform — Art. 14 notifications go through it from 2026-09-11; set `enisaReportingPlatformId` in the CRA sidecar",
           "element": null,
           "requirement": "CRA Art. 14(7): ENISA single reporting platform",
           "rule_id": "SBOM-CRA-ART-14-ENISA",
@@ -1865,7 +1865,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Record the manufacturer's identifier on the ENISA single reporting platform (Art. 14(7)) once ENISA publishes it: set enisaReportingPlatformId in the CRA sidecar. This check reads only the sidecar.",
+          "remediation": "Record how the manufacturer reaches the ENISA Single Reporting Platform, through which Art. 14(1), (3) and (7) route every notification since 2026-09-11 (https://portal.cra-srp.enisa.europa.eu/): set enisaReportingPlatformId in the CRA sidecar to the manufacturer's registration on the platform or, as ENISA advises registering only when a notification is due, to the CSIRT designated as coordinator whose end-point Art. 14(7) assigns by main establishment. This check reads only the sidecar.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         }
       ],

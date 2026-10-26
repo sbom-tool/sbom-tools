@@ -1654,13 +1654,16 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar.",
             advice: None,
         },
+        // Warning once Art. 14 applies (2026-09-11), Info before, never an
+        // Error: the CRA routes every notification through the platform
+        // but names no manufacturer identifier on it.
         "SBOM-CRA-ART-14-ENISA" => RuleMeta {
             sarif_id: "SBOM-CRA-ART-14-ENISA",
             name: "CraEnisaPlatformIdentifier",
-            short_description: "CRA Art. 14(7): Manufacturer identifier on the ENISA single reporting platform",
-            default_severity: ViolationSeverity::Info,
+            short_description: "CRA Art. 14(7): How the manufacturer reaches the ENISA single reporting platform",
+            default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 14(7)")],
-            remediation: "Record the manufacturer's identifier on the ENISA single reporting platform (Art. 14(7)) once ENISA publishes it: set enisaReportingPlatformId in the CRA sidecar. This check reads only the sidecar.",
+            remediation: "Record how the manufacturer reaches the ENISA Single Reporting Platform, through which Art. 14(1), (3) and (7) route every notification since 2026-09-11 (https://portal.cra-srp.enisa.europa.eu/): set enisaReportingPlatformId in the CRA sidecar to the manufacturer's registration on the platform or, as ENISA advises registering only when a notification is due, to the CSIRT designated as coordinator whose end-point Art. 14(7) assigns by main establishment. This check reads only the sidecar.",
             advice: None,
         },
         // The steward's vulnerability-handling floor is the one Art. 24

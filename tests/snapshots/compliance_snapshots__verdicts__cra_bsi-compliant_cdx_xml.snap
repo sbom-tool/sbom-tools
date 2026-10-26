@@ -16,9 +16,8 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-NTIA-ELEMENT-ID  pkg:cargo/demo-app@1.0.0
   I SBOM-NTIA-ELEMENT-ID  pkg:cargo/serde@1.0.197
   I SBOM-NTIA-ELEMENT-ID  pkg:cargo/tokio@1.40.0
-[CraPhase1] compliant · E0 W6 I6
+[CraPhase1] compliant · E0 W7 I5
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/demo-app@1.0.0
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/serde@1.0.197
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/tokio@1.40.0
@@ -26,13 +25,13 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-ENISA  -
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2] compliant · E0 W8 I8
+[CraPhase2] compliant · E0 W9 I7
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/demo-app@1.0.0
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/serde@1.0.197
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/tokio@1.40.0
@@ -42,6 +41,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-ENISA  -
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-CVD-POLICY  -

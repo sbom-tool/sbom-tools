@@ -735,9 +735,10 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
         ),
         // Art. 14 channels past the 2026-09-11 deadline (the pinned clock):
         // each missing channel warns, escalated to Error for important class
-        // II and critical products, and the ENISA platform id stays an Info
-        // at every class. art_14_findings_escalate_on_2026_09_11
-        // (tests/pinned_clock_tests.rs) covers the pre-deadline Infos.
+        // II and critical products, and the ENISA platform finding warns at
+        // every class — never an Error. art_14_findings_escalate_on_2026_09_11
+        // and enisa_platform_finding_escalates_but_never_errors
+        // (tests/pinned_clock_tests.rs) cover the pre-deadline Infos.
         RuleEntry::tested(
             "SBOM-CRA-ART-14-PSIRT",
             Sev::Warning,
@@ -782,16 +783,24 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
         ),
         RuleEntry::tested(
             "SBOM-CRA-ART-14-ENISA",
-            Sev::Info,
+            Sev::Warning,
             broken(|s| s.sidecar_mut().enisa_reporting_platform_id = None),
             base(),
         )
         .with_firing(
             "important class II product",
-            Sev::Info,
+            Sev::Warning,
             broken(|s| {
                 s.sidecar_mut().enisa_reporting_platform_id = None;
                 pin_class(s, CraProductClass::ImportantClass2, None);
+            }),
+        )
+        .with_firing(
+            "critical product",
+            Sev::Warning,
+            broken(|s| {
+                s.sidecar_mut().enisa_reporting_platform_id = None;
+                pin_class(s, CraProductClass::Critical, None);
             }),
         ),
         // prEN 40000-1-3 [PRE-8-RQ-02] hardware checks: a conforming

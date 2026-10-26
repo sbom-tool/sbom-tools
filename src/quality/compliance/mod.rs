@@ -4788,7 +4788,7 @@ mod tests {
     }
 
     /// Pre-deadline (mocked clock 2026-04-26): all four channels missing.
-    /// PSIRT/14(1)/14(2) surface as Info; 14(7) (ENISA platform) is always Info.
+    /// PSIRT/14(1)/14(2) and 14(7) (ENISA platform) surface as Info.
     /// Total: 4 Infos, 0 Warnings, 0 Errors at Art. 14 level.
     #[test]
     fn article_14_pre_deadline_mocked_clock_emits_4_infos() {
@@ -4820,10 +4820,11 @@ mod tests {
     }
 
     /// Post-deadline (mocked clock 2026-12-01): same SBOM-less state, but
-    /// PSIRT/14(1)/14(2) become Warnings; 14(7) stays Info.
-    /// Total: 1 Info, 3 Warnings.
+    /// all four channels become Warnings — 14(7), the ENISA platform every
+    /// notification goes through, included.
+    /// Total: 0 Infos, 4 Warnings.
     #[test]
-    fn article_14_post_deadline_mocked_clock_emits_3_warnings_1_info() {
+    fn article_14_post_deadline_mocked_clock_emits_4_warnings() {
         let checker = checker(ComplianceLevel::CraPhase2);
         let mut violations = Vec::new();
         let now = chrono::DateTime::parse_from_rfc3339("2026-12-01T00:00:00Z")
@@ -4842,12 +4843,12 @@ mod tests {
             })
             .count();
         assert_eq!(
-            warnings, 3,
-            "Post-deadline expects 3 Warning-level Art. 14 findings (PSIRT/14(1)/14(2)); got {warnings} (full: {violations:?})"
+            warnings, 4,
+            "Post-deadline expects 4 Warning-level Art. 14 findings (PSIRT/14(1)/14(2)/14(7)); got {warnings} (full: {violations:?})"
         );
         assert_eq!(
-            infos, 1,
-            "Post-deadline expects 1 Info-level Art. 14 finding (Art. 14(7) ENISA platform stays Info regardless of date)"
+            infos, 0,
+            "Post-deadline expects no Info-level Art. 14 finding (the ENISA platform finding warns too)"
         );
     }
 
@@ -4864,7 +4865,7 @@ mod tests {
         let result = checker(ComplianceLevel::CraPhase2)
             .with_sidecar(sidecar)
             .check(&sbom);
-        // PSIRT, 14(1), 14(2) suppressed; 14(7) (ENISA platform) remains as Info.
+        // PSIRT, 14(1), 14(2) suppressed; 14(7) (ENISA platform) remains.
         let art_14_psirt = result
             .violations
             .iter()

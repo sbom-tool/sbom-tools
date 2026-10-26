@@ -17,29 +17,28 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  pkg:huggingface/datasets/example/reviews@2026.1
   E SBOM-NTIA-VERSION  pkg:huggingface/example/sentiment-model@1.2.3
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
-[CraPhase1] NON-COMPLIANT · E2 W7 I6
+[CraPhase1] NON-COMPLIANT · E2 W8 I5
   E SBOM-CRA-COMPONENT-NAME  pkg:huggingface/datasets/example/reviews@2026.1
   E SBOM-CRA-COMPONENT-VERSION  pkg:huggingface/example/sentiment-model@1.2.3
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/assistant@1.0.0
   I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/3)
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (3/3)
   W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-ENISA  -
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:huggingface/datasets/example/reviews@2026.1
-[CraPhase2] NON-COMPLIANT · E2 W11 I7
+[CraPhase2] NON-COMPLIANT · E2 W12 I6
   E SBOM-CRA-COMPONENT-NAME  pkg:huggingface/datasets/example/reviews@2026.1
   E SBOM-CRA-COMPONENT-VERSION  pkg:huggingface/example/sentiment-model@1.2.3
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/assistant@1.0.0
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
@@ -49,6 +48,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-13-5  - (3/3)
   W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-ENISA  -
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:huggingface/datasets/example/reviews@2026.1

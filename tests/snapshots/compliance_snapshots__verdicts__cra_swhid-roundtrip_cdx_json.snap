@@ -27,7 +27,7 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/lib-content@0.1.0
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/lib-tree@2.0.0
-[CraPhase1] NON-COMPLIANT · E1 W12 I11
+[CraPhase1] NON-COMPLIANT · E1 W13 I10
   E SBOM-CRA-ANNEX-I-DEPENDENCY  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/swhid-demo@1.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/lib-content@0.1.0
@@ -35,7 +35,6 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/lib-tree@2.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-content@0.1.0
   I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
   I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-tree@2.0.0
@@ -44,6 +43,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (5/5)
   W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-ENISA  -
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/swhid-demo@1.0.0
@@ -52,7 +52,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:generic/lib-tree@2.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2] NON-COMPLIANT · E1 W14 I13
+[CraPhase2] NON-COMPLIANT · E1 W15 I12
   E SBOM-CRA-ANNEX-I-DEPENDENCY  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/swhid-demo@1.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/lib-content@0.1.0
@@ -61,7 +61,6 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-content@0.1.0
   I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
   I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-tree@2.0.0
@@ -72,6 +71,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-13-5  - (5/5)
   W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-ENISA  -
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/swhid-demo@1.0.0

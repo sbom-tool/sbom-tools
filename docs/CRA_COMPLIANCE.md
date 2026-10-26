@@ -91,11 +91,22 @@ Pre-deadline findings are emitted as `Info`; post-deadline they become
 The 2026-09-11 deadline is compared against the *evaluation instant* — the
 wall clock by default, or `--as-of <RFC 3339>` for reproducible CI runs.
 
-Art. 14(7) is the exception: ENISA's Single Reporting Platform went live on
-2026-09-11, but as a web form with no machine-readable endpoint, so the
-missing-`enisaReportingPlatformId` finding stays `Info` on both sides of the
-deadline for now. Its severity is being revisited now that the platform
-exists.
+Art. 14(7) follows the same dates — `Info` before 2026-09-11, `Warning` from
+then on — but is never escalated to `Error`, at any product class. Art.
+14(1) and (3) require every notification "via the single reporting platform
+established pursuant to Article 16", and Art. 14(7) through "the electronic
+notification end-point of the CSIRT designated as coordinator of the Member
+State where the manufacturers have their main establishment"; Art. 14
+applies from 11 September 2026 (Art. 71(2)), the day ENISA launched the
+platform ("The CRA Single Reporting Platform is launched", ENISA, 11
+September 2026, <https://www.enisa.europa.eu/cra-srp/>; portal
+<https://portal.cra-srp.enisa.europa.eu/>). The CRA names no manufacturer
+identifier on the platform, and ENISA advises manufacturers "to register
+and initiate the validation process only when they need to submit a
+notification" (SRP FAQ, updated 2026-10-15), so `enisaReportingPlatformId`
+can hold either the registration or the CSIRT designated as coordinator
+whose end-point the manufacturer will use. Before v0.4.0 the finding was
+`Info` on both sides of the deadline.
 
 ### CRA Annexes
 
