@@ -1,31 +1,36 @@
 //! Minimal JSON Schema validator for the schemas the tests check output
-//! against: the draft 2020-12 schemas under `schemas/` and the vendored OSCAL
-//! schema (draft-07) under `tests/fixtures/schemas/oscal/`.
+//! against: the draft 2020-12 schemas under `schemas/`, the vendored OSCAL
+//! schema (draft-07) under `tests/fixtures/schemas/oscal/` and the vendored
+//! SARIF 2.1.0 schema (draft-04) under `tests/fixtures/schemas/sarif/`.
 //!
 //! Implements exactly the keywords and `format`s those schemas use and panics
 //! on any other, so a schema edit can never be silently ignored by the tests.
 //! A full validator crate was not added: `jsonschema` and `boon` both pull in
 //! `borrow-or-share` (MIT-0), a license `deny.toml` does not allow.
 //!
-//! Where the drafts differ, the schema's `$schema` decides: draft-07 ignores
-//! every keyword next to a `$ref`, later drafts apply them. `pattern` is read
-//! the way JSON Schema defines it, as an ECMA-262 regular expression, not as
-//! `regex` crate syntax (see [`ecma_to_rust`]); `format` is asserted.
+//! Where the drafts differ, the schema's `$schema` decides: draft-04 and
+//! draft-07 ignore every keyword next to a `$ref`, later drafts apply them.
+//! `pattern` is read the way JSON Schema defines it, as an ECMA-262 regular
+//! expression, not as `regex` crate syntax (see [`ecma_to_rust`]); `format`
+//! is asserted.
 
 #![allow(dead_code)]
 
 use serde_json::{Map, Value};
 
-/// Keywords that only annotate (no assertion), plus `$defs` and draft-07's
-/// `definitions`, which hold `$ref` targets and are not applied by
-/// themselves. `contentEncoding` is an annotation in draft-07 (§8.3 leaves
-/// decoding to the application).
+/// Keywords that only annotate (no assertion), plus `$defs` and the
+/// `definitions` of draft-04 and draft-07, which hold `$ref` targets and are
+/// not applied by themselves. `contentEncoding` is an annotation in draft-07
+/// (§8.3 leaves decoding to the application). `id` is draft-04's spelling of
+/// `$id`; only local `$ref`s are resolved, so neither changes the outcome.
 const ANNOTATIONS: &[&str] = &[
     "$schema",
     "$id",
+    "id",
     "$comment",
     "title",
     "description",
+    "default",
     "$defs",
     "definitions",
     "contentEncoding",
@@ -130,6 +135,35 @@ fn check(root: &Value, schema: &Value, instance: &Value, path: &str, errors: &mu
                     }
                 }
             }
+            "oneOf" => {
+                let options = value.as_array().expect("oneOf is an array");
+                let mut rejections = Vec::new();
+                let mut matched = 0usize;
+                for option in options {
+                    let mut option_errors = Vec::new();
+                    check(root, option, instance, path, &mut option_errors);
+                    if option_errors.is_empty() {
+                        matched += 1;
+                    } else {
+                        rejections.push(option_errors);
+                    }
+                }
+                match matched {
+                    1 => {}
+                    0 => {
+                        errors.push(format!(
+                            "{path}: matches none of the {} oneOf alternatives",
+                            options.len()
+                        ));
+                        for (i, option_errors) in rejections.iter().enumerate() {
+                            errors.extend(option_errors.iter().map(|e| format!("  [{i}] {e}")));
+                        }
+                    }
+                    n => errors.push(format!(
+                        "{path}: matches {n} of the oneOf alternatives, not exactly one"
+                    )),
+                }
+            }
             "format" => {
                 if let Value::String(s) = instance {
                     let format = value.as_str().expect("format is a string");
@@ -201,6 +235,17 @@ fn check(root: &Value, schema: &Value, instance: &Value, path: &str, errors: &mu
                     let min = value.as_u64().expect("minItems is an integer");
                     if (items.len() as u64) < min {
                         errors.push(format!("{path}: fewer than {min} items"));
+                    }
+                }
+            }
+            "uniqueItems" => {
+                if let Value::Array(items) = instance
+                    && value.as_bool().expect("uniqueItems is a boolean")
+                {
+                    for (i, item) in items.iter().enumerate() {
+                        if let Some(j) = items[..i].iter().position(|earlier| earlier == item) {
+                            errors.push(format!("{path}: items {j} and {i} are equal"));
+                        }
                     }
                 }
             }
@@ -386,12 +431,13 @@ fn is_uri_text(s: &str) -> bool {
     s.matches('#').count() <= 1
 }
 
-/// Whether the root schema is draft-07, where a `$ref` makes every keyword
-/// beside it ignored (draft 2019-09 and later apply them alongside).
+/// Whether the root schema is draft-04 or draft-07, where a `$ref` makes
+/// every keyword beside it ignored (draft 2019-09 and later apply them
+/// alongside).
 fn refs_replace_siblings(root: &Value) -> bool {
     root.get("$schema")
         .and_then(Value::as_str)
-        .is_some_and(|uri| uri.contains("draft-07"))
+        .is_some_and(|uri| uri.contains("draft-04") || uri.contains("draft-07"))
 }
 
 fn resolve<'a>(root: &'a Value, reference: &Value) -> &'a Value {

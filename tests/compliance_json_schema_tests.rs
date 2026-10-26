@@ -448,8 +448,8 @@ fn strict_copy_rejects_undeclared_fields_at_every_level() {
 }
 
 #[test]
-#[should_panic(expected = "unsupported JSON Schema keyword `oneOf`")]
+#[should_panic(expected = "unsupported JSON Schema keyword `not`")]
 fn validator_refuses_keywords_it_does_not_implement() {
-    let schema = json!({"oneOf": [{"type": "string"}]});
+    let schema = json!({"not": {"type": "number"}});
     let _ = json_schema::validate(&schema, &json!("x"));
 }
