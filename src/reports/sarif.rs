@@ -9,6 +9,12 @@ use crate::quality::{
 };
 use serde::Serialize;
 
+/// The `$schema` every SARIF log declares: the OASIS SARIF 2.1.0 schema
+/// (Errata 01 edition), at the URL the schema itself gives as its `id`.
+/// tests/fixtures/schemas/sarif/2.1.0/ keeps a verbatim copy.
+pub const SARIF_SCHEMA_URI: &str =
+    "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json";
+
 /// SARIF report generator
 pub struct SarifReporter {
     /// Include informational results
@@ -265,7 +271,7 @@ impl ReportGenerator for SarifReporter {
         let rules = complete_rule_catalogue(get_sarif_rules(), &results);
 
         let sarif = SarifReport {
-            schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
+            schema: SARIF_SCHEMA_URI.to_string(),
             version: "2.1.0".to_string(),
             runs: vec![SarifRun {
                 tool: SarifTool {
@@ -330,7 +336,7 @@ impl ReportGenerator for SarifReporter {
         let rules = complete_rule_catalogue(get_sarif_view_rules(), &results);
 
         let sarif = SarifReport {
-            schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
+            schema: SARIF_SCHEMA_URI.to_string(),
             version: "2.1.0".to_string(),
             runs: vec![SarifRun {
                 tool: SarifTool {
@@ -532,7 +538,7 @@ pub fn generate_ai_readiness_sarif(
         .collect();
 
     let sarif = SarifReport {
-        schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
+        schema: SARIF_SCHEMA_URI.to_string(),
         version: "2.1.0".to_string(),
         runs: vec![SarifRun {
             tool: SarifTool {
@@ -632,7 +638,7 @@ pub fn generate_compliance_sarif(result: &ComplianceResult) -> Result<String, Re
         &results,
     ));
     let sarif = SarifReport {
-        schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
+        schema: SARIF_SCHEMA_URI.to_string(),
         version: "2.1.0".to_string(),
         runs: vec![SarifRun {
             tool: SarifTool {
@@ -688,7 +694,7 @@ pub fn generate_multi_compliance_sarif(
     });
 
     let sarif = SarifReport {
-        schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
+        schema: SARIF_SCHEMA_URI.to_string(),
         version: "2.1.0".to_string(),
         runs: vec![SarifRun {
             tool: SarifTool {
@@ -771,7 +777,7 @@ pub fn generate_quality_sarif(
         crate::quality::Applicability::Applicable => None,
     };
     let sarif = SarifReport {
-        schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
+        schema: SARIF_SCHEMA_URI.to_string(),
         version: "2.1.0".to_string(),
         runs: vec![SarifRun {
             tool: SarifTool {
