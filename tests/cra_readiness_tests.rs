@@ -1,6 +1,10 @@
 //! CRA SBOM readiness tests.
 
+#[path = "common/clock.rs"]
+mod clock;
+
 use chrono::{TimeZone, Utc};
+use clock::checker;
 use sbom_tools::diff::DiffEngine;
 use sbom_tools::model::{
     CompletenessDeclaration, Component, Creator, CreatorType, DocumentMetadata, ExternalRefType,
@@ -57,7 +61,7 @@ fn cra_missing_identifier_and_version_are_errors() {
     let comp = Component::new("lib-a".to_string(), "lib-a-ref".to_string());
     sbom.add_component(comp);
 
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&sbom);
+    let result = checker(ComplianceLevel::CraPhase2).check(&sbom);
 
     assert!(result.violations.iter().any(|v| {
         v.severity == ViolationSeverity::Error
@@ -89,7 +93,7 @@ fn cra_security_contact_reference_suppresses_warning() {
     });
     sbom.add_component(comp);
 
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&sbom);
+    let result = checker(ComplianceLevel::CraPhase2).check(&sbom);
     assert!(!result.violations.iter().any(|v| {
         v.category == ViolationCategory::SecurityInfo
             && v.requirement == "CRA: Vulnerability disclosure contact"
@@ -114,7 +118,7 @@ fn cra_vulnerability_metadata_warning() {
     ));
     sbom.add_component(comp);
 
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&sbom);
+    let result = checker(ComplianceLevel::CraPhase2).check(&sbom);
     assert!(result.violations.iter().any(|v| {
         v.severity == ViolationSeverity::Warning
             && v.category == ViolationCategory::SecurityInfo
@@ -130,7 +134,7 @@ fn cra_dependency_and_root_warnings() {
     sbom.add_component(cra_ready_component("lib-d"));
     sbom.add_component(cra_ready_component("lib-e"));
 
-    let result = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&sbom);
+    let result = checker(ComplianceLevel::CraPhase2).check(&sbom);
     assert!(result.violations.iter().any(|v| {
         v.severity == ViolationSeverity::Error
             && v.category == ViolationCategory::DependencyInfo
@@ -454,9 +458,11 @@ fn diff_json_report_honours_adjacent_cra_sidecar_per_sbom() {
 
     // The JSON report must match what the TUI computes for the same SBOM +
     // sidecar (ComplianceChecker with the sidecar attached), not a bare check.
+    // `diff` has no --as-of and reads the wall clock, so the expectation does.
     let parsed_new = parse_sbom_str(SIDECAR_PARITY_SBOM).expect("parse new SBOM");
     let sidecar = CraSidecarMetadata::from_file(&sidecar_path).expect("load sidecar");
     let expected = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+        .with_as_of(Utc::now())
         .with_sidecar(sidecar)
         .check(&parsed_new);
     let new_detail = &report["cra_compliance"]["new"];

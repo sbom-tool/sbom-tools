@@ -665,7 +665,7 @@ impl App {
                     severity,
                     component: v.element.clone(),
                     description: v.message.clone(),
-                    remediation: v.remediation_guidance().to_string(),
+                    remediation: v.remediation_guidance().into_owned(),
                 }
             })
             .collect();

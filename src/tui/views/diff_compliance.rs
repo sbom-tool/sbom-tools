@@ -1498,6 +1498,7 @@ mod tests {
             component_id: None,
             counts: None,
             standard_refs: Vec::new(),
+            remediation: None,
         }
     }
 

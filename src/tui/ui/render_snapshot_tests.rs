@@ -1234,7 +1234,10 @@ fn policy_preset_uses_shared_score_formula() {
     app.compliance_state.policy_preset = PolicyPreset::Cra;
     app.run_compliance_check();
 
+    // `run_compliance_check` evaluates at the wall clock (the TUI has no
+    // clock seam), so the expectation must too.
     let expected = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+        .with_as_of(chrono::Utc::now())
         .check(app.data.new_sbom.as_ref().expect("demo new SBOM"))
         .score()
         .expect("CRA applies to the demo SBOM");

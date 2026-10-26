@@ -204,7 +204,10 @@ impl ComplianceChecker {
         // documented component inventory current is the systematic-
         // documentation duty applied to the SBOM element. A missing
         // timestamp (epoch sentinel) is a freshness gap in its own right, but
-        // must be reported as "missing", not as a bogus ~20000-day age.
+        // must be reported as "missing", not as a bogus ~20000-day age. A
+        // timestamp after the evaluation instant is no evidence of currency
+        // either and warns like a missing one, instead of passing as fresh.
+        let now = self.now();
         if !sbom.document.has_known_timestamp() {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
@@ -218,9 +221,18 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
+        } else if let Some(future) = future_timestamp_violation(
+            sbom,
+            now,
+            "SBOM-CRA-SBOM-FRESHNESS",
+            "[CRA Art. 13(7) / Annex I Part II (1)]",
+            "CRA Art. 13(7) / Annex I Part II (1): SBOM freshness",
+        ) {
+            violations.push(future);
         } else {
-            let age_days = (self.now() - sbom.document.created).num_days();
+            let age_days = (now - sbom.document.created).num_days();
             if age_days > 90 {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
@@ -234,6 +246,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             } else if age_days > 30 {
                 violations.push(Violation {
@@ -248,6 +261,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
@@ -285,6 +299,7 @@ impl ComplianceChecker {
                     total,
                 }),
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -320,6 +335,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -388,6 +404,7 @@ impl ComplianceChecker {
                         total: direct_ids.len(),
                     }),
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -417,6 +434,7 @@ impl ComplianceChecker {
                         total: denom,
                     }),
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
@@ -509,6 +527,7 @@ impl ComplianceChecker {
                             total: metrics.vendor_components_total,
                         }),
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 }
             }
@@ -541,6 +560,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -572,6 +592,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
@@ -615,6 +636,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -638,6 +660,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -670,6 +693,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -701,6 +725,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
@@ -746,6 +771,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
@@ -818,6 +844,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
     }
@@ -867,6 +894,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
     }
@@ -931,6 +959,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -951,6 +980,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -971,6 +1001,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -990,6 +1021,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
     }
@@ -1043,6 +1075,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -1064,6 +1097,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -1082,6 +1116,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -1107,6 +1142,7 @@ impl ComplianceChecker {
                         component_id: Some(comp.canonical_id.value().to_string()),
                         counts: None,
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 }
             }
@@ -1178,6 +1214,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -1204,6 +1241,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 

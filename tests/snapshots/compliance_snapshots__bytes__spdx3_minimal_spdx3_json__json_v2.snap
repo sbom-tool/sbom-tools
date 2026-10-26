@@ -1,0 +1,326 @@
+---
+source: tests/compliance_snapshots.rs
+---
+{
+  "schema": "sbom-tools/compliance/v2",
+  "tool": {
+    "name": "sbom-tools",
+    "version": "[VERSION]"
+  },
+  "results": [
+    {
+      "standard": "bsi",
+      "name": "BSI TR-03183-2",
+      "applicable": true,
+      "compliant": false,
+      "score": 11,
+      "counts": {
+        "error": 3,
+        "warning": 5,
+        "info": 0
+      },
+      "violations": [
+        {
+          "finding_id": "sbomtools:v1:000354355e33ac4a",
+          "finding_key": "bsi|SBOM-BSI-TR-03183-2-5-1|document",
+          "severity": "Error",
+          "category": "DocumentMetadata",
+          "message": "[BSI TR-03183-2 §5.2.1] Creator of the SBOM missing (email address, or URL if no email is available); generation tools (metadata.tools) do not satisfy the field — provide a Person/Organization creator (e.g. CycloneDX metadata.authors or metadata.manufacturer)",
+          "element": null,
+          "requirement": "BSI TR-03183-2 §5.2.1: Creator of the SBOM",
+          "rule_id": "SBOM-BSI-TR-03183-2-5-1",
+          "sarif_rule_id": "SBOM-BSI-TR-03183-2-5-1",
+          "standard_refs": [
+            {
+              "standard": "BsiTr03183_2",
+              "id": "§5.2.1",
+              "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+            }
+          ],
+          "remediation": "Identify the SBOM creator with an email address, or a URL (e.g. the creator's home page) if no email is available; generation tools do not count as the creator. SPDX 3.0: set creationInfo.createdBy to a Person or Organization element that has a name; createdUsing tools do not count.",
+          "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+        },
+        {
+          "finding_id": "sbomtools:v1:82644af310164731",
+          "finding_key": "bsi|SBOM-BSI-TR-03183-2-LICENSE|document",
+          "severity": "Error",
+          "category": "LicenseInfo",
+          "message": "[BSI TR-03183-2 §5.2.2] 1/3 component(s) missing distribution licence(s): lib-utils",
+          "element": null,
+          "counts": {
+            "affected": 1,
+            "total": 3
+          },
+          "requirement": "BSI TR-03183-2 §5.2.2: Distribution licences",
+          "rule_id": "SBOM-BSI-TR-03183-2-LICENSE",
+          "sarif_rule_id": "SBOM-BSI-TR-03183-2-LICENSE",
+          "standard_refs": [
+            {
+              "standard": "BsiTr03183_2",
+              "id": "§5.2.2",
+              "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+            },
+            {
+              "standard": "BsiTr03183_2",
+              "id": "§6.1",
+              "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+            }
+          ],
+          "remediation": "Declare the distribution licence(s) of every component, named by SPDX licence identifier or expression (§6.1). SPDX 3.0: add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing_LicenseExpression element.",
+          "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+        },
+        {
+          "finding_id": "sbomtools:v1:c7b9741417339d70",
+          "finding_key": "bsi|SBOM-BSI-TR-03183-2-CREATOR|document",
+          "severity": "Warning",
+          "category": "SupplierInfo",
+          "message": "[BSI TR-03183-2 §5.2.2] 2/3 component(s) missing a component creator (supplier/author with email, or URL if no email)",
+          "element": null,
+          "counts": {
+            "affected": 2,
+            "total": 3
+          },
+          "requirement": "BSI TR-03183-2 §5.2.2: Component creator",
+          "rule_id": "SBOM-BSI-TR-03183-2-CREATOR",
+          "sarif_rule_id": "SBOM-BSI-TR-03183-2-CREATOR",
+          "standard_refs": [
+            {
+              "standard": "BsiTr03183_2",
+              "id": "§5.2.2",
+              "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+            }
+          ],
+          "remediation": "Record the component creator: the email address (or URL if no email) of the entity that created or maintains the component. SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.",
+          "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+        },
+        {
+          "finding_id": "sbomtools:v1:f40d65709c70d36b",
+          "finding_key": "bsi|SBOM-BSI-TR-03183-2-5-4|document",
+          "severity": "Error",
+          "category": "IntegrityInfo",
+          "message": "[BSI TR-03183-2 §5.2.2] 1/3 component(s) carry hashes but none is SHA-512 (the TR names the algorithm; SHA-256 or others alone do not satisfy the required field): my-app",
+          "element": null,
+          "counts": {
+            "affected": 1,
+            "total": 3
+          },
+          "requirement": "BSI TR-03183-2 §5.2.2: Hash of the deployable component (SHA-512)",
+          "rule_id": "SBOM-BSI-TR-03183-2-5-4",
+          "sarif_rule_id": "SBOM-BSI-TR-03183-2-5-4",
+          "standard_refs": [
+            {
+              "standard": "BsiTr03183_2",
+              "id": "§5.2.2",
+              "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+            }
+          ],
+          "remediation": "Provide the hash of the deployed/deployable component as SHA-512 — §5.2.2 names the algorithm, so SHA-256 or other algorithms alone do not satisfy the required field (additional hashes may coexist). SPDX 3.0: add a verifiedUsing[] Hash entry with algorithm sha512.",
+          "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+        },
+        {
+          "finding_id": "sbomtools:v1:39fcb85483501b9b",
+          "finding_key": "bsi|SBOM-BSI-TR-03183-2-5-4-MISSING|document",
+          "severity": "Warning",
+          "category": "IntegrityInfo",
+          "message": "[BSI TR-03183-2 §5.2.2] 1/3 component(s) have no hash of the deployable form; required as SHA-512 unless the information is unavailable due to the way the component is assembled (§3.2.1)",
+          "element": null,
+          "counts": {
+            "affected": 1,
+            "total": 3
+          },
+          "requirement": "BSI TR-03183-2 §5.2.2: Hash of the deployable component",
+          "rule_id": "SBOM-BSI-TR-03183-2-5-4-MISSING",
+          "sarif_rule_id": "SBOM-BSI-TR-03183-2-5-4-MISSING",
+          "standard_refs": [
+            {
+              "standard": "BsiTr03183_2",
+              "id": "§5.2.2",
+              "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+            },
+            {
+              "standard": "BsiTr03183_2",
+              "id": "§3.2.1",
+              "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+            }
+          ],
+          "remediation": "Add a SHA-512 hash of the deployable component. §3.2.1 permits omission only when the information cannot exist due to the way the component is assembled (e.g. logical components). SPDX 3.0: add a verifiedUsing[] Hash entry with algorithm sha512.",
+          "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+        },
+        {
+          "finding_id": "sbomtools:v1:c4680981eb8cf7ab",
+          "finding_key": "bsi|SBOM-BSI-TR-03183-2-5-5-COMPLETENESS|document",
+          "severity": "Warning",
+          "category": "DependencyInfo",
+          "message": "[BSI TR-03183-2 §5.2.2] Completeness of the dependency enumeration is not clearly indicated (CycloneDX compositions.aggregate / SPDX 3 relationship completeness)",
+          "element": null,
+          "requirement": "BSI TR-03183-2 §5.2.2: Completeness of the dependency enumeration",
+          "rule_id": "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS",
+          "sarif_rule_id": "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS",
+          "standard_refs": [
+            {
+              "standard": "BsiTr03183_2",
+              "id": "§5.2.2",
+              "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+            }
+          ],
+          "remediation": "Clearly indicate the completeness of the dependency enumeration (complete or incomplete). SPDX 3.0: set completeness (complete or incomplete) on the dependsOn Relationship elements.",
+          "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+        },
+        {
+          "finding_id": "sbomtools:v1:9acdf22246e78381",
+          "finding_key": "bsi|SBOM-BSI-TR-03183-2-5-2-4|document",
+          "severity": "Warning",
+          "category": "ComponentIdentification",
+          "message": "[BSI TR-03183-2 §5.2.4] 1/3 component(s) missing a unique identifier (purl/CPE/SWHID/SWID) — an additional-tier field that MUST be provided when one exists: lib-utils",
+          "element": null,
+          "counts": {
+            "affected": 1,
+            "total": 3
+          },
+          "requirement": "BSI TR-03183-2 §5.2.4: Other unique identifiers",
+          "rule_id": "SBOM-BSI-TR-03183-2-5-2-4",
+          "sarif_rule_id": "SBOM-BSI-TR-03183-2-5-2-4",
+          "standard_refs": [
+            {
+              "standard": "BsiTr03183_2",
+              "id": "§5.2.4",
+              "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+            }
+          ],
+          "remediation": "Add unique identifiers (purl, CPE) to components. §5.2.4 is the additional tier: the field MUST be provided when an identifier exists for the component. SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.",
+          "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+        },
+        {
+          "finding_id": "sbomtools:v1:a4b11bafe5f569cf",
+          "finding_key": "bsi|SBOM-BSI-TR-03183-2-3-1|document",
+          "severity": "Warning",
+          "category": "SecurityInfo",
+          "message": "[BSI TR-03183-2 §3.1] SBOM carries vulnerability information on 1/4 component(s); a document containing both SBOM and vulnerability information does not conform — publish advisories separately (e.g. CSAF). Ignore if the data was attached by enrichment rather than present in the source document.",
+          "element": null,
+          "counts": {
+            "affected": 1,
+            "total": 4
+          },
+          "requirement": "BSI TR-03183-2 §3.1: No vulnerability information in the SBOM",
+          "rule_id": "SBOM-BSI-TR-03183-2-3-1",
+          "sarif_rule_id": "SBOM-BSI-TR-03183-2-3-1",
+          "standard_refs": [
+            {
+              "standard": "BsiTr03183_2",
+              "id": "§3.1",
+              "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+            }
+          ],
+          "remediation": "Remove vulnerability information from the SBOM and publish it separately (e.g. as CSAF advisories); a document containing both SBOM and vulnerability information does not conform to TR-03183-2. SPDX 3.0: remove the security_Vulnerability elements and their affects and assessment Relationships.",
+          "help_uri": "https://bsi.bund.de/dok/TR-03183-en"
+        }
+      ]
+    },
+    {
+      "standard": "eo14028",
+      "name": "EO 14028 Section 4",
+      "applicable": true,
+      "compliant": false,
+      "score": 20,
+      "counts": {
+        "error": 2,
+        "warning": 2,
+        "info": 0
+      },
+      "violations": [
+        {
+          "finding_id": "sbomtools:v1:39af377742616641",
+          "finding_key": "eo14028|SBOM-EO14028-IDENTIFIER|document",
+          "severity": "Error",
+          "category": "ComponentIdentification",
+          "message": "1/3 components missing unique identifier (PURL/CPE/SWHID/SWID)",
+          "element": null,
+          "counts": {
+            "affected": 1,
+            "total": 3
+          },
+          "requirement": "EO 14028 Sec 4(e): Component unique identification",
+          "rule_id": "SBOM-EO14028-IDENTIFIER",
+          "sarif_rule_id": "SBOM-EO14028-IDENTIFIER",
+          "standard_refs": [
+            {
+              "standard": "Eo14028",
+              "id": "EO 14028 §4",
+              "help_uri": "https://www.federalregister.gov/d/2021-10460"
+            }
+          ],
+          "remediation": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information. SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.",
+          "help_uri": "https://www.federalregister.gov/d/2021-10460"
+        },
+        {
+          "finding_id": "sbomtools:v1:d791ac1adac121ac",
+          "finding_key": "eo14028|SBOM-EO14028-INTEGRITY|document",
+          "severity": "Warning",
+          "category": "IntegrityInfo",
+          "message": "1/3 components missing cryptographic hashes",
+          "element": null,
+          "counts": {
+            "affected": 1,
+            "total": 3
+          },
+          "requirement": "EO 14028 Sec 4(e): Component integrity verification",
+          "rule_id": "SBOM-EO14028-INTEGRITY",
+          "sarif_rule_id": "SBOM-EO14028-INTEGRITY",
+          "standard_refs": [
+            {
+              "standard": "Eo14028",
+              "id": "EO 14028 §4",
+              "help_uri": "https://www.federalregister.gov/d/2021-10460"
+            }
+          ],
+          "remediation": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information. SPDX 3.0: add verifiedUsing[] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.",
+          "help_uri": "https://www.federalregister.gov/d/2021-10460"
+        },
+        {
+          "finding_id": "sbomtools:v1:c1d6c36feb991c0a",
+          "finding_key": "eo14028|SBOM-EO14028-DISCLOSURE|document",
+          "severity": "Warning",
+          "category": "SecurityInfo",
+          "message": "No security contact or vulnerability disclosure reference found",
+          "element": null,
+          "requirement": "EO 14028 Sec 4(g): Vulnerability disclosure process",
+          "rule_id": "SBOM-EO14028-DISCLOSURE",
+          "sarif_rule_id": "SBOM-EO14028-DISCLOSURE",
+          "standard_refs": [
+            {
+              "standard": "Eo14028",
+              "id": "EO 14028 §4",
+              "help_uri": "https://www.federalregister.gov/d/2021-10460"
+            }
+          ],
+          "remediation": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information. SPDX 3.0: add an externalRef[] entry with externalRefType securityAdvisory to the root package.",
+          "help_uri": "https://www.federalregister.gov/d/2021-10460"
+        },
+        {
+          "finding_id": "sbomtools:v1:9fe2e163e08f2a30",
+          "finding_key": "eo14028|SBOM-EO14028-SUPPLIER|document",
+          "severity": "Error",
+          "category": "SupplierInfo",
+          "message": "2/3 components (66%) missing supplier information",
+          "element": null,
+          "counts": {
+            "affected": 2,
+            "total": 3
+          },
+          "requirement": "EO 14028 Sec 4(e): Supplier identification",
+          "rule_id": "SBOM-EO14028-SUPPLIER",
+          "sarif_rule_id": "SBOM-EO14028-SUPPLIER",
+          "standard_refs": [
+            {
+              "standard": "Eo14028",
+              "id": "EO 14028 §4",
+              "help_uri": "https://www.federalregister.gov/d/2021-10460"
+            }
+          ],
+          "remediation": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information. SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.",
+          "help_uri": "https://www.federalregister.gov/d/2021-10460"
+        }
+      ]
+    }
+  ]
+}

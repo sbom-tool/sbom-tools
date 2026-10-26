@@ -62,6 +62,52 @@ pub(crate) fn inventory_absent_violation(
         component_id: None,
         counts: None,
         standard_refs: Vec::new(),
+        remediation: None,
+    })
+}
+
+/// The freshness finding for an SBOM dated in the future, or `None` when its
+/// creation timestamp is missing or not later than `as_of`.
+///
+/// Freshness checks measure the document's age at the evaluation instant. A
+/// timestamp after that instant gave a negative age, which read as "just
+/// generated" and passed every staleness threshold. A future-dated SBOM shows
+/// nothing about when the inventory was last updated (usually the generator's
+/// clock or time zone is wrong), so it is reported at the severity both
+/// freshness rules give a missing timestamp: Warning, because clock-skewed
+/// generators are common and the rest of the document is unaffected. There is
+/// no skew tolerance, as for attestation evidence created after `as_of`.
+/// `citation` prefixes the message, e.g. `"[PCI DSS 6.3.2]"`.
+pub(crate) fn future_timestamp_violation(
+    sbom: &NormalizedSbom,
+    as_of: chrono::DateTime<chrono::Utc>,
+    rule_id: &'static str,
+    citation: &str,
+    requirement: &str,
+) -> Option<Violation> {
+    let created = sbom.document.created;
+    if !sbom.document.has_known_timestamp() || created <= as_of {
+        return None;
+    }
+    // The message names only the document's timestamp: the evaluation
+    // instant is the wall clock unless pinned, and would make the text
+    // differ on every run.
+    Some(Violation {
+        severity: ViolationSeverity::Warning,
+        category: ViolationCategory::DocumentMetadata,
+        message: format!(
+            "{citation} SBOM creation timestamp {} is later than the evaluation instant; a \
+             future-dated SBOM does not show when the inventory was last updated (check the \
+             generator's clock and time zone)",
+            created.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+        ),
+        element: None,
+        requirement: requirement.to_string(),
+        rule_id,
+        component_id: None,
+        counts: None,
+        standard_refs: Vec::new(),
+        remediation: None,
     })
 }
 
@@ -304,5 +350,43 @@ mod tests {
         assert_eq!(known_value(Some(" 1.0 ")), Some("1.0"));
         assert_eq!(known_value(Some("N/A")), None);
         assert_eq!(known_value(Some("NOASSERTION")), None);
+    }
+
+    #[test]
+    fn only_a_timestamp_after_the_evaluation_instant_is_future_dated() {
+        let ts = |s: &str| {
+            chrono::DateTime::parse_from_rfc3339(s)
+                .expect("test timestamp must parse")
+                .with_timezone(&chrono::Utc)
+        };
+        let as_of = ts("2026-10-12T00:00:00Z");
+        let dated = |created: chrono::DateTime<chrono::Utc>| {
+            let mut sbom = NormalizedSbom::default();
+            sbom.document.created = created;
+            future_timestamp_violation(&sbom, as_of, "SBOM-PCI-6-3-2-FRESHNESS", "[PCI]", "req")
+        };
+
+        let future = dated(ts("2026-10-12T00:00:01Z")).expect("one second later is future");
+        assert_eq!(future.severity, ViolationSeverity::Warning);
+        assert_eq!(future.rule_id, "SBOM-PCI-6-3-2-FRESHNESS");
+        assert!(
+            future
+                .message
+                .starts_with("[PCI] SBOM creation timestamp 2026-10-12T00:00:01Z"),
+            "the message names the document's timestamp: {}",
+            future.message
+        );
+        assert!(
+            !future.message.contains("2026-10-12T00:00:00Z"),
+            "the evaluation instant stays out of the message: {}",
+            future.message
+        );
+
+        // The instant itself and anything earlier are not in the future, and
+        // a missing timestamp (the parsers' epoch sentinel) is reported by
+        // the missing-timestamp branch instead.
+        assert!(dated(as_of).is_none());
+        assert!(dated(ts("2026-01-01T00:00:00Z")).is_none());
+        assert!(dated(chrono::DateTime::UNIX_EPOCH).is_none());
     }
 }

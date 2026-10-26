@@ -5,8 +5,10 @@
 //! * `compliance_10k_mixed` — every compliance level on a 10,000-component
 //!   graph, the cost of `validate` across all standards.
 //! * `fsct_flat_direct_deps` — FSCT on a wide, flat star graph (one primary
-//!   component with N direct dependencies). Each direct dependency used to be
-//!   checked against every edge, which was quadratic on this shape.
+//!   component with N direct dependencies, no deeper edges), N from 10,000 to
+//!   80,000. Each direct dependency used to be checked against every edge,
+//!   which was quadratic on this shape (3.7 s at 80,000); the set of edge
+//!   sources is now computed once, so time grows linearly with N.
 //!
 //! Fixtures come from the shared, deterministic `benches/support` generators.
 
@@ -54,7 +56,7 @@ fn star_sbom(direct: usize) -> NormalizedSbom {
 fn bench_fsct_wide(c: &mut Criterion) {
     let mut group = c.benchmark_group("fsct_flat_direct_deps");
     group.sample_size(10);
-    for direct in [10_000usize, 40_000] {
+    for direct in [10_000usize, 20_000, 40_000, 80_000] {
         let sbom = star_sbom(direct);
         let checker = ComplianceChecker::new(ComplianceLevel::Fsct);
         group.bench_with_input(BenchmarkId::from_parameter(direct), &sbom, |b, sbom| {

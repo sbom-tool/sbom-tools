@@ -1,0 +1,81 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "app-1.0.0",
+  "documentNamespace": "https://example.com/spdx/app-1.0.0-8f3c2d1e",
+  "creationInfo": {
+    "created": "2026-10-01T00:00:00Z",
+    "creators": [
+      "Organization: Example Corp (sbom@example.com)",
+      "Tool: example-generator-1.0.0"
+    ]
+  },
+  "documentDescribes": [
+    "SPDXRef-Package-app"
+  ],
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-app",
+      "name": "app",
+      "versionInfo": "1.0.0",
+      "supplier": "Organization: Example Corp",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "APPLICATION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0"
+        }
+      ],
+      "licenseDeclared": "MIT",
+      "licenseConcluded": "MIT",
+      "copyrightText": "Copyright 2026 Example Corp",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:generic/app@1.0.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-libfoo",
+      "name": "libfoo",
+      "versionInfo": "2.1.0",
+      "supplier": "Organization: Foo Maintainers",
+      "downloadLocation": "https://registry.npmjs.org/libfoo/-/libfoo-2.1.0.tgz",
+      "filesAnalyzed": false,
+      "primaryPackagePurpose": "LIBRARY",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "1f2e3d4c5b6a79881f2e3d4c5b6a79881f2e3d4c5b6a79881f2e3d4c5b6a7988"
+        }
+      ],
+      "licenseDeclared": "MIT",
+      "licenseConcluded": "MIT",
+      "copyrightText": "Copyright 2024 Foo Maintainers",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/libfoo@2.1.0"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-app"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-app",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-libfoo"
+    }
+  ]
+}

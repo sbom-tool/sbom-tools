@@ -664,7 +664,13 @@ mod tests {
     fn tech_doc_includes_compliance_summary() {
         let mut sbom = NormalizedSbom::default();
         sbom.add_component(Component::new("c".to_string(), "c".to_string()));
-        let result = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&sbom);
+        // The shared test clock (tests/common/clock.rs).
+        let as_of = chrono::DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
+            .expect("valid instant")
+            .with_timezone(&chrono::Utc);
+        let result = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+            .with_as_of(as_of)
+            .check(&sbom);
         let tech = render_tech_doc(
             &sbom,
             None,

@@ -48,7 +48,8 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "Document creator identification",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Warning",
@@ -69,7 +70,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex II (1)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Identify the manufacturer as an organization creator of the SBOM (Art. 13(16)); manufacturerName in the CRA sidecar lowers this to Info. CycloneDX: set metadata.manufacturer (name, contact[].email).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -95,7 +98,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex II (2)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Give the product a single point of contact for vulnerability reports (Art. 13(17)): a security contact or vulnerability-disclosure URL referenced from the product component. securityContact or vulnerabilityDisclosureUrl in the CRA sidecar lowers the finding to Info. CycloneDX: add a metadata.component.externalReferences[] entry of type security-contact (or advisories).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -121,7 +126,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex II (7)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Declare when security updates end (Art. 13(8) / 13(19)): set supportEndDate in the CRA sidecar, or record the date in the SBOM. Components the end-of-life data marks as no longer supported need upgrading or replacing. CycloneDX: add a metadata.component.properties[] entry named end-of-support whose value is the date (RFC 3339 or YYYY-MM-DD).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -142,7 +149,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-07"
             }
-          ]
+          ],
+          "remediation": "Give the primary product component a PURL or CPE so it can be traced across updates (Annex I Part II (1)); a SWHID or SWID alone does not satisfy this check. CycloneDX: set metadata.component.purl (or cpe).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -167,7 +176,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "RLS-2-RQ-03-RE"
             }
-          ]
+          ],
+          "remediation": "Reference the coordinated vulnerability disclosure policy (Annex I Part II (5)) from the product component. In the CRA sidecar, coordinatedDisclosurePolicyUrl satisfies the open-source steward profile and vulnerabilityDisclosureUrl lowers the manufacturer finding to Info. CycloneDX: add a metadata.component.externalReferences[] entry of type advisories linking the policy.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -188,7 +199,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex II (7)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Record component lifecycle or end-of-support status (Art. 13(8) / Annex II (7)); supportEndDate in the CRA sidecar counts too. Plan replacements for components approaching end-of-life. CycloneDX: add an eol, lifecycle or end-of-support entry to components[].properties[] (or an end-of-support date to metadata.component.properties[]).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -204,7 +217,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex V",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Reference the EU Declaration of Conformity (Annex V): set ceMarkingReference in the CRA sidecar to the DoC's URL or document ID. CycloneDX: no CycloneDX external reference type is read as a DoC reference yet, so use the sidecar key.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -213,7 +228,8 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "Document unique identification",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Error",
@@ -234,7 +250,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-07"
             }
-          ]
+          ],
+          "remediation": "Add a PURL, CPE, SWHID or SWID to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21). CycloneDX: set components[].purl (or cpe, or swhid[]).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -255,7 +273,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -272,7 +292,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -293,7 +315,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -310,7 +334,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -331,7 +357,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -348,7 +376,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -369,7 +399,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -386,7 +418,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -407,7 +441,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -424,7 +460,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -445,7 +483,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -462,7 +502,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -483,7 +525,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -500,7 +544,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -521,7 +567,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -538,7 +586,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -559,7 +609,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -576,7 +628,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -593,7 +647,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add dependency relationships between components, and identify the primary product component when the graph has several roots. CycloneDX: add dependencies[] entries (ref plus dependsOn[]) and set metadata.component to the product.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -603,7 +659,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "acme-webapp",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -613,7 +670,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/lodash@4.17.20",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -623,7 +681,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/express@4.17.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -633,7 +692,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/moment@2.29.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -643,7 +703,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/request@2.88.2",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -653,7 +714,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/axios@0.21.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -663,7 +725,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/underscore@1.12.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -673,7 +736,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/jquery@3.5.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -683,7 +747,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/react@17.0.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Warning",
@@ -704,7 +769,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part II (1)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -724,7 +791,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Art. 13(5)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Record license information for every component to support the Art. 13(5) due diligence on integrated third-party components. CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -752,7 +821,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier, starting with direct dependencies (mandatory under PRE-7-RQ-03; transitive dependencies are recommended). CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -768,7 +839,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add document-level integrity metadata (Annex I Part I (2)(f)): a unique document serial number or namespace. CycloneDX: set serialNumber (urn:uuid:…).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -784,7 +857,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Art. 13(2)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Reference the documented cybersecurity risk assessment Art. 13(2) requires: set riskAssessmentUrl in the CRA sidecar to its URL or document reference. sbom-tools does not yet read a risk-assessment external reference from the SBOM, so the sidecar key is how to satisfy this check.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "[ART14_SEV]",
@@ -800,7 +875,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Art. 14",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "[ART14_SEV]",
@@ -816,7 +893,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Art. 14",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "[ART14_SEV]",
@@ -832,7 +911,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Art. 14",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "[ART14_SEV]",
@@ -848,7 +929,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Art. 14",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         }
       ],
       "error_count": 2,
@@ -880,7 +963,8 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "Document creator identification",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Warning",
@@ -901,7 +985,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex II (1)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Identify the manufacturer as an organization creator of the SBOM (Art. 13(16)); manufacturerName in the CRA sidecar lowers this to Info. CycloneDX: set metadata.manufacturer (name, contact[].email).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -927,7 +1013,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex II (2)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Give the product a single point of contact for vulnerability reports (Art. 13(17)): a security contact or vulnerability-disclosure URL referenced from the product component. securityContact or vulnerabilityDisclosureUrl in the CRA sidecar lowers the finding to Info. CycloneDX: add a metadata.component.externalReferences[] entry of type security-contact (or advisories).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -953,7 +1041,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex II (7)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Declare when security updates end (Art. 13(8) / 13(19)): set supportEndDate in the CRA sidecar, or record the date in the SBOM. Components the end-of-life data marks as no longer supported need upgrading or replacing. CycloneDX: add a metadata.component.properties[] entry named end-of-support whose value is the date (RFC 3339 or YYYY-MM-DD).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -974,7 +1064,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-07"
             }
-          ]
+          ],
+          "remediation": "Give the primary product component a PURL or CPE so it can be traced across updates (Annex I Part II (1)); a SWHID or SWID alone does not satisfy this check. CycloneDX: set metadata.component.purl (or cpe).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -999,7 +1091,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "RLS-2-RQ-03-RE"
             }
-          ]
+          ],
+          "remediation": "Reference the coordinated vulnerability disclosure policy (Annex I Part II (5)) from the product component. In the CRA sidecar, coordinatedDisclosurePolicyUrl satisfies the open-source steward profile and vulnerabilityDisclosureUrl lowers the manufacturer finding to Info. CycloneDX: add a metadata.component.externalReferences[] entry of type advisories linking the policy.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1020,7 +1114,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex II (7)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Record component lifecycle or end-of-support status (Art. 13(8) / Annex II (7)); supportEndDate in the CRA sidecar counts too. Plan replacements for components approaching end-of-life. CycloneDX: add an eol, lifecycle or end-of-support entry to components[].properties[] (or an end-of-support date to metadata.component.properties[]).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1036,7 +1132,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex V",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Reference the EU Declaration of Conformity (Annex V): set ceMarkingReference in the CRA sidecar to the DoC's URL or document ID. CycloneDX: no CycloneDX external reference type is read as a DoC reference yet, so use the sidecar key.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -1045,7 +1143,8 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "Document unique identification",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Error",
@@ -1066,7 +1165,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-07"
             }
-          ]
+          ],
+          "remediation": "Add a PURL, CPE, SWHID or SWID to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21). CycloneDX: set components[].purl (or cpe, or swhid[]).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -1087,7 +1188,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1104,7 +1207,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -1125,7 +1230,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1142,7 +1249,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -1163,7 +1272,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1180,7 +1291,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -1201,7 +1314,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1218,7 +1333,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -1239,7 +1356,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1256,7 +1375,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -1277,7 +1398,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1294,7 +1417,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -1315,7 +1440,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1332,7 +1459,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -1353,7 +1482,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1370,7 +1501,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -1391,7 +1524,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1408,7 +1543,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -1425,7 +1562,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add dependency relationships between components, and identify the primary product component when the graph has several roots. CycloneDX: add dependencies[] entries (ref plus dependsOn[]) and set metadata.component to the product.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1435,7 +1574,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "acme-webapp",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1445,7 +1585,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/lodash@4.17.21",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1455,7 +1596,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/express@4.18.2",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1465,7 +1607,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/dayjs@1.11.7",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1475,7 +1618,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/axios@1.4.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1485,7 +1629,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/react@18.2.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1495,7 +1640,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/typescript@5.0.4",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1505,7 +1651,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/zod@3.21.4",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Info",
@@ -1515,7 +1662,8 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/prisma@4.15.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-GENERAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL"
+          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "remediation": "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers. CycloneDX: set the creator (metadata.authors[], metadata.manufacturer or metadata.tools), serialNumber, components[].name, specVersion 1.4–1.7, and a bom-ref on every component."
         },
         {
           "severity": "Warning",
@@ -1536,7 +1684,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part II (1)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1556,7 +1706,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Art. 13(5)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Record license information for every component to support the Art. 13(5) due diligence on integrated third-party components. CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -1584,7 +1736,9 @@ expression: "render(&JsonReporter::new())"
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
             }
-          ]
+          ],
+          "remediation": "Identify each component's supplier, starting with direct dependencies (mandatory under PRE-7-RQ-03; transitive dependencies are recommended). CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1600,7 +1754,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Add document-level integrity metadata (Annex I Part I (2)(f)): a unique document serial number or namespace. CycloneDX: set serialNumber (urn:uuid:…).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -1616,7 +1772,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Art. 13(2)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Reference the documented cybersecurity risk assessment Art. 13(2) requires: set riskAssessmentUrl in the CRA sidecar to its URL or document reference. sbom-tools does not yet read a risk-assessment external reference from the SBOM, so the sidecar key is how to satisfy this check.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "[ART14_SEV]",
@@ -1632,7 +1790,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Art. 14",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "[ART14_SEV]",
@@ -1648,7 +1808,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Art. 14",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "[ART14_SEV]",
@@ -1664,7 +1826,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Art. 14",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "[ART14_SEV]",
@@ -1680,7 +1844,9 @@ expression: "render(&JsonReporter::new())"
               "id": "Art. 14",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
-          ]
+          ],
+          "remediation": "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         }
       ],
       "error_count": 2,
