@@ -1977,37 +1977,116 @@ source: tests/compliance_snapshots.rs
           ]
         }
       },
+      "automationDetails": {
+        "id": "sbom-tools/cra+cra-phase1/"
+      },
+      "originalUriBaseIds": {
+        "SRCROOT": {
+          "description": {
+            "text": "The root of the source tree relative artifact URIs resolve against: the repository the SBOM file is in, or the directory given as --sarif-base."
+          }
+        }
+      },
       "results": [
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 43,
           "level": "note",
           "message": {
             "text": "EU CRA Phase 2 (2027): Component 'lib-a' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: lib-a]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cra/cra-compliant.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 36
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:cargo/lib-a@2.3.4",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "8d3abdb4f047da6f3082587ebc11fefb3362a905ef71012ebdee6c7ed7f1286c",
+            "primaryLocationLineHash": "8d3abdb4f047da6f:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:cargo/lib-a@2.3.4",
+            "findingId": "sbomtools:v1:8d3abdb4f047da6f",
             "componentId": "pkg:cargo/lib-a@2.3.4"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 43,
           "level": "note",
           "message": {
             "text": "EU CRA Phase 2 (2027): Component 'lib-b' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: lib-b]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cra/cra-compliant.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 46
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:cargo/lib-b@0.9.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "1856ab48d3130417ea54c4d6e275001cbc1047d95501d26c3b2f2659239acdf9",
+            "primaryLocationLineHash": "1856ab48d3130417:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:cargo/lib-b@0.9.1",
+            "findingId": "sbomtools:v1:1856ab48d3130417",
             "componentId": "pkg:cargo/lib-b@0.9.1"
           }
         },
         {
           "ruleId": "SBOM-CRA-SBOM-FRESHNESS",
+          "ruleIndex": 0,
           "level": "warning",
           "message": {
             "text": "EU CRA Phase 2 (2027): [CRA Art. 13(7) / Annex I Part II (1)] SBOM is 269 days old; keep the documented component inventory current when components change (Requirement: CRA Art. 13(7) / Annex I Part II (1): SBOM freshness) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cra/cra-compliant.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "2423ce73fc79ae3c6423f3fe2df512ecde0972e85d87b83295cb542f618c9be2",
+            "primaryLocationLineHash": "2423ce73fc79ae3c:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-SBOM-FRESHNESS|document",
+            "findingId": "sbomtools:v1:2423ce73fc79ae3c",
             "standardIds": [
               "CRA:Art. 13(7)",
               "CRA-Annex:Annex I Part II (1)"
@@ -2020,12 +2099,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CRA-VULN-STATEMENT",
+          "ruleIndex": 18,
           "level": "note",
           "message": {
             "text": "EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities (Requirement: CRA Annex I Part II (1): Documented vulnerability information) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cra/cra-compliant.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "f11e52f4b08d0b489a97c1e68a6b5507ba21892edeaf4733717713b31624335c",
+            "primaryLocationLineHash": "f11e52f4b08d0b48:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-VULN-STATEMENT|document",
+            "findingId": "sbomtools:v1:f11e52f4b08d0b48",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)"
             ],
@@ -2036,34 +2134,103 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 43,
           "level": "note",
           "message": {
             "text": "EU CRA Phase 1 (2026): Component 'lib-a' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: lib-a]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cra/cra-compliant.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 36
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:cargo/lib-a@2.3.4",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "f90a7165f75452f69885d7acdf4b841e99dcb6bfe0f1c0390631ea169023f8cd",
+            "primaryLocationLineHash": "f90a7165f75452f6:1"
+          },
           "properties": {
+            "findingKey": "cra-phase1|SBOM-CRA-ELEMENT-ID|pkg:cargo/lib-a@2.3.4",
+            "findingId": "sbomtools:v1:f90a7165f75452f6",
             "componentId": "pkg:cargo/lib-a@2.3.4"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 43,
           "level": "note",
           "message": {
             "text": "EU CRA Phase 1 (2026): Component 'lib-b' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: lib-b]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cra/cra-compliant.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 46
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:cargo/lib-b@0.9.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "10c544cf70ae7cece43a0801ce11c2a4de7f8341e16bae9f9b59adcd96746d26",
+            "primaryLocationLineHash": "10c544cf70ae7cec:1"
+          },
           "properties": {
+            "findingKey": "cra-phase1|SBOM-CRA-ELEMENT-ID|pkg:cargo/lib-b@0.9.1",
+            "findingId": "sbomtools:v1:10c544cf70ae7cec",
             "componentId": "pkg:cargo/lib-b@0.9.1"
           }
         },
         {
           "ruleId": "SBOM-CRA-SBOM-FRESHNESS",
+          "ruleIndex": 0,
           "level": "warning",
           "message": {
             "text": "EU CRA Phase 1 (2026): [CRA Art. 13(7) / Annex I Part II (1)] SBOM is 269 days old; keep the documented component inventory current when components change (Requirement: CRA Art. 13(7) / Annex I Part II (1): SBOM freshness) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cra/cra-compliant.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "78fe654fd47ccc0f5c8a9391640bbef75a177b654ec73ea60d1812fc2e9f9b56",
+            "primaryLocationLineHash": "78fe654fd47ccc0f:1"
+          },
           "properties": {
+            "findingKey": "cra-phase1|SBOM-CRA-SBOM-FRESHNESS|document",
+            "findingId": "sbomtools:v1:78fe654fd47ccc0f",
             "standardIds": [
               "CRA:Art. 13(7)",
               "CRA-Annex:Annex I Part II (1)"
@@ -2076,12 +2243,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CRA-VULN-STATEMENT",
+          "ruleIndex": 18,
           "level": "note",
           "message": {
             "text": "EU CRA Phase 1 (2026): [CRA Annex I Part II (1)] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities (Requirement: CRA Annex I Part II (1): Documented vulnerability information) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cra/cra-compliant.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "e48721d2aa6b495f38895506123d42d856647c69f07d0c4ad0ea64741c15e103",
+            "primaryLocationLineHash": "e48721d2aa6b495f:1"
+          },
           "properties": {
+            "findingKey": "cra-phase1|SBOM-CRA-VULN-STATEMENT|document",
+            "findingId": "sbomtools:v1:e48721d2aa6b495f",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)"
             ],

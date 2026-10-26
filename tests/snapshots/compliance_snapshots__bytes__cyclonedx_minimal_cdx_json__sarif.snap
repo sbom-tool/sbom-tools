@@ -537,15 +537,50 @@ source: tests/compliance_snapshots.rs
           ]
         }
       },
+      "automationDetails": {
+        "id": "sbom-tools/cisa-2026+ntia/"
+      },
+      "originalUriBaseIds": {
+        "SRCROOT": {
+          "description": {
+            "text": "The root of the source tree relative artifact URIs resolve against: the repository the SBOM file is in, or the directory given as --sarif-base."
+          }
+        }
+      },
       "results": [
         {
           "ruleId": "SBOM-NTIA-IDENTIFIER",
+          "ruleIndex": 5,
           "level": "error",
           "message": {
             "text": "NTIA Minimum Elements: Component 'test-app' missing unique identifier (PURL/CPE/SWHID/SWID) (Requirement: NTIA Minimum Elements: Other Unique Identifiers) [Element: test-app]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-app",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "8dbbd0ee3922d90ecdb9ec24e7f7e1398401241982a72e57000215cbf25c50c5",
+            "primaryLocationLineHash": "8dbbd0ee3922d90e:1"
+          },
           "properties": {
+            "findingKey": "ntia|SBOM-NTIA-IDENTIFIER|test-app",
+            "findingId": "sbomtools:v1:8dbbd0ee3922d90e",
             "standardIds": [
               "NTIA:NTIA Minimum Elements"
             ],
@@ -557,12 +592,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-NTIA-SUPPLIER",
+          "ruleIndex": 4,
           "level": "error",
           "message": {
             "text": "NTIA Minimum Elements: Component 'test-app' missing supplier/manufacturer (Requirement: NTIA: Supplier information) [Element: test-app]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-app",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "ab835691e2f798bb95f4837b5b10c59720bf8aa252991ebf2d1f36bd6b3f3723",
+            "primaryLocationLineHash": "ab835691e2f798bb:1"
+          },
           "properties": {
+            "findingKey": "ntia|SBOM-NTIA-SUPPLIER|test-app",
+            "findingId": "sbomtools:v1:ab835691e2f798bb",
             "standardIds": [
               "NTIA:NTIA Minimum Elements"
             ],
@@ -574,12 +634,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-NTIA-SUPPLIER",
+          "ruleIndex": 4,
           "level": "error",
           "message": {
             "text": "NTIA Minimum Elements: Component 'lodash' missing supplier/manufacturer (Requirement: NTIA: Supplier information) [Element: lodash]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 22
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/lodash@4.17.21",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "f863b422f8675d3bb0212f3b31445b83955cf890c899f3bff31fa550ce90b2eb",
+            "primaryLocationLineHash": "f863b422f8675d3b:1"
+          },
           "properties": {
+            "findingKey": "ntia|SBOM-NTIA-SUPPLIER|pkg:npm/lodash@4.17.21",
+            "findingId": "sbomtools:v1:f863b422f8675d3b",
             "standardIds": [
               "NTIA:NTIA Minimum Elements"
             ],
@@ -591,12 +676,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-NTIA-SUPPLIER",
+          "ruleIndex": 4,
           "level": "error",
           "message": {
             "text": "NTIA Minimum Elements: Component 'express' missing supplier/manufacturer (Requirement: NTIA: Supplier information) [Element: express]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 36
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/express@4.18.2",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "3ac7f51e13b33edfc7dd477f886d1137745e86097c85d7e121b86f96d38d5458",
+            "primaryLocationLineHash": "3ac7f51e13b33edf:1"
+          },
           "properties": {
+            "findingKey": "ntia|SBOM-NTIA-SUPPLIER|pkg:npm/express@4.18.2",
+            "findingId": "sbomtools:v1:3ac7f51e13b33edf",
             "standardIds": [
               "NTIA:NTIA Minimum Elements"
             ],
@@ -608,12 +718,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-NTIA-DEPENDENCY",
+          "ruleIndex": 6,
           "level": "warning",
           "message": {
             "text": "NTIA Minimum Elements: Primary component 'test-app' participates in no dependency relationship (Requirement: NTIA: Dependency relationships) [Element: test-app]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-app",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "8b7cd2c62a51b6878a566adac502f5366aa0450017d6ba45f9f01f580e36c1da",
+            "primaryLocationLineHash": "8b7cd2c62a51b687:1"
+          },
           "properties": {
+            "findingKey": "ntia|SBOM-NTIA-DEPENDENCY|test-app",
+            "findingId": "sbomtools:v1:8b7cd2c62a51b687",
             "standardIds": [
               "NTIA:NTIA Minimum Elements"
             ],
@@ -625,12 +760,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-NTIA-ELEMENT-ID",
+          "ruleIndex": 10,
           "level": "note",
           "message": {
             "text": "NTIA Minimum Elements: Component 'test-app' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: test-app]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-app",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "394b5cbe21a02487bebd084a140a1951cf3e89f4decc6a97a32252e503c4ca57",
+            "primaryLocationLineHash": "394b5cbe21a02487:1"
+          },
           "properties": {
+            "findingKey": "ntia|SBOM-NTIA-ELEMENT-ID|test-app",
+            "findingId": "sbomtools:v1:394b5cbe21a02487",
             "standardIds": [
               "NTIA:NTIA Minimum Elements"
             ],
@@ -642,12 +802,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-AUTHOR",
+          "ruleIndex": 11,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] SBOM Author missing: no Person or Organization creator names the entity that created the SBOM data (tool-only creator lists do not satisfy the element — the author is the entity operating the tool, not the tool itself) (Requirement: CISA 2026 Minimum Elements: SBOM Author) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "c121631bf022b32880df6a1c27bd2e15ce8e41288736d4cd4e89e20e0436e2bd",
+            "primaryLocationLineHash": "c121631bf022b328:1"
+          },
           "properties": {
+            "findingKey": "cisa-2026|SBOM-CISA2026-AUTHOR|document",
+            "findingId": "sbomtools:v1:c121631bf022b328",
             "standardIds": [
               "CISA-2026:SBOM Author"
             ],
@@ -658,12 +837,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-SIGNATURE",
+          "ruleIndex": 12,
           "level": "warning",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] No SBOM Author Signature found in the document (CycloneDX JSF signature or SPDX 3 verifiedUsing signature); SPDX 2.x cannot express one in-document and detached signatures are invisible to this check (Requirement: CISA 2026 Minimum Elements: SBOM Author Signature) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "a8f36f3ede2cbd0f7e44ddf03000d1ec549cc95d018bed47d47702c47aac7d10",
+            "primaryLocationLineHash": "a8f36f3ede2cbd0f:1"
+          },
           "properties": {
+            "findingKey": "cisa-2026|SBOM-CISA2026-SIGNATURE|document",
+            "findingId": "sbomtools:v1:a8f36f3ede2cbd0f",
             "standardIds": [
               "CISA-2026:SBOM Author Signature"
             ],
@@ -674,12 +872,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-GENERATION-CONTEXT",
+          "ruleIndex": 14,
           "level": "warning",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] SBOM Generation Context missing: no software lifecycle phase is declared (CycloneDX 1.5+ metadata.lifecycles, e.g. 'pre-build', 'build', 'post-build'; SPDX 2.x has no standard field) (Requirement: CISA 2026 Minimum Elements: SBOM Generation Context) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "98b748f2ca790dafe603ac2b4adf290f27595ed8aaefe8b5f837e23f47a7681c",
+            "primaryLocationLineHash": "98b748f2ca790daf:1"
+          },
           "properties": {
+            "findingKey": "cisa-2026|SBOM-CISA2026-GENERATION-CONTEXT|document",
+            "findingId": "sbomtools:v1:98b748f2ca790daf",
             "standardIds": [
               "CISA-2026:SBOM Generation Context"
             ],
@@ -690,12 +907,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-PRODUCER",
+          "ruleIndex": 19,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'test-app' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance (Requirement: CISA 2026 Minimum Elements: Component Producer) [Element: test-app]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-app",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "237e61efe1f7dfd4e75ed1837b13810ed422b68809f7aaedb0f5bca1453ee424",
+            "primaryLocationLineHash": "237e61efe1f7dfd4:1"
+          },
           "properties": {
+            "findingKey": "cisa-2026|SBOM-CISA2026-PRODUCER|test-app",
+            "findingId": "sbomtools:v1:237e61efe1f7dfd4",
             "standardIds": [
               "CISA-2026:Component Producer"
             ],
@@ -707,12 +949,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-IDENTIFIER",
+          "ruleIndex": 23,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'test-app' has no machine-processable identifier (CPE or PURL are named by the element; SWHID/SWID also qualify) (Requirement: CISA 2026 Minimum Elements: Component Identifiers) [Element: test-app]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-app",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "17ed5a828034d7b58cd3b29524a9f53e9ff0cdfe0830db26ffe6c2e77723f4ae",
+            "primaryLocationLineHash": "17ed5a828034d7b5:1"
+          },
           "properties": {
+            "findingKey": "cisa-2026|SBOM-CISA2026-IDENTIFIER|test-app",
+            "findingId": "sbomtools:v1:17ed5a828034d7b5",
             "standardIds": [
               "CISA-2026:Component Identifiers"
             ],
@@ -724,12 +991,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-HASH",
+          "ruleIndex": 24,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'test-app' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author) (Requirement: CISA 2026 Minimum Elements: Component Hash Value) [Element: test-app]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-app",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9d8266cde530b4f993ac0c1eb6df1594dcc4c77bde1ffc5d5e797228bd7a3e23",
+            "primaryLocationLineHash": "9d8266cde530b4f9:1"
+          },
           "properties": {
+            "findingKey": "cisa-2026|SBOM-CISA2026-HASH|test-app",
+            "findingId": "sbomtools:v1:9d8266cde530b4f9",
             "standardIds": [
               "CISA-2026:Component Hash Value"
             ],
@@ -741,12 +1033,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-LICENSE",
+          "ruleIndex": 26,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'test-app' has no license information and no explicit unknown indication (prefer SPDX identifiers; use NOASSERTION when the license is unknown to the author) (Requirement: CISA 2026 Minimum Elements: Component License) [Element: test-app]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-app",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9942ba05bb3e949d25e85aec003d1915e6b19668831f386c349355fa27a0649b",
+            "primaryLocationLineHash": "9942ba05bb3e949d:1"
+          },
           "properties": {
+            "findingKey": "cisa-2026|SBOM-CISA2026-LICENSE|test-app",
+            "findingId": "sbomtools:v1:9942ba05bb3e949d",
             "standardIds": [
               "CISA-2026:Component License"
             ],
@@ -758,12 +1075,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-PRODUCER",
+          "ruleIndex": 19,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'lodash' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance (Requirement: CISA 2026 Minimum Elements: Component Producer) [Element: lodash]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 22
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/lodash@4.17.21",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "ed9b044d1e184c63a74e8c0ef5df15fc01a1343c47d3ecfd9355ff6b22b48d35",
+            "primaryLocationLineHash": "ed9b044d1e184c63:1"
+          },
           "properties": {
+            "findingKey": "cisa-2026|SBOM-CISA2026-PRODUCER|pkg:npm/lodash@4.17.21",
+            "findingId": "sbomtools:v1:ed9b044d1e184c63",
             "standardIds": [
               "CISA-2026:Component Producer"
             ],
@@ -775,12 +1117,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-HASH",
+          "ruleIndex": 24,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'lodash' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author) (Requirement: CISA 2026 Minimum Elements: Component Hash Value) [Element: lodash]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 22
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/lodash@4.17.21",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "95cd0336e73dcd729daf69f0a4277733f140fd1ccdb8812b9f7e82bf04232ff2",
+            "primaryLocationLineHash": "95cd0336e73dcd72:1"
+          },
           "properties": {
+            "findingKey": "cisa-2026|SBOM-CISA2026-HASH|pkg:npm/lodash@4.17.21",
+            "findingId": "sbomtools:v1:95cd0336e73dcd72",
             "standardIds": [
               "CISA-2026:Component Hash Value"
             ],
@@ -792,12 +1159,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-PRODUCER",
+          "ruleIndex": 19,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'express' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance (Requirement: CISA 2026 Minimum Elements: Component Producer) [Element: express]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 36
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/express@4.18.2",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "7dfaa34cd5221fcccf90324bba1e7d54bdcae0d122705ffee741ea7267e5c100",
+            "primaryLocationLineHash": "7dfaa34cd5221fcc:1"
+          },
           "properties": {
+            "findingKey": "cisa-2026|SBOM-CISA2026-PRODUCER|pkg:npm/express@4.18.2",
+            "findingId": "sbomtools:v1:7dfaa34cd5221fcc",
             "standardIds": [
               "CISA-2026:Component Producer"
             ],
@@ -809,12 +1201,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-HASH",
+          "ruleIndex": 24,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'express' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author) (Requirement: CISA 2026 Minimum Elements: Component Hash Value) [Element: express]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 36
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/express@4.18.2",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "7b85bdafcc0877b03ae0231f62a6304b7e508b20d17779e1428cd6a0450e1907",
+            "primaryLocationLineHash": "7b85bdafcc0877b0:1"
+          },
           "properties": {
+            "findingKey": "cisa-2026|SBOM-CISA2026-HASH|pkg:npm/express@4.18.2",
+            "findingId": "sbomtools:v1:7b85bdafcc0877b0",
             "standardIds": [
               "CISA-2026:Component Hash Value"
             ],
@@ -826,12 +1243,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-COVERAGE",
+          "ruleIndex": 28,
           "level": "warning",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Coverage: the SBOM does not declare its completeness (CycloneDX compositions aggregate); information gaps must be explicitly stated as unknown or deliberately withheld (Requirement: CISA 2026 Minimum Elements: Coverage / Explicitly Identifying Unknown Information) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "17cdd69dc4e4f7211a3a270c6d722bb8e659ccadec139e29e63e25acea85008c",
+            "primaryLocationLineHash": "17cdd69dc4e4f721:1"
+          },
           "properties": {
+            "findingKey": "cisa-2026|SBOM-CISA2026-COVERAGE|document",
+            "findingId": "sbomtools:v1:17cdd69dc4e4f721",
             "standardIds": [
               "CISA-2026:Coverage",
               "CISA-2026:Explicitly Identifying Unknown Information"

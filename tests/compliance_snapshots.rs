@@ -26,7 +26,10 @@ use sbom_tools::quality::{
     ComplianceChecker, ComplianceLevel, ComplianceResult, StandardSelector, ViolationSeverity,
 };
 use sbom_tools::reports::oscal::generate_assessment_results_at;
-use sbom_tools::reports::{generate_compliance_json, generate_multi_compliance_sarif};
+use sbom_tools::reports::{
+    SarifArtifact, SarifArtifactLocation, SarifOptions, generate_compliance_json,
+    generate_multi_compliance_sarif_with,
+};
 
 const FIXTURES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
@@ -283,7 +286,17 @@ fn render_outputs(rel: &str, standards: &[&str]) -> [(&'static str, String); 4] 
         .collect();
     let json = serde_json::to_string_pretty(&results).expect("JSON serializes");
     let envelope = generate_compliance_json(&results).expect("envelope serializes");
-    let sarif = generate_multi_compliance_sarif(&results).expect("SARIF serializes");
+    // The SBOM as the CLI names it from the repository root.
+    let artifact = SarifArtifact::new(
+        SarifArtifactLocation::relative(format!("tests/fixtures/{rel}")),
+        &sbom,
+        &raw,
+    );
+    let sarif = generate_multi_compliance_sarif_with(
+        &results,
+        &SarifOptions::new().with_artifact(artifact),
+    )
+    .expect("SARIF serializes");
     let oscal = generate_assessment_results_at(
         &results,
         &sbom,

@@ -2149,191 +2149,790 @@ expression: "render(&SarifReporter::new())"
           ]
         }
       },
+      "automationDetails": {
+        "id": "sbom-tools/diff/"
+      },
+      "originalUriBaseIds": {
+        "SRCROOT": {
+          "description": {
+            "text": "The root of the source tree relative artifact URIs resolve against: the repository the SBOM file is in, or the directory given as --sarif-base."
+          }
+        }
+      },
       "results": [
         {
           "ruleId": "SBOM-TOOLS-001",
+          "ruleIndex": 0,
           "level": "note",
           "message": {
             "text": "Component added: dayjs 1.11.7"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/dayjs@1.11.7",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "fd3fd3e69d2d81ab7e170b5621da8a9c568f66773a2b7c83a80e3ff5f0059a98",
+            "primaryLocationLineHash": "fd3fd3e69d2d81ab:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-001|pkg:npm/dayjs@1.11.7",
+            "findingId": "sbomtools:v1:fd3fd3e69d2d81ab"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-001",
+          "ruleIndex": 0,
           "level": "note",
           "message": {
             "text": "Component added: typescript 5.0.4"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/typescript@5.0.4",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9b072acf3882f15e68a311d8311994e20a3b9c6f206164f7689937b5f0e087b9",
+            "primaryLocationLineHash": "9b072acf3882f15e:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-001|pkg:npm/typescript@5.0.4",
+            "findingId": "sbomtools:v1:9b072acf3882f15e"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-001",
+          "ruleIndex": 0,
           "level": "note",
           "message": {
             "text": "Component added: zod 3.21.4"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/zod@3.21.4",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9309551daae47dd230f91277e5e01aa0bb92dfd9ec242c944a861634aac64d8b",
+            "primaryLocationLineHash": "9309551daae47dd2:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-001|pkg:npm/zod@3.21.4",
+            "findingId": "sbomtools:v1:9309551daae47dd2"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-001",
+          "ruleIndex": 0,
           "level": "note",
           "message": {
             "text": "Component added: prisma 4.15.0"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/prisma@4.15.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "0431a3a7dec48380988fc01223a13971297aaeb2606b8dd9a093e79e2316db21",
+            "primaryLocationLineHash": "0431a3a7dec48380:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-001|pkg:npm/prisma@4.15.0",
+            "findingId": "sbomtools:v1:0431a3a7dec48380"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-002",
+          "ruleIndex": 1,
           "level": "warning",
           "message": {
             "text": "Component removed: jquery 3.5.1"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/jquery@3.5.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "a22887cb0c52128f1b6c3153bec7a2fd6199d56254fda8aeb8a10e1a49b1e818",
+            "primaryLocationLineHash": "a22887cb0c52128f:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-002|pkg:npm/jquery@3.5.1",
+            "findingId": "sbomtools:v1:a22887cb0c52128f"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-002",
+          "ruleIndex": 1,
           "level": "warning",
           "message": {
             "text": "Component removed: moment 2.29.1"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/moment@2.29.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "eed09dcbe021afc2573420f98546f7949094d5b926437e22d49a1bed222475ac",
+            "primaryLocationLineHash": "eed09dcbe021afc2:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-002|pkg:npm/moment@2.29.1",
+            "findingId": "sbomtools:v1:eed09dcbe021afc2"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-002",
+          "ruleIndex": 1,
           "level": "warning",
           "message": {
             "text": "Component removed: request 2.88.2"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/request@2.88.2",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "1f83a1a8236d6d44dc0a7ee27702f2eddffd8ee165dd00e2088d088aab8251fd",
+            "primaryLocationLineHash": "1f83a1a8236d6d44:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-002|pkg:npm/request@2.88.2",
+            "findingId": "sbomtools:v1:1f83a1a8236d6d44"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-002",
+          "ruleIndex": 1,
           "level": "warning",
           "message": {
             "text": "Component removed: underscore 1.12.0"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/underscore@1.12.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "a9929e0db254ed4dfc5ea7cb8cfe60a88302078a57972dc879e5f75f0578eb8c",
+            "primaryLocationLineHash": "a9929e0db254ed4d:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-002|pkg:npm/underscore@1.12.0",
+            "findingId": "sbomtools:v1:a9929e0db254ed4d"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-003",
+          "ruleIndex": 2,
           "level": "note",
           "message": {
             "text": "Component modified: acme-webapp 1.0.0 -> 2.0.0"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "acme-webapp",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "00ed494590e010b73b07b7af200d33938bdda7e76d03e80a23ef9a61ea8815b6",
+            "primaryLocationLineHash": "00ed494590e010b7:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-003|acme-webapp",
+            "findingId": "sbomtools:v1:00ed494590e010b7"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-003",
+          "ruleIndex": 2,
           "level": "note",
           "message": {
             "text": "Component modified: axios 0.21.1 -> 1.4.0"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/axios@1.4.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "fb35c450684ee44bccb828e80f38e6a52e3628b281828b34ecb79cd2537227d2",
+            "primaryLocationLineHash": "fb35c450684ee44b:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-003|pkg:npm/axios@1.4.0",
+            "findingId": "sbomtools:v1:fb35c450684ee44b"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-003",
+          "ruleIndex": 2,
           "level": "note",
           "message": {
             "text": "Component modified: express 4.17.1 -> 4.18.2"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/express@4.18.2",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "4a4f2e9774185abb5c71d8a83fa572ad569263022b8f3b13f72ea704234e5ba9",
+            "primaryLocationLineHash": "4a4f2e9774185abb:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-003|pkg:npm/express@4.18.2",
+            "findingId": "sbomtools:v1:4a4f2e9774185abb"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-003",
+          "ruleIndex": 2,
           "level": "note",
           "message": {
             "text": "Component modified: lodash 4.17.20 -> 4.17.21"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/lodash@4.17.21",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "81fdfe139d0f055e0480d6f796bbe50da885e1208c636e2ebff22d9c4fbf2ed5",
+            "primaryLocationLineHash": "81fdfe139d0f055e:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-003|pkg:npm/lodash@4.17.21",
+            "findingId": "sbomtools:v1:81fdfe139d0f055e"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-003",
+          "ruleIndex": 2,
           "level": "note",
           "message": {
             "text": "Component modified: react 17.0.1 -> 18.2.0"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/react@18.2.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "5ac0d0fc2074bd6eabdb57dd9951ef38ab00f0a7b204da8be640124e9758efa1",
+            "primaryLocationLineHash": "5ac0d0fc2074bd6e:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-003|pkg:npm/react@18.2.0",
+            "findingId": "sbomtools:v1:5ac0d0fc2074bd6e"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-005",
+          "ruleIndex": 4,
           "level": "error",
           "message": {
             "text": "Vulnerability introduced: CVE-2023-45857 (Critical) [Transitive] in axios 1.4.0"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/axios@1.4.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "07bcb4f8b3ab46757ee01bcd5155cfa4e758556fb43011f02e80fb984914ee04",
+            "primaryLocationLineHash": "07bcb4f8b3ab4675:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-005:CVE-2023-45857|pkg:npm/axios@1.4.0",
+            "findingId": "sbomtools:v1:07bcb4f8b3ab4675"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-005",
+          "ruleIndex": 4,
           "level": "error",
           "message": {
             "text": "Vulnerability introduced: CVE-2023-26136 (High) [Transitive] in express 4.18.2"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/express@4.18.2",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "1071362216b83e1dc32eba359ea717744569397717eceb931647e293cd31e526",
+            "primaryLocationLineHash": "1071362216b83e1d:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-005:CVE-2023-26136|pkg:npm/express@4.18.2",
+            "findingId": "sbomtools:v1:1071362216b83e1d"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-006",
+          "ruleIndex": 5,
           "level": "note",
           "message": {
             "text": "Vulnerability resolved: CVE-2020-28469 (High) [Transitive] was in express"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/express@4.17.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "55f2ce7fef827d31b698cabec0d65ffc294e647738a8a452f760b119c533855a",
+            "primaryLocationLineHash": "55f2ce7fef827d31:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-006:CVE-2020-28469|pkg:npm/express@4.17.1",
+            "findingId": "sbomtools:v1:55f2ce7fef827d31"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-006",
+          "ruleIndex": 5,
           "level": "note",
           "message": {
             "text": "Vulnerability resolved: CVE-2021-23337 (High) [Direct] was in lodash"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/lodash@4.17.20",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "8b27806efa1436a4db96646147dbcaefc829e4ed9afe4333f8fd3da477f223a0",
+            "primaryLocationLineHash": "8b27806efa1436a4:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-006:CVE-2021-23337|pkg:npm/lodash@4.17.20",
+            "findingId": "sbomtools:v1:8b27806efa1436a4"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-006",
+          "ruleIndex": 5,
           "level": "note",
           "message": {
             "text": "Vulnerability resolved: CVE-2022-24999 (Medium) [Transitive] was in express"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/express@4.17.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "e42bbe0e2730f01c145f454828b6a42300a756dba5a5281ba640c18e90d7263a",
+            "primaryLocationLineHash": "e42bbe0e2730f01c:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-006:CVE-2022-24999|pkg:npm/express@4.17.1",
+            "findingId": "sbomtools:v1:e42bbe0e2730f01c"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-008",
+          "ruleIndex": 7,
           "level": "note",
           "message": {
             "text": "Metadata modified: created ([TIMESTAMP] -> [TIMESTAMP])"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "b8e701d83e460f6defffd3a6de25b481d8b2db0a146c960770c855d994cdafbd",
+            "primaryLocationLineHash": "b8e701d83e460f6d:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-008:created|document",
+            "findingId": "sbomtools:v1:b8e701d83e460f6d"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-008",
+          "ruleIndex": 7,
           "level": "note",
           "message": {
             "text": "Metadata modified: doc_version (1 -> 2)"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "71fcd25a30c3817f44d81b61fdd2e9fac6e3484374bf856c927aaa534bbb96da",
+            "primaryLocationLineHash": "71fcd25a30c3817f:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-008:doc_version|document",
+            "findingId": "sbomtools:v1:71fcd25a30c3817f"
+          }
         },
         {
           "ruleId": "SBOM-TOOLS-008",
+          "ruleIndex": 7,
           "level": "note",
           "message": {
             "text": "Metadata modified: primary_component_version (1.0.0 -> 2.0.0)"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "d7aba02aa6149bc5b59636334141489b94d87fd6233094dce8d9569b56471ba4",
+            "primaryLocationLineHash": "d7aba02aa6149bc5:1"
+          },
+          "properties": {
+            "findingKey": "diff|SBOM-TOOLS-008:primary_component_version|document",
+            "findingId": "sbomtools:v1:d7aba02aa6149bc5"
+          }
         },
         {
           "ruleId": "SBOM-CRA-CREATOR",
+          "ruleIndex": 48,
           "level": "error",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): SBOM must have creator/tool information (Requirement: Document creator identification) [Element: unknown]"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "761bc16c60e5f3558fd178a509dfd0ed4eaab7a471b7180b5229b9c431501806",
+            "primaryLocationLineHash": "761bc16c60e5f355:1"
+          },
+          "properties": {
+            "findingKey": "cra|SBOM-CRA-CREATOR|document",
+            "findingId": "sbomtools:v1:761bc16c60e5f355"
+          }
         },
         {
           "ruleId": "SBOM-CRA-ART-13-16",
+          "ruleIndex": 25,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Art. 13(16)] SBOM should identify the manufacturer (organization) (Requirement: CRA Art. 13(16): Manufacturer identification) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "e7d698f69d8bc55abf88406ec61f2892351acf048661a2ee0018b16618d4e31a",
+            "primaryLocationLineHash": "e7d698f69d8bc55a:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-13-16|document",
+            "findingId": "sbomtools:v1:e7d698f69d8bc55a",
             "standardIds": [
               "CRA:Art. 13(16)",
               "CRA-Annex:Annex II (1)"
@@ -2346,12 +2945,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-13-17-CONTACT",
+          "ruleIndex": 12,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Art. 13(17)] SBOM should include a security contact or vulnerability disclosure reference (Requirement: CRA Art. 13(17): Vulnerability disclosure contact) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "ca743c47edfed343c67b18d87c46642c7a3f17f857a4a51848c5f597b007c392",
+            "primaryLocationLineHash": "ca743c47edfed343:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-13-17-CONTACT|document",
+            "findingId": "sbomtools:v1:ca743c47edfed343",
             "standardIds": [
               "CRA:Art. 13(17)",
               "CRA-Annex:Annex I Part II (6)",
@@ -2366,12 +2984,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-13-8",
+          "ruleIndex": 19,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Art. 13(8) / 13(19)] Consider specifying a support end date for security updates (Requirement: CRA Art. 13(8) / 13(19): Support period disclosure) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "2d7f9b5226418dab3158b7e8e19f872bf17ea3f0278964cf994374992368de17",
+            "primaryLocationLineHash": "2d7f9b5226418dab:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-13-8|document",
+            "findingId": "sbomtools:v1:2d7f9b5226418dab",
             "standardIds": [
               "CRA:Art. 13(8)",
               "CRA:Art. 13(19)",
@@ -2386,12 +3023,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-TRACEABILITY",
+          "ruleIndex": 30,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Primary component 'acme-webapp' missing unique identifier (PURL/CPE) for cross-update traceability (Requirement: CRA Annex I Part II (1): Product identifier traceability across updates) [Element: acme-webapp]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "acme-webapp",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "b25878f8386a75c14367a997a7d79f2890e06722d0b48d40985b4d44744257cf",
+            "primaryLocationLineHash": "b25878f8386a75c1:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-TRACEABILITY|acme-webapp",
+            "findingId": "sbomtools:v1:b25878f8386a75c1",
             "standardIds": [
               "CRA-Annex:Annex I Part II",
               "prEN-40000-1-3:PRE-7-RQ-07"
@@ -2404,12 +3066,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-CVD-POLICY",
+          "ruleIndex": 18,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (5)] SBOM should reference a coordinated vulnerability disclosure policy (advisories URL or disclosure URL) (Requirement: CRA Annex I Part II (5): Coordinated vulnerability disclosure policy) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9ca70a3db870e6559d8448b8ee6f5ddc9e5aaa86d858e3f31b1317c29f0f390b",
+            "primaryLocationLineHash": "9ca70a3db870e655:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-CVD-POLICY|document",
+            "findingId": "sbomtools:v1:9ca70a3db870e655",
             "standardIds": [
               "CRA-Annex:Annex I Part II (5)",
               "CRA:Art. 13(8)",
@@ -2423,12 +3104,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-LIFECYCLE",
+          "ruleIndex": 21,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Art. 13(8) / Annex II (7)] Consider including component lifecycle/end-of-support information (Requirement: CRA Annex II (7): Component lifecycle status) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "87033cdc965d69b7b1b0b1c7d2c627179fb1d00040d20ea0852ae92269132afb",
+            "primaryLocationLineHash": "87033cdc965d69b7:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-LIFECYCLE|document",
+            "findingId": "sbomtools:v1:87033cdc965d69b7",
             "standardIds": [
               "CRA:Art. 13(8)",
               "CRA-Annex:Annex II (7)"
@@ -2441,12 +3141,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-V",
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex V] Missing reference to the EU Declaration of Conformity (attestation or certification external reference) for product class Default (Requirement: CRA Annex V: EU Declaration of Conformity reference) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "d59208c42cd33a93e87227347cb4cea216527089f0f2702cb765dafe3716ef59",
+            "primaryLocationLineHash": "d59208c42cd33a93:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-V|document",
+            "findingId": "sbomtools:v1:d59208c42cd33a93",
             "standardIds": [
               "CRA-Annex:Annex V"
             ],
@@ -2457,20 +3176,66 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-SERIAL",
+          "ruleIndex": 49,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): SBOM should have a serial number/unique identifier (Requirement: Document unique identification) [Element: unknown]"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "7ebe5161af763b692247d99bf91463cad5f21a8272e45c70363f7b2e8e352faa",
+            "primaryLocationLineHash": "7ebe5161af763b69:1"
+          },
+          "properties": {
+            "findingKey": "cra|SBOM-CRA-SERIAL|document",
+            "findingId": "sbomtools:v1:7ebe5161af763b69"
+          }
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-IDENTIFIER",
+          "ruleIndex": 29,
           "level": "error",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I, [PRE-7-RQ-07]] Component 'acme-webapp' missing unique identifier (PURL/CPE/SWHID/SWID) (Requirement: CRA Annex I / prEN 40000-1-3 [PRE-7-RQ-07]: Unique component identifier (PURL/CPE/SWHID/SWID)) [Element: acme-webapp]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "acme-webapp",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "7a3f325e79a0cd7fa1522279e7747e576f6a7badd113ce1314761040ccb902b3",
+            "primaryLocationLineHash": "7a3f325e79a0cd7f:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-IDENTIFIER|acme-webapp",
+            "findingId": "sbomtools:v1:7a3f325e79a0cd7f",
             "standardIds": [
               "CRA-Annex:Annex I",
               "prEN-40000-1-3:PRE-7-RQ-07"
@@ -2483,12 +3248,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'acme-webapp' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: acme-webapp]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "acme-webapp",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "68e9c47444c36f9b1e2ffe9f458f6fd27393c0e5ac876ec6d4288727220b1803",
+            "primaryLocationLineHash": "68e9c47444c36f9b:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|acme-webapp",
+            "findingId": "sbomtools:v1:68e9c47444c36f9b",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -2501,12 +3291,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'acme-webapp' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: acme-webapp]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "acme-webapp",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "452cd9cfddf68fb5088cd0605b903a3c46034384212b6200f5110b639642452e",
+            "primaryLocationLineHash": "452cd9cfddf68fb5:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|acme-webapp",
+            "findingId": "sbomtools:v1:452cd9cfddf68fb5",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -2518,12 +3333,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'lodash' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: lodash]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/lodash@4.17.20",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "40a44574539d759525886aae2a5362566c40d90b6beb20c6b8914c95172f3cc4",
+            "primaryLocationLineHash": "40a44574539d7595:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/lodash@4.17.20",
+            "findingId": "sbomtools:v1:40a44574539d7595",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -2536,12 +3376,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'lodash' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: lodash]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/lodash@4.17.20",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "04783e57d03cc1cf2aa2846a686a67974b73ce35706d1159f33d97e21f90af65",
+            "primaryLocationLineHash": "04783e57d03cc1cf:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/lodash@4.17.20",
+            "findingId": "sbomtools:v1:04783e57d03cc1cf",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -2553,12 +3418,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'express' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: express]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/express@4.17.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "ebbc70b4f61009c86645952bce9397bf9ad2bdd1f54841a7be9d1b90923dd423",
+            "primaryLocationLineHash": "ebbc70b4f61009c8:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/express@4.17.1",
+            "findingId": "sbomtools:v1:ebbc70b4f61009c8",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -2571,12 +3461,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'express' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: express]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/express@4.17.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "ebf781e53a614f8d17bdc07a47a4b1fd5e61c0cfa96c43fa5cc9aa350c2327cd",
+            "primaryLocationLineHash": "ebf781e53a614f8d:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/express@4.17.1",
+            "findingId": "sbomtools:v1:ebf781e53a614f8d",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -2588,12 +3503,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'moment' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: moment]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/moment@2.29.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "142eaa35ebe9fe2d7811c7a496213369439f309710f49dd53541185186a7185e",
+            "primaryLocationLineHash": "142eaa35ebe9fe2d:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/moment@2.29.1",
+            "findingId": "sbomtools:v1:142eaa35ebe9fe2d",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -2606,12 +3546,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'moment' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: moment]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/moment@2.29.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "5a4891d132d0ace25607380393a970d05695d4f116ea69d0ee3cd601f4ea73bf",
+            "primaryLocationLineHash": "5a4891d132d0ace2:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/moment@2.29.1",
+            "findingId": "sbomtools:v1:5a4891d132d0ace2",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -2623,12 +3588,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'request' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: request]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/request@2.88.2",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "290137638227f976ad0ee55edc8d3d017190ce4eb219e2f7e61c94ef7332dd22",
+            "primaryLocationLineHash": "290137638227f976:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/request@2.88.2",
+            "findingId": "sbomtools:v1:290137638227f976",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -2641,12 +3631,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'request' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: request]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/request@2.88.2",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "a6f36f471b8bd3d483d07c54c23c67f6dfc244e74693b850754f6371c3b0c5f6",
+            "primaryLocationLineHash": "a6f36f471b8bd3d4:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/request@2.88.2",
+            "findingId": "sbomtools:v1:a6f36f471b8bd3d4",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -2658,12 +3673,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'axios' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: axios]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/axios@0.21.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9c5dc84bc539f681e4362cb6156fd29fed1a2bae06d0d80ccf9547b4fac57138",
+            "primaryLocationLineHash": "9c5dc84bc539f681:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/axios@0.21.1",
+            "findingId": "sbomtools:v1:9c5dc84bc539f681",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -2676,12 +3716,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'axios' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: axios]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/axios@0.21.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "38b1b73d953f4f87c24339676115339ab4ab1cf64bab2043cbf7010ed2c053bb",
+            "primaryLocationLineHash": "38b1b73d953f4f87:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/axios@0.21.1",
+            "findingId": "sbomtools:v1:38b1b73d953f4f87",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -2693,12 +3758,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'underscore' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: underscore]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/underscore@1.12.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "f545bf528d149ec2a26bbf96ca7b12adcb8973b32743aaf7a006aef0d451eedd",
+            "primaryLocationLineHash": "f545bf528d149ec2:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/underscore@1.12.0",
+            "findingId": "sbomtools:v1:f545bf528d149ec2",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -2711,12 +3801,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'underscore' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: underscore]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/underscore@1.12.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "d4c2252e033d30009712256b3b4c4a67e845e0c2c5a93c09fcca07176e82b956",
+            "primaryLocationLineHash": "d4c2252e033d3000:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/underscore@1.12.0",
+            "findingId": "sbomtools:v1:d4c2252e033d3000",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -2728,12 +3843,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'jquery' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: jquery]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/jquery@3.5.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "68bbd91fee56affe5c0d2c072be2462ffa04cb7744e70b1edcb713c3a50f65e0",
+            "primaryLocationLineHash": "68bbd91fee56affe:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/jquery@3.5.1",
+            "findingId": "sbomtools:v1:68bbd91fee56affe",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -2746,12 +3886,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'jquery' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: jquery]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/jquery@3.5.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "70bab23e250ae70fd29e03f1f4548944f7cc297555e3e199fbdeca32c5325e70",
+            "primaryLocationLineHash": "70bab23e250ae70f:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/jquery@3.5.1",
+            "findingId": "sbomtools:v1:70bab23e250ae70f",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -2763,12 +3928,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'react' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: react]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/react@17.0.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "76539be8933f21097699553b43fdf11f321574d3fc3833ce3a8db25a40dade68",
+            "primaryLocationLineHash": "76539be8933f2109:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/react@17.0.1",
+            "findingId": "sbomtools:v1:76539be8933f2109",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -2781,12 +3971,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'react' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: react]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/react@17.0.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "80254963ffbfd1590ffceafe3c9609650fe0b44546a0b782c356a5af64c77fc5",
+            "primaryLocationLineHash": "80254963ffbfd159:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/react@17.0.1",
+            "findingId": "sbomtools:v1:80254963ffbfd159",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -2798,12 +4013,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-DEPENDENCY",
+          "ruleIndex": 34,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): Primary component 'acme-webapp' participates in no dependency relationship (Requirement: CRA Annex I: Dependency relationships) [Element: acme-webapp]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "acme-webapp",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "8a34287e9fb54e06ce762cc9b5f9c45c3a93ca85a20fd6e16599e74666d2c3bb",
+            "primaryLocationLineHash": "8a34287e9fb54e06:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-DEPENDENCY|acme-webapp",
+            "findingId": "sbomtools:v1:8a34287e9fb54e06",
             "standardIds": [
               "CRA-Annex:Annex I"
             ],
@@ -2815,111 +4055,355 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): Component 'acme-webapp' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: acme-webapp]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "acme-webapp",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "2d17ceaec9d17de628aeee5744183d7bada5f42ba627e53049c97ad8c008894f",
+            "primaryLocationLineHash": "2d17ceaec9d17de6:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|acme-webapp",
+            "findingId": "sbomtools:v1:2d17ceaec9d17de6",
             "componentId": "acme-webapp"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): Component 'lodash' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: lodash]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/lodash@4.17.20",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "155e7f2336d37847519f531b8c54cd39a14cb27fb140c51d1d5cf994aedca0f5",
+            "primaryLocationLineHash": "155e7f2336d37847:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/lodash@4.17.20",
+            "findingId": "sbomtools:v1:155e7f2336d37847",
             "componentId": "pkg:npm/lodash@4.17.20"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): Component 'express' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: express]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/express@4.17.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9f97d25169d44aa30edb376595a31d4ed62b97f3a08250db1cc82b9812afad2d",
+            "primaryLocationLineHash": "9f97d25169d44aa3:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/express@4.17.1",
+            "findingId": "sbomtools:v1:9f97d25169d44aa3",
             "componentId": "pkg:npm/express@4.17.1"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): Component 'moment' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: moment]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/moment@2.29.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "ee70f21d71cc6ba9871f7a02a087582b885da02b5c366fd5a3bd232ce24cb345",
+            "primaryLocationLineHash": "ee70f21d71cc6ba9:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/moment@2.29.1",
+            "findingId": "sbomtools:v1:ee70f21d71cc6ba9",
             "componentId": "pkg:npm/moment@2.29.1"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): Component 'request' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: request]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/request@2.88.2",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "708bc206b4653b0573bf445efa273046104ba948ef219a55a27780d9a10f27e5",
+            "primaryLocationLineHash": "708bc206b4653b05:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/request@2.88.2",
+            "findingId": "sbomtools:v1:708bc206b4653b05",
             "componentId": "pkg:npm/request@2.88.2"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): Component 'axios' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: axios]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/axios@0.21.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "e02232bba6cf1b2e868bdd4b9e9f763cc3262a28c63784583d4c9f64179367d5",
+            "primaryLocationLineHash": "e02232bba6cf1b2e:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/axios@0.21.1",
+            "findingId": "sbomtools:v1:e02232bba6cf1b2e",
             "componentId": "pkg:npm/axios@0.21.1"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): Component 'underscore' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: underscore]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/underscore@1.12.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "2b1b52afbb280ddbe6893142645774b3179834e5e7dce4c763ded02003d26d15",
+            "primaryLocationLineHash": "2b1b52afbb280ddb:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/underscore@1.12.0",
+            "findingId": "sbomtools:v1:2b1b52afbb280ddb",
             "componentId": "pkg:npm/underscore@1.12.0"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): Component 'jquery' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: jquery]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/jquery@3.5.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "7d5bda91373a3b42ca4b96129053a7ebfed6359f5a313041e8aae9a9fb5a9f37",
+            "primaryLocationLineHash": "7d5bda91373a3b42:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/jquery@3.5.1",
+            "findingId": "sbomtools:v1:7d5bda91373a3b42",
             "componentId": "pkg:npm/jquery@3.5.1"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): Component 'react' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: react]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/react@17.0.1",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "03c0275de6eb83347729927592099cd45086faeab08a4d2046daa4b23e331141",
+            "primaryLocationLineHash": "03c0275de6eb8334:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/react@17.0.1",
+            "findingId": "sbomtools:v1:03c0275de6eb8334",
             "componentId": "pkg:npm/react@17.0.1"
           }
         },
         {
           "ruleId": "SBOM-CRA-SBOM-FRESHNESS",
+          "ruleIndex": 10,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Art. 13(7) / Annex I Part II (1)] SBOM is [N] days old; keep the documented component inventory current when components change (Requirement: CRA Art. 13(7) / Annex I Part II (1): SBOM freshness) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "2423ce73fc79ae3c6423f3fe2df512ecde0972e85d87b83295cb542f618c9be2",
+            "primaryLocationLineHash": "2423ce73fc79ae3c:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-SBOM-FRESHNESS|document",
+            "findingId": "sbomtools:v1:2423ce73fc79ae3c",
             "standardIds": [
               "CRA:Art. 13(7)",
               "CRA-Annex:Annex I Part II (1)"
@@ -2932,12 +4416,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-13-5",
+          "ruleIndex": 16,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Art. 13(5)] 1/9 components (11%) missing license information needed to evidence third-party due diligence (Requirement: CRA Art. 13(5): Third-party due diligence (license tracking)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "cdf532bc70743fc94ba1314d7f2b8188438c39bb43f80786c3e54181a85d527a",
+            "primaryLocationLineHash": "cdf532bc70743fc9:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-13-5|document",
+            "findingId": "sbomtools:v1:cdf532bc70743fc9",
             "standardIds": [
               "CRA:Art. 13(5)"
             ],
@@ -2950,12 +4453,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
+          "ruleIndex": 32,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II / [PRE-7-RQ-03]] 9/9 transitive dependencies (100%) missing supplier (recommended): acme-webapp, lodash, express, moment, request, …and 4 more (Requirement: CRA Annex I Part II / prEN 40000-1-3 [PRE-7-RQ-03]: Transitive dependency supplier (recommended)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "1bc1569631751ff318881ddc68723893c018c62200512ab5b2645e83edcd049b",
+            "primaryLocationLineHash": "1bc1569631751ff3:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE|document",
+            "findingId": "sbomtools:v1:1bc1569631751ff3",
             "standardIds": [
               "CRA-Annex:Annex I Part II",
               "prEN-40000-1-3:PRE-7-RQ-01",
@@ -2970,12 +4492,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-DOC-INTEGRITY",
+          "ruleIndex": 39,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Consider adding document-level integrity metadata (serial number, digital signature, or attestation with hash) (Requirement: CRA Annex I Part I (2)(f): Document signature/integrity) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "1ee40fa73753968151f9800128f11323160f433edd9aa30cdf0a1dedae1e4678",
+            "primaryLocationLineHash": "1ee40fa737539681:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-DOC-INTEGRITY|document",
+            "findingId": "sbomtools:v1:1ee40fa737539681",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -2986,12 +4527,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-13-2",
+          "ruleIndex": 41,
           "level": "warning",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Art. 13(2)] No documented risk assessment referenced — add an externalReference of type 'risk-assessment' or supply riskAssessmentUrl in the CRA sidecar (Requirement: CRA Art. 13(2): Documented risk assessment) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "14b195a51fc7c6fbaf5e52b02a3fe9227191f019597e961cba03ac38133d7285",
+            "primaryLocationLineHash": "14b195a51fc7c6fb:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-13-2|document",
+            "findingId": "sbomtools:v1:14b195a51fc7c6fb",
             "standardIds": [
               "CRA:Art. 13(2)"
             ],
@@ -3002,12 +4562,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-14-PSIRT",
+          "ruleIndex": 42,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Art. 14] PSIRT URL missing — [ART14] (Requirement: CRA Art. 14: PSIRT contact for external vulnerability reports) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "84659955b7343b8bb40025fb4719e8246c871630b3c7cea8cdd591f48325d01d",
+            "primaryLocationLineHash": "84659955b7343b8b:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-14-PSIRT|document",
+            "findingId": "sbomtools:v1:84659955b7343b8b",
             "standardIds": [
               "CRA:Art. 14"
             ],
@@ -3018,12 +4597,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-14-EARLY-WARNING",
+          "ruleIndex": 43,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Art. 14(2)(a)] 24-hour early-warning channel missing — document the ENISA/CSIRT contact before 2026-09-11 (Requirement: CRA Art. 14(2)(a): 24-hour early-warning channel) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "be1a24d18b9f18a574ff518d99f39fcb717e97ca7c7f7e2890347ad289ad1226",
+            "primaryLocationLineHash": "be1a24d18b9f18a5:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-14-EARLY-WARNING|document",
+            "findingId": "sbomtools:v1:be1a24d18b9f18a5",
             "standardIds": [
               "CRA:Art. 14(2)(a)",
               "CRA:Art. 14(4)(a)"
@@ -3036,12 +4634,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-14-NOTIFICATION",
+          "ruleIndex": 44,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Art. 14(2)(b) / 14(4)(b)] 72-hour notification channel missing — document this contact before 2026-09-11 (Requirement: CRA Art. 14(2)(b): 72-hour notification channel) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "04a4a186bae0b0751ba7a9cbe0ce8cac0be1bdc979f6974c0c72c9d67ca9cf16",
+            "primaryLocationLineHash": "04a4a186bae0b075:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-14-NOTIFICATION|document",
+            "findingId": "sbomtools:v1:04a4a186bae0b075",
             "standardIds": [
               "CRA:Art. 14(2)(b)",
               "CRA:Art. 14(4)(b)"
@@ -3054,12 +4671,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-14-ENISA",
+          "ruleIndex": 45,
           "level": "note",
           "message": {
             "text": "Old SBOM - EU CRA Phase 2 (2027): [CRA Art. 14(7)] No ENISA single reporting platform identifier — track ENISA publication and add `enisaReportingPlatformId` to the CRA sidecar when available (Requirement: CRA Art. 14(7): ENISA single reporting platform) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-old.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "f0b4b382d4ba50fda1e36f1def74bd9e477cc4ef974c955f3a4ea0323778ac45",
+            "primaryLocationLineHash": "f0b4b382d4ba50fd:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-14-ENISA|document",
+            "findingId": "sbomtools:v1:f0b4b382d4ba50fd",
             "standardIds": [
               "CRA:Art. 14(7)"
             ],
@@ -3070,20 +4706,60 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-CREATOR",
+          "ruleIndex": 48,
           "level": "error",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): SBOM must have creator/tool information (Requirement: Document creator identification) [Element: unknown]"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "761bc16c60e5f3558fd178a509dfd0ed4eaab7a471b7180b5229b9c431501806",
+            "primaryLocationLineHash": "761bc16c60e5f355:1"
+          },
+          "properties": {
+            "findingKey": "cra|SBOM-CRA-CREATOR|document",
+            "findingId": "sbomtools:v1:761bc16c60e5f355"
+          }
         },
         {
           "ruleId": "SBOM-CRA-ART-13-16",
+          "ruleIndex": 25,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 13(16)] SBOM should identify the manufacturer (organization) (Requirement: CRA Art. 13(16): Manufacturer identification) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "e7d698f69d8bc55abf88406ec61f2892351acf048661a2ee0018b16618d4e31a",
+            "primaryLocationLineHash": "e7d698f69d8bc55a:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-13-16|document",
+            "findingId": "sbomtools:v1:e7d698f69d8bc55a",
             "standardIds": [
               "CRA:Art. 13(16)",
               "CRA-Annex:Annex II (1)"
@@ -3096,12 +4772,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-13-17-CONTACT",
+          "ruleIndex": 12,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 13(17)] SBOM should include a security contact or vulnerability disclosure reference (Requirement: CRA Art. 13(17): Vulnerability disclosure contact) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "ca743c47edfed343c67b18d87c46642c7a3f17f857a4a51848c5f597b007c392",
+            "primaryLocationLineHash": "ca743c47edfed343:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-13-17-CONTACT|document",
+            "findingId": "sbomtools:v1:ca743c47edfed343",
             "standardIds": [
               "CRA:Art. 13(17)",
               "CRA-Annex:Annex I Part II (6)",
@@ -3116,12 +4811,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-13-8",
+          "ruleIndex": 19,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 13(8) / 13(19)] Consider specifying a support end date for security updates (Requirement: CRA Art. 13(8) / 13(19): Support period disclosure) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "2d7f9b5226418dab3158b7e8e19f872bf17ea3f0278964cf994374992368de17",
+            "primaryLocationLineHash": "2d7f9b5226418dab:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-13-8|document",
+            "findingId": "sbomtools:v1:2d7f9b5226418dab",
             "standardIds": [
               "CRA:Art. 13(8)",
               "CRA:Art. 13(19)",
@@ -3136,12 +4850,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-TRACEABILITY",
+          "ruleIndex": 30,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Primary component 'acme-webapp' missing unique identifier (PURL/CPE) for cross-update traceability (Requirement: CRA Annex I Part II (1): Product identifier traceability across updates) [Element: acme-webapp]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "acme-webapp",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "b25878f8386a75c14367a997a7d79f2890e06722d0b48d40985b4d44744257cf",
+            "primaryLocationLineHash": "b25878f8386a75c1:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-TRACEABILITY|acme-webapp",
+            "findingId": "sbomtools:v1:b25878f8386a75c1",
             "standardIds": [
               "CRA-Annex:Annex I Part II",
               "prEN-40000-1-3:PRE-7-RQ-07"
@@ -3154,12 +4893,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-CVD-POLICY",
+          "ruleIndex": 18,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (5)] SBOM should reference a coordinated vulnerability disclosure policy (advisories URL or disclosure URL) (Requirement: CRA Annex I Part II (5): Coordinated vulnerability disclosure policy) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9ca70a3db870e6559d8448b8ee6f5ddc9e5aaa86d858e3f31b1317c29f0f390b",
+            "primaryLocationLineHash": "9ca70a3db870e655:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-CVD-POLICY|document",
+            "findingId": "sbomtools:v1:9ca70a3db870e655",
             "standardIds": [
               "CRA-Annex:Annex I Part II (5)",
               "CRA:Art. 13(8)",
@@ -3173,12 +4931,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-LIFECYCLE",
+          "ruleIndex": 21,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 13(8) / Annex II (7)] Consider including component lifecycle/end-of-support information (Requirement: CRA Annex II (7): Component lifecycle status) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "87033cdc965d69b7b1b0b1c7d2c627179fb1d00040d20ea0852ae92269132afb",
+            "primaryLocationLineHash": "87033cdc965d69b7:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-LIFECYCLE|document",
+            "findingId": "sbomtools:v1:87033cdc965d69b7",
             "standardIds": [
               "CRA:Art. 13(8)",
               "CRA-Annex:Annex II (7)"
@@ -3191,12 +4968,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-V",
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex V] Missing reference to the EU Declaration of Conformity (attestation or certification external reference) for product class Default (Requirement: CRA Annex V: EU Declaration of Conformity reference) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "d59208c42cd33a93e87227347cb4cea216527089f0f2702cb765dafe3716ef59",
+            "primaryLocationLineHash": "d59208c42cd33a93:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-V|document",
+            "findingId": "sbomtools:v1:d59208c42cd33a93",
             "standardIds": [
               "CRA-Annex:Annex V"
             ],
@@ -3207,20 +5003,66 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-SERIAL",
+          "ruleIndex": 49,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): SBOM should have a serial number/unique identifier (Requirement: Document unique identification) [Element: unknown]"
           },
-          "locations": []
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "7ebe5161af763b692247d99bf91463cad5f21a8272e45c70363f7b2e8e352faa",
+            "primaryLocationLineHash": "7ebe5161af763b69:1"
+          },
+          "properties": {
+            "findingKey": "cra|SBOM-CRA-SERIAL|document",
+            "findingId": "sbomtools:v1:7ebe5161af763b69"
+          }
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-IDENTIFIER",
+          "ruleIndex": 29,
           "level": "error",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I, [PRE-7-RQ-07]] Component 'acme-webapp' missing unique identifier (PURL/CPE/SWHID/SWID) (Requirement: CRA Annex I / prEN 40000-1-3 [PRE-7-RQ-07]: Unique component identifier (PURL/CPE/SWHID/SWID)) [Element: acme-webapp]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "acme-webapp",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "7a3f325e79a0cd7fa1522279e7747e576f6a7badd113ce1314761040ccb902b3",
+            "primaryLocationLineHash": "7a3f325e79a0cd7f:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-IDENTIFIER|acme-webapp",
+            "findingId": "sbomtools:v1:7a3f325e79a0cd7f",
             "standardIds": [
               "CRA-Annex:Annex I",
               "prEN-40000-1-3:PRE-7-RQ-07"
@@ -3233,12 +5075,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'acme-webapp' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: acme-webapp]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "acme-webapp",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "68e9c47444c36f9b1e2ffe9f458f6fd27393c0e5ac876ec6d4288727220b1803",
+            "primaryLocationLineHash": "68e9c47444c36f9b:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|acme-webapp",
+            "findingId": "sbomtools:v1:68e9c47444c36f9b",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -3251,12 +5118,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'acme-webapp' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: acme-webapp]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "acme-webapp",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "452cd9cfddf68fb5088cd0605b903a3c46034384212b6200f5110b639642452e",
+            "primaryLocationLineHash": "452cd9cfddf68fb5:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|acme-webapp",
+            "findingId": "sbomtools:v1:452cd9cfddf68fb5",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -3268,12 +5160,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'lodash' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: lodash]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/lodash@4.17.21",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "ce0c11c414b3048a6a4fcf0e69fc93aed2710563b4b905d9bab43d4a1aa40362",
+            "primaryLocationLineHash": "ce0c11c414b3048a:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/lodash@4.17.21",
+            "findingId": "sbomtools:v1:ce0c11c414b3048a",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -3286,12 +5203,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'lodash' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: lodash]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/lodash@4.17.21",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9939ebd438a18cffaee5cde0bac4725ff1b5b255f4ad801a8d91a0beb285a10d",
+            "primaryLocationLineHash": "9939ebd438a18cff:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/lodash@4.17.21",
+            "findingId": "sbomtools:v1:9939ebd438a18cff",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -3303,12 +5245,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'express' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: express]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/express@4.18.2",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "0b51680552d4099bc35498ca7fea969bca6a1a66de64b3771655ac9ce838f028",
+            "primaryLocationLineHash": "0b51680552d4099b:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/express@4.18.2",
+            "findingId": "sbomtools:v1:0b51680552d4099b",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -3321,12 +5288,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'express' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: express]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/express@4.18.2",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "e9f525e2f8df94f26905158fc35f347118f13c6b3f1797a15331fa075fe32e22",
+            "primaryLocationLineHash": "e9f525e2f8df94f2:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/express@4.18.2",
+            "findingId": "sbomtools:v1:e9f525e2f8df94f2",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -3338,12 +5330,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'dayjs' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: dayjs]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/dayjs@1.11.7",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "19fc5457b18b8434823063b3fc3469f571dc7725a4850d96d3def6f7c59fdd1d",
+            "primaryLocationLineHash": "19fc5457b18b8434:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/dayjs@1.11.7",
+            "findingId": "sbomtools:v1:19fc5457b18b8434",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -3356,12 +5373,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'dayjs' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: dayjs]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/dayjs@1.11.7",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "99c5f94f319390111fa6882fe6d1ace1aca0737e91c2687cea04d39007c88b51",
+            "primaryLocationLineHash": "99c5f94f31939011:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/dayjs@1.11.7",
+            "findingId": "sbomtools:v1:99c5f94f31939011",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -3373,12 +5415,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'axios' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: axios]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/axios@1.4.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "570cb148fec7e15d54cb2137509206df1fc0700266b46a23d06471dcc05517b3",
+            "primaryLocationLineHash": "570cb148fec7e15d:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/axios@1.4.0",
+            "findingId": "sbomtools:v1:570cb148fec7e15d",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -3391,12 +5458,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'axios' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: axios]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/axios@1.4.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "151c410d70dcd1f03ec18ecf8e21e5653337eec97b2bddd49f3de38896a8584c",
+            "primaryLocationLineHash": "151c410d70dcd1f0:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/axios@1.4.0",
+            "findingId": "sbomtools:v1:151c410d70dcd1f0",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -3408,12 +5500,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'react' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: react]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/react@18.2.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "f93120e6aa1d3382e8ad4c6fc6ae81ee742c258e9eacef235b426126d0b6d7d0",
+            "primaryLocationLineHash": "f93120e6aa1d3382:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/react@18.2.0",
+            "findingId": "sbomtools:v1:f93120e6aa1d3382",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -3426,12 +5543,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'react' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: react]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/react@18.2.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "00f6acc0678cb1141345588d9b736b73ea1d9bd02c9116143bc9d0e49807045f",
+            "primaryLocationLineHash": "00f6acc0678cb114:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/react@18.2.0",
+            "findingId": "sbomtools:v1:00f6acc0678cb114",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -3443,12 +5585,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'typescript' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: typescript]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/typescript@5.0.4",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "453aab516ae558b1bf9df5dcc0fd677b3123e3d849b84093317b1bb3256e91b4",
+            "primaryLocationLineHash": "453aab516ae558b1:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/typescript@5.0.4",
+            "findingId": "sbomtools:v1:453aab516ae558b1",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -3461,12 +5628,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'typescript' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: typescript]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/typescript@5.0.4",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "7c31cb7a553350ae793fefe783fb29d6d5c3e4c8f401c87d82fe8a102441eb0a",
+            "primaryLocationLineHash": "7c31cb7a553350ae:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/typescript@5.0.4",
+            "findingId": "sbomtools:v1:7c31cb7a553350ae",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -3478,12 +5670,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'zod' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: zod]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/zod@3.21.4",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "d45903214a42bc948a1990c8aa752128cc45a6ba6e083c844f9c5ffb21715386",
+            "primaryLocationLineHash": "d45903214a42bc94:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/zod@3.21.4",
+            "findingId": "sbomtools:v1:d45903214a42bc94",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -3496,12 +5713,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'zod' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: zod]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/zod@3.21.4",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "f3dca7c20698d616faacd4975a65f04acc4303c8ec18800222d430f2195bffc2",
+            "primaryLocationLineHash": "f3dca7c20698d616:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/zod@3.21.4",
+            "findingId": "sbomtools:v1:f3dca7c20698d616",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -3513,12 +5755,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
+          "ruleIndex": 27,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II (1)] Component 'prisma' missing supplier/manufacturer (Requirement: CRA Annex I Part II (1): Component supplier information) [Element: prisma]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/prisma@4.15.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "de1bf2f0926523cb4a223105699028f93d777774f6e533094e5bf34fe4c39747",
+            "primaryLocationLineHash": "de1bf2f0926523cb:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-COMPONENT-SUPPLIER|pkg:npm/prisma@4.15.0",
+            "findingId": "sbomtools:v1:de1bf2f0926523cb",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
               "prEN-40000-1-3:PRE-7-RQ-03"
@@ -3531,12 +5798,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
+          "ruleIndex": 33,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Component 'prisma' missing cryptographic hash (recommended for integrity) (Requirement: CRA Annex I Part I (2)(f): Component integrity information (hash)) [Element: prisma]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/prisma@4.15.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "a75e85f59d4ebeeaf97ba05d5dd368049663b0ccd6983e029dd351165b428602",
+            "primaryLocationLineHash": "a75e85f59d4ebeea:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/prisma@4.15.0",
+            "findingId": "sbomtools:v1:a75e85f59d4ebeea",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -3548,12 +5840,37 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-DEPENDENCY",
+          "ruleIndex": 34,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Primary component 'acme-webapp' participates in no dependency relationship (Requirement: CRA Annex I: Dependency relationships) [Element: acme-webapp]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "acme-webapp",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "8a34287e9fb54e06ce762cc9b5f9c45c3a93ca85a20fd6e16599e74666d2c3bb",
+            "primaryLocationLineHash": "8a34287e9fb54e06:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-DEPENDENCY|acme-webapp",
+            "findingId": "sbomtools:v1:8a34287e9fb54e06",
             "standardIds": [
               "CRA-Annex:Annex I"
             ],
@@ -3565,111 +5882,355 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'acme-webapp' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: acme-webapp]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "acme-webapp",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "2d17ceaec9d17de628aeee5744183d7bada5f42ba627e53049c97ad8c008894f",
+            "primaryLocationLineHash": "2d17ceaec9d17de6:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|acme-webapp",
+            "findingId": "sbomtools:v1:2d17ceaec9d17de6",
             "componentId": "acme-webapp"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'lodash' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: lodash]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/lodash@4.17.21",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "a28f3940a2d724f6bbf65c43eb01cadad8f5f99b90a392a2671cc3de701aad9a",
+            "primaryLocationLineHash": "a28f3940a2d724f6:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/lodash@4.17.21",
+            "findingId": "sbomtools:v1:a28f3940a2d724f6",
             "componentId": "pkg:npm/lodash@4.17.21"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'express' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: express]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/express@4.18.2",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "abf4cb3d60744c06bf967e4a8669c697b9e9fa4b445afc5dc63193c884ac5e4b",
+            "primaryLocationLineHash": "abf4cb3d60744c06:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/express@4.18.2",
+            "findingId": "sbomtools:v1:abf4cb3d60744c06",
             "componentId": "pkg:npm/express@4.18.2"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'dayjs' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: dayjs]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/dayjs@1.11.7",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "ba055699608f5f9184735efcba7c10f7c8279ea65aabd76d59e458ace462d8ed",
+            "primaryLocationLineHash": "ba055699608f5f91:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/dayjs@1.11.7",
+            "findingId": "sbomtools:v1:ba055699608f5f91",
             "componentId": "pkg:npm/dayjs@1.11.7"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'axios' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: axios]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/axios@1.4.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "1b68dd97ea26df9ea83cb2dfbd103b64fd0462645942f4c193366dae7f342515",
+            "primaryLocationLineHash": "1b68dd97ea26df9e:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/axios@1.4.0",
+            "findingId": "sbomtools:v1:1b68dd97ea26df9e",
             "componentId": "pkg:npm/axios@1.4.0"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'react' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: react]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/react@18.2.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "c6a766f8be6d5142ac4d91475ed23c1cb4b92bff6e88b5edcab182774f2750d9",
+            "primaryLocationLineHash": "c6a766f8be6d5142:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/react@18.2.0",
+            "findingId": "sbomtools:v1:c6a766f8be6d5142",
             "componentId": "pkg:npm/react@18.2.0"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'typescript' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: typescript]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/typescript@5.0.4",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "483eee6f197d26e12ebcdb5f051dcb578a55b205a9fd12f918531962a1535eaa",
+            "primaryLocationLineHash": "483eee6f197d26e1:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/typescript@5.0.4",
+            "findingId": "sbomtools:v1:483eee6f197d26e1",
             "componentId": "pkg:npm/typescript@5.0.4"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'zod' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: zod]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/zod@3.21.4",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "7eab09d7d84eb05ec9fbc6cb81d7ca65749570b5d5ca46e6bca31000a418d209",
+            "primaryLocationLineHash": "7eab09d7d84eb05e:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/zod@3.21.4",
+            "findingId": "sbomtools:v1:7eab09d7d84eb05e",
             "componentId": "pkg:npm/zod@3.21.4"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
+          "ruleIndex": 53,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'prisma' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: prisma]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/prisma@4.15.0",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "921f2e8e13257ff408636cd1b45b3917fa31923ed546a7d11ba8f62770a506b5",
+            "primaryLocationLineHash": "921f2e8e13257ff4:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/prisma@4.15.0",
+            "findingId": "sbomtools:v1:921f2e8e13257ff4",
             "componentId": "pkg:npm/prisma@4.15.0"
           }
         },
         {
           "ruleId": "SBOM-CRA-SBOM-FRESHNESS",
+          "ruleIndex": 10,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 13(7) / Annex I Part II (1)] SBOM is [N] days old; keep the documented component inventory current when components change (Requirement: CRA Art. 13(7) / Annex I Part II (1): SBOM freshness) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "2423ce73fc79ae3c6423f3fe2df512ecde0972e85d87b83295cb542f618c9be2",
+            "primaryLocationLineHash": "2423ce73fc79ae3c:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-SBOM-FRESHNESS|document",
+            "findingId": "sbomtools:v1:2423ce73fc79ae3c",
             "standardIds": [
               "CRA:Art. 13(7)",
               "CRA-Annex:Annex I Part II (1)"
@@ -3682,12 +6243,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-13-5",
+          "ruleIndex": 16,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 13(5)] 1/9 components (11%) missing license information needed to evidence third-party due diligence (Requirement: CRA Art. 13(5): Third-party due diligence (license tracking)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "cdf532bc70743fc94ba1314d7f2b8188438c39bb43f80786c3e54181a85d527a",
+            "primaryLocationLineHash": "cdf532bc70743fc9:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-13-5|document",
+            "findingId": "sbomtools:v1:cdf532bc70743fc9",
             "standardIds": [
               "CRA:Art. 13(5)"
             ],
@@ -3700,12 +6280,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
+          "ruleIndex": 32,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part II / [PRE-7-RQ-03]] 9/9 transitive dependencies (100%) missing supplier (recommended): acme-webapp, lodash, express, dayjs, axios, …and 4 more (Requirement: CRA Annex I Part II / prEN 40000-1-3 [PRE-7-RQ-03]: Transitive dependency supplier (recommended)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "1bc1569631751ff318881ddc68723893c018c62200512ab5b2645e83edcd049b",
+            "primaryLocationLineHash": "1bc1569631751ff3:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE|document",
+            "findingId": "sbomtools:v1:1bc1569631751ff3",
             "standardIds": [
               "CRA-Annex:Annex I Part II",
               "prEN-40000-1-3:PRE-7-RQ-01",
@@ -3720,12 +6319,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-DOC-INTEGRITY",
+          "ruleIndex": 39,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Consider adding document-level integrity metadata (serial number, digital signature, or attestation with hash) (Requirement: CRA Annex I Part I (2)(f): Document signature/integrity) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "1ee40fa73753968151f9800128f11323160f433edd9aa30cdf0a1dedae1e4678",
+            "primaryLocationLineHash": "1ee40fa737539681:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-DOC-INTEGRITY|document",
+            "findingId": "sbomtools:v1:1ee40fa737539681",
             "standardIds": [
               "CRA-Annex:Annex I Part I (2)(f)"
             ],
@@ -3736,12 +6354,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-13-2",
+          "ruleIndex": 41,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 13(2)] No documented risk assessment referenced — add an externalReference of type 'risk-assessment' or supply riskAssessmentUrl in the CRA sidecar (Requirement: CRA Art. 13(2): Documented risk assessment) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "14b195a51fc7c6fbaf5e52b02a3fe9227191f019597e961cba03ac38133d7285",
+            "primaryLocationLineHash": "14b195a51fc7c6fb:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-13-2|document",
+            "findingId": "sbomtools:v1:14b195a51fc7c6fb",
             "standardIds": [
               "CRA:Art. 13(2)"
             ],
@@ -3752,12 +6389,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-14-PSIRT",
+          "ruleIndex": 42,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 14] PSIRT URL missing — [ART14] (Requirement: CRA Art. 14: PSIRT contact for external vulnerability reports) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "84659955b7343b8bb40025fb4719e8246c871630b3c7cea8cdd591f48325d01d",
+            "primaryLocationLineHash": "84659955b7343b8b:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-14-PSIRT|document",
+            "findingId": "sbomtools:v1:84659955b7343b8b",
             "standardIds": [
               "CRA:Art. 14"
             ],
@@ -3768,12 +6424,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-14-EARLY-WARNING",
+          "ruleIndex": 43,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 14(2)(a)] 24-hour early-warning channel missing — document the ENISA/CSIRT contact before 2026-09-11 (Requirement: CRA Art. 14(2)(a): 24-hour early-warning channel) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "be1a24d18b9f18a574ff518d99f39fcb717e97ca7c7f7e2890347ad289ad1226",
+            "primaryLocationLineHash": "be1a24d18b9f18a5:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-14-EARLY-WARNING|document",
+            "findingId": "sbomtools:v1:be1a24d18b9f18a5",
             "standardIds": [
               "CRA:Art. 14(2)(a)",
               "CRA:Art. 14(4)(a)"
@@ -3786,12 +6461,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-14-NOTIFICATION",
+          "ruleIndex": 44,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 14(2)(b) / 14(4)(b)] 72-hour notification channel missing — document this contact before 2026-09-11 (Requirement: CRA Art. 14(2)(b): 72-hour notification channel) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "04a4a186bae0b0751ba7a9cbe0ce8cac0be1bdc979f6974c0c72c9d67ca9cf16",
+            "primaryLocationLineHash": "04a4a186bae0b075:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-14-NOTIFICATION|document",
+            "findingId": "sbomtools:v1:04a4a186bae0b075",
             "standardIds": [
               "CRA:Art. 14(2)(b)",
               "CRA:Art. 14(4)(b)"
@@ -3804,12 +6498,31 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-14-ENISA",
+          "ruleIndex": 45,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 14(7)] No ENISA single reporting platform identifier — track ENISA publication and add `enisaReportingPlatformId` to the CRA sidecar when available (Requirement: CRA Art. 14(7): ENISA single reporting platform) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/demo-new.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "f0b4b382d4ba50fda1e36f1def74bd9e477cc4ef974c955f3a4ea0323778ac45",
+            "primaryLocationLineHash": "f0b4b382d4ba50fd:1"
+          },
           "properties": {
+            "findingKey": "cra|SBOM-CRA-ART-14-ENISA|document",
+            "findingId": "sbomtools:v1:f0b4b382d4ba50fd",
             "standardIds": [
               "CRA:Art. 14(7)"
             ],

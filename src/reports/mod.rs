@@ -39,8 +39,10 @@ pub use json::JsonReporter;
 pub use markdown::MarkdownReporter;
 pub use sarif::SarifReporter;
 pub use sarif::{
-    SARIF_SCHEMA_URI, SbomLocator, generate_ai_readiness_sarif, generate_compliance_sarif,
-    generate_multi_compliance_sarif, generate_quality_sarif,
+    SARIF_SCHEMA_URI, SARIF_SRCROOT, SarifArtifact, SarifArtifactLocation, SarifOptions,
+    SbomLocator, generate_ai_readiness_sarif, generate_ai_readiness_sarif_with,
+    generate_compliance_sarif, generate_compliance_sarif_with, generate_multi_compliance_sarif,
+    generate_multi_compliance_sarif_with, generate_quality_sarif, generate_quality_sarif_with,
 };
 pub use sidebyside::SideBySideReporter;
 pub use streaming::{

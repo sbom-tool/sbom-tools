@@ -34,8 +34,10 @@ mod shared;
 mod ssdf;
 
 use context::{ComplianceContext, checker_for};
+pub(crate) use finding::compose_finding_key;
 pub use finding::{
-    DOCUMENT_SUBJECT, FINDING_ID_PREFIX, finding_id, finding_key, finding_subject, standard_key,
+    DOCUMENT_SUBJECT, FINDING_ID_PREFIX, finding_fingerprint, finding_id, finding_key,
+    finding_subject, standard_key,
 };
 pub use registry::{
     CISA2026_SARIF_RULE_IDS, CNSA2_SARIF_RULE_IDS, COMPLIANCE_SARIF_RULE_IDS,

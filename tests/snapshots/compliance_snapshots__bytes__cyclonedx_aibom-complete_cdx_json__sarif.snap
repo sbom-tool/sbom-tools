@@ -1977,15 +1977,44 @@ source: tests/compliance_snapshots.rs
           ]
         }
       },
+      "automationDetails": {
+        "id": "sbom-tools/ai-act+bsi-ai/"
+      },
+      "originalUriBaseIds": {
+        "SRCROOT": {
+          "description": {
+            "text": "The root of the source tree relative artifact URIs resolve against: the repository the SBOM file is in, or the directory given as --sarif-base."
+          }
+        }
+      },
       "results": [
         {
           "ruleId": "SBOM-BSIAI-META-SIGNATURE",
+          "ruleIndex": 85,
           "level": "note",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Metadata readiness: SBOM carries no document signature (integrity attestation recommended) (Requirement: BSI/G7 SBOM-for-AI — Metadata / Signature) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/aibom-complete.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "b230137e90a4e2872efb8aed3a3a58b82ade042b545d407c06a090b7cccaa3ee",
+            "primaryLocationLineHash": "b230137e90a4e287:1"
+          },
           "properties": {
+            "findingKey": "bsi-ai|SBOM-BSIAI-META-SIGNATURE|document",
+            "findingId": "sbomtools:v1:b230137e90a4e287",
             "standardIds": [
               "BSI-G7-SBOM-for-AI:Metadata / Signature"
             ],
@@ -1996,12 +2025,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-SYS-PRODUCER",
+          "ruleIndex": 87,
           "level": "warning",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] System-Level readiness: no producer/supplier of the AI system is declared (Requirement: BSI/G7 SBOM-for-AI — System-Level / Producer) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/aibom-complete.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "1783ac537445c03ae77d091332d7ddd47f9878605aad8d66ecd99c0f428c8d79",
+            "primaryLocationLineHash": "1783ac537445c03a:1"
+          },
           "properties": {
+            "findingKey": "bsi-ai|SBOM-BSIAI-SYS-PRODUCER|document",
+            "findingId": "sbomtools:v1:1783ac537445c03a",
             "standardIds": [
               "BSI-G7-SBOM-for-AI:System-Level / Producer"
             ],
@@ -2012,12 +2060,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-SYS-DATAFLOW",
+          "ruleIndex": 88,
           "level": "note",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] System-Level readiness: AI-system data-flow / usage / input-output description is not declared (no SBOM field carries it today) (Requirement: BSI/G7 SBOM-for-AI — System-Level / Data flow & usage) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/aibom-complete.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "d7ca27dca398f343c3ee6190e29d7da9fda9dbca1a6c5d4d8acba16365a47bbf",
+            "primaryLocationLineHash": "d7ca27dca398f343:1"
+          },
           "properties": {
+            "findingKey": "bsi-ai|SBOM-BSIAI-SYS-DATAFLOW|document",
+            "findingId": "sbomtools:v1:d7ca27dca398f343",
             "standardIds": [
               "BSI-G7-SBOM-for-AI:System-Level / Data flow & usage"
             ],
@@ -2028,12 +2095,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-MODEL-IDENTIFIER",
+          "ruleIndex": 91,
           "level": "error",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Model identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): sentiment-classifier (Requirement: BSI/G7 SBOM-for-AI — Models / Model identifier) [Element: sentiment-classifier]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/aibom-complete.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "f8fa5c15054a729a22bf3158fc6be2281a6439dffae5e1b86ce4cbfb7c0d6c80",
+            "primaryLocationLineHash": "f8fa5c15054a729a:1"
+          },
           "properties": {
+            "findingKey": "bsi-ai|SBOM-BSIAI-MODEL-IDENTIFIER|document",
+            "findingId": "sbomtools:v1:f8fa5c15054a729a",
             "standardIds": [
               "BSI-G7-SBOM-for-AI:Models / Model identifier"
             ],
@@ -2046,12 +2132,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-MODEL-LICENSE",
+          "ruleIndex": 98,
           "level": "warning",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Model license readiness: 1 component(s) declare no license: sentiment-classifier (Requirement: BSI/G7 SBOM-for-AI — Models / Model license) [Element: sentiment-classifier]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/aibom-complete.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "b1de68bec48da482973f2e4082030e8b9a608c7d905a2fa37a40e57bd4d60c0e",
+            "primaryLocationLineHash": "b1de68bec48da482:1"
+          },
           "properties": {
+            "findingKey": "bsi-ai|SBOM-BSIAI-MODEL-LICENSE|document",
+            "findingId": "sbomtools:v1:b1de68bec48da482",
             "standardIds": [
               "BSI-G7-SBOM-for-AI:Models / Model license"
             ],
@@ -2064,12 +2169,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-DATASET-IDENTIFIER",
+          "ruleIndex": 100,
           "level": "error",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Dataset identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): product-reviews-1M (Requirement: BSI/G7 SBOM-for-AI — Datasets / Dataset identifier) [Element: product-reviews-1M]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/aibom-complete.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "1684f9587b9bb310fe9f67e9e9990477ae6e797c04057fcfac992b4baea2ccc9",
+            "primaryLocationLineHash": "1684f9587b9bb310:1"
+          },
           "properties": {
+            "findingKey": "bsi-ai|SBOM-BSIAI-DATASET-IDENTIFIER|document",
+            "findingId": "sbomtools:v1:1684f9587b9bb310",
             "standardIds": [
               "BSI-G7-SBOM-for-AI:Datasets / Dataset identifier"
             ],
@@ -2082,12 +2206,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-DATASET-HASH",
+          "ruleIndex": 101,
           "level": "warning",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Dataset hash value readiness: 1 component(s) carry no hash value: product-reviews-1M (Requirement: BSI/G7 SBOM-for-AI — Datasets / Dataset hash value) [Element: product-reviews-1M]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/aibom-complete.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "b4588b41034ea1f1832130bcd8679da678756fa6064782f2290cfda82b6fdc54",
+            "primaryLocationLineHash": "b4588b41034ea1f1:1"
+          },
           "properties": {
+            "findingKey": "bsi-ai|SBOM-BSIAI-DATASET-HASH|document",
+            "findingId": "sbomtools:v1:b4588b41034ea1f1",
             "standardIds": [
               "BSI-G7-SBOM-for-AI:Datasets / Dataset hash value"
             ],
@@ -2100,12 +2243,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-DATASET-LICENSE",
+          "ruleIndex": 102,
           "level": "warning",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Dataset license readiness: 1 component(s) declare no license: product-reviews-1M (Requirement: BSI/G7 SBOM-for-AI — Datasets / Dataset license) [Element: product-reviews-1M]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/aibom-complete.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "67a07bd975d84c32f04afbf4ce194d2c12f6cb6e30652ea11dda54c205c1f6d3",
+            "primaryLocationLineHash": "67a07bd975d84c32:1"
+          },
           "properties": {
+            "findingKey": "bsi-ai|SBOM-BSIAI-DATASET-LICENSE|document",
+            "findingId": "sbomtools:v1:67a07bd975d84c32",
             "standardIds": [
               "BSI-G7-SBOM-for-AI:Datasets / Dataset license"
             ],
@@ -2118,12 +2280,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-DATASET-PROVENANCE",
+          "ruleIndex": 104,
           "level": "warning",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Provenance & intended use readiness: 1 component(s) declare no provenance / intended-use: product-reviews-1M (Requirement: BSI/G7 SBOM-for-AI — Datasets / Provenance & intended use) [Element: product-reviews-1M]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/aibom-complete.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "5294c1949801d48ca39ef899a2e8b0c649829381d746c26c9465792a34c8cfe6",
+            "primaryLocationLineHash": "5294c1949801d48c:1"
+          },
           "properties": {
+            "findingKey": "bsi-ai|SBOM-BSIAI-DATASET-PROVENANCE|document",
+            "findingId": "sbomtools:v1:5294c1949801d48c",
             "standardIds": [
               "BSI-G7-SBOM-for-AI:Datasets / Provenance & intended use"
             ],
@@ -2136,12 +2317,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-INFRA-RUNTIME",
+          "ruleIndex": 105,
           "level": "note",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Infrastructure readiness: no ML component links to its runtime / framework dependencies (no dependency edge or BOM/HBOM reference) (Requirement: BSI/G7 SBOM-for-AI — Infrastructure / Runtime & framework) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/aibom-complete.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "d687aaf1fa585eea2739a2f629a69261a69c36859d20c9ba7c050aa6bff23baa",
+            "primaryLocationLineHash": "d687aaf1fa585eea:1"
+          },
           "properties": {
+            "findingKey": "bsi-ai|SBOM-BSIAI-INFRA-RUNTIME|document",
+            "findingId": "sbomtools:v1:d687aaf1fa585eea",
             "standardIds": [
               "BSI-G7-SBOM-for-AI:Infrastructure / Runtime & framework"
             ],
@@ -2152,12 +2352,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-SEC-CONTROLS",
+          "ruleIndex": 106,
           "level": "note",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Security readiness: no AI-specific security controls are declared (no SBOM field carries them today) (Requirement: BSI/G7 SBOM-for-AI — Security / AI security controls) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/aibom-complete.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "bced627c90b2adc1429cb819e8583a49f4e219723da5f7b624fa8dc23d04f412",
+            "primaryLocationLineHash": "bced627c90b2adc1:1"
+          },
           "properties": {
+            "findingKey": "bsi-ai|SBOM-BSIAI-SEC-CONTROLS|document",
+            "findingId": "sbomtools:v1:bced627c90b2adc1",
             "standardIds": [
               "BSI-G7-SBOM-for-AI:Security / AI security controls"
             ],
@@ -2168,12 +2387,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSIAI-SEC-EXPLOITABILITY",
+          "ruleIndex": 107,
           "level": "note",
           "message": {
             "text": "BSI/G7 SBOM-for-AI Minimum Elements Readiness: [BSI-AI] Security readiness: no exploitability reference is declared (no SBOM field carries it today) (Requirement: BSI/G7 SBOM-for-AI — Security / Exploitability reference) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/aibom-complete.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9abd3f4073d259a19c3d4fefcfc75e249953436e4158e5bd60e576e221a201ba",
+            "primaryLocationLineHash": "9abd3f4073d259a1:1"
+          },
           "properties": {
+            "findingKey": "bsi-ai|SBOM-BSIAI-SEC-EXPLOITABILITY|document",
+            "findingId": "sbomtools:v1:9abd3f4073d259a1",
             "standardIds": [
               "BSI-G7-SBOM-for-AI:Security / Exploitability reference"
             ],

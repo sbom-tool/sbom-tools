@@ -537,15 +537,50 @@ source: tests/compliance_snapshots.rs
           ]
         }
       },
+      "automationDetails": {
+        "id": "sbom-tools/cnsa2+pqc/"
+      },
+      "originalUriBaseIds": {
+        "SRCROOT": {
+          "description": {
+            "text": "The root of the source tree relative artifact URIs resolve against: the repository the SBOM file is in, or the directory given as --sarif-base."
+          }
+        }
+      },
       "results": [
         {
           "ruleId": "SBOM-CNSA2-ALG-007",
+          "ruleIndex": 7,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'ML-KEM-768' quantum level 3 < 5, CNSA 2.0 requires Level 5 (Requirement: CNSA 2.0 Level 5) [Element: ML-KEM-768]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 79
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ml-kem-768",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "db8f934f12fe2eaff03bc623c9fa787719457ddd229d310c0845f3e428146537",
+            "primaryLocationLineHash": "db8f934f12fe2eaf:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-007|crypto/algorithm/ml-kem-768",
+            "findingId": "sbomtools:v1:db8f934f12fe2eaf",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -557,12 +592,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-003",
+          "ruleIndex": 3,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'ML-KEM-768' uses ML-KEM-768, CNSA 2.0 requires ML-KEM-1024 only (Requirement: CNSA 2.0 KEM) [Element: ML-KEM-768]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 79
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ml-kem-768",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "f6f3e69908944371049b68936b94482e366804a8b51fb409d4b0ef012b9d5a76",
+            "primaryLocationLineHash": "f6f3e69908944371:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-003|crypto/algorithm/ml-kem-768",
+            "findingId": "sbomtools:v1:f6f3e69908944371",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -574,12 +634,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-007",
+          "ruleIndex": 7,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'ML-DSA-65' quantum level 3 < 5, CNSA 2.0 requires Level 5 (Requirement: CNSA 2.0 Level 5) [Element: ML-DSA-65]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 119
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ml-dsa-65",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "326a99536d9bc8784f74309216045a862f1c254b0026db68833c382204071143",
+            "primaryLocationLineHash": "326a99536d9bc878:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-007|crypto/algorithm/ml-dsa-65",
+            "findingId": "sbomtools:v1:326a99536d9bc878",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -591,12 +676,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-004",
+          "ruleIndex": 4,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'ML-DSA-65' uses ML-DSA-65, CNSA 2.0 requires ML-DSA-87 only (Requirement: CNSA 2.0 Signature) [Element: ML-DSA-65]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 119
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ml-dsa-65",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "059cf70a9ae9a775b11055296ed6382ca19b626214e198c7c4633bf4ceaec90a",
+            "primaryLocationLineHash": "059cf70a9ae9a775:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-004|crypto/algorithm/ml-dsa-65",
+            "findingId": "sbomtools:v1:059cf70a9ae9a775",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -608,12 +718,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-008",
+          "ruleIndex": 8,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'SLH-DSA-SHAKE-256s' uses SLH-DSA, which is NIST-approved (FIPS 205) but not part of CNSA 2.0 (Requirement: CNSA 2.0 Approved Algorithms) [Element: SLH-DSA-SHAKE-256s]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 139
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/slh-dsa-shake-256s",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "83cc7dc911fdae9eabe311943026ec12d1c4d2916495714246ccb0904cd8064b",
+            "primaryLocationLineHash": "83cc7dc911fdae9e:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-008|crypto/algorithm/slh-dsa-shake-256s",
+            "findingId": "sbomtools:v1:83cc7dc911fdae9e",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -625,12 +760,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-006",
+          "ruleIndex": 6,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'X25519' (ECDH) is quantum-vulnerable, must migrate to CNSA 2.0 approved algorithm (Requirement: CNSA 2.0 PQC Migration) [Element: X25519]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 198
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/x25519",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9682dc81d044cfe27b7efff99cb171614149cacfb45a308a9f1b282246e598e3",
+            "primaryLocationLineHash": "9682dc81d044cfe2:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-006|crypto/algorithm/x25519",
+            "findingId": "sbomtools:v1:9682dc81d044cfe2",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -642,12 +802,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-007",
+          "ruleIndex": 7,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'X25519-ML-KEM-768' quantum level 3 < 5, CNSA 2.0 requires Level 5 (Requirement: CNSA 2.0 Level 5) [Element: X25519-ML-KEM-768]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 216
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/hybrid-kem",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "ee8a3c54afb74d2d70023a172a76876daf91efb6d0e630d44d7fc65854d5488b",
+            "primaryLocationLineHash": "ee8a3c54afb74d2d:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-007|crypto/algorithm/hybrid-kem",
+            "findingId": "sbomtools:v1:ee8a3c54afb74d2d",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -659,12 +844,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-003",
+          "ruleIndex": 3,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'X25519-ML-KEM-768' uses the hybrid X25519 + ML-KEM-768, which CNSA 2.0 does not approve: ML-KEM-768 is not ML-KEM-1024, and X25519 is not a CNSA 1.0 algorithm (ECDH or ECDSA over P-384, or RSA or DH of 3072 bits or more) (Requirement: CNSA 2.0 KEM) [Element: X25519-ML-KEM-768]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 216
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/hybrid-kem",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "3a93e421ce43b0275324657eeb6cf6dddeb43f3b95653b24ad67194682951d2b",
+            "primaryLocationLineHash": "3a93e421ce43b027:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-003|crypto/algorithm/hybrid-kem",
+            "findingId": "sbomtools:v1:3a93e421ce43b027",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -676,12 +886,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-ALG-006",
+          "ruleIndex": 6,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: 'ECDSA-P521' (ECDSA) is quantum-vulnerable, must migrate to CNSA 2.0 approved algorithm (Requirement: CNSA 2.0 PQC Migration) [Element: ECDSA-P521]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 235
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ecdsa-p521",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "3d1e46793ae574a2918e2bec7c35fb29098e6ffbc789379c5ffec3c3a125c014",
+            "primaryLocationLineHash": "3d1e46793ae574a2:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-ALG-006|crypto/algorithm/ecdsa-p521",
+            "findingId": "sbomtools:v1:3d1e46793ae574a2",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -693,12 +928,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-PROTO-002",
+          "ruleIndex": 13,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384_ML_KEM_768' includes non-CNSA 2.0 algorithms: X25519 + ML-KEM-768, ML-KEM-768 (Requirement: CNSA 2.0 Protocol) [Element: TLS 1.3 (PQC Hybrid)]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 332
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/protocol/tls13-pqc",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "994d5a495641e8abe77b389a55a8610175b1a143b257b895cf8ec77284f36923",
+            "primaryLocationLineHash": "994d5a495641e8ab:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-PROTO-002:TLS_AES_256_GCM_SHA384_ML_KEM_768|crypto/protocol/tls13-pqc",
+            "findingId": "sbomtools:v1:994d5a495641e8ab",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -710,12 +970,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CNSA2-PROTO-002",
+          "ruleIndex": 13,
           "level": "error",
           "message": {
             "text": "CNSA 2.0: Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384' includes non-CNSA 2.0 algorithms: ECDH (Requirement: CNSA 2.0 Protocol) [Element: TLS 1.3 (PQC Hybrid)]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 332
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/protocol/tls13-pqc",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "a5d96550a9b92abdbf49c7e265b3134c1771bac52abad9f200537a86bee58c1c",
+            "primaryLocationLineHash": "a5d96550a9b92abd:1"
+          },
           "properties": {
+            "findingKey": "cnsa2|SBOM-CNSA2-PROTO-002:TLS_AES_256_GCM_SHA384|crypto/protocol/tls13-pqc",
+            "findingId": "sbomtools:v1:a5d96550a9b92abd",
             "standardIds": [
               "CNSA-2.0:CNSA 2.0"
             ],
@@ -727,12 +1012,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-PQC-009",
+          "ruleIndex": 19,
           "level": "note",
           "message": {
             "text": "NIST PQC Readiness: 'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205) (Requirement: FIPS 203/204/205: approved) [Element: ML-KEM-1024]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 59
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ml-kem-1024",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "1b668fce7dabff770225953f2a48723dbed50456b091ad4db40a6a525e18d254",
+            "primaryLocationLineHash": "1b668fce7dabff77:1"
+          },
           "properties": {
+            "findingKey": "pqc|SBOM-PQC-009|crypto/algorithm/ml-kem-1024",
+            "findingId": "sbomtools:v1:1b668fce7dabff77",
             "standardIds": [
               "NIST-PQC:FIPS 203/204/205",
               "NIST-PQC:SP 800-208"
@@ -746,12 +1056,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-PQC-009",
+          "ruleIndex": 19,
           "level": "note",
           "message": {
             "text": "NIST PQC Readiness: 'ML-KEM-768' uses NIST-approved PQC algorithm (FIPS 203/204/205) (Requirement: FIPS 203/204/205: approved) [Element: ML-KEM-768]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 79
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ml-kem-768",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "1ab07b91d0dfc14920ee9d22b2d2b5f8c5bedf7c6f5494ce34d2f1360e1b975c",
+            "primaryLocationLineHash": "1ab07b91d0dfc149:1"
+          },
           "properties": {
+            "findingKey": "pqc|SBOM-PQC-009|crypto/algorithm/ml-kem-768",
+            "findingId": "sbomtools:v1:1ab07b91d0dfc149",
             "standardIds": [
               "NIST-PQC:FIPS 203/204/205",
               "NIST-PQC:SP 800-208"
@@ -765,12 +1100,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-PQC-009",
+          "ruleIndex": 19,
           "level": "note",
           "message": {
             "text": "NIST PQC Readiness: 'ML-DSA-87' uses NIST-approved PQC algorithm (FIPS 203/204/205) (Requirement: FIPS 203/204/205: approved) [Element: ML-DSA-87]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 99
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ml-dsa-87",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "1e7ace63cafd4753de8fde2d9f36d28b8dc2c08525ac45803f869c7771f17af0",
+            "primaryLocationLineHash": "1e7ace63cafd4753:1"
+          },
           "properties": {
+            "findingKey": "pqc|SBOM-PQC-009|crypto/algorithm/ml-dsa-87",
+            "findingId": "sbomtools:v1:1e7ace63cafd4753",
             "standardIds": [
               "NIST-PQC:FIPS 203/204/205",
               "NIST-PQC:SP 800-208"
@@ -784,12 +1144,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-PQC-009",
+          "ruleIndex": 19,
           "level": "note",
           "message": {
             "text": "NIST PQC Readiness: 'ML-DSA-65' uses NIST-approved PQC algorithm (FIPS 203/204/205) (Requirement: FIPS 203/204/205: approved) [Element: ML-DSA-65]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 119
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ml-dsa-65",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "82ab8e3138bc09d97a6509ae9e6d6178ea766a27a353deef020dc007c48b637d",
+            "primaryLocationLineHash": "82ab8e3138bc09d9:1"
+          },
           "properties": {
+            "findingKey": "pqc|SBOM-PQC-009|crypto/algorithm/ml-dsa-65",
+            "findingId": "sbomtools:v1:82ab8e3138bc09d9",
             "standardIds": [
               "NIST-PQC:FIPS 203/204/205",
               "NIST-PQC:SP 800-208"
@@ -803,12 +1188,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-PQC-009",
+          "ruleIndex": 19,
           "level": "note",
           "message": {
             "text": "NIST PQC Readiness: 'SLH-DSA-SHAKE-256s' uses NIST-approved PQC algorithm (FIPS 203/204/205) (Requirement: FIPS 203/204/205: approved) [Element: SLH-DSA-SHAKE-256s]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 139
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/slh-dsa-shake-256s",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "ce3f644b51d4d60e62b530a2fde20ee39383b459dad3451f69e0fdd6ebe267b7",
+            "primaryLocationLineHash": "ce3f644b51d4d60e:1"
+          },
           "properties": {
+            "findingKey": "pqc|SBOM-PQC-009|crypto/algorithm/slh-dsa-shake-256s",
+            "findingId": "sbomtools:v1:ce3f644b51d4d60e",
             "standardIds": [
               "NIST-PQC:FIPS 203/204/205",
               "NIST-PQC:SP 800-208"
@@ -822,12 +1232,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-PQC-001",
+          "ruleIndex": 16,
           "level": "error",
           "message": {
             "text": "NIST PQC Readiness: 'X25519' (ECDH) is quantum-vulnerable and must migrate to PQC (IR 8547) (Requirement: IR 8547: quantum-vulnerable) [Element: X25519]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 198
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/x25519",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9f9263b04c514a5f94a3a8fcd8658939d9b5b460c8d315729d22d9ab95b87bb8",
+            "primaryLocationLineHash": "9f9263b04c514a5f:1"
+          },
           "properties": {
+            "findingKey": "pqc|SBOM-PQC-001|crypto/algorithm/x25519",
+            "findingId": "sbomtools:v1:9f9263b04c514a5f",
             "standardIds": [
               "NIST-PQC:IR 8547 ipd",
               "NIST-PQC:SP 800-131A Rev. 2"
@@ -841,12 +1276,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-PQC-010",
+          "ruleIndex": 20,
           "level": "note",
           "message": {
             "text": "NIST PQC Readiness: 'X25519-ML-KEM-768' is a PQ/T hybrid (X25519 + ML-KEM-768) whose post-quantum part is NIST-approved (FIPS 203); SP 800-227 §4.6.2 approves the key combination (Requirement: SP 800-227 / IR 8547: PQ/T hybrid) [Element: X25519-ML-KEM-768]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 216
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/hybrid-kem",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "8119d896d50ea594ae948345422abb6625881172817604e447ba0578cd0b6409",
+            "primaryLocationLineHash": "8119d896d50ea594:1"
+          },
           "properties": {
+            "findingKey": "pqc|SBOM-PQC-010|crypto/algorithm/hybrid-kem",
+            "findingId": "sbomtools:v1:8119d896d50ea594",
             "standardIds": [
               "NIST-PQC:SP 800-227",
               "NIST-PQC:IR 8547 ipd"
@@ -860,12 +1320,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-PQC-001",
+          "ruleIndex": 16,
           "level": "error",
           "message": {
             "text": "NIST PQC Readiness: 'ECDSA-P521' (ECDSA) is quantum-vulnerable and must migrate to PQC (IR 8547) (Requirement: IR 8547: quantum-vulnerable) [Element: ECDSA-P521]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 235
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/ecdsa-p521",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "461158e579e9d249206116cad0a61746cf2bc2c24902421e28066375a5a56642",
+            "primaryLocationLineHash": "461158e579e9d249:1"
+          },
           "properties": {
+            "findingKey": "pqc|SBOM-PQC-001|crypto/algorithm/ecdsa-p521",
+            "findingId": "sbomtools:v1:461158e579e9d249",
             "standardIds": [
               "NIST-PQC:IR 8547 ipd",
               "NIST-PQC:SP 800-131A Rev. 2"
@@ -879,12 +1364,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-PQC-009",
+          "ruleIndex": 19,
           "level": "note",
           "message": {
             "text": "NIST PQC Readiness: 'XMSS' uses NIST-approved PQC algorithm (SP 800-208 stateful hash-based signature) (Requirement: FIPS 203/204/205: approved) [Element: XMSS]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 253
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/algorithm/xmss",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "77d714919f4f5c86a3d21473e604dea5dcb9e30faee24ff0512cc148e4d2f595",
+            "primaryLocationLineHash": "77d714919f4f5c86:1"
+          },
           "properties": {
+            "findingKey": "pqc|SBOM-PQC-009|crypto/algorithm/xmss",
+            "findingId": "sbomtools:v1:77d714919f4f5c86",
             "standardIds": [
               "NIST-PQC:FIPS 203/204/205",
               "NIST-PQC:SP 800-208"
@@ -898,12 +1408,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-PQC-PROTO-002",
+          "ruleIndex": 27,
           "level": "error",
           "message": {
             "text": "NIST PQC Readiness: Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384' includes broken or quantum-vulnerable algorithms: ECDH (quantum-vulnerable) (Requirement: IR 8547 / SP 800-131A: protocol algorithms) [Element: TLS 1.3 (PQC Hybrid)]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 332
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "crypto/protocol/tls13-pqc",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "19df590ce505e4d795f1afab20cf5fa516ae132da581819ec4d2c6c7700990c3",
+            "primaryLocationLineHash": "19df590ce505e4d7:1"
+          },
           "properties": {
+            "findingKey": "pqc|SBOM-PQC-PROTO-002:TLS_AES_256_GCM_SHA384|crypto/protocol/tls13-pqc",
+            "findingId": "sbomtools:v1:19df590ce505e4d7",
             "standardIds": [
               "NIST-PQC:SP 800-131A / IR 8547"
             ],

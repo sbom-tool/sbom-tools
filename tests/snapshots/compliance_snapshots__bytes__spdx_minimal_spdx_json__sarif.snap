@@ -717,15 +717,50 @@ source: tests/compliance_snapshots.rs
           ]
         }
       },
+      "automationDetails": {
+        "id": "sbom-tools/fsct+ntia/"
+      },
+      "originalUriBaseIds": {
+        "SRCROOT": {
+          "description": {
+            "text": "The root of the source tree relative artifact URIs resolve against: the repository the SBOM file is in, or the directory given as --sarif-base."
+          }
+        }
+      },
       "results": [
         {
           "ruleId": "SBOM-NTIA-SUPPLIER",
+          "ruleIndex": 4,
           "level": "error",
           "message": {
             "text": "NTIA Minimum Elements: Component 'lodash' missing supplier/manufacturer (Requirement: NTIA: Supplier information) [Element: lodash]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 17
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/lodash@4.17.21",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "f863b422f8675d3bb0212f3b31445b83955cf890c899f3bff31fa550ce90b2eb",
+            "primaryLocationLineHash": "f863b422f8675d3b:1"
+          },
           "properties": {
+            "findingKey": "ntia|SBOM-NTIA-SUPPLIER|pkg:npm/lodash@4.17.21",
+            "findingId": "sbomtools:v1:f863b422f8675d3b",
             "standardIds": [
               "NTIA:NTIA Minimum Elements"
             ],
@@ -737,12 +772,37 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-NTIA-SUPPLIER",
+          "ruleIndex": 4,
           "level": "error",
           "message": {
             "text": "NTIA Minimum Elements: Component 'express' missing supplier/manufacturer (Requirement: NTIA: Supplier information) [Element: express]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 40
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/express@4.18.2",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "3ac7f51e13b33edfc7dd477f886d1137745e86097c85d7e121b86f96d38d5458",
+            "primaryLocationLineHash": "3ac7f51e13b33edf:1"
+          },
           "properties": {
+            "findingKey": "ntia|SBOM-NTIA-SUPPLIER|pkg:npm/express@4.18.2",
+            "findingId": "sbomtools:v1:3ac7f51e13b33edf",
             "standardIds": [
               "NTIA:NTIA Minimum Elements"
             ],
@@ -754,12 +814,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-DIRECT-DEPS",
+          "ruleIndex": 16,
           "level": "error",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2/§2.3.3] No direct dependencies of the Primary Component are identified, and no completeness declaration covers their absence — identify all static direct dependencies or declare the enumeration's completeness (Requirement: CISA FSCT 3e §2.2.2/§2.3.3: Direct dependencies (Minimum Expected)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "7b4c886ebbfb65d0abe29895c29c278bd87aa1f60e8a2fb208d3fc67def2b55a",
+            "primaryLocationLineHash": "7b4c886ebbfb65d0:1"
+          },
           "properties": {
+            "findingKey": "fsct|SBOM-FSCT-DIRECT-DEPS|document",
+            "findingId": "sbomtools:v1:7b4c886ebbfb65d0",
             "standardIds": [
               "CISA-FSCT-3e:§2.2.2",
               "CISA-FSCT-3e:§2.3.3"
@@ -772,12 +851,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-SUPPLIER",
+          "ruleIndex": 21,
           "level": "error",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.3] 2/2 component(s) declare no Supplier Name (an explicit 'unknown' is a permitted last resort; silent absence is not): lodash, express (Requirement: CISA FSCT 3e §2.2.2.3: Supplier Name (Minimum Expected)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "d012930a8be22ac44d775191d9b6ab30b329c1bee154684d97ac573206198aca",
+            "primaryLocationLineHash": "d012930a8be22ac4:1"
+          },
           "properties": {
+            "findingKey": "fsct|SBOM-FSCT-SUPPLIER|document",
+            "findingId": "sbomtools:v1:d012930a8be22ac4",
             "standardIds": [
               "CISA-FSCT-3e:§2.2.2.3"
             ],
@@ -790,12 +888,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-HASH",
+          "ruleIndex": 24,
           "level": "error",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.5] 1/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): express (Requirement: CISA FSCT 3e §2.2.2.5: Cryptographic Hash (Minimum Expected)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "36df4e88c1e15649902ae99f6fc0172af5eb316a0c201b1602ea3713d458f879",
+            "primaryLocationLineHash": "36df4e88c1e15649:1"
+          },
           "properties": {
+            "findingKey": "fsct|SBOM-FSCT-HASH|document",
+            "findingId": "sbomtools:v1:36df4e88c1e15649",
             "standardIds": [
               "CISA-FSCT-3e:§2.2.2.5"
             ],
@@ -808,12 +925,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-IDENTIFIER-MULTI",
+          "ruleIndex": 23,
           "level": "warning",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.4] 2/2 component(s) declare fewer than two globally unique identifier kinds (PURL/CPE/SWHID/SWID) — list as many as are available (heuristic threshold; profile policy): lodash, express (Requirement: CISA FSCT 3e §2.2.2.4: Unique Identifier multiplicity (Recommended Practice)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "df83bce274c1f9fd01dcfbe698be738ca2682693fc32cebc94f6a791523c6abc",
+            "primaryLocationLineHash": "df83bce274c1f9fd:1"
+          },
           "properties": {
+            "findingKey": "fsct|SBOM-FSCT-IDENTIFIER-MULTI|document",
+            "findingId": "sbomtools:v1:df83bce274c1f9fd",
             "standardIds": [
               "CISA-FSCT-3e:§2.2.2.4"
             ],
@@ -826,12 +962,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-COMPLETENESS",
+          "ruleIndex": 28,
           "level": "warning",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.6.4] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate) (Requirement: CISA FSCT 3e §2.2.2.6.4: Relationship completeness (supplemental, optional)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "bb72efb8c507e7b70b9d8c60c62398c9ee6545e0886b9c1d42154c4fb0f0e1b2",
+            "primaryLocationLineHash": "bb72efb8c507e7b7:1"
+          },
           "properties": {
+            "findingKey": "fsct|SBOM-FSCT-COMPLETENESS|document",
+            "findingId": "sbomtools:v1:bb72efb8c507e7b7",
             "standardIds": [
               "CISA-FSCT-3e:§2.2.2.6.4",
               "CISA-FSCT-3e:§2.3.3"
@@ -844,12 +999,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-DYNAMIC-DEPS",
+          "ruleIndex": 18,
           "level": "note",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2/§2.2.2.6] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC_LINK / RUNTIME_DEPENDENCY_OF / PROVIDED_DEPENDENCY_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies (Requirement: CISA FSCT 3e §2.2.2/§2.2.2.6: Dynamic and remote dependencies (Aspirational Goal)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 7
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "d2ef39d6479191537bc1b2da210e4d16a579bfab570767ca16041780ac5c6e73",
+            "primaryLocationLineHash": "d2ef39d647919153:1"
+          },
           "properties": {
+            "findingKey": "fsct|SBOM-FSCT-DYNAMIC-DEPS|document",
+            "findingId": "sbomtools:v1:d2ef39d647919153",
             "standardIds": [
               "CISA-FSCT-3e:§2.2.2",
               "CISA-FSCT-3e:§2.2.2.6"

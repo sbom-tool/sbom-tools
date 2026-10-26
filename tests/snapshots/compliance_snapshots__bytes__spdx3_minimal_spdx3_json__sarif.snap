@@ -2193,15 +2193,44 @@ source: tests/compliance_snapshots.rs
           ]
         }
       },
+      "automationDetails": {
+        "id": "sbom-tools/bsi+eo14028/"
+      },
+      "originalUriBaseIds": {
+        "SRCROOT": {
+          "description": {
+            "text": "The root of the source tree relative artifact URIs resolve against: the repository the SBOM file is in, or the directory given as --sarif-base."
+          }
+        }
+      },
       "results": [
         {
           "ruleId": "SBOM-BSI-TR-03183-2-5-1",
+          "ruleIndex": 55,
           "level": "error",
           "message": {
             "text": "BSI TR-03183-2: [BSI TR-03183-2 §5.2.1] Creator of the SBOM missing (email address, or URL if no email is available); generation tools (metadata.tools) do not satisfy the field — provide a Person/Organization creator (e.g. CycloneDX metadata.authors or metadata.manufacturer) (Requirement: BSI TR-03183-2 §5.2.1: Creator of the SBOM) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx3/minimal.spdx3.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "000354355e33ac4a563884ea644dbf7fb75d34e510aabec6f31adb08745d0785",
+            "primaryLocationLineHash": "000354355e33ac4a:1"
+          },
           "properties": {
+            "findingKey": "bsi|SBOM-BSI-TR-03183-2-5-1|document",
+            "findingId": "sbomtools:v1:000354355e33ac4a",
             "standardIds": [
               "BSI-TR-03183-2:§5.2.1"
             ],
@@ -2212,12 +2241,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSI-TR-03183-2-LICENSE",
+          "ruleIndex": 61,
           "level": "error",
           "message": {
             "text": "BSI TR-03183-2: [BSI TR-03183-2 §5.2.2] 1/3 component(s) missing distribution licence(s): lib-utils (Requirement: BSI TR-03183-2 §5.2.2: Distribution licences) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx3/minimal.spdx3.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "82644af3101647318cc7a23def326474deebfe3173f0c420eafa388f898427c8",
+            "primaryLocationLineHash": "82644af310164731:1"
+          },
           "properties": {
+            "findingKey": "bsi|SBOM-BSI-TR-03183-2-LICENSE|document",
+            "findingId": "sbomtools:v1:82644af310164731",
             "standardIds": [
               "BSI-TR-03183-2:§5.2.2",
               "BSI-TR-03183-2:§6.1"
@@ -2232,12 +2280,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSI-TR-03183-2-CREATOR",
+          "ruleIndex": 63,
           "level": "warning",
           "message": {
             "text": "BSI TR-03183-2: [BSI TR-03183-2 §5.2.2] 2/3 component(s) missing a component creator (supplier/author with email, or URL if no email) (Requirement: BSI TR-03183-2 §5.2.2: Component creator) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx3/minimal.spdx3.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "c7b9741417339d708e65c7b0c962f132b04b64a5625d1d0834c55b243341fbd5",
+            "primaryLocationLineHash": "c7b9741417339d70:1"
+          },
           "properties": {
+            "findingKey": "bsi|SBOM-BSI-TR-03183-2-CREATOR|document",
+            "findingId": "sbomtools:v1:c7b9741417339d70",
             "standardIds": [
               "BSI-TR-03183-2:§5.2.2"
             ],
@@ -2250,12 +2317,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSI-TR-03183-2-5-4",
+          "ruleIndex": 64,
           "level": "error",
           "message": {
             "text": "BSI TR-03183-2: [BSI TR-03183-2 §5.2.2] 1/3 component(s) carry hashes but none is SHA-512 (the TR names the algorithm; SHA-256 or others alone do not satisfy the required field): my-app (Requirement: BSI TR-03183-2 §5.2.2: Hash of the deployable component (SHA-512)) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx3/minimal.spdx3.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "f40d65709c70d36b9c61bc39d32bf13088d73a109f47cb84bb938cda66910fb1",
+            "primaryLocationLineHash": "f40d65709c70d36b:1"
+          },
           "properties": {
+            "findingKey": "bsi|SBOM-BSI-TR-03183-2-5-4|document",
+            "findingId": "sbomtools:v1:f40d65709c70d36b",
             "standardIds": [
               "BSI-TR-03183-2:§5.2.2"
             ],
@@ -2268,12 +2354,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSI-TR-03183-2-5-4-MISSING",
+          "ruleIndex": 65,
           "level": "warning",
           "message": {
             "text": "BSI TR-03183-2: [BSI TR-03183-2 §5.2.2] 1/3 component(s) have no hash of the deployable form; required as SHA-512 unless the information is unavailable due to the way the component is assembled (§3.2.1) (Requirement: BSI TR-03183-2 §5.2.2: Hash of the deployable component) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx3/minimal.spdx3.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "39fcb85483501b9b2e373e8d53e580c0edac0efe3b234bf05b217a630e1219d3",
+            "primaryLocationLineHash": "39fcb85483501b9b:1"
+          },
           "properties": {
+            "findingKey": "bsi|SBOM-BSI-TR-03183-2-5-4-MISSING|document",
+            "findingId": "sbomtools:v1:39fcb85483501b9b",
             "standardIds": [
               "BSI-TR-03183-2:§5.2.2",
               "BSI-TR-03183-2:§3.2.1"
@@ -2288,12 +2393,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS",
+          "ruleIndex": 67,
           "level": "warning",
           "message": {
             "text": "BSI TR-03183-2: [BSI TR-03183-2 §5.2.2] Completeness of the dependency enumeration is not clearly indicated (CycloneDX compositions.aggregate / SPDX 3 relationship completeness) (Requirement: BSI TR-03183-2 §5.2.2: Completeness of the dependency enumeration) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx3/minimal.spdx3.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "c4680981eb8cf7ab9130e2050c1e54cc7a12629cf4263bf2f36c0c3587980dee",
+            "primaryLocationLineHash": "c4680981eb8cf7ab:1"
+          },
           "properties": {
+            "findingKey": "bsi|SBOM-BSI-TR-03183-2-5-5-COMPLETENESS|document",
+            "findingId": "sbomtools:v1:c4680981eb8cf7ab",
             "standardIds": [
               "BSI-TR-03183-2:§5.2.2"
             ],
@@ -2304,12 +2428,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSI-TR-03183-2-5-2-4",
+          "ruleIndex": 68,
           "level": "warning",
           "message": {
             "text": "BSI TR-03183-2: [BSI TR-03183-2 §5.2.4] 1/3 component(s) missing a unique identifier (purl/CPE/SWHID/SWID) — an additional-tier field that MUST be provided when one exists: lib-utils (Requirement: BSI TR-03183-2 §5.2.4: Other unique identifiers) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx3/minimal.spdx3.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9acdf22246e783811f956e44139d787e12d1f1ae3b7aa86f488410de203dee01",
+            "primaryLocationLineHash": "9acdf22246e78381:1"
+          },
           "properties": {
+            "findingKey": "bsi|SBOM-BSI-TR-03183-2-5-2-4|document",
+            "findingId": "sbomtools:v1:9acdf22246e78381",
             "standardIds": [
               "BSI-TR-03183-2:§5.2.4"
             ],
@@ -2322,12 +2465,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-BSI-TR-03183-2-3-1",
+          "ruleIndex": 69,
           "level": "warning",
           "message": {
             "text": "BSI TR-03183-2: [BSI TR-03183-2 §3.1] SBOM carries vulnerability information on 1/4 component(s); a document containing both SBOM and vulnerability information does not conform — publish advisories separately (e.g. CSAF). Ignore if the data was attached by enrichment rather than present in the source document. (Requirement: BSI TR-03183-2 §3.1: No vulnerability information in the SBOM) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx3/minimal.spdx3.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "a4b11bafe5f569cf940fe178b765cc7382a7ff3e32ed62ca0d72184469ca916b",
+            "primaryLocationLineHash": "a4b11bafe5f569cf:1"
+          },
           "properties": {
+            "findingKey": "bsi|SBOM-BSI-TR-03183-2-3-1|document",
+            "findingId": "sbomtools:v1:a4b11bafe5f569cf",
             "standardIds": [
               "BSI-TR-03183-2:§3.1"
             ],
@@ -2340,12 +2502,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-EO14028-IDENTIFIER",
+          "ruleIndex": 114,
           "level": "error",
           "message": {
             "text": "EO 14028 Section 4: 1/3 components missing unique identifier (PURL/CPE/SWHID/SWID) (Requirement: EO 14028 Sec 4(e): Component unique identification) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx3/minimal.spdx3.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "39af3777426166418bac60be33ffdbc7446a4c92b26eddc23287809443d9d1c3",
+            "primaryLocationLineHash": "39af377742616641:1"
+          },
           "properties": {
+            "findingKey": "eo14028|SBOM-EO14028-IDENTIFIER|document",
+            "findingId": "sbomtools:v1:39af377742616641",
             "standardIds": [
               "EO-14028:EO 14028 §4"
             ],
@@ -2358,12 +2539,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-EO14028-INTEGRITY",
+          "ruleIndex": 117,
           "level": "warning",
           "message": {
             "text": "EO 14028 Section 4: 1/3 components missing cryptographic hashes (Requirement: EO 14028 Sec 4(e): Component integrity verification) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx3/minimal.spdx3.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "d791ac1adac121ac0fc3e55867285dea417050ec46f538f7b02e669eff0227ef",
+            "primaryLocationLineHash": "d791ac1adac121ac:1"
+          },
           "properties": {
+            "findingKey": "eo14028|SBOM-EO14028-INTEGRITY|document",
+            "findingId": "sbomtools:v1:d791ac1adac121ac",
             "standardIds": [
               "EO-14028:EO 14028 §4"
             ],
@@ -2376,12 +2576,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-EO14028-DISCLOSURE",
+          "ruleIndex": 118,
           "level": "warning",
           "message": {
             "text": "EO 14028 Section 4: No security contact or vulnerability disclosure reference found (Requirement: EO 14028 Sec 4(g): Vulnerability disclosure process) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx3/minimal.spdx3.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "c1d6c36feb991c0a761fad4fb6f1d2b6296262947823781468465ad136bdc958",
+            "primaryLocationLineHash": "c1d6c36feb991c0a:1"
+          },
           "properties": {
+            "findingKey": "eo14028|SBOM-EO14028-DISCLOSURE|document",
+            "findingId": "sbomtools:v1:c1d6c36feb991c0a",
             "standardIds": [
               "EO-14028:EO 14028 §4"
             ],
@@ -2392,12 +2611,31 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-EO14028-SUPPLIER",
+          "ruleIndex": 119,
           "level": "error",
           "message": {
             "text": "EO 14028 Section 4: 2/3 components (66%) missing supplier information (Requirement: EO 14028 Sec 4(e): Supplier identification) [Element: unknown]"
           },
-          "locations": [],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx3/minimal.spdx3.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 6
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "9fe2e163e08f2a30905221f7703fa16a68f9293582725b0bbc1aed89cf0a4b73",
+            "primaryLocationLineHash": "9fe2e163e08f2a30:1"
+          },
           "properties": {
+            "findingKey": "eo14028|SBOM-EO14028-SUPPLIER|document",
+            "findingId": "sbomtools:v1:9fe2e163e08f2a30",
             "standardIds": [
               "EO-14028:EO 14028 §4"
             ],

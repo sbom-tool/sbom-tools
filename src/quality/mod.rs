@@ -32,6 +32,7 @@ mod compliance;
 mod metrics;
 mod scorer;
 
+pub(crate) use compliance::compose_finding_key;
 pub use compliance::{
     Applicability, CISA2026_SARIF_RULE_IDS, CNSA2_SARIF_RULE_IDS, COMPLIANCE_SARIF_RULE_IDS,
     ClassCheck, ComplianceChecker, ComplianceLevel, ComplianceResult, ConformityAssessmentSummary,
@@ -42,7 +43,8 @@ pub use compliance::{
     generic_rule_id_for_level, rule_meta,
 };
 pub use compliance::{
-    DOCUMENT_SUBJECT, FINDING_ID_PREFIX, finding_id, finding_key, finding_subject, standard_key,
+    DOCUMENT_SUBJECT, FINDING_ID_PREFIX, finding_fingerprint, finding_id, finding_key,
+    finding_subject, standard_key,
 };
 pub use metrics::{
     AuditabilityMetrics, CompletenessMetrics, ComplexityFactors, ComplexityLevel,

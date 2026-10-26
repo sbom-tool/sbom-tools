@@ -18,8 +18,10 @@ mod sbom_fixtures;
 
 use sbom_tools::quality::{ComplianceLevel, ComplianceResult, QualityScorer, ScoringProfile};
 use sbom_tools::reports::{
-    ReportConfig, ReportGenerator, SARIF_SCHEMA_URI, SarifReporter, generate_ai_readiness_sarif,
-    generate_compliance_sarif, generate_multi_compliance_sarif, generate_quality_sarif,
+    ReportConfig, ReportGenerator, SARIF_SCHEMA_URI, SarifArtifact, SarifArtifactLocation,
+    SarifOptions, SarifReporter, generate_ai_readiness_sarif_with, generate_compliance_sarif_with,
+    generate_multi_compliance_sarif, generate_multi_compliance_sarif_with,
+    generate_quality_sarif_with,
 };
 use sbom_tools::{DiffEngine, parse_sbom_str};
 use serde_json::{Value, json};
@@ -93,23 +95,42 @@ fn vendored_schema_is_the_published_oasis_schema() {
 // The writers
 // ---------------------------------------------------------------------------
 
+/// The SBOM file of `fixture`, named as the CLI names it from the
+/// repository root.
+fn options(fixture: &sbom_fixtures::Fixture) -> SarifOptions {
+    SarifOptions::new().with_artifact(SarifArtifact::new(
+        SarifArtifactLocation::relative(format!("tests/fixtures/{}", fixture.rel)),
+        &fixture.sbom,
+        &fixture.raw,
+    ))
+}
+
 #[test]
 fn validate_sarif_matches_the_schema_at_every_level_on_every_fixture() {
     let schema = schema();
     let fixtures = sbom_fixtures::fixtures();
     assert!(fixtures.len() > 100, "the SBOM fixtures were not found");
     for fixture in &fixtures {
+        let options = options(fixture);
         let results: Vec<ComplianceResult> = ComplianceLevel::all()
             .iter()
             .map(|level| fixture.check(*level))
             .collect();
         for result in &results {
             let label = format!("{} @ {:?}", fixture.rel, result.level);
-            let sarif = generate_compliance_sarif(result).expect("SARIF serializes");
+            let sarif = generate_compliance_sarif_with(result, &options).expect("SARIF serializes");
             assert_valid(&schema, &sarif, &label);
         }
-        let sarif = generate_multi_compliance_sarif(&results).expect("SARIF serializes");
+        let sarif =
+            generate_multi_compliance_sarif_with(&results, &options).expect("SARIF serializes");
         assert_valid(&schema, &sarif, &format!("{} @ every level", fixture.rel));
+        // Without the SBOM file, results keep only logical locations.
+        let sarif = generate_multi_compliance_sarif(&results).expect("SARIF serializes");
+        assert_valid(
+            &schema,
+            &sarif,
+            &format!("{} @ every level, no artifact", fixture.rel),
+        );
     }
 }
 
@@ -144,16 +165,18 @@ fn quality_sarif_matches_the_schema_for_every_profile() {
         ] {
             let report = QualityScorer::new(profile).score(&fixture.sbom);
             let label = format!("{rel} @ quality --profile {profile}");
-            let sarif = generate_quality_sarif(&report, rel, &profile.to_string())
-                .expect("SARIF serializes");
+            let sarif =
+                generate_quality_sarif_with(&report, rel, &profile.to_string(), &options(fixture))
+                    .expect("SARIF serializes");
             assert_valid(&schema, &sarif, &label);
             if let Some(metrics) = report.ai_readiness_metrics.as_ref() {
-                let sarif = generate_ai_readiness_sarif(
+                let sarif = generate_ai_readiness_sarif_with(
                     metrics,
                     rel,
                     &profile.to_string(),
                     Some(report.overall_score),
                     report.grade.letter(),
+                    &options(fixture),
                 )
                 .expect("SARIF serializes");
                 assert_valid(&schema, &sarif, &format!("{label} (AI readiness)"));
@@ -177,18 +200,33 @@ fn diff_and_view_sarif_match_the_schema() {
     let read = |rel: &str| {
         let path = std::path::Path::new(sbom_fixtures::FIXTURES_DIR).join(rel);
         let raw = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{rel}: {e}"));
-        parse_sbom_str(&raw).unwrap_or_else(|e| panic!("{rel} must parse: {e}"))
+        let sbom = parse_sbom_str(&raw).unwrap_or_else(|e| panic!("{rel} must parse: {e}"));
+        let artifact = SarifArtifact::new(
+            SarifArtifactLocation::relative(format!("tests/fixtures/{rel}")),
+            &sbom,
+            &raw,
+        );
+        (sbom, artifact)
     };
     for (old_rel, new_rel) in pairs {
-        let (old, new) = (read(old_rel), read(new_rel));
+        let ((old, old_artifact), (new, new_artifact)) = (read(old_rel), read(new_rel));
         let diff = DiffEngine::new().diff(&old, &new).expect("diff succeeds");
         let reporter = SarifReporter::new();
-        let config = ReportConfig::all();
+        let config = ReportConfig {
+            old_sarif_artifact: Some(old_artifact.clone()),
+            new_sarif_artifact: Some(new_artifact.clone()),
+            ..ReportConfig::all()
+        };
         let sarif = reporter
             .generate_diff_report(&diff, &old, &new, &config)
             .expect("diff SARIF");
         assert_valid(&schema, &sarif, &format!("diff {old_rel} {new_rel}"));
-        for (rel, sbom) in [(old_rel, &old), (new_rel, &new)] {
+        for (rel, sbom, artifact) in [(old_rel, &old, old_artifact), (new_rel, &new, new_artifact)]
+        {
+            let config = ReportConfig {
+                view_sarif_artifact: Some(artifact),
+                ..ReportConfig::all()
+            };
             let sarif = reporter
                 .generate_view_report(sbom, &config)
                 .expect("view SARIF");

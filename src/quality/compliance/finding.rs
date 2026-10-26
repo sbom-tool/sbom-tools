@@ -111,7 +111,13 @@ pub const fn standard_key(level: ComplianceLevel) -> &'static str {
 /// finding.
 #[must_use]
 pub fn finding_subject(violation: &Violation) -> Cow<'_, str> {
-    match violation.component_id.as_deref() {
+    subject_of(violation.component_id.as_deref())
+}
+
+/// The `<subject>` of a finding about the component whose canonical id is
+/// `component_id`, or about the document when it is `None`.
+fn subject_of(component_id: Option<&str>) -> Cow<'_, str> {
+    match component_id {
         None => Cow::Borrowed(DOCUMENT_SUBJECT),
         Some(id)
             if id == DOCUMENT_SUBJECT
@@ -130,8 +136,27 @@ pub fn finding_subject(violation: &Violation) -> Cow<'_, str> {
 /// module docs).
 #[must_use]
 pub fn finding_key(level: ComplianceLevel, violation: &Violation) -> String {
-    let mut key = format!("{}|{}", standard_key(level), violation.rule_id);
-    if let Some(detail) = &violation.finding_detail {
+    compose_finding_key(
+        standard_key(level),
+        violation.rule_id,
+        violation.finding_detail.as_deref(),
+        violation.component_id.as_deref(),
+    )
+}
+
+/// A key in the shape of [`finding_key`] from its parts: `scope` in place of
+/// the standard (SARIF results that are not compliance findings use a
+/// surface name such as `diff` or `view`), the rule id, the optional detail
+/// (percent-encoded) and the canonical id of the component the result is
+/// about, or `None` for the document.
+pub(crate) fn compose_finding_key(
+    scope: &str,
+    rule_id: &str,
+    detail: Option<&str>,
+    component_id: Option<&str>,
+) -> String {
+    let mut key = format!("{scope}|{rule_id}");
+    if let Some(detail) = detail {
         key.push(':');
         for c in detail.chars() {
             match c {
@@ -143,7 +168,7 @@ pub fn finding_key(level: ComplianceLevel, violation: &Violation) -> String {
         }
     }
     key.push('|');
-    key.push_str(&finding_subject(violation));
+    key.push_str(&subject_of(component_id));
     key
 }
 
@@ -194,14 +219,26 @@ pub(crate) fn number_repeated_details(violations: &mut [Violation]) {
 /// first 16 lowercase hex digits of SHA-256 of the key's UTF-8 bytes.
 #[must_use]
 pub fn finding_id(finding_key: &str) -> String {
-    use sha2::{Digest, Sha256};
-    let digest = Sha256::digest(finding_key.as_bytes());
+    let fingerprint = finding_fingerprint(finding_key);
     let mut id = String::with_capacity(FINDING_ID_PREFIX.len() + 16);
     id.push_str(FINDING_ID_PREFIX);
-    for byte in &digest[..8] {
-        let _ = write!(id, "{byte:02x}");
-    }
+    id.push_str(&fingerprint[..16]);
     id
+}
+
+/// The full fingerprint of a finding key: the 64 lowercase hex digits of
+/// SHA-256 of the key's UTF-8 bytes. SARIF output carries it as the
+/// `sbomToolsFinding/v1` partial fingerprint; [`finding_id`] is its first 16
+/// digits behind a prefix.
+#[must_use]
+pub fn finding_fingerprint(finding_key: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let digest = Sha256::digest(finding_key.as_bytes());
+    let mut hex = String::with_capacity(64);
+    for byte in digest {
+        let _ = write!(hex, "{byte:02x}");
+    }
+    hex
 }
 
 #[cfg(test)]
@@ -453,6 +490,41 @@ mod tests {
         assert_eq!(
             finding_id("ntia|SBOM-NTIA-SUPPLIER|pkg:npm/lodash@4.17.21"),
             "sbomtools:v1:f863b422f8675d3b"
+        );
+    }
+
+    /// The fingerprint is the whole digest the id is cut from.
+    #[test]
+    fn fingerprint_is_the_full_sha256_of_the_key() {
+        let key = "ntia|SBOM-NTIA-AUTHOR|document";
+        let fingerprint = finding_fingerprint(key);
+        assert_eq!(fingerprint.len(), 64);
+        assert!(fingerprint.bytes().all(|b| b.is_ascii_hexdigit()));
+        assert!(fingerprint.starts_with("60072ae05d1ef4b8"), "{fingerprint}");
+        assert_eq!(
+            finding_id(key),
+            format!("{FINDING_ID_PREFIX}{}", &fingerprint[..16])
+        );
+    }
+
+    /// The composed key of a violation's parts is its finding key.
+    #[test]
+    fn composed_keys_match_finding_keys() {
+        let violations = ntia_violations();
+        for v in &violations {
+            assert_eq!(
+                compose_finding_key(
+                    standard_key(ComplianceLevel::NtiaMinimum),
+                    v.rule_id,
+                    v.finding_detail.as_deref(),
+                    v.component_id.as_deref(),
+                ),
+                finding_key(ComplianceLevel::NtiaMinimum, v)
+            );
+        }
+        assert_eq!(
+            compose_finding_key("diff", "SBOM-TOOLS-005", Some("CVE-1:x"), Some("document")),
+            "diff|SBOM-TOOLS-005:CVE-1%3Ax|component:document"
         );
     }
 
