@@ -278,10 +278,10 @@ fn jca_key_agreement_names_with_their_kdf_are_classical() {
 }
 
 /// A post-quantum signature with a pre-hash digest ("SHA512withML-DSA")
-/// would hide behind the digest under a single classification, and a
-/// classical part beside a post-quantum one makes a hybrid, so such a JCA
-/// name stays unclassified and fails closed. So does a digest beside a
-/// signature the classifier does not know.
+/// would hide behind the digest under a single classification, so such a
+/// JCA name stays unclassified and fails closed. So does a digest beside a
+/// signature the classifier does not know. (A classical part beside a
+/// post-quantum one is the hybrid they make: tests/crypto_hybrid_tests.rs.)
 #[test]
 fn jca_names_with_post_quantum_signatures_stay_unclassified() {
     for name in [
@@ -289,7 +289,6 @@ fn jca_names_with_post_quantum_signatures_stay_unclassified() {
         "SHA256withXMSS",
         "SHA512withML-DSA",
         "NONEwithML-DSA-87",
-        "X25519withML-KEM-768",
         "SHA256withUnknownSig",
     ] {
         assert_eq!(named(name).class, AlgorithmClass::Unknown, "{name}");

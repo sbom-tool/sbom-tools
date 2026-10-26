@@ -1308,6 +1308,14 @@ pub enum AlgorithmClass {
     /// Post-quantum algorithm; the parameter set, when known, is in
     /// `parameter` (e.g., "1024" for ML-KEM-1024, "87" for ML-DSA-87).
     PostQuantum(PqcKind),
+    /// PQ/T hybrid: a post-quantum algorithm combined with a classical one
+    /// so that the result holds while either part does — a hybrid key
+    /// exchange (the TLS group X25519MLKEM768, the SSH method
+    /// mlkem768x25519-sha256, an RFC 9370 IKEv2 additional key exchange) or
+    /// a composite signature (ML-DSA-87 with ECDSA P-384). The parts are in
+    /// [`AlgorithmClassification::hybrid`]; a hybrid is judged by its parts,
+    /// never by the weaker one alone.
+    Hybrid,
     /// Not recognized — callers should treat as "cannot verify", never as
     /// implicitly compliant.
     Unknown,
@@ -1315,22 +1323,39 @@ pub enum AlgorithmClass {
 
 impl AlgorithmClass {
     /// Rank for "report the most severe mention" selection (higher is
-    /// worse): Broken > ClassicalQuantumVulnerable > recognized
+    /// worse): Broken > ClassicalQuantumVulnerable > Hybrid > recognized
     /// symmetric/hash (not necessarily approved) > post-quantum >
     /// Unknown. Used to pick the worst algorithm out of multi-algorithm
     /// identities like "sha384-rsa-cert-chain", where reporting the first
     /// token (SHA-384, CNSA-approved) would hide the quantum-vulnerable
-    /// RSA.
+    /// RSA. A hybrid outranks the hash named with it ("mlkem768x25519-
+    /// sha256") but not a classical algorithm named outside it, which is
+    /// quantum-vulnerable whatever else the name holds.
     #[must_use]
     pub const fn severity_rank(self) -> u8 {
         match self {
             Self::Broken => 5,
             Self::ClassicalQuantumVulnerable => 4,
+            Self::Hybrid => 3,
             Self::Symmetric | Self::Sha2 | Self::Sha3 | Self::OtherHash => 2,
             Self::PostQuantum(_) => 1,
             Self::Unknown => 0,
         }
     }
+}
+
+/// The two parts of a PQ/T hybrid ([`AlgorithmClass::Hybrid`]), each
+/// classified on its own.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HybridParts {
+    /// The classical (traditional, quantum-vulnerable) part: X25519, ECDH
+    /// over P-384, ECDSA P-384, RSA-3072, …. A curve is recorded under its
+    /// canonical name ("P-384" for secp384r1).
+    pub classical: AlgorithmClassification,
+    /// The post-quantum part: ML-KEM-768, ML-DSA-87, …. A part that is not
+    /// recognized is [`AlgorithmClass::Unknown`] and keeps the name it was
+    /// given in `family` ("SNTRUP761"), so reports can name it.
+    pub post_quantum: AlgorithmClassification,
 }
 
 /// Structured result of [`classify_algorithm`]: canonical family name,
@@ -1351,6 +1376,10 @@ pub struct AlgorithmClassification {
     /// primitive; when none is named, `family` is `None` and `class` is
     /// [`AlgorithmClass::Symmetric`].
     pub construction: Option<String>,
+    /// The parts of a PQ/T hybrid, set exactly when `class` is
+    /// [`AlgorithmClass::Hybrid`]. `family`, `parameter` and `construction`
+    /// describe single algorithms, so a hybrid leaves them `None`.
+    pub hybrid: Option<Box<HybridParts>>,
 }
 
 impl AlgorithmClassification {
@@ -1362,7 +1391,36 @@ impl AlgorithmClassification {
             parameter: None,
             class: AlgorithmClass::Unknown,
             construction: None,
+            hybrid: None,
         }
+    }
+
+    /// A PQ/T hybrid of a `classical` and a `post_quantum` part. A curve the
+    /// classical part names by an alias ("secp384r1", "nistp384",
+    /// "secg/secp384r1") is recorded under its canonical name ("P-384").
+    #[must_use]
+    pub fn hybrid(mut classical: Self, post_quantum: Self) -> Self {
+        if let Some(p) = classical.parameter.as_deref()
+            && let Some(("EC", Some(curve))) = classify_token(p.rsplit('/').next().unwrap_or(p))
+        {
+            classical.parameter = Some(curve);
+        }
+        Self {
+            family: None,
+            parameter: None,
+            class: AlgorithmClass::Hybrid,
+            construction: None,
+            hybrid: Some(Box::new(HybridParts {
+                classical,
+                post_quantum,
+            })),
+        }
+    }
+
+    /// The parts of a PQ/T hybrid, or `None` for a single algorithm.
+    #[must_use]
+    pub fn hybrid_parts(&self) -> Option<&HybridParts> {
+        self.hybrid.as_deref()
     }
 
     /// The parameter parsed as a bit/size number, when numeric.
@@ -1373,9 +1431,16 @@ impl AlgorithmClassification {
 
     /// Human-readable label, e.g. "AES-128", "SHA-384", "ML-KEM-1024",
     /// "RSA", "HMAC-SHA-256" — or just the construction ("HMAC") when it
-    /// names no primitive.
+    /// names no primitive, and "X25519 + ML-KEM-768" for a hybrid.
     #[must_use]
     pub fn label(&self) -> String {
+        if let Some(parts) = &self.hybrid {
+            return format!(
+                "{} + {}",
+                parts.classical.label(),
+                parts.post_quantum.label()
+            );
+        }
         match (self.construction.as_deref(), self.family.is_some()) {
             (Some(c), true) => format!("{c}-{}", self.primitive_label()),
             (Some(c), false) => c.to_string(),
@@ -1406,6 +1471,7 @@ impl AlgorithmClassification {
             parameter,
             class: family_class(family),
             construction: None,
+            hybrid: None,
         }
     }
 }
@@ -1783,6 +1849,274 @@ fn bare_construction(chain: &[&'static str]) -> AlgorithmClassification {
         parameter: None,
         class: AlgorithmClass::Symmetric,
         construction: Some(chain.join("-")),
+        hybrid: None,
+    }
+}
+
+// ── PQ/T hybrids ────────────────────────────────────────────────────────
+//
+// A hybrid names a classical and a post-quantum algorithm together. It is
+// recognized from a registered name (TLS groups, SSH methods, composite
+// ML-DSA and ML-KEM), from a composite OID, from one token gluing the two
+// parts ("X25519MLKEM768"), from the two parts named side by side ("X25519
+// + ML-KEM-768", "ECDH P-384 ML-KEM-1024"), and — outside this module —
+// from an RFC 9370 IKEv2 additional key exchange paired with the classical
+// one.
+
+/// One part of a named hybrid: its canonical family and parameter.
+type NamedPart = (&'static str, Option<&'static str>);
+
+/// The composite ML-DSA signature or composite ML-KEM an id-alg OID arc
+/// (1.3.6.1.5.5.7.6.<arc>) names, by the normalized name of its algorithm
+/// identifier without the "id-" prefix: arcs 37–54 per
+/// draft-ietf-lamps-pq-composite-sigs-19 §6 and 55–66 per
+/// draft-ietf-lamps-pq-composite-kem-23 §6. Both drafts are approved and in
+/// the RFC Editor queue; IANA allocated the OIDs early, on 2025-10-20, in
+/// "SMI Security for PKIX Algorithms".
+fn composite_name(arc: u32) -> Option<&'static str> {
+    Some(match arc {
+        37 => "MLDSA44-RSA2048-PSS-SHA256",
+        38 => "MLDSA44-RSA2048-PKCS15-SHA256",
+        39 => "MLDSA44-ED25519-SHA512",
+        40 => "MLDSA44-ECDSA-P256-SHA256",
+        41 => "MLDSA65-RSA3072-PSS-SHA512",
+        42 => "MLDSA65-RSA3072-PKCS15-SHA512",
+        43 => "MLDSA65-RSA4096-PSS-SHA512",
+        44 => "MLDSA65-RSA4096-PKCS15-SHA512",
+        45 => "MLDSA65-ECDSA-P256-SHA512",
+        46 => "MLDSA65-ECDSA-P384-SHA512",
+        47 => "MLDSA65-ECDSA-BRAINPOOLP256R1-SHA512",
+        48 => "MLDSA65-ED25519-SHA512",
+        49 => "MLDSA87-ECDSA-P384-SHA512",
+        50 => "MLDSA87-ECDSA-BRAINPOOLP384R1-SHA512",
+        51 => "MLDSA87-ED448-SHAKE256",
+        52 => "MLDSA87-RSA3072-PSS-SHA512",
+        53 => "MLDSA87-RSA4096-PSS-SHA512",
+        54 => "MLDSA87-ECDSA-P521-SHA512",
+        55 => "MLKEM768-RSA2048-SHA3-256",
+        56 => "MLKEM768-RSA3072-SHA3-256",
+        57 => "MLKEM768-RSA4096-SHA3-256",
+        58 => "MLKEM768-X25519-SHA3-256",
+        59 => "MLKEM768-ECDH-P256-SHA3-256",
+        60 => "MLKEM768-ECDH-P384-SHA3-256",
+        61 => "MLKEM768-ECDH-BRAINPOOLP256R1-SHA3-256",
+        62 => "MLKEM1024-RSA3072-SHA3-256",
+        63 => "MLKEM1024-ECDH-P384-SHA3-256",
+        64 => "MLKEM1024-ECDH-BRAINPOOLP384R1-SHA3-256",
+        65 => "MLKEM1024-X448-SHA3-256",
+        66 => "MLKEM1024-ECDH-P521-SHA3-256",
+        _ => return None,
+    })
+}
+
+/// The traditional and post-quantum parts of a composite, by normalized
+/// name (see [`composite_name`]); the composite ML-DSA signature labels
+/// spell the brainpool curves "BP256" and "BP384". The pre-hash of a
+/// composite signature and the SHA3-256 combiner of a composite KEM are
+/// internal to the composite, not algorithms judged on their own.
+fn composite_parts(name: &str) -> Option<(NamedPart, NamedPart)> {
+    let ml_dsa = |set| ("ML-DSA", Some(set));
+    let ml_kem = |set| ("ML-KEM", Some(set));
+    Some(match name {
+        "MLDSA44-RSA2048-PSS-SHA256" | "MLDSA44-RSA2048-PKCS15-SHA256" => {
+            (("RSA", Some("2048")), ml_dsa("44"))
+        }
+        "MLDSA44-ED25519-SHA512" => (("ED25519", None), ml_dsa("44")),
+        "MLDSA44-ECDSA-P256-SHA256" => (("ECDSA", Some("P-256")), ml_dsa("44")),
+        "MLDSA65-RSA3072-PSS-SHA512" | "MLDSA65-RSA3072-PKCS15-SHA512" => {
+            (("RSA", Some("3072")), ml_dsa("65"))
+        }
+        "MLDSA65-RSA4096-PSS-SHA512" | "MLDSA65-RSA4096-PKCS15-SHA512" => {
+            (("RSA", Some("4096")), ml_dsa("65"))
+        }
+        "MLDSA65-ECDSA-P256-SHA512" => (("ECDSA", Some("P-256")), ml_dsa("65")),
+        "MLDSA65-ECDSA-P384-SHA512" => (("ECDSA", Some("P-384")), ml_dsa("65")),
+        "MLDSA65-ECDSA-BRAINPOOLP256R1-SHA512" | "MLDSA65-ECDSA-BP256-SHA512" => {
+            (("ECDSA", Some("brainpoolP256r1")), ml_dsa("65"))
+        }
+        "MLDSA65-ED25519-SHA512" => (("ED25519", None), ml_dsa("65")),
+        "MLDSA87-ECDSA-P384-SHA512" => (("ECDSA", Some("P-384")), ml_dsa("87")),
+        "MLDSA87-ECDSA-BRAINPOOLP384R1-SHA512" | "MLDSA87-ECDSA-BP384-SHA512" => {
+            (("ECDSA", Some("brainpoolP384r1")), ml_dsa("87"))
+        }
+        "MLDSA87-ED448-SHAKE256" => (("ED448", None), ml_dsa("87")),
+        "MLDSA87-RSA3072-PSS-SHA512" => (("RSA", Some("3072")), ml_dsa("87")),
+        "MLDSA87-RSA4096-PSS-SHA512" => (("RSA", Some("4096")), ml_dsa("87")),
+        "MLDSA87-ECDSA-P521-SHA512" => (("ECDSA", Some("P-521")), ml_dsa("87")),
+        "MLKEM768-RSA2048-SHA3-256" => (("RSA", Some("2048")), ml_kem("768")),
+        "MLKEM768-RSA3072-SHA3-256" => (("RSA", Some("3072")), ml_kem("768")),
+        "MLKEM768-RSA4096-SHA3-256" => (("RSA", Some("4096")), ml_kem("768")),
+        "MLKEM768-X25519-SHA3-256" => (("X25519", None), ml_kem("768")),
+        "MLKEM768-ECDH-P256-SHA3-256" => (("ECDH", Some("P-256")), ml_kem("768")),
+        "MLKEM768-ECDH-P384-SHA3-256" => (("ECDH", Some("P-384")), ml_kem("768")),
+        "MLKEM768-ECDH-BRAINPOOLP256R1-SHA3-256" => {
+            (("ECDH", Some("brainpoolP256r1")), ml_kem("768"))
+        }
+        "MLKEM1024-RSA3072-SHA3-256" => (("RSA", Some("3072")), ml_kem("1024")),
+        "MLKEM1024-ECDH-P384-SHA3-256" => (("ECDH", Some("P-384")), ml_kem("1024")),
+        "MLKEM1024-ECDH-BRAINPOOLP384R1-SHA3-256" => {
+            (("ECDH", Some("brainpoolP384r1")), ml_kem("1024"))
+        }
+        "MLKEM1024-X448-SHA3-256" => (("X448", None), ml_kem("1024")),
+        "MLKEM1024-ECDH-P521-SHA3-256" => (("ECDH", Some("P-521")), ml_kem("1024")),
+        _ => return None,
+    })
+}
+
+/// The hybrid of two named parts.
+fn named_hybrid((classical, post_quantum): (NamedPart, NamedPart)) -> AlgorithmClassification {
+    let part = |(family, parameter): NamedPart| {
+        AlgorithmClassification::primitive(family, parameter.map(str::to_string))
+    };
+    AlgorithmClassification::hybrid(part(classical), part(post_quantum))
+}
+
+/// A composite ML-DSA or ML-KEM OID (1.3.6.1.5.5.7.6.37 – .66).
+fn composite_oid(oid: &str) -> Option<AlgorithmClassification> {
+    let arc: u32 = oid.trim().strip_prefix("1.3.6.1.5.5.7.6.")?.parse().ok()?;
+    composite_name(arc)
+        .and_then(composite_parts)
+        .map(named_hybrid)
+}
+
+/// A registered hybrid, by normalized token span (tokens joined with `-`):
+/// the TLS 1.3 hybrid groups (RFC 10024 §7: IANA TLS Supported Groups
+/// 4587–4589; the provisional 4585, 4586 and 4590 from their drafts), the
+/// SSH hybrid key exchange methods (RFC 10042 §2.3; RFC 9941 §3 for
+/// sntrup761x25519-sha512, also known by its "@openssh.com" name), and the
+/// composites, named with or without the "id-" or "COMPSIG-" prefix. The SSH
+/// exchange hash in the method name is not judged: it is SHA-384 or SHA-512
+/// wherever both parts would pass. The obsolete pre-standard groups
+/// X25519Kyber768Draft00 and SecP256r1Kyber768Draft00 used round-3 Kyber,
+/// not ML-KEM, and stay unclassified.
+fn registered_hybrid(span: &str) -> Option<AlgorithmClassification> {
+    let ml_kem = |set| ("ML-KEM", Some(set));
+    let parts: (NamedPart, NamedPart) = match span {
+        "X25519MLKEM768" | "MLKEM768X25519-SHA256" => (("X25519", None), ml_kem("768")),
+        "SECP256R1MLKEM768" | "MLKEM768NISTP256-SHA256" => (("ECDH", Some("P-256")), ml_kem("768")),
+        "SECP384R1MLKEM1024" | "MLKEM1024NISTP384-SHA384" => {
+            (("ECDH", Some("P-384")), ml_kem("1024"))
+        }
+        "SECP256R1MLKEM512" => (("ECDH", Some("P-256")), ml_kem("512")),
+        "MLKEM512X25519" => (("X25519", None), ml_kem("512")),
+        "CURVESM2MLKEM768" => (("SM2", None), ml_kem("768")),
+        // Streamlined NTRU Prime is no NIST algorithm: the post-quantum
+        // part stays unclassified under its own name.
+        "SNTRUP761X25519-SHA512" => (("X25519", None), ("SNTRUP761", None)),
+        _ => {
+            let name = span
+                .strip_prefix("ID-")
+                .or_else(|| span.strip_prefix("COMPSIG-"))
+                .unwrap_or(span);
+            composite_parts(name)?
+        }
+    };
+    Some(named_hybrid(parts))
+}
+
+/// Whether a classical and a post-quantum part can make one hybrid: a KEM
+/// pairs with a key agreement or key transport, a signature with a
+/// signature. Generic elliptic-curve, RSA, SM2 and GOST keys serve both.
+fn hybrid_roles_match(classical: &AlgorithmClassification, pq: &AlgorithmClassification) -> bool {
+    let family = classical.family.as_deref().unwrap_or_default();
+    let either = matches!(family, "EC" | "RSA" | "SM2" | "GOST-R-34.10");
+    match pq.class {
+        AlgorithmClass::PostQuantum(PqcKind::MlKem) => {
+            either
+                || matches!(
+                    family,
+                    "ECDH" | "X25519" | "X448" | "DH" | "MQV" | "ECMQV" | "ECIES" | "ELGAMAL"
+                )
+        }
+        AlgorithmClass::PostQuantum(_) => {
+            either
+                || matches!(
+                    family,
+                    "ECDSA" | "EDDSA" | "ED25519" | "ED448" | "DSA" | "BLS"
+                )
+        }
+        _ => false,
+    }
+}
+
+/// The hybrid two single algorithms make: one classical and one
+/// post-quantum part, in either order, whose roles agree.
+fn hybrid_of(
+    a: AlgorithmClassification,
+    b: AlgorithmClassification,
+) -> Option<AlgorithmClassification> {
+    use AlgorithmClass as C;
+    let (classical, pq) = match (a.class, b.class) {
+        (C::ClassicalQuantumVulnerable, C::PostQuantum(_)) => (a, b),
+        (C::PostQuantum(_), C::ClassicalQuantumVulnerable) => (b, a),
+        _ => return None,
+    };
+    hybrid_roles_match(&classical, &pq).then(|| AlgorithmClassification::hybrid(classical, pq))
+}
+
+/// A classical and a post-quantum algorithm glued into one token, in either
+/// order ("X25519MLKEM768", "MLKEM768X25519", "RSA3072MLDSA65"): the first
+/// split where both halves classify and make a hybrid.
+fn concatenated_hybrid(token: &str, guarded: bool) -> Option<AlgorithmClassification> {
+    let part = |s: &str| {
+        if guarded && is_overgeneric_span(s) {
+            return None;
+        }
+        classify_token(s)
+            .map(|(family, parameter)| AlgorithmClassification::primitive(family, parameter))
+    };
+    token
+        .char_indices()
+        .skip(1)
+        .find_map(|(at, _)| hybrid_of(part(&token[..at])?, part(&token[at..])?))
+}
+
+/// A hybrid named as two mentions side by side at the start of `tokens`,
+/// beginning with `first` (`span` tokens long): a classical and a
+/// post-quantum algorithm in either order ("X25519 ML-KEM-768",
+/// "ML-KEM-768 X25519"), the curve of an unsized ECDH or ECDSA read from
+/// the token after it ("ECDH P-384 ML-KEM-1024"). Returns the hybrid and
+/// the tokens it spans.
+fn adjacent_hybrid(
+    first: &AlgorithmClassification,
+    span: usize,
+    tokens: &[&str],
+    guarded: bool,
+) -> Option<(AlgorithmClassification, usize)> {
+    use AlgorithmClass as C;
+    // The single algorithm starting at token `at`, and its length.
+    let primitive_at = |at: usize| match longest_hit(tokens.get(at..)?, guarded) {
+        Some((NameHit::Primitive(cls), len)) if cls.class != C::Hybrid => Some((cls, len)),
+        _ => None,
+    };
+    // A classical part ending at token `end`, sized by the curve named next.
+    let with_curve = |cls: AlgorithmClassification, end: usize| {
+        if cls.parameter.is_none()
+            && matches!(cls.family.as_deref(), Some("ECDH" | "ECDSA" | "EC"))
+            && let Some((curve, len)) = primitive_at(end)
+            && curve.family.as_deref() == Some("EC")
+            && curve.parameter.is_some()
+        {
+            let sized = AlgorithmClassification {
+                parameter: curve.parameter,
+                ..cls
+            };
+            return (sized, end + len);
+        }
+        (cls, end)
+    };
+    match first.class {
+        C::ClassicalQuantumVulnerable => {
+            let (classical, end) = with_curve(first.clone(), span);
+            let (pq, len) = primitive_at(end)?;
+            Some((hybrid_of(classical, pq)?, end + len))
+        }
+        C::PostQuantum(_) => {
+            let (classical, len) = primitive_at(span)?;
+            let (classical, end) = with_curve(classical, span + len);
+            Some((hybrid_of(classical, first.clone())?, end))
+        }
+        _ => None,
     }
 }
 
@@ -1792,13 +2126,18 @@ fn bare_construction(chain: &[&'static str]) -> AlgorithmClassification {
 /// name-based fallback for assets without `algorithmFamily`/OID.
 ///
 /// Tokens are split on any non-alphanumeric character (keeping `+` for
-/// "SPHINCS+"); spans of up to three adjacent tokens are joined with `-` and
-/// matched longest-first, so "ML KEM 1024" and "AES 128" resolve as units.
-/// Unrecognized tokens (GCM, CBC, TLS, WITH, …) are simply skipped. A keyed
-/// construction joins the primitive right after it ("HMAC-SHA-384",
-/// "PBKDF2WithHmacSHA256") or, failing that, right before it
-/// ("AES-128-CMAC"); JCA `<digest>with<signature>` names are split at
-/// their glued `with` ("SHA256withRSA").
+/// "SPHINCS+", but not between two names: "X25519+ML-KEM-768"); spans of up
+/// to three adjacent tokens are joined with `-` and matched longest-first,
+/// so "ML KEM 1024" and "AES 128" resolve as units. Unrecognized tokens
+/// (GCM, CBC, TLS, WITH, …) are simply skipped. A keyed construction joins
+/// the primitive right after it ("HMAC-SHA-384", "PBKDF2WithHmacSHA256")
+/// or, failing that, right before it ("AES-128-CMAC"); JCA
+/// `<digest>with<signature>` names are split at their glued `with`
+/// ("SHA256withRSA"). A PQ/T hybrid is one mention
+/// ([`AlgorithmClass::Hybrid`]): a registered name ("X25519MLKEM768",
+/// "mlkem768x25519-sha256", "id-MLDSA87-ECDSA-P384-SHA512"), the two parts
+/// glued together, or a classical and a post-quantum algorithm named side by
+/// side ("X25519-ML-KEM-768", "p384_mldsa65").
 #[must_use]
 pub fn classify_algorithm_names(name: &str) -> Vec<AlgorithmClassification> {
     classify_names_impl(name, false)
@@ -1846,9 +2185,10 @@ fn classify_names_impl(name: &str, guarded: bool) -> Vec<AlgorithmClassification
 ///
 /// Such a name is judged by its weaker part: a broken part decides, and so
 /// does a classical (quantum-vulnerable) one ("ECDHwithSHA256KDF") unless a
-/// post-quantum part is present too. A post-quantum signature would hide
-/// behind its digest, and a classical part beside a post-quantum one makes
-/// a hybrid, so such names stay unclassified (fail closed), as does a
+/// post-quantum part is present too. A classical part beside a post-quantum
+/// one is the hybrid they make together ("X25519withML-KEM-768"). A
+/// post-quantum signature would hide behind its digest, so such names stay
+/// unclassified (fail closed), as do pairs that make no single hybrid and a
 /// digest beside a signature that is not recognized. A KDF named with its
 /// PRF ("PBKDF2WithHmacSHA256") is the construction built on the PRF's
 /// hash.
@@ -1889,11 +2229,19 @@ fn classify_jca_name(upper: &str, guarded: bool) -> Option<Vec<AlgorithmClassifi
         .iter()
         .any(|m| m.class == C::ClassicalQuantumVulnerable);
     let post_quantum = parts.iter().any(|m| matches!(m.class, C::PostQuantum(_)));
-    Some(if broken || (classical && !post_quantum) {
-        parts
-    } else {
-        Vec::new()
-    })
+    if broken || (classical && !post_quantum) {
+        return Some(parts);
+    }
+    // Read across the `with`, the two parts must make exactly one hybrid.
+    if classical && post_quantum {
+        let joined = scan_names(&format!("{left} {right}"), guarded);
+        if let [hybrid] = joined.as_slice()
+            && hybrid.class == C::Hybrid
+        {
+            return Some(joined);
+        }
+    }
+    Some(Vec::new())
 }
 
 /// One recognized token span: a primitive, or a keyed construction waiting
@@ -1904,8 +2252,17 @@ enum NameHit {
 }
 
 /// The longest recognized span (up to three tokens) at the start of
-/// `tokens`, with its length.
+/// `tokens`, with its length. A registered hybrid name, up to five tokens
+/// long ("ID-MLDSA87-ECDSA-P384-SHA512"), is tried first, and a token that
+/// names nothing on its own may still glue a hybrid's two parts together
+/// ("X25519MLKEM768").
 fn longest_hit(tokens: &[&str], guarded: bool) -> Option<(NameHit, usize)> {
+    let first = *tokens.first()?;
+    for span in (1..=5.min(tokens.len())).rev() {
+        if let Some(cls) = registered_hybrid(&tokens[..span].join("-")) {
+            return Some((NameHit::Primitive(cls), span));
+        }
+    }
     for span in (1..=3.min(tokens.len())).rev() {
         let joined = tokens[..span].join("-");
         if let Some(construction) = construction_alias(&joined) {
@@ -1919,7 +2276,20 @@ fn longest_hit(tokens: &[&str], guarded: bool) -> Option<(NameHit, usize)> {
             return Some((NameHit::Primitive(cls), span));
         }
     }
-    None
+    concatenated_hybrid(first, guarded).map(|cls| (NameHit::Primitive(cls), 1))
+}
+
+/// The next mention at the start of `tokens`: the longest recognized span,
+/// joined with the mentions right after it when together they name a PQ/T
+/// hybrid ("X25519-ML-KEM-768", "ECDH_P384_ML_KEM_1024").
+fn next_hit(tokens: &[&str], guarded: bool) -> Option<(NameHit, usize)> {
+    let (hit, span) = longest_hit(tokens, guarded)?;
+    if let NameHit::Primitive(first) = &hit
+        && let Some((hybrid, len)) = adjacent_hybrid(first, span, tokens, guarded)
+    {
+        return Some((NameHit::Primitive(hybrid), len));
+    }
+    Some((hit, span))
 }
 
 /// Split a JCA `Mac` name glued to its hash ("HMACSHA256", from
@@ -1941,13 +2311,31 @@ fn push_unique(out: &mut Vec<AlgorithmClassification>, cls: AlgorithmClassificat
 }
 
 /// The tokens of an uppercased name: split on any non-alphanumeric
-/// character but `+`, with glued JCA `Mac` names split too.
+/// character but `+`, and on a `+` between two names ("X25519+MLKEM768";
+/// "SPHINCS+" keeps its trailing one), with glued JCA `Mac` names split too.
 fn name_tokens(upper: &str) -> Vec<&str> {
     upper
         .split(|c: char| !(c.is_ascii_alphanumeric() || c == '+'))
         .filter(|t| !t.is_empty())
+        .flat_map(split_infix_plus)
         .flat_map(split_glued_hmac)
         .collect()
+}
+
+/// Split a token at every `+` that a name follows ("X25519+ML" → "X25519",
+/// "ML"), keeping a trailing one ("SPHINCS+").
+fn split_infix_plus(token: &str) -> Vec<&str> {
+    let bytes = token.as_bytes();
+    let mut parts = Vec::new();
+    let mut start = 0;
+    for (at, &b) in bytes.iter().enumerate() {
+        if b == b'+' && at > start && bytes.get(at + 1).is_some_and(u8::is_ascii_alphanumeric) {
+            parts.push(&token[start..at]);
+            start = at + 1;
+        }
+    }
+    parts.push(&token[start..]);
+    parts
 }
 
 /// The mentions in an uppercased name, in order (see
@@ -1970,7 +2358,7 @@ fn scan_names(upper: &str, guarded: bool) -> Vec<AlgorithmClassification> {
             i += 1;
             continue;
         }
-        match longest_hit(&tokens[i..], guarded) {
+        match next_hit(&tokens[i..], guarded) {
             Some((NameHit::Construction(construction), span)) => {
                 if pending.is_empty() {
                     pending_at = i;
@@ -2262,12 +2650,15 @@ fn classify_construction_oid(oid: &str) -> Option<AlgorithmClassification> {
     })
 }
 
-/// The classification an OID names: a keyed construction, else a primitive.
+/// The classification an OID names: a composite (a hybrid), a keyed
+/// construction, else a primitive.
 fn oid_classification(oid: &str) -> Option<AlgorithmClassification> {
-    classify_construction_oid(oid).or_else(|| {
-        classify_oid(oid)
-            .map(|(family, parameter)| AlgorithmClassification::primitive(family, parameter))
-    })
+    composite_oid(oid)
+        .or_else(|| classify_construction_oid(oid))
+        .or_else(|| {
+            classify_oid(oid)
+                .map(|(family, parameter)| AlgorithmClassification::primitive(family, parameter))
+        })
 }
 
 /// Classify a cryptographic algorithm from whatever identity a CBOM provides.
@@ -2281,14 +2672,16 @@ fn oid_classification(oid: &str) -> Option<AlgorithmClassification> {
 ///    SHA-2 digest size in `parameter_set` reads as SHA-2 of that size
 ///    (bare "SHA" means SHA-1 only in cipher-suite context).
 /// 2. `oid` (CycloneDX 1.6+ `cryptoProperties.oid`) via [`classify_oid`],
-///    or [`classify_construction_oid`] for HMAC/HKDF/GMAC/PBKDF2 OIDs.
+///    or [`classify_construction_oid`] for HMAC/HKDF/GMAC/PBKDF2 OIDs, or
+///    a composite ML-DSA or ML-KEM OID (an [`AlgorithmClass::Hybrid`]).
 /// 3. A declared-but-unrecognized `family` string is token-scanned as a
 ///    last resort ("DES-CBC", "AES-128-CBC", "RSA/ECB/PKCS1Padding"), and
 ///    the most severe mention wins — a mode/padding-qualified family must
 ///    not silently classify as Unknown. A keyed-construction family
 ///    ("HMAC", "HKDF", "CMAC", "PBKDF2", …) lands here too and takes its
 ///    primitive from `parameter_set` or `name` ("HMAC" + "SHA-384"); with
-///    neither it stays a construction that names no primitive.
+///    neither it stays a construction that names no primitive. A hybrid
+///    family ("X25519MLKEM768") classifies here as that hybrid.
 /// 4. `elliptic_curve` (CycloneDX 1.7 `ellipticCurve`, or the 1.6 `curve`
 ///    it deprecates): any named curve marks the asset as classical
 ///    elliptic-curve crypto.
@@ -2315,6 +2708,10 @@ pub fn classify_algorithm(
     elliptic_curve: Option<&str>,
 ) -> AlgorithmClassification {
     let fill_parameter = |mut cls: AlgorithmClassification| {
+        // A hybrid's parts carry their own parameters.
+        if cls.class == AlgorithmClass::Hybrid {
+            return cls;
+        }
         // A keyed construction that names no primitive takes the one the
         // parameter set or the component name gives it; the name is
         // unstructured, so it is scanned guarded.
@@ -3023,6 +3420,42 @@ mod tests {
         assert_eq!(
             cls(Some("SEED"), None, None, None, None).class,
             AlgorithmClass::Symmetric
+        );
+    }
+
+    /// A hybrid records its classical curve under the canonical name, keeps
+    /// what has none, and ranks between a classical algorithm named
+    /// outside it and a hash named with it; a `+` splits names but not
+    /// "SPHINCS+".
+    #[test]
+    fn hybrid_parts_and_rank() {
+        let ml_kem = AlgorithmClassification::primitive("ML-KEM", Some("1024".to_string()));
+        for (curve, canonical) in [
+            ("secp384r1", "P-384"),
+            ("secg/secp384r1", "P-384"),
+            ("nistp384", "P-384"),
+            ("brainpoolP384r1", "brainpoolP384r1"),
+            ("3072", "3072"),
+        ] {
+            let classical = AlgorithmClassification::primitive("ECDH", Some(curve.to_string()));
+            let hybrid = AlgorithmClassification::hybrid(classical, ml_kem.clone());
+            let parts = hybrid.hybrid_parts().expect("hybrid parts");
+            assert_eq!(parts.classical.parameter.as_deref(), Some(canonical));
+            assert_eq!(hybrid.class, AlgorithmClass::Hybrid);
+            assert_eq!(hybrid.family, None);
+        }
+        assert!(
+            AlgorithmClass::ClassicalQuantumVulnerable.severity_rank()
+                > AlgorithmClass::Hybrid.severity_rank()
+        );
+        assert!(AlgorithmClass::Hybrid.severity_rank() > AlgorithmClass::Sha2.severity_rank());
+        assert_eq!(split_infix_plus("X25519+MLKEM768"), ["X25519", "MLKEM768"]);
+        assert_eq!(split_infix_plus("SPHINCS+"), ["SPHINCS+"]);
+        assert_eq!(
+            classify_algorithm_names("SPHINCS+-SHAKE-256s")
+                .first()
+                .map(|c| c.class),
+            Some(AlgorithmClass::PostQuantum(PqcKind::SlhDsa))
         );
     }
 

@@ -17,7 +17,7 @@ source: tests/compliance_snapshots.rs
         "description": "Validation results for CNSA 2.0, derived only from the supplied SBOM.",
         "findings": [
           {
-            "description": "Overall verdict for CNSA 2.0: 12 error(s), 0 warning(s), 0 informational finding(s).",
+            "description": "Overall verdict for CNSA 2.0: 11 error(s), 0 warning(s), 0 informational finding(s).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -148,7 +148,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "0a09665e-98df-5e36-a44a-13c01f1dc1c6"
           },
           {
-            "description": "'X25519-ML-KEM-768' is a hybrid combiner whose component algorithms cannot be identified, so it cannot be shown to be on the CNSA 2.0 allowlist",
+            "description": "'X25519-ML-KEM-768' uses the hybrid X25519 + ML-KEM-768, which CNSA 2.0 does not approve: ML-KEM-768 is not ML-KEM-1024, and X25519 is not a CNSA 1.0 algorithm (ECDH or ECDSA over P-384, or RSA or DH of 3072 bits or more)",
             "related-observations": [
               {
                 "observation-uuid": "d5952ed0-0744-562c-9b87-525951bf3312"
@@ -158,10 +158,10 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "sbom-cnsa2-alg-unknown",
+              "target-id": "sbom-cnsa2-alg-003",
               "type": "objective-id"
             },
-            "title": "SBOM-CNSA2-ALG-UNKNOWN",
+            "title": "SBOM-CNSA2-ALG-003",
             "uuid": "b540a580-74da-586e-95d1-6df5c4f6d2ec"
           },
           {
@@ -182,7 +182,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "42a3c7dd-4f3a-5628-9d21-295b6836e27f"
           },
           {
-            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384_ML_KEM_768' includes non-CNSA 2.0 algorithms: ML-KEM-768",
+            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384_ML_KEM_768' includes non-CNSA 2.0 algorithms: X25519 + ML-KEM-768, ML-KEM-768",
             "related-observations": [
               {
                 "observation-uuid": "7ecac478-b7bd-5bcd-ba3a-f37a718bcf42"
@@ -214,23 +214,6 @@ source: tests/compliance_snapshots.rs
             },
             "title": "SBOM-CNSA2-PROTO-002",
             "uuid": "ab380ede-c128-55d2-acdb-339fbc4947db"
-          },
-          {
-            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' has crypto references that cannot be resolved or classified: crypto/algorithm/hybrid-kem; they cannot be shown to be on the CNSA 2.0 allowlist",
-            "related-observations": [
-              {
-                "observation-uuid": "e1df3a55-f69f-5bc6-b523-46e1d125c028"
-              }
-            ],
-            "target": {
-              "status": {
-                "state": "not-satisfied"
-              },
-              "target-id": "sbom-cnsa2-proto-unknown",
-              "type": "objective-id"
-            },
-            "title": "SBOM-CNSA2-PROTO-UNKNOWN",
-            "uuid": "2bf74a7b-9593-500d-9f36-5fe39e632634"
           }
         ],
         "observations": [
@@ -509,7 +492,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "'X25519-ML-KEM-768' is a hybrid combiner whose component algorithms cannot be identified, so it cannot be shown to be on the CNSA 2.0 allowlist",
+            "description": "'X25519-ML-KEM-768' uses the hybrid X25519 + ML-KEM-768, which CNSA 2.0 does not approve: ML-KEM-768 is not ML-KEM-1024, and X25519 is not a CNSA 1.0 algorithm (ECDH or ECDSA over P-384, or RSA or DH of 3072 bits or more)",
             "methods": [
               "EXAMINE"
             ],
@@ -522,17 +505,17 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "standard-reference",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "CNSA 2.0: algorithm identification"
+                "value": "CNSA 2.0 KEM"
               },
               {
                 "name": "rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CNSA2-ALG-UNKNOWN"
+                "value": "SBOM-CNSA2-ALG-003"
               },
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CNSA2-ALG-UNKNOWN"
+                "value": "SBOM-CNSA2-ALG-003"
               },
               {
                 "name": "sbom-element",
@@ -540,7 +523,7 @@ source: tests/compliance_snapshots.rs
                 "value": "X25519-ML-KEM-768"
               }
             ],
-            "title": "SBOM-CNSA2-ALG-UNKNOWN",
+            "title": "SBOM-CNSA2-ALG-003",
             "types": [
               "finding"
             ],
@@ -587,7 +570,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384_ML_KEM_768' includes non-CNSA 2.0 algorithms: ML-KEM-768",
+            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384_ML_KEM_768' includes non-CNSA 2.0 algorithms: X25519 + ML-KEM-768, ML-KEM-768",
             "methods": [
               "EXAMINE"
             ],
@@ -662,45 +645,6 @@ source: tests/compliance_snapshots.rs
               "finding"
             ],
             "uuid": "dab3033c-715b-5fc5-a477-b2e6cd29eb7c"
-          },
-          {
-            "collected": "2026-10-12T00:00:00Z",
-            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' has crypto references that cannot be resolved or classified: crypto/algorithm/hybrid-kem; they cannot be shown to be on the CNSA 2.0 allowlist",
-            "methods": [
-              "EXAMINE"
-            ],
-            "props": [
-              {
-                "name": "severity",
-                "ns": "https://sbom.tools/ns/oscal",
-                "value": "error"
-              },
-              {
-                "name": "standard-reference",
-                "ns": "https://sbom.tools/ns/oscal",
-                "value": "CNSA 2.0: protocol algorithm identification"
-              },
-              {
-                "name": "rule-id",
-                "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CNSA2-PROTO-UNKNOWN"
-              },
-              {
-                "name": "sarif-rule-id",
-                "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CNSA2-PROTO-UNKNOWN"
-              },
-              {
-                "name": "sbom-element",
-                "ns": "https://sbom.tools/ns/oscal",
-                "value": "TLS 1.3 (PQC Hybrid)"
-              }
-            ],
-            "title": "SBOM-CNSA2-PROTO-UNKNOWN",
-            "types": [
-              "finding"
-            ],
-            "uuid": "e1df3a55-f69f-5bc6-b523-46e1d125c028"
           }
         ],
         "props": [
@@ -727,7 +671,7 @@ source: tests/compliance_snapshots.rs
           {
             "name": "error-count",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "12"
+            "value": "11"
           },
           {
             "name": "warning-count",
@@ -742,7 +686,7 @@ source: tests/compliance_snapshots.rs
           {
             "name": "score",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "7"
+            "value": "8"
           }
         ],
         "reviewed-controls": {
@@ -755,13 +699,13 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — CNSA 2.0",
-        "uuid": "c9f60d6e-8bcd-54f0-b7e1-483715f041ec"
+        "uuid": "e1df3a55-f69f-5bc6-b523-46e1d125c028"
       },
       {
         "description": "Validation results for NIST PQC Readiness, derived only from the supplied SBOM.",
         "findings": [
           {
-            "description": "Overall verdict for NIST PQC Readiness: 3 error(s), 1 warning(s), 7 informational finding(s).",
+            "description": "Overall verdict for NIST PQC Readiness: 3 error(s), 0 warning(s), 7 informational finding(s).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -770,10 +714,27 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "NIST PQC Readiness compliance roll-up",
-            "uuid": "7b906c83-0cf0-590f-9e48-e47cd30e17df"
+            "uuid": "2bf74a7b-9593-500d-9f36-5fe39e632634"
           },
           {
             "description": "'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+            "related-observations": [
+              {
+                "observation-uuid": "c9f60d6e-8bcd-54f0-b7e1-483715f041ec"
+              }
+            ],
+            "target": {
+              "status": {
+                "state": "not-satisfied"
+              },
+              "target-id": "sbom-pqc-009",
+              "type": "objective-id"
+            },
+            "title": "SBOM-PQC-009",
+            "uuid": "7b906c83-0cf0-590f-9e48-e47cd30e17df"
+          },
+          {
+            "description": "'ML-KEM-768' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
             "related-observations": [
               {
                 "observation-uuid": "7e6fc5b3-68a0-536d-a214-d53fd3f1f600"
@@ -790,7 +751,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "5a41752c-1e7c-5a8f-8ea6-5ff838afe6c8"
           },
           {
-            "description": "'ML-KEM-768' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+            "description": "'ML-DSA-87' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
             "related-observations": [
               {
                 "observation-uuid": "06be73b5-2084-5588-b1cf-56fb1f29bdbe"
@@ -807,7 +768,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "e1c6867f-0f0e-5f40-9159-f21400bc304a"
           },
           {
-            "description": "'ML-DSA-87' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+            "description": "'ML-DSA-65' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
             "related-observations": [
               {
                 "observation-uuid": "8eb9be32-0a20-5396-a2f1-24e160d75f0f"
@@ -824,7 +785,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "6b2e9128-2148-51dc-93e2-ce5812bcd811"
           },
           {
-            "description": "'ML-DSA-65' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+            "description": "'SLH-DSA-SHAKE-256s' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
             "related-observations": [
               {
                 "observation-uuid": "44acb7c8-67a4-5456-9211-413c29591f22"
@@ -841,27 +802,10 @@ source: tests/compliance_snapshots.rs
             "uuid": "2405840a-ebc3-532f-9a94-02c7921b8188"
           },
           {
-            "description": "'SLH-DSA-SHAKE-256s' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
-            "related-observations": [
-              {
-                "observation-uuid": "5fca561a-2a2b-550c-a47d-a4a30dbffe09"
-              }
-            ],
-            "target": {
-              "status": {
-                "state": "not-satisfied"
-              },
-              "target-id": "sbom-pqc-009",
-              "type": "objective-id"
-            },
-            "title": "SBOM-PQC-009",
-            "uuid": "893198dc-8115-57cf-963d-a323726b5f36"
-          },
-          {
             "description": "'X25519' (ECDH) is quantum-vulnerable and must migrate to PQC (IR 8547)",
             "related-observations": [
               {
-                "observation-uuid": "f7832ea4-184a-546f-b849-54fae5327766"
+                "observation-uuid": "5fca561a-2a2b-550c-a47d-a4a30dbffe09"
               }
             ],
             "target": {
@@ -872,13 +816,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-001",
-            "uuid": "5787679b-6754-54db-b07d-38fbffd1faed"
+            "uuid": "893198dc-8115-57cf-963d-a323726b5f36"
           },
           {
-            "description": "'X25519-ML-KEM-768' is a hybrid PQC combiner — good migration practice",
+            "description": "'X25519-ML-KEM-768' is a PQ/T hybrid (X25519 + ML-KEM-768) whose post-quantum part is NIST-approved (FIPS 203); SP 800-227 §4.6.2 approves the key combination",
             "related-observations": [
               {
-                "observation-uuid": "83c08d48-4408-5b0c-a39a-ff2e3f2fce11"
+                "observation-uuid": "f7832ea4-184a-546f-b849-54fae5327766"
               }
             ],
             "target": {
@@ -889,13 +833,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-010",
-            "uuid": "7dc0b351-146a-553f-962a-48c96c5183fe"
+            "uuid": "5787679b-6754-54db-b07d-38fbffd1faed"
           },
           {
             "description": "'ECDSA-P521' (ECDSA) is quantum-vulnerable and must migrate to PQC (IR 8547)",
             "related-observations": [
               {
-                "observation-uuid": "d42970ff-52c8-50ac-b6a1-c5f499fb9ef4"
+                "observation-uuid": "83c08d48-4408-5b0c-a39a-ff2e3f2fce11"
               }
             ],
             "target": {
@@ -906,13 +850,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-001",
-            "uuid": "5c906be7-9347-580a-91e1-a8780b176154"
+            "uuid": "7dc0b351-146a-553f-962a-48c96c5183fe"
           },
           {
             "description": "'XMSS' uses NIST-approved PQC algorithm (SP 800-208 stateful hash-based signature)",
             "related-observations": [
               {
-                "observation-uuid": "b70fe4ab-87fd-5495-bb26-e25b217469fa"
+                "observation-uuid": "d42970ff-52c8-50ac-b6a1-c5f499fb9ef4"
               }
             ],
             "target": {
@@ -923,13 +867,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-009",
-            "uuid": "28316281-d04c-5036-9e15-e10ddbd64805"
+            "uuid": "5c906be7-9347-580a-91e1-a8780b176154"
           },
           {
             "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS_AES_256_GCM_SHA384' includes broken or quantum-vulnerable algorithms: ECDH (quantum-vulnerable)",
             "related-observations": [
               {
-                "observation-uuid": "132d664a-82dc-5fc2-92e7-e0602565967d"
+                "observation-uuid": "b70fe4ab-87fd-5495-bb26-e25b217469fa"
               }
             ],
             "target": {
@@ -940,24 +884,7 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-PROTO-002",
-            "uuid": "3eeb5d07-b95d-5ba5-a6af-305211d8c76a"
-          },
-          {
-            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' has crypto evidence that cannot be resolved or classified: crypto/algorithm/hybrid-kem; unable to verify PQC readiness",
-            "related-observations": [
-              {
-                "observation-uuid": "b076fa48-ee77-5ef5-8a76-cb809390766e"
-              }
-            ],
-            "target": {
-              "status": {
-                "state": "not-satisfied"
-              },
-              "target-id": "sbom-pqc-proto-unknown",
-              "type": "objective-id"
-            },
-            "title": "SBOM-PQC-PROTO-UNKNOWN",
-            "uuid": "9847b23d-fb74-5086-b838-45f83646bbb9"
+            "uuid": "28316281-d04c-5036-9e15-e10ddbd64805"
           }
         ],
         "observations": [
@@ -998,7 +925,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "7e6fc5b3-68a0-536d-a214-d53fd3f1f600"
+            "uuid": "c9f60d6e-8bcd-54f0-b7e1-483715f041ec"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1037,7 +964,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "06be73b5-2084-5588-b1cf-56fb1f29bdbe"
+            "uuid": "7e6fc5b3-68a0-536d-a214-d53fd3f1f600"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1076,7 +1003,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "8eb9be32-0a20-5396-a2f1-24e160d75f0f"
+            "uuid": "06be73b5-2084-5588-b1cf-56fb1f29bdbe"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1115,7 +1042,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "44acb7c8-67a4-5456-9211-413c29591f22"
+            "uuid": "8eb9be32-0a20-5396-a2f1-24e160d75f0f"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1154,7 +1081,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "5fca561a-2a2b-550c-a47d-a4a30dbffe09"
+            "uuid": "44acb7c8-67a4-5456-9211-413c29591f22"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1193,11 +1120,11 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "f7832ea4-184a-546f-b849-54fae5327766"
+            "uuid": "5fca561a-2a2b-550c-a47d-a4a30dbffe09"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "'X25519-ML-KEM-768' is a hybrid PQC combiner — good migration practice",
+            "description": "'X25519-ML-KEM-768' is a PQ/T hybrid (X25519 + ML-KEM-768) whose post-quantum part is NIST-approved (FIPS 203); SP 800-227 §4.6.2 approves the key combination",
             "methods": [
               "EXAMINE"
             ],
@@ -1210,7 +1137,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "standard-reference",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "IR 8547: recommended transition"
+                "value": "SP 800-227 / IR 8547: PQ/T hybrid"
               },
               {
                 "name": "rule-id",
@@ -1232,7 +1159,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "83c08d48-4408-5b0c-a39a-ff2e3f2fce11"
+            "uuid": "f7832ea4-184a-546f-b849-54fae5327766"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1271,7 +1198,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "d42970ff-52c8-50ac-b6a1-c5f499fb9ef4"
+            "uuid": "83c08d48-4408-5b0c-a39a-ff2e3f2fce11"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1310,7 +1237,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "b70fe4ab-87fd-5495-bb26-e25b217469fa"
+            "uuid": "d42970ff-52c8-50ac-b6a1-c5f499fb9ef4"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -1349,46 +1276,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "finding"
             ],
-            "uuid": "132d664a-82dc-5fc2-92e7-e0602565967d"
-          },
-          {
-            "collected": "2026-10-12T00:00:00Z",
-            "description": "Protocol 'TLS 1.3 (PQC Hybrid)' has crypto evidence that cannot be resolved or classified: crypto/algorithm/hybrid-kem; unable to verify PQC readiness",
-            "methods": [
-              "EXAMINE"
-            ],
-            "props": [
-              {
-                "name": "severity",
-                "ns": "https://sbom.tools/ns/oscal",
-                "value": "warning"
-              },
-              {
-                "name": "standard-reference",
-                "ns": "https://sbom.tools/ns/oscal",
-                "value": "IR 8547: protocol algorithm identification"
-              },
-              {
-                "name": "rule-id",
-                "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-PQC-PROTO-UNKNOWN"
-              },
-              {
-                "name": "sarif-rule-id",
-                "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-PQC-PROTO-UNKNOWN"
-              },
-              {
-                "name": "sbom-element",
-                "ns": "https://sbom.tools/ns/oscal",
-                "value": "TLS 1.3 (PQC Hybrid)"
-              }
-            ],
-            "title": "SBOM-PQC-PROTO-UNKNOWN",
-            "types": [
-              "finding"
-            ],
-            "uuid": "b076fa48-ee77-5ef5-8a76-cb809390766e"
+            "uuid": "b70fe4ab-87fd-5495-bb26-e25b217469fa"
           }
         ],
         "props": [
@@ -1420,7 +1308,7 @@ source: tests/compliance_snapshots.rs
           {
             "name": "warning-count",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "1"
+            "value": "0"
           },
           {
             "name": "info-count",
@@ -1430,7 +1318,7 @@ source: tests/compliance_snapshots.rs
           {
             "name": "score",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "20"
+            "value": "25"
           }
         ],
         "reviewed-controls": {
@@ -1443,9 +1331,9 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — NIST PQC Readiness",
-        "uuid": "bb7ba507-a1e8-53e9-a0a7-82f808e8a5cd"
+        "uuid": "132d664a-82dc-5fc2-92e7-e0602565967d"
       }
     ],
-    "uuid": "b4b61fdc-f0ab-5b31-b20f-b83ed5abf19d"
+    "uuid": "3eeb5d07-b95d-5ba5-a6af-305211d8c76a"
   }
 }
