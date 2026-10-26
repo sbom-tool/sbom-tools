@@ -57,6 +57,9 @@ pub struct QualityConfig {
     /// Code-scanning category of `-o sarif` output (`--sarif-category`);
     /// `sbom-tools/quality/<profile>/` when `None`.
     pub sarif_category: Option<String>,
+    /// The most results the `-o sarif` run keeps (`--sarif-max-results`;
+    /// `0` keeps every result).
+    pub sarif_max_results: usize,
 }
 
 /// Run the quality command, returning the desired exit code.
@@ -84,6 +87,7 @@ pub fn run_quality(
     enrichment: EnrichmentConfig,
     sarif_base: Option<PathBuf>,
     sarif_category: Option<String>,
+    sarif_max_results: usize,
 ) -> Result<i32> {
     let config = QualityConfig {
         sbom_path,
@@ -101,6 +105,7 @@ pub fn run_quality(
         enrichment,
         sarif_base,
         sarif_category,
+        sarif_max_results,
     };
 
     run_quality_impl(config)
@@ -202,7 +207,9 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
                 parsed.sbom(),
                 parsed.raw_content(),
             )?;
-            let mut options = crate::reports::SarifOptions::new().with_artifact(artifact);
+            let mut options = crate::reports::SarifOptions::new()
+                .with_artifact(artifact)
+                .with_max_results(config.sarif_max_results);
             if let Some(category) = &config.sarif_category {
                 options = options.with_category(category.clone());
             }
@@ -736,6 +743,7 @@ mod tests {
                 EnrichmentConfig::default(),
                 None,
                 None,
+                crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             )
             .expect_err("unsupported format must be rejected");
             let msg = err.to_string();
@@ -778,6 +786,7 @@ mod tests {
             EnrichmentConfig::default(),
             None,
             None,
+            crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         )
         .expect("sbomqs-json run must succeed");
         assert_eq!(code, exit_codes::SUCCESS);
@@ -822,6 +831,7 @@ mod tests {
             EnrichmentConfig::default(),
             None,
             None,
+            crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         )
         .expect("summary run must succeed");
         assert_eq!(code, exit_codes::SUCCESS);
@@ -861,6 +871,7 @@ mod tests {
             EnrichmentConfig::default(),
             None,
             None,
+            crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         )
         .expect_err("broken explicit sidecar must be a hard error");
         assert!(err.to_string().contains("Failed to load CRA sidecar"));
@@ -899,6 +910,7 @@ mod tests {
             EnrichmentConfig::default(),
             None,
             None,
+            crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         )
         .expect("an N/A AI-readiness run must not error");
         assert_eq!(
@@ -930,6 +942,7 @@ mod tests {
             EnrichmentConfig::default(),
             None,
             None,
+            crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         )
         .expect("the run itself must succeed");
         assert_eq!(code, exit_codes::COMPLIANCE_ERRORS);
@@ -957,6 +970,7 @@ mod tests {
             EnrichmentConfig::default(),
             None,
             None,
+            crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         )
         .expect_err("typo'd --cra-product-class must be a hard error");
         let msg = err.to_string();
@@ -985,6 +999,7 @@ mod tests {
             EnrichmentConfig::default(),
             None,
             None,
+            crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         )
         .expect_err("invalid --as-of must be rejected");
         assert!(err.to_string().contains("invalid --as-of"));
@@ -1019,6 +1034,7 @@ mod tests {
             EnrichmentConfig::default(),
             None,
             None,
+            crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         )
         .expect_err("a discovered-but-broken sidecar must hard-error");
         assert!(
@@ -1044,6 +1060,7 @@ mod tests {
             enrichment: EnrichmentConfig::default(),
             sarif_base: None,
             sarif_category: None,
+            sarif_max_results: crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         }
     }
 

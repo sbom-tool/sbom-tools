@@ -32,20 +32,38 @@ use rules::SarifRule;
 pub const SARIF_SCHEMA_URI: &str =
     "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json";
 
-/// Options of the SARIF writers that take a single SBOM.
+/// The most results one SARIF run may carry by default: GitHub code scanning
+/// rejects a SARIF file with more than 25,000 results in a run (and shows
+/// only the 5,000 most severe). See [`SarifOptions::with_max_results`].
+pub const DEFAULT_SARIF_MAX_RESULTS: usize = 25_000;
+
+/// Options of the SARIF writers.
 ///
 /// Without an artifact, results carry no physical location (only the
 /// component's logical location), and GitHub code scanning drops them: the
 /// CLI always passes the SBOM file.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct SarifOptions {
     artifact: Option<SarifArtifact>,
     category: Option<String>,
     include_passes: bool,
+    max_results: usize,
+}
+
+impl Default for SarifOptions {
+    fn default() -> Self {
+        Self {
+            artifact: None,
+            category: None,
+            include_passes: false,
+            max_results: DEFAULT_SARIF_MAX_RESULTS,
+        }
+    }
 }
 
 impl SarifOptions {
-    /// Options with no artifact.
+    /// Options with no artifact, no category, no passes and the default cap
+    /// of [`DEFAULT_SARIF_MAX_RESULTS`] results.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -88,6 +106,20 @@ impl SarifOptions {
         self
     }
 
+    /// Keep at most `max_results` results in the run (`--sarif-max-results`;
+    /// `0` keeps every result). A run that would hold more keeps the most
+    /// severe ones (error, then warning, then note, then none, each level in
+    /// report order), says in `invocations[0].toolExecutionNotifications` how
+    /// many it omitted, and logs the same warning. GitHub code scanning
+    /// rejects a run of more than [`DEFAULT_SARIF_MAX_RESULTS`] results and
+    /// shows only its 5,000 most severe, so the default cap changes nothing
+    /// GitHub would display.
+    #[must_use]
+    pub const fn with_max_results(mut self, max_results: usize) -> Self {
+        self.max_results = max_results;
+        self
+    }
+
     /// The SBOM file results point into.
     #[must_use]
     pub const fn artifact(&self) -> Option<&SarifArtifact> {
@@ -104,6 +136,13 @@ impl SarifOptions {
     #[must_use]
     pub const fn include_passes(&self) -> bool {
         self.include_passes
+    }
+
+    /// The most results a run keeps; `0` means no cap (see
+    /// [`Self::with_max_results`]).
+    #[must_use]
+    pub const fn max_results(&self) -> usize {
+        self.max_results
     }
 }
 
@@ -153,7 +192,7 @@ impl ReportGenerator for SarifReporter {
         config: &ReportConfig,
     ) -> Result<String, ReportError> {
         let old = config.old_sarif_artifact.as_ref();
-        let new = config.new_sarif_artifact.as_ref();
+        let new = config.sarif.artifact();
         let mut old_keys = KeyBook::default();
         let mut new_keys = KeyBook::default();
         let mut results = Vec::new();
@@ -400,14 +439,12 @@ impl ReportGenerator for SarifReporter {
         // predates rules like SBOM-CRA-CYCLES) and descriptor ids are unique.
         let rules = rules::complete_rule_catalogue(rules::diff_rules(), &results);
         render_log(
-            automation_id(
-                config.sarif_category.as_deref(),
-                format!("sbom-tools/{DIFF_SCOPE}/"),
-            ),
+            automation_id(config.sarif.category(), format!("sbom-tools/{DIFF_SCOPE}/")),
             rules,
             results,
             uses_srcroot([old, new]),
             None,
+            config.sarif.max_results(),
         )
     }
 
@@ -416,7 +453,7 @@ impl ReportGenerator for SarifReporter {
         sbom: &NormalizedSbom,
         config: &ReportConfig,
     ) -> Result<String, ReportError> {
-        let artifact = config.view_sarif_artifact.as_ref();
+        let artifact = config.sarif.artifact();
         let mut keys = KeyBook::default();
         let mut results = Vec::new();
 
@@ -462,14 +499,12 @@ impl ReportGenerator for SarifReporter {
         // Same descriptor guarantee as the diff path (see above).
         let rules = rules::complete_rule_catalogue(rules::view_rules(), &results);
         render_log(
-            automation_id(
-                config.sarif_category.as_deref(),
-                format!("sbom-tools/{VIEW_SCOPE}/"),
-            ),
+            automation_id(config.sarif.category(), format!("sbom-tools/{VIEW_SCOPE}/")),
             rules,
             results,
             uses_srcroot([artifact]),
             None,
+            config.sarif.max_results(),
         )
     }
 
@@ -566,6 +601,7 @@ pub fn generate_ai_readiness_sarif_with(
         results,
         uses_srcroot([artifact]),
         Some(properties),
+        options.max_results(),
     )
 }
 
@@ -614,6 +650,7 @@ pub fn generate_compliance_sarif_with(
         results,
         uses_srcroot([artifact]),
         Some(properties),
+        options.max_results(),
     )
 }
 
@@ -681,6 +718,7 @@ pub fn generate_multi_compliance_sarif_with(
         all_results,
         uses_srcroot([artifact]),
         Some(properties),
+        options.max_results(),
     )
 }
 
@@ -784,6 +822,7 @@ pub fn generate_quality_sarif_with(
         results,
         uses_srcroot([artifact]),
         Some(properties),
+        options.max_results(),
     )
 }
 
@@ -951,7 +990,8 @@ fn sarif_result(
     }
 }
 
-/// Serialize one run: its results' `ruleIndex` set from `rules`, and the
+/// Serialize one run: at most `max_results` results (see
+/// [`cap_results`]), each with its `ruleIndex` set from `rules`, and the
 /// `SRCROOT` base declared when an artifact URI is relative to it.
 fn render_log(
     automation_id: String,
@@ -959,7 +999,26 @@ fn render_log(
     mut results: Vec<SarifResult>,
     relative_to_srcroot: bool,
     properties: Option<SarifRunProperties>,
+    max_results: usize,
 ) -> Result<String, ReportError> {
+    let total = results.len();
+    let omitted = cap_results(&mut results, max_results);
+    let invocations = (omitted > 0).then(|| {
+        let text = format!(
+            "{omitted} of {total} results were omitted to keep the run within {max_results} \
+             results (--sarif-max-results; GitHub code scanning rejects a run of more than \
+             {DEFAULT_SARIF_MAX_RESULTS}). The most severe were kept. Use -o json for the full \
+             list."
+        );
+        tracing::warn!("{text}");
+        vec![SarifInvocation {
+            execution_successful: true,
+            tool_execution_notifications: vec![SarifNotification {
+                level: SarifLevel::Warning,
+                message: SarifMessage::new(text),
+            }],
+        }]
+    });
     let index: HashMap<&str, usize> = rules
         .iter()
         .enumerate()
@@ -992,6 +1051,7 @@ fn render_log(
                     rules,
                 },
             },
+            invocations,
             automation_details: SarifAutomationDetails { id: automation_id },
             original_uri_base_ids,
             results,
@@ -999,6 +1059,46 @@ fn render_log(
         }],
     };
     serde_json::to_string_pretty(&sarif).map_err(|e| ReportError::SerializationError(e.to_string()))
+}
+
+/// Keep at most `max_results` of `results`; `0` keeps them all. The kept
+/// results are the most severe — every error, then warnings, notes and
+/// `none` (passes) while room is left — and, within the level the cap falls
+/// in, the first in report order; they stay in report order. Returns how
+/// many were omitted.
+fn cap_results(results: &mut Vec<SarifResult>, max_results: usize) -> usize {
+    if max_results == 0 || results.len() <= max_results {
+        return 0;
+    }
+    let mut per_level = [0usize; 4];
+    for result in results.iter() {
+        per_level[severity_rank(result.level)] += 1;
+    }
+    let mut room = max_results;
+    let mut keep = [0usize; 4];
+    for (kept, count) in keep.iter_mut().zip(per_level) {
+        *kept = count.min(room);
+        room -= *kept;
+    }
+    let omitted = results.len() - max_results;
+    let mut kept_so_far = [0usize; 4];
+    results.retain(|result| {
+        let rank = severity_rank(result.level);
+        let keep_it = kept_so_far[rank] < keep[rank];
+        kept_so_far[rank] += usize::from(keep_it);
+        keep_it
+    });
+    omitted
+}
+
+/// The order in which [`cap_results`] keeps levels: error first.
+const fn severity_rank(level: SarifLevel) -> usize {
+    match level {
+        SarifLevel::Error => 0,
+        SarifLevel::Warning => 1,
+        SarifLevel::Note => 2,
+        SarifLevel::None => 3,
+    }
 }
 
 /// SARIF level for a quality recommendation. Recommendations are advisory —
@@ -1236,12 +1336,31 @@ struct SarifReport {
 #[serde(rename_all = "camelCase")]
 struct SarifRun {
     tool: SarifTool,
+    /// Present only when results were omitted (see [`cap_results`]).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    invocations: Option<Vec<SarifInvocation>>,
     automation_details: SarifAutomationDetails,
     #[serde(skip_serializing_if = "Option::is_none")]
     original_uri_base_ids: Option<BTreeMap<&'static str, SarifBaseDescription>>,
     results: Vec<SarifResult>,
     #[serde(skip_serializing_if = "Option::is_none")]
     properties: Option<SarifRunProperties>,
+}
+
+/// `run.invocations[]`: the run succeeded, and its notifications say what
+/// it left out.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SarifInvocation {
+    execution_successful: bool,
+    tool_execution_notifications: Vec<SarifNotification>,
+}
+
+/// One `toolExecutionNotifications` entry.
+#[derive(Serialize)]
+struct SarifNotification {
+    level: SarifLevel,
+    message: SarifMessage,
 }
 
 /// `run.automationDetails`: `id` is `sbom-tools/<category>/`.
@@ -1576,6 +1695,97 @@ mod tests {
             "sbom-tools/compliance/"
         );
         assert_eq!(quality_category("cra"), "sbom-tools/quality/cra/");
+    }
+
+    fn result_at(level: SarifLevel, n: usize) -> SarifResult {
+        sarif_result(
+            "SBOM-TOOLS-001",
+            level,
+            format!("result {n}"),
+            format!("test|SBOM-TOOLS-001:{n}|document"),
+            Vec::new(),
+            SarifResultProperties::default(),
+        )
+    }
+
+    fn messages(results: &[SarifResult]) -> Vec<&str> {
+        results.iter().map(|r| r.message.text.as_str()).collect()
+    }
+
+    #[test]
+    fn the_cap_keeps_the_most_severe_results_in_report_order() {
+        use SarifLevel::{Error, None, Note, Warning};
+        let levels = [Note, Error, None, Warning, Error, Note, Warning, Error];
+        let run = || -> Vec<SarifResult> {
+            levels
+                .iter()
+                .enumerate()
+                .map(|(n, level)| result_at(*level, n))
+                .collect()
+        };
+
+        // Room for every error and one warning: the first warning in
+        // report order, and the kept results stay in report order.
+        let mut results = run();
+        assert_eq!(cap_results(&mut results, 4), 4);
+        assert_eq!(
+            messages(&results),
+            ["result 1", "result 3", "result 4", "result 7"]
+        );
+
+        // Room for errors, warnings and one note; `none` goes first.
+        let mut results = run();
+        assert_eq!(cap_results(&mut results, 6), 2);
+        assert_eq!(
+            messages(&results),
+            [
+                "result 0", "result 1", "result 3", "result 4", "result 6", "result 7"
+            ]
+        );
+
+        // No cap, or a cap the run fits in, keeps everything.
+        for cap in [0, 8, 9] {
+            let mut results = run();
+            assert_eq!(cap_results(&mut results, cap), 0, "cap {cap}");
+            assert_eq!(results.len(), 8, "cap {cap}");
+        }
+    }
+
+    #[test]
+    fn a_capped_run_says_how_many_results_it_omitted() {
+        let results: Vec<SarifResult> = (0..5).map(|n| result_at(SarifLevel::Note, n)).collect();
+        let sarif = render_log(
+            "sbom-tools/test/".to_string(),
+            Vec::new(),
+            results,
+            false,
+            None,
+            2,
+        )
+        .expect("serializes");
+        let doc: serde_json::Value = serde_json::from_str(&sarif).expect("JSON");
+        let run = &doc["runs"][0];
+        assert_eq!(run["results"].as_array().map(Vec::len), Some(2));
+        let invocation = &run["invocations"][0];
+        assert_eq!(invocation["executionSuccessful"], true);
+        let notification = &invocation["toolExecutionNotifications"][0];
+        assert_eq!(notification["level"], "warning");
+        let text = notification["message"]["text"].as_str().expect("text");
+        assert!(text.starts_with("3 of 5 results were omitted"), "{text}");
+        assert!(text.contains("-o json"), "{text}");
+
+        // An uncapped run has no invocations.
+        let results: Vec<SarifResult> = (0..5).map(|n| result_at(SarifLevel::Note, n)).collect();
+        let sarif = render_log(
+            "sbom-tools/test/".to_string(),
+            Vec::new(),
+            results,
+            false,
+            None,
+            DEFAULT_SARIF_MAX_RESULTS,
+        )
+        .expect("serializes");
+        assert!(!sarif.contains("invocations"), "{sarif}");
     }
 
     #[test]

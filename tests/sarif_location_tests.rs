@@ -304,7 +304,7 @@ fn every_diff_and_view_result_has_a_location_and_a_fingerprint() {
         let diff = DiffEngine::new().diff(&old, &new).expect("diff");
         let config = ReportConfig {
             old_sarif_artifact: Some(artifact(old_rel, &old, &old_raw)),
-            new_sarif_artifact: Some(artifact(new_rel, &new, &new_raw)),
+            sarif: SarifOptions::new().with_artifact(artifact(new_rel, &new, &new_raw)),
             ..ReportConfig::all()
         };
         let sarif = reporter
@@ -321,7 +321,7 @@ fn every_diff_and_view_result_has_a_location_and_a_fingerprint() {
         }
         for (rel, sbom, raw) in [(old_rel, &old, &old_raw), (new_rel, &new, &new_raw)] {
             let config = ReportConfig {
-                view_sarif_artifact: Some(artifact(rel, sbom, raw)),
+                sarif: SarifOptions::new().with_artifact(artifact(rel, sbom, raw)),
                 ..ReportConfig::all()
             };
             let sarif = reporter.generate_view_report(sbom, &config).expect("SARIF");
@@ -706,6 +706,112 @@ fn cli_sarif_category_replaces_the_default_category() {
             assert_eq!(automation_id(&output.stdout), id, "{command:?} {given}");
         }
     }
+}
+
+/// `--sarif-max-results N` keeps the N most severe results, says in the
+/// run and on stderr how many it omitted, and still validates; `0` keeps
+/// every result. Every command with `-o sarif` takes it.
+#[test]
+fn cli_sarif_max_results_caps_the_run() {
+    let schema: Value = serde_json::from_str(
+        &std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/schemas/sarif/2.1.0/sarif-schema-2.1.0.json"
+        ))
+        .expect("schema"),
+    )
+    .expect("schema JSON");
+    let repo = repository();
+    let sbom = repo.path().join("sboms/app.cdx.json");
+    let validate = |cap: &str| {
+        sbom_tools()
+            .env("RUST_LOG", "warn")
+            .args(["validate", "--standard", "ntia,cra", "-o", "sarif"])
+            .args(["--sarif-max-results", cap])
+            .arg(&sbom)
+            .output()
+            .expect("runs")
+    };
+    let results = |output: &std::process::Output| -> Vec<Value> {
+        let doc: Value = serde_json::from_slice(&output.stdout).expect("SARIF JSON");
+        doc["runs"][0]["results"]
+            .as_array()
+            .expect("results")
+            .clone()
+    };
+
+    let uncapped = validate("0");
+    let all = results(&uncapped);
+    assert!(all.len() > 3, "the fixture must report more than 3 results");
+    let doc: Value = serde_json::from_slice(&uncapped.stdout).expect("SARIF JSON");
+    assert!(doc["runs"][0].get("invocations").is_none());
+
+    let capped = validate("3");
+    assert!(capped.status.code().is_some_and(|c| c <= 1), "{capped:?}");
+    let kept = results(&capped);
+    assert_eq!(kept.len(), 3);
+    // The most severe, in report order.
+    let rank = |r: &Value| match r["level"].as_str() {
+        Some("error") => 0,
+        Some("warning") => 1,
+        Some("note") => 2,
+        _ => 3,
+    };
+    let mut by_severity: Vec<&Value> = all.iter().collect();
+    by_severity.sort_by_key(|r| rank(r));
+    let mut expected: Vec<&Value> = by_severity[..3].to_vec();
+    expected.sort_by_key(|r| all.iter().position(|a| std::ptr::eq(a, *r)));
+    let keys = |rs: &[&Value]| -> Vec<String> {
+        rs.iter()
+            .map(|r| {
+                r["properties"]["findingKey"]
+                    .as_str()
+                    .expect("key")
+                    .to_string()
+            })
+            .collect()
+    };
+    assert_eq!(keys(&kept.iter().collect::<Vec<_>>()), keys(&expected));
+
+    let doc: Value = serde_json::from_slice(&capped.stdout).expect("SARIF JSON");
+    if let Err(errors) = json_schema::validate(&schema, &doc) {
+        panic!("{}", errors.join("\n"));
+    }
+    let invocation = &doc["runs"][0]["invocations"][0];
+    assert_eq!(invocation["executionSuccessful"], true);
+    let note = &invocation["toolExecutionNotifications"][0];
+    assert_eq!(note["level"], "warning");
+    let text = note["message"]["text"].as_str().expect("text");
+    let omitted = all.len() - 3;
+    assert!(
+        text.starts_with(&format!("{omitted} of {} results were omitted", all.len())),
+        "{text}"
+    );
+    let stderr = String::from_utf8_lossy(&capped.stderr);
+    assert!(stderr.contains(text), "stderr: {stderr}");
+
+    for command in [vec!["quality"], vec!["view"]] {
+        let output = sbom_tools()
+            .args(&command)
+            .args(["-o", "sarif", "--sarif-max-results", "1"])
+            .arg(&sbom)
+            .output()
+            .expect("runs");
+        assert_eq!(results(&output).len(), 1, "{command:?}");
+    }
+    let old = repo.path().join("sboms/old.cdx.json");
+    std::fs::copy(
+        Path::new(sbom_fixtures::FIXTURES_DIR).join("demo-old.cdx.json"),
+        &old,
+    )
+    .expect("copy");
+    let output = sbom_tools()
+        .args(["diff", "-o", "sarif", "--sarif-max-results", "1"])
+        .arg(&old)
+        .arg(&sbom)
+        .output()
+        .expect("runs");
+    assert_eq!(results(&output).len(), 1, "diff");
 }
 
 #[test]

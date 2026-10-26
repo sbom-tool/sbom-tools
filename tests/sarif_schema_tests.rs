@@ -223,7 +223,7 @@ fn diff_and_view_sarif_match_the_schema() {
         let reporter = SarifReporter::new();
         let config = ReportConfig {
             old_sarif_artifact: Some(old_artifact.clone()),
-            new_sarif_artifact: Some(new_artifact.clone()),
+            sarif: SarifOptions::new().with_artifact(new_artifact.clone()),
             ..ReportConfig::all()
         };
         let sarif = reporter
@@ -233,7 +233,7 @@ fn diff_and_view_sarif_match_the_schema() {
         for (rel, sbom, artifact) in [(old_rel, &old, old_artifact), (new_rel, &new, new_artifact)]
         {
             let config = ReportConfig {
-                view_sarif_artifact: Some(artifact),
+                sarif: SarifOptions::new().with_artifact(artifact),
                 ..ReportConfig::all()
             };
             let sarif = reporter

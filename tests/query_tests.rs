@@ -23,6 +23,7 @@ fn base_config(paths: Vec<PathBuf>) -> QueryConfig {
             export_template: None,
             sarif_base: None,
             sarif_category: None,
+            sarif_max_results: None,
         },
         enrichment: EnrichmentConfig::default(),
         limit: None,

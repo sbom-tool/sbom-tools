@@ -427,8 +427,10 @@ fn output_view_report(
             ..Default::default()
         },
         view_cra_compliance: Some(cra_result),
-        view_sarif_artifact: sarif_artifact,
-        sarif_category: config.output.sarif_category.clone(),
+        sarif: match sarif_artifact {
+            Some(artifact) => config.output.sarif_options().with_artifact(artifact),
+            None => config.output.sarif_options(),
+        },
         ..Default::default()
     };
 
@@ -500,6 +502,7 @@ mod tests {
                 export_template: None,
                 sarif_base: None,
                 sarif_category: None,
+                sarif_max_results: None,
             },
             validate_ntia: false,
             min_severity: min_severity.map(str::to_string),

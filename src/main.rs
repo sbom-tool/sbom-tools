@@ -385,6 +385,13 @@ struct DiffArgs {
     #[arg(long, value_name = "CATEGORY")]
     sarif_category: Option<String>,
 
+    /// The most results one `-o sarif` run keeps (default 25000, the most
+    /// GitHub code scanning accepts; 0 keeps every result). Beyond it the
+    /// least severe are omitted, with a warning in the run and on stderr.
+    /// Only `-o sarif` reads it
+    #[arg(long, value_name = "N")]
+    sarif_max_results: Option<usize>,
+
     /// Report types to include
     #[arg(long, default_value = "all")]
     reports: ReportType,
@@ -520,6 +527,13 @@ struct ViewArgs {
     #[arg(long, value_name = "CATEGORY")]
     sarif_category: Option<String>,
 
+    /// The most results one `-o sarif` run keeps (default 25000, the most
+    /// GitHub code scanning accepts; 0 keeps every result). Beyond it the
+    /// least severe are omitted, with a warning in the run and on stderr.
+    /// Only `-o sarif` reads it
+    #[arg(long, value_name = "N")]
+    sarif_max_results: Option<usize>,
+
     /// Validate against NTIA minimum elements
     #[arg(long)]
     validate_ntia: bool,
@@ -637,6 +651,13 @@ struct ValidateArgs {
     /// way. Only `-o sarif` reads it
     #[arg(long, value_name = "CATEGORY")]
     sarif_category: Option<String>,
+
+    /// The most results one `-o sarif` run keeps (default 25000, the most
+    /// GitHub code scanning accepts; 0 keeps every result). Beyond it the
+    /// least severe are omitted, with a warning in the run and on stderr.
+    /// Only `-o sarif` reads it
+    #[arg(long, value_name = "N")]
+    sarif_max_results: Option<usize>,
 
     /// Exit with non-zero code when warnings are found (not just errors)
     #[arg(long)]
@@ -980,6 +1001,13 @@ struct QualityArgs {
     /// way. Only `-o sarif` reads it
     #[arg(long, value_name = "CATEGORY")]
     sarif_category: Option<String>,
+
+    /// The most results one `-o sarif` run keeps (default 25000, the most
+    /// GitHub code scanning accepts; 0 keeps every result). Beyond it the
+    /// least severe are omitted, with a warning in the run and on stderr.
+    /// Only `-o sarif` reads it
+    #[arg(long, value_name = "N")]
+    sarif_max_results: Option<usize>,
 
     /// Show detailed recommendations
     #[arg(long)]
@@ -2012,6 +2040,7 @@ fn run() -> Result<()> {
                     sarif_category: args
                         .sarif_category
                         .or_else(|| app.output.sarif_category.clone()),
+                    sarif_max_results: args.sarif_max_results.or(app.output.sarif_max_results),
                 },
                 matching: MatchingConfig {
                     fuzzy_preset: resolve(
@@ -2117,6 +2146,7 @@ fn run() -> Result<()> {
                     sarif_category: args
                         .sarif_category
                         .or_else(|| app.output.sarif_category.clone()),
+                    sarif_max_results: args.sarif_max_results.or(app.output.sarif_max_results),
                 },
                 validate_ntia: args.validate_ntia,
                 min_severity: args.severity.or_else(|| app.filtering.min_severity.clone()),
@@ -2189,6 +2219,9 @@ fn run() -> Result<()> {
                 args.sarif_category
                     .or_else(|| app.output.sarif_category.clone()),
                 args.sarif_include_passes,
+                args.sarif_max_results
+                    .or(app.output.sarif_max_results)
+                    .unwrap_or(sbom_tools::reports::DEFAULT_SARIF_MAX_RESULTS),
             )?;
             if exit_code != 0 {
                 std::process::exit(exit_code);
@@ -2213,6 +2246,7 @@ fn run() -> Result<()> {
                     export_template: cli.export_template.clone(),
                     sarif_base: None,
                     sarif_category: None,
+                    sarif_max_results: None,
                     ..Default::default()
                 },
                 matching: MatchingConfig {
@@ -2292,6 +2326,7 @@ fn run() -> Result<()> {
                     export_template: cli.export_template.clone(),
                     sarif_base: None,
                     sarif_category: None,
+                    sarif_max_results: None,
                     ..Default::default()
                 },
                 matching: MatchingConfig {
@@ -2368,6 +2403,7 @@ fn run() -> Result<()> {
                     export_template: cli.export_template.clone(),
                     sarif_base: None,
                     sarif_category: None,
+                    sarif_max_results: None,
                     ..Default::default()
                 },
                 matching: MatchingConfig {
@@ -2476,6 +2512,9 @@ fn run() -> Result<()> {
                 args.sarif_base.or_else(|| app.output.sarif_base.clone()),
                 args.sarif_category
                     .or_else(|| app.output.sarif_category.clone()),
+                args.sarif_max_results
+                    .or(app.output.sarif_max_results)
+                    .unwrap_or(sbom_tools::reports::DEFAULT_SARIF_MAX_RESULTS),
             )?;
             if exit_code != 0 {
                 std::process::exit(exit_code);
@@ -2536,6 +2575,7 @@ fn run() -> Result<()> {
                     export_template: None,
                     sarif_base: None,
                     sarif_category: None,
+                    sarif_max_results: None,
                 },
                 enrichment,
                 limit: args.limit,
@@ -2644,6 +2684,7 @@ fn run() -> Result<()> {
                     export_template: None,
                     sarif_base: None,
                     sarif_category: None,
+                    sarif_max_results: None,
                 },
                 enrichment,
                 webhook_url: args.webhook,

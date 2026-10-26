@@ -246,6 +246,9 @@ impl AppConfig {
                 .sarif_category
                 .clone_from(&other.output.sarif_category);
         }
+        if other.output.sarif_max_results.is_some() {
+            self.output.sarif_max_results = other.output.sarif_max_results;
+        }
 
         // Filtering config
         if other.filtering.only_changes {

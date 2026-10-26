@@ -20,7 +20,7 @@
 use sbom_tools::model::NormalizedSbom;
 use sbom_tools::reports::{
     CsvReporter, HtmlReporter, JsonReporter, MarkdownReporter, NdjsonWriter, ReportConfig,
-    ReportGenerator, ReportType, SarifArtifact, SarifArtifactLocation, SarifReporter,
+    ReportGenerator, ReportType, SarifArtifact, SarifArtifactLocation, SarifOptions, SarifReporter,
     SideBySideReporter, StreamingJsonWriter, SummaryReporter, TableReporter,
 };
 use sbom_tools::{DiffEngine, DiffResult, parse_sbom_str};
@@ -63,7 +63,7 @@ fn stable_config() -> ReportConfig {
         &old,
         DEMO_OLD,
     ));
-    config.new_sarif_artifact = Some(SarifArtifact::new(
+    config.sarif = SarifOptions::new().with_artifact(SarifArtifact::new(
         SarifArtifactLocation::relative("tests/fixtures/demo-new.cdx.json"),
         &new,
         DEMO_NEW,

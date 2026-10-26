@@ -74,6 +74,7 @@ pub fn run_validate(
     sarif_base: Option<PathBuf>,
     sarif_category: Option<String>,
     sarif_include_passes: bool,
+    sarif_max_results: usize,
 ) -> Result<i32> {
     // `--summary` overrides `--output` (documented on the flag), so the
     // requested format is never rendered and must not be gated.
@@ -151,7 +152,9 @@ pub fn run_validate(
     // the SBOM document and the components its findings are about.
     // SARIF results point at the SBOM lines of their components, and list
     // the passed checks only under --sarif-include-passes.
-    let mut sarif = SarifOptions::new().with_passes(sarif_include_passes);
+    let mut sarif = SarifOptions::new()
+        .with_passes(sarif_include_passes)
+        .with_max_results(sarif_max_results);
     if !summary && output == ReportFormat::Sarif {
         sarif = sarif.with_artifact(super::sarif_artifact(
             &sbom_path,
@@ -533,6 +536,7 @@ mod tests {
                 None,
                 None,
                 false,
+                crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             )
             .expect_err("unsupported format must be rejected");
             let msg = err.to_string();
@@ -564,6 +568,7 @@ mod tests {
             None,
             None,
             false,
+            crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         )
         .expect_err("empty standard list must be rejected");
         assert!(err.to_string().contains("no compliance standard selected"));
@@ -596,6 +601,7 @@ mod tests {
             None,
             None,
             false,
+            crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         )
         .expect("--summary must override -o html instead of hard-erroring");
         let content = std::fs::read_to_string(out).unwrap();
@@ -630,6 +636,7 @@ mod tests {
             None,
             None,
             false,
+            crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         )
         .expect_err("typo'd --cra-product-class must be a hard error");
         let msg = err.to_string();
@@ -666,6 +673,7 @@ mod tests {
             None,
             None,
             false,
+            crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         )
         .expect("offset-less --as-of datetime must parse (assumed UTC)");
     }
@@ -696,6 +704,7 @@ mod tests {
             None,
             None,
             false,
+            crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         )
         .expect_err("broken explicit sidecar must be a hard error");
         assert!(err.to_string().contains("Failed to load CRA sidecar"));

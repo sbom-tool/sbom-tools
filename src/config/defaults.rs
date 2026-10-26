@@ -160,6 +160,7 @@ impl AppConfig {
                 export_template: None,
                 sarif_base: None,
                 sarif_category: None,
+                sarif_max_results: None,
             },
             filtering: FilterConfig {
                 only_changes: true,

@@ -165,18 +165,12 @@ pub struct ReportConfig {
     /// SBOM point into. Without it they carry no physical location.
     #[serde(skip)]
     pub old_sarif_artifact: Option<crate::reports::SarifArtifact>,
-    /// The new SBOM file of a diff, which `-o sarif` results about the new
-    /// SBOM point into.
+    /// How `-o sarif` renders a diff or a view: the SBOM file its results
+    /// point into (the new SBOM of a diff, the SBOM of a view), the
+    /// code-scanning category in place of `sbom-tools/diff/` or
+    /// `sbom-tools/view/`, and the cap on the number of results.
     #[serde(skip)]
-    pub new_sarif_artifact: Option<crate::reports::SarifArtifact>,
-    /// The SBOM file of a view, which `-o sarif` results point into.
-    #[serde(skip)]
-    pub view_sarif_artifact: Option<crate::reports::SarifArtifact>,
-    /// The code-scanning category of `-o sarif` output (`--sarif-category`),
-    /// instead of `sbom-tools/diff/` or `sbom-tools/view/`; see
-    /// [`crate::reports::SarifOptions::with_category`].
-    #[serde(skip)]
-    pub sarif_category: Option<String>,
+    pub sarif: crate::reports::SarifOptions,
 }
 
 impl Default for ReportConfig {
@@ -193,9 +187,7 @@ impl Default for ReportConfig {
             new_cra_compliance: None,
             view_cra_compliance: None,
             old_sarif_artifact: None,
-            new_sarif_artifact: None,
-            view_sarif_artifact: None,
-            sarif_category: None,
+            sarif: crate::reports::SarifOptions::default(),
         }
     }
 }

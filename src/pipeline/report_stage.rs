@@ -80,12 +80,12 @@ pub fn output_report_with_sarif(
         },
         old_cra_compliance: old_cra,
         new_cra_compliance: new_cra,
-        sarif_category: config.output.sarif_category.clone(),
+        sarif: config.output.sarif_options(),
         ..Default::default()
     };
     if let Some((old_artifact, new_artifact)) = sarif {
         report_config.old_sarif_artifact = Some(old_artifact);
-        report_config.new_sarif_artifact = Some(new_artifact);
+        report_config.sarif = report_config.sarif.with_artifact(new_artifact);
     }
 
     if use_streaming {
