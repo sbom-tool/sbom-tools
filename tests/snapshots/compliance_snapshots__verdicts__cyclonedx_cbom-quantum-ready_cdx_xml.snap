@@ -1,0 +1,127 @@
+---
+source: tests/compliance_snapshots.rs
+---
+fixture: cyclonedx/cbom-quantum-ready.cdx.xml
+as_of: 2026-10-12T00:00:00Z
+
+[Minimum] compliant · E0 W0 I0
+[Standard] compliant · E0 W1 I0
+  W SBOM-QUALITY-GENERAL  pkg:cargo/fully-quantum-safe-app@1.0.0
+[NtiaMinimum] NON-COMPLIANT · E2 W0 I0
+  E SBOM-NTIA-SUPPLIER  pkg:cargo/fully-quantum-safe-app@1.0.0
+  E SBOM-NTIA-SUPPLIER  pkg:cargo/pqc-crypto-suite@2.0.0
+[CraPhase1] compliant · E0 W9 I6
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/fully-quantum-safe-app@1.0.0
+  I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/2)
+  I SBOM-CRA-ART-13-5  - (1/2)
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
+  W SBOM-CRA-ART-13-16  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/fully-quantum-safe-app@1.0.0
+  W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/pqc-crypto-suite@2.0.0
+  W SBOM-CRA-SBOM-FRESHNESS  -
+[CraPhase2] NON-COMPLIANT · E1 W11 I7
+  E SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/fully-quantum-safe-app@1.0.0
+  I SBOM-CRA-ANNEX-V  -
+  I SBOM-CRA-ART-13-5  - (1/2)
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-LIFECYCLE  -
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/2)
+  W SBOM-CRA-ART-13-16  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-13-2  -
+  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/fully-quantum-safe-app@1.0.0
+  W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/pqc-crypto-suite@2.0.0
+  W SBOM-CRA-CVD-POLICY  -
+  W SBOM-CRA-SBOM-FRESHNESS  -
+[FdaMedicalDevice] NON-COMPLIANT · E3 W3 I0
+  E SBOM-FDA-HASH  pkg:cargo/fully-quantum-safe-app@1.0.0
+  E SBOM-FDA-SUPPLIER  pkg:cargo/fully-quantum-safe-app@1.0.0
+  E SBOM-FDA-SUPPLIER  pkg:cargo/pqc-crypto-suite@2.0.0
+  W SBOM-FDA-SUPPLIER  -
+  W SBOM-FDA-SUPPORT  - ×2
+[NistSsdf] compliant · E0 W3 I2
+  I SBOM-SSDF-PO3  -
+  I SBOM-SSDF-PW6  -
+  W SBOM-SSDF-PO1  -
+  W SBOM-SSDF-PS2  - (1/2)
+  W SBOM-SSDF-PS3  - (2/2)
+[Eo14028] NON-COMPLIANT · E1 W2 I0
+  E SBOM-EO14028-SUPPLIER  - (2/2)
+  W SBOM-EO14028-DISCLOSURE  -
+  W SBOM-EO14028-INTEGRITY  - (1/2)
+[Cnsa2] NON-COMPLIANT · E8 W0 I0
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-768
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-65
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-65
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/slh-dsa-shake-128f
+  E SBOM-CNSA2-ALG-008  crypto/algorithm/sha3-256
+  E SBOM-CNSA2-ALG-008  crypto/algorithm/slh-dsa-sha2-256s
+  E SBOM-CNSA2-ALG-008  crypto/algorithm/slh-dsa-shake-128f
+[NistPqc] compliant · E0 W0 I8
+  I SBOM-PQC-009  crypto/algorithm/lms
+  I SBOM-PQC-009  crypto/algorithm/ml-dsa-65
+  I SBOM-PQC-009  crypto/algorithm/ml-dsa-87
+  I SBOM-PQC-009  crypto/algorithm/ml-kem-1024
+  I SBOM-PQC-009  crypto/algorithm/ml-kem-768
+  I SBOM-PQC-009  crypto/algorithm/slh-dsa-sha2-256s
+  I SBOM-PQC-009  crypto/algorithm/slh-dsa-shake-128f
+  I SBOM-PQC-009  crypto/algorithm/xmss
+[BsiTr03183_2] NON-COMPLIANT · E3 W2 I0
+  E SBOM-BSI-TR-03183-2-5-1  -
+  E SBOM-BSI-TR-03183-2-5-4  - (1/2)
+  E SBOM-BSI-TR-03183-2-LICENSE  - (1/2)
+  W SBOM-BSI-TR-03183-2-5-4-MISSING  - (1/2)
+  W SBOM-BSI-TR-03183-2-CREATOR  - (2/2)
+[CraOssSteward] NON-COMPLIANT · E1 W3 I1
+  E SBOM-CRA-ART-24  -
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/fully-quantum-safe-app@1.0.0
+  W SBOM-CRA-ART-24-SUPPLIER  pkg:cargo/fully-quantum-safe-app@1.0.0
+  W SBOM-CRA-ART-24-SUPPLIER  pkg:cargo/pqc-crypto-suite@2.0.0
+  W SBOM-CRA-CVD-POLICY  -
+[EuccSubstantial] NON-COMPLIANT · E4 W1 I0
+  E SBOM-EUCC-ITSEF  -
+  E SBOM-EUCC-PP  -
+  E SBOM-EUCC-TOE  -
+  E SBOM-EUCC-VALIDITY  -
+  W SBOM-EUCC-CERTREF  -
+[EuAiAct] not applicable · E0 W0 I1
+  I SBOM-AIACT-NA  -
+[BsiSbomForAi] not applicable · E0 W0 I1
+  I SBOM-BSIAI-NA  -
+[Cisa2026] NON-COMPLIANT · E5 W2 I0
+  E SBOM-CISA2026-AUTHOR  -
+  E SBOM-CISA2026-HASH  pkg:cargo/fully-quantum-safe-app@1.0.0
+  E SBOM-CISA2026-LICENSE  pkg:cargo/fully-quantum-safe-app@1.0.0
+  E SBOM-CISA2026-PRODUCER  pkg:cargo/fully-quantum-safe-app@1.0.0
+  E SBOM-CISA2026-PRODUCER  pkg:cargo/pqc-crypto-suite@2.0.0
+  W SBOM-CISA2026-GENERATION-CONTEXT  -
+  W SBOM-CISA2026-SIGNATURE  -
+[PciDss632] compliant · E0 W0 I1
+  I SBOM-PCI-6-3-2-VULN-EVIDENCE  -
+[Fsct] NON-COMPLIANT · E5 W3 I4
+  E SBOM-FSCT-AUTHOR  -
+  E SBOM-FSCT-COPYRIGHT-PRIMARY  pkg:cargo/fully-quantum-safe-app@1.0.0
+  E SBOM-FSCT-HASH  - (1/2)
+  E SBOM-FSCT-LICENSE-PRIMARY  pkg:cargo/fully-quantum-safe-app@1.0.0
+  E SBOM-FSCT-SUPPLIER  - (2/2)
+  I SBOM-FSCT-COPYRIGHT-ALL  - (2/2)
+  I SBOM-FSCT-LICENSE-ALL  - (1/2)
+  I SBOM-FSCT-SBOM-TYPE  -
+  I SBOM-FSCT-SIGNATURE  -
+  W SBOM-FSCT-COPYRIGHT-COVERAGE  - (0/2)
+  W SBOM-FSCT-HASH-PRIMARY-SHA2  pkg:cargo/fully-quantum-safe-app@1.0.0
+  W SBOM-FSCT-IDENTIFIER-MULTI  - (2/2)
+[Comprehensive] NON-COMPLIANT · E2 W2 I0
+  E SBOM-NTIA-SUPPLIER  pkg:cargo/fully-quantum-safe-app@1.0.0
+  E SBOM-NTIA-SUPPLIER  pkg:cargo/pqc-crypto-suite@2.0.0
+  W SBOM-QUALITY-GENERAL  pkg:cargo/fully-quantum-safe-app@1.0.0 ×2

@@ -1,12 +1,4 @@
 ---
 source: tests/compliance_snapshots.rs
 ---
-cyclonedx/cbom-1.6-curve.cdx.xml
-cyclonedx/cbom-1.6-no-family.cdx.xml
-cyclonedx/cbom-1.6.cdx.xml
-cyclonedx/cbom-1.7.cdx.xml
-cyclonedx/cbom-cnsa2-compliant.cdx.xml
-cyclonedx/cbom-cnsa2-violations.cdx.xml
-cyclonedx/cbom-pqc-transition.cdx.xml
-cyclonedx/cbom-quantum-ready.cdx.xml
-cyclonedx/cbom-weak-crypto.cdx.xml
+
