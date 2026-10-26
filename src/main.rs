@@ -979,8 +979,9 @@ struct QualityArgs {
     profile: ScoringProfile,
 
     /// Output format (summary, json, sarif, sbomqs-json; auto = summary).
-    /// sbomqs-json emits interlynk-io/sbomqs `score --json`-shaped 0-10
-    /// scores for side-by-side comparison with sbomqs output.
+    /// sbomqs-json emits 0-10 scores in the shape of interlynk-io/sbomqs
+    /// v2.1.2 `score --legacy --json`, for side-by-side comparison with
+    /// sbomqs output.
     #[arg(short, long, default_value = "auto")]
     output: ReportFormat,
 

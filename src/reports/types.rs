@@ -54,9 +54,9 @@ pub enum ReportFormat {
     /// Newline-delimited JSON (one record per line, streaming-friendly)
     #[serde(alias = "Ndjson")]
     Ndjson,
-    /// interlynk-io/sbomqs `score --json`-shaped quality scores (0-10),
-    /// recomputed per-feature for side-by-side comparison with sbomqs
-    /// output (`quality` command only)
+    /// interlynk-io/sbomqs v2.1.2 `score --legacy --json`-shaped quality
+    /// scores (0-10), recomputed per-feature for side-by-side comparison
+    /// with sbomqs output (`quality` command only)
     #[serde(alias = "SbomqsJson")]
     SbomqsJson,
 }

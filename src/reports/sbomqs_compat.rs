@@ -2,12 +2,15 @@
 //!
 //! Recomputes interlynk-io/sbomqs **legacy (v1) engine** feature scores from
 //! the normalized SBOM and emits them in the exact JSON shape of
-//! `sbomqs score --json` (pkg/reporter/json.go struct tags), so users can put
-//! this tool's output side by side with sbomqs output. Parity target:
-//! **sbomqs v2.0.11** — every formula below was pinned against the fetched
-//! v2.0.11 sources (`pkg/scorer/{criteria,semantic,quality,ntia,structural,`
-//! `sharing,scores,score}.go`, `pkg/sbom/{sbom,cdx,spdx}.go`,
-//! `pkg/licenses/{license,embed_licenses}.go`, `pkg/reporter/json.go`).
+//! `sbomqs score --legacy --json` (pkg/reporter/json.go struct tags; since
+//! sbomqs 2.0 a plain `score --json` runs the v2 engine, whose report has a
+//! different shape), so users can put this tool's output side by side with
+//! sbomqs output. Parity target: **sbomqs v2.1.2** — every formula below was
+//! pinned against the fetched v2.1.2 sources
+//! (`pkg/scorer/{criteria,semantic,quality,ntia,structural,sharing,scores,`
+//! `score,scorer}.go`, `pkg/sbom/{sbom,cdx,spdx,spdx3}.go`,
+//! `pkg/licenses/{license,embed_licenses}.go` and the license files they
+//! embed, `pkg/reporter/json.go`, `pkg/engine/score.go`).
 //!
 //! This is a presentation layer only: nothing here changes scoring weights,
 //! metrics, or compliance checks, and nothing here reads
@@ -24,6 +27,13 @@
 //! * `avg_score = sum(score of non-ignored entries) / count(ALL entries,`
 //!   `ignored included)` — the verbatim `scores.go AvgScore()` formula,
 //!   quirk included (ignored entries stay in the denominator).
+//! * The entries are the 23 features of the five documented v1 categories
+//!   (NTIA-minimum-elements, Semantic, Quality, Sharing, Structural). A
+//!   default `sbomqs score --legacy` run also scores the `bsi-v1.1` and
+//!   `bsi-v2.0` categories (`scorer.go AllScores`, 59 entries in all) and
+//!   averages over every entry, so the `avg_score` here equals the run
+//!   `sbomqs score --legacy --category ntia,semantic,quality,sharing,structural`,
+//!   not the default run (sbomqs `docs/specs/LEGACY-V1-QUIRKS.md` §2).
 //! * Grades use the sbomqs `ToGrade` brackets **A ≥ 9.0, B ≥ 8.0, C ≥ 7.0,
 //!   D ≥ 5.0, F otherwise** — NOT this repo's `QualityGrade` brackets
 //!   (A ≥ 90 … D ≥ 60 on 0-100), whose D/F cut lines differ. Grades are
@@ -31,7 +41,7 @@
 //!
 //! # Exact vs approximate vs not-computable
 //!
-//! Feature-by-feature fidelity against sbomqs v2.0.11 (see
+//! Feature-by-feature fidelity against sbomqs v2.1.2 (see
 //! `docs/STANDARDS_VERSIONS.md`, "sbomqs interoperability" for the full
 //! user-facing table):
 //!
@@ -39,24 +49,39 @@
 //!   `sbom_spec`, `sbom_spec_version`, `sbom_parsable` (with the documented
 //!   asymmetry that this pipeline only ever scores documents it parsed, while
 //!   sbomqs can score an unparsable file 0), `comp_with_name`,
-//!   `comp_with_version`, `comp_with_uniq_ids`, `comp_with_checksums`,
-//!   `comp_with_licenses`, `comp_with_any_vuln_lookup_id`,
-//!   `comp_with_multi_vuln_lookup_id`, `sbom_authors`, `sbom_dependencies`,
-//!   `sbom_with_primary_component`.
+//!   `comp_with_version`, `comp_with_checksums`, `comp_with_licenses`,
+//!   `sbom_authors`, `sbom_with_primary_component`, and — for well-formed
+//!   purl and CPE values, since sbomqs drops values its purl and CPE parsers
+//!   reject — `comp_with_uniq_ids`, `comp_with_any_vuln_lookup_id` and
+//!   `comp_with_multi_vuln_lookup_id`.
 //! * **Approximate** (model keeps less than sbomqs reads; direction of the
 //!   possible drift documented on each evaluator): `sbom_file_format`
 //!   (detected from the raw document text), `sbom_creation_timestamp`
 //!   (epoch sentinel for missing/invalid timestamps),
 //!   `sbom_required_fields` (SPDX `downloadLocation` / CDX `bomFormat` and
-//!   dependency-ref checks are not modeled), `comp_with_supplier` (SPDX
-//!   originator fallback approximated via the author field),
-//!   `comp_valid_licenses` / `comp_with_deprecated_licenses` /
-//!   `comp_with_restrictive_licenses` (license-expression tokenization and
-//!   SPDX-list flags via the `spdx` crate instead of sbomqs' embedded
-//!   list + AboutCode overlay), `comp_with_primary_purpose` (typed
-//!   `ComponentType` loses the raw purpose string and defaults to Library),
-//!   `sbom_with_creator_and_version` (tool version recovered heuristically
-//!   from the normalized creator name), `sbom_sharable` (see below).
+//!   dependency-ref checks are not modeled), `sbom_dependencies` (this
+//!   repo's relationship mapping decides which SPDX relationships are
+//!   edges), `comp_with_supplier` (SPDX originator fallback approximated via
+//!   the author field), `comp_valid_licenses` /
+//!   `comp_with_deprecated_licenses` / `comp_with_restrictive_licenses`
+//!   (license strings are read the way sbomqs reads them, a port of its
+//!   go-spdx parsing in `expression`, but the SPDX license list is the
+//!   `spdx` crate's rather than the lists sbomqs and go-spdx embed; the
+//!   deprecated flags match sbomqs', the restrictive flags are sbomqs' own
+//!   for SPDX-listed ids, see `license_data`, and the AboutCode-only
+//!   `LicenseRef-scancode-*` ids are never restrictive or deprecated here),
+//!   `comp_with_primary_purpose` (typed `ComponentType` loses the raw
+//!   purpose string and defaults to Library), `sbom_with_creator_and_version`
+//!   (exact for SPDX; for CycloneDX the tool version is recovered
+//!   heuristically from the normalized creator name), `sbom_sharable` (exact
+//!   for the document licenses of SPDX JSON and tag-value and CycloneDX JSON
+//!   and XML; see below).
+//! * **SPDX 3**: sbomqs scores SPDX 3.0.x since v2.0.12, through a separate
+//!   reader (`pkg/sbom/spdx3.go`, on spdx-zen). The SPDX 3 differences this
+//!   view models are the spec version list, the `sbom_required_fields`
+//!   halves, the concluded-only component licenses, the `operatingSystem`
+//!   purpose and the hyphen-only tool split; every other SPDX 3 entry
+//!   follows the SPDX 2.x path and is approximate.
 //! * **Not computable → `ignored: true`**: when the original document text is
 //!   not provided (library callers), `sbom_file_format` and `sbom_sharable`
 //!   are emitted with `ignored: true` and a reason — never silently dropped
@@ -66,24 +91,24 @@
 //!
 //! # Known upstream quirks replicated or documented
 //!
-//! * `sbom_sharable`: sbomqs v2.0.11's vendored SPDX license list
-//!   (`pkg/licenses/files/licenses_spdx.json`) carries **no** `isFreeAnyUse`
-//!   flags, so every SPDX-listed document license (including `CC0-1.0`)
-//!   counts as not-free and the check scores 0.0 for essentially every real
-//!   document. This emitter replicates that (score 0.0, not ignored, when
-//!   the raw document is available). The only inputs sbomqs scores 10 are
-//!   document licenses absent from the SPDX list but present in its
-//!   AboutCode data with a "Public Domain" category — that data is not
-//!   embedded here, so such documents (rare) would diverge; the description
-//!   discloses this.
+//! * `comp_with_uniq_ids` (NTIA) counts components with a purl or a CPE —
+//!   the same predicate as `comp_with_any_vuln_lookup_id` — since v2.1.0
+//!   (interlynk-io/sbomqs#734); v2.0.x counted a non-empty bom-ref/SPDXID.
+//! * `sbom_sharable` scores 10.0 only when the document declares at least one
+//!   license and every license token is free for any use, which sbomqs
+//!   v2.1.0+ derives from the AboutCode "Public Domain" category
+//!   (interlynk-io/sbomqs#732). `CC0-1.0`, the `dataLicense` SPDX 2.x
+//!   mandates, is one of those ids, so a typical SPDX 2.x document now scores
+//!   10.0; v2.0.x scored 0.0 for essentially every document.
 //! * `sbom_with_creator_and_version` divides by the tool count; with zero
 //!   tools Go computes `0.0/0.0 = NaN`, which sbomqs' `setScore` coerces to
 //!   `0.0`. Replicated as a plain 0.0.
 //! * `sbom_required_fields` is NOT binary: `docOK && all pkgs OK → 10.0`;
 //!   `docOK && partial pkgs → (10 + 10·have/total)/2` (e.g. 7.5; and 5.0 for
-//!   a docOK document with zero components); `!docOK → 0.0` regardless of
-//!   package fields (the `(0+10)/2` branch in sbomqs is immediately
-//!   overwritten with 0.0 — quirk preserved).
+//!   a docOK document with zero components — v2.1.2 keeps this wart, see
+//!   its `sbomWithRequiredFieldCheck` comment); `!docOK → 0.0` regardless of
+//!   package fields. For SPDX 3 sbomqs always reports the document half as
+//!   present and requires a name and a supplier of each package.
 //! * Component-list checks on a zero-component SBOM emit score 0.0 with
 //!   `ignored: true` ("N/A (no components)") and stay in the denominator.
 //! * `comp_valid_licenses` is a mean over ALL components of per-component
@@ -91,9 +116,19 @@
 //!   components contributing 0 — not `10·have/total`. Only SPDX-list
 //!   membership counts (sbomqs `l.Spdx()`); `LicenseRef-*` and other custom
 //!   ids do NOT count in the v1 engine.
+//! * A license string is one license per distinct term of a valid SPDX
+//!   expression, but a string that names an id outside the SPDX list, or is
+//!   no valid expression (`Apache License 2.0`, `MIT OR FooBar`), is ONE
+//!   custom license; a `WITH` clause and a `+` on an id without an
+//!   `-or-later` successor stay on the term, which is then no SPDX-listed id.
+//!   An SPDX 2.x package contributes its concluded license, or its declared
+//!   one when the concluded yields none — never both.
 //! * `comp_with_deprecated_licenses` / `comp_with_restrictive_licenses` are
 //!   inverted proportionals `10·(total−affected)/total`, and score 0.0 with
-//!   "no licenses found" when the whole SBOM has no licenses.
+//!   "no licenses found" when the whole SBOM has no licenses. Since v2.1.0 a
+//!   license in AboutCode's Non-Commercial category is restrictive too.
+//! * Grade brackets are unchanged in code since v2.0.x; v2.1.0 corrected the
+//!   sbomqs docs that listed A as 8.0-10.0 (interlynk-io/sbomqs#735).
 //!
 //! # Component enumeration parity
 //!
@@ -101,17 +136,26 @@
 //! list) and CycloneDX components including `metadata.component` (services
 //! are not components). The normalized model folds SPDX files/snippets and
 //! CycloneDX services into `components`, so this module filters them back
-//! out: SPDX components typed `File` and CycloneDX components typed
-//! `Service` are excluded from every per-component denominator and from
-//! `num_components`. An SPDX *package* whose `primaryPackagePurpose` is
-//! SOURCE/ARCHIVE/FILE is typed `Other(..)`, not `File`, so it is counted
-//! like any other package, as sbomqs does.
+//! out: SPDX components typed `File` and CycloneDX `services[]` entries
+//! (typed `Service`) are excluded from every per-component denominator,
+//! from `num_components`, and as targets of the primary component's
+//! dependencies. A CycloneDX `components[]` entry counts whatever its type,
+//! as in sbomqs, including one that misuses the type `service`. An SPDX
+//! *package* whose `primaryPackagePurpose` is SOURCE/ARCHIVE/FILE is typed
+//! `Other(..)`, not `File`, so it is counted like any other package, as
+//! sbomqs does.
 
-use crate::model::{Component, ComponentType, CreatorType, NormalizedSbom, SbomFormat};
+mod expression;
+mod license_data;
+
+use crate::model::{
+    CanonicalId, Component, ComponentType, CreatorType, NormalizedSbom, SbomFormat,
+};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 /// sbomqs release every formula in this module was verified against.
-pub const SBOMQS_PARITY_TARGET: &str = "v2.0.11";
+pub const SBOMQS_PARITY_TARGET: &str = "v2.1.2";
 
 /// sbomqs scorer engine version (`pkg/scorer/scorer.go EngineVersion`) whose
 /// behaviour this emitter models.
@@ -136,9 +180,12 @@ pub const CATEGORY_ORDER: [&str; 5] = [
     CAT_STRUCTURAL,
 ];
 
-// Recognition tables, verbatim from sbomqs v2.0.11 pkg/sbom/{cdx,spdx}.go.
+// Recognition tables, verbatim from sbomqs v2.1.2 pkg/sbom/{cdx,spdx}.go.
+// The SPDX list gained "3.0.1" in v2.0.12 (SPDX 3 support); an SPDX 3
+// document that declares 3.0, or no version, is scored against it too and
+// fails it.
 const CDX_SPEC_VERSIONS: &[&str] = &["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7"];
-const SPDX_SPEC_VERSIONS: &[&str] = &["2.1", "2.2", "2.3"];
+const SPDX_SPEC_VERSIONS: &[&str] = &["2.1", "2.2", "2.3", "3.0.1"];
 const CDX_FILE_FORMATS: &[&str] = &["json", "xml"];
 const SPDX_FILE_FORMATS: &[&str] = &["json", "yaml", "rdf", "tag-value"];
 const CDX_PRIMARY_PURPOSES: &[&str] = &[
@@ -416,7 +463,8 @@ pub fn avg_score(scores: &[SbomqsScoreEntry]) -> f64 {
     sum / count
 }
 
-/// Compute all 23 v1 default-profile feature scores in sbomqs order.
+/// Compute the 23 feature scores of the five documented v1 categories in
+/// sbomqs order.
 #[must_use]
 pub fn compute_scores(input: &SbomqsCompatInput<'_>) -> Vec<SbomqsScoreEntry> {
     let sbom = input.sbom;
@@ -424,8 +472,11 @@ pub fn compute_scores(input: &SbomqsCompatInput<'_>) -> Vec<SbomqsScoreEntry> {
     let facts = input
         .raw_content
         .map(|raw| extract_raw_facts(raw, &sbom.document.format));
-    let tokens: Vec<Vec<LicenseToken>> =
-        comps.iter().map(|c| component_license_tokens(c)).collect();
+    let spdx3 = is_spdx3(sbom);
+    let tokens: Vec<Vec<LicenseToken>> = comps
+        .iter()
+        .map(|c| component_license_tokens(c, &sbom.document.format, spdx3))
+        .collect();
 
     let mut scores = Vec::with_capacity(23);
 
@@ -446,12 +497,14 @@ pub fn compute_scores(input: &SbomqsCompatInput<'_>) -> Vec<SbomqsScoreEntry> {
         comps.len(),
         "have versions",
     ));
-    // NTIA uniq-ids = compWithUniqIDCheck semantics: a non-empty LOCAL id
-    // (bom-ref / SPDXID), NOT purl/cpe presence (that is the BSI variant).
+    // NTIA uniq-ids = v2.1.x compWithUniqIDCheck: a purl or a CPE (the NTIA
+    // "Other Unique Identifiers" element, sbomqs#734), the predicate
+    // comp_with_any_vuln_lookup_id uses too. v2.0.x counted a non-empty
+    // local id (bom-ref / SPDXID) instead.
     scores.push(proportional(
         CAT_NTIA,
         "comp_with_uniq_ids",
-        count_by(&comps, |c| !c.identifiers.format_id.trim().is_empty()),
+        count_by(&comps, |c| has_purl(c) || has_cpe(c)),
         comps.len(),
         "have unique ID's",
     ));
@@ -464,7 +517,7 @@ pub fn compute_scores(input: &SbomqsCompatInput<'_>) -> Vec<SbomqsScoreEntry> {
     ));
     scores.push(timestamp_check(sbom));
     scores.push(authors_check(sbom));
-    scores.push(dependencies_check(sbom));
+    scores.push(dependencies_check(sbom, &comps));
 
     // --- Semantic ---------------------------------------------------------
     scores.push(required_fields_check(sbom, &comps, facts.as_ref()));
@@ -485,7 +538,7 @@ pub fn compute_scores(input: &SbomqsCompatInput<'_>) -> Vec<SbomqsScoreEntry> {
 
     // --- Quality ----------------------------------------------------------
     scores.push(valid_licenses_check(&comps, &tokens));
-    scores.push(primary_purpose_check(&comps, &sbom.document.format));
+    scores.push(primary_purpose_check(&comps, &sbom.document.format, spdx3));
     scores.push(inverted_license_check(
         "comp_with_deprecated_licenses",
         &comps,
@@ -542,17 +595,30 @@ pub fn compute_scores(input: &SbomqsCompatInput<'_>) -> Vec<SbomqsScoreEntry> {
 // Component enumeration
 // ---------------------------------------------------------------------------
 
+/// Whether the document is SPDX 3, which sbomqs reads through its own SPDX
+/// 3 reader (`pkg/sbom/spdx3.go`) rather than the SPDX 2.x one. The SPDX 3
+/// parser always records a 3.x version ("3.0" when the document names
+/// none).
+fn is_spdx3(sbom: &NormalizedSbom) -> bool {
+    sbom.document.format == SbomFormat::Spdx
+        && sbom
+            .document
+            .spec_version_parsed()
+            .is_some_and(|v| v.major >= 3)
+}
+
 /// The sbomqs-visible component set (see module docs): SPDX file/snippet
-/// components and CycloneDX service components are excluded.
+/// components and CycloneDX `services[]` entries are excluded. An entry of
+/// CycloneDX `components[]` is a component whatever its `type` (sbomqs
+/// `walkComponents` reads every one), so one typed `service` there — no
+/// CycloneDX component type, which the parser keeps as `Other("service")`
+/// — still counts.
 fn compat_components(sbom: &NormalizedSbom) -> Vec<&Component> {
     sbom.components
         .values()
         .filter(|c| match sbom.document.format {
             SbomFormat::Spdx => c.component_type != ComponentType::File,
-            SbomFormat::CycloneDx => {
-                !matches!(&c.component_type, ComponentType::Service)
-                    && !matches!(&c.component_type, ComponentType::Other(s) if s == "service")
-            }
+            SbomFormat::CycloneDx => c.component_type != ComponentType::Service,
         })
         .collect()
 }
@@ -680,10 +746,20 @@ fn authors_check(sbom: &NormalizedSbom) -> SbomqsScoreEntry {
 
 /// `sbom_dependencies` — binary on the PRIMARY component's direct
 /// dependencies (verbatim `sbomWithDepedenciesCheck`), not on arbitrary
-/// dependency edges.
-fn dependencies_check(sbom: &NormalizedSbom) -> SbomqsScoreEntry {
+/// dependency edges. sbomqs resolves each target through `Components()`
+/// (`GetDirectDependencies`), so an edge to an SPDX file or a CycloneDX
+/// service does not count. Approximate for SPDX: sbomqs counts every
+/// relationship from the primary except DESCRIBES, flipping only
+/// DEPENDENCY_OF, CONTAINED_BY and DESCRIBED_BY (v2.1.0, sbomqs#744), while
+/// the edges here follow this repo's SPDX relationship mapping (which keeps
+/// fewer types and flips every `*_OF` inverse).
+fn dependencies_check(sbom: &NormalizedSbom, comps: &[&Component]) -> SbomqsScoreEntry {
+    let visible: HashSet<&CanonicalId> = comps.iter().map(|c| &c.canonical_id).collect();
     let total = sbom.primary_component_id.as_ref().map_or(0, |primary| {
-        sbom.edges.iter().filter(|e| &e.from == primary).count()
+        sbom.edges
+            .iter()
+            .filter(|e| &e.from == primary && visible.contains(&e.to))
+            .count()
     });
     SbomqsScoreEntry {
         category: CAT_NTIA.to_string(),
@@ -710,16 +786,22 @@ fn dependencies_check(sbom: &NormalizedSbom) -> SbomqsScoreEntry {
 ///   SPDX pkgOK ≈ name + SPDXID present (`downloadLocation` and
 ///   `packageVerificationCode` are not modeled — drift towards scoring
 ///   HIGHER than sbomqs on packages missing those).
+/// * SPDX 3 (exact as far as the model goes): sbomqs' SPDX 3 reader marks
+///   the document half present unconditionally (`spdx3.go parseSpec`) and
+///   requires a name and a supplier that is not NOASSERTION of every package
+///   (`pkgRequiredFields`).
 fn required_fields_check(
     sbom: &NormalizedSbom,
     comps: &[&Component],
     facts: Option<&RawFacts>,
 ) -> SbomqsScoreEntry {
     let doc = &sbom.document;
+    let spdx3 = is_spdx3(sbom);
     let doc_ok = match doc.format {
         SbomFormat::CycloneDx => {
             !doc.spec_version.trim().is_empty() && doc.doc_version.unwrap_or(0) >= 1
         }
+        SbomFormat::Spdx if spdx3 => true,
         SbomFormat::Spdx => {
             !doc.spec_version.trim().is_empty()
                 && doc.name.as_deref().is_some_and(|n| !n.trim().is_empty())
@@ -736,6 +818,12 @@ fn required_fields_check(
     let total = comps.len();
     let ok = count_by(comps, |c| match doc.format {
         SbomFormat::CycloneDx => !c.name.trim().is_empty(),
+        SbomFormat::Spdx if spdx3 => {
+            !c.name.is_empty()
+                && c.supplier
+                    .as_ref()
+                    .is_some_and(|s| !s.name.eq_ignore_ascii_case("NOASSERTION"))
+        }
         SbomFormat::Spdx => !c.name.trim().is_empty() && !c.identifiers.format_id.trim().is_empty(),
     });
     let pkgs_ok = total > 0 && ok == total;
@@ -767,13 +855,12 @@ fn required_fields_check(
 }
 
 /// `sbom_with_creator_and_version` — tools with both a name and a version,
-/// over the tool count. Approximate: the normalized model folds the tool
-/// version into the creator name (CycloneDX: `"name version"`; SPDX keeps
-/// the raw `name-version` string), so the version is recovered
-/// heuristically: the last space- or hyphen-separated token counts as a
-/// version when it contains a digit — the same heuristic sbomqs itself
-/// applies to SPDX tool strings. Zero tools replicate sbomqs' `0/0 → NaN →
-/// setScore → 0.0` coercion as a plain 0.0.
+/// over the tool count. The normalized model folds the tool version into
+/// the creator name, so the version is recovered per format (see
+/// [`split_tool_name_version`]): for SPDX the split is sbomqs' own
+/// `extractVersion`; for CycloneDX, whose tools carry the version in a
+/// field of its own, it is a heuristic (approximate). Zero tools replicate
+/// sbomqs' `0/0 → NaN → setScore → 0.0` coercion as a plain 0.0.
 fn creator_and_version_check(sbom: &NormalizedSbom) -> SbomqsScoreEntry {
     let tools: Vec<&crate::model::Creator> = sbom
         .document
@@ -784,7 +871,7 @@ fn creator_and_version_check(sbom: &NormalizedSbom) -> SbomqsScoreEntry {
     let with_version = tools
         .iter()
         .filter(|t| {
-            let (name, version) = split_tool_name_version(&t.name);
+            let (name, version) = split_tool_name_version(&t.name, &sbom.document.format);
             !name.is_empty() && !version.is_empty()
         })
         .count();
@@ -824,29 +911,37 @@ fn primary_component_check(sbom: &NormalizedSbom) -> SbomqsScoreEntry {
     }
 }
 
-/// `sbom_sharable` — quirk-faithful to sbomqs v2.0.11 (see module docs):
-/// its vendored SPDX list has no `isFreeAnyUse` flags, so every SPDX-listed
-/// document license counts non-free and the check scores 0.0 for
-/// essentially every real document; a missing document license also scores
-/// 0.0. Emitted as a real (non-ignored) 0.0 whenever the raw document was
-/// provided; `ignored: true` is reserved for the tool-limitation case where
-/// the raw document is unavailable.
+/// `sbom_sharable` — verbatim `sharableLicenseCheck`: 10.0 when the
+/// document declares at least one license and every license token is free
+/// for any use, else 0.0. The document licenses are the SPDX `dataLicense`
+/// and the CycloneDX `metadata.licenses` entries, split into tokens as
+/// sbomqs' `LookupExpression` does; free-for-any-use is sbomqs v2.1.2's
+/// AboutCode "Public Domain" classification (`license_data::FREE_ANY_USE`,
+/// which includes `CC0-1.0`). Emitted as a real (non-ignored) score whenever
+/// the raw document was provided; `ignored: true` is reserved for the
+/// tool-limitation case where the raw document is unavailable.
 fn sharable_check(facts: Option<&RawFacts>) -> SbomqsScoreEntry {
     match facts {
-        Some(f) => SbomqsScoreEntry {
-            category: CAT_SHARING.to_string(),
-            feature: "sbom_sharable".to_string(),
-            score: 0.0,
-            max_score: 10.0,
-            description: format!(
-                "doc has a sharable license free 0 :: of {} (sbomqs {SBOMQS_PARITY_TARGET}'s \
-                 vendored SPDX list carries no isFreeAnyUse flags, so every SPDX-listed data \
-                 license — including CC0-1.0 — scores non-free; only AboutCode \
-                 'Public Domain'-category ids not on the SPDX list would score 10 there)",
-                f.doc_license_count
-            ),
-            ignored: false,
-        },
+        Some(f) => {
+            let tokens: Vec<LicenseToken> = f
+                .doc_licenses
+                .iter()
+                .flat_map(|l| expression_tokens(l))
+                .collect();
+            let free = tokens.iter().filter(|t| t.free_any_use).count();
+            let sharable = !tokens.is_empty() && free == tokens.len();
+            SbomqsScoreEntry {
+                category: CAT_SHARING.to_string(),
+                feature: "sbom_sharable".to_string(),
+                score: if sharable { 10.0 } else { 0.0 },
+                max_score: 10.0,
+                description: format!(
+                    "doc has a sharable license free {free} :: of {}",
+                    tokens.len()
+                ),
+                ignored: false,
+            }
+        }
         None => SbomqsScoreEntry {
             category: CAT_SHARING.to_string(),
             feature: "sbom_sharable".to_string(),
@@ -958,87 +1053,104 @@ fn file_format_check(sbom: &NormalizedSbom, facts: Option<&RawFacts>) -> SbomqsS
 // ---------------------------------------------------------------------------
 
 /// One license "token", mirroring one `licenses.License` object sbomqs
-/// derives from an expression via `LookupExpression` (which splits an SPDX
-/// expression into individual ids and classifies each).
+/// derives from a license string via `LookupExpression` (see
+/// [`expression`]).
 #[derive(Debug, Clone, Copy)]
 struct LicenseToken {
-    /// Equivalent of sbomqs `l.Spdx()`: the id is on the SPDX license list.
+    /// Equivalent of sbomqs `l.Spdx()`: the term is an id on the SPDX
+    /// license list.
     listed: bool,
-    /// SPDX-list deprecated flag (`isDeprecatedLicenseId`).
+    /// SPDX-list deprecated flag (`isDeprecatedLicenseId`). The `spdx`
+    /// crate's deprecated ids are the 32 sbomqs v2.1.2 embeds.
     deprecated: bool,
-    /// Approximation of sbomqs `l.Restrictive()` (AboutCode category
-    /// containing "copyleft"/"restricted") via the `spdx` crate's copyleft
-    /// flag.
+    /// sbomqs `l.Restrictive()`: AboutCode category Copyleft, Copyleft
+    /// Limited, Free Restricted or Non-Commercial
+    /// (`license_data::RESTRICTIVE_SPDX`).
     restrictive: bool,
+    /// sbomqs `l.FreeAnyUse()`: AboutCode category Public Domain
+    /// (`license_data::FREE_ANY_USE`).
+    free_any_use: bool,
 }
 
-/// Split one license expression into tokens.
-///
-/// Mirrors sbomqs `LookupExpression`: `NONE`/`NOASSERTION`/empty yield no
-/// tokens; ids are extracted from the expression and each is classified;
-/// an id not on the SPDX list becomes a "custom" token (not listed, never
-/// deprecated/restrictive). Differences (documented approximations): the
-/// exception id after `WITH` is dropped rather than looked up, and
-/// AboutCode-sourced classification is not available.
-fn expression_tokens(expr: &str) -> Vec<LicenseToken> {
-    let trimmed = expr.trim();
-    if trimmed.is_empty() {
-        return Vec::new();
-    }
-    let lower = trimmed.to_ascii_lowercase();
-    if lower == "none" || lower == "noassertion" {
-        return Vec::new();
-    }
+/// Whether sbomqs v2.1.2 classifies the license id as restrictive.
+fn is_restrictive(id: &str) -> bool {
+    license_data::RESTRICTIVE_SPDX.binary_search(&id).is_ok()
+}
 
-    let mut tokens = Vec::new();
-    let mut skip_next = false; // the token after WITH is an exception id
-    for tok in trimmed
-        .split(|c: char| c.is_whitespace() || c == '(' || c == ')')
-        .filter(|t| !t.is_empty())
-    {
-        if tok == "AND" || tok == "OR" {
-            continue;
-        }
-        if tok == "WITH" {
-            skip_next = true;
-            continue;
-        }
-        if skip_next {
-            skip_next = false;
-            continue;
-        }
-        let id = spdx::license_id(tok).or_else(|| spdx::license_id(tok.trim_end_matches('+')));
-        tokens.push(id.map_or(
+/// Whether sbomqs v2.1.2 classifies the license id as free for any use.
+fn is_free_any_use(id: &str) -> bool {
+    license_data::FREE_ANY_USE.binary_search(&id).is_ok()
+}
+
+/// Classify one license term the way sbomqs looks it up: in its SPDX list
+/// (`LookupSpdxLicense`), else in its AboutCode data with a trailing `+`
+/// trimmed (`LookupAboutCodeLicense`), else as a custom license. Only the
+/// AboutCode entries of SPDX ids carry a restrictive flag here (the 572
+/// restrictive `LicenseRef-scancode-*` keys do not), and an AboutCode
+/// entry is never deprecated here.
+fn classify_term(term: &expression::Term) -> LicenseToken {
+    match term {
+        expression::Term::Parsed(name) => {
+            if let Some(license) = expression::listed_license(name) {
+                return LicenseToken {
+                    listed: true,
+                    deprecated: license.flags & spdx::flags::IS_DEPRECATED != 0,
+                    restrictive: is_restrictive(name),
+                    free_any_use: is_free_any_use(name),
+                };
+            }
+            let base = name.trim_end_matches('+');
             LicenseToken {
                 listed: false,
                 deprecated: false,
-                restrictive: false,
-            },
-            |id| LicenseToken {
-                listed: true,
-                deprecated: id.is_deprecated(),
-                restrictive: id.is_copyleft(),
-            },
-        ));
-    }
-    if tokens.is_empty() {
-        // Unparseable expression: sbomqs turns the whole expression into a
-        // single custom license.
-        tokens.push(LicenseToken {
+                restrictive: is_restrictive(base),
+                free_any_use: is_free_any_use(base),
+            }
+        }
+        expression::Term::Custom(_) => LicenseToken {
             listed: false,
             deprecated: false,
             restrictive: false,
-        });
+            free_any_use: false,
+        },
     }
-    tokens
 }
 
-fn component_license_tokens(comp: &Component) -> Vec<LicenseToken> {
-    comp.licenses
-        .all_licenses()
-        .into_iter()
-        .flat_map(|l| expression_tokens(&l.expression))
+/// The license tokens sbomqs derives from one license string.
+fn expression_tokens(expr: &str) -> Vec<LicenseToken> {
+    expression::lookup_expression(expr)
+        .iter()
+        .map(classify_term)
         .collect()
+}
+
+/// The component's license tokens, read the way each sbomqs reader does:
+/// CycloneDX every license choice (`aggregateLicenses`); SPDX 2.x the
+/// concluded license, or the declared one when the concluded yields none
+/// (`spdx.go licenses()`); SPDX 3 the concluded licenses only (`spdx3.go
+/// licenses()`, the `hasConcludedLicense` relationships).
+fn component_license_tokens(
+    comp: &Component,
+    format: &SbomFormat,
+    spdx3: bool,
+) -> Vec<LicenseToken> {
+    let tokens = |licenses: Vec<&crate::model::LicenseExpression>| -> Vec<LicenseToken> {
+        licenses
+            .into_iter()
+            .flat_map(|l| expression_tokens(&l.expression))
+            .collect()
+    };
+    match format {
+        SbomFormat::CycloneDx => tokens(comp.licenses.all_licenses()),
+        SbomFormat::Spdx => {
+            let concluded = tokens(comp.licenses.concluded.iter().collect());
+            if spdx3 || !concluded.is_empty() {
+                concluded
+            } else {
+                tokens(comp.licenses.declared.iter().collect())
+            }
+        }
+    }
 }
 
 /// `comp_valid_licenses` — verbatim shape: mean over ALL components of
@@ -1079,8 +1191,16 @@ fn valid_licenses_check(comps: &[&Component], tokens: &[Vec<LicenseToken>]) -> S
 /// `comp_with_primary_purpose` — the purpose must be non-blank AND one of
 /// the values sbomqs recognizes for the spec. Approximate: the typed
 /// `ComponentType` defaults to Library when the source document declared no
-/// type/purpose, which over-counts (sbomqs would see an empty purpose).
-fn primary_purpose_check(comps: &[&Component], format: &SbomFormat) -> SbomqsScoreEntry {
+/// type/purpose, which over-counts (sbomqs would see an empty purpose), and
+/// both SPDX 2.3 spellings OPERATING-SYSTEM and OPERATING_SYSTEM count here,
+/// where sbomqs lowercases the raw value and accepts only the hyphen. SPDX 3
+/// spells the purpose `operatingSystem`, which sbomqs lowercases to a value
+/// its hyphenated list lacks, so an SPDX 3 operating system never counts.
+fn primary_purpose_check(
+    comps: &[&Component],
+    format: &SbomFormat,
+    spdx3: bool,
+) -> SbomqsScoreEntry {
     if comps.is_empty() {
         return zero_components_entry(CAT_QUALITY, "comp_with_primary_purpose");
     }
@@ -1091,6 +1211,9 @@ fn primary_purpose_check(comps: &[&Component], format: &SbomFormat) -> SbomqsSco
     let with_purpose = comps
         .iter()
         .filter(|c| {
+            if spdx3 && c.component_type == ComponentType::OperatingSystem {
+                return false;
+            }
             let purpose = c.component_type.to_string().to_lowercase();
             !purpose.trim().is_empty() && supported.contains(&purpose.as_str())
         })
@@ -1150,10 +1273,11 @@ struct RawFacts {
     /// Detected serialization: "json", "xml", "yaml", "tag-value" or
     /// "unknown".
     file_format: &'static str,
-    /// Number of document-level license entries (CycloneDX
-    /// `metadata.licenses` entries / 1 when an SPDX `dataLicense` is
-    /// present). Description-only.
-    doc_license_count: usize,
+    /// Document-level license expressions, as sbomqs collects them
+    /// (`Spec().GetLicenses()`): the SPDX `dataLicense`, or one entry per
+    /// CycloneDX `metadata.licenses` choice (its expression, else its license
+    /// id, else its license name). Read by `sbom_sharable`.
+    doc_licenses: Vec<String>,
     /// SPDX `dataLicense` present (used by `sbom_required_fields`).
     has_data_license: bool,
 }
@@ -1187,53 +1311,40 @@ fn extract_raw_facts(raw: &str, format: &SbomFormat) -> RawFacts {
     let file_format = detect_file_format(raw, format);
     match format {
         SbomFormat::Spdx => {
-            let has = match file_format {
-                "json" => {
-                    #[derive(Deserialize)]
-                    #[serde(rename_all = "camelCase")]
-                    struct SpdxDataLicense {
-                        data_license: Option<String>,
-                    }
-                    serde_json::from_str::<SpdxDataLicense>(raw)
-                        .ok()
-                        .and_then(|d| d.data_license)
-                        .is_some_and(|l| !l.trim().is_empty())
-                }
-                "tag-value" => raw.lines().any(|l| {
+            let data_license = match file_format {
+                "json" => spdx_json_data_license(raw),
+                "tag-value" => raw.lines().find_map(|l| {
                     l.trim_start()
                         .strip_prefix("DataLicense:")
-                        .is_some_and(|v| !v.trim().is_empty())
+                        .map(str::trim)
+                        .filter(|v| !v.is_empty())
+                        .map(str::to_string)
                 }),
+                // RDF/XML: sbomqs v2.1.2 has no detection path for it and
+                // does not score such a document, so there is nothing to
+                // match; only the docOK presence heuristic below reads it.
+                _ => None,
+            };
+            let has = match file_format {
+                "json" | "tag-value" => data_license.is_some(),
                 // XML / YAML / unknown: substring heuristic.
                 _ => raw.contains("dataLicense") || raw.contains("DataLicense"),
             };
             RawFacts {
                 file_format,
-                doc_license_count: usize::from(has),
+                doc_licenses: data_license.into_iter().collect(),
                 has_data_license: has,
             }
         }
         SbomFormat::CycloneDx => {
-            let count = if file_format == "json" {
-                #[derive(Deserialize)]
-                struct CdxMetadata {
-                    licenses: Option<Vec<serde_json::Value>>,
-                }
-                #[derive(Deserialize)]
-                struct CdxDoc {
-                    metadata: Option<CdxMetadata>,
-                }
-                serde_json::from_str::<CdxDoc>(raw)
-                    .ok()
-                    .and_then(|d| d.metadata)
-                    .and_then(|m| m.licenses)
-                    .map_or(0, |l| l.len())
-            } else {
-                0
+            let doc_licenses = match file_format {
+                "json" => cdx_json_metadata_licenses(raw),
+                "xml" => cdx_xml_metadata_licenses(raw),
+                _ => Vec::new(),
             };
             RawFacts {
                 file_format,
-                doc_license_count: count,
+                doc_licenses,
                 // dataLicense is an SPDX concept; irrelevant for CycloneDX
                 // docOK, which never consults it.
                 has_data_license: true,
@@ -1242,29 +1353,166 @@ fn extract_raw_facts(raw: &str, format: &SbomFormat) -> RawFacts {
     }
 }
 
+/// The SPDX `dataLicense` of a JSON document: the top-level member (SPDX
+/// 2.x, or an SPDX 3 document whose top-level object is the SpdxDocument),
+/// else the `dataLicense` of the SpdxDocument element in the SPDX 3 element
+/// list. sbomqs' SPDX 3 reader keeps the member's raw value (spdx-zen
+/// v0.1.5 `ParseSpdxDocument`), so an IRI reference such as
+/// `https://spdx.org/licenses/CC0-1.0` stays one custom license there and
+/// here.
+fn spdx_json_data_license(raw: &str) -> Option<String> {
+    let value: serde_json::Value = serde_json::from_str(raw).ok()?;
+    let read = |v: &serde_json::Value| {
+        v.get("dataLicense")
+            .and_then(serde_json::Value::as_str)
+            .map(str::trim)
+            .filter(|l| !l.is_empty())
+            .map(str::to_string)
+    };
+    read(&value).or_else(|| {
+        ["@graph", "element"].iter().find_map(|key| {
+            value
+                .get(*key)
+                .and_then(serde_json::Value::as_array)?
+                .iter()
+                .filter(|e| {
+                    e.get("type").and_then(serde_json::Value::as_str) == Some("SpdxDocument")
+                })
+                .find_map(read)
+        })
+    })
+}
+
+/// One license expression per CycloneDX `metadata.licenses` choice, as
+/// sbomqs `aggregateLicenses` reads it: the choice's expression, else its
+/// license id, else its license name.
+fn cdx_json_metadata_licenses(raw: &str) -> Vec<String> {
+    #[derive(Deserialize)]
+    struct CdxLicense {
+        id: Option<String>,
+        name: Option<String>,
+    }
+    #[derive(Deserialize)]
+    struct CdxLicenseChoice {
+        expression: Option<String>,
+        license: Option<CdxLicense>,
+    }
+    #[derive(Deserialize)]
+    struct CdxMetadata {
+        licenses: Option<Vec<CdxLicenseChoice>>,
+    }
+    #[derive(Deserialize)]
+    struct CdxDoc {
+        metadata: Option<CdxMetadata>,
+    }
+    let non_empty = |s: Option<String>| s.filter(|v| !v.trim().is_empty());
+    serde_json::from_str::<CdxDoc>(raw)
+        .ok()
+        .and_then(|d| d.metadata)
+        .and_then(|m| m.licenses)
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|choice| {
+            non_empty(choice.expression).or_else(|| {
+                choice
+                    .license
+                    .and_then(|l| non_empty(l.id).or_else(|| non_empty(l.name)))
+            })
+        })
+        .collect()
+}
+
+/// The XML counterpart of [`cdx_json_metadata_licenses`]: the
+/// `<bom><metadata><licenses>` children `<license>` (its `<id>`, else its
+/// `<name>`) and `<expression>`. Component licenses
+/// (`<metadata><component><licenses>`) are not document licenses.
+fn cdx_xml_metadata_licenses(raw: &str) -> Vec<String> {
+    use quick_xml::events::Event;
+
+    let mut reader = quick_xml::Reader::from_str(raw);
+    let mut path: Vec<String> = Vec::with_capacity(8);
+    let mut out = Vec::new();
+    let (mut id, mut name) = (None::<String>, None::<String>);
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(e)) => {
+                let local = e.local_name();
+                let local: &str = local.as_ref();
+                path.push(local.to_string());
+                if path == ["bom", "metadata", "licenses", "license"] {
+                    (id, name) = (None, None);
+                }
+            }
+            Ok(Event::Text(t)) => {
+                let text: &str = t.as_ref();
+                let text = text.trim();
+                if text.is_empty() {
+                    continue;
+                }
+                match path.as_slice() {
+                    [bom, metadata, licenses, license, field]
+                        if bom == "bom"
+                            && metadata == "metadata"
+                            && licenses == "licenses"
+                            && license == "license" =>
+                    {
+                        match field.as_str() {
+                            "id" => id = Some(text.to_string()),
+                            "name" => name = Some(text.to_string()),
+                            _ => {}
+                        }
+                    }
+                    [bom, metadata, licenses, expression]
+                        if bom == "bom"
+                            && metadata == "metadata"
+                            && licenses == "licenses"
+                            && expression == "expression" =>
+                    {
+                        out.push(text.to_string());
+                    }
+                    _ => {}
+                }
+            }
+            Ok(Event::End(_)) => {
+                if path == ["bom", "metadata", "licenses", "license"]
+                    && let Some(license) = id.take().or_else(|| name.take())
+                {
+                    out.push(license);
+                }
+                path.pop();
+            }
+            Ok(Event::Eof) | Err(_) => break,
+            Ok(_) => {}
+        }
+    }
+    out
+}
+
 // ---------------------------------------------------------------------------
 // Tool name/version split
 // ---------------------------------------------------------------------------
 
 /// Recover a (name, version) pair from a normalized tool-creator name.
 ///
-/// The CycloneDX parser concatenates `"name version"`; SPDX creators keep
-/// the raw `name-version` string. A trailing token only counts as a version
-/// when it contains a digit — the same heuristic sbomqs applies to SPDX
-/// tool strings (`extractVersion` in pkg/sbom/spdx.go).
-fn split_tool_name_version(raw_name: &str) -> (&str, &str) {
+/// * SPDX (2.x and 3): the creator keeps the raw `name-version` string, and
+///   this is sbomqs' own `extractVersion` (`pkg/sbom/spdx.go`, `spdx3.go`):
+///   the text after the last hyphen is the version when it contains a
+///   digit, the rest is the name; otherwise there is no version.
+/// * CycloneDX: sbomqs reads the tool's separate `name` and `version`
+///   fields, which the parser joins as `"name version"`; the last
+///   space-separated token counts as the version when it contains a digit
+///   (approximate: a version without a digit, or a nameless tool, reads
+///   differently).
+fn split_tool_name_version<'a>(raw_name: &'a str, format: &SbomFormat) -> (&'a str, &'a str) {
     let name = raw_name.trim();
-    if let Some((n, v)) = name.rsplit_once(' ')
-        && v.chars().any(|c| c.is_ascii_digit())
-    {
-        return (n.trim_end(), v);
+    let split = match format {
+        SbomFormat::Spdx => name.rsplit_once('-'),
+        SbomFormat::CycloneDx => name.rsplit_once(' ').map(|(n, v)| (n.trim_end(), v)),
+    };
+    match split {
+        Some((n, v)) if v.chars().any(|c| c.is_ascii_digit()) => (n, v),
+        _ => (name, ""),
     }
-    if let Some((n, v)) = name.rsplit_once('-')
-        && v.chars().any(|c| c.is_ascii_digit())
-    {
-        return (n, v);
-    }
-    (name, "")
 }
 
 /// First Tool creator's (name, version) for the `gen_tool_name` /
@@ -1277,7 +1525,7 @@ fn first_tool_name_version(sbom: &NormalizedSbom) -> (String, String) {
         .map_or_else(
             || (String::new(), String::new()),
             |t| {
-                let (name, version) = split_tool_name_version(&t.name);
+                let (name, version) = split_tool_name_version(&t.name, &sbom.document.format);
                 (name.to_string(), version.to_string())
             },
         )
@@ -1411,8 +1659,12 @@ mod tests {
             score(&scores, "comp_with_version").score,
             10.0 / 3.0
         ));
-        // All 3 carry a local id (bom-ref) — NTIA uniq-ids is local-id, not purl/cpe.
-        assert!(approx(score(&scores, "comp_with_uniq_ids").score, 10.0));
+        // All 3 carry a local id (bom-ref), but only comp1 has a purl or a
+        // CPE: since v2.1.0 NTIA uniq-ids counts purl/CPE, not bom-ref.
+        assert!(approx(
+            score(&scores, "comp_with_uniq_ids").score,
+            10.0 / 3.0
+        ));
         // 1 of 3 has a supplier.
         assert!(approx(
             score(&scores, "comp_with_supplier").score,
@@ -1451,14 +1703,12 @@ mod tests {
     #[test]
     fn valid_licenses_is_ratio_mean_over_all_components() {
         let scores = fixture_scores(Some(CDX_RAW));
-        // comp1 tokens: MIT, MIT, FooBar → 2/3 → 6.666…
+        // comp1: "MIT" → MIT; "MIT OR FooBar" names an id go-spdx does not
+        // know, so the whole value is one custom license → 1/2 → 5.0
         // comp2 tokens: GPL-2.0 (listed) → 10
         // comp3: no licenses → 0
-        // mean over 3 comps: (20/3 + 10 + 0)/3 = 50/9 = 5.555…
-        assert!(approx(
-            score(&scores, "comp_valid_licenses").score,
-            50.0 / 9.0
-        ));
+        // mean over 3 comps: (5 + 10 + 0)/3 = 5.0
+        assert!(approx(score(&scores, "comp_valid_licenses").score, 5.0));
     }
 
     #[test]
@@ -1526,14 +1776,117 @@ mod tests {
     }
 
     #[test]
-    fn sharable_replicates_v2_0_11_no_free_flags_quirk() {
+    fn sharable_scores_ten_for_a_public_domain_document_license() {
         let scores = fixture_scores(Some(CDX_RAW));
         let entry = score(&scores, "sbom_sharable");
-        // Even a CC0-1.0 document license scores 0.0 in sbomqs v2.0.11
-        // (vendored list carries no isFreeAnyUse flags) — not ignored.
-        assert!(approx(entry.score, 0.0));
+        // CC0-1.0 is in AboutCode's Public Domain category, which sbomqs
+        // v2.1.0+ reads as free for any use (v2.0.x scored it 0.0).
+        assert!(approx(entry.score, 10.0));
         assert!(!entry.ignored);
-        assert!(entry.description.contains("free 0 :: of 1"));
+        assert_eq!(
+            entry.description,
+            "doc has a sharable license free 1 :: of 1"
+        );
+    }
+
+    fn sharable_for(raw: &str, format: SbomFormat) -> SbomqsScoreEntry {
+        sharable_check(Some(&extract_raw_facts(raw, &format)))
+    }
+
+    #[test]
+    fn sharable_needs_every_document_license_token_free() {
+        let cdx = |licenses: &str| {
+            format!(
+                r#"{{"bomFormat":"CycloneDX","specVersion":"1.6","version":1,
+                    "metadata":{{"licenses":{licenses}}}}}"#
+            )
+        };
+        // Two entries, one of them not free: 1 of 2.
+        let entry = sharable_for(
+            &cdx(r#"[{"license":{"id":"CC0-1.0"}},{"license":{"id":"MIT"}}]"#),
+            SbomFormat::CycloneDx,
+        );
+        assert!(approx(entry.score, 0.0));
+        assert!(entry.description.ends_with("free 1 :: of 2"));
+        // An expression contributes one token per id.
+        let entry = sharable_for(
+            &cdx(r#"[{"expression":"CC0-1.0 OR Unlicense"}]"#),
+            SbomFormat::CycloneDx,
+        );
+        assert!(approx(entry.score, 10.0));
+        assert!(entry.description.ends_with("free 2 :: of 2"));
+        // A license name is looked up like an id: an AboutCode-only public
+        // domain key is free, anything else is custom.
+        let entry = sharable_for(
+            &cdx(r#"[{"license":{"name":"LicenseRef-scancode-public-domain"}}]"#),
+            SbomFormat::CycloneDx,
+        );
+        assert!(approx(entry.score, 10.0));
+        // No document license at all: 0 of 0 is not sharable.
+        let entry = sharable_for(
+            r#"{"bomFormat":"CycloneDX","specVersion":"1.6","version":1}"#,
+            SbomFormat::CycloneDx,
+        );
+        assert!(approx(entry.score, 0.0));
+        assert!(entry.description.ends_with("free 0 :: of 0"));
+    }
+
+    #[test]
+    fn sharable_reads_spdx_data_license_in_json_and_tag_value() {
+        let json =
+            r#"{"spdxVersion":"SPDX-2.3","SPDXID":"SPDXRef-DOCUMENT","dataLicense":"CC0-1.0"}"#;
+        assert!(approx(sharable_for(json, SbomFormat::Spdx).score, 10.0));
+        let tv = "SPDXVersion: SPDX-2.3\nDataLicense: CC0-1.0\nSPDXID: SPDXRef-DOCUMENT\n";
+        assert!(approx(sharable_for(tv, SbomFormat::Spdx).score, 10.0));
+        // NOASSERTION is no license (LookupExpression returns none).
+        let none =
+            r#"{"spdxVersion":"SPDX-2.3","SPDXID":"SPDXRef-DOCUMENT","dataLicense":"NOASSERTION"}"#;
+        let entry = sharable_for(none, SbomFormat::Spdx);
+        assert!(approx(entry.score, 0.0));
+        assert!(entry.description.ends_with("free 0 :: of 0"));
+    }
+
+    #[test]
+    fn sharable_keeps_an_spdx3_data_license_reference_raw() {
+        // sbomqs' SPDX 3 reader passes the SpdxDocument's dataLicense value
+        // to LookupExpression as is: an IRI is one custom license.
+        let doc = |data_license: &str| {
+            format!(
+                r#"{{"@context":"https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+                    "@graph":[{{"type":"SpdxDocument","spdxId":"urn:doc",
+                    "dataLicense":"{data_license}"}}]}}"#
+            )
+        };
+        let iri = sharable_for(&doc("https://spdx.org/licenses/CC0-1.0"), SbomFormat::Spdx);
+        assert!(approx(iri.score, 0.0));
+        assert!(iri.description.ends_with("free 0 :: of 1"));
+        let id = sharable_for(&doc("CC0-1.0"), SbomFormat::Spdx);
+        assert!(approx(id.score, 10.0));
+    }
+
+    #[test]
+    fn cdx_xml_document_licenses_exclude_component_licenses() {
+        let xml = r#"<?xml version="1.0"?>
+            <bom xmlns="http://cyclonedx.org/schema/bom/1.6" version="1">
+              <metadata>
+                <licenses>
+                  <license><id>CC0-1.0</id></license>
+                  <license><name>Some Name</name></license>
+                  <expression>MIT OR Unlicense</expression>
+                </licenses>
+                <component type="application">
+                  <name>app</name>
+                  <licenses><license><id>GPL-3.0-only</id></license></licenses>
+                </component>
+              </metadata>
+            </bom>"#;
+        assert_eq!(
+            cdx_xml_metadata_licenses(xml),
+            vec!["CC0-1.0", "Some Name", "MIT OR Unlicense"]
+        );
+        let entry = sharable_for(xml, SbomFormat::CycloneDx);
+        assert!(approx(entry.score, 0.0));
+        assert!(entry.description.ends_with("free 2 :: of 4"));
     }
 
     #[test]
@@ -1790,19 +2143,56 @@ mod tests {
         assert!(expression_tokens("NONE").is_empty());
         assert!(expression_tokens("").is_empty());
 
+        // An unknown id makes the whole value one custom license.
         let toks = expression_tokens("MIT OR FooBar");
-        assert_eq!(toks.len(), 2);
-        assert!(toks[0].listed && !toks[1].listed);
+        assert_eq!(toks.len(), 1);
+        assert!(!toks[0].listed);
 
-        // WITH-exception: exception id dropped (documented approximation).
+        let toks = expression_tokens("MIT OR Apache-2.0");
+        assert_eq!(toks.len(), 2);
+        assert!(toks.iter().all(|t| t.listed));
+
+        // A WITH clause is one term, which is no SPDX-listed id.
         let toks = expression_tokens("Apache-2.0 WITH LLVM-exception");
         assert_eq!(toks.len(), 1);
-        assert!(toks[0].listed);
+        assert!(!toks[0].listed);
 
         // Deprecated '+' form stays deprecated.
         let toks = expression_tokens("GPL-2.0+");
         assert_eq!(toks.len(), 1);
         assert!(toks[0].listed && toks[0].deprecated);
+
+        // A non-deprecated id with '+' is looked up in AboutCode under the
+        // bare id: unlisted, but its restrictive flag is the id's.
+        let toks = expression_tokens("EPL-2.0+");
+        assert_eq!(toks.len(), 1);
+        assert!(!toks[0].listed && toks[0].restrictive);
+    }
+
+    #[test]
+    fn restrictive_and_free_flags_follow_sbomqs_v2_1_2() {
+        assert_eq!(license_data::RESTRICTIVE_SPDX.len(), 252);
+        assert_eq!(license_data::FREE_ANY_USE.len(), 43);
+        // Both tables are binary-searched.
+        assert!(license_data::RESTRICTIVE_SPDX.is_sorted());
+        assert!(license_data::FREE_ANY_USE.is_sorted());
+        let flags = |id: &str| {
+            let toks = expression_tokens(id);
+            assert_eq!(toks.len(), 1, "{id}");
+            (toks[0].restrictive, toks[0].free_any_use)
+        };
+        // Copyleft Limited ids the spdx crate's copyleft flag misses.
+        assert_eq!(flags("EPL-2.0"), (true, false));
+        assert_eq!(flags("MPL-2.0"), (true, false));
+        // Non-Commercial is restrictive since v2.1.0.
+        assert_eq!(flags("CC-BY-NC-4.0"), (true, false));
+        assert_eq!(flags("GPL-3.0-only"), (true, false));
+        assert_eq!(flags("MIT"), (false, false));
+        assert_eq!(flags("Apache-2.0"), (false, false));
+        // Public Domain: free for any use.
+        assert_eq!(flags("CC0-1.0"), (false, true));
+        assert_eq!(flags("Unlicense"), (false, true));
+        assert_eq!(flags("LicenseRef-scancode-public-domain"), (false, true));
     }
 
     #[test]
@@ -1828,6 +2218,195 @@ mod tests {
         assert!(approx(score(&scores, "comp_with_version").score, 10.0));
         let report = build_report(&input);
         assert_eq!(report.files[0].num_components, 1);
+    }
+
+    /// An SPDX document of `spec_version` with the given components.
+    fn spdx_sbom(spec_version: &str, comps: Vec<Component>) -> NormalizedSbom {
+        let mut doc = DocumentMetadata::default();
+        doc.format = SbomFormat::Spdx;
+        doc.spec_version = spec_version.to_string();
+        let mut sbom = NormalizedSbom::new(doc);
+        for c in comps {
+            sbom.add_component(c);
+        }
+        sbom
+    }
+
+    fn scores_of(sbom: &NormalizedSbom) -> Vec<SbomqsScoreEntry> {
+        compute_scores(&SbomqsCompatInput {
+            sbom,
+            file_name: "doc",
+            raw_content: None,
+        })
+    }
+
+    #[test]
+    fn uniq_ids_counts_a_purl_or_a_cpe_since_v2_1_0() {
+        let mut purl = Component::new("a".to_string(), "ref-a".to_string());
+        purl.identifiers.purl = Some("pkg:npm/a@1".to_string());
+        let mut cpe = Component::new("b".to_string(), "ref-b".to_string());
+        cpe.identifiers
+            .cpe
+            .push("cpe:2.3:a:x:b:1:*:*:*:*:*:*:*".to_string());
+        let local_only = Component::new("c".to_string(), "ref-c".to_string());
+        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+        sbom.add_component(purl);
+        sbom.add_component(cpe);
+        sbom.add_component(local_only);
+        let scores = scores_of(&sbom);
+        let uniq = score(&scores, "comp_with_uniq_ids");
+        assert!(approx(uniq.score, 20.0 / 3.0));
+        assert_eq!(uniq.description, "2/3 have unique ID's");
+        // The same predicate as the any-lookup-id feature.
+        assert!(approx(
+            score(&scores, "comp_with_any_vuln_lookup_id").score,
+            uniq.score
+        ));
+    }
+
+    #[test]
+    fn spdx_3_0_1_is_a_recognized_spec_version_and_3_0_is_not() {
+        for (version, expected) in [("2.3", 10.0), ("3.0.1", 10.0), ("3.0", 0.0)] {
+            let sbom = spdx_sbom(version, Vec::new());
+            let scores = scores_of(&sbom);
+            assert!(
+                approx(score(&scores, "sbom_spec_version").score, expected),
+                "{version}"
+            );
+        }
+    }
+
+    #[test]
+    fn spdx3_required_fields_take_the_document_half_and_need_suppliers() {
+        let mut supplied = Component::new("a".to_string(), "spdx:a".to_string());
+        supplied.supplier = Some(Organization::new("Acme".to_string()));
+        let mut noassertion = Component::new("b".to_string(), "spdx:b".to_string());
+        noassertion.supplier = Some(Organization::new("NOASSERTION".to_string()));
+        // No name, namespace, creators or timestamp: an SPDX 2.x docOK
+        // would fail, the SPDX 3 reader marks the document half present.
+        let sbom = spdx_sbom("3.0.1", vec![supplied.clone(), noassertion]);
+        let entry = scores_of(&sbom)
+            .into_iter()
+            .find(|s| s.feature == "sbom_required_fields")
+            .unwrap();
+        assert_eq!(entry.description, "Doc Fields:true Pkg Fields:false");
+        assert!(approx(entry.score, (10.0 + 5.0) / 2.0));
+
+        let sbom = spdx_sbom("3.0.1", vec![supplied]);
+        assert!(approx(
+            score(&scores_of(&sbom), "sbom_required_fields").score,
+            10.0
+        ));
+        // The same document as SPDX 2.3 fails the document half.
+        let sbom = spdx_sbom(
+            "2.3",
+            vec![Component::new("a".to_string(), "x".to_string())],
+        );
+        assert!(approx(
+            score(&scores_of(&sbom), "sbom_required_fields").score,
+            0.0
+        ));
+    }
+
+    #[test]
+    fn spdx_licenses_follow_each_reader() {
+        // Concluded MIT, declared GPL-2.0 (deprecated).
+        let mut comp = Component::new("a".to_string(), "spdx:a".to_string());
+        comp.licenses.concluded = Some(LicenseExpression::new("MIT".to_string()));
+        comp.licenses
+            .add_declared(LicenseExpression::new("GPL-2.0".to_string()));
+        // SPDX 2.x reads the concluded license and stops there.
+        let scores = scores_of(&spdx_sbom("2.3", vec![comp.clone()]));
+        assert!(approx(
+            score(&scores, "comp_with_deprecated_licenses").score,
+            10.0
+        ));
+        // Without a concluded license it reads the declared one.
+        let mut declared_only = comp.clone();
+        declared_only.licenses.concluded = None;
+        let scores = scores_of(&spdx_sbom("2.3", vec![declared_only.clone()]));
+        assert!(approx(
+            score(&scores, "comp_with_deprecated_licenses").score,
+            0.0
+        ));
+        // SPDX 3 reads only the concluded licenses.
+        let scores = scores_of(&spdx_sbom("3.0.1", vec![declared_only]));
+        assert!(approx(score(&scores, "comp_with_licenses").score, 0.0));
+        // CycloneDX reads every license.
+        let mut cdx = NormalizedSbom::new(DocumentMetadata::default());
+        cdx.add_component(comp);
+        let scores = scores_of(&cdx);
+        assert!(approx(
+            score(&scores, "comp_with_deprecated_licenses").score,
+            0.0
+        ));
+    }
+
+    #[test]
+    fn spdx3_operating_system_purpose_does_not_count() {
+        let mut os = Component::new("linux".to_string(), "spdx:os".to_string());
+        os.component_type = ComponentType::OperatingSystem;
+        let scores = scores_of(&spdx_sbom("3.0.1", vec![os.clone()]));
+        assert!(approx(
+            score(&scores, "comp_with_primary_purpose").score,
+            0.0
+        ));
+        let scores = scores_of(&spdx_sbom("2.3", vec![os]));
+        assert!(approx(
+            score(&scores, "comp_with_primary_purpose").score,
+            10.0
+        ));
+    }
+
+    #[test]
+    fn tool_versions_split_per_format() {
+        // SPDX: sbomqs extractVersion splits on the last hyphen only.
+        assert_eq!(
+            split_tool_name_version("test-generator-1.0.0", &SbomFormat::Spdx),
+            ("test-generator", "1.0.0")
+        );
+        assert_eq!(
+            split_tool_name_version("syft 1.0", &SbomFormat::Spdx),
+            ("syft 1.0", "")
+        );
+        assert_eq!(
+            split_tool_name_version("cyclonedx-gomod 1.4", &SbomFormat::Spdx),
+            ("cyclonedx", "gomod 1.4")
+        );
+        // CycloneDX: the parser's "name version" join.
+        assert_eq!(
+            split_tool_name_version("syft 1.0", &SbomFormat::CycloneDx),
+            ("syft", "1.0")
+        );
+        assert_eq!(
+            split_tool_name_version("tool-2", &SbomFormat::CycloneDx),
+            ("tool-2", "")
+        );
+    }
+
+    #[test]
+    fn dependencies_count_only_sbomqs_visible_targets() {
+        let primary = Component::new("app".to_string(), "SPDXRef-app".to_string());
+        let mut file = Component::new("a.c".to_string(), "SPDXRef-file".to_string());
+        file.component_type = ComponentType::File;
+        let (p, f) = (primary.canonical_id.clone(), file.canonical_id.clone());
+        let mut sbom = spdx_sbom("2.3", vec![primary, file]);
+        sbom.set_primary_component(p.clone());
+        sbom.add_edge(DependencyEdge::new(p.clone(), f, DependencyType::Contains));
+        // The only edge targets a file, which is not an SBOM component for
+        // sbomqs.
+        assert!(approx(
+            score(&scores_of(&sbom), "sbom_dependencies").score,
+            0.0
+        ));
+        let lib = Component::new("lib".to_string(), "SPDXRef-lib".to_string());
+        let l = lib.canonical_id.clone();
+        sbom.add_component(lib);
+        sbom.add_edge(DependencyEdge::new(p, l, DependencyType::DependsOn));
+        assert!(approx(
+            score(&scores_of(&sbom), "sbom_dependencies").score,
+            10.0
+        ));
     }
 
     #[test]

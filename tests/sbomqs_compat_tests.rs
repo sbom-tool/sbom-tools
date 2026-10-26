@@ -1,16 +1,28 @@
 //! CLI-level and cross-format tests for the sbomqs interoperability view
 //! (`quality -o sbomqs-json` and the sbomqs table in the human summary).
 //!
-//! Parity target: interlynk-io/sbomqs v2.0.11 — the JSON must match the
-//! `sbomqs score --json` schema (pkg/reporter/json.go) field-for-field, the
-//! category strings must match pkg/scorer/criteria.go byte-for-byte, and
-//! `avg_score` must obey the verbatim `AvgScore` formula
+//! Parity target: interlynk-io/sbomqs v2.1.2 — the JSON must match the
+//! `sbomqs score --legacy --json` schema (pkg/reporter/json.go)
+//! field-for-field, the category strings must match pkg/scorer/criteria.go
+//! byte-for-byte, and `avg_score` must obey the verbatim `AvgScore` formula
 //! (sum of non-ignored scores / count of ALL scores, ignored included).
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
+use sbom_tools::reports::sbomqs_compat::SBOMQS_PARITY_TARGET;
+
 const FIXTURES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
+
+/// The sbomqs release the compat view is pinned to. Moving the pin means
+/// re-verifying every formula against that release's sources and updating
+/// `docs/STANDARDS_VERSIONS.md`.
+const PINNED_SBOMQS: &str = "v2.1.2";
+
+#[test]
+fn compat_view_is_pinned_to_sbomqs_v2_1_2() {
+    assert_eq!(SBOMQS_PARITY_TARGET, PINNED_SBOMQS);
+}
 
 fn fixture_path(name: &str) -> PathBuf {
     Path::new(FIXTURES_DIR).join(name)
@@ -70,6 +82,14 @@ fn cli_quality_sbomqs_json_matches_sbomqs_score_report_schema() {
             .as_str()
             .is_some_and(|v| v.contains("sbomqs-compat")),
         "scoring_engine_version must carry the compat tag"
+    );
+    // The pinned sbomqs release is printed with the scores.
+    assert!(
+        ci["scoring_engine_version"]
+            .as_str()
+            .is_some_and(|v| v.contains(&format!("parity target sbomqs {PINNED_SBOMQS} engine 7"))),
+        "scoring_engine_version must name the pinned sbomqs release: {}",
+        ci["scoring_engine_version"]
     );
 
     // Per-file block (pkg/reporter/json.go file).
@@ -156,7 +176,7 @@ fn cli_quality_sbomqs_json_spdx_document() {
     // hyphen-with-digit, mirroring sbomqs' extractVersion heuristic.
     assert_eq!(file["gen_tool_name"], "test-generator");
     assert_eq!(file["gen_tool_version"], "1.0.0");
-    // Both packages carry name/version/SPDXID → exact 10s.
+    // Both packages carry name/version and a purl → exact 10s.
     let scores = file["scores"].as_array().expect("scores array");
     let get = |feature: &str| {
         scores
@@ -166,13 +186,52 @@ fn cli_quality_sbomqs_json_spdx_document() {
     };
     assert_eq!(get("comp_with_name")["score"], 10.0);
     assert_eq!(get("comp_with_version")["score"], 10.0);
+    // Since sbomqs v2.1.0 NTIA uniq-ids counts a purl or a CPE.
     assert_eq!(get("comp_with_uniq_ids")["score"], 10.0);
-    // sbomqs v2.0.11 quirk replicated: even a CC0-1.0 dataLicense scores
-    // 0.0 on sbom_sharable (vendored list has no isFreeAnyUse flags) — a
-    // real 0.0, not an ignored entry, because the raw document is available.
+    assert_eq!(
+        get("comp_with_uniq_ids")["description"],
+        "2/2 have unique ID's"
+    );
+    // sbomqs v2.1.0+ reads CC0-1.0, the dataLicense SPDX mandates, as free
+    // for any use (AboutCode "Public Domain"), so the document is sharable.
     let sharable = get("sbom_sharable");
-    assert_eq!(sharable["score"], 0.0);
+    assert_eq!(sharable["score"], 10.0);
     assert_eq!(sharable["ignored"], false);
+    assert_eq!(
+        sharable["description"],
+        "doc has a sharable license free 1 :: of 1"
+    );
+}
+
+#[test]
+fn cli_quality_sbomqs_json_uniq_ids_needs_a_purl_or_cpe() {
+    // Every component of cyclonedx/minimal carries a bom-ref, and two of
+    // the three a purl. sbomqs v2.0.x counted the bom-refs (10.0); v2.1.x
+    // counts purl/CPE only.
+    let output = base_command()
+        .arg("quality")
+        .arg(fixture_path("cyclonedx/minimal.cdx.json"))
+        .args(["-o", "sbomqs-json"])
+        .output()
+        .expect("quality command should run");
+    assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));
+    let value = json_stdout(&output);
+    let scores = value["files"][0]["scores"].as_array().expect("scores");
+    let get = |feature: &str| {
+        scores
+            .iter()
+            .find(|s| s["feature"] == feature)
+            .unwrap_or_else(|| panic!("missing feature {feature}"))
+    };
+    assert_eq!(
+        get("comp_with_uniq_ids")["description"],
+        "2/3 have unique ID's"
+    );
+    assert_eq!(
+        get("comp_with_uniq_ids")["score"],
+        get("comp_with_any_vuln_lookup_id")["score"],
+        "uniq-ids and any-lookup-id share one predicate since sbomqs v2.1.0"
+    );
 }
 
 #[test]
@@ -189,6 +248,10 @@ fn cli_quality_summary_appends_sbomqs_table() {
     assert!(
         stdout.contains("sbomqs-Comparable Scores"),
         "summary must contain the sbomqs table:\n{stdout}"
+    );
+    assert!(
+        stdout.contains(&format!("(sbomqs {PINNED_SBOMQS} score model, 0-10)")),
+        "the sbomqs table must name the pinned sbomqs release:\n{stdout}"
     );
     for category in SBOMQS_CATEGORIES {
         assert!(
@@ -212,5 +275,12 @@ fn cli_quality_help_documents_sbomqs_json_format() {
     assert!(
         help.contains("sbomqs-json"),
         "quality --help must document the sbomqs-json format:\n{help}"
+    );
+    // The help names the pinned release (a hand-written string, so this
+    // catches a pin moved without the help).
+    let flattened = help.split_whitespace().collect::<Vec<_>>().join(" ");
+    assert!(
+        flattened.contains(&format!("sbomqs {PINNED_SBOMQS} `score --legacy --json`")),
+        "quality --help must name the pinned sbomqs release:\n{help}"
     );
 }
