@@ -77,21 +77,23 @@ fn ssdf_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             }),
             base(),
         ),
-        // PS.1 has two sites sharing the rule id: creator-less SBOM (Error)
-        // and missing tool creator (Warning).
+        // PS.1 has two checks sharing the SARIF rule: a creator-less SBOM
+        // (Error, this row) and a missing tool creator (SBOM-SSDF-PS1-TOOL,
+        // per-key row below; a creator-less SBOM draws both).
         RuleEntry::tested(
             "SBOM-SSDF-PS1",
             Sev::Error,
             broken(|s| s.tools.clear()),
             base(),
-        )
-        .with_departing_firing(
-            "creators present but no generation tool",
+        ),
+        RuleEntry::key_tested(
+            "SBOM-SSDF-PS1-TOOL",
             Sev::Warning,
             broken(|s| {
                 s.tools.clear();
                 s.authors = vec![("Dana Author".to_string(), None)];
             }),
+            base(),
         ),
         // PS.2: >50% of components without hashes is an Error; at or below
         // the threshold it relaxes to Warning.
