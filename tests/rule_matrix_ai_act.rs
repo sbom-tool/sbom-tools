@@ -106,6 +106,27 @@ fn strip_description(s: &mut SbomFixture) {
     card.model_architecture = None;
 }
 
+/// Declare the training data the nested way instead of through
+/// `modelParameters.datasets`: the dataset component moves under the model
+/// (`components[]`, which the parser links with a `contains` edge), keeping
+/// its `data[]` evidence when `with_evidence`.
+fn nest_dataset_under_model(s: &mut SbomFixture, with_evidence: bool) {
+    let at = s
+        .components
+        .iter()
+        .position(|c| c.name == "reviews")
+        .expect("base() lists the reviews dataset");
+    let mut dataset = s.components.remove(at);
+    if !with_evidence {
+        dataset.dataset = None;
+    }
+    s.dependencies
+        .retain(|(from, _)| from != "ref-sentiment-bert");
+    let m = model(s);
+    m.model_card_mut().datasets.clear();
+    m.children.push(dataset);
+}
+
 /// A HuggingFace-hosted model typed `library` with no model card: ML content
 /// the profile must not lose.
 fn untyped_hf_model() -> ComponentFixture {
@@ -244,13 +265,18 @@ fn ai_act_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 high_risk(s);
             }),
         )
-        .with_skipped_case(
-            "dataset component with data[] evidence nested under the model (silent)",
-            "bug: check_ai_act_training_data reads only \
-             ml_model.training_datasets and ignores the nested-dataset shape \
-             ai_shared::declares_training_datasets accepts, so an AI-BOM whose \
-             model nests its dataset fails Annex IV §2(d) here while \
-             SBOM-BSIAI-MODEL-DATASETS and quality check AI-003 pass it",
+        // The nested shape ai_shared::declares_training_datasets accepts (as
+        // do SBOM-BSIAI-MODEL-DATASETS and quality check AI-003): a dataset
+        // component with data[] evidence nested under the model. A bare
+        // nested `type: data` component is no dataset evidence.
+        .with_silent(
+            "dataset component with data[] evidence nested under the model",
+            broken(|s| nest_dataset_under_model(s, true)),
+        )
+        .with_firing(
+            "nested type: data component without data[] evidence",
+            Sev::Warning,
+            broken(|s| nest_dataset_under_model(s, false)),
         ),
         RuleEntry::key_tested(
             "SBOM-AIACT-ANNEX-IV-2D-SENSITIVITY",

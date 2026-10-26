@@ -305,7 +305,7 @@ fn module_attestation_skipped_at_default_class() {
     assert!(
         !res.violations
             .iter()
-            .any(|v| v.requirement.contains("attestation reference")),
+            .any(|v| v.rule_id == "SBOM-CRA-ANNEX-VIII"),
         "Module attestation check should be skipped at Default"
     );
 }
@@ -325,7 +325,7 @@ fn module_attestation_skipped_for_module_a_route() {
     assert!(
         !res.violations
             .iter()
-            .any(|v| v.requirement.contains("attestation reference")),
+            .any(|v| v.rule_id == "SBOM-CRA-ANNEX-VIII"),
         "Module attestation check should be skipped on Module A route"
     );
 }
@@ -344,7 +344,7 @@ fn module_attestation_fires_warning_at_important_1_module_bc() {
     let v = res
         .violations
         .iter()
-        .find(|v| v.requirement.contains("attestation reference"))
+        .find(|v| v.rule_id == "SBOM-CRA-ANNEX-VIII")
         .expect("Module attestation violation expected");
     assert_eq!(v.severity, ViolationSeverity::Warning);
 }
@@ -359,7 +359,7 @@ fn module_attestation_fires_error_at_critical_with_default_route() {
     let v = res
         .violations
         .iter()
-        .find(|v| v.requirement.contains("attestation reference"))
+        .find(|v| v.rule_id == "SBOM-CRA-ANNEX-VIII")
         .expect("Module attestation violation expected");
     assert_eq!(v.severity, ViolationSeverity::Error);
 }

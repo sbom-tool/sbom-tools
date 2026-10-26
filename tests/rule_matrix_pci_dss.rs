@@ -215,6 +215,17 @@ fn pci_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 }
             }),
             base(),
+        )
+        .with_silent(
+            "vulnerability-assertion (VDR) reference as the only hook",
+            broken(|s| {
+                if let Some(primary) = &mut s.primary {
+                    primary.external_refs = vec![(
+                        "vulnerability-assertion".to_string(),
+                        "https://acme.example/security/vdr.json".to_string(),
+                    )];
+                }
+            }),
         ),
         // An embedded entry whose only rating severity is "unknown" (and no
         // CVSS score) is unranked; a "medium" entry is ranked and must stay

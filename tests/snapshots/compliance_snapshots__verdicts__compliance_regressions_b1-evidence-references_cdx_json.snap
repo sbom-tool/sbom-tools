@@ -1,0 +1,105 @@
+---
+source: tests/compliance_snapshots.rs
+---
+fixture: compliance/regressions/b1-evidence-references.cdx.json
+as_of: 2026-10-12T00:00:00Z
+
+[Minimum] compliant · E0 W0 I2
+  I SBOM-QUALITY-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-QUALITY-GENERAL  pkg:npm/libfoo@2.1.0
+[Standard] compliant · E0 W0 I2
+  I SBOM-QUALITY-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-QUALITY-GENERAL  pkg:npm/libfoo@2.1.0
+[NtiaMinimum] compliant · E0 W0 I2
+  I SBOM-NTIA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-NTIA-GENERAL  pkg:npm/libfoo@2.1.0
+[CraPhase1] compliant · E0 W4 I4
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-CRA-GENERAL  pkg:npm/libfoo@2.1.0
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-14  - ×3
+[CraPhase2] compliant · E0 W5 I5
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-CRA-GENERAL  pkg:npm/libfoo@2.1.0
+  I SBOM-CRA-LIFECYCLE  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-CVD-POLICY  -
+[FdaMedicalDevice] compliant · E0 W1 I2
+  I SBOM-FDA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-FDA-GENERAL  pkg:npm/libfoo@2.1.0
+  W SBOM-FDA-SUPPORT  -
+[NistSsdf] compliant · E0 W1 I0
+  W SBOM-SSDF-PO1  -
+[Eo14028] compliant · E0 W1 I0
+  W SBOM-EO14028-DISCLOSURE  -
+[Cnsa2] NON-COMPLIANT · E1 W0 I0
+  E SBOM-CNSA2-000  -
+[NistPqc] NON-COMPLIANT · E1 W0 I0
+  E SBOM-PQC-000  -
+[BsiTr03183_2] NON-COMPLIANT · E1 W1 I0
+  E SBOM-BSI-TR-03183-2-5-4  - (2/2)
+  W SBOM-BSI-TR-03183-2-5-5-COMPLETENESS  -
+[CraOssSteward] compliant · E0 W1 I2
+  I SBOM-CRA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-CRA-GENERAL  pkg:npm/libfoo@2.1.0
+  W SBOM-CRA-CVD-POLICY  -
+[EuccSubstantial] NON-COMPLIANT · E4 W0 I0
+  E SBOM-EUCC-ITSEF  -
+  E SBOM-EUCC-PP  -
+  E SBOM-EUCC-TOE  -
+  E SBOM-EUCC-VALIDITY  -
+[EuAiAct] not applicable · E0 W0 I1
+  I SBOM-AIACT-NA  -
+[BsiSbomForAi] not applicable · E0 W0 I1
+  I SBOM-BSIAI-NA  -
+[Cisa2026] compliant · E0 W3 I0
+  W SBOM-CISA2026-COVERAGE  -
+  W SBOM-CISA2026-GENERATION-CONTEXT  -
+  W SBOM-CISA2026-SIGNATURE  -
+[PciDss632] compliant · E0 W0 I1
+  I SBOM-PCI-6-3-2-COMPLETENESS  -
+[Fsct] NON-COMPLIANT · E1 W3 I3
+  E SBOM-FSCT-COPYRIGHT-PRIMARY  pkg:generic/example/gateway@3.1.0
+  I SBOM-FSCT-COPYRIGHT-ALL  - (2/2)
+  I SBOM-FSCT-SBOM-TYPE  -
+  I SBOM-FSCT-SIGNATURE  -
+  W SBOM-FSCT-COMPLETENESS  -
+  W SBOM-FSCT-COPYRIGHT-COVERAGE  - (0/2)
+  W SBOM-FSCT-IDENTIFIER-MULTI  - (2/2)
+[Comprehensive] compliant · E0 W0 I2
+  I SBOM-QUALITY-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-QUALITY-GENERAL  pkg:npm/libfoo@2.1.0
+
+with auto-discovered CRA sidecar:
+[CraPhase1 + sidecar] NON-COMPLIANT · E3 W1 I4
+  E SBOM-CRA-ART-14  - ×3
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-CRA-GENERAL  pkg:npm/libfoo@2.1.0
+  W SBOM-CRA-ART-13-17-CONTACT  -
+[CraPhase2 + sidecar] NON-COMPLIANT · E3 W2 I5
+  E SBOM-CRA-ART-14  - ×3
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-CRA-GENERAL  pkg:npm/libfoo@2.1.0
+  I SBOM-CRA-LIFECYCLE  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-CVD-POLICY  -
+[CraOssSteward + sidecar] compliant · E0 W1 I2
+  I SBOM-CRA-GENERAL  pkg:generic/example/gateway@3.1.0
+  I SBOM-CRA-GENERAL  pkg:npm/libfoo@2.1.0
+  W SBOM-CRA-CVD-POLICY  -
+[EuccSubstantial + sidecar] NON-COMPLIANT · E4 W0 I0
+  E SBOM-EUCC-ITSEF  -
+  E SBOM-EUCC-PP  -
+  E SBOM-EUCC-TOE  -
+  E SBOM-EUCC-VALIDITY  -
+[EuAiAct + sidecar] not applicable · E0 W0 I1
+  I SBOM-AIACT-NA  -

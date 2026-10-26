@@ -1,0 +1,61 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:7c9e1a3b-5d7f-4b2d-9e1f-3a5c7e9b1d3f",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T00:00:00Z",
+    "component": {
+      "type": "application",
+      "bom-ref": "gateway",
+      "name": "gateway",
+      "version": "3.1.0",
+      "purl": "pkg:generic/example/gateway@3.1.0",
+      "supplier": {
+        "name": "Example Corp"
+      }
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "libfoo",
+      "name": "libfoo",
+      "version": "2.1.0",
+      "supplier": {
+        "name": "Foo Maintainers"
+      },
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1f2e3d4c5b6a79881f2e3d4c5b6a79881f2e3d4c5b6a79881f2e3d4c5b6a7988"
+        }
+      ]
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "kex-hybrid",
+      "name": "X25519MLKEM768",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "combiner",
+          "algorithmFamily": "X25519MLKEM768",
+          "nistQuantumSecurityLevel": 3
+        }
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "gateway",
+      "dependsOn": [
+        "libfoo"
+      ]
+    },
+    {
+      "ref": "libfoo",
+      "dependsOn": []
+    }
+  ]
+}

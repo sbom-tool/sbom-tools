@@ -1,0 +1,140 @@
+---
+source: tests/compliance_snapshots.rs
+---
+fixture: compliance/regressions/i3-expired-eucc-certificate.cdx.json
+as_of: 2026-10-12T00:00:00Z
+
+[Minimum] compliant · E0 W0 I1
+  I SBOM-QUALITY-GENERAL  pkg:generic/example/hsm@5.0.0
+[Standard] compliant · E0 W1 I1
+  I SBOM-QUALITY-GENERAL  pkg:generic/example/hsm@5.0.0
+  W SBOM-QUALITY-GENERAL  pkg:generic/example/hsm@5.0.0
+[NtiaMinimum] compliant · E0 W0 I1
+  I SBOM-NTIA-GENERAL  pkg:generic/example/hsm@5.0.0
+[CraPhase1] compliant · E0 W6 I5
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/hsm@5.0.0
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-GENERAL  pkg:generic/example/hsm@5.0.0
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-13-5  - (1/1)
+  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
+[CraPhase2] NON-COMPLIANT · E1 W7 I7
+  E SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/hsm@5.0.0
+  I SBOM-CRA-ANNEX-V  -
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-GENERAL  pkg:generic/example/hsm@5.0.0
+  I SBOM-CRA-LIFECYCLE  -
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-13-2  -
+  W SBOM-CRA-ART-13-5  - (1/1)
+  W SBOM-CRA-ART-14  - ×3
+  W SBOM-CRA-CVD-POLICY  -
+[FdaMedicalDevice] NON-COMPLIANT · E1 W2 I1
+  E SBOM-FDA-HASH  pkg:generic/example/hsm@5.0.0
+  I SBOM-FDA-GENERAL  pkg:generic/example/hsm@5.0.0
+  W SBOM-FDA-SUPPORT  - ×2
+[NistSsdf] NON-COMPLIANT · E1 W1 I2
+  E SBOM-SSDF-PS2  - (1/1)
+  I SBOM-SSDF-PO3  -
+  I SBOM-SSDF-PW6  -
+  W SBOM-SSDF-PO1  -
+[Eo14028] compliant · E0 W2 I0
+  W SBOM-EO14028-DISCLOSURE  -
+  W SBOM-EO14028-INTEGRITY  - (1/1)
+[Cnsa2] NON-COMPLIANT · E1 W0 I0
+  E SBOM-CNSA2-000  -
+[NistPqc] NON-COMPLIANT · E1 W0 I0
+  E SBOM-PQC-000  -
+[BsiTr03183_2] NON-COMPLIANT · E1 W3 I0
+  E SBOM-BSI-TR-03183-2-LICENSE  - (1/1)
+  W SBOM-BSI-TR-03183-2-5-1-CONTACT  -
+  W SBOM-BSI-TR-03183-2-5-4-MISSING  - (1/1)
+  W SBOM-BSI-TR-03183-2-5-5-COMPLETENESS  -
+[CraOssSteward] NON-COMPLIANT · E1 W1 I2
+  E SBOM-CRA-ART-24  -
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/hsm@5.0.0
+  I SBOM-CRA-GENERAL  pkg:generic/example/hsm@5.0.0
+  W SBOM-CRA-CVD-POLICY  -
+[EuccSubstantial] NON-COMPLIANT · E4 W1 I0
+  E SBOM-EUCC-ITSEF  -
+  E SBOM-EUCC-PP  -
+  E SBOM-EUCC-TOE  -
+  E SBOM-EUCC-VALIDITY  -
+  W SBOM-EUCC-CERTREF  -
+[EuAiAct] not applicable · E0 W0 I1
+  I SBOM-AIACT-NA  -
+[BsiSbomForAi] not applicable · E0 W0 I1
+  I SBOM-BSIAI-NA  -
+[Cisa2026] NON-COMPLIANT · E2 W3 I0
+  E SBOM-CISA2026-HASH  pkg:generic/example/hsm@5.0.0
+  E SBOM-CISA2026-LICENSE  pkg:generic/example/hsm@5.0.0
+  W SBOM-CISA2026-COVERAGE  -
+  W SBOM-CISA2026-GENERATION-CONTEXT  -
+  W SBOM-CISA2026-SIGNATURE  -
+[PciDss632] compliant · E0 W1 I2
+  I SBOM-PCI-6-3-2-COMPLETENESS  -
+  I SBOM-PCI-6-3-2-VULN-EVIDENCE  -
+  W SBOM-PCI-6-3-2-THIRD-PARTY  -
+[Fsct] NON-COMPLIANT · E4 W5 I4
+  E SBOM-FSCT-COPYRIGHT-PRIMARY  pkg:generic/example/hsm@5.0.0
+  E SBOM-FSCT-DIRECT-DEPS  -
+  E SBOM-FSCT-HASH  - (1/1)
+  E SBOM-FSCT-LICENSE-PRIMARY  pkg:generic/example/hsm@5.0.0
+  I SBOM-FSCT-COPYRIGHT-ALL  - (1/1)
+  I SBOM-FSCT-LICENSE-ALL  - (1/1)
+  I SBOM-FSCT-SBOM-TYPE  -
+  I SBOM-FSCT-SIGNATURE  -
+  W SBOM-FSCT-COMPLETENESS  -
+  W SBOM-FSCT-COPYRIGHT-COVERAGE  - (0/1)
+  W SBOM-FSCT-HASH-PRIMARY-SHA2  pkg:generic/example/hsm@5.0.0
+  W SBOM-FSCT-IDENTIFIER-MULTI  - (1/1)
+  W SBOM-FSCT-LICENSE-COVERAGE  - (0/1)
+[Comprehensive] compliant · E0 W2 I1
+  I SBOM-QUALITY-GENERAL  pkg:generic/example/hsm@5.0.0
+  W SBOM-QUALITY-GENERAL  pkg:generic/example/hsm@5.0.0 ×2
+
+with auto-discovered CRA sidecar:
+[CraPhase1 + sidecar] NON-COMPLIANT · E6 W2 I5
+  E SBOM-CRA-ANNEX-IV  -
+  E SBOM-CRA-ANNEX-VIII  -
+  E SBOM-CRA-ART-14  - ×3
+  E SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/hsm@5.0.0
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-GENERAL  pkg:generic/example/hsm@5.0.0
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-13-5  - (1/1)
+[CraPhase2 + sidecar] NON-COMPLIANT · E7 W4 I6
+  E SBOM-CRA-ANNEX-IV  -
+  E SBOM-CRA-ANNEX-V  -
+  E SBOM-CRA-ANNEX-VIII  -
+  E SBOM-CRA-ART-14  - ×3
+  E SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/hsm@5.0.0
+  I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-ART-14  -
+  I SBOM-CRA-GENERAL  pkg:generic/example/hsm@5.0.0
+  I SBOM-CRA-LIFECYCLE  -
+  I SBOM-CRA-VULN-STATEMENT  -
+  W SBOM-CRA-ART-13-17-CONTACT  -
+  W SBOM-CRA-ART-13-2  -
+  W SBOM-CRA-ART-13-5  - (1/1)
+  W SBOM-CRA-CVD-POLICY  -
+[CraOssSteward + sidecar] NON-COMPLIANT · E1 W1 I2
+  E SBOM-CRA-ART-24  -
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/hsm@5.0.0
+  I SBOM-CRA-GENERAL  pkg:generic/example/hsm@5.0.0
+  W SBOM-CRA-CVD-POLICY  -
+[EuccSubstantial + sidecar] NON-COMPLIANT · E1 W1 I0
+  E SBOM-EUCC-VALIDITY  -
+  W SBOM-EUCC-CERTREF  -
+[EuAiAct + sidecar] not applicable · E0 W0 I1
+  I SBOM-AIACT-NA  -

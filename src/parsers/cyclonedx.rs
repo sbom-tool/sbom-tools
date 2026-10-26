@@ -650,40 +650,16 @@ impl CycloneDxParser {
         }
 
         // Set hashes
-        if let Some(hashes) = &cdx.hashes {
-            for h in hashes {
-                let algorithm = match h.alg.to_uppercase().as_str() {
-                    "MD5" => HashAlgorithm::Md5,
-                    "SHA-1" => HashAlgorithm::Sha1,
-                    "SHA-256" => HashAlgorithm::Sha256,
-                    "SHA-384" => HashAlgorithm::Sha384,
-                    "SHA-512" => HashAlgorithm::Sha512,
-                    "SHA3-256" => HashAlgorithm::Sha3_256,
-                    "SHA3-384" => HashAlgorithm::Sha3_384,
-                    "SHA3-512" => HashAlgorithm::Sha3_512,
-                    "BLAKE2B-256" => HashAlgorithm::Blake2b256,
-                    "BLAKE2B-384" => HashAlgorithm::Blake2b384,
-                    "BLAKE2B-512" => HashAlgorithm::Blake2b512,
-                    "BLAKE3" => HashAlgorithm::Blake3,
-                    "STREEBOG-256" => HashAlgorithm::Streebog256,
-                    "STREEBOG-512" => HashAlgorithm::Streebog512,
-                    other => HashAlgorithm::Other(other.to_string()),
-                };
-                comp.hashes.push(Hash::new(algorithm, h.content.clone()));
-            }
-        }
+        comp.hashes
+            .extend(convert_cdx_hashes(cdx.hashes.as_deref()));
 
         // Set external references
-        if let Some(ext_refs) = &cdx.external_references {
-            for ext_ref in ext_refs {
-                comp.external_refs.push(ExternalReference {
-                    ref_type: map_cdx_external_ref_type(&ext_ref.ref_type),
-                    url: ext_ref.url.clone(),
-                    comment: ext_ref.comment.clone(),
-                    hashes: Vec::new(),
-                });
-            }
-        }
+        comp.external_refs.extend(
+            cdx.external_references
+                .iter()
+                .flatten()
+                .map(convert_cdx_external_reference),
+        );
 
         // Set properties as extensions. Both fields are optional in the
         // schema: value-less properties keep their name; name-less ones
@@ -1294,16 +1270,12 @@ impl CycloneDxParser {
                 hashes: Vec::new(),
             });
         }
-        if let Some(ext_refs) = &svc.external_references {
-            for ext_ref in ext_refs {
-                comp.external_refs.push(ExternalReference {
-                    ref_type: map_cdx_external_ref_type(&ext_ref.ref_type),
-                    url: ext_ref.url.clone(),
-                    comment: ext_ref.comment.clone(),
-                    hashes: Vec::new(),
-                });
-            }
-        }
+        comp.external_refs.extend(
+            svc.external_references
+                .iter()
+                .flatten()
+                .map(convert_cdx_external_reference),
+        );
         if let Some(props) = &svc.properties {
             for prop in props {
                 let Some(name) = prop.name.clone() else {
@@ -1434,14 +1406,8 @@ impl CycloneDxParser {
             vuln_ref.cwes = cwes.iter().map(|c| format!("CWE-{c}")).collect();
         }
 
-        // Parse remediation
-        if let Some(recommendation) = &vuln.recommendation {
-            vuln_ref.remediation = Some(Remediation {
-                remediation_type: RemediationType::Upgrade,
-                description: Some(recommendation.clone()),
-                fixed_version: None,
-            });
-        }
+        // Parse remediation (see `cdx_remediation`)
+        vuln_ref.remediation = cdx_remediation(vuln);
 
         // Parse analysis (VEX)
         let vex_status = vuln.analysis.as_ref().map(|analysis| {
@@ -1590,28 +1556,184 @@ fn xml_depth_within_limit(content: &str) -> Result<(), ParseError> {
     }
 }
 
+/// Convert CycloneDX `hashes[]` entries (`{alg, content}`) to the model.
+/// Shared by components and external references, JSON and XML alike.
+fn convert_cdx_hashes(hashes: Option<&[CdxHash]>) -> Vec<Hash> {
+    hashes
+        .unwrap_or_default()
+        .iter()
+        .map(|h| {
+            let algorithm = match h.alg.to_uppercase().as_str() {
+                "MD5" => HashAlgorithm::Md5,
+                "SHA-1" => HashAlgorithm::Sha1,
+                "SHA-256" => HashAlgorithm::Sha256,
+                "SHA-384" => HashAlgorithm::Sha384,
+                "SHA-512" => HashAlgorithm::Sha512,
+                "SHA3-256" => HashAlgorithm::Sha3_256,
+                "SHA3-384" => HashAlgorithm::Sha3_384,
+                "SHA3-512" => HashAlgorithm::Sha3_512,
+                "BLAKE2B-256" => HashAlgorithm::Blake2b256,
+                "BLAKE2B-384" => HashAlgorithm::Blake2b384,
+                "BLAKE2B-512" => HashAlgorithm::Blake2b512,
+                "BLAKE3" => HashAlgorithm::Blake3,
+                "STREEBOG-256" => HashAlgorithm::Streebog256,
+                "STREEBOG-512" => HashAlgorithm::Streebog512,
+                other => HashAlgorithm::Other(other.to_string()),
+            };
+            Hash::new(algorithm, h.content.clone())
+        })
+        .collect()
+}
+
+/// Convert one CycloneDX `externalReferences[]` entry: its type, URL and
+/// comment, and the hashes of the referenced content
+/// (`externalReference.hashes`, in every schema version from 1.4 to 1.7),
+/// which the CRA document-integrity check reads on attestation and
+/// certification references.
+fn convert_cdx_external_reference(r: &CdxExternalReference) -> ExternalReference {
+    ExternalReference {
+        ref_type: map_cdx_external_ref_type(&r.ref_type),
+        url: r.url.clone(),
+        comment: r.comment.clone(),
+        hashes: convert_cdx_hashes(r.hashes.as_deref()),
+    }
+}
+
 /// Map a CycloneDX external-reference type string to the normalized enum.
-/// Shared by the component and service conversion paths.
+/// Shared by every conversion path that reads `externalReferences` —
+/// components, services and CDXA declarations, JSON and XML alike.
+///
+/// The vocabulary is the `externalReference.type` enum of the CycloneDX
+/// schemas (`definitions.externalReference.properties.type` in
+/// bom-1.4…1.7.schema.json, `externalReferenceType` in the XSDs). 1.4 has
+/// 16 values; 1.5 adds `distribution-intake`, `security-contact`,
+/// `model-card` and the assurance-evidence types from `log` to `poam`; 1.6
+/// adds `source-distribution`, `electronic-signature`, `digital-signature`
+/// and `rfc-9116`; 1.7 adds `patent`, `patent-family`, `patent-assertion`
+/// and `citation`.
+///
+/// Every value with a model variant maps to it, and the variant displays as
+/// that same value, so a CycloneDX document round-trips through the model.
+/// The rest stay `Other`, verbatim: `source-distribution` (the model's
+/// `SourceDistribution` is CycloneDX `distribution`, which is also how the
+/// SPDX 2.x parser stores a download location), `poam`,
+/// `electronic-signature`, `digital-signature`, `rfc-9116`, `other`, and any
+/// unlisted string.
+///
+/// Until v0.4.0 only 16 values were mapped. Among the ones that were not,
+/// `attestation`, `certification-report`, `risk-assessment`,
+/// `vulnerability-assertion`, `exploitability-statement` and `build-system`
+/// are what the CRA, EUCC, SSDF and PCI DSS checks look for, so no CycloneDX
+/// document could satisfy those checks through its external references.
 fn map_cdx_external_ref_type(ref_type: &str) -> ExternalRefType {
     match ref_type {
+        // CycloneDX 1.4
         "vcs" => ExternalRefType::Vcs,
         "issue-tracker" => ExternalRefType::IssueTracker,
         "website" => ExternalRefType::Website,
         "advisories" => ExternalRefType::Advisories,
         "bom" => ExternalRefType::Bom,
-        "model-card" => ExternalRefType::ModelCard,
+        "mailing-list" => ExternalRefType::MailingList,
+        "social" => ExternalRefType::Social,
+        "chat" => ExternalRefType::Chat,
         "documentation" => ExternalRefType::Documentation,
         "support" => ExternalRefType::Support,
-        "security-contact" => ExternalRefType::SecurityContact,
+        "distribution" => ExternalRefType::SourceDistribution,
         "license" => ExternalRefType::License,
         "build-meta" => ExternalRefType::BuildMeta,
+        "build-system" => ExternalRefType::BuildSystem,
         "release-notes" => ExternalRefType::ReleaseNotes,
-        "citation" => ExternalRefType::Citation,
+        // CycloneDX 1.5
+        "distribution-intake" => ExternalRefType::BinaryDistribution,
+        "security-contact" => ExternalRefType::SecurityContact,
+        "model-card" => ExternalRefType::ModelCard,
+        "log" => ExternalRefType::Log,
+        "configuration" => ExternalRefType::Configuration,
+        "evidence" => ExternalRefType::Evidence,
+        "formulation" => ExternalRefType::Formulation,
+        "attestation" => ExternalRefType::Attestation,
+        "threat-model" => ExternalRefType::ThreatModel,
+        "adversary-model" => ExternalRefType::AdversaryModel,
+        "risk-assessment" => ExternalRefType::RiskAssessment,
+        "vulnerability-assertion" => ExternalRefType::VulnerabilityAssertion,
+        "exploitability-statement" => ExternalRefType::ExploitabilityStatement,
+        "pentest-report" => ExternalRefType::Pentest,
+        "static-analysis-report" => ExternalRefType::StaticAnalysis,
+        "dynamic-analysis-report" => ExternalRefType::DynamicAnalysis,
+        "runtime-analysis-report" => ExternalRefType::RuntimeAnalysis,
+        "component-analysis-report" => ExternalRefType::ComponentAnalysis,
+        "maturity-report" => ExternalRefType::Maturity,
+        "certification-report" => ExternalRefType::Certification,
+        "codified-infrastructure" => ExternalRefType::Codified,
+        "quality-metrics" => ExternalRefType::QualityMetrics,
+        // CycloneDX 1.7
         "patent" => ExternalRefType::Patent,
-        "patent-assertion" => ExternalRefType::PatentAssertion,
         "patent-family" => ExternalRefType::PatentFamily,
+        "patent-assertion" => ExternalRefType::PatentAssertion,
+        "citation" => ExternalRefType::Citation,
         other => ExternalRefType::Other(other.to_string()),
     }
+}
+
+/// The remediation a CycloneDX vulnerability declares, if any.
+///
+/// CycloneDX carries remediation details only as free text —
+/// `recommendation` ("how the vulnerability can be remediated or
+/// mitigated") and, since 1.5, `workaround` — and declares the remediation
+/// route in `analysis.response`. It has no fixed-version field: an
+/// `affects[].versions[]` entry with status `unaffected` may also be a
+/// version that predates the flaw, so it is not read as "fixed in", and
+/// `fixed_version` stays unset.
+///
+/// - The description is the `recommendation`, else the `workaround` text;
+///   blank text counts as none.
+/// - The type follows the declared response: `update` ("update to a
+///   different revision or release") is an upgrade, `workaround_available`
+///   a workaround. Without either, a recommendation keeps its long-standing
+///   upgrade type and a lone workaround text is a workaround.
+/// - A response of `update` or `workaround_available` with neither text is
+///   a remediation without details, which CRA Phase 2 reports
+///   (SBOM-CRA-VULN-METADATA: Annex I Part II (4) asks for information that
+///   helps users remediate). `rollback` has no remediation type in the
+///   model, and `can_not_fix` / `will_not_fix` state that no remediation
+///   will come, so they create no record.
+fn cdx_remediation(vuln: &CdxVulnerability) -> Option<Remediation> {
+    let responses = vuln
+        .analysis
+        .as_ref()
+        .and_then(|a| a.response.as_deref())
+        .unwrap_or_default();
+    let declared = |response: &str| responses.iter().any(|r| r == response);
+    let declared_type = if declared("update") {
+        Some(RemediationType::Upgrade)
+    } else if declared("workaround_available") {
+        Some(RemediationType::Workaround)
+    } else {
+        None
+    };
+    let text = |value: &Option<String>| {
+        value
+            .as_deref()
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+            .map(str::to_string)
+    };
+    let (default_type, description) = match (text(&vuln.recommendation), text(&vuln.workaround)) {
+        (Some(recommendation), _) => (RemediationType::Upgrade, Some(recommendation)),
+        (None, Some(workaround)) => (RemediationType::Workaround, Some(workaround)),
+        (None, None) => {
+            return declared_type.map(|remediation_type| Remediation {
+                remediation_type,
+                description: None,
+                fixed_version: None,
+            });
+        }
+    };
+    Some(Remediation {
+        remediation_type: declared_type.unwrap_or(default_type),
+        description,
+        fixed_version: None,
+    })
 }
 
 /// Risk ordering for component-level VEX resolution: higher = more actionable.
@@ -2179,12 +2301,7 @@ fn convert_declarations(
         organization.contacts = o.contact.iter().flatten().map(contact).collect();
         organization
     };
-    let ext_ref = |r: &CdxExternalReference| ExternalReference {
-        ref_type: map_cdx_external_ref_type(&r.ref_type),
-        url: r.url.clone(),
-        comment: r.comment.clone(),
-        hashes: Vec::new(),
-    };
+    let ext_ref = convert_cdx_external_reference;
     let ext_refs = |list: &Option<Vec<CdxExternalReference>>| -> Vec<ExternalReference> {
         list.iter().flatten().map(ext_ref).collect()
     };
@@ -2644,12 +2761,13 @@ struct CdxHash {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 struct CdxExternalReference {
     #[serde(rename = "type")]
     ref_type: String,
     url: String,
     comment: Option<String>,
+    /// Hashes of the referenced content.
+    hashes: Option<Vec<CdxHash>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -3416,6 +3534,9 @@ struct CdxVulnerability {
     references: Option<Vec<CdxVulnReference>>,
     description: Option<String>,
     recommendation: Option<String>,
+    /// CycloneDX 1.5+: a temporary bypass that reduces the vulnerability's
+    /// likelihood or impact.
+    workaround: Option<String>,
     ratings: Option<Vec<CdxRating>>,
     cwes: Option<Vec<u32>>,
     affects: Option<Vec<CdxAffects>>,
@@ -3829,11 +3950,7 @@ impl From<CdxComponentXml> for CdxComponent {
             wrapper
                 .reference
                 .into_iter()
-                .map(|r| CdxExternalReference {
-                    ref_type: r.ref_type,
-                    url: r.url,
-                    comment: r.comment,
-                })
+                .map(CdxExternalReference::from)
                 .collect()
         });
 
@@ -3936,6 +4053,28 @@ struct CdxExternalReferenceXml {
     ref_type: String,
     url: String,
     comment: Option<String>,
+    /// `<hashes><hash alg="…">…</hash></hashes>` of the referenced content.
+    hashes: Option<CdxHashesXml>,
+}
+
+impl From<CdxExternalReferenceXml> for CdxExternalReference {
+    fn from(xml: CdxExternalReferenceXml) -> Self {
+        Self {
+            ref_type: xml.ref_type,
+            url: xml.url,
+            comment: xml.comment,
+            hashes: xml.hashes.map(|wrapper| {
+                wrapper
+                    .hash
+                    .into_iter()
+                    .map(|h| CdxHash {
+                        alg: h.alg,
+                        content: h.content,
+                    })
+                    .collect()
+            }),
+        }
+    }
 }
 
 /// Properties wrapper element for XML format
@@ -4249,6 +4388,7 @@ struct CdxVulnerabilityXml {
     references: Option<CdxVulnReferencesXml>,
     description: Option<String>,
     recommendation: Option<String>,
+    workaround: Option<String>,
     ratings: Option<CdxRatingsXml>,
     cwes: Option<CdxCwesXml>,
     affects: Option<CdxAffectsXml>,
@@ -4322,6 +4462,7 @@ impl From<CdxVulnerabilityXml> for CdxVulnerability {
             references: xml.references.map(|r| r.reference),
             description: xml.description,
             recommendation: xml.recommendation,
+            workaround: xml.workaround,
             ratings: xml.ratings.map(|r| r.rating),
             cwes: xml.cwes.map(|c| c.cwe),
             affects: xml.affects.map(|a| {
@@ -4407,11 +4548,7 @@ impl From<CdxServiceXml> for CdxService {
                 wrapper
                     .reference
                     .into_iter()
-                    .map(|r| CdxExternalReference {
-                        ref_type: r.ref_type,
-                        url: r.url,
-                        comment: r.comment,
-                    })
+                    .map(CdxExternalReference::from)
                     .collect()
             }),
             properties: xml.properties.map(|wrapper| {
@@ -6433,5 +6570,365 @@ mod tests {
             "id-less vulnerability must fall back to its reference id"
         );
         component(&sbom, "api");
+    }
+
+    /// The `externalReference.type` enum of bom-1.7.schema.json, which
+    /// contains every value of 1.4, 1.5 and 1.6.
+    const CDX_EXTERNAL_REF_TYPES: &[&str] = &[
+        "vcs",
+        "issue-tracker",
+        "website",
+        "advisories",
+        "bom",
+        "mailing-list",
+        "social",
+        "chat",
+        "documentation",
+        "support",
+        "source-distribution",
+        "distribution",
+        "distribution-intake",
+        "license",
+        "build-meta",
+        "build-system",
+        "release-notes",
+        "security-contact",
+        "model-card",
+        "log",
+        "configuration",
+        "evidence",
+        "formulation",
+        "attestation",
+        "threat-model",
+        "adversary-model",
+        "risk-assessment",
+        "vulnerability-assertion",
+        "exploitability-statement",
+        "pentest-report",
+        "static-analysis-report",
+        "dynamic-analysis-report",
+        "runtime-analysis-report",
+        "component-analysis-report",
+        "maturity-report",
+        "certification-report",
+        "codified-infrastructure",
+        "quality-metrics",
+        "poam",
+        "electronic-signature",
+        "digital-signature",
+        "rfc-9116",
+        "patent",
+        "patent-family",
+        "patent-assertion",
+        "citation",
+        "other",
+    ];
+
+    /// The CycloneDX values the model has no variant for.
+    const CDX_TYPES_WITHOUT_VARIANT: &[&str] = &[
+        "source-distribution",
+        "poam",
+        "electronic-signature",
+        "digital-signature",
+        "rfc-9116",
+        "other",
+    ];
+
+    /// Every CycloneDX external-reference type maps to the variant that
+    /// displays as it, so the CycloneDX writer emits the same value back;
+    /// the six values without a variant stay `Other`, verbatim.
+    #[test]
+    fn every_cyclonedx_external_ref_type_round_trips() {
+        assert_eq!(CDX_EXTERNAL_REF_TYPES.len(), 47, "bom-1.7 has 47 types");
+        for value in CDX_EXTERNAL_REF_TYPES {
+            let mapped = map_cdx_external_ref_type(value);
+            assert_eq!(mapped.to_string(), *value, "{value} must display as itself");
+            assert_eq!(
+                matches!(mapped, ExternalRefType::Other(_)),
+                CDX_TYPES_WITHOUT_VARIANT.contains(value),
+                "{value}: mapped to {mapped:?}"
+            );
+        }
+        // The evidence kinds the CRA, EUCC and SSDF checks read.
+        for (value, expected) in [
+            ("attestation", ExternalRefType::Attestation),
+            ("certification-report", ExternalRefType::Certification),
+            ("risk-assessment", ExternalRefType::RiskAssessment),
+            (
+                "vulnerability-assertion",
+                ExternalRefType::VulnerabilityAssertion,
+            ),
+            (
+                "exploitability-statement",
+                ExternalRefType::ExploitabilityStatement,
+            ),
+            ("build-system", ExternalRefType::BuildSystem),
+        ] {
+            assert_eq!(map_cdx_external_ref_type(value), expected);
+        }
+    }
+
+    /// `externalReferences[].hashes` are kept, from JSON and XML, on
+    /// components and services alike (they were dropped until v0.4.0).
+    #[test]
+    fn external_reference_hashes_are_kept() {
+        let digest = "9a3f2c1b8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a3928170f6e5d4c";
+        let json = format!(
+            r#"{{
+              "bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
+              "components": [{{"type": "application", "bom-ref": "app", "name": "app",
+                "externalReferences": [{{"type": "attestation",
+                  "url": "https://example.com/eu-doc.pdf",
+                  "hashes": [{{"alg": "SHA-256", "content": "{digest}"}},
+                             {{"alg": "SHA-512", "content": "{digest}{digest}"}}]}},
+                  {{"type": "vcs", "url": "https://example.com/app.git"}}]}}],
+              "services": [{{"bom-ref": "svc", "name": "api",
+                "externalReferences": [{{"type": "certification-report",
+                  "url": "https://example.com/cert.pdf",
+                  "hashes": [{{"alg": "SHA-256", "content": "{digest}"}}]}}]}}]
+            }}"#
+        );
+        let xml = format!(
+            r#"<?xml version="1.0"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" version="1">
+  <components>
+    <component type="application" bom-ref="app">
+      <name>app</name>
+      <externalReferences>
+        <reference type="attestation">
+          <url>https://example.com/eu-doc.pdf</url>
+          <hashes><hash alg="SHA-256">{digest}</hash><hash alg="SHA-512">{digest}{digest}</hash></hashes>
+        </reference>
+        <reference type="vcs"><url>https://example.com/app.git</url></reference>
+      </externalReferences>
+    </component>
+  </components>
+  <services>
+    <service bom-ref="svc">
+      <name>api</name>
+      <externalReferences>
+        <reference type="certification-report">
+          <url>https://example.com/cert.pdf</url>
+          <hashes><hash alg="SHA-256">{digest}</hash></hashes>
+        </reference>
+      </externalReferences>
+    </service>
+  </services>
+</bom>"#
+        );
+        let from_json = CycloneDxParser::new()
+            .parse_str(&json)
+            .expect("JSON should parse");
+        let from_xml = parse(&xml);
+        let digest512 = format!("{digest}{digest}");
+        for (label, sbom) in [("JSON", &from_json), ("XML", &from_xml)] {
+            let refs = &component(sbom, "app").external_refs;
+            assert_eq!(refs[0].ref_type, ExternalRefType::Attestation, "{label}");
+            assert_eq!(
+                refs[0]
+                    .hashes
+                    .iter()
+                    .map(|h| (h.algorithm.clone(), h.value.as_str()))
+                    .collect::<Vec<_>>(),
+                vec![
+                    (HashAlgorithm::Sha256, digest),
+                    (HashAlgorithm::Sha512, digest512.as_str()),
+                ],
+                "{label}: attestation hashes"
+            );
+            assert!(refs[1].hashes.is_empty(), "{label}: a hash-less reference");
+            let service_refs = &component(sbom, "api").external_refs;
+            assert_eq!(service_refs[0].ref_type, ExternalRefType::Certification);
+            assert_eq!(service_refs[0].hashes.len(), 1, "{label}: service hashes");
+        }
+    }
+
+    /// The remediation record follows the vulnerability's remediation text
+    /// (`recommendation`, else `workaround`) and its declared
+    /// `analysis.response`, in JSON and XML alike. No CycloneDX field is a
+    /// fixed version, so none is ever set.
+    #[test]
+    fn remediation_follows_text_and_declared_response() {
+        // (id, recommendation, workaround, responses, expected type and description)
+        type Case = (
+            &'static str,
+            Option<&'static str>,
+            Option<&'static str>,
+            &'static [&'static str],
+            Option<(RemediationType, Option<&'static str>)>,
+        );
+        let cases: &[Case] = &[
+            (
+                "CVE-1",
+                Some("Upgrade to 2.0"),
+                None,
+                &[],
+                Some((RemediationType::Upgrade, Some("Upgrade to 2.0"))),
+            ),
+            (
+                "CVE-2",
+                None,
+                Some("Disable the parser"),
+                &[],
+                Some((RemediationType::Workaround, Some("Disable the parser"))),
+            ),
+            (
+                "CVE-3",
+                Some("Apply the vendor mitigation"),
+                Some("Disable the parser"),
+                &["workaround_available"],
+                Some((
+                    RemediationType::Workaround,
+                    Some("Apply the vendor mitigation"),
+                )),
+            ),
+            (
+                "CVE-4",
+                None,
+                None,
+                &["update"],
+                Some((RemediationType::Upgrade, None)),
+            ),
+            (
+                "CVE-5",
+                None,
+                Some("  "),
+                &["workaround_available"],
+                Some((RemediationType::Workaround, None)),
+            ),
+            ("CVE-6", None, None, &["will_not_fix", "can_not_fix"], None),
+            ("CVE-7", None, None, &["rollback"], None),
+            ("CVE-8", None, None, &[], None),
+        ];
+        let json_vulns: Vec<serde_json::Value> = cases
+            .iter()
+            .map(|(id, recommendation, workaround, responses, _)| {
+                let mut v = serde_json::json!({ "id": id, "affects": [{ "ref": "lib" }] });
+                if let Some(text) = recommendation {
+                    v["recommendation"] = serde_json::json!(text);
+                }
+                if let Some(text) = workaround {
+                    v["workaround"] = serde_json::json!(text);
+                }
+                if !responses.is_empty() {
+                    v["analysis"] =
+                        serde_json::json!({ "state": "exploitable", "response": responses });
+                }
+                v
+            })
+            .collect();
+        let json = serde_json::json!({
+            "bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
+            "components": [{ "type": "library", "bom-ref": "lib", "name": "lib", "version": "1.0" }],
+            "vulnerabilities": json_vulns,
+        })
+        .to_string();
+        let xml_vulns: String = cases
+            .iter()
+            .map(|(id, recommendation, workaround, responses, _)| {
+                let recommendation = recommendation
+                    .map(|t| format!("<recommendation>{t}</recommendation>"))
+                    .unwrap_or_default();
+                let workaround = workaround
+                    .map(|t| format!("<workaround>{t}</workaround>"))
+                    .unwrap_or_default();
+                let analysis = if responses.is_empty() {
+                    String::new()
+                } else {
+                    let responses: String = responses
+                        .iter()
+                        .map(|r| format!("<response>{r}</response>"))
+                        .collect();
+                    format!("<analysis><state>exploitable</state><responses>{responses}</responses></analysis>")
+                };
+                format!(
+                    "<vulnerability><id>{id}</id>{recommendation}{workaround}{analysis}\
+                     <affects><target><ref>lib</ref></target></affects></vulnerability>"
+                )
+            })
+            .collect();
+        let xml = format!(
+            r#"<?xml version="1.0"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" version="1">
+  <components><component type="library" bom-ref="lib"><name>lib</name><version>1.0</version></component></components>
+  <vulnerabilities>{xml_vulns}</vulnerabilities>
+</bom>"#
+        );
+        let from_json = CycloneDxParser::new()
+            .parse_str(&json)
+            .expect("JSON should parse");
+        let from_xml = parse(&xml);
+        for (label, sbom) in [("JSON", &from_json), ("XML", &from_xml)] {
+            let lib = component(sbom, "lib");
+            for (id, _, _, _, expected) in cases {
+                let vuln = lib
+                    .vulnerabilities
+                    .iter()
+                    .find(|v| v.id == *id)
+                    .unwrap_or_else(|| panic!("{label}: {id} attached"));
+                let got = vuln.remediation.as_ref().map(|r| {
+                    assert_eq!(r.fixed_version, None, "{label} {id}: no fixed version");
+                    (r.remediation_type.clone(), r.description.as_deref())
+                });
+                assert_eq!(got, *expected, "{label} {id}");
+            }
+        }
+    }
+
+    /// JSON and XML read every external-reference type the same way.
+    #[test]
+    fn external_ref_types_read_alike_from_json_and_xml() {
+        let json_refs: Vec<serde_json::Value> = CDX_EXTERNAL_REF_TYPES
+            .iter()
+            .map(|t| serde_json::json!({ "type": t, "url": format!("https://example.com/{t}") }))
+            .collect();
+        let json = serde_json::json!({
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.7",
+            "version": 1,
+            "components": [{
+                "type": "library",
+                "bom-ref": "lib",
+                "name": "lib",
+                "externalReferences": json_refs,
+            }],
+        })
+        .to_string();
+        let xml_refs: String = CDX_EXTERNAL_REF_TYPES
+            .iter()
+            .map(|t| {
+                format!(r#"<reference type="{t}"><url>https://example.com/{t}</url></reference>"#)
+            })
+            .collect();
+        let xml = format!(
+            r#"<?xml version="1.0"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.7" version="1">
+  <components>
+    <component type="library" bom-ref="lib">
+      <name>lib</name>
+      <externalReferences>{xml_refs}</externalReferences>
+    </component>
+  </components>
+</bom>"#
+        );
+        let from_json = CycloneDxParser::new()
+            .parse_str(&json)
+            .expect("JSON should parse");
+        let from_xml = parse(&xml);
+        let types = |sbom: &NormalizedSbom| -> Vec<ExternalRefType> {
+            component(sbom, "lib")
+                .external_refs
+                .iter()
+                .map(|r| r.ref_type.clone())
+                .collect()
+        };
+        assert_eq!(types(&from_json), types(&from_xml));
+        assert_eq!(
+            types(&from_json),
+            CDX_EXTERNAL_REF_TYPES
+                .iter()
+                .map(|t| map_cdx_external_ref_type(t))
+                .collect::<Vec<_>>()
+        );
     }
 }

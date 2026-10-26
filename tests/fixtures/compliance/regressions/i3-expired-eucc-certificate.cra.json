@@ -1,0 +1,7 @@
+{
+  "productClass": "critical",
+  "euccProtectionProfileId": "PP-CC-HSM-2024-01",
+  "euccTargetOfEvaluation": "hsm 5.0.0",
+  "euccItsefIdentifier": "ITSEF-DE-0042",
+  "euccValidUntil": "2026-06-30T00:00:00Z"
+}

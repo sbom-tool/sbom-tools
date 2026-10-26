@@ -69,6 +69,9 @@ pub struct ComponentFixture {
     pub hashes: Vec<(String, String)>,
     /// `(type, url)` external references, e.g. `("vcs", "https://…")`.
     pub external_refs: Vec<(String, String)>,
+    /// External references that carry `hashes[]`, rendered after
+    /// [`Self::external_refs`]: `(type, url, (alg, content) pairs)`.
+    pub hashed_external_refs: Vec<(String, String, Vec<(String, String)>)>,
     /// SPDX license ids rendered as `{"license": {"id": …}}` entries.
     pub licenses: Vec<String>,
     /// `(name, value)` CycloneDX properties.
@@ -100,6 +103,7 @@ impl ComponentFixture {
             description: None,
             hashes: vec![("SHA-256".to_string(), SHA256_FILLER.to_string())],
             external_refs: Vec::new(),
+            hashed_external_refs: Vec::new(),
             licenses: Vec::new(),
             properties: Vec::new(),
             model_card: None,
@@ -175,11 +179,22 @@ impl ComponentFixture {
                 .collect();
             obj.insert("hashes".into(), serde_json::json!(hashes));
         }
-        if !self.external_refs.is_empty() {
+        if !self.external_refs.is_empty() || !self.hashed_external_refs.is_empty() {
+            let hashed = self
+                .hashed_external_refs
+                .iter()
+                .map(|(ref_type, url, hashes)| {
+                    let hashes: Vec<_> = hashes
+                        .iter()
+                        .map(|(alg, content)| serde_json::json!({ "alg": alg, "content": content }))
+                        .collect();
+                    serde_json::json!({ "type": ref_type, "url": url, "hashes": hashes })
+                });
             let refs: Vec<_> = self
                 .external_refs
                 .iter()
                 .map(|(ref_type, url)| serde_json::json!({ "type": ref_type, "url": url }))
+                .chain(hashed)
                 .collect();
             obj.insert("externalReferences".into(), serde_json::json!(refs));
         }
@@ -672,6 +687,9 @@ pub struct SbomFixture {
     /// bom-ref)`. An empty severity renders no `ratings` at all (an unrated
     /// vulnerability).
     pub vulnerabilities: Vec<(String, String, String)>,
+    /// Extra members merged into the rendered `vulnerabilities[]` entry with
+    /// the given id, e.g. `("CVE-…", json!({ "recommendation": "…" }))`.
+    pub vulnerability_extras: Vec<(String, serde_json::Value)>,
     /// `compositions[0].aggregate` (e.g. `complete`, `incomplete`).
     pub completeness: Option<String>,
     /// Top-level JSF `signature` as `(algorithm, value)`.
@@ -695,6 +713,7 @@ impl Default for SbomFixture {
             crypto_assets: Vec::new(),
             dependencies: Vec::new(),
             vulnerabilities: Vec::new(),
+            vulnerability_extras: Vec::new(),
             completeness: None,
             signature: None,
             sidecar: None,
@@ -820,6 +839,17 @@ impl SbomFixture {
                         "affects".into(),
                         serde_json::json!([{ "ref": affected_ref }]),
                     );
+                    for (extra_id, extra) in &self.vulnerability_extras {
+                        if extra_id != id {
+                            continue;
+                        }
+                        let members = extra
+                            .as_object()
+                            .expect("vulnerability extras are JSON objects");
+                        for (key, value) in members {
+                            v.insert(key.clone(), value.clone());
+                        }
+                    }
                     serde_json::Value::Object(v)
                 })
                 .collect();
@@ -940,6 +970,14 @@ pub struct SkippedCase {
     pub reason: &'static str,
 }
 
+/// Another satisfying shape that must not surface the rule, beside the
+/// row's main silent fixture (e.g. a document reference that satisfies a
+/// rule the main fixture satisfies through the CRA sidecar).
+pub struct SilentCase {
+    pub label: &'static str,
+    pub fixture: SbomFixture,
+}
+
 /// Coverage for one rule of a standard's universe. The silent fixture is
 /// boxed to keep the variants comparable in size
 /// (clippy::large_enum_variant).
@@ -947,6 +985,7 @@ pub enum RuleCoverage {
     Tested {
         firing: Vec<FiringCase>,
         silent: Box<SbomFixture>,
+        extra_silent: Vec<SilentCase>,
         skipped_cases: Vec<SkippedCase>,
     },
     /// The rule genuinely cannot fire from document content alone (or has no
@@ -996,6 +1035,7 @@ impl RuleEntry {
                     fixture: firing,
                 }],
                 silent: Box::new(silent),
+                extra_silent: Vec::new(),
                 skipped_cases: Vec::new(),
             },
         }
@@ -1078,6 +1118,21 @@ impl RuleEntry {
             departs_from_registry_default: true,
             fixture,
         });
+        self
+    }
+
+    /// Additional silent case: another satisfying fixture that must not emit
+    /// the row's identity.
+    #[must_use]
+    pub fn with_silent(mut self, label: &'static str, fixture: SbomFixture) -> Self {
+        match &mut self.coverage {
+            RuleCoverage::Tested { extra_silent, .. } => {
+                extra_silent.push(SilentCase { label, fixture });
+            }
+            RuleCoverage::Skipped { .. } => {
+                panic!("cannot add a silent case to skipped rule {}", self.id)
+            }
+        }
         self
     }
 
@@ -1211,7 +1266,13 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
     );
 
     for entry in entries {
-        let RuleCoverage::Tested { firing, silent, .. } = &entry.coverage else {
+        let RuleCoverage::Tested {
+            firing,
+            silent,
+            extra_silent,
+            ..
+        } = &entry.coverage
+        else {
             continue; // skip-with-reason rows carry their justification inline
         };
         let id = entry.id;
@@ -1219,6 +1280,23 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
             .unwrap_or_else(|| panic!("[{level:?}] {id} does not resolve in the rule registry"));
 
         assert!(!firing.is_empty(), "[{level:?}] {id} has no firing case");
+        // The registry default is what the SARIF rule catalogue advertises,
+        // so some check must emit it: a rule whose severity is not context-
+        // dependent emits only its default, and one that escalates or relaxes
+        // by product class, phase or context still emits its default in its
+        // most common case. A row whose every firing case departs from the
+        // default documents a level no check emits (WP 1.2 finding B6).
+        assert!(
+            firing
+                .iter()
+                .any(|case| !case.departs_from_registry_default),
+            "[{level:?}] {id}: no firing case is at the registry default severity \
+             {default:?} (emitted: {emitted:?}) — the SARIF catalogue would advertise a \
+             level no check emits; align the registry default with the emitted severity \
+             (the most common one when it depends on context) and document the escalation",
+            default = meta.default_severity,
+            emitted = firing.iter().map(|case| case.severity).collect::<Vec<_>>(),
+        );
         for case in firing {
             // The flag keeps severity expectations honest against the
             // registry: an expectation that silently matches (or silently
@@ -1257,13 +1335,17 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
             );
         }
 
-        let result = check(level, silent);
-        assert!(
-            result.violations.iter().all(|v| !entry.matches(v)),
-            "[{level:?}] {id} (silent): the satisfying fixture must not fire this rule; \
-             emitted:\n{violations}",
-            violations = render_violations(&result)
-        );
+        let silent_cases = std::iter::once(("silent", silent.as_ref()))
+            .chain(extra_silent.iter().map(|c| (c.label, &c.fixture)));
+        for (label, fixture) in silent_cases {
+            let result = check(level, fixture);
+            assert!(
+                result.violations.iter().all(|v| !entry.matches(v)),
+                "[{level:?}] {id} ({label}): the satisfying fixture must not fire this rule; \
+                 emitted:\n{violations}",
+                violations = render_violations(&result)
+            );
+        }
     }
 
     // Universe sweep: no fixture in this matrix may emit a rule outside the
@@ -1271,13 +1353,20 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
     // check site for this standard must extend the universe (and therefore
     // the matrix) instead of escaping it.
     for entry in entries {
-        let RuleCoverage::Tested { firing, silent, .. } = &entry.coverage else {
+        let RuleCoverage::Tested {
+            firing,
+            silent,
+            extra_silent,
+            ..
+        } = &entry.coverage
+        else {
             continue;
         };
         let fixtures = firing
             .iter()
             .map(|c| (c.label, &c.fixture))
-            .chain(std::iter::once(("silent", silent.as_ref())));
+            .chain(std::iter::once(("silent", silent.as_ref())))
+            .chain(extra_silent.iter().map(|c| (c.label, &c.fixture)));
         for (label, fixture) in fixtures {
             let result = check(level, fixture);
             for v in &result.violations {

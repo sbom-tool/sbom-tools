@@ -304,10 +304,13 @@ impl ComplianceChecker {
 
         for c in ml_components {
             let ml = c.ml_model.as_ref();
-            if c.name.trim().is_empty() {
+            // Name, version and license need real values: a placeholder
+            // (TBD, N/A) or a sentinel (NOASSERTION) declares nothing, as
+            // in every other profile's presence checks.
+            if !has_known_name(c) {
                 without_name.push(c.canonical_id.to_string());
             }
-            if c.version.as_ref().is_none_or(|v| v.trim().is_empty()) {
+            if !has_known_value(&c.version) {
                 without_version.push(c.name.clone());
             }
             if !c.identifiers.has_cra_identifier() {
@@ -347,7 +350,7 @@ impl ComplianceChecker {
                 without_limitations.push(c.name.clone());
             }
             // License present.
-            if c.licenses.declared.is_empty() && c.licenses.concluded.is_none() {
+            if !has_known_license(c) {
                 without_license.push(c.name.clone());
             }
         }
@@ -473,7 +476,7 @@ impl ComplianceChecker {
         let mut without_provenance = Vec::new();
 
         for c in dataset_components {
-            if c.name.trim().is_empty() {
+            if !has_known_name(c) {
                 without_name.push(c.canonical_id.to_string());
             }
             if !c.identifiers.has_cra_identifier() {
@@ -482,7 +485,7 @@ impl ComplianceChecker {
             if c.hashes.is_empty() {
                 without_hash.push(c.name.clone());
             }
-            if c.licenses.declared.is_empty() && c.licenses.concluded.is_none() {
+            if !has_known_license(c) {
                 without_license.push(c.name.clone());
             }
             let ds = c.dataset.as_ref();
@@ -651,6 +654,14 @@ impl ComplianceChecker {
             remediation: None,
         });
     }
+}
+
+/// Whether a model or dataset carries a real name: one the component-name
+/// checks accept (`known_component_name`: not empty, not `NOASSERTION`, and
+/// `NONE` / `UNKNOWN` only when the PURL names the package so) that is not a
+/// placeholder such as `TBD` or `N/A` either.
+fn has_known_name(c: &crate::model::Component) -> bool {
+    known_component_name(c) && !is_placeholder(&c.name)
 }
 
 /// NIST-approved cryptographic hash gate (SHA-256 or stronger). Reuses the

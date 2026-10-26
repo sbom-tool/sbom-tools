@@ -218,7 +218,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Reference the EU Declaration of Conformity (Annex V): set ceMarkingReference in the CRA sidecar to the DoC's URL or document ID. CycloneDX: no CycloneDX external reference type is read as a DoC reference yet, so use the sidecar key.",
+          "remediation": "Reference the EU Declaration of Conformity (Annex V): set ceMarkingReference in the CRA sidecar to the DoC's URL or document ID. CycloneDX: a metadata.component.externalReferences[] entry of type attestation or certification-report pointing at the DoC also counts.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -858,7 +858,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Reference the documented cybersecurity risk assessment Art. 13(2) requires: set riskAssessmentUrl in the CRA sidecar to its URL or document reference. sbom-tools does not yet read a risk-assessment external reference from the SBOM, so the sidecar key is how to satisfy this check.",
+          "remediation": "Reference the documented cybersecurity risk assessment Art. 13(2) requires: set riskAssessmentUrl in the CRA sidecar to its URL or document reference. CycloneDX: a metadata.component.externalReferences[] entry of type risk-assessment pointing at it also counts.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1133,7 +1133,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Reference the EU Declaration of Conformity (Annex V): set ceMarkingReference in the CRA sidecar to the DoC's URL or document ID. CycloneDX: no CycloneDX external reference type is read as a DoC reference yet, so use the sidecar key.",
+          "remediation": "Reference the EU Declaration of Conformity (Annex V): set ceMarkingReference in the CRA sidecar to the DoC's URL or document ID. CycloneDX: a metadata.component.externalReferences[] entry of type attestation or certification-report pointing at the DoC also counts.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1773,7 +1773,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Reference the documented cybersecurity risk assessment Art. 13(2) requires: set riskAssessmentUrl in the CRA sidecar to its URL or document reference. sbom-tools does not yet read a risk-assessment external reference from the SBOM, so the sidecar key is how to satisfy this check.",
+          "remediation": "Reference the documented cybersecurity risk assessment Art. 13(2) requires: set riskAssessmentUrl in the CRA sidecar to its URL or document reference. CycloneDX: a metadata.component.externalReferences[] entry of type risk-assessment pointing at it also counts.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {

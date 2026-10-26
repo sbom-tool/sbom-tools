@@ -1,0 +1,108 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:6b1f6a52-8d0b-4c59-9e0e-4f0c2f9b7a11",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T00:00:00Z",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "example-generator",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    "manufacturer": {
+      "name": "Example Corp",
+      "contact": [
+        {
+          "email": "psirt@example.com"
+        }
+      ]
+    },
+    "component": {
+      "type": "application",
+      "bom-ref": "gateway",
+      "name": "gateway",
+      "version": "3.1.0",
+      "purl": "pkg:generic/example/gateway@3.1.0",
+      "supplier": {
+        "name": "Example Corp"
+      },
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9a3f2c1b8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a3928170f6e5d4c"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "attestation",
+          "url": "https://example.com/compliance/eu-declaration-of-conformity-2026-001.pdf"
+        },
+        {
+          "type": "certification-report",
+          "url": "https://certification.enisa.europa.eu/eucc/certificates/EUCC-DE-2026-0042.pdf"
+        },
+        {
+          "type": "risk-assessment",
+          "url": "https://example.com/compliance/risk-assessment.pdf"
+        },
+        {
+          "type": "vulnerability-assertion",
+          "url": "https://example.com/security/vdr.cdx.json"
+        },
+        {
+          "type": "build-system",
+          "url": "https://ci.example.com/pipelines/gateway"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "libfoo",
+      "name": "libfoo",
+      "version": "2.1.0",
+      "purl": "pkg:npm/libfoo@2.1.0",
+      "supplier": {
+        "name": "Foo Maintainers"
+      },
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1f2e3d4c5b6a79881f2e3d4c5b6a79881f2e3d4c5b6a79881f2e3d4c5b6a7988"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "gateway",
+      "dependsOn": [
+        "libfoo"
+      ]
+    },
+    {
+      "ref": "libfoo",
+      "dependsOn": []
+    }
+  ]
+}

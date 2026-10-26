@@ -40,7 +40,7 @@ ENISA / industry guidance. Use it to:
 The `--cra-product-class` flag (or sidecar `productClass`) drives the
 [CRA-P3.2 calibration table](#cra-p32-product-class-severity-calibration)
 that scales severity for vendor-hash, EOL, cycles, DoC, EUCC, PSIRT,
-and module-attestation checks.
+and module-certificate checks.
 
 ## Reverse map
 
@@ -60,7 +60,7 @@ that ends up in SARIF `properties.standardHelpUris`.
 
 | Requirement string                                              | CRA anchor                        | prEN 40000-1-3      | BSI TR-03183-2 § | sidecar field that clears it                              |
 |-----------------------------------------------------------------|-----------------------------------|---------------------|------------------|-----------------------------------------------------------|
-| `CRA Art. 13(2): Documented risk assessment`                    | Art. 13(2)                        | —                   | —                | `riskAssessmentUrl` + `riskAssessmentMethodology`         |
+| `CRA Art. 13(2): Documented risk assessment`                    | Art. 13(2)                        | —                   | —                | `riskAssessmentUrl` (or a `risk-assessment` external reference) |
 | `CRA Art. 13(7) / Annex I Part II (1): SBOM freshness`          | Art. 13(7); Annex I Part II (1)   | PRE-7-RQ-04         | §3.1             | regenerate SBOM on each release                           |
 | `CRA Annex I Part II (1): Machine-readable SBOM format`         | Annex I Part II (1)               | PRE-7-RQ-04         | §4               | parse-time check (CycloneDX 1.4+ / SPDX 2.3+)             |
 | `CRA Art. 13(5): Third-party due diligence (license tracking)`  | Art. 13(5)                        | PRE-7-RQ-05         | §5.2.2           | populate component `license` fields                       |
@@ -68,7 +68,7 @@ that ends up in SARIF `properties.standardHelpUris`.
 | `CRA Annex I Part II (5): Coordinated vulnerability disclosure policy` | Annex I Part II (5); Art. 13(8) | RLS-2-RQ-02      | —                | `coordinatedDisclosurePolicyUrl`                          |
 | `CRA Art. 13(8): Support period / lifecycle management`         | Art. 13(8)                        | PRE-7-RQ-06         | —                | `supportEndDate` + EOL enrichment                         |
 | `CRA Art. 13(8) / 13(19): Support period disclosure`            | Art. 13(8); Art. 13(19); Annex II (7) | PRE-7-RQ-06     | —                | `supportEndDate`                                          |
-| `CRA Annex I Part II (1): Documented vulnerability information` | Annex I Part II (1)               | RLS-2-RQ-04         | —                | OSV / KEV / VEX enrichment                                |
+| `CRA Annex I Part II (1): Documented vulnerability information` | Annex I Part II (1)               | RLS-2-RQ-04         | —                | embedded vulnerabilities (or OSV / KEV / VEX enrichment), or a `vulnerability-assertion` / `exploitability-statement` external reference |
 | `CRA Annex II (7): Component lifecycle monitoring/status`       | Art. 13(8); Annex II (7)          | PRE-7-RQ-06         | —                | EOL enrichment + transitive supplier coverage             |
 | `CRA Art. 13(15): Product identification`                       | Art. 13(15); Annex II (3)         | PRE-7-RQ-06         | §5.2.2           | SBOM `metadata.component.name` + sidecar `productName`    |
 | `CRA Annex I Part II (1): Component version`                    | Annex I Part II (1)               | PRE-7-RQ-06         | §5.2.2           | component `version` fields                                |
@@ -109,8 +109,31 @@ exists.
 | `CRA Annex IV: EUCC reference (Common Criteria certificate)`| Annex IV                 | —                   | sidecar EUCC evidence fields, a `Certification`/`Attestation` external ref with `eucc`/`common-criteria` URL, or a [CDXA attestation](#attestation-evidence-cyclonedx-16-declarations) naming EUCC / Common Criteria |
 | `CRA Annex VII: Technical documentation`                    | Annex VII                | —                   | run `sbom-tools cra-docs <sbom> --output dossier/`     |
 | `CRA Annex V: EU Declaration of Conformity reference`       | Annex V                  | —                   | `Attestation`/`Certification` external ref OR `ceMarkingReference` |
-| `CRA Annex VIII: <Module> attestation reference`            | Annex VIII (Module B+C/H/EUCC) | —             | Module-specific `Attestation`/`Certification` external ref |
+| `CRA Annex VIII: <Module> certificate reference`            | Annex VIII (Module B+C/H/EUCC) | —             | `Certification` external ref (the notified-body or certification-body certificate; an `Attestation` ref does not count) |
 | `CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware component inventory` | Annex I Part II   | PRE-8-RQ-02         | producer + identifier + firmware version on hardware    |
+
+External-reference types. The `Attestation`, `Certification`,
+`RiskAssessment`, `VulnerabilityAssertion` and `ExploitabilityStatement`
+references these checks read come from CycloneDX
+`externalReferences[].type` `attestation`, `certification-report`,
+`risk-assessment`, `vulnerability-assertion` and `exploitability-statement`,
+and from SPDX 3.0 `externalRef[].externalRefType` `secureSoftwareAttestation`,
+`certificationReport`, `riskAssessment`, `vulnerabilityDisclosureReport` and
+`vulnerabilityExploitabilityAssessment`. SPDX 2.3 has no external-reference
+category for any of them (its OTHER category with a
+`declaration-of-conformity` type is still read as an Annex V reference).
+Before v0.4.0 the parsers did not map these types, so only the sidecar keys
+and CDXA attestations could satisfy the checks.
+
+Annex VIII is stricter than Annex V. A route beyond Module A rests on
+notified-body or certification-body evidence — the EU-type examination
+certificate (Module B+C), the quality-system approval (Module H) or the EUCC
+certificate — so `SBOM-CRA-ANNEX-VIII` and the `conformity_summary` Module B
+and Module H rows accept only a `Certification` reference
+(`certification-report`, SPDX 3.0 `certificationReport`). An `Attestation`
+reference may be a self-attestation: it still serves as the Annex V
+Declaration of Conformity reference (and the Module C production-conformity
+statement), but not as the route's certificate.
 
 ### Article 24 — open-source software steward floor
 
@@ -120,7 +143,7 @@ exists.
 | `CRA Annex I Part II (5): Coordinated vulnerability disclosure policy` (relaxed to Warning under steward) | Annex I Part II (5) | `Advisories` external ref OR `coordinatedDisclosurePolicyUrl` |
 
 Article 24 *suppresses* manufacturer-only checks (Art. 13(16) email,
-Annex V DoC, Annex VIII attestation, Article 14 channels, hardware
+Annex V DoC, Annex VIII certificate, Article 14 channels, hardware
 [PRE-8-RQ-02], vendor-hash carry-through).
 
 ## CRA-P3.2 product-class severity calibration
@@ -139,7 +162,7 @@ overridable via sidecar `conformityAssessmentRoute`.
 | Annex V DoC reference          | Info    | Warning     | Error       | Error    |
 | EUCC reference                 | n/a     | n/a         | Info        | Error    |
 | PSIRT documented               | Warning | Warning     | Error       | Error    |
-| Module attestation reference   | n/a     | Warning (B+C) | Error (B+C/H) | Error (EUCC) |
+| Module certificate reference   | n/a     | Warning (B+C) | Error (B+C/H) | Error (EUCC) |
 
 Default conformity routes per class:
 
@@ -173,10 +196,10 @@ violation messages.
 | `SBOM-CRA-ANNEX-IV` — EUCC / Common Criteria reference (only fires at Important-2 / Critical) | yes | CRA-family standard that also names EUCC / Common Criteria |
 | `SBOM-EUCC-CERTREF` (under `--standard eucc`)                      | yes                 | same as above                                       |
 | `conformity_summary` → "EU Declaration of Conformity" row          | yes                 | any CRA-family attestation                          |
-| `conformity_summary` → Module B / Module C / Module H rows          | yes                 | any CRA-family attestation                          |
+| `conformity_summary` → Module B / Module C / Module H rows          | yes                 | any CRA-family attestation (the external-reference fallback: a `Certification` ref for Module B and H, an `Attestation` or `Certification` ref for Module C) |
 | `conformity_summary` → EUCC certificate + Target-of-Evaluation rows | yes                 | CRA-family standard that also names EUCC / Common Criteria |
 | `SBOM-CRA-ANNEX-V` — Annex V DoC violation                         | no                  | `Attestation`/`Certification` external ref or sidecar `ceMarkingReference` |
-| `SBOM-CRA-ANNEX-VIII` — module attestation violation               | no                  | `Attestation`/`Certification` external ref          |
+| `SBOM-CRA-ANNEX-VIII` — module certificate violation               | no                  | `Certification` external ref (an `Attestation` ref does not count) |
 | `SBOM-EUCC-PP` / `-TOE` / `-ITSEF` / `-VALIDITY`                   | no                  | dedicated sidecar EUCC fields                       |
 | `SBOM-CRA-ART-14` channels + the `conformity_summary` PSIRT row     | no                  | sidecar fields                                      |
 
