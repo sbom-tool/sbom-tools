@@ -1,37 +1,35 @@
 //! Registry exhaustiveness (audit P3, deferred P0 item): every id in
 //! `all_rule_ids()` must resolve via `rule_meta`, and its externally-visible
 //! SARIF identity must belong to at least one per-standard SARIF slice — or
-//! the id must be explicitly documented as slice-less with a reason. No
-//! silent omissions: stale exemptions (ids that later join a slice) fail too.
+//! the id must be explicitly documented as slice-less with a reason, or be a
+//! family fallback rule (`generic_rule_id_for_level`), which no check emits.
+//! No silent omissions: stale exemptions (ids that later join a slice) fail
+//! too.
 //!
 //! The matrix half (WP 1.2): every compliance level has a rule matrix, and
-//! every registered rule key sits in some `tests/rule_matrix_*.rs` row —
-//! tested, or skipped with a reason that names the bug or limitation.
+//! every registered rule key but the fallback rules sits in some
+//! `tests/rule_matrix_*.rs` row — tested, or skipped with a reason that names
+//! the bug or limitation.
 
 use sbom_tools::quality::{
     CISA2026_SARIF_RULE_IDS, CNSA2_SARIF_RULE_IDS, COMPLIANCE_SARIF_RULE_IDS, ComplianceLevel,
     EO14028_SARIF_RULE_IDS, FDA_SARIF_RULE_IDS, FSCT_SARIF_RULE_IDS, NTIA_SARIF_RULE_IDS,
-    PCIDSS_SARIF_RULE_IDS, PQC_SARIF_RULE_IDS, SSDF_SARIF_RULE_IDS, all_rule_ids, rule_meta,
+    PCIDSS_SARIF_RULE_IDS, PQC_SARIF_RULE_IDS, SSDF_SARIF_RULE_IDS, all_rule_ids,
+    generic_rule_id_for_level, rule_meta,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-/// Why the quality profiles' checks are slice-less: they alias
-/// SBOM-QUALITY-GENERAL, which no per-standard slice lists.
-const QUALITY_CHECK: &str = "quality-profile check aliasing SBOM-QUALITY-GENERAL; the quality \
-     profiles have no dedicated SARIF slice — their catalogue is backfilled from fired rules";
+/// Why the quality profiles' checks are slice-less.
+const QUALITY_CHECK: &str = "quality-profile check: the quality profiles \
+     (Minimum/Standard/Comprehensive) have no dedicated SARIF slice — their catalogue is \
+     backfilled from fired rules";
 
 /// Internal rule ids whose SARIF identity is deliberately in no per-standard
 /// SARIF slice, with the reason. These rules still render in SARIF output via
 /// the generator's catalogue-completion backfill when they fire; they are
 /// just not part of any upfront-declared rule catalogue.
 const SLICELESS: &[(&str, &str)] = &[
-    (
-        "SBOM-QUALITY-GENERAL",
-        "generic bucket for the quality profiles (Minimum/Standard/Comprehensive); \
-         those profiles have no dedicated SARIF slice — their catalogue is \
-         backfilled from fired rules",
-    ),
     ("SBOM-QUALITY-CREATOR", QUALITY_CHECK),
     ("SBOM-QUALITY-SERIAL", QUALITY_CHECK),
     ("SBOM-QUALITY-INVENTORY", QUALITY_CHECK),
@@ -58,22 +56,17 @@ const SLICELESS: &[(&str, &str)] = &[
         "CRA Annex VIII conformity-route rule: not enumerated in the shared \
          COMPLIANCE slice; backfilled into the SARIF catalogue when it fires",
     ),
-    (
-        "SBOM-EUCC-GENERAL",
-        "EUCC generic fallback bucket (SARIF re-bucketing target only); no \
-         upfront catalogue lists it",
-    ),
-    (
-        "SBOM-AIACT-GENERAL",
-        "EU AI Act generic fallback bucket (SARIF re-bucketing target only); no \
-         upfront catalogue lists it",
-    ),
-    (
-        "SBOM-BSIAI-GENERAL",
-        "BSI/G7 SBOM-for-AI generic fallback bucket (SARIF re-bucketing target \
-         only); no upfront catalogue lists it",
-    ),
 ];
+
+/// The family fallback rules: the rule the SARIF writer files a finding
+/// without a registered rule under. No check emits one, so no slice and no
+/// matrix lists them.
+fn fallback_rules() -> BTreeSet<&'static str> {
+    ComplianceLevel::all()
+        .iter()
+        .map(|level| generic_rule_id_for_level(*level))
+        .collect()
+}
 
 fn slice_union() -> BTreeSet<&'static str> {
     [
@@ -96,6 +89,7 @@ fn slice_union() -> BTreeSet<&'static str> {
 #[test]
 fn every_registered_rule_resolves_and_is_sliced_or_documented_sliceless() {
     let union = slice_union();
+    let fallbacks = fallback_rules();
     let mut exemptions: BTreeMap<&str, &str> = BTreeMap::new();
     for (id, reason) in SLICELESS {
         assert!(
@@ -103,6 +97,10 @@ fn every_registered_rule_resolves_and_is_sliced_or_documented_sliceless() {
             "duplicate SLICELESS entry for {id}"
         );
         assert!(!reason.trim().is_empty(), "{id}: empty exemption reason");
+        assert!(
+            !fallbacks.contains(id),
+            "{id} is a fallback rule; it needs no SLICELESS entry"
+        );
     }
 
     for id in all_rule_ids() {
@@ -111,7 +109,7 @@ fn every_registered_rule_resolves_and_is_sliced_or_documented_sliceless() {
             .unwrap_or_else(|| panic!("registered rule id {id:?} does not resolve in rule_meta"));
 
         let sliced = union.contains(meta.sarif_id);
-        let exempt = exemptions.contains_key(id);
+        let exempt = exemptions.contains_key(id) || fallbacks.contains(id);
         assert!(
             sliced || exempt,
             "rule {id} (SARIF identity {sarif}) belongs to no per-standard SARIF \
@@ -122,16 +120,23 @@ fn every_registered_rule_resolves_and_is_sliced_or_documented_sliceless() {
         assert!(
             !(sliced && exempt),
             "rule {id} is now covered by a SARIF slice (via {sarif}); remove the \
-             stale SLICELESS exemption",
+             stale SLICELESS exemption (a fallback rule belongs in no slice)",
             sarif = meta.sarif_id
         );
     }
 
-    // Exemptions must reference real registry ids (no typo'd dead entries).
+    // Exemptions must reference real registry ids (no typo'd dead entries),
+    // and so must the fallbacks the SARIF writer files findings under.
     for (id, _) in SLICELESS {
         assert!(
             all_rule_ids().contains(id),
             "SLICELESS entry {id:?} is not a registered rule id"
+        );
+    }
+    for id in fallbacks {
+        assert!(
+            all_rule_ids().contains(&id),
+            "fallback rule {id:?} is not a registered rule id"
         );
     }
 }
@@ -246,20 +251,12 @@ fn matrix_sources() -> Vec<(String, String)> {
 }
 
 /// The row constructors of tests/common/rule_matrix.rs.
-const ROW_CONSTRUCTORS: &[&str] = &[
-    "tested",
-    "tested_departing",
-    "skipped",
-    "key_tested",
-    "key_tested_departing",
-    "key_skipped",
-];
+const ROW_CONSTRUCTORS: &[&str] = &["tested", "tested_departing", "skipped"];
 
 /// One `RuleEntry::<constructor>("<id>", …)` row of a matrix source.
 struct MatrixRow {
     file: String,
     id: String,
-    per_key: bool,
 }
 
 /// The string literal `args` starts with (after leading whitespace), and the
@@ -300,7 +297,6 @@ fn matrix_rows(file: &str, code: &str) -> Vec<MatrixRow> {
         rows.push(MatrixRow {
             file: file.to_string(),
             id: id.to_string(),
-            per_key: ctor.starts_with("key_"),
         });
     }
     rows
@@ -326,12 +322,11 @@ fn every_compliance_level_has_a_rule_matrix() {
     );
 }
 
-/// Every registered rule key sits in some matrix: a self-descriptor (its own
-/// SARIF rule) needs a SARIF row, an alias key (one that shares another
-/// key's SARIF rule) needs a per-key row. Either may be `skipped` — the
-/// reason, enforced non-empty by `run_matrix`, names the bug or limitation —
-/// but nothing is left out silently. Rows may not name unregistered ids,
-/// and a per-key row may not name a self-descriptor.
+/// Every registered rule key sits in some matrix — `tested`, or `skipped`
+/// with a reason, enforced non-empty by `run_matrix`, that names the bug or
+/// limitation — so nothing is left out silently. The fallback rules are the
+/// exception, and no row may name one: no check emits them. Rows may not
+/// name unregistered ids either.
 #[test]
 fn every_registered_rule_sits_in_a_matrix_or_is_skipped_with_a_reason() {
     let rows: Vec<MatrixRow> = matrix_sources()
@@ -339,31 +334,28 @@ fn every_registered_rule_sits_in_a_matrix_or_is_skipped_with_a_reason() {
         .flat_map(|(file, code)| matrix_rows(file, code))
         .collect();
     assert!(!rows.is_empty(), "no matrix rows found");
+    let fallbacks = fallback_rules();
 
     for row in &rows {
-        let meta = rule_meta(&row.id)
-            .unwrap_or_else(|| panic!("{}: row names unregistered rule {}", row.file, row.id));
-        if row.per_key {
-            assert_ne!(
-                meta.sarif_id, row.id,
-                "{}: per-key row {} is its own SARIF rule; use a SARIF row",
-                row.file, row.id
-            );
-        }
+        assert!(
+            rule_meta(&row.id).is_some(),
+            "{}: row names unregistered rule {}",
+            row.file,
+            row.id
+        );
+        assert!(
+            !fallbacks.contains(row.id.as_str()),
+            "{}: row names the fallback rule {}, which no check emits",
+            row.file,
+            row.id
+        );
     }
 
-    let mut missing = Vec::new();
-    for id in all_rule_ids() {
-        let meta = rule_meta(id).expect("listed id resolves");
-        let per_key = meta.sarif_id != *id;
-        if !rows.iter().any(|r| r.id == *id && r.per_key == per_key) {
-            missing.push(if per_key {
-                format!("{id} (alias of {}: needs a per-key row)", meta.sarif_id)
-            } else {
-                format!("{id} (needs a SARIF row)")
-            });
-        }
-    }
+    let missing: Vec<&str> = all_rule_ids()
+        .iter()
+        .copied()
+        .filter(|id| !fallbacks.contains(id) && !rows.iter().any(|r| r.id == *id))
+        .collect();
     assert!(
         missing.is_empty(),
         "registered rules in no matrix (add a row, or a skipped row naming the \

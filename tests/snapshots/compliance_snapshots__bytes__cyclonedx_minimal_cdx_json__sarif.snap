@@ -101,13 +101,35 @@ source: tests/compliance_snapshots.rs
               "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             },
             {
-              "id": "SBOM-NTIA-GENERAL",
-              "name": "NtiaGeneralRequirement",
+              "id": "SBOM-NTIA-SPEC-VERSION",
+              "name": "NtiaSpecVersion",
               "shortDescription": {
-                "text": "NTIA Minimum Elements: General requirement"
+                "text": "NTIA Minimum Elements: Spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0)"
               },
               "defaultConfiguration": {
                 "level": "warning"
+              },
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+            },
+            {
+              "id": "SBOM-NTIA-SPEC-VERSION-UNKNOWN",
+              "name": "NtiaSpecVersionUnknown",
+              "shortDescription": {
+                "text": "NTIA Minimum Elements: SPDX document declares a valid SPDX version"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+            },
+            {
+              "id": "SBOM-NTIA-ELEMENT-ID",
+              "name": "NtiaElementIdentifier",
+              "shortDescription": {
+                "text": "NTIA Minimum Elements: Every element has its own well-formed identifier"
+              },
+              "defaultConfiguration": {
+                "level": "note"
               },
               "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             },
@@ -308,17 +330,6 @@ source: tests/compliance_snapshots.rs
                 "level": "warning"
               },
               "helpUri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
-            },
-            {
-              "id": "SBOM-CISA2026-GENERAL",
-              "name": "Cisa2026GeneralRequirement",
-              "shortDescription": {
-                "text": "CISA 2026 Minimum Elements: general requirement"
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             }
           ]
         }
@@ -410,7 +421,7 @@ source: tests/compliance_snapshots.rs
           }
         },
         {
-          "ruleId": "SBOM-NTIA-GENERAL",
+          "ruleId": "SBOM-NTIA-ELEMENT-ID",
           "level": "note",
           "message": {
             "text": "NTIA Minimum Elements: Component 'test-app' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: test-app]"

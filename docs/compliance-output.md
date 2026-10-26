@@ -64,7 +64,7 @@ identity.
 | `counts` | object | `affected` and `total` components of an aggregate finding. Absent otherwise. |
 | `requirement` | string | The requirement, as text. |
 | `rule_id` | string | Stable internal rule key, e.g. `SBOM-NTIA-SUPPLIER`. |
-| `sarif_rule_id` | string | The rule id `-o sarif` reports for this violation. Several `rule_id`s can share one. |
+| `sarif_rule_id` | string | The rule id `-o sarif` reports for this violation. Every check is its own SARIF rule, so this equals `rule_id` (until v0.4.0 several `rule_id`s shared one). |
 | `standard_refs` | array | `{standard, id, help_uri?}` references to the clauses the rule implements. Absent when empty. |
 
 ## Finding identity
@@ -80,10 +80,10 @@ cra|SBOM-CRA-VULN-METADATA:CVE-2024-3094|pkg:generic/xz-utils@5.6.0
 ```
 
 - `<standard>` is the canonical `--standard` value.
-- `<rule_id>` is the violation's `rule_id`, not its `sarif_rule_id`: dozens of
-  rules share a SARIF id (all ten `SBOM-BSIAI-MODEL-*` checks report as
-  `SBOM-BSIAI-MODEL`), so keying on the SARIF id would merge distinct findings
-  about one component.
+- `<rule_id>` is the violation's `rule_id`. Since v0.4.0 it equals the
+  `sarif_rule_id`; before, dozens of rules shared a SARIF id (all ten
+  `SBOM-BSIAI-MODEL-*` checks reported as `SBOM-BSIAI-MODEL`), which is why
+  the key is built from the `rule_id`.
 - `<finding_detail>` is the violation's `finding_detail`, present only for a
   rule that reports several findings on one subject (one per vulnerability of
   a component, one per cipher suite of a protocol). `%`, `|` and `:` in it are

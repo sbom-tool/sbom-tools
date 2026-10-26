@@ -10,10 +10,12 @@
 //!
 //! - `<standard>` is the canonical `validate --standard` value of the level
 //!   (see [`standard_key`]).
-//! - `<rule id>` is the stable internal [`Violation::rule_id`], not the
-//!   `sarif_rule_id`: dozens of registry keys alias a shared SARIF rule (the
-//!   ten `SBOM-BSIAI-MODEL-*` checks all report as `SBOM-BSIAI-MODEL`), so a
-//!   SARIF-keyed id would merge distinct findings about the same component.
+//! - `<rule id>` is the stable internal [`Violation::rule_id`]. Since v0.4.0
+//!   every check is its own SARIF rule, so it equals the `sarif_rule_id` of
+//!   every registered rule; until then dozens of keys shared a SARIF rule
+//!   (the ten `SBOM-BSIAI-MODEL-*` checks all reported as
+//!   `SBOM-BSIAI-MODEL`), and the key was built from the internal id so that
+//!   distinct findings about one component never merged.
 //! - `<detail>` is the [`Violation::finding_detail`] of a rule that reports
 //!   several findings on one subject (the vulnerability id, the cipher
 //!   suite, …), with `%`, `|` and `:` percent-encoded as `%25`, `%7C` and

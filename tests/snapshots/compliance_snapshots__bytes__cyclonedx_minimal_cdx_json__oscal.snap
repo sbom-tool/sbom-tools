@@ -524,7 +524,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-NTIA-GENERAL"
+                "value": "SBOM-NTIA-ELEMENT-ID"
               },
               {
                 "name": "sbom-element",

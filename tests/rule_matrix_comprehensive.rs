@@ -4,9 +4,9 @@
 //! arms in generic.rs would have shipped unnoticed).
 //!
 //! Comprehensive has no dedicated SARIF slice in the registry: it runs on the
-//! generic checker path and shares the NTIA rule ids for its gating elements
-//! plus the quality-family SARIF rule for everything else. The universe is
-//! declared locally (derived from the Comprehensive-level match arms in
+//! generic checker path and shares the NTIA rule ids for its gating elements,
+//! with an `SBOM-QUALITY-*` rule of its own for every other check. The
+//! universe is declared locally (derived from the Comprehensive-level match arms in
 //! src/quality/compliance/generic.rs) and the matrix sweep enforces that no
 //! fixture ever emits an id outside it.
 
@@ -26,17 +26,25 @@ const LEVEL: ComplianceLevel = ComplianceLevel::Comprehensive;
 /// * `SBOM-NTIA-VERSION` — missing component version (Error);
 /// * `SBOM-NTIA-SUPPLIER` — missing component supplier (Error);
 /// * `SBOM-NTIA-DEPENDENCY` — dependency-relationship gaps (Error/Warning);
-/// * `SBOM-QUALITY-GENERAL` — the quality-family SARIF rule of the
-///   remaining checks, each under its own `SBOM-QUALITY-*` id: document
-///   creator (Error), serial number (Warning), component name (Error),
+/// * the `SBOM-QUALITY-*` rules of the remaining checks: document creator
+///   (Error), serial number (Warning), component inventory and name (Error),
 ///   unique identifier (Warning), license (Warning), hashes (Warning), and
-///   the format-specific Infos.
+///   the format-specific checks.
 const COMPREHENSIVE_RULE_UNIVERSE: &[&str] = &[
     "SBOM-NTIA-TIMESTAMP",
     "SBOM-NTIA-VERSION",
     "SBOM-NTIA-SUPPLIER",
     "SBOM-NTIA-DEPENDENCY",
-    "SBOM-QUALITY-GENERAL",
+    "SBOM-QUALITY-CREATOR",
+    "SBOM-QUALITY-SERIAL",
+    "SBOM-QUALITY-INVENTORY",
+    "SBOM-QUALITY-NAME",
+    "SBOM-QUALITY-IDENTIFIER",
+    "SBOM-QUALITY-LICENSE",
+    "SBOM-QUALITY-HASH",
+    "SBOM-QUALITY-SPEC-VERSION",
+    "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
+    "SBOM-QUALITY-ELEMENT-ID",
 ];
 
 /// A component that also satisfies the Comprehensive license check.
@@ -119,24 +127,13 @@ fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 // Only libalpha -> libbeta stays connected.
             }),
         ),
-        // The quality-family generic bucket: every remaining
-        // Comprehensive-level check reports an alias key of its own (per-key
-        // rows below).
-        RuleEntry::skipped(
-            "SBOM-QUALITY-GENERAL",
-            "no check emits SBOM-QUALITY-GENERAL under its own key since WP 1.8b: every \
-             Comprehensive-level check that shares the SARIF rule reports an alias key of \
-             its own (CREATOR, SERIAL, INVENTORY, NAME, IDENTIFIER, LICENSE, HASH, \
-             SPEC-VERSION, SPEC-VERSION-UNKNOWN, ELEMENT-ID), each with a per-key row",
-        ),
-        // ── Per-key rows ─────────────────────────────────────────────────
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-CREATOR",
             Sev::Error,
             broken(|s| s.tools.clear()),
             base(),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-SERIAL",
             Sev::Warning,
             broken(|s| s.serial_number = None),
@@ -144,7 +141,7 @@ fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // No software component at all: the per-component rules have
         // nothing to judge, which is a finding.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-INVENTORY",
             Sev::Error,
             broken(|s| {
@@ -155,19 +152,19 @@ fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // "unknown" without a corroborating PURL name segment does not count
         // as a real component name.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-NAME",
             Sev::Error,
             broken(|s| s.component_mut("libalpha").name = "unknown".to_string()),
             base(),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-IDENTIFIER",
             Sev::Warning,
             broken(|s| s.component_mut("libalpha").purl = None),
             base(),
         ),
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-LICENSE",
             Sev::Warning,
             broken(|s| s.component_mut("libalpha").licenses.clear()),
@@ -175,7 +172,7 @@ fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // The hash site is Comprehensive-specific (FDA is the only other
         // level in that match arm — the exact list the audit flagged).
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-HASH",
             Sev::Warning,
             broken(|s| s.component_mut("libalpha").hashes.clear()),
@@ -183,7 +180,7 @@ fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         ),
         // CycloneDX newer than the latest version read (1.7) warns; an
         // outdated version is an Info.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-SPEC-VERSION",
             Sev::Warning,
             broken(|s| s.spec_version = "1.8".to_string()),
@@ -194,7 +191,7 @@ fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Info,
             broken(|s| s.spec_version = "1.3".to_string()),
         ),
-        RuleEntry::key_skipped(
+        RuleEntry::skipped(
             "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
             "an SPDX version that is neither 2.x nor 3.x is an SPDX-only check, out of \
              the CycloneDX-only DSL's reach; \
@@ -202,7 +199,7 @@ fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
              and keeps it silent on SPDX 2.3",
         ),
         // A component whose bom-ref collapses to its name.
-        RuleEntry::key_tested(
+        RuleEntry::tested(
             "SBOM-QUALITY-ELEMENT-ID",
             Sev::Info,
             broken(|s| {
@@ -216,7 +213,7 @@ fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     run_matrix(LEVEL, COMPREHENSIVE_RULE_UNIVERSE, &entries);
 }
 
-/// SBOM-QUALITY-SPEC-VERSION-UNKNOWN reads only SPDX input, so its per-key
+/// SBOM-QUALITY-SPEC-VERSION-UNKNOWN reads only SPDX input, so its matrix
 /// row is skipped.
 #[test]
 fn comprehensive_spec_version_unknown_reads_only_spdx() {

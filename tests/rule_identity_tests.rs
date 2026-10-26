@@ -128,9 +128,6 @@ fn sarif_descriptors_match_registry_name_description_and_severity() {
             let Some(meta) = rule_meta(id) else {
                 continue; // non-registry rules (e.g. SBOM-TOOLS-*) are exempt
             };
-            if meta.sarif_id != id {
-                continue; // aliased identities never appear as descriptors
-            }
             assert_eq!(
                 rule["name"].as_str(),
                 Some(meta.name),
@@ -248,9 +245,8 @@ fn quality_sarif_has_no_invented_quality_ids_and_no_error_level_recommendations(
 // ---------------------------------------------------------------------------
 
 /// SBOM that also fires the level-agnostic CycloneDX bom-ref heuristic
-/// (`format_id == name`), whose check site has no specific registry mapping
-/// and therefore stamps the family-generic fallback rule for the running
-/// level (`generic_rule_id_for_level`).
+/// (`format_id == name`), a check the generic path shares between profiles:
+/// each profile family reports it under an `*-ELEMENT-ID` rule of its own.
 fn fallback_firing_sbom() -> NormalizedSbom {
     let mut sbom = violating_sbom();
     sbom.add_component(Component::new("libx".to_string(), "libx".to_string()));
@@ -266,10 +262,33 @@ fn declared_rule_ids(run: &serde_json::Value) -> BTreeSet<String> {
         .collect()
 }
 
+/// `result` with one more violation built outside the checkers: it carries
+/// the deserialization default `SBOM-CRA-GENERAL`, which names no check.
+fn with_unregistered_violation(
+    mut result: sbom_tools::quality::ComplianceResult,
+) -> sbom_tools::quality::ComplianceResult {
+    use sbom_tools::quality::{Violation, ViolationCategory, ViolationSeverity};
+    result.violations.push(Violation {
+        severity: ViolationSeverity::Warning,
+        category: ViolationCategory::DocumentMetadata,
+        message: "finding from an external source".to_string(),
+        element: None,
+        requirement: "external requirement".to_string(),
+        rule_id: "SBOM-CRA-GENERAL",
+        component_id: None,
+        counts: None,
+        standard_refs: Vec::new(),
+        remediation: None,
+        finding_detail: None,
+    });
+    result
+}
+
 /// An NTIA-only `validate -o sarif` run must never stamp a CRA-family
 /// identity on its findings: the generic path's shared checks report under
-/// NTIA ids that alias SBOM-NTIA-GENERAL (declared in rules[]), and those
-/// results carry `properties.standardIds` for the running standard.
+/// NTIA rules of their own (declared in rules[]), and a finding without a
+/// registered rule falls back to SBOM-NTIA-GENERAL, carrying
+/// `properties.standardIds` for the running standard.
 #[test]
 fn ntia_validate_sarif_emits_no_cra_rule_ids_and_family_correct_fallback() {
     let result = checker(ComplianceLevel::NtiaMinimum).check(&fallback_firing_sbom());
@@ -279,16 +298,17 @@ fn ntia_validate_sarif_emits_no_cra_rule_ids_and_family_correct_fallback() {
         result
             .violations
             .iter()
-            .any(|v| v.sarif_rule_id() == "SBOM-NTIA-GENERAL"),
-        "fixture must exercise a check reported under SBOM-NTIA-GENERAL"
+            .any(|v| v.sarif_rule_id() == "SBOM-NTIA-ELEMENT-ID"),
+        "fixture must exercise a shared generic-path check"
     );
     assert!(
         result
             .violations
             .iter()
-            .all(|v| !v.rule_id.starts_with("SBOM-CRA-")),
-        "NTIA-only violations must not carry a CRA-family rule_id"
+            .all(|v| !v.rule_id.starts_with("SBOM-CRA-") && v.sarif_rule_id() == v.rule_id),
+        "NTIA-only violations must carry NTIA rules of their own"
     );
+    let result = with_unregistered_violation(result);
     let sarif = generate_compliance_sarif(&result).expect("sarif");
     let json: serde_json::Value = serde_json::from_str(&sarif).expect("valid SARIF");
     let run = &json["runs"][0];
@@ -319,27 +339,29 @@ fn ntia_validate_sarif_emits_no_cra_rule_ids_and_family_correct_fallback() {
     }
     assert!(
         fallback_seen,
-        "the shared checks must report under SBOM-NTIA-GENERAL"
+        "the unregistered finding must fall back to SBOM-NTIA-GENERAL"
     );
 }
 
 /// A quality-report SARIF for a non-CRA profile must never stamp a
 /// CRA-family identity on its findings: the generic path's shared checks
-/// report under SBOM-QUALITY-* ids that alias SBOM-QUALITY-GENERAL, and every
-/// emitted ruleId is declared in rules[].
+/// report under SBOM-QUALITY-* rules of their own, every emitted ruleId is
+/// declared in rules[], and a finding without a registered rule falls back
+/// to SBOM-QUALITY-GENERAL.
 #[test]
 fn quality_sarif_emits_no_cra_rule_ids_for_non_cra_profiles() {
     let sbom = fallback_firing_sbom();
-    let report = QualityScorer::new(ScoringProfile::Standard).score(&sbom);
+    let mut report = QualityScorer::new(ScoringProfile::Standard).score(&sbom);
     assert_eq!(report.compliance.level, ComplianceLevel::Standard);
     assert!(
         report
             .compliance
             .violations
             .iter()
-            .any(|v| v.sarif_rule_id() == "SBOM-QUALITY-GENERAL"),
-        "fixture must exercise a check reported under SBOM-QUALITY-GENERAL"
+            .any(|v| v.sarif_rule_id() == "SBOM-QUALITY-ELEMENT-ID"),
+        "fixture must exercise a shared generic-path check"
     );
+    report.compliance = with_unregistered_violation(report.compliance);
     let sarif = generate_quality_sarif(&report, "test.cdx.json", "standard").expect("sarif");
     let json: serde_json::Value = serde_json::from_str(&sarif).expect("valid SARIF");
     let run = &json["runs"][0];
@@ -359,21 +381,26 @@ fn quality_sarif_emits_no_cra_rule_ids_for_non_cra_profiles() {
     }
     assert!(
         fallback_seen,
-        "the shared checks must report under SBOM-QUALITY-GENERAL"
+        "the unregistered finding must fall back to SBOM-QUALITY-GENERAL"
     );
 }
 
-/// CRA runs keep the historical fallback identity: the re-bucketing must not
-/// move correctly-scoped CRA findings off SBOM-CRA-GENERAL (GitHub code
-/// scanning dedups on these ids).
+/// CRA runs file a finding without a registered rule under SBOM-CRA-GENERAL;
+/// the shared checks report under CRA rules of their own.
 #[test]
 fn cra_validate_sarif_keeps_the_cra_general_fallback() {
     let result = checker(ComplianceLevel::CraPhase2).check(&fallback_firing_sbom());
-    let sarif = generate_compliance_sarif(&result).expect("sarif");
-    let ids = sarif_rule_ids(&sarif);
+    let ids = sarif_rule_ids(&generate_compliance_sarif(&result).expect("sarif"));
+    assert!(
+        ids.contains("SBOM-CRA-ELEMENT-ID") && !ids.contains("SBOM-CRA-GENERAL"),
+        "the shared checks report under CRA rules of their own, got {ids:?}"
+    );
+    let result = with_unregistered_violation(result);
+    let ids = sarif_rule_ids(&generate_compliance_sarif(&result).expect("sarif"));
     assert!(
         ids.contains("SBOM-CRA-GENERAL"),
-        "CRA-run fallback findings must stay on SBOM-CRA-GENERAL, got {ids:?}"
+        "a CRA-run finding without a registered rule falls back to SBOM-CRA-GENERAL, \
+         got {ids:?}"
     );
 }
 

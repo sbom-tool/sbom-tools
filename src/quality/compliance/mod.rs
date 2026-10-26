@@ -805,29 +805,26 @@ impl Violation {
     }
 
     /// Externally-visible SARIF rule id for this violation, looked up from
-    /// the rule registry by [`Violation::rule_id`]. Every check site stamps a
-    /// registered id (the checks the generic path shares between profiles
-    /// use one id per profile family, aliasing that family's generic SARIF
-    /// rule from [`generic_rule_id_for_level`]), so registered keys — i.e.
-    /// every violation the checkers produce — serialize identically in JSON
-    /// and SARIF. Truly
-    /// unregistered keys (violations built outside the checkers, e.g. from
-    /// external config) fall back to the generic CRA rule here; the SARIF
-    /// renderer additionally re-buckets those by standard family, which is
-    /// the one residual place the two outputs can differ.
+    /// the rule registry by [`Violation::rule_id`]. Every check is its own
+    /// SARIF rule, so for every registered key — i.e. every violation the
+    /// checkers produce — this is the key itself, and JSON and SARIF agree.
+    /// Truly unregistered keys (violations built outside the checkers, e.g.
+    /// from external config) fall back to the generic CRA rule here; the
+    /// SARIF renderer additionally re-buckets those by standard family
+    /// ([`generic_rule_id_for_level`]), which is the one residual place the
+    /// two outputs can differ.
     #[must_use]
     pub fn sarif_rule_id(&self) -> &'static str {
         rule_meta(self.rule_id).map_or("SBOM-CRA-GENERAL", |m| m.sarif_id)
     }
 }
 
-/// Family-generic rule for a compliance standard: the SARIF rule the generic
-/// path's shared checks alias (each reports under an id of its own, so two
-/// checks on one subject never share a finding key), and the id the SARIF
-/// renderer falls back to when a finding has no registry mapping. Every
-/// returned id is a registered self-descriptor
-/// (`rule_meta(id).sarif_id == id`), so rule catalogues always declare it
-/// with registry metadata.
+/// Family fallback rule for a compliance standard: the SARIF rule a finding
+/// without a registry mapping is filed under. No check emits one, so no
+/// standard's rule catalogue lists it; until v0.4.0 the generic path's
+/// shared checks reported under it. Every returned id is a registered
+/// self-descriptor (`rule_meta(id).sarif_id == id`), so a SARIF run that
+/// files a finding here declares the rule with registry metadata.
 #[must_use]
 pub const fn generic_rule_id_for_level(level: ComplianceLevel) -> &'static str {
     match level {
@@ -2532,10 +2529,10 @@ mod tests {
             message: "m".to_string(),
             element: None,
             requirement: "r".to_string(),
-            rule_id: "SBOM-CRA-PRE-8-RQ-02",
+            rule_id: "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
             component_id: None,
             counts: None,
-            standard_refs: rule_meta("SBOM-CRA-PRE-8-RQ-02")
+            standard_refs: rule_meta("SBOM-CRA-PRE-8-RQ-02-PRODUCER")
                 .expect("registered rule")
                 .refs
                 .iter()

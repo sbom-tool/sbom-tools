@@ -204,7 +204,7 @@ mod tests {
             component_id: None,
             counts: None,
             requirement: "EU AI Act Annex IV".to_string(),
-            rule_id: "SBOM-AIACT-ANNEX-IV-2D",
+            rule_id: "SBOM-AIACT-ANNEX-IV-2D-DATASETS",
             standard_refs: vec![StandardRef::new(StandardKind::EuAiAct, "Annex IV §2(d)")],
             remediation: None,
             finding_detail: None,
@@ -219,7 +219,7 @@ mod tests {
         });
         assert!(text.contains("Rule:"), "overlay must label the rule id");
         assert!(
-            text.contains("SBOM-AIACT-ANNEX-IV-2D"),
+            text.contains("SBOM-AIACT-ANNEX-IV-2D-DATASETS"),
             "overlay must surface the rule id; got:\n{text}"
         );
         assert!(

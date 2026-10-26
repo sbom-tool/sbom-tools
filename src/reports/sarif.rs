@@ -583,8 +583,8 @@ fn complete_rule_catalogue(mut rules: Vec<SarifRule>, results: &[SarifResult]) -
         }
         seen.insert(res.rule_id.clone());
         // Prefer the registry's descriptor identity when the emitted ruleId
-        // is a registered self-descriptor (e.g. the CNSA/PQC rule families,
-        // which have no curated per-standard slice).
+        // is a registered self-descriptor (a rule in no per-standard slice,
+        // such as the quality profiles' checks or a family fallback rule).
         if let Some(meta) = rule_meta(&res.rule_id)
             && meta.sarif_id == res.rule_id
         {
@@ -864,12 +864,11 @@ fn compliance_results_to_sarif(result: &ComplianceResult, label: Option<&str>) -
             let element = v.element.as_deref().unwrap_or("unknown");
             // The externally-visible SARIF rule ID comes from the rule
             // registry keyed by the violation's stable `rule_id` — never from
-            // re-parsing the human-readable requirement string. Check sites
-            // with no specific mapping stamp the generic `SBOM-CRA-GENERAL`
-            // key regardless of which checker ran; re-bucket that fallback
-            // (and any unregistered key) onto the running standard's own
-            // generic rule so NTIA/quality/... findings never surface under
-            // a CRA identity. Specifically-mapped rules keep their identity.
+            // re-parsing the human-readable requirement string. Every check
+            // is its own rule; a violation built outside the checkers carries
+            // the `SBOM-CRA-GENERAL` default or an unregistered key, and is
+            // re-bucketed onto the running standard's fallback rule so
+            // NTIA/quality/... findings never surface under a CRA identity.
             let is_unmapped = v.rule_id == "SBOM-CRA-GENERAL" || rule_meta(v.rule_id).is_none();
             let sarif_rule_id = if is_unmapped {
                 generic_rule_id_for_level(result.level)
@@ -1503,8 +1502,7 @@ mod registry_consistency_tests {
     /// is what GitHub code scanning displays, and they had already drifted
     /// apart once (audit finding: registry.rs default_severity dead + wrong).
     /// Rules whose id is not a registry key (e.g. SBOM-TOOLS-* change
-    /// tracking) are exempt, as are registry keys whose sarif_id differs
-    /// from the key (aliased identities).
+    /// tracking) are exempt.
     #[test]
     fn registry_severity_matches_sarif_catalogue() {
         let mut tables: Vec<(&str, Vec<SarifRule>)> = vec![

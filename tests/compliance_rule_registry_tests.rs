@@ -145,7 +145,9 @@ fn sarif_rule_ids_are_stable_for_cra_noncompliant_fixture() {
     // Every emitted ID must be one of the known, stable CRA external rule IDs.
     // NOTE: the CRA rule IDs were deliberately re-anchored in 2026-07 — the
     // old identifiers (SBOM-CRA-ART-13-3/-4/-6/-7/-11/-12/-15, ANNEX-III)
-    // encoded citations to the wrong Article 13 paragraphs.
+    // encoded citations to the wrong Article 13 paragraphs. v0.4.0 split the
+    // shared SBOM-CRA-ANNEX-I and SBOM-CRA-GENERAL rules into one rule per
+    // check.
     let allowed: BTreeSet<&str> = [
         "SBOM-CRA-SBOM-FRESHNESS",
         "SBOM-CRA-MACHINE-READABLE",
@@ -161,11 +163,30 @@ fn sarif_rule_ids_are_stable_for_cra_noncompliant_fixture() {
         "SBOM-CRA-ART-13-16",
         "SBOM-CRA-ART-13-16-EMAIL",
         "SBOM-CRA-COMPONENT-SUPPLIER",
-        "SBOM-CRA-ANNEX-I",
+        "SBOM-CRA-ANNEX-I-IDENTIFIER",
+        "SBOM-CRA-ANNEX-I-TRACEABILITY",
+        "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
+        "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
+        "SBOM-CRA-ANNEX-I-INTEGRITY",
+        "SBOM-CRA-ANNEX-I-DEPENDENCY",
+        "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS",
+        "SBOM-CRA-ANNEX-I-PRIMARY",
+        "SBOM-CRA-ANNEX-I-CONTROLS",
         "SBOM-CRA-DOC-INTEGRITY",
         "SBOM-CRA-ANNEX-V",
         "SBOM-CRA-PRE-7-RQ-07-RE",
-        "SBOM-CRA-GENERAL",
+        "SBOM-CRA-ART-13-2",
+        "SBOM-CRA-ART-14-PSIRT",
+        "SBOM-CRA-ART-14-EARLY-WARNING",
+        "SBOM-CRA-ART-14-NOTIFICATION",
+        "SBOM-CRA-ART-14-ENISA",
+        "SBOM-CRA-ANNEX-IV",
+        "SBOM-CRA-CREATOR",
+        "SBOM-CRA-SERIAL",
+        "SBOM-CRA-COMPONENT-NAME",
+        "SBOM-CRA-SPEC-VERSION",
+        "SBOM-CRA-SPEC-VERSION-UNKNOWN",
+        "SBOM-CRA-ELEMENT-ID",
     ]
     .into_iter()
     .collect();

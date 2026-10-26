@@ -48,7 +48,7 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "Document creator identification",
           "rule_id": "SBOM-CRA-CREATOR",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-CREATOR",
           "remediation": "Identify who created the SBOM: a person, organization or tool. CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools."
         },
         {
@@ -138,7 +138,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "acme-webapp",
           "requirement": "CRA Annex I Part II (1): Product identifier traceability across updates",
           "rule_id": "SBOM-CRA-ANNEX-I-TRACEABILITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-TRACEABILITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -228,7 +228,7 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "Document unique identification",
           "rule_id": "SBOM-CRA-SERIAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-SERIAL",
           "remediation": "Give the SBOM a unique document identifier. CycloneDX: set serialNumber (urn:uuid:…)."
         },
         {
@@ -239,7 +239,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "acme-webapp",
           "requirement": "CRA Annex I / prEN 40000-1-3 [PRE-7-RQ-07]: Unique component identifier (PURL/CPE/SWHID/SWID)",
           "rule_id": "SBOM-CRA-ANNEX-I-IDENTIFIER",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-IDENTIFIER",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -285,7 +285,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "acme-webapp",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -327,7 +327,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/lodash@4.17.20",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -369,7 +369,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/express@4.17.1",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -411,7 +411,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/moment@2.29.1",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -453,7 +453,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/request@2.88.2",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -495,7 +495,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/axios@0.21.1",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -537,7 +537,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/underscore@1.12.0",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -579,7 +579,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/jquery@3.5.1",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -621,7 +621,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/react@17.0.1",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -640,7 +640,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "acme-webapp",
           "requirement": "CRA Annex I: Dependency relationships",
           "rule_id": "SBOM-CRA-ANNEX-I-DEPENDENCY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-DEPENDENCY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -659,7 +659,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "acme-webapp",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -670,7 +670,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/lodash@4.17.20",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -681,7 +681,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/express@4.17.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -692,7 +692,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/moment@2.29.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -703,7 +703,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/request@2.88.2",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -714,7 +714,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/axios@0.21.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -725,7 +725,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/underscore@1.12.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -736,7 +736,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/jquery@3.5.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -747,7 +747,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/react@17.0.1",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -806,7 +806,7 @@ expression: "render(&JsonReporter::new())"
           },
           "requirement": "CRA Annex I Part II / prEN 40000-1-3 [PRE-7-RQ-03]: Transitive dependency supplier (recommended)",
           "rule_id": "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -850,7 +850,7 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "CRA Art. 13(2): Documented risk assessment",
           "rule_id": "SBOM-CRA-ART-13-2",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ART-13-2",
           "standard_refs": [
             {
               "standard": "CraArticle",
@@ -868,7 +868,7 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "CRA Art. 14: PSIRT contact for external vulnerability reports",
           "rule_id": "SBOM-CRA-ART-14-PSIRT",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ART-14-PSIRT",
           "standard_refs": [
             {
               "standard": "CraArticle",
@@ -886,7 +886,7 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "CRA Art. 14(2)(a): 24-hour early-warning channel",
           "rule_id": "SBOM-CRA-ART-14-EARLY-WARNING",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ART-14-EARLY-WARNING",
           "standard_refs": [
             {
               "standard": "CraArticle",
@@ -909,7 +909,7 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "CRA Art. 14(2)(b): 72-hour notification channel",
           "rule_id": "SBOM-CRA-ART-14-NOTIFICATION",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ART-14-NOTIFICATION",
           "standard_refs": [
             {
               "standard": "CraArticle",
@@ -932,7 +932,7 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "CRA Art. 14(7): ENISA single reporting platform",
           "rule_id": "SBOM-CRA-ART-14-ENISA",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ART-14-ENISA",
           "standard_refs": [
             {
               "standard": "CraArticle",
@@ -973,7 +973,7 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "Document creator identification",
           "rule_id": "SBOM-CRA-CREATOR",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-CREATOR",
           "remediation": "Identify who created the SBOM: a person, organization or tool. CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools."
         },
         {
@@ -1063,7 +1063,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "acme-webapp",
           "requirement": "CRA Annex I Part II (1): Product identifier traceability across updates",
           "rule_id": "SBOM-CRA-ANNEX-I-TRACEABILITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-TRACEABILITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -1153,7 +1153,7 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "Document unique identification",
           "rule_id": "SBOM-CRA-SERIAL",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-SERIAL",
           "remediation": "Give the SBOM a unique document identifier. CycloneDX: set serialNumber (urn:uuid:…)."
         },
         {
@@ -1164,7 +1164,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "acme-webapp",
           "requirement": "CRA Annex I / prEN 40000-1-3 [PRE-7-RQ-07]: Unique component identifier (PURL/CPE/SWHID/SWID)",
           "rule_id": "SBOM-CRA-ANNEX-I-IDENTIFIER",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-IDENTIFIER",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -1210,7 +1210,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "acme-webapp",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -1252,7 +1252,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/lodash@4.17.21",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -1294,7 +1294,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/express@4.18.2",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -1336,7 +1336,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/dayjs@1.11.7",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -1378,7 +1378,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/axios@1.4.0",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -1420,7 +1420,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/react@18.2.0",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -1462,7 +1462,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/typescript@5.0.4",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -1504,7 +1504,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/zod@3.21.4",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -1546,7 +1546,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/prisma@4.15.0",
           "requirement": "CRA Annex I Part I (2)(f): Component integrity information (hash)",
           "rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-INTEGRITY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -1565,7 +1565,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "acme-webapp",
           "requirement": "CRA Annex I: Dependency relationships",
           "rule_id": "SBOM-CRA-ANNEX-I-DEPENDENCY",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-DEPENDENCY",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -1584,7 +1584,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "acme-webapp",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -1595,7 +1595,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/lodash@4.17.21",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -1606,7 +1606,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/express@4.18.2",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -1617,7 +1617,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/dayjs@1.11.7",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -1628,7 +1628,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/axios@1.4.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -1639,7 +1639,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/react@18.2.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -1650,7 +1650,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/typescript@5.0.4",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -1661,7 +1661,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/zod@3.21.4",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -1672,7 +1672,7 @@ expression: "render(&JsonReporter::new())"
           "component_id": "pkg:npm/prisma@4.15.0",
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
           "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
         },
         {
@@ -1731,7 +1731,7 @@ expression: "render(&JsonReporter::new())"
           },
           "requirement": "CRA Annex I Part II / prEN 40000-1-3 [PRE-7-RQ-03]: Transitive dependency supplier (recommended)",
           "rule_id": "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
-          "sarif_rule_id": "SBOM-CRA-ANNEX-I",
+          "sarif_rule_id": "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
           "standard_refs": [
             {
               "standard": "CraAnnex",
@@ -1775,7 +1775,7 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "CRA Art. 13(2): Documented risk assessment",
           "rule_id": "SBOM-CRA-ART-13-2",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ART-13-2",
           "standard_refs": [
             {
               "standard": "CraArticle",
@@ -1793,7 +1793,7 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "CRA Art. 14: PSIRT contact for external vulnerability reports",
           "rule_id": "SBOM-CRA-ART-14-PSIRT",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ART-14-PSIRT",
           "standard_refs": [
             {
               "standard": "CraArticle",
@@ -1811,7 +1811,7 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "CRA Art. 14(2)(a): 24-hour early-warning channel",
           "rule_id": "SBOM-CRA-ART-14-EARLY-WARNING",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ART-14-EARLY-WARNING",
           "standard_refs": [
             {
               "standard": "CraArticle",
@@ -1834,7 +1834,7 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "CRA Art. 14(2)(b): 72-hour notification channel",
           "rule_id": "SBOM-CRA-ART-14-NOTIFICATION",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ART-14-NOTIFICATION",
           "standard_refs": [
             {
               "standard": "CraArticle",
@@ -1857,7 +1857,7 @@ expression: "render(&JsonReporter::new())"
           "element": null,
           "requirement": "CRA Art. 14(7): ENISA single reporting platform",
           "rule_id": "SBOM-CRA-ART-14-ENISA",
-          "sarif_rule_id": "SBOM-CRA-GENERAL",
+          "sarif_rule_id": "SBOM-CRA-ART-14-ENISA",
           "standard_refs": [
             {
               "standard": "CraArticle",

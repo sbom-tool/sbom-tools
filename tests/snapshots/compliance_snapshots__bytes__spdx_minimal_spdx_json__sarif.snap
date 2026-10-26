@@ -101,13 +101,35 @@ source: tests/compliance_snapshots.rs
               "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             },
             {
-              "id": "SBOM-NTIA-GENERAL",
-              "name": "NtiaGeneralRequirement",
+              "id": "SBOM-NTIA-SPEC-VERSION",
+              "name": "NtiaSpecVersion",
               "shortDescription": {
-                "text": "NTIA Minimum Elements: General requirement"
+                "text": "NTIA Minimum Elements: Spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0)"
               },
               "defaultConfiguration": {
                 "level": "warning"
+              },
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+            },
+            {
+              "id": "SBOM-NTIA-SPEC-VERSION-UNKNOWN",
+              "name": "NtiaSpecVersionUnknown",
+              "shortDescription": {
+                "text": "NTIA Minimum Elements: SPDX document declares a valid SPDX version"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
+            },
+            {
+              "id": "SBOM-NTIA-ELEMENT-ID",
+              "name": "NtiaElementIdentifier",
+              "shortDescription": {
+                "text": "NTIA Minimum Elements: Every element has its own well-formed identifier"
+              },
+              "defaultConfiguration": {
+                "level": "note"
               },
               "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             },
@@ -335,7 +357,18 @@ source: tests/compliance_snapshots.rs
               "id": "SBOM-FSCT-LICENSE-ALL",
               "name": "FsctLicenseAll",
               "shortDescription": {
-                "text": "CISA FSCT 3e §2.2.2.7 (Aspirational): license information incl. concluded-license attestation for ALL components"
+                "text": "CISA FSCT 3e §2.2.2.7 (Aspirational): license information for ALL listed components"
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+            },
+            {
+              "id": "SBOM-FSCT-LICENSE-CONCLUDED",
+              "name": "FsctConcludedLicense",
+              "shortDescription": {
+                "text": "CISA FSCT 3e §2.2.2.7 (Aspirational): concluded-license attestation alongside declared licenses"
               },
               "defaultConfiguration": {
                 "level": "note"
@@ -405,17 +438,6 @@ source: tests/compliance_snapshots.rs
               },
               "defaultConfiguration": {
                 "level": "note"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
-            },
-            {
-              "id": "SBOM-FSCT-GENERAL",
-              "name": "FsctGeneralRequirement",
-              "shortDescription": {
-                "text": "CISA FSCT 3e: general baseline-attribute requirement"
-              },
-              "defaultConfiguration": {
-                "level": "warning"
               },
               "helpUri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
             }

@@ -24,7 +24,7 @@ source: tests/compliance_snapshots.rs
         "element": null,
         "requirement": "BSI/G7 SBOM-for-AI — Metadata / Signature",
         "rule_id": "SBOM-BSIAI-META-SIGNATURE",
-        "sarif_rule_id": "SBOM-BSIAI-META",
+        "sarif_rule_id": "SBOM-BSIAI-META-SIGNATURE",
         "standard_refs": [
           {
             "standard": "BsiSbomForAi",
@@ -42,7 +42,7 @@ source: tests/compliance_snapshots.rs
         "element": null,
         "requirement": "BSI/G7 SBOM-for-AI — System-Level / Producer",
         "rule_id": "SBOM-BSIAI-SYS-PRODUCER",
-        "sarif_rule_id": "SBOM-BSIAI-SYS",
+        "sarif_rule_id": "SBOM-BSIAI-SYS-PRODUCER",
         "standard_refs": [
           {
             "standard": "BsiSbomForAi",
@@ -60,7 +60,7 @@ source: tests/compliance_snapshots.rs
         "element": null,
         "requirement": "BSI/G7 SBOM-for-AI — System-Level / Data flow & usage",
         "rule_id": "SBOM-BSIAI-SYS-DATAFLOW",
-        "sarif_rule_id": "SBOM-BSIAI-SYS",
+        "sarif_rule_id": "SBOM-BSIAI-SYS-DATAFLOW",
         "standard_refs": [
           {
             "standard": "BsiSbomForAi",
@@ -82,7 +82,7 @@ source: tests/compliance_snapshots.rs
         },
         "requirement": "BSI/G7 SBOM-for-AI — Models / Model identifier",
         "rule_id": "SBOM-BSIAI-MODEL-IDENTIFIER",
-        "sarif_rule_id": "SBOM-BSIAI-MODEL",
+        "sarif_rule_id": "SBOM-BSIAI-MODEL-IDENTIFIER",
         "standard_refs": [
           {
             "standard": "BsiSbomForAi",
@@ -104,7 +104,7 @@ source: tests/compliance_snapshots.rs
         },
         "requirement": "BSI/G7 SBOM-for-AI — Models / Model license",
         "rule_id": "SBOM-BSIAI-MODEL-LICENSE",
-        "sarif_rule_id": "SBOM-BSIAI-MODEL",
+        "sarif_rule_id": "SBOM-BSIAI-MODEL-LICENSE",
         "standard_refs": [
           {
             "standard": "BsiSbomForAi",
@@ -126,7 +126,7 @@ source: tests/compliance_snapshots.rs
         },
         "requirement": "BSI/G7 SBOM-for-AI — Datasets / Dataset identifier",
         "rule_id": "SBOM-BSIAI-DATASET-IDENTIFIER",
-        "sarif_rule_id": "SBOM-BSIAI-DATASET",
+        "sarif_rule_id": "SBOM-BSIAI-DATASET-IDENTIFIER",
         "standard_refs": [
           {
             "standard": "BsiSbomForAi",
@@ -148,7 +148,7 @@ source: tests/compliance_snapshots.rs
         },
         "requirement": "BSI/G7 SBOM-for-AI — Datasets / Dataset hash value",
         "rule_id": "SBOM-BSIAI-DATASET-HASH",
-        "sarif_rule_id": "SBOM-BSIAI-DATASET",
+        "sarif_rule_id": "SBOM-BSIAI-DATASET-HASH",
         "standard_refs": [
           {
             "standard": "BsiSbomForAi",
@@ -170,7 +170,7 @@ source: tests/compliance_snapshots.rs
         },
         "requirement": "BSI/G7 SBOM-for-AI — Datasets / Dataset license",
         "rule_id": "SBOM-BSIAI-DATASET-LICENSE",
-        "sarif_rule_id": "SBOM-BSIAI-DATASET",
+        "sarif_rule_id": "SBOM-BSIAI-DATASET-LICENSE",
         "standard_refs": [
           {
             "standard": "BsiSbomForAi",
@@ -192,7 +192,7 @@ source: tests/compliance_snapshots.rs
         },
         "requirement": "BSI/G7 SBOM-for-AI — Datasets / Provenance & intended use",
         "rule_id": "SBOM-BSIAI-DATASET-PROVENANCE",
-        "sarif_rule_id": "SBOM-BSIAI-DATASET",
+        "sarif_rule_id": "SBOM-BSIAI-DATASET-PROVENANCE",
         "standard_refs": [
           {
             "standard": "BsiSbomForAi",
@@ -210,7 +210,7 @@ source: tests/compliance_snapshots.rs
         "element": null,
         "requirement": "BSI/G7 SBOM-for-AI — Infrastructure / Runtime & framework",
         "rule_id": "SBOM-BSIAI-INFRA-RUNTIME",
-        "sarif_rule_id": "SBOM-BSIAI-INFRA",
+        "sarif_rule_id": "SBOM-BSIAI-INFRA-RUNTIME",
         "standard_refs": [
           {
             "standard": "BsiSbomForAi",
@@ -228,7 +228,7 @@ source: tests/compliance_snapshots.rs
         "element": null,
         "requirement": "BSI/G7 SBOM-for-AI — Security / AI security controls",
         "rule_id": "SBOM-BSIAI-SEC-CONTROLS",
-        "sarif_rule_id": "SBOM-BSIAI-SEC",
+        "sarif_rule_id": "SBOM-BSIAI-SEC-CONTROLS",
         "standard_refs": [
           {
             "standard": "BsiSbomForAi",
@@ -246,7 +246,7 @@ source: tests/compliance_snapshots.rs
         "element": null,
         "requirement": "BSI/G7 SBOM-for-AI — Security / Exploitability reference",
         "rule_id": "SBOM-BSIAI-SEC-EXPLOITABILITY",
-        "sarif_rule_id": "SBOM-BSIAI-SEC",
+        "sarif_rule_id": "SBOM-BSIAI-SEC-EXPLOITABILITY",
         "standard_refs": [
           {
             "standard": "BsiSbomForAi",

@@ -15,16 +15,13 @@
 //!    minimal SBOM that must surface the rule, with the expected severity)
 //!    and one *silent* case (a minimal SBOM that must not surface it), or an
 //!    explicit skip-with-reason entry. No silent omissions: the runner fails
-//!    if the entry table and the declared universe differ. Registry keys
-//!    that exist only as aliases of a shared SARIF rule (e.g.
-//!    `SBOM-CRA-ANNEX-I-DEPENDENCY` → `SBOM-CRA-ANNEX-I`) get per-key rows
-//!    that match the internal `Violation::rule_id` instead.
+//!    if the entry table and the declared universe differ. Every check is its
+//!    own SARIF rule, so a row matches one check.
 //!
 //! 3. **A universe sweep**: every violation emitted by every fixture in a
 //!    matrix must map (via its registry SARIF identity) into the standard's
-//!    declared rule universe, and every alias key a fixture emits must have
-//!    its own per-key row — a new check site that emits a new rule id forces
-//!    the matrix to be extended instead of silently escaping it.
+//!    declared rule universe — a new check site that emits a new rule id
+//!    forces the matrix to be extended instead of silently escaping it.
 
 // Each per-standard matrix binary uses a subset of the DSL (mirrors the
 // existing tests/common/ffi_helpers.rs posture).
@@ -1103,31 +1100,17 @@ pub enum RuleCoverage {
     Skipped { reason: &'static str },
 }
 
-/// Which identity of an emitted violation a row matches.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RuleScope {
-    /// The externally-visible SARIF rule id (`Violation::sarif_rule_id`).
-    /// These rows must cover the standard's universe exactly.
-    Sarif,
-    /// The internal registry key (`Violation::rule_id`) of a key that exists
-    /// only as an alias of a shared SARIF rule; asserting the SARIF id alone
-    /// cannot tell such keys apart.
-    Key,
-}
-
 /// One row of the per-standard matrix.
 pub struct RuleEntry {
-    /// SARIF rule id ([`RuleScope::Sarif`]) or registry key
-    /// ([`RuleScope::Key`]).
+    /// The SARIF rule id (`Violation::sarif_rule_id`) the row covers. Every
+    /// check is its own SARIF rule, so this names exactly one check.
     pub id: &'static str,
-    pub scope: RuleScope,
     pub coverage: RuleCoverage,
 }
 
 impl RuleEntry {
     fn tested_case(
         id: &'static str,
-        scope: RuleScope,
         severity: ViolationSeverity,
         departs_from_registry_default: bool,
         firing: SbomFixture,
@@ -1135,7 +1118,6 @@ impl RuleEntry {
     ) -> Self {
         Self {
             id,
-            scope,
             coverage: RuleCoverage::Tested {
                 firing: vec![FiringCase {
                     label: "firing",
@@ -1158,7 +1140,7 @@ impl RuleEntry {
         firing: SbomFixture,
         silent: SbomFixture,
     ) -> Self {
-        Self::tested_case(sarif_id, RuleScope::Sarif, severity, false, firing, silent)
+        Self::tested_case(sarif_id, severity, false, firing, silent)
     }
 
     /// Rule whose main firing case intentionally departs from the registry's
@@ -1169,30 +1151,7 @@ impl RuleEntry {
         firing: SbomFixture,
         silent: SbomFixture,
     ) -> Self {
-        Self::tested_case(sarif_id, RuleScope::Sarif, severity, true, firing, silent)
-    }
-
-    /// Per-key row: the alias key `key` (matched on `Violation::rule_id`)
-    /// fires at the key's registry default severity; the silent fixture must
-    /// not emit the key.
-    pub fn key_tested(
-        key: &'static str,
-        severity: ViolationSeverity,
-        firing: SbomFixture,
-        silent: SbomFixture,
-    ) -> Self {
-        Self::tested_case(key, RuleScope::Key, severity, false, firing, silent)
-    }
-
-    /// Per-key row whose main firing case departs from the key's registry
-    /// default severity.
-    pub fn key_tested_departing(
-        key: &'static str,
-        severity: ViolationSeverity,
-        firing: SbomFixture,
-        silent: SbomFixture,
-    ) -> Self {
-        Self::tested_case(key, RuleScope::Key, severity, true, firing, silent)
+        Self::tested_case(sarif_id, severity, true, firing, silent)
     }
 
     /// Additional firing case at the registry's default severity.
@@ -1273,40 +1232,24 @@ impl RuleEntry {
     pub fn skipped(sarif_id: &'static str, reason: &'static str) -> Self {
         Self {
             id: sarif_id,
-            scope: RuleScope::Sarif,
-            coverage: RuleCoverage::Skipped { reason },
-        }
-    }
-
-    /// Explicit skip-with-reason entry for an alias key.
-    pub fn key_skipped(key: &'static str, reason: &'static str) -> Self {
-        Self {
-            id: key,
-            scope: RuleScope::Key,
             coverage: RuleCoverage::Skipped { reason },
         }
     }
 
     /// Whether `v` carries this row's identity.
     fn matches(&self, v: &sbom_tools::quality::Violation) -> bool {
-        match self.scope {
-            RuleScope::Sarif => v.sarif_rule_id() == self.id,
-            RuleScope::Key => v.rule_id == self.id,
-        }
+        v.sarif_rule_id() == self.id
     }
 }
 
 /// Run a per-standard rule matrix:
 ///
-/// 1. exhaustiveness — the SARIF rows must cover `universe` exactly (every
-///    rule id tested or explicitly skipped, no duplicates, no strays); each
-///    per-key row must name a registered alias key whose SARIF identity is
-///    in `universe`;
+/// 1. exhaustiveness — the rows must cover `universe` exactly (every rule id
+///    tested or explicitly skipped, no duplicates, no strays);
 /// 2. per rule — each firing fixture surfaces the row's id at the expected
 ///    severity (with registry-default consistency enforced), each silent
 ///    fixture stays silent for that id;
-/// 3. sweep — every violation any fixture emits maps into `universe`, and
-///    every alias key a fixture emits has its own per-key row.
+/// 3. sweep — every violation any fixture emits maps into `universe`.
 pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntry]) {
     let universe_set: BTreeSet<&str> = universe.iter().copied().collect();
     assert_eq!(
@@ -1316,39 +1259,12 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
     );
 
     let mut covered: BTreeSet<&str> = BTreeSet::new();
-    let mut keys: BTreeSet<&str> = BTreeSet::new();
     for entry in entries {
-        match entry.scope {
-            RuleScope::Sarif => assert!(
-                covered.insert(entry.id),
-                "[{level:?}] duplicate matrix entry for {}",
-                entry.id
-            ),
-            RuleScope::Key => {
-                assert!(
-                    keys.insert(entry.id),
-                    "[{level:?}] duplicate per-key entry for {}",
-                    entry.id
-                );
-                let meta = rule_meta(entry.id).unwrap_or_else(|| {
-                    panic!(
-                        "[{level:?}] per-key row {} is not a registered key",
-                        entry.id
-                    )
-                });
-                assert_ne!(
-                    meta.sarif_id, entry.id,
-                    "[{level:?}] per-key row {} is its own SARIF rule; use a SARIF row",
-                    entry.id
-                );
-                assert!(
-                    universe_set.contains(meta.sarif_id),
-                    "[{level:?}] per-key row {} aliases {} outside the rule universe",
-                    entry.id,
-                    meta.sarif_id
-                );
-            }
-        }
+        assert!(
+            covered.insert(entry.id),
+            "[{level:?}] duplicate matrix entry for {}",
+            entry.id
+        );
         match &entry.coverage {
             RuleCoverage::Skipped { reason } => assert!(
                 !reason.trim().is_empty(),
@@ -1458,9 +1374,9 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
     }
 
     // Universe sweep: no fixture in this matrix may emit a rule outside the
-    // declared universe, or an alias key without its own per-key row. A new
-    // check site for this standard must extend the universe (and therefore
-    // the matrix) instead of escaping it.
+    // declared universe, or an unregistered rule. A new check site for this
+    // standard must extend the universe (and therefore the matrix) instead
+    // of escaping it.
     for entry in entries {
         let RuleCoverage::Tested {
             firing,
@@ -1488,21 +1404,11 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
                     rule = v.rule_id,
                     sarif = v.sarif_rule_id(),
                 );
-                let meta = rule_meta(v.rule_id).unwrap_or_else(|| {
-                    panic!(
-                        "[{level:?}] fixture for {id} ({label}) emitted unregistered rule {rule}",
-                        id = entry.id,
-                        rule = v.rule_id
-                    )
-                });
                 assert!(
-                    meta.sarif_id == v.rule_id || keys.contains(v.rule_id),
-                    "[{level:?}] fixture for {id} ({label}) emitted alias key {rule} \
-                     (sarif {sarif}) with no per-key row — add RuleEntry::key_tested \
-                     (or key_skipped with a reason) for it",
+                    rule_meta(v.rule_id).is_some(),
+                    "[{level:?}] fixture for {id} ({label}) emitted unregistered rule {rule}",
                     id = entry.id,
-                    rule = v.rule_id,
-                    sarif = meta.sarif_id,
+                    rule = v.rule_id
                 );
             }
         }

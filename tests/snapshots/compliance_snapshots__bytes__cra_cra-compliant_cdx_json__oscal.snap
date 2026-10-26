@@ -225,7 +225,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CRA-GENERAL"
+                "value": "SBOM-CRA-ELEMENT-ID"
               },
               {
                 "name": "sbom-element",
@@ -276,7 +276,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CRA-GENERAL"
+                "value": "SBOM-CRA-ELEMENT-ID"
               },
               {
                 "name": "sbom-element",
@@ -605,7 +605,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CRA-GENERAL"
+                "value": "SBOM-CRA-ELEMENT-ID"
               },
               {
                 "name": "sbom-element",
@@ -656,7 +656,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-CRA-GENERAL"
+                "value": "SBOM-CRA-ELEMENT-ID"
               },
               {
                 "name": "sbom-element",

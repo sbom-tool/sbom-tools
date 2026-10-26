@@ -359,7 +359,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-BSIAI-META"
+                "value": "SBOM-BSIAI-META-SIGNATURE"
               }
             ],
             "subjects": [
@@ -400,7 +400,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-BSIAI-SYS"
+                "value": "SBOM-BSIAI-SYS-PRODUCER"
               }
             ],
             "subjects": [
@@ -441,7 +441,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-BSIAI-SYS"
+                "value": "SBOM-BSIAI-SYS-DATAFLOW"
               }
             ],
             "subjects": [
@@ -482,7 +482,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-BSIAI-MODEL"
+                "value": "SBOM-BSIAI-MODEL-IDENTIFIER"
               },
               {
                 "name": "sbom-element",
@@ -528,7 +528,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-BSIAI-MODEL"
+                "value": "SBOM-BSIAI-MODEL-LICENSE"
               },
               {
                 "name": "sbom-element",
@@ -574,7 +574,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-BSIAI-DATASET"
+                "value": "SBOM-BSIAI-DATASET-IDENTIFIER"
               },
               {
                 "name": "sbom-element",
@@ -620,7 +620,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-BSIAI-DATASET"
+                "value": "SBOM-BSIAI-DATASET-HASH"
               },
               {
                 "name": "sbom-element",
@@ -666,7 +666,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-BSIAI-DATASET"
+                "value": "SBOM-BSIAI-DATASET-LICENSE"
               },
               {
                 "name": "sbom-element",
@@ -712,7 +712,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-BSIAI-DATASET"
+                "value": "SBOM-BSIAI-DATASET-PROVENANCE"
               },
               {
                 "name": "sbom-element",
@@ -758,7 +758,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-BSIAI-INFRA"
+                "value": "SBOM-BSIAI-INFRA-RUNTIME"
               }
             ],
             "subjects": [
@@ -799,7 +799,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-BSIAI-SEC"
+                "value": "SBOM-BSIAI-SEC-CONTROLS"
               }
             ],
             "subjects": [
@@ -840,7 +840,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "SBOM-BSIAI-SEC"
+                "value": "SBOM-BSIAI-SEC-EXPLOITABILITY"
               }
             ],
             "subjects": [

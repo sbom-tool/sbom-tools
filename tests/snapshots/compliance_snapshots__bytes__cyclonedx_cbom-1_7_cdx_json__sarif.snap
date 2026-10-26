@@ -178,17 +178,6 @@ source: tests/compliance_snapshots.rs
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             },
             {
-              "id": "SBOM-CNSA2-GENERAL",
-              "name": "Cnsa2GeneralRequirement",
-              "shortDescription": {
-                "text": "CNSA 2.0: general algorithm-suite requirement"
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
-            },
-            {
               "id": "SBOM-PQC-000",
               "name": "PqcCryptoInventory",
               "shortDescription": {
@@ -336,17 +325,6 @@ source: tests/compliance_snapshots.rs
               "name": "PqcProtocolUnverifiable",
               "shortDescription": {
                 "text": "NIST PQC: protocol crypto references cannot be verified — readiness cannot be verified"
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
-            },
-            {
-              "id": "SBOM-PQC-GENERAL",
-              "name": "PqcGeneralRequirement",
-              "shortDescription": {
-                "text": "NIST PQC: general post-quantum readiness requirement"
               },
               "defaultConfiguration": {
                 "level": "warning"
