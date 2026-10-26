@@ -159,7 +159,17 @@ fn assert_envelope_invariants(envelope: &Value, results: &[ComplianceResult], la
         for v in violations {
             let key = v["finding_key"].as_str().expect("finding_key");
             assert_eq!(v["finding_id"], finding_id(key).as_str(), "{label}");
-            let subject = v["component_id"].as_str().unwrap_or(DOCUMENT_SUBJECT);
+            let subject = match v["component_id"].as_str() {
+                None => DOCUMENT_SUBJECT.to_string(),
+                Some(id)
+                    if id == DOCUMENT_SUBJECT
+                        || id.starts_with("edge:")
+                        || id.starts_with("component:") =>
+                {
+                    format!("component:{id}")
+                }
+                Some(id) => id.to_string(),
+            };
             let rule = v["rule_id"].as_str().expect("rule_id");
             let detail = v["finding_detail"].as_str().map_or_else(String::new, |d| {
                 let encoded = d

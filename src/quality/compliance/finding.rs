@@ -22,7 +22,11 @@
 //!   ([`Violation::component_id`]), or [`DOCUMENT_SUBJECT`] for document-level
 //!   and aggregate findings. A finding about one dependency edge would use
 //!   `edge:<from>-><to>`, but no rule reports a single edge today, so that
-//!   form is reserved.
+//!   form is reserved. A canonical id that would read as one of those forms
+//!   — `document` itself, or one starting with `edge:` — gets `component:`
+//!   prepended, as does one already starting with `component:`, so a
+//!   component never shares the document's subject (see
+//!   [`finding_subject`]).
 //!
 //! Neither the standard key nor a rule id contains `|` or `:`, and the
 //! encoded detail contains neither, so the key splits unambiguously: the
@@ -46,10 +50,18 @@
 //! fingerprints and baselines.
 
 use super::{ComplianceLevel, Violation};
+use std::borrow::Cow;
 use std::fmt::Write as _;
 
 /// Subject of a finding that is about the document rather than a component.
 pub const DOCUMENT_SUBJECT: &str = "document";
+
+/// Prefix of the reserved dependency-edge subject form.
+const EDGE_SUBJECT_PREFIX: &str = "edge:";
+
+/// Prepended to a component's canonical id that would otherwise read as the
+/// document subject or an edge subject (or as an id prefixed this way).
+const COMPONENT_SUBJECT_PREFIX: &str = "component:";
 
 /// Prefix of every [`finding_id`]. The version changes only if the key
 /// scheme does.
@@ -89,12 +101,25 @@ pub const fn standard_key(level: ComplianceLevel) -> &'static str {
 /// offending component's canonical id, or [`DOCUMENT_SUBJECT`]. Several
 /// findings of one rule on one subject are told apart by their
 /// [`Violation::finding_detail`], not by the subject.
+///
+/// A canonical id falls back to the bom-ref or SPDXID, which can be any
+/// string, so a component id that reads `document`, or starts with `edge:` or
+/// `component:`, is written with `component:` prepended: a component with the
+/// bom-ref `document` must not share the subject of a rule's document-level
+/// finding.
 #[must_use]
-pub fn finding_subject(violation: &Violation) -> &str {
-    violation
-        .component_id
-        .as_deref()
-        .unwrap_or(DOCUMENT_SUBJECT)
+pub fn finding_subject(violation: &Violation) -> Cow<'_, str> {
+    match violation.component_id.as_deref() {
+        None => Cow::Borrowed(DOCUMENT_SUBJECT),
+        Some(id)
+            if id == DOCUMENT_SUBJECT
+                || id.starts_with(EDGE_SUBJECT_PREFIX)
+                || id.starts_with(COMPONENT_SUBJECT_PREFIX) =>
+        {
+            Cow::Owned(format!("{COMPONENT_SUBJECT_PREFIX}{id}"))
+        }
+        Some(id) => Cow::Borrowed(id),
+    }
 }
 
 /// The finding key of `violation` reported under `level`:
@@ -116,7 +141,7 @@ pub fn finding_key(level: ComplianceLevel, violation: &Violation) -> String {
         }
     }
     key.push('|');
-    key.push_str(finding_subject(violation));
+    key.push_str(&finding_subject(violation));
     key
 }
 
@@ -134,9 +159,11 @@ pub fn finding_key(level: ComplianceLevel, violation: &Violation) -> String {
 /// `ComplianceChecker::check()` runs this on every result.
 pub(crate) fn number_repeated_details(violations: &mut [Violation]) {
     use std::collections::HashSet;
-    type Identity = (&'static str, Option<String>, String);
-    let identity =
-        |v: &Violation, detail: String| -> Identity { (v.rule_id, v.component_id.clone(), detail) };
+    // Rule, subject and detail as the finding key spells them.
+    type Identity = (&'static str, String, String);
+    let identity = |v: &Violation, detail: String| -> Identity {
+        (v.rule_id, finding_subject(v).into_owned(), detail)
+    };
     let taken: HashSet<Identity> = violations
         .iter()
         .filter_map(|v| Some(identity(v, v.finding_detail.clone()?)))
@@ -293,7 +320,15 @@ mod tests {
             Some("%7C"),
             Some("%3A|:%25"),
         ];
-        let subjects = [None, Some("pkg:npm/x@1"), Some("a|b:c"), Some("b|c")];
+        let subjects = [
+            None,
+            Some("pkg:npm/x@1"),
+            Some("a|b:c"),
+            Some("b|c"),
+            Some("document"),
+            Some("edge:a->b"),
+            Some("component:document"),
+        ];
         for detail in details {
             for subject in subjects {
                 let mut v = base.clone();
@@ -304,9 +339,38 @@ mod tests {
                 assert_eq!(standard, "cisa-2026", "{key}");
                 assert_eq!(rule_id, "SBOM-NTIA-SUPPLIER", "{key}");
                 assert_eq!(parsed_detail.as_deref(), detail, "{key}");
-                assert_eq!(parsed_subject, subject.unwrap_or(DOCUMENT_SUBJECT), "{key}");
+                let component = parsed_subject.strip_prefix("component:");
+                let expected = match subject {
+                    None => DOCUMENT_SUBJECT,
+                    Some(id) if component.is_some() => {
+                        assert_eq!(component, Some(id), "{key}");
+                        parsed_subject
+                    }
+                    Some(id) => id,
+                };
+                assert_eq!(parsed_subject, expected, "{key}");
                 assert!(keys.insert(key.clone()), "two inputs share {key}");
             }
+        }
+    }
+
+    /// A component's canonical id falls back to its bom-ref, which can read
+    /// `document` or `edge:…`: such an id is prefixed, so the component never
+    /// shares the subject of a document-level (or edge) finding.
+    #[test]
+    fn component_ids_never_read_as_another_kind_of_subject() {
+        let violations = ntia_violations();
+        let mut v = find(&violations, "SBOM-NTIA-SUPPLIER").clone();
+        for (component_id, subject) in [
+            (None, "document"),
+            (Some("document"), "component:document"),
+            (Some("edge:a->b"), "component:edge:a->b"),
+            (Some("component:document"), "component:component:document"),
+            (Some("pkg:npm/lodash@4.17.21"), "pkg:npm/lodash@4.17.21"),
+            (Some("documents"), "documents"),
+        ] {
+            v.component_id = component_id.map(str::to_string);
+            assert_eq!(finding_subject(&v), subject, "{component_id:?}");
         }
     }
 

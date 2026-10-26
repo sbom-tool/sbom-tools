@@ -226,8 +226,10 @@ fn repeat_prone_cdx() -> (NormalizedSbom, CraSidecarMetadata) {
 }
 
 /// The fixture corpus does not exercise every way a rule can report twice on
-/// one subject; this document does, and an SPDX document claiming version
-/// 4.0 draws both spec-version findings. Keys stay unique at every level.
+/// one subject; this document does, an SPDX document claiming version 4.0
+/// draws both spec-version findings, and a component whose bom-ref is
+/// `document` meets a document-level finding of its rule. Keys stay unique
+/// at every level.
 #[test]
 fn repeat_prone_documents_keep_unique_keys() {
     let (cdx, sidecar) = repeat_prone_cdx();
@@ -237,12 +239,36 @@ fn repeat_prone_documents_keep_unique_keys() {
     )
     .expect("fixture parses");
     spdx4.document.spec_version = "4.0".to_string();
+    // A component whose canonical id is its bom-ref `document`: under FDA it
+    // lacks a supplier while the document lacks an organization creator, so
+    // SBOM-FDA-SUPPLIER reports on the document and on the component.
+    let document_named = parse_sbom_str(
+        &serde_json::json!({
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.6",
+            "version": 1,
+            "metadata": {
+                "timestamp": "2026-10-01T00:00:00Z",
+                "tools": [{"name": "generator", "version": "1.0"}]
+            },
+            "components": [
+                {"type": "library", "bom-ref": "document", "name": "document", "version": "1.0"}
+            ]
+        })
+        .to_string(),
+    )
+    .expect("synthetic document parses");
 
     let mut repeats = Vec::new();
     let mut fired: std::collections::BTreeSet<(String, &'static str)> =
         std::collections::BTreeSet::new();
     let mut numbered = 0usize;
-    for (name, sbom, sidecar) in [("cdx", &cdx, Some(&sidecar)), ("spdx-4.0", &spdx4, None)] {
+    let mut supplier_subjects = std::collections::BTreeSet::new();
+    for (name, sbom, sidecar) in [
+        ("cdx", &cdx, Some(&sidecar)),
+        ("spdx-4.0", &spdx4, None),
+        ("document-named", &document_named, None),
+    ] {
         for (label, checker) in checkers(sidecar) {
             let result = checker.check(sbom);
             repeats.extend(repeated_keys(&format!("{name} [{label}]"), &result));
@@ -253,10 +279,18 @@ fn repeat_prone_documents_keep_unique_keys() {
                         .as_deref()
                         .is_some_and(|d| d.ends_with("#2")),
                 );
+                if name == "document-named" && v.rule_id == "SBOM-FDA-SUPPLIER" {
+                    supplier_subjects.insert(v.component_id.clone());
+                }
             }
         }
     }
     assert_no_repeats(&repeats);
+    assert_eq!(
+        supplier_subjects,
+        [None, Some("document".to_string())].into_iter().collect(),
+        "SBOM-FDA-SUPPLIER must report on the document and on the component `document`"
+    );
 
     // The document does trip what it is meant to: several findings of one
     // check family on one subject, and repeats numbered.

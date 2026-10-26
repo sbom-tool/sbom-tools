@@ -89,7 +89,9 @@ cra|SBOM-CRA-VULN-METADATA:CVE-2024-3094|pkg:generic/xz-utils@5.6.0
 - `<subject>` is the violation's `component_id` when it has one, otherwise
   `document`. A finding about one dependency edge would use
   `edge:<from>-><to>`; no rule reports a single edge today, so that form is
-  reserved.
+  reserved. A `component_id` that would read as one of those forms (a
+  component whose bom-ref is `document`, say), or that starts with
+  `component:`, gets `component:` prepended: `component:document`.
 
 Neither the standard nor a rule id contains `|` or `:`, and the encoded detail
 contains neither, so the key splits unambiguously: the standard is everything
