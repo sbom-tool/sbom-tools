@@ -164,6 +164,23 @@ severity of certain checks scales per Annex III/IV class. Selecting a
 class also implies a default conformity-assessment route (Annex VIII),
 overridable via sidecar `conformityAssessmentRoute`.
 
+The classes are those of the CRA: `important-class-1` is Annex III class I
+(19 product categories, from identity management systems and browsers to
+operating systems, routers and connected toys), `important-class-2` is
+Annex III class II (hypervisors and container runtimes, firewalls and
+intrusion detection/prevention systems, tamper-resistant microprocessors
+and microcontrollers), and `critical` is Annex IV (hardware devices with
+security boxes, smart meter gateways, smartcards and secure elements).
+Whether a product falls into a category follows from its core
+functionality (Art. 7(1), 8(1)) and from **Commission Implementing
+Regulation (EU) 2025/2392** of 28 November 2025 on the technical
+description of the categories of important and critical products with
+digital elements (OJ L, 2025/2392, 1.12.2025;
+<https://eur-lex.europa.eu/eli/reg_impl/2025/2392/oj/eng>), adopted under
+Art. 7(4): its Annex I describes the class I and class II categories, its
+Annex II the critical ones. sbom-tools does not classify a product; pick
+the class from those descriptions.
+
 | Check                          | Default | Important-1 | Important-2 | Critical |
 |--------------------------------|---------|-------------|-------------|----------|
 | Vendor-hash coverage threshold | 50%     | 80%         | 80%         | 100%     |

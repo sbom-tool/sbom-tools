@@ -1806,7 +1806,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Annex IV: EUCC (Common Criteria) certification the product class requires",
             default_severity: ViolationSeverity::Info,
             refs: &[(ANNEX, "Annex IV")],
-            remediation: "Reference the EUCC (Common Criteria) certification the product class requires: set euccProtectionProfileId, euccTargetOfEvaluation, euccItsefIdentifier or an unexpired euccValidUntil in the CRA sidecar. Once euccValidUntil has passed, the certificate is expired and none of these keys counts.",
+            remediation: "Reference the EUCC (Common Criteria) certification the product class requires: set euccProtectionProfileId, euccTargetOfEvaluation, euccItsefIdentifier or an unexpired euccValidUntil in the CRA sidecar. Once euccValidUntil has passed, the certificate is expired and none of these keys counts. The product classes are CRA Annex III (important, class I and II) and Annex IV (critical); Implementing Regulation (EU) 2025/2392 describes which products each category covers.",
             advice: Some(&ADVICE_EUCC_ALT),
         },
         "SBOM-CRA-ANNEX-V" => RuleMeta {
@@ -1838,7 +1838,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Annex VIII: Conformity-assessment evidence for the resolved assessment route",
             default_severity: ViolationSeverity::Warning,
             refs: &[(ANNEX, "Annex VIII")],
-            remediation: "Reference the notified-body or certification-body certificate the conformity-assessment route requires — the EU-type examination certificate (Module B+C), the quality-system approval (Module H) or the EUCC certificate — as a certification external reference on the product component. An attestation reference does not count here, since it may be a self-attestation; it still serves as the Annex V Declaration of Conformity reference.",
+            remediation: "Reference the notified-body or certification-body certificate the conformity-assessment route requires — the EU-type examination certificate (Module B+C), the quality-system approval (Module H) or the EUCC certificate — as a certification external reference on the product component. An attestation reference does not count here, since it may be a self-attestation; it still serves as the Annex V Declaration of Conformity reference. The route follows the product class (Art. 32; Annex III class I and II, Annex IV critical), whose product categories Implementing Regulation (EU) 2025/2392 describes.",
             advice: Some(&ADVICE_CONFORMITY_EVIDENCE),
         },
         // The four [PRE-8-RQ-02] checks on a hardware component, one id each

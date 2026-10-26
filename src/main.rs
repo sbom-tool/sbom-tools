@@ -565,6 +565,8 @@ struct ViewArgs {
 
     /// CRA Annex III/IV product class (drives severity calibration).
     /// One of: default, important-class-1, important-class-2, critical.
+    /// Implementing Regulation (EU) 2025/2392 gives the technical
+    /// description of each class's product categories.
     /// Sidecar `productClass` wins over this flag.
     #[arg(long, value_name = "CLASS")]
     cra_product_class: Option<String>,
@@ -693,6 +695,8 @@ struct ValidateArgs {
 
     /// CRA Annex III/IV product class (drives severity calibration).
     /// One of: default, important-class-1, important-class-2, critical.
+    /// Implementing Regulation (EU) 2025/2392 gives the technical
+    /// description of each class's product categories.
     /// Sidecar `productClass` wins over this flag.
     #[arg(long, value_name = "CLASS")]
     cra_product_class: Option<String>,
@@ -1035,6 +1039,8 @@ struct QualityArgs {
 
     /// CRA Annex III/IV product class (drives severity calibration).
     /// One of: default, important-class-1, important-class-2, critical.
+    /// Implementing Regulation (EU) 2025/2392 gives the technical
+    /// description of each class's product categories.
     /// Sidecar `productClass` wins over this flag.
     #[arg(long, value_name = "CLASS")]
     cra_product_class: Option<String>,
@@ -1699,6 +1705,8 @@ struct CraDocsArgs {
 
     /// CRA Annex III/IV product class.
     /// One of: default, important-class-1, important-class-2, critical.
+    /// Implementing Regulation (EU) 2025/2392 gives the technical
+    /// description of each class's product categories.
     /// Sidecar `productClass` wins.
     #[arg(long, value_name = "CLASS")]
     cra_product_class: Option<String>,
