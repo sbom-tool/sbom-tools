@@ -8,8 +8,10 @@ use crate::quality::{
 };
 use serde::Serialize;
 
+mod locator;
 mod rules;
 
+pub use locator::SbomLocator;
 use rules::SarifRule;
 
 /// The `$schema` every SARIF log declares: the OASIS SARIF 2.1.0 schema
