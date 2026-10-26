@@ -601,9 +601,10 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
                     pin_class(s, CraProductClass::ImportantClass2, None);
                 }),
             ),
-        // Only routes beyond Module A need an attestation reference. The
-        // registry documents an Info default, but no class emits one.
-        RuleEntry::tested_departing(
+        // Only routes beyond Module A need an attestation reference: Warning
+        // for important class I (the registry default), Error for class II
+        // and critical products.
+        RuleEntry::tested(
             "SBOM-CRA-ANNEX-VIII",
             Sev::Warning,
             broken(|s| {
@@ -685,7 +686,7 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
                 pin_class(s, CraProductClass::ImportantClass2, None);
             }),
         ),
-        RuleEntry::key_tested_departing(
+        RuleEntry::key_tested(
             "SBOM-CRA-ANNEX-I-IDENTIFIER",
             Sev::Error,
             broken(|s| s.component_mut("libalpha").purl = None),
@@ -1146,9 +1147,8 @@ fn cra_oss_steward_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             }),
         ),
         // ── Per-key rows ─────────────────────────────────────────────────
-        // The vulnerability-handling floor is an Error (the registry
-        // documents a Warning default).
-        RuleEntry::key_tested_departing(
+        // The vulnerability-handling floor is an Error.
+        RuleEntry::key_tested(
             "SBOM-CRA-ART-24",
             Sev::Error,
             steward_broken(|s| s.primary_mut().external_refs.clear()),
@@ -1163,7 +1163,7 @@ fn cra_oss_steward_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 )];
             }),
         ),
-        RuleEntry::key_tested_departing(
+        RuleEntry::key_tested(
             "SBOM-CRA-ANNEX-I-IDENTIFIER",
             Sev::Error,
             steward_broken(|s| s.component_mut("libalpha").purl = None),

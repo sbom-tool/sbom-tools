@@ -1280,6 +1280,23 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
             .unwrap_or_else(|| panic!("[{level:?}] {id} does not resolve in the rule registry"));
 
         assert!(!firing.is_empty(), "[{level:?}] {id} has no firing case");
+        // The registry default is what the SARIF rule catalogue advertises,
+        // so some check must emit it: a rule whose severity is not context-
+        // dependent emits only its default, and one that escalates or relaxes
+        // by product class, phase or context still emits its default in its
+        // most common case. A row whose every firing case departs from the
+        // default documents a level no check emits (WP 1.2 finding B6).
+        assert!(
+            firing
+                .iter()
+                .any(|case| !case.departs_from_registry_default),
+            "[{level:?}] {id}: no firing case is at the registry default severity \
+             {default:?} (emitted: {emitted:?}) — the SARIF catalogue would advertise a \
+             level no check emits; align the registry default with the emitted severity \
+             (the most common one when it depends on context) and document the escalation",
+            default = meta.default_severity,
+            emitted = firing.iter().map(|case| case.severity).collect::<Vec<_>>(),
+        );
         for case in firing {
             // The flag keeps severity expectations honest against the
             // registry: an expectation that silently matches (or silently

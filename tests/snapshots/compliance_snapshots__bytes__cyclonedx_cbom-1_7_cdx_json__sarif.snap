@@ -250,7 +250,7 @@ source: tests/compliance_snapshots.rs
                 "text": "NIST PQC: hybrid PQC combiner — recommended transition practice (IR 8547)"
               },
               "defaultConfiguration": {
-                "level": "warning"
+                "level": "note"
               },
               "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             },

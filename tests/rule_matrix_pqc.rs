@@ -149,9 +149,8 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             base(),
         ),
         // A hybrid combiner is good migration practice (Info), even when its
-        // component algorithms cannot be named. The registry documents a
-        // Warning default, but the only push site emits Info.
-        RuleEntry::tested_departing(
+        // component algorithms cannot be named.
+        RuleEntry::tested(
             "SBOM-PQC-010",
             Sev::Info,
             broken(|s| {

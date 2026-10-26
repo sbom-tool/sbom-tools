@@ -1539,11 +1539,13 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Document the Art. 14 reporting channels in the CRA sidecar: psirtUrl (the public PSIRT URL for vulnerability reports), earlyWarningContact (the 24-hour early-warning channel), incidentReportContact (the 72-hour notification channel) and enisaReportingPlatformId (the manufacturer's identifier on the ENISA single reporting platform, once ENISA publishes it). This check reads only the sidecar.",
             advice: None,
         },
+        // The steward's vulnerability-handling floor is the one Art. 24
+        // obligation the profile gates on: always an Error.
         "SBOM-CRA-ART-24" => RuleMeta {
             sarif_id: "SBOM-CRA-GENERAL",
             name: "CraGeneralRequirement",
             short_description: "CRA general SBOM readiness requirement",
-            default_severity: ViolationSeverity::Warning,
+            default_severity: ViolationSeverity::Error,
             refs: &[],
             remediation: "Show the open-source steward's vulnerability-handling process (Art. 24): reference a security contact or vulnerability-disclosure URL from the product component, or set psirtUrl or vulnerabilityDisclosureUrl in the CRA sidecar.",
             advice: Some(&ADVICE_SECURITY_CONTACT),
@@ -1562,11 +1564,13 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Complete the Annex I technical documentation in the SBOM: a unique identifier (PURL, CPE, SWHID or SWID) on every component, the supplier of every direct dependency, component hashes, dependency relationships and the primary product component, plus an evidenceUrl for every Annex I Part I control the CRA sidecar claims satisfied. Each SBOM-CRA-ANNEX-I-* finding names the element it lacks.",
             advice: None,
         },
+        // Every CRA profile (both phases and the steward) emits a missing
+        // component identifier as an Error.
         "SBOM-CRA-ANNEX-I-IDENTIFIER" => RuleMeta {
             sarif_id: "SBOM-CRA-ANNEX-I",
             name: "CraTechnicalDocumentation",
             short_description: "CRA Annex I: Technical documentation (unique identifiers, dependencies, primary component)",
-            default_severity: ViolationSeverity::Warning,
+            default_severity: ViolationSeverity::Error,
             refs: &[(ANNEX, "Annex I"), (PREN, "PRE-7-RQ-07")],
             remediation: "Add a PURL, CPE, SWHID or SWID to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21).",
             advice: Some(&ADVICE_IDENTIFIER),
@@ -1681,11 +1685,14 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Resolve cyclic dependency declarations so the SBOM's dependency graph is a directed acyclic inventory of the product's components.",
             advice: None,
         },
+        // Fires only for a pinned class whose route goes beyond Module A:
+        // Warning for important class I (the default here), escalated to
+        // Error for important class II and critical products.
         "SBOM-CRA-ANNEX-VIII" => RuleMeta {
             sarif_id: "SBOM-CRA-ANNEX-VIII",
             name: "CraConformityAssessment",
             short_description: "CRA Annex VIII: Conformity-assessment evidence for the resolved assessment route",
-            default_severity: ViolationSeverity::Info,
+            default_severity: ViolationSeverity::Warning,
             refs: &[(ANNEX, "Annex VIII")],
             remediation: "Reference the notified-body evidence the conformity-assessment route requires — the EU-type examination certificate (Module B+C), the quality-system certification (Module H) or the EUCC certificate — as a certification or attestation external reference on the product component.",
             advice: Some(&ADVICE_CONFORMITY_EVIDENCE),
@@ -2378,11 +2385,12 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // FDA rules emitted by the `validate` NTIA/FDA fast-path
         // (`cli::validate`), which builds violations directly without
         // populating `standard_refs`.
+        // The creator gate emits a creator-less FDA SBOM as an Error.
         "SBOM-FDA-CREATOR" => RuleMeta {
             sarif_id: "SBOM-FDA-CREATOR",
             name: "FdaCreator",
             short_description: "FDA Medical Device: SBOM creator/manufacturer information",
-            default_severity: ViolationSeverity::Warning,
+            default_severity: ViolationSeverity::Error,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
             remediation: "Identify who created the SBOM, the device manufacturer or the tool that generated it (FDA premarket guidance).",
             advice: Some(&ADVICE_CREATORS),
@@ -3043,11 +3051,13 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: REMEDIATION_PQC,
             advice: None,
         },
+        // A hybrid combiner is good practice, reported as an informational
+        // note.
         "SBOM-PQC-010" => RuleMeta {
             sarif_id: "SBOM-PQC-010",
             name: "PqcHybridCombiner",
             short_description: "NIST PQC: hybrid PQC combiner — recommended transition practice (IR 8547)",
-            default_severity: ViolationSeverity::Warning,
+            default_severity: ViolationSeverity::Info,
             refs: &[(K::NistPqc, "FIPS 203/204/205")],
             remediation: REMEDIATION_PQC,
             advice: None,

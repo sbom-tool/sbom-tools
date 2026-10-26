@@ -89,9 +89,8 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.timestamp = None),
             base(),
         ),
-        // Registry default is Warning; the shared creator gate escalates a
-        // fully creator-less SBOM to Error for every non-Minimum level.
-        RuleEntry::tested_departing(
+        // The creator gate emits a fully creator-less SBOM as an Error.
+        RuleEntry::tested(
             "SBOM-FDA-CREATOR",
             Sev::Error,
             broken(|s| {

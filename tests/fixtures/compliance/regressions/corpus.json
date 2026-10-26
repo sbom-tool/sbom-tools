@@ -1177,6 +1177,85 @@
           }
         }
       ]
+    },
+    {
+      "id": "b6-registry-severities",
+      "review_id": "B6",
+      "fixture": "b6-registry-severities.cdx.json",
+      "note": "Pins the severities these checks emit, which the rule registry and so the SARIF rule catalogue now advertise: a creator-less SBOM (SBOM-FDA-CREATOR), a component without an identifier (SBOM-CRA-ANNEX-I-IDENTIFIER), a steward product without a vulnerability-handling reference (SBOM-CRA-ART-24) and a hybrid PQC combiner (SBOM-PQC-010). The registry documented a Warning default for all four, though the first three are emitted as Errors and the last as an Info.",
+      "checks": [
+        {
+          "standard": "fda",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-FDA-CREATOR",
+                "severity": "error"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "cra",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-ANNEX-I-IDENTIFIER",
+                "severity": "error"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "oss-steward",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-ART-24",
+                "severity": "error"
+              },
+              {
+                "rule": "SBOM-CRA-ANNEX-I-IDENTIFIER",
+                "severity": "error"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "pqc",
+          "expect": {
+            "rules_present": [
+              {
+                "rule": "SBOM-PQC-010",
+                "severity": "info"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "b6-registry-severities-class-1",
+      "review_id": "B6",
+      "fixture": "b6-registry-severities.cdx.json",
+      "sidecar": "b6-registry-severities.cra.json",
+      "note": "The same product as an important class I product on the Module B+C route: SBOM-CRA-ANNEX-VIII is a Warning, the registry default (it escalates to Error for class II and critical products); the registry documented Info, which no class emits.",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-ANNEX-VIII",
+                "severity": "warning"
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }
