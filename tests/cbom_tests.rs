@@ -3,11 +3,15 @@
 //! Tests end-to-end parsing of CBOM fixtures, crypto property extraction,
 //! PQC compliance checking (CNSA 2.0, NIST PQC), and diff engine crypto changes.
 
+#[path = "common/clock.rs"]
+mod clock;
+
+use clock::checker;
 use sbom_tools::{
     diff::DiffEngine,
     model::{ComponentType, CryptoAssetType},
     parsers::parse_sbom,
-    quality::{ComplianceChecker, ComplianceLevel, CryptographyMetrics, ViolationSeverity},
+    quality::{ComplianceLevel, CryptographyMetrics, ViolationSeverity},
 };
 use std::path::Path;
 
@@ -312,7 +316,7 @@ fn crypto_metrics_no_crypto_returns_none() {
 #[test]
 fn cnsa2_compliant_passes() {
     let parsed = parse_sbom(&fixture_path("cyclonedx/cbom-cnsa2-compliant.cdx.json")).unwrap();
-    let result = ComplianceChecker::new(ComplianceLevel::Cnsa2).check(&parsed);
+    let result = checker(ComplianceLevel::Cnsa2).check(&parsed);
 
     let errors: Vec<_> = result
         .violations
@@ -334,7 +338,7 @@ fn cnsa2_compliant_passes() {
 #[test]
 fn cnsa2_violations_detected() {
     let parsed = parse_sbom(&fixture_path("cyclonedx/cbom-cnsa2-violations.cdx.json")).unwrap();
-    let result = ComplianceChecker::new(ComplianceLevel::Cnsa2).check(&parsed);
+    let result = checker(ComplianceLevel::Cnsa2).check(&parsed);
 
     let errors: Vec<_> = result
         .violations
@@ -375,7 +379,7 @@ fn cnsa2_violations_detected() {
 #[test]
 fn nist_pqc_weak_crypto_violations() {
     let parsed = parse_sbom(&fixture_path("cyclonedx/cbom-weak-crypto.cdx.json")).unwrap();
-    let result = ComplianceChecker::new(ComplianceLevel::NistPqc).check(&parsed);
+    let result = checker(ComplianceLevel::NistPqc).check(&parsed);
 
     let errors: Vec<_> = result
         .violations
@@ -410,7 +414,7 @@ fn nist_pqc_weak_crypto_violations() {
 fn cyclonedx_16_cbom_without_family_fails_both_standards() {
     let parsed = parse_sbom(&fixture_path("cyclonedx/cbom-1.6-no-family.cdx.json")).unwrap();
 
-    let cnsa = ComplianceChecker::new(ComplianceLevel::Cnsa2).check(&parsed);
+    let cnsa = checker(ComplianceLevel::Cnsa2).check(&parsed);
     assert!(!cnsa.is_compliant, "1.6 CBOM must not pass CNSA 2.0");
     let messages: Vec<_> = cnsa
         .violations
@@ -431,7 +435,7 @@ fn cyclonedx_16_cbom_without_family_fails_both_standards() {
         "SHA-1 (via OID) must be flagged: {messages:?}"
     );
 
-    let pqc = ComplianceChecker::new(ComplianceLevel::NistPqc).check(&parsed);
+    let pqc = checker(ComplianceLevel::NistPqc).check(&parsed);
     assert!(!pqc.is_compliant, "1.6 CBOM must not pass PQC readiness");
     assert!(
         pqc.violations
@@ -469,7 +473,7 @@ fn cyclonedx_16_curve_classifies_as_quantum_vulnerable_ec() {
     assert_eq!(curve_of("key-exchange").as_deref(), Some("secp256r1"));
     assert_eq!(curve_of("token-signer").as_deref(), Some("secp384r1"));
 
-    let cnsa = ComplianceChecker::new(ComplianceLevel::Cnsa2).check(&parsed);
+    let cnsa = checker(ComplianceLevel::Cnsa2).check(&parsed);
     for name in ["key-exchange", "token-signer"] {
         assert!(
             cnsa.violations
@@ -490,7 +494,7 @@ fn cyclonedx_16_curve_classifies_as_quantum_vulnerable_ec() {
         cnsa.violations
     );
 
-    let pqc = ComplianceChecker::new(ComplianceLevel::NistPqc).check(&parsed);
+    let pqc = checker(ComplianceLevel::NistPqc).check(&parsed);
     assert!(
         !pqc.is_compliant,
         "curve-only EC assets must fail PQC readiness"
@@ -538,7 +542,7 @@ fn cyclonedx_17_related_crypto_assets_are_parsed_and_judged() {
     let ssh = props("ssh-endpoint").protocol_properties.unwrap();
     assert_eq!(ssh.crypto_ref_array, ["crypto/algorithm/rsa-2048"]);
 
-    let cnsa = ComplianceChecker::new(ComplianceLevel::Cnsa2).check(&parsed);
+    let cnsa = checker(ComplianceLevel::Cnsa2).check(&parsed);
     let has = |violations: &[sbom_tools::quality::Violation], rule: &str, name: &str| {
         violations.iter().any(|v| {
             v.rule_id == rule
@@ -573,7 +577,7 @@ fn cyclonedx_17_related_crypto_assets_are_parsed_and_judged() {
         cnsa.violations
     );
 
-    let pqc = ComplianceChecker::new(ComplianceLevel::NistPqc).check(&parsed);
+    let pqc = checker(ComplianceLevel::NistPqc).check(&parsed);
     assert!(
         has(&pqc.violations, "SBOM-PQC-CERT-001", "mixed-cert"),
         "a certificate relating RSA must fail PQC readiness: {:?}",
@@ -615,7 +619,7 @@ fn cyclonedx_17_ikev2_transform_objects_are_parsed_and_judged() {
     assert_eq!(ike("ipsec-cnsa").integ, ["crypto/algorithm/sha-384"]);
 
     let messages = |level| {
-        ComplianceChecker::new(level)
+        checker(level)
             .check(&parsed)
             .violations
             .into_iter()
@@ -706,7 +710,7 @@ fn protocol_unknown_warning_acknowledges_declared_version() {
         (ComplianceLevel::Cnsa2, "SBOM-CNSA2-PROTO-UNKNOWN"),
         (ComplianceLevel::NistPqc, "SBOM-PQC-PROTO-UNKNOWN"),
     ] {
-        let result = ComplianceChecker::new(level).check(&parsed);
+        let result = checker(level).check(&parsed);
         let message = |name: &str| {
             result
                 .violations
@@ -742,7 +746,7 @@ fn protocol_unknown_warning_acknowledges_declared_version() {
 fn weak_crypto_protocols_and_cnsa2_verdict() {
     let parsed = parse_sbom(&fixture_path("cyclonedx/cbom-weak-crypto.cdx.json")).unwrap();
 
-    let cnsa = ComplianceChecker::new(ComplianceLevel::Cnsa2).check(&parsed);
+    let cnsa = checker(ComplianceLevel::Cnsa2).check(&parsed);
     assert!(
         !cnsa.is_compliant,
         "an MD5/SHA-1/DES/RC4 inventory must not be CNSA 2.0 compliant"
@@ -766,7 +770,7 @@ fn weak_crypto_protocols_and_cnsa2_verdict() {
         "MD5 (broken) must be flagged under the CNSA 2.0 allowlist"
     );
 
-    let pqc = ComplianceChecker::new(ComplianceLevel::NistPqc).check(&parsed);
+    let pqc = checker(ComplianceLevel::NistPqc).check(&parsed);
     assert!(
         pqc.violations
             .iter()
@@ -812,7 +816,7 @@ fn unclassifiable_refs_fail_instead_of_vacuous_pass() {
             ViolationSeverity::Warning,
         ),
     ] {
-        let result = ComplianceChecker::new(level).check(&parsed);
+        let result = checker(level).check(&parsed);
         assert!(
             result.violations.iter().any(|v| {
                 v.severity == severity
@@ -844,7 +848,7 @@ fn unclassifiable_refs_fail_instead_of_vacuous_pass() {
 #[test]
 fn nist_pqc_hybrid_transition_info() {
     let parsed = parse_sbom(&fixture_path("cyclonedx/cbom-pqc-transition.cdx.json")).unwrap();
-    let result = ComplianceChecker::new(ComplianceLevel::NistPqc).check(&parsed);
+    let result = checker(ComplianceLevel::NistPqc).check(&parsed);
 
     // Should have info-level messages about hybrid combiners
     let infos: Vec<_> = result

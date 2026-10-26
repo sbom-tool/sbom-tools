@@ -623,6 +623,96 @@
           }
         }
       ]
+    },
+    {
+      "id": "v14-future-timestamp",
+      "review_id": "V14",
+      "fixture": "v14-future-timestamp.cdx.json",
+      "note": "Dated 2027-01-01, after the evaluation instant. The freshness checks read the negative age as just generated and stayed silent; a future timestamp now warns like a missing one.",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-SBOM-FRESHNESS",
+                "severity": "warning"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "cra-phase1",
+          "expect": {
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-SBOM-FRESHNESS",
+                "severity": "warning"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "pci-dss",
+          "expect": {
+            "compliant": true,
+            "rules_present": [
+              {
+                "rule": "SBOM-PCI-6-3-2-FRESHNESS",
+                "severity": "warning"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v14-maven-default-hashes",
+      "review_id": "V14",
+      "fixture": "v14-maven-default-hashes.cdx.json",
+      "note": "Every component carries MD5, SHA-1, SHA-256 and SHA-512, the cyclonedx-maven-plugin default. HASH-ALGO warned on each although SHA-256 satisfies the element. The SPDX 2.x gate must not reach CycloneDX: the missing signature and completeness declaration still warn.",
+      "checks": [
+        {
+          "standard": "cisa-2026",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-CISA2026-HASH-ALGO"
+            ],
+            "rules_present": [
+              {
+                "rule": "SBOM-CISA2026-SIGNATURE",
+                "severity": "warning"
+              },
+              {
+                "rule": "SBOM-CISA2026-COVERAGE",
+                "severity": "warning"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "v14-spdx2-cisa2026-complete",
+      "review_id": "V14",
+      "fixture": "v14-spdx2-cisa2026-complete.spdx.json",
+      "note": "A complete SPDX 2.3 SBOM. Three CISA 2026 warnings asked for a signature, a lifecycle phase and a completeness declaration, none of which SPDX 2.x can carry, so --fail-on-warning could never pass.",
+      "checks": [
+        {
+          "standard": "cisa-2026",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_absent": [
+              "SBOM-CISA2026-SIGNATURE",
+              "SBOM-CISA2026-GENERATION-CONTEXT",
+              "SBOM-CISA2026-COVERAGE"
+            ]
+          }
+        }
+      ]
     }
   ]
 }

@@ -5,13 +5,14 @@
 //! quality profile embeds NIST PQC rather than the generic package checks.
 //! Real findings — broken algorithms, unclassifiable assets — must stay.
 
+#[path = "common/clock.rs"]
+mod clock;
+
+use clock::{as_of, checker};
 use sbom_tools::{
     model::NormalizedSbom,
     parsers::{parse_sbom, parse_sbom_str},
-    quality::{
-        ComplianceChecker, ComplianceLevel, QualityScorer, ScoringProfile, Violation,
-        ViolationSeverity,
-    },
+    quality::{ComplianceLevel, QualityScorer, ScoringProfile, Violation, ViolationSeverity},
 };
 use std::path::Path;
 
@@ -88,7 +89,7 @@ fn package_standards_do_not_require_package_fields_of_crypto_assets() {
         ComplianceLevel::CraPhase2,
         ComplianceLevel::Cisa2026,
     ] {
-        let offending: Vec<_> = ComplianceChecker::new(level)
+        let offending: Vec<_> = checker(level)
             .check(&sbom)
             .violations
             .into_iter()
@@ -118,7 +119,7 @@ fn mixed_sbom_still_holds_packages_to_ntia() {
                  "algorithmProperties":{"primitive":"ae","algorithmFamily":"AES","parameterSetIdentifier":"256"}}}]}"#,
     )
     .expect("parses");
-    let violations = ComplianceChecker::new(ComplianceLevel::NtiaMinimum)
+    let violations = checker(ComplianceLevel::NtiaMinimum)
         .check(&sbom)
         .violations;
     for rule in ["SBOM-NTIA-VERSION", "SBOM-NTIA-SUPPLIER"] {
@@ -141,7 +142,7 @@ fn mixed_sbom_still_holds_packages_to_ntia() {
 /// classified (quantum-vulnerable), not reported as unclassifiable.
 #[test]
 fn ike_group_names_are_classified() {
-    let result = ComplianceChecker::new(ComplianceLevel::Cnsa2).check(&sparse_cbom());
+    let result = checker(ComplianceLevel::Cnsa2).check(&sparse_cbom());
     let modp: Vec<_> = result
         .violations
         .iter()
@@ -164,13 +165,15 @@ fn ike_group_names_are_classified() {
 #[test]
 fn quality_weak_count_matches_compliance_verdict() {
     let sbom = sparse_cbom();
-    let report = QualityScorer::new(ScoringProfile::Cbom).score(&sbom);
+    let report = QualityScorer::new(ScoringProfile::Cbom)
+        .with_as_of(as_of())
+        .score(&sbom);
     let cm = &report.cryptography_metrics;
     let mut weak = cm.weak_algorithm_names.clone();
     weak.sort();
     assert_eq!(weak, ["3DES", "HMAC_SHA1"]);
 
-    let broken_by_compliance = ComplianceChecker::new(ComplianceLevel::NistPqc)
+    let broken_by_compliance = checker(ComplianceLevel::NistPqc)
         .check(&sbom)
         .violations
         .iter()

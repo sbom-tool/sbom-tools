@@ -15,13 +15,13 @@
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
+use rule_matrix::clock::{AS_OF, checker};
 use rule_matrix::{
     ComponentFixture, MD5_FILLER, RuleEntry, SbomFixture, check, render_violations, run_matrix,
 };
 use sbom_tools::parsers::parse_sbom_str;
 use sbom_tools::quality::{
-    CISA2026_SARIF_RULE_IDS, ComplianceChecker, ComplianceLevel, ComplianceResult,
-    ViolationSeverity as Sev,
+    CISA2026_SARIF_RULE_IDS, ComplianceLevel, ComplianceResult, ViolationSeverity as Sev,
 };
 
 const LEVEL: ComplianceLevel = ComplianceLevel::Cisa2026;
@@ -214,6 +214,17 @@ fn cisa2026_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 s.component_mut("libalpha").hashes =
                     vec![("WHIRLPOOL".to_string(), SHA1_FILLER.to_string())];
             }),
+        )
+        // Weak digests only, however many: no strong hash to fall back on.
+        .with_firing(
+            "md5-and-sha1-only",
+            Sev::Warning,
+            broken(|s| {
+                s.component_mut("libalpha").hashes = vec![
+                    ("MD5".to_string(), MD5_FILLER.to_string()),
+                    ("SHA-1".to_string(), SHA1_FILLER.to_string()),
+                ];
+            }),
         ),
         RuleEntry::tested(
             "SBOM-CISA2026-LICENSE",
@@ -298,7 +309,7 @@ fn conforming_json() -> serde_json::Value {
 fn check_json(doc: &serde_json::Value) -> ComplianceResult {
     let json = doc.to_string();
     let sbom = parse_sbom_str(&json).unwrap_or_else(|e| panic!("fixture must parse: {e}\n{json}"));
-    ComplianceChecker::new(LEVEL).check(&sbom)
+    checker(LEVEL).check(&sbom)
 }
 
 /// Assert the rule fired at the given severity.
@@ -492,4 +503,127 @@ fn file_components_are_exempt_from_package_elements() {
     ] {
         assert_silent(&result, id);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Review finding V14: weak digests beside a strong one, and SPDX 2.x, which
+// has no field for a signature, a lifecycle phase or a completeness
+// declaration. These tests pin the evaluation clock.
+// ---------------------------------------------------------------------------
+
+/// Filler SHA-512 digest (128 hex chars, the digest of empty input).
+const SHA512_FILLER: &str = "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce\
+                             47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e";
+
+/// A complete SPDX 2.3 SBOM from the regression corpus.
+const SPDX2_COMPLETE: &str = "compliance/regressions/v14-spdx2-cisa2026-complete.spdx.json";
+
+fn fixture_path(rel: &str) -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures")
+        .join(rel)
+}
+
+fn check_at_as_of(json: &str) -> ComplianceResult {
+    let sbom = parse_sbom_str(json).unwrap_or_else(|e| panic!("fixture must parse: {e}\n{json}"));
+    checker(LEVEL).check(&sbom)
+}
+
+fn check_fixture(rel: &str) -> ComplianceResult {
+    let path = fixture_path(rel);
+    let raw = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
+    check_at_as_of(&raw)
+}
+
+/// The cyclonedx-maven-plugin default lists MD5 and SHA-1 next to SHA-256
+/// and SHA-512. The strong digests satisfy the element, so the conforming
+/// document stays clean with that hash set on every component.
+#[test]
+fn weak_digests_beside_a_strong_one_do_not_warn() {
+    let mut doc = conforming_json();
+    let maven_default = serde_json::json!([
+        { "alg": "MD5", "content": MD5_FILLER },
+        { "alg": "SHA-1", "content": SHA1_FILLER },
+        { "alg": "SHA-256", "content": rule_matrix::SHA256_FILLER },
+        { "alg": "SHA-512", "content": SHA512_FILLER },
+    ]);
+    doc["metadata"]["component"]["hashes"] = maven_default.clone();
+    for component in doc["components"].as_array_mut().unwrap() {
+        component["hashes"] = maven_default.clone();
+    }
+    let result = check_at_as_of(&doc.to_string());
+    assert!(
+        result.violations.is_empty() && result.is_compliant,
+        "the Maven default hash set must pass cleanly; emitted:\n{}",
+        render_violations(&result)
+    );
+}
+
+/// A strong algorithm counts only with a real digest: next to an SHA-256
+/// entry that declares its value unknown, MD5 is the only hash, and warns.
+#[test]
+fn a_strong_algorithm_without_a_digest_leaves_the_warning() {
+    let mut doc = conforming_json();
+    doc["components"][0]["hashes"] = serde_json::json!([
+        { "alg": "MD5", "content": MD5_FILLER },
+        { "alg": "SHA-256", "content": "NOASSERTION" },
+    ]);
+    let result = check_at_as_of(&doc.to_string());
+    assert_fires(&result, "SBOM-CISA2026-HASH-ALGO", Sev::Warning);
+    assert_silent(&result, "SBOM-CISA2026-HASH");
+}
+
+/// SPDX 2.x cannot express a signature, a lifecycle phase or a completeness
+/// declaration, so a complete SPDX 2.3 SBOM passes with no findings at all.
+#[test]
+fn spdx2_is_not_asked_for_evidence_it_cannot_carry() {
+    let result = check_fixture(SPDX2_COMPLETE);
+    assert!(
+        result.violations.is_empty() && result.is_compliant,
+        "a complete SPDX 2.3 SBOM must pass with zero findings; emitted:\n{}",
+        render_violations(&result)
+    );
+}
+
+/// The gate is SPDX 2.x only. SPDX 3 can carry all three, so a document
+/// that omits them still warns.
+#[test]
+fn spdx3_without_the_evidence_still_warns() {
+    let result = check_fixture("spdx3/minimal.spdx3.json");
+    for id in [
+        "SBOM-CISA2026-SIGNATURE",
+        "SBOM-CISA2026-GENERATION-CONTEXT",
+        "SBOM-CISA2026-COVERAGE",
+    ] {
+        assert_fires(&result, id, Sev::Warning);
+    }
+}
+
+/// End to end: `validate --standard cisa-2026 --fail-on-warning` succeeds
+/// on a complete SPDX 2.3 SBOM. It used to exit 2 on the three warnings no
+/// SPDX 2.x document can clear.
+#[test]
+fn complete_spdx2_sbom_passes_validate_with_fail_on_warning() {
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_sbom-tools"))
+        .arg("--no-color")
+        .arg("validate")
+        .arg(fixture_path(SPDX2_COMPLETE))
+        .args([
+            "--standard",
+            "cisa-2026",
+            "--fail-on-warning",
+            "--as-of",
+            AS_OF,
+        ])
+        .env("RUST_LOG", "error")
+        .output()
+        .expect("validate command should run");
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
 }

@@ -11,11 +11,15 @@
 //! - Sidecar productClass overrides explicit `with_product_class`
 //! - CLI parse_cli aliases
 
+#[path = "common/clock.rs"]
+mod clock;
+
+use clock::checker;
 use sbom_tools::model::{
     Component, ConformityRoute, CraProductClass, CraSidecarMetadata, EolInfo, EolStatus,
     ExternalRefType, ExternalReference, Hash, HashAlgorithm, NormalizedSbom, Organization,
 };
-use sbom_tools::quality::{ClassCheck, ComplianceChecker, ComplianceLevel, ViolationSeverity};
+use sbom_tools::quality::{ClassCheck, ComplianceLevel, ViolationSeverity};
 
 // --- helpers -----------------------------------------------------------------
 
@@ -55,7 +59,7 @@ fn vendor_hash_default_class_errors_below_50pct() {
     // must never weaken it, so this stays an Error (not the class table's
     // Warning) — same verdict as running Phase 2 with no class at all.
     let sbom = vendor_sbom(10, 4);
-    let res = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Default)
         .check(&sbom);
     assert_eq!(vendor_hash_violation(&res), Some(ViolationSeverity::Error));
@@ -66,7 +70,7 @@ fn vendor_hash_default_class_keeps_phase2_warning_above_50pct() {
     // 6/10 = 60% — clears Default's 50% class bar, but the Phase 2 gate
     // still warns below 80%; the class must not suppress the phase floor.
     let sbom = vendor_sbom(10, 6);
-    let res = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Default)
         .check(&sbom);
     assert_eq!(
@@ -79,7 +83,7 @@ fn vendor_hash_default_class_keeps_phase2_warning_above_50pct() {
 fn vendor_hash_important_class_1_warns_below_80pct() {
     // 6/10 = 60% — fails Important-1's 80% bar; severity is Warning
     let sbom = vendor_sbom(10, 6);
-    let res = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::ImportantClass1)
         .check(&sbom);
     assert_eq!(
@@ -92,7 +96,7 @@ fn vendor_hash_important_class_1_warns_below_80pct() {
 fn vendor_hash_important_class_2_errors_below_80pct() {
     // 6/10 = 60% — fails Important-2's 80% bar; severity is Error
     let sbom = vendor_sbom(10, 6);
-    let res = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::ImportantClass2)
         .check(&sbom);
     assert_eq!(vendor_hash_violation(&res), Some(ViolationSeverity::Error));
@@ -102,14 +106,14 @@ fn vendor_hash_important_class_2_errors_below_80pct() {
 fn vendor_hash_critical_demands_100pct() {
     // 9/10 = 90% — fails Critical's 100% bar; severity is Error
     let sbom = vendor_sbom(10, 9);
-    let res = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Critical)
         .check(&sbom);
     assert_eq!(vendor_hash_violation(&res), Some(ViolationSeverity::Error));
 
     // 10/10 = 100% — clears
     let sbom2 = vendor_sbom(10, 10);
-    let res2 = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res2 = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Critical)
         .check(&sbom2);
     assert_eq!(vendor_hash_violation(&res2), None);
@@ -119,14 +123,14 @@ fn vendor_hash_critical_demands_100pct() {
 fn vendor_hash_no_class_preserves_phase2_two_stage() {
     // No product class set: existing CraPhase2 logic — warn at <80%, error at <50%
     let sbom_warn = vendor_sbom(10, 6); // 60%
-    let res_warn = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&sbom_warn);
+    let res_warn = checker(ComplianceLevel::CraPhase2).check(&sbom_warn);
     assert_eq!(
         vendor_hash_violation(&res_warn),
         Some(ViolationSeverity::Warning)
     );
 
     let sbom_err = vendor_sbom(10, 4); // 40%
-    let res_err = ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&sbom_err);
+    let res_err = checker(ComplianceLevel::CraPhase2).check(&sbom_err);
     assert_eq!(
         vendor_hash_violation(&res_err),
         Some(ViolationSeverity::Error)
@@ -158,7 +162,7 @@ fn sbom_with_eol_component() -> NormalizedSbom {
 #[test]
 fn eol_severity_escalates_to_error_at_important_class_2() {
     let sbom = sbom_with_eol_component();
-    let res = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::ImportantClass2)
         .check(&sbom);
     let v = res
@@ -172,7 +176,7 @@ fn eol_severity_escalates_to_error_at_important_class_2() {
 #[test]
 fn eol_severity_remains_warning_at_default_class() {
     let sbom = sbom_with_eol_component();
-    let res = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Default)
         .check(&sbom);
     let v = res
@@ -189,7 +193,7 @@ fn eol_severity_remains_warning_at_default_class() {
 fn doc_reference_severity_scales_with_class() {
     let sbom = NormalizedSbom::default();
 
-    let res_default = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res_default = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Default)
         .check(&sbom);
     let v = res_default
@@ -199,7 +203,7 @@ fn doc_reference_severity_scales_with_class() {
         .expect("Annex V DoC violation expected");
     assert_eq!(v.severity, ViolationSeverity::Info);
 
-    let res_imp1 = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res_imp1 = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::ImportantClass1)
         .check(&sbom);
     let v = res_imp1
@@ -209,7 +213,7 @@ fn doc_reference_severity_scales_with_class() {
         .expect("Annex V DoC violation expected");
     assert_eq!(v.severity, ViolationSeverity::Warning);
 
-    let res_critical = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res_critical = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Critical)
         .check(&sbom);
     let v = res_critical
@@ -226,7 +230,7 @@ fn doc_reference_severity_scales_with_class() {
 fn eucc_reference_check_skipped_at_default_and_important_1() {
     let sbom = NormalizedSbom::default();
     for class in [CraProductClass::Default, CraProductClass::ImportantClass1] {
-        let res = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+        let res = checker(ComplianceLevel::CraPhase2)
             .with_product_class(class)
             .check(&sbom);
         assert!(
@@ -241,7 +245,7 @@ fn eucc_reference_check_skipped_at_default_and_important_1() {
 #[test]
 fn eucc_reference_check_fires_info_at_important_class_2() {
     let sbom = NormalizedSbom::default();
-    let res = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::ImportantClass2)
         .check(&sbom);
     let v = res
@@ -255,7 +259,7 @@ fn eucc_reference_check_fires_info_at_important_class_2() {
 #[test]
 fn eucc_reference_check_fires_error_at_critical() {
     let sbom = NormalizedSbom::default();
-    let res = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Critical)
         .check(&sbom);
     let v = res
@@ -279,7 +283,7 @@ fn eucc_reference_satisfied_by_certification_with_eucc_url() {
     });
     sbom.add_component(c);
 
-    let res = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Critical)
         .check(&sbom);
     assert!(
@@ -295,7 +299,7 @@ fn eucc_reference_satisfied_by_certification_with_eucc_url() {
 #[test]
 fn module_attestation_skipped_at_default_class() {
     let sbom = NormalizedSbom::default();
-    let res = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Default)
         .check(&sbom);
     assert!(
@@ -315,7 +319,7 @@ fn module_attestation_skipped_for_module_a_route() {
         ..Default::default()
     };
     let sbom = NormalizedSbom::default();
-    let res = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res = checker(ComplianceLevel::CraPhase2)
         .with_sidecar(sidecar)
         .check(&sbom);
     assert!(
@@ -334,7 +338,7 @@ fn module_attestation_fires_warning_at_important_1_module_bc() {
         ..Default::default()
     };
     let sbom = NormalizedSbom::default();
-    let res = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res = checker(ComplianceLevel::CraPhase2)
         .with_sidecar(sidecar)
         .check(&sbom);
     let v = res
@@ -349,7 +353,7 @@ fn module_attestation_fires_warning_at_important_1_module_bc() {
 fn module_attestation_fires_error_at_critical_with_default_route() {
     // Critical implies EUCC by default — non-Module-A → check fires
     let sbom = NormalizedSbom::default();
-    let res = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let res = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Critical)
         .check(&sbom);
     let v = res
@@ -368,7 +372,7 @@ fn sidecar_product_class_overrides_explicit_with_product_class() {
         product_class: Some(CraProductClass::Critical),
         ..Default::default()
     };
-    let checker = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let checker = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::Default)
         .with_sidecar(sidecar);
     assert_eq!(checker.effective_product_class(), CraProductClass::Critical);
@@ -380,7 +384,7 @@ fn explicit_with_product_class_used_when_sidecar_lacks_class() {
         manufacturer_name: Some("Mfr".to_string()),
         ..Default::default()
     };
-    let checker = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+    let checker = checker(ComplianceLevel::CraPhase2)
         .with_product_class(CraProductClass::ImportantClass1)
         .with_sidecar(sidecar);
     assert_eq!(
@@ -391,14 +395,14 @@ fn explicit_with_product_class_used_when_sidecar_lacks_class() {
 
 #[test]
 fn no_class_falls_back_to_default_class() {
-    let checker = ComplianceChecker::new(ComplianceLevel::CraPhase2);
+    let checker = checker(ComplianceLevel::CraPhase2);
     assert_eq!(checker.effective_product_class(), CraProductClass::Default);
     assert!(!checker.has_explicit_product_class());
 }
 
 #[test]
 fn class_severity_table_matches_plan() {
-    let mk = |c| ComplianceChecker::new(ComplianceLevel::CraPhase2).with_product_class(c);
+    let mk = |c| checker(ComplianceLevel::CraPhase2).with_product_class(c);
     use ClassCheck as K;
     use CraProductClass as C;
     use ViolationSeverity as S;
@@ -475,7 +479,7 @@ fn class_severity_table_matches_plan() {
 
 #[test]
 fn vendor_hash_threshold_table_matches_plan() {
-    let mk = |c| ComplianceChecker::new(ComplianceLevel::CraPhase2).with_product_class(c);
+    let mk = |c| checker(ComplianceLevel::CraPhase2).with_product_class(c);
     assert!((mk(CraProductClass::Default).vendor_hash_threshold() - 0.50).abs() < 1e-9);
     assert!((mk(CraProductClass::ImportantClass1).vendor_hash_threshold() - 0.80).abs() < 1e-9);
     assert!((mk(CraProductClass::ImportantClass2).vendor_hash_threshold() - 0.80).abs() < 1e-9);
@@ -484,7 +488,7 @@ fn vendor_hash_threshold_table_matches_plan() {
 
 #[test]
 fn effective_route_falls_back_to_class_default() {
-    let mk = |c| ComplianceChecker::new(ComplianceLevel::CraPhase2).with_product_class(c);
+    let mk = |c| checker(ComplianceLevel::CraPhase2).with_product_class(c);
     assert_eq!(
         mk(CraProductClass::Default).effective_route(),
         ConformityRoute::ModuleA
@@ -510,6 +514,6 @@ fn effective_route_sidecar_wins() {
         conformity_assessment_route: Some(ConformityRoute::ModuleH),
         ..Default::default()
     };
-    let checker = ComplianceChecker::new(ComplianceLevel::CraPhase2).with_sidecar(sidecar);
+    let checker = checker(ComplianceLevel::CraPhase2).with_sidecar(sidecar);
     assert_eq!(checker.effective_route(), ConformityRoute::ModuleH);
 }

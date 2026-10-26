@@ -3,6 +3,10 @@
 //! These tests verify end-to-end functionality of the SBOM parsing,
 //! diff engine, and report generation.
 
+#[path = "common/clock.rs"]
+mod clock;
+
+use clock::checker;
 use sbom_tools::{
     diff::DiffEngine,
     matching::FuzzyMatchConfig,
@@ -1660,12 +1664,12 @@ mod cross_format_tests {
 
     #[test]
     fn test_spdx3_compliance_no_false_positives() {
-        use sbom_tools::quality::{ComplianceChecker, ComplianceLevel};
+        use sbom_tools::quality::ComplianceLevel;
 
         let path = fixture_path("spdx3/minimal.spdx3.json");
         let sbom = parse_sbom(&path).expect("Failed to parse SPDX 3.0");
 
-        let checker = ComplianceChecker::new(ComplianceLevel::Minimum);
+        let checker = checker(ComplianceLevel::Minimum);
         let report = checker.check(&sbom);
 
         // SPDX 3.0 URN-style IDs should not trigger false SPDXRef- format violations
@@ -1878,12 +1882,12 @@ mod cross_format_tests {
 
     #[test]
     fn test_spdx3_cra_security_profile_conformance_check() {
-        use sbom_tools::quality::{ComplianceChecker, ComplianceLevel};
+        use sbom_tools::quality::ComplianceLevel;
 
         let path = fixture_path("spdx3/security-profile.spdx3.json");
         let sbom = parse_sbom(&path).expect("Failed to parse SPDX 3.0 security profile");
 
-        let checker = ComplianceChecker::new(ComplianceLevel::CraPhase1);
+        let checker = checker(ComplianceLevel::CraPhase1);
         let report = checker.check(&sbom);
 
         // Security profile IS declared in this fixture, so no profile conformance warning
@@ -1900,13 +1904,13 @@ mod cross_format_tests {
 
     #[test]
     fn test_spdx3_cra_missing_security_profile_warning() {
-        use sbom_tools::quality::{ComplianceChecker, ComplianceLevel};
+        use sbom_tools::quality::ComplianceLevel;
 
         // The minimal fixture has vulns but no Security profile declaration
         let path = fixture_path("spdx3/minimal.spdx3.json");
         let sbom = parse_sbom(&path).expect("Failed to parse SPDX 3.0");
 
-        let checker = ComplianceChecker::new(ComplianceLevel::CraPhase1);
+        let checker = checker(ComplianceLevel::CraPhase1);
         let report = checker.check(&sbom);
 
         // Should warn about missing Security profile

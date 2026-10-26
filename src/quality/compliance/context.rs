@@ -307,7 +307,8 @@ mod tests {
 
         // No declarations at all: accessor is None, evidence queries are empty.
         let bare = NormalizedSbom::default();
-        let checker = ComplianceChecker::new(ComplianceLevel::NistSsdf);
+        let checker = ComplianceChecker::new(ComplianceLevel::NistSsdf)
+            .with_as_of(ts("2026-10-12T00:00:00Z"));
         let ctx = ComplianceContext::new(&checker, &bare);
         assert!(ctx.attestation_declarations().is_none());
         assert!(ctx.evidence_for(AttestationRuleFamily::Ssdf).is_empty());

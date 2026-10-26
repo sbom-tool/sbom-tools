@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.5" serialNumber="urn:uuid:9c3d5e7f-1a2b-4c6d-8e0f-a1b2c3d4e5f6" version="2">
+  <metadata>
+    <timestamp>2026-09-21T16:45:00Z</timestamp>
+    <lifecycles>
+      <lifecycle>
+        <phase>build</phase>
+      </lifecycle>
+    </lifecycles>
+    <tools>
+      <components>
+        <component type="application">
+          <group>org.example</group>
+          <name>example-sbom-gen</name>
+          <version>4.3.0</version>
+        </component>
+      </components>
+      <services>
+        <service>
+          <name>example-enrichment-api</name>
+          <version>2026.09</version>
+        </service>
+      </services>
+    </tools>
+    <authors>
+      <author>
+        <name>Platform Team</name>
+        <email>platform@example.org</email>
+      </author>
+    </authors>
+    <component type="application" bom-ref="ledger">
+      <supplier>
+        <name>Example Org</name>
+      </supplier>
+      <name>ledger</name>
+      <version>2.4.0</version>
+      <hashes>
+        <hash alg="SHA-512">be3d60841149486aa79a0133eadff4371885760f350e793c63109eadf4ed3c12fb32ed8a6cfd351c95e3e8331b60b78e4df8ebff59a27b80559ad5c7293148f2</hash>
+      </hashes>
+      <licenses>
+        <license>
+          <id>Apache-2.0</id>
+        </license>
+      </licenses>
+      <copyright>Copyright 2026 Example Org</copyright>
+      <purl>pkg:generic/example/ledger@2.4.0</purl>
+    </component>
+    <manufacture>
+      <name>Example Org</name>
+      <contact>
+        <email>sbom@example.org</email>
+      </contact>
+    </manufacture>
+  </metadata>
+  <components>
+    <component type="library" bom-ref="openssl">
+      <supplier>
+        <name>OpenSSL Foundation</name>
+      </supplier>
+      <name>openssl</name>
+      <version>3.0.15</version>
+      <hashes>
+        <hash alg="SHA-512">dfbc695fa1aa3a3de3fc308c063ee18f906227fc66df810903b38702a484368ca0089c1ebcb8fb8183a6d29e84e68a652b5adc488679c9141dd76f6dc06da4c7</hash>
+      </hashes>
+      <licenses>
+        <license>
+          <id>Apache-2.0</id>
+        </license>
+      </licenses>
+      <copyright>Copyright (c) 1998-2024 The OpenSSL Project Authors</copyright>
+      <purl>pkg:generic/openssl@3.0.15</purl>
+    </component>
+    <component type="library" bom-ref="pcre2">
+      <supplier>
+        <name>PCRE2 project</name>
+      </supplier>
+      <name>pcre2</name>
+      <version>10.44</version>
+      <hashes>
+        <hash alg="SHA-512">b0d50a8c76687bb4d0c4716aa10d6320436c08db63229a508d7fe6bd6e103a0c48f8d44aa1b0c5560bb5d5675af3e2cf708e8f3b67bfcb0353c2783196ecd719</hash>
+      </hashes>
+      <licenses>
+        <license>
+          <id>BSD-3-Clause</id>
+        </license>
+      </licenses>
+      <copyright>Copyright (c) 1997-2024 University of Cambridge</copyright>
+      <purl>pkg:generic/pcre2@10.44</purl>
+    </component>
+  </components>
+  <dependencies>
+    <dependency ref="ledger">
+      <dependency ref="openssl"/>
+      <dependency ref="pcre2"/>
+    </dependency>
+    <dependency ref="openssl"/>
+    <dependency ref="pcre2"/>
+  </dependencies>
+  <compositions>
+    <composition>
+      <aggregate>complete</aggregate>
+    </composition>
+  </compositions>
+</bom>

@@ -42,6 +42,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -70,6 +71,7 @@ impl ComplianceChecker {
                         component_id: None,
                         counts: None,
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 } else {
                     violations.push(Violation {
@@ -84,6 +86,7 @@ impl ComplianceChecker {
                         component_id: None,
                         counts: None,
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 }
             }
@@ -106,6 +109,7 @@ impl ComplianceChecker {
                         component_id: None,
                         counts: None,
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 }
             }
@@ -126,6 +130,7 @@ impl ComplianceChecker {
                         component_id: None,
                         counts: None,
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 } else {
                     violations.push(Violation {
@@ -139,6 +144,7 @@ impl ComplianceChecker {
                         component_id: None,
                         counts: None,
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 }
             }
@@ -179,6 +185,7 @@ impl ComplianceChecker {
                         component_id: None,
                         counts: None,
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 } else {
                     violations.push(Violation {
@@ -192,6 +199,7 @@ impl ComplianceChecker {
                         component_id: None,
                         counts: None,
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 }
             }
@@ -208,6 +216,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -232,6 +241,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -267,6 +277,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -291,6 +302,7 @@ impl ComplianceChecker {
                             component_id: Some(primary.canonical_id.value().to_string()),
                             counts: None,
                             standard_refs: Vec::new(),
+                            remediation: None,
                         });
             }
         }
@@ -324,6 +336,7 @@ impl ComplianceChecker {
                         component_id: None,
                         counts: None,
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 } else {
                     violations.push(Violation {
@@ -336,6 +349,7 @@ impl ComplianceChecker {
                         component_id: None,
                         counts: None,
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 }
             }
@@ -355,6 +369,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -390,6 +405,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
@@ -413,6 +429,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -429,6 +446,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -444,6 +462,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -468,6 +487,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
@@ -501,6 +521,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -529,6 +550,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
     }
@@ -620,6 +642,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -679,6 +702,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -755,6 +779,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -820,6 +845,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -840,6 +866,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -871,6 +898,7 @@ impl ComplianceChecker {
                         component_id: Some(comp.canonical_id.value().to_string()),
                         counts: None,
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 } else if self.level == ComplianceLevel::FdaMedicalDevice {
                     // FDA: Check for strong hash algorithm (SHA-256 or better)
@@ -906,6 +934,7 @@ impl ComplianceChecker {
                             component_id: Some(comp.canonical_id.value().to_string()),
                             counts: None,
                             standard_refs: Vec::new(),
+                            remediation: None,
                         });
                     }
                 }
@@ -927,6 +956,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
@@ -986,6 +1016,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             } else if has_multiple_components {
                 // Edges exist — check the graph is more than a token gesture.
@@ -1030,6 +1061,7 @@ impl ComplianceChecker {
                         component_id: Some(primary.canonical_id.value().to_string()),
                         counts: None,
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 }
 
@@ -1068,6 +1100,7 @@ impl ComplianceChecker {
                             total,
                         }),
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
                 }
             }
@@ -1097,6 +1130,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
@@ -1130,6 +1164,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
@@ -1173,6 +1208,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
@@ -1197,6 +1233,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
 
@@ -1217,6 +1254,7 @@ impl ComplianceChecker {
                         component_id: Some(comp.canonical_id.value().to_string()),
                         counts: None,
                         standard_refs: Vec::new(),
+                        remediation: None,
                     });
             }
         }
@@ -1260,6 +1298,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
             // A version newer than any this tool reads (CycloneDX 2.0 is
@@ -1278,6 +1317,7 @@ impl ComplianceChecker {
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
             _ => {}
@@ -1298,6 +1338,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
@@ -1329,6 +1370,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -1344,6 +1386,7 @@ impl ComplianceChecker {
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
+                remediation: None,
             });
         }
 
@@ -1377,6 +1420,7 @@ impl ComplianceChecker {
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
                     standard_refs: Vec::new(),
+                    remediation: None,
                 });
             }
         }
