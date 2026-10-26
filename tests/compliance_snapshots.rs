@@ -128,6 +128,7 @@ fn severity_letter(s: ViolationSeverity) -> char {
         ViolationSeverity::Error => 'E',
         ViolationSeverity::Warning => 'W',
         ViolationSeverity::Info => 'I',
+        other => panic!("no verdict letter for severity {other:?}"),
     }
 }
 
