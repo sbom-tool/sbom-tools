@@ -9,6 +9,7 @@
 
 use crate::model::{NormalizedSbom, SbomFormat};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 
 // `pub(crate)` so the AI-readiness scorer (quality/scorer.rs) shares the exact
 // ML-component applicability semantics of the AI compliance profiles instead
@@ -34,11 +35,11 @@ mod ssdf;
 use context::{ComplianceContext, checker_for};
 pub use registry::{
     CISA2026_SARIF_RULE_IDS, CNSA2_SARIF_RULE_IDS, COMPLIANCE_SARIF_RULE_IDS,
-    EO14028_SARIF_RULE_IDS, FDA_SARIF_RULE_IDS, FSCT_SARIF_RULE_IDS, NTIA_SARIF_RULE_IDS,
-    PCIDSS_SARIF_RULE_IDS, PQC_SARIF_RULE_IDS, RuleMeta, SSDF_SARIF_RULE_IDS, all_rule_ids,
-    rule_meta,
+    EO14028_SARIF_RULE_IDS, FDA_SARIF_RULE_IDS, FSCT_SARIF_RULE_IDS, FieldAdvice, FormatAdvice,
+    NTIA_SARIF_RULE_IDS, PCIDSS_SARIF_RULE_IDS, PQC_SARIF_RULE_IDS, RemediationFormat, RuleMeta,
+    SSDF_SARIF_RULE_IDS, all_rule_ids, rule_meta,
 };
-use registry::{REMEDIATION_GENERIC, lookup_static_rule_id};
+use registry::{REMEDIATION_UNREGISTERED, lookup_static_rule_id};
 pub use selector::StandardSelector;
 use shared::{
     ValueState, creator_identified, has_known_license, has_known_producer, has_known_value,
@@ -560,8 +561,17 @@ pub struct Violation {
     /// Populated by `ComplianceChecker::check()` from [`Violation::rule_id`]
     /// via [`rule_meta`]. Empty when a violation's rule maps to no references.
     pub standard_refs: Vec<StandardRef>,
-    /// Remediation guidance for this violation; `None` until a producer
-    /// fills it in.
+    /// Remediation guidance phrased for the format of the SBOM the violation
+    /// was found in (see [`RuleMeta::remediation_for`]).
+    ///
+    /// Populated by `ComplianceChecker::check()` from [`Violation::rule_id`]
+    /// and the input format, as [`Violation::standard_refs`] is. `None` on
+    /// violations built outside the checker; read it through
+    /// [`Violation::remediation_guidance`], which then falls back to the
+    /// registry advice for every format.
+    ///
+    /// Serialized as `remediation` (always present); old payloads without
+    /// the field deserialize to `None`.
     pub remediation: Option<String>,
 }
 
@@ -606,6 +616,8 @@ struct ViolationPayload {
     rule_id: Option<String>,
     #[serde(default)]
     standard_refs: Vec<StandardRef>,
+    #[serde(default)]
+    remediation: Option<String>,
 }
 
 impl<'de> Deserialize<'de> for Violation {
@@ -624,15 +636,15 @@ impl<'de> Deserialize<'de> for Violation {
             requirement: payload.requirement,
             // Unknown ids (from newer/older registries) collapse to the
             // generic default rather than failing deserialization; the
-            // serialized `sarif_rule_id` companion field is derived, so it
-            // is ignored here.
+            // serialized `sarif_rule_id` and `help_uri` companion fields are
+            // derived, so they are ignored here.
             rule_id: payload
                 .rule_id
                 .as_deref()
                 .and_then(lookup_static_rule_id)
                 .unwrap_or_else(default_rule_id),
             standard_refs: payload.standard_refs,
-            remediation: None,
+            remediation: payload.remediation,
         })
     }
 }
@@ -644,6 +656,9 @@ impl Serialize for Violation {
     /// order; `standard_refs` is skipped when empty, and `component_id` /
     /// `counts` are skipped when `None`, as their serde-derive
     /// `skip_serializing_if = "Option::is_none"` equivalents would be.
+    /// `remediation` is always written (see
+    /// [`Violation::remediation_guidance`]), followed by the derived
+    /// `help_uri`, which is skipped when no standard reference has a URL.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -652,9 +667,13 @@ impl Serialize for Violation {
         let has_refs = !self.standard_refs.is_empty();
         let has_component_id = self.component_id.is_some();
         let has_counts = self.counts.is_some();
+        let help_uri = self.help_uri();
         let mut state = serializer.serialize_struct(
             "Violation",
-            7 + usize::from(has_refs) + usize::from(has_component_id) + usize::from(has_counts),
+            8 + usize::from(has_refs)
+                + usize::from(has_component_id)
+                + usize::from(has_counts)
+                + usize::from(help_uri.is_some()),
         )?;
         state.serialize_field("severity", &self.severity)?;
         state.serialize_field("category", &self.category)?;
@@ -679,6 +698,12 @@ impl Serialize for Violation {
             state.serialize_field("standard_refs", &self.standard_refs)?;
         } else {
             state.skip_field("standard_refs")?;
+        }
+        state.serialize_field("remediation", &self.remediation_guidance())?;
+        if let Some(uri) = help_uri {
+            state.serialize_field("help_uri", uri)?;
+        } else {
+            state.skip_field("help_uri")?;
         }
         state.end()
     }
@@ -709,11 +734,43 @@ impl Violation {
             .unwrap_or_default()
     }
 
-    /// Remediation guidance for this violation, looked up from the rule
-    /// registry by [`Violation::rule_id`].
+    /// Remediation guidance for this violation: the [`Violation::remediation`]
+    /// that `ComplianceChecker::check()` phrased for the input format, or —
+    /// for violations built outside the checker — the registry advice for
+    /// every format (see [`RuleMeta::remediation_all_formats`]).
+    ///
+    /// Every renderer (JSON, text, Markdown, HTML, TUI) reads remediation
+    /// through this, so the same violation shows the same text everywhere.
     #[must_use]
-    pub fn remediation_guidance(&self) -> &'static str {
-        rule_meta(self.rule_id).map_or(REMEDIATION_GENERIC, |m| m.remediation)
+    pub fn remediation_guidance(&self) -> Cow<'_, str> {
+        match &self.remediation {
+            Some(text) => Cow::Borrowed(text),
+            None => Cow::Owned(rule_meta(self.rule_id).map_or_else(
+                || REMEDIATION_UNREGISTERED.to_string(),
+                |m| m.remediation_all_formats(),
+            )),
+        }
+    }
+
+    /// Registry remediation for this violation's rule, phrased for `format`.
+    /// `ComplianceChecker::check()` stores the result in
+    /// [`Violation::remediation`].
+    #[must_use]
+    pub fn registry_remediation(&self, format: RemediationFormat) -> String {
+        rule_meta(self.rule_id).map_or_else(
+            || REMEDIATION_UNREGISTERED.to_string(),
+            |m| m.remediation_for(format),
+        )
+    }
+
+    /// Canonical URL for this violation: the URL of the first standard
+    /// reference that has one (see [`StandardKind::canonical_help_uri`]).
+    /// Serialized as `help_uri`; `None` when no reference carries a URL.
+    #[must_use]
+    pub fn help_uri(&self) -> Option<&str> {
+        self.standard_refs
+            .iter()
+            .find_map(|r| r.help_uri.as_deref())
     }
 
     /// Externally-visible SARIF rule id for this violation, looked up from
@@ -1217,9 +1274,10 @@ impl ComplianceChecker {
     ///
     /// Selects the [`StandardChecker`] for the configured level (the
     /// dedicated profiles get their own checker; the rest take the generic
-    /// path), runs it, then back-fills harmonised-standard references from the
-    /// rule registry and attaches the CRA Annex VIII conformity summary when a
-    /// product class has been pinned on a CRA profile.
+    /// path), runs it, then back-fills harmonised-standard references and the
+    /// remediation for the SBOM's format from the rule registry, and attaches
+    /// the CRA Annex VIII conformity summary when a product class has been
+    /// pinned on a CRA profile.
     #[must_use]
     pub fn check(&self, sbom: &NormalizedSbom) -> ComplianceResult {
         let ctx = ComplianceContext::new(self, sbom);
@@ -1231,10 +1289,15 @@ impl ComplianceChecker {
         );
         let mut violations = checker.check(&ctx);
 
-        // Populate harmonised-standard references from the rule registry.
+        // Populate harmonised-standard references and the remediation,
+        // phrased for the input format, from the rule registry.
+        let format = RemediationFormat::of(&sbom.document);
         for v in &mut violations {
             if v.standard_refs.is_empty() {
                 v.standard_refs = v.registry_standard_refs();
+            }
+            if v.remediation.is_none() {
+                v.remediation = Some(v.registry_remediation(format));
             }
         }
 
@@ -2293,6 +2356,179 @@ mod tests {
         json.as_object_mut().unwrap().remove("applicability");
         let back: ComplianceResult = serde_json::from_value(json).unwrap();
         assert_eq!(back.applicability, Applicability::Applicable);
+    }
+
+    /// The evaluation instant the remediation tests pin the checker to.
+    fn remediation_test_clock() -> chrono::DateTime<chrono::Utc> {
+        chrono::DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
+            .expect("valid RFC 3339 instant")
+            .with_timezone(&chrono::Utc)
+    }
+
+    /// An NTIA run over a one-component SBOM of the given format whose
+    /// component names no supplier, returning the SBOM-NTIA-SUPPLIER finding.
+    fn ntia_supplier_finding(format: SbomFormat, spec_version: &str) -> Violation {
+        use crate::model::{Component, DocumentMetadata, NormalizedSbom};
+        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+        sbom.document.format = format;
+        sbom.document.spec_version = spec_version.to_string();
+        sbom.add_component(
+            Component::new("lib".to_string(), "lib@1".to_string())
+                .with_version("1.0".to_string())
+                .with_purl("pkg:cargo/lib@1.0".to_string()),
+        );
+        ComplianceChecker::new(ComplianceLevel::NtiaMinimum)
+            .with_as_of(remediation_test_clock())
+            .check(&sbom)
+            .violations
+            .into_iter()
+            .find(|v| v.rule_id == "SBOM-NTIA-SUPPLIER")
+            .expect("a supplier-less component fails the NTIA supplier element")
+    }
+
+    /// Each violation's remediation names the fields of the format the SBOM
+    /// was written in: SPDX inputs used to get CycloneDX field advice.
+    #[test]
+    fn remediation_follows_the_input_format() {
+        for (format, spec_version, own, foreign) in [
+            (
+                SbomFormat::CycloneDx,
+                "1.6",
+                "CycloneDX: set components[].supplier.name",
+                ["packages[].supplier", "suppliedBy"],
+            ),
+            (
+                SbomFormat::Spdx,
+                "2.3",
+                "SPDX 2.x: set packages[].supplier",
+                ["components[].supplier.name", "suppliedBy"],
+            ),
+            (
+                SbomFormat::Spdx,
+                "3.0.1",
+                "SPDX 3.0: set suppliedBy",
+                ["components[].supplier.name", "packages[].supplier"],
+            ),
+        ] {
+            let v = ntia_supplier_finding(format.clone(), spec_version);
+            let text = v
+                .remediation
+                .as_deref()
+                .expect("check() stamps remediation");
+            assert!(
+                text.contains(own),
+                "{format} {spec_version}: expected {own:?} in {text:?}"
+            );
+            for field in foreign {
+                assert!(
+                    !text.contains(field),
+                    "{format} {spec_version}: {field:?} belongs to another format: {text:?}"
+                );
+            }
+            assert_eq!(v.remediation_guidance(), text);
+        }
+    }
+
+    /// JSON carries `remediation` on every violation and `help_uri` from the
+    /// first standard reference that has a URL; `help_uri` is omitted when
+    /// no reference has one.
+    #[test]
+    fn violation_json_carries_remediation_and_help_uri() {
+        let v = ntia_supplier_finding(SbomFormat::CycloneDx, "1.6");
+        let json = serde_json::to_value(&v).expect("violation serializes");
+        assert_eq!(
+            json["remediation"].as_str(),
+            v.remediation.as_deref(),
+            "remediation is serialized verbatim"
+        );
+        let first_uri = v.standard_refs.iter().find_map(|r| r.help_uri.as_deref());
+        assert!(first_uri.is_some(), "NTIA references carry a URL");
+        assert_eq!(json["help_uri"].as_str(), first_uri);
+
+        // prEN 40000-1-3 has no public URL, so a prEN-only rule has no
+        // help_uri — but still a remediation.
+        let hardware = Violation {
+            severity: ViolationSeverity::Error,
+            category: ViolationCategory::SupplierInfo,
+            message: "m".to_string(),
+            element: None,
+            requirement: "r".to_string(),
+            rule_id: "SBOM-CRA-PRE-8-RQ-02",
+            component_id: None,
+            counts: None,
+            standard_refs: rule_meta("SBOM-CRA-PRE-8-RQ-02")
+                .expect("registered rule")
+                .refs
+                .iter()
+                .map(|(kind, id)| StandardRef::new(*kind, *id))
+                .collect(),
+            remediation: None,
+        };
+        let json = serde_json::to_value(&hardware).expect("violation serializes");
+        assert!(
+            json.get("help_uri").is_none(),
+            "no URL, no help_uri: {json}"
+        );
+        assert!(
+            json["remediation"]
+                .as_str()
+                .is_some_and(|r| r.contains("hardware component")),
+            "unstamped violations still serialize the registry remediation: {json}"
+        );
+    }
+
+    /// Payloads written before `remediation` and `help_uri` existed still
+    /// deserialize; a payload that carries `remediation` keeps it.
+    #[test]
+    fn remediation_payloads_round_trip_and_old_payloads_deserialize() {
+        let v = ntia_supplier_finding(SbomFormat::Spdx, "2.3");
+        let mut json = serde_json::to_value(&v).expect("violation serializes");
+        let back: Violation =
+            serde_json::from_value(json.clone()).expect("current payload deserializes");
+        assert_eq!(back.remediation, v.remediation);
+
+        let object = json.as_object_mut().expect("violation is a JSON object");
+        object.remove("remediation");
+        object.remove("help_uri");
+        let old: Violation = serde_json::from_value(json).expect("old payload deserializes");
+        assert_eq!(old.remediation, None);
+        assert_eq!(old.rule_id, "SBOM-NTIA-SUPPLIER");
+        assert!(
+            !old.remediation_guidance().is_empty(),
+            "an old payload still renders registry remediation"
+        );
+    }
+
+    /// A violation built outside the checker has no input format, so its
+    /// remediation lists every format's advice; an unregistered rule id has
+    /// no registry guidance at all.
+    #[test]
+    fn unstamped_remediation_lists_every_format() {
+        let unstamped = |rule_id: &'static str| Violation {
+            severity: ViolationSeverity::Warning,
+            category: ViolationCategory::SupplierInfo,
+            message: String::new(),
+            element: None,
+            requirement: String::new(),
+            rule_id,
+            component_id: None,
+            counts: None,
+            standard_refs: Vec::new(),
+            remediation: None,
+        };
+        let guidance = unstamped("SBOM-CRA-COMPONENT-SUPPLIER")
+            .remediation_guidance()
+            .into_owned();
+        for format in RemediationFormat::ALL {
+            assert!(
+                guidance.contains(&format!("{}: ", format.label())),
+                "{format:?} advice missing from {guidance:?}"
+            );
+        }
+        assert_eq!(
+            unstamped("SBOM-NOT-A-RULE").remediation_guidance(),
+            REMEDIATION_UNREGISTERED
+        );
     }
 
     /// A pinned evaluation clock makes deadline-sensitive checks

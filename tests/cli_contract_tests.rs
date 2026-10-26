@@ -1064,6 +1064,7 @@ fn every_text_output_neutralizes_sbom_text() {
         runs.push(vec!["diff", old, new, "-o", format]);
         runs.push(vec!["view", new, "-o", format]);
     }
+    runs.push(vec!["view", new, "--validate-ntia", "-o", "summary"]);
     runs.push(vec!["quality", new]);
     runs.push(vec!["quality", new, "--profile", "cbom"]);
     for format in ["summary", "table", "csv"] {
@@ -1100,6 +1101,97 @@ fn every_text_output_neutralizes_sbom_text() {
         assert!(!out.trim().is_empty(), "{label}: printed nothing");
         assert_neutralized(&label, "stdout", &out);
         assert_neutralized(&label, "stderr", &stderr(&output));
+        // The remediation line under each finding goes through the same
+        // sanitizer; it must be present for every finding.
+        if args[0] == "validate" {
+            assert_fix_line_per_finding(&label, &out, &["[ERROR] ", "[WARN] ", "[INFO] "], 2);
+        } else if args.contains(&"--validate-ntia") {
+            assert_fix_line_per_finding(&label, &out, &["  - "], 1);
+        }
+    }
+}
+
+/// Every finding line (one starting with a `markers` prefix) is followed,
+/// `offset` lines later, by a non-empty `fix:` line with its remediation.
+fn assert_fix_line_per_finding(label: &str, text: &str, markers: &[&str], offset: usize) {
+    let lines: Vec<&str> = text.lines().collect();
+    let findings: Vec<usize> = lines
+        .iter()
+        .enumerate()
+        .filter(|(_, line)| markers.iter().any(|m| line.starts_with(m)))
+        .map(|(i, _)| i)
+        .collect();
+    assert!(
+        !findings.is_empty(),
+        "{label}: no findings printed:\n{text}"
+    );
+    for i in findings {
+        let fix = lines.get(i + offset).map_or("", |l| l.trim_start());
+        assert!(
+            fix.strip_prefix("fix: ")
+                .is_some_and(|r| !r.trim().is_empty()),
+            "{label}: finding {:?} has no fix line (got {fix:?})",
+            lines[i]
+        );
+    }
+}
+
+/// `validate` gives every violation a remediation in JSON and a `fix:` line
+/// in text, phrased for the input format: SPDX documents get SPDX field
+/// paths, never CycloneDX ones.
+#[test]
+fn validate_remediation_follows_the_input_format() {
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    for (rel, standard, expected) in [
+        (
+            "spdx/minimal.spdx.json",
+            "ntia",
+            "SPDX 2.x: set packages[].supplier",
+        ),
+        (
+            "spdx3/minimal.spdx3.json",
+            "bsi",
+            "SPDX 3.0: add a hasDeclaredLicense",
+        ),
+    ] {
+        let sbom = fixtures.join(rel);
+        let text = stdout(
+            &base_command()
+                .arg("validate")
+                .arg(&sbom)
+                .args(["--standard", standard])
+                .output()
+                .expect("validate should run"),
+        );
+        assert_fix_line_per_finding(rel, &text, &["[ERROR] ", "[WARN] ", "[INFO] "], 2);
+        assert!(
+            text.contains(expected),
+            "{rel}: expected {expected:?}:\n{text}"
+        );
+        for cyclonedx_field in ["components[]", "metadata.component", "externalReferences"] {
+            assert!(
+                !text.contains(cyclonedx_field),
+                "{rel}: CycloneDX field {cyclonedx_field:?} in SPDX remediation:\n{text}"
+            );
+        }
+
+        let json: serde_json::Value = serde_json::from_str(&stdout(
+            &base_command()
+                .arg("validate")
+                .arg(&sbom)
+                .args(["--standard", standard, "-o", "json"])
+                .output()
+                .expect("validate -o json should run"),
+        ))
+        .expect("validate -o json is JSON");
+        let violations = json["violations"].as_array().expect("violations array");
+        assert!(!violations.is_empty(), "{rel}: expected violations");
+        for v in violations {
+            assert!(
+                v["remediation"].as_str().is_some_and(|r| !r.is_empty()),
+                "{rel}: violation without remediation: {v}"
+            );
+        }
     }
 }
 

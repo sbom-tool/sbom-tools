@@ -988,7 +988,7 @@ struct AggregatedViolationHtml<'a> {
     category: &'a str,
     requirement: &'a str,
     message: String,
-    remediation: &'static str,
+    remediation: std::borrow::Cow<'a, str>,
     count: usize,
     standard_refs: String,
 }
@@ -1046,7 +1046,7 @@ fn write_violation_table_html(
         writeln!(
             html,
             "                <td><details><summary>View</summary>{}</details></td>",
-            escape_html(v.remediation)
+            escape_html(&v.remediation)
         )?;
         writeln!(html, "            </tr>")?;
     }

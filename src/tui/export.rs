@@ -424,7 +424,7 @@ fn compliance_to_markdown(results: &[crate::quality::ComplianceResult], selected
                 v.category.name(),
                 md_escape_cell(&v.requirement),
                 md_escape_cell(element),
-                md_escape_cell(v.remediation_guidance()),
+                md_escape_cell(&v.remediation_guidance()),
             ));
         }
         md.push('\n');
@@ -469,7 +469,7 @@ fn compliance_to_csv(results: &[crate::quality::ComplianceResult], selected: usi
                 csv_escape(&v.requirement),
                 csv_escape(element),
                 csv_escape(&v.message),
-                csv_escape(v.remediation_guidance()),
+                csv_escape(&v.remediation_guidance()),
             ));
         }
     }
@@ -552,7 +552,7 @@ th { background: #313244; color: #89b4fa; font-weight: 600; }
                 escape_html(&v.requirement),
                 escape_html(element),
                 escape_html(&v.message),
-                escape_html(v.remediation_guidance()),
+                escape_html(&v.remediation_guidance()),
             ));
         }
         html.push_str("</table>\n");

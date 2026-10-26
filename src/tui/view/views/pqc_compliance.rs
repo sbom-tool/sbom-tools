@@ -383,7 +383,7 @@ fn render_violation_detail(
                     Span::styled("  Fix: ", Style::default().fg(scheme.success)),
                     Span::styled(
                         crate::tui::widgets::truncate_str(
-                            v.remediation_guidance(),
+                            &v.remediation_guidance(),
                             inner_w.saturating_sub(7),
                         ),
                         Style::default().fg(scheme.text),
