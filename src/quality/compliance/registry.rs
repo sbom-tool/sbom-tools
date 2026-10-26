@@ -1449,14 +1449,18 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // vulnerabilities (description, impacts, severity, remediation).
         // One finding per vulnerability of a component, told apart by the
         // vulnerability id (`finding_detail`). The remediation-detail and
-        // SPDX 3.0 profile checks report under their own ids below.
+        // SPDX 3.0 profile checks report under their own ids below. Both
+        // per-vulnerability checks skip an entry whose own VEX statement
+        // is not_affected with a justification: the CRA FAQ (v1.4, 4.3.1)
+        // lets the manufacturer document a vulnerability that cannot be
+        // exploited and not fix it, and (4) covers fixed vulnerabilities.
         "SBOM-CRA-VULN-METADATA" => RuleMeta {
             sarif_id: "SBOM-CRA-VULN-METADATA",
             name: "CraVulnerabilityMetadata",
             short_description: "CRA Annex I Part II (4): Vulnerability entries carry a severity or CVSS score",
             default_severity: ViolationSeverity::Warning,
             refs: &[(ANNEX, "Annex I Part II (4)")],
-            remediation: "Give every vulnerability entry a severity or CVSS score (Annex I Part II (4)).",
+            remediation: "Give every vulnerability entry a severity or CVSS score (Annex I Part II (4)). An entry whose VEX statement is not_affected and names a justification needs neither: it documents a vulnerability that cannot be exploited in the product, which the CRA FAQ (v1.4, 4.3.1) says the manufacturer may decide not to fix.",
             advice: Some(&ADVICE_VULN_SEVERITY),
         },
         "SBOM-CRA-VULN-METADATA-REMEDIATION" => RuleMeta {
@@ -1465,7 +1469,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Annex I Part II (4): Vulnerability remediations name a fixed version or describe the fix",
             default_severity: ViolationSeverity::Info,
             refs: &[(ANNEX, "Annex I Part II (4)")],
-            remediation: "Give every vulnerability remediation a fixed version or a description of the fix (Annex I Part II (4)).",
+            remediation: "Give every vulnerability remediation a fixed version or a description of the fix (Annex I Part II (4)). A vulnerability whose VEX statement is not_affected and names a justification is exempt: it documents a vulnerability that cannot be exploited in the product, which the CRA FAQ (v1.4, 4.3.1) says the manufacturer may decide not to fix.",
             advice: Some(&ADVICE_VULN_REMEDIATION),
         },
         "SBOM-CRA-VULN-METADATA-PROFILE" => RuleMeta {

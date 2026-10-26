@@ -73,8 +73,44 @@ that ends up in SARIF `properties.standardHelpUris`.
 | `CRA Art. 13(15): Product identification`                       | Art. 13(15); Annex II (3)         | PRE-7-RQ-06         | §5.2.2           | SBOM `metadata.component.name` + sidecar `productName`    |
 | `CRA Annex I Part II (1): Component version`                    | Annex I Part II (1)               | PRE-7-RQ-06         | §5.2.2           | component `version` fields                                |
 | `CRA Annex I Part II (1): Component supplier information`       | Annex I Part II (1)               | PRE-7-RQ-03         | §5.2.2           | component `supplier` fields                               |
-| `CRA Annex I Part II (4): Vulnerability metadata completeness`  | Annex I Part II (4)               | —                   | —                | vulnerability severity/CVSS + remediation detail          |
+| `CRA Annex I Part II (4): Vulnerability metadata completeness`  | Annex I Part II (4)               | —                   | —                | vulnerability severity/CVSS + remediation detail, or a [justified VEX `not_affected` statement](#vex-not_affected-statements) |
 | `CRA Art. 13(16): Manufacturer identification`                  | Art. 13(16); Annex II (1)         | —                   | §5.2.1           | `manufacturerName` + `manufacturerEmail`                  |
+
+#### VEX `not_affected` statements
+
+The two per-vulnerability Annex I Part II (4) checks, severity or CVSS
+(`SBOM-CRA-VULN-METADATA`) and remediation detail
+(`SBOM-CRA-VULN-METADATA-REMEDIATION`), skip a vulnerability whose own VEX
+statement is `not_affected` and names a justification: CycloneDX
+`analysis.justification`, OpenVEX `justification` or SPDX 3.0
+`justificationType`. The Commission services' CRA FAQ (version 1.4, 4
+September 2026) does not ask for a patch for every vulnerability (FAQ
+4.3.1): "When discovering a vulnerability, manufacturers are expected to
+determine its relevance for their product, and assess the resulting risk,
+in the framework of the manufacturer's risk assessment." Its example is a
+Wi-Fi router whose library has a buffer overflow that "cannot be exploited,
+as the library functions are never called in the firmware. The
+manufacturer may be expected, for example, to document the vulnerability,
+but may decide not to fix it with a dedicated update." FAQ 4.2.2 lists what
+that case-by-case assessment weighs: "the extent to which the vulnerable
+code is invoked or loaded when the product is in use; the level and type of
+access required to carry out the exploit; whether compensating controls are
+already in place to mitigate exploitation". A VEX justification records
+that reason, and Annex I Part II (4) concerns "fixed vulnerabilities". The
+FAQ does not mention VEX.
+
+A bare `not_affected` claim does not count, nor does an impact statement or
+`detail` text without a justification, a justification on any other state,
+or a statement on another vulnerability of the same component (the
+component-level VEX status sums up all of a component's statements). The
+CycloneDX SBOM parser leaves the `protected_by_compiler`,
+`protected_at_runtime` and `protected_at_perimeter` justifications unmapped
+(a CycloneDX VEX document passed with `--vex` maps the last two), and the
+CSAF reader ignores `flags` and `threats`, so such statements do not count
+yet. Before v0.4.0 every unrated vulnerability warned. Sources: the FAQ as
+the Commission's Markdown conversion
+(<https://ec.europa.eu/newsroom/dae/redirection/document/123307>) and PDF
+(<https://ec.europa.eu/newsroom/dae/redirection/document/122331>).
 
 ### CRA Article 14 (reporting obligations, applicable from 2026-09-11)
 

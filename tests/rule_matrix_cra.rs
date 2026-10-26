@@ -345,6 +345,30 @@ fn with_response(s: &mut SbomFixture, response: &str, text: Option<(&str, &str)>
         .push(("CVE-2026-1111".to_string(), extra));
 }
 
+/// The id of [`unrated_vulnerability`].
+const UNRATED_CVE: &str = "CVE-2026-2222";
+
+/// A vulnerability of libalpha with no rating: no severity, no CVSS score.
+fn unrated_vulnerability() -> (String, String, String) {
+    (
+        UNRATED_CVE.to_string(),
+        String::new(), // unrated
+        "ref-libalpha".to_string(),
+    )
+}
+
+/// Declare a VEX `analysis` block on the embedded vulnerability `id`.
+fn with_analysis(s: &mut SbomFixture, id: &str, analysis: serde_json::Value) {
+    s.vulnerability_extras
+        .push((id.to_string(), serde_json::json!({ "analysis": analysis })));
+}
+
+/// A VEX `not_affected` analysis that names its justification: the
+/// vulnerable code is never reached in the product.
+fn justified_not_affected() -> serde_json::Value {
+    serde_json::json!({ "state": "not_affected", "justification": "code_not_reachable" })
+}
+
 /// Add an external reference of `ref_type` carrying the SHA-256 of the
 /// referenced document to the product component.
 fn with_hashed_product_ref(s: &mut SbomFixture, ref_type: &str, url: &str) {
@@ -1124,18 +1148,75 @@ fn cra_phase2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     let mut entries = manufacturer_rows();
     entries.extend([
         // An unrated vulnerability lacks the severity Annex I Part II (4)
-        // asks for.
+        // asks for. A VEX not_affected statement that names a justification
+        // documents a vulnerability that cannot be exploited, which the CRA
+        // FAQ (v1.4, 4.3.1) lets the manufacturer leave unfixed; (4) covers
+        // fixed vulnerabilities, so the entry needs no severity. A bare
+        // not_affected claim, a free-text detail without a justification,
+        // a justification on another state and a justified statement on
+        // another vulnerability of the component are no such record.
         RuleEntry::tested(
             "SBOM-CRA-VULN-METADATA",
             Sev::Warning,
-            broken(|s| {
-                s.vulnerabilities = vec![(
-                    "CVE-2026-2222".to_string(),
-                    String::new(), // unrated
-                    "ref-libalpha".to_string(),
-                )];
-            }),
+            broken(|s| s.vulnerabilities = vec![unrated_vulnerability()]),
             base(),
+        )
+        .with_firing(
+            "unjustified not_affected statement",
+            Sev::Warning,
+            broken(|s| {
+                s.vulnerabilities = vec![unrated_vulnerability()];
+                with_analysis(
+                    s,
+                    UNRATED_CVE,
+                    serde_json::json!({ "state": "not_affected" }),
+                );
+            }),
+        )
+        .with_firing(
+            "not_affected statement with a detail but no justification",
+            Sev::Warning,
+            broken(|s| {
+                s.vulnerabilities = vec![unrated_vulnerability()];
+                with_analysis(
+                    s,
+                    UNRATED_CVE,
+                    serde_json::json!({
+                        "state": "not_affected",
+                        "detail": "libalpha's XML parser is never called",
+                    }),
+                );
+            }),
+        )
+        .with_firing(
+            "justification on an exploitable statement",
+            Sev::Warning,
+            broken(|s| {
+                s.vulnerabilities = vec![unrated_vulnerability()];
+                with_analysis(
+                    s,
+                    UNRATED_CVE,
+                    serde_json::json!({
+                        "state": "exploitable",
+                        "justification": "code_not_reachable",
+                    }),
+                );
+            }),
+        )
+        .with_firing(
+            "justified not_affected statement on another vulnerability of the component",
+            Sev::Warning,
+            broken(|s| {
+                s.vulnerabilities.push(unrated_vulnerability());
+                with_analysis(s, "CVE-2026-1111", justified_not_affected());
+            }),
+        )
+        .with_silent(
+            "justified not_affected statement",
+            broken(|s| {
+                s.vulnerabilities = vec![unrated_vulnerability()];
+                with_analysis(s, UNRATED_CVE, justified_not_affected());
+            }),
         ),
         // A declared remediation (analysis.response update or
         // workaround_available) with no recommendation or workaround text
@@ -1175,6 +1256,27 @@ fn cra_phase2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         .with_silent(
             "will_not_fix response declares no remediation",
             broken(|s| with_response(s, "will_not_fix", None)),
+        )
+        // A justified not_affected statement exempts the entry (see the
+        // SBOM-CRA-VULN-METADATA row); a bare one does not.
+        .with_firing(
+            "update response on an unjustified not_affected statement",
+            Sev::Info,
+            broken(|s| {
+                with_analysis(
+                    s,
+                    "CVE-2026-1111",
+                    serde_json::json!({ "state": "not_affected", "response": ["update"] }),
+                );
+            }),
+        )
+        .with_silent(
+            "update response on a justified not_affected statement",
+            broken(|s| {
+                let mut analysis = justified_not_affected();
+                analysis["response"] = serde_json::json!(["update"]);
+                with_analysis(s, "CVE-2026-1111", analysis);
+            }),
         ),
         // Phase 2 also asks for lifecycle evidence. An approaching-EOL
         // component reports SBOM-CRA-LIFECYCLE-APPROACHING-EOL (its row is in

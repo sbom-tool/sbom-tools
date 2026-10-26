@@ -4852,6 +4852,68 @@ mod tests {
         );
     }
 
+    /// An unrated vulnerability needs no severity when its own VEX statement
+    /// is not_affected and names a justification (CRA FAQ v1.4, 4.3.1). The
+    /// check reads the model, so a statement from an OpenVEX overlay or an
+    /// SPDX 3.0 assessment counts the same as an embedded CycloneDX
+    /// analysis. No other statement counts.
+    #[test]
+    fn cra_phase2_vuln_metadata_accepts_only_a_justified_not_affected_statement() {
+        use crate::model::{
+            Component, VexJustification, VexState, VexStatus, VulnerabilityRef, VulnerabilitySource,
+        };
+        let warns = |vex: Option<VexStatus>| {
+            let mut vuln =
+                VulnerabilityRef::new("CVE-2026-2222".to_string(), VulnerabilitySource::Cve);
+            vuln.vex_status = vex;
+            let mut component = Component::new("libalpha".to_string(), "libalpha@1".to_string());
+            component.vulnerabilities.push(vuln);
+            let mut sbom = NormalizedSbom::default();
+            sbom.add_component(component);
+            checker(ComplianceLevel::CraPhase2)
+                .check(&sbom)
+                .violations
+                .iter()
+                .any(|v| v.rule_id == "SBOM-CRA-VULN-METADATA")
+        };
+        let statement = |state: VexState, justified: bool, impact: Option<&str>| {
+            let mut vex = VexStatus::new(state);
+            if justified {
+                vex.justification = Some(VexJustification::VulnerableCodeNotInExecutePath);
+            }
+            vex.impact_statement = impact.map(str::to_string);
+            Some(vex)
+        };
+
+        assert!(
+            !warns(statement(VexState::NotAffected, true, None)),
+            "a justified not_affected statement documents the vulnerability"
+        );
+        assert!(warns(None), "an entry without a VEX statement warns");
+        assert!(
+            warns(statement(VexState::NotAffected, false, None)),
+            "a bare not_affected claim is no record"
+        );
+        assert!(
+            warns(statement(
+                VexState::NotAffected,
+                false,
+                Some("the parser is never called")
+            )),
+            "an impact statement without a justification is not enough"
+        );
+        for state in [
+            VexState::Affected,
+            VexState::Fixed,
+            VexState::UnderInvestigation,
+        ] {
+            assert!(
+                warns(statement(state.clone(), true, None)),
+                "a justification on a {state} statement does not count"
+            );
+        }
+    }
+
     #[test]
     fn article_14_sidecar_suppresses_psirt_warning() {
         use crate::model::CraSidecarMetadata;
