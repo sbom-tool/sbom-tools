@@ -1664,7 +1664,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA general SBOM readiness requirement",
             default_severity: ViolationSeverity::Info,
             refs: &[(ANNEX, "Annex IV")],
-            remediation: "Reference the EUCC (Common Criteria) certification the product class requires: set euccProtectionProfileId, euccTargetOfEvaluation, euccItsefIdentifier or an unexpired euccValidUntil in the CRA sidecar.",
+            remediation: "Reference the EUCC (Common Criteria) certification the product class requires: set euccProtectionProfileId, euccTargetOfEvaluation, euccItsefIdentifier or an unexpired euccValidUntil in the CRA sidecar. Once euccValidUntil has passed, the certificate is expired and none of these keys counts.",
             advice: Some(&ADVICE_EUCC_ALT),
         },
         "SBOM-CRA-ANNEX-V" => RuleMeta {

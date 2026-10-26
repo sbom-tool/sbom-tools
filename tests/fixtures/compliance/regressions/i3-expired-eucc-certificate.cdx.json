@@ -1,0 +1,32 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:9b1d3f5a-7c9e-4a2c-8e0b-2d4f6a8c0e1a",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T00:00:00Z",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "example-generator",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    "manufacturer": {
+      "name": "Example Corp"
+    },
+    "component": {
+      "type": "device",
+      "bom-ref": "hsm",
+      "name": "hsm",
+      "version": "5.0.0",
+      "purl": "pkg:generic/example/hsm@5.0.0",
+      "supplier": {
+        "name": "Example Corp"
+      }
+    }
+  },
+  "components": []
+}

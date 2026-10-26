@@ -1256,6 +1256,39 @@
           }
         }
       ]
+    },
+    {
+      "id": "i3-expired-eucc-certificate",
+      "review_id": "I3",
+      "fixture": "i3-expired-eucc-certificate.cdx.json",
+      "sidecar": "i3-expired-eucc-certificate.cra.json",
+      "note": "A critical product whose sidecar names a Protection Profile, a Target of Evaluation and an ITSEF for an EUCC certificate that expired on 2026-06-30. Any single non-empty identifier counted as live EUCC evidence, so the expired certificate satisfied the Annex IV reference that EUCC itself reports as expired.",
+      "checks": [
+        {
+          "standard": "cra",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-CRA-ANNEX-IV",
+                "severity": "error"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "eucc",
+          "expect": {
+            "compliant": false,
+            "rules_present": [
+              {
+                "rule": "SBOM-EUCC-VALIDITY",
+                "severity": "error"
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }

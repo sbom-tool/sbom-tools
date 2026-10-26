@@ -770,7 +770,8 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             }),
         ),
         // Class-pinned EUCC reference: Info for important class II, Error
-        // for critical; live sidecar EUCC evidence satisfies it.
+        // for critical; live sidecar EUCC evidence satisfies it, and an
+        // expired certificate voids the identifiers beside it.
         RuleEntry::key_tested(
             "SBOM-CRA-ANNEX-IV",
             Sev::Info,
@@ -778,6 +779,16 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             broken(|s| {
                 pin_class(s, CraProductClass::ImportantClass2, None);
                 s.sidecar_mut().eucc_protection_profile_id = Some("PP-CC-ROUTER-01".to_string());
+            }),
+        )
+        .with_firing(
+            "Protection Profile id beside an expired certificate",
+            Sev::Info,
+            broken(|s| {
+                pin_class(s, CraProductClass::ImportantClass2, None);
+                let sidecar = s.sidecar_mut();
+                sidecar.eucc_protection_profile_id = Some("PP-CC-ROUTER-01".to_string());
+                sidecar.eucc_valid_until = Some(as_of() - chrono::Duration::days(1));
             }),
         )
         .with_departing_firing(

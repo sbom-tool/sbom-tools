@@ -2169,6 +2169,32 @@ mod tests {
             }),
             "a live EUCC validity date satisfies the Annex IV gate"
         );
+        // An expired certificate voids its identifiers: they describe a
+        // certificate that no longer holds.
+        assert!(
+            check(CraSidecarMetadata {
+                eucc_protection_profile_id: Some("PP-CC-ROUTER-01".to_string()),
+                eucc_itsef_identifier: Some("ITSEF-DE-0042".to_string()),
+                eucc_valid_until: Some(as_of() - chrono::Duration::days(1)),
+                ..Default::default()
+            }),
+            "identifiers beside an expired validity date must not satisfy the Annex IV gate"
+        );
+        assert!(
+            !check(CraSidecarMetadata {
+                eucc_protection_profile_id: Some("PP-CC-ROUTER-01".to_string()),
+                eucc_valid_until: Some(as_of() + chrono::Duration::days(365)),
+                ..Default::default()
+            }),
+            "an identifier with a live validity date satisfies the Annex IV gate"
+        );
+        assert!(
+            !check(CraSidecarMetadata {
+                eucc_protection_profile_id: Some("PP-CC-ROUTER-01".to_string()),
+                ..Default::default()
+            }),
+            "an identifier without a validity date still satisfies the Annex IV gate"
+        );
     }
 
     /// Steward supplier findings cite Art. 24 in their structured refs, not
