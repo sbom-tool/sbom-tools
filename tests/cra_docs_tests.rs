@@ -193,6 +193,7 @@ const HOSTILE_SIDECAR: &str = r##"{
     "manufacturerEmail": "legal@example.com\n# Forged contact",
     "psirtUrl": "https://example.com/psirt>\n# Forged psirt",
     "securityContact": "security@example.com | injected cell",
+    "earlyWarningContact": "\\<img src=x onerror=alert(2)>",
     "riskAssessmentMethodology": "ISO <script>alert(1)</script>",
     "annexIPartIControls": {
         "ctl-1\n# Forged control": {
@@ -206,10 +207,11 @@ const HOSTILE_SIDECAR: &str = r##"{
 }"##;
 
 /// Whether `needle` occurs in `md` without a Markdown backslash escape on its
-/// first character.
+/// first character. Only an odd run of backslashes escapes it: an even run is
+/// escaped backslashes, after which the needle is live (`\\<img`).
 fn contains_unescaped(md: &str, needle: &str) -> bool {
     md.match_indices(needle)
-        .any(|(at, _)| !md[..at].ends_with('\\'))
+        .any(|(at, _)| md[..at].chars().rev().take_while(|&c| c == '\\').count() % 2 == 0)
 }
 
 /// Text from the SBOM and the sidecar is escaped in every dossier file: no
