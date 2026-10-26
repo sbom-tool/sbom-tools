@@ -236,9 +236,9 @@ sbom-tools validate sbom.json --standard ntia -o oscal-json --as-of 2026-10-12T0
 | Where | What |
 |---|---|
 | `metadata.oscal-version` | `1.2.3`. |
-| `results[]` | One per checked standard, in `--standard` order. Its `props` carry the verdict: `standard`, `standard-name`, `is-compliant`, `applicability`, `error-count`, `warning-count`, `info-count`, `score`, and `not-applicable-reason` when the standard did not apply. |
-| `results[].findings[]` | A roll-up finding for the standard (`satisfied` when compliant), then one `not-satisfied` finding per violation, targeting the objective named by the lowercased rule id. A standard that did not apply gets no roll-up and no finding. |
-| `results[].observations[]` | One per violation, the evidence its finding relates to, typed `discovery`, with the properties `severity`, `standard-reference`, `rule-id`, `sarif-rule-id` and, when the SBOM gives a label, `sbom-element`. |
+| `results[]` | One per checked standard, in `--standard` order. Its `props` carry the verdict: `standard`, `standard-name`, `is-compliant`, `applicability`, `error-count`, `warning-count`, `info-count`, `passed-count`, `score`, and `not-applicable-reason` when the standard did not apply. |
+| `results[].findings[]` | A roll-up finding for the standard (`satisfied` when compliant), then one `not-satisfied` finding per violation, then one `satisfied` finding per [passed check](#passed-checks), each targeting the objective named by the lowercased rule id. A standard that did not apply gets no roll-up and no finding. |
+| `results[].observations[]` | One per violation, the evidence its finding relates to, typed `discovery`, with the properties `severity`, `standard-reference`, `rule-id`, `sarif-rule-id` and, when the SBOM gives a label, `sbom-element`; then one per passed check, typed `control-objective`, with the same properties but `severity`. |
 | `results[].observations[].subjects[]` | The SBOM document (`type: resource`), then, for a finding about a component, the component (`type: component`). |
 | `results[].local-definitions.components[]` | The components the result's observations name, titled by name and version, with OSCAL's `version` property, `component-id` (the canonical id: `component_id` in `-o json`) and `component-type` (the SBOM's own type). |
 | `back-matter.resources[0]` | The SBOM document: `type` `artifact`, `sha256` (of the SBOM bytes as read), `format`, `spec-version`, and the serial number (CycloneDX) or document namespace (SPDX) in `document-ids`. When that id is a URI (`urn:uuid:…`, `https://…`), it is also the resource's `rlinks[0].href`, with the SHA-256 in `hashes`. |
@@ -280,6 +280,10 @@ should note:
 - Observations gain `subjects`, results gain `local-definitions`, and the
   document gains `back-matter`. These are additions: no existing field moved
   or changed meaning.
+- A check the SBOM passed (an approved post-quantum algorithm under `pqc`)
+  used to be an Info violation, and so a `not-satisfied` finding. It is now a
+  `satisfied` finding over a `control-objective` observation, and results
+  count such checks in the `passed-count` property.
 - Titles and descriptions that carry SBOM text are Markdown-escaped, as
   described above. A consumer that read a description as plain text now sees
   backslash escapes (`\[CISA 2026\]`, `TLS\_AES\_256\_GCM\_SHA384`): render it

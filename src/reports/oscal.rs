@@ -9,7 +9,9 @@
 //! entry, with a satisfied roll-up finding.
 //!
 //! Each rule a standard checked against the SBOM becomes an observation and
-//! the finding that judges it (a `Check`). Observations name their
+//! the finding that judges it (a `Check`): a violation is a `not-satisfied`
+//! finding over a `discovery` observation, a passed check a `satisfied`
+//! finding over a `control-objective` observation. Observations name their
 //! subjects: the SBOM document, described once as a back-matter resource,
 //! and, when the check is about a component, that component, defined in the
 //! result's `local-definitions`.
@@ -23,7 +25,7 @@ use std::collections::HashMap;
 
 use super::escape::escape_markdown_inline;
 use crate::model::{Component, ComponentType, NormalizedSbom};
-use crate::quality::{Applicability, ComplianceResult, Violation, ViolationSeverity};
+use crate::quality::{Applicability, ComplianceResult, PassedCheck, Violation, ViolationSeverity};
 use anyhow::Result;
 use chrono::{DateTime, SecondsFormat, Utc};
 use serde_json::{Value, json};
@@ -294,6 +296,31 @@ impl<'a> Check<'a> {
         }
     }
 
+    /// The check a passed check reports: a met objective. A pass has no
+    /// severity, so its observation carries the violation's properties but
+    /// `severity`.
+    fn pass(pass: &'a PassedCheck) -> Self {
+        let mut props: Vec<Value> = [
+            prop("standard-reference", &pass.requirement),
+            prop("rule-id", pass.rule_id),
+            prop("sarif-rule-id", pass.sarif_rule_id()),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        if let Some(element) = &pass.element {
+            props.extend(prop("sbom-element", element));
+        }
+        Self {
+            rule_id: pass.rule_id,
+            message: &pass.message,
+            objective: Objective::Satisfied,
+            component_id: pass.component_id.as_deref(),
+            label: pass.element.as_deref(),
+            props,
+        }
+    }
+
     /// The observation's and the finding's `description` (markup): the
     /// message, Markdown-escaped as a whole because SBOM values sit inside it.
     /// Its own wording renders unchanged; only the raw JSON gains backslashes.
@@ -340,6 +367,7 @@ fn standard_result(
         prop("error-count", &result.error_count.to_string()),
         prop("warning-count", &result.warning_count.to_string()),
         prop("info-count", &result.info_count.to_string()),
+        prop("passed-count", &result.passed.len().to_string()),
     ]
     .into_iter()
     .flatten()
@@ -351,10 +379,15 @@ fn standard_result(
         props.extend(prop("score", &score.to_string()));
     }
 
-    // A standard that did not apply reports no violations: the
-    // applicability props above carry that verdict (OSCAL's finding-target
-    // state is a closed satisfied/not-satisfied enum with no N/A).
-    let checks = result.violations.iter().map(Check::violation);
+    // The violations, then the passed checks. A standard that did not apply
+    // reports neither: the applicability props above carry that verdict
+    // (OSCAL's finding-target state is a closed satisfied/not-satisfied enum
+    // with no N/A).
+    let checks = result
+        .violations
+        .iter()
+        .map(Check::violation)
+        .chain(result.passed.iter().map(Check::pass));
 
     let mut observations = Vec::new();
     let mut findings = Vec::new();
@@ -393,11 +426,17 @@ fn standard_result(
 /// Standard-level roll-up finding: `satisfied` when the standard evaluated
 /// the SBOM and found no blocking violation, `not-satisfied` otherwise.
 fn rollup_finding(result: &ComplianceResult, standard_name: &str, uuid: Uuid) -> Value {
+    // The passed checks are named only when there are some, so a result
+    // that passes none keeps its description.
+    let passed = match result.passed.len() {
+        0 => String::new(),
+        n => format!(" {n} check(s) passed."),
+    };
     json!({
         "uuid": uuid,
         "title": format!("{standard_name} compliance roll-up"),
         "description": format!(
-            "Overall verdict for {standard_name}: {} error(s), {} warning(s), {} informational finding(s).",
+            "Overall verdict for {standard_name}: {} error(s), {} warning(s), {} informational finding(s).{passed}",
             result.error_count, result.warning_count, result.info_count
         ),
         "target": {
@@ -1401,6 +1440,62 @@ mod tests {
         assert_eq!(subjects(&observed).len(), 2, "document and component");
         assert_eq!(local.definitions.len(), 1);
         assert!(observed.get("props").is_none(), "no props, no empty array");
+    }
+
+    /// A result's passed checks become satisfied findings over
+    /// control-objective observations, after its violations; the roll-up
+    /// names them and the result counts them.
+    #[test]
+    fn passed_checks_become_satisfied_findings_after_the_violations() {
+        use crate::quality::PassedCheck;
+        let pass = PassedCheck {
+            rule_id: "SBOM-PQC-009",
+            message: "'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205)"
+                .to_string(),
+            element: Some("ML-KEM-1024".to_string()),
+            component_id: Some("crypto/algorithm/ml-kem-1024".to_string()),
+            finding_detail: None,
+            requirement: "FIPS 203/204/205: approved".to_string(),
+            standard_refs: Vec::new(),
+        };
+        let mut checked = result(vec![violation("timestamp missing")]).with_passed(vec![pass]);
+        checked.level = ComplianceLevel::NistPqc;
+        let document = build(&[checked]);
+        let assessment = &document["assessment-results"]["results"][0];
+        assert_eq!(prop_value(assessment, "passed-count"), Some("1"));
+        assert_eq!(prop_value(assessment, "info-count"), Some("0"));
+
+        let findings = assessment["findings"].as_array().expect("findings");
+        assert_eq!(findings.len(), 3, "roll-up, the violation, the pass");
+        assert!(
+            findings[0]["description"]
+                .as_str()
+                .is_some_and(|d| d.ends_with("1 check(s) passed.")),
+            "{}",
+            findings[0]["description"]
+        );
+        assert_eq!(findings[1]["target"]["status"]["state"], "not-satisfied");
+        assert_eq!(findings[2]["target"]["status"]["state"], "satisfied");
+        assert_eq!(findings[2]["target"]["target-id"], "sbom-pqc-009");
+
+        let observations = assessment["observations"].as_array().expect("observations");
+        assert_eq!(observations.len(), 2);
+        assert_eq!(observations[0]["types"], serde_json::json!(["discovery"]));
+        let passed = &observations[1];
+        assert_eq!(passed["types"], serde_json::json!(["control-objective"]));
+        assert_eq!(
+            findings[2]["related-observations"][0]["observation-uuid"],
+            passed["uuid"]
+        );
+        assert_eq!(prop_value(passed, "rule-id"), Some("SBOM-PQC-009"));
+        assert_eq!(prop_value(passed, "sarif-rule-id"), Some("SBOM-PQC-009"));
+        assert_eq!(
+            prop_value(passed, "standard-reference"),
+            Some("FIPS 203/204/205: approved")
+        );
+        assert_eq!(prop_value(passed, "sbom-element"), Some("ML-KEM-1024"));
+        assert!(prop_value(passed, "severity").is_none(), "a pass has none");
+        assert_eq!(subjects(passed).len(), 2, "document and component");
     }
 
     #[test]
