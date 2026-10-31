@@ -72,7 +72,7 @@ pub const INFO_FINDINGS: &[(&str, &str)] = &[
     ),
     (
         "SBOM-CRA-ART-14-ENISA",
-        "gap: no ENISA single reporting platform identifier",
+        "gap: no record of how the manufacturer reaches the ENISA single reporting platform; Info only before the 2026-09-11 Art. 14 deadline",
     ),
     (
         "SBOM-CRA-ART-14-PSIRT",

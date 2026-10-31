@@ -1329,6 +1329,13 @@ impl ComplianceChecker {
         // One finding per vulnerability of a component: the vulnerability id
         // tells a component's findings apart.
         for (comp, vuln) in sbom.all_vulnerabilities() {
+            // A justified VEX `not_affected` statement documents why the
+            // vulnerability needs no fix (see `justified_not_affected`), so
+            // neither check below asks anything more of the entry.
+            if justified_not_affected(vuln) {
+                continue;
+            }
+
             if vuln.severity.is_none() && vuln.cvss.is_empty() {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
@@ -1555,4 +1562,25 @@ impl ComplianceChecker {
             }
         }
     }
+}
+
+/// Whether the vulnerability's own VEX statement is `not_affected` and names
+/// its justification (CycloneDX `analysis.justification`, OpenVEX
+/// `justification`, SPDX 3.0 `justificationType`).
+///
+/// The CRA FAQ (v1.4, 4.3.1) has the manufacturer judge a vulnerability's
+/// relevance for the product; where it "cannot be exploited", the
+/// manufacturer "may be expected, for example, to document the
+/// vulnerability, but may decide not to fix it with a dedicated update". A
+/// justified `not_affected` statement is that record (Annex I Part II (1)),
+/// and Annex I Part II (4), which asks for the severity and the remediation,
+/// covers fixed vulnerabilities. A bare `not_affected` claim gives no reason
+/// and counts for nothing, nor does a free-text detail without a
+/// justification. Only the vulnerability's own statement counts: the
+/// component-level VEX status sums up all of the component's statements and
+/// is no statement about this one.
+fn justified_not_affected(vuln: &crate::model::VulnerabilityRef) -> bool {
+    vuln.vex_status.as_ref().is_some_and(|vex| {
+        vex.status == crate::model::VexState::NotAffected && vex.justification.is_some()
+    })
 }

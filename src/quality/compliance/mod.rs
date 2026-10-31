@@ -246,7 +246,7 @@ impl ComplianceLevel {
                 "Secure Software Development Framework — provenance, build integrity, VCS references"
             }
             Self::Eo14028 => {
-                "Executive Order 14028 — machine-readable SBOM, auto-generation, supply chain security"
+                "Executive Order 14028 §4 SBOM practice (not a federal mandate since OMB M-26-05 rescinded M-22-18 and M-23-16) — machine-readable SBOM, auto-generation, supply chain security"
             }
             Self::Cnsa2 => {
                 "CNSA 2.0 — AES-256, SHA-384+, ML-KEM-1024, ML-DSA-87, quantum security level 5"
@@ -1814,7 +1814,7 @@ mod tests {
         );
     }
 
-    /// EO 14028 §4(e) mandates the NTIA minimum elements, which include the
+    /// The EO 14028 §4(e) practice incorporates the NTIA minimum elements, which include the
     /// creation timestamp.
     #[test]
     fn eo14028_gates_on_missing_timestamp() {
@@ -4845,7 +4845,7 @@ mod tests {
     }
 
     /// Pre-deadline (mocked clock 2026-04-26): all four channels missing.
-    /// PSIRT/14(1)/14(2) surface as Info; 14(7) (ENISA platform) is always Info.
+    /// PSIRT/14(1)/14(2) and 14(7) (ENISA platform) surface as Info.
     /// Total: 4 Infos, 0 Warnings, 0 Errors at Art. 14 level.
     #[test]
     fn article_14_pre_deadline_mocked_clock_emits_4_infos() {
@@ -4877,10 +4877,11 @@ mod tests {
     }
 
     /// Post-deadline (mocked clock 2026-12-01): same SBOM-less state, but
-    /// PSIRT/14(1)/14(2) become Warnings; 14(7) stays Info.
-    /// Total: 1 Info, 3 Warnings.
+    /// all four channels become Warnings — 14(7), the ENISA platform every
+    /// notification goes through, included.
+    /// Total: 0 Infos, 4 Warnings.
     #[test]
-    fn article_14_post_deadline_mocked_clock_emits_3_warnings_1_info() {
+    fn article_14_post_deadline_mocked_clock_emits_4_warnings() {
         let checker = checker(ComplianceLevel::CraPhase2);
         let mut violations = Vec::new();
         let now = chrono::DateTime::parse_from_rfc3339("2026-12-01T00:00:00Z")
@@ -4899,13 +4900,75 @@ mod tests {
             })
             .count();
         assert_eq!(
-            warnings, 3,
-            "Post-deadline expects 3 Warning-level Art. 14 findings (PSIRT/14(1)/14(2)); got {warnings} (full: {violations:?})"
+            warnings, 4,
+            "Post-deadline expects 4 Warning-level Art. 14 findings (PSIRT/14(1)/14(2)/14(7)); got {warnings} (full: {violations:?})"
         );
         assert_eq!(
-            infos, 1,
-            "Post-deadline expects 1 Info-level Art. 14 finding (Art. 14(7) ENISA platform stays Info regardless of date)"
+            infos, 0,
+            "Post-deadline expects no Info-level Art. 14 finding (the ENISA platform finding warns too)"
         );
+    }
+
+    /// An unrated vulnerability needs no severity when its own VEX statement
+    /// is not_affected and names a justification (CRA FAQ v1.4, 4.3.1). The
+    /// check reads the model, so a statement from an OpenVEX overlay or an
+    /// SPDX 3.0 assessment counts the same as an embedded CycloneDX
+    /// analysis. No other statement counts.
+    #[test]
+    fn cra_phase2_vuln_metadata_accepts_only_a_justified_not_affected_statement() {
+        use crate::model::{
+            Component, VexJustification, VexState, VexStatus, VulnerabilityRef, VulnerabilitySource,
+        };
+        let warns = |vex: Option<VexStatus>| {
+            let mut vuln =
+                VulnerabilityRef::new("CVE-2026-2222".to_string(), VulnerabilitySource::Cve);
+            vuln.vex_status = vex;
+            let mut component = Component::new("libalpha".to_string(), "libalpha@1".to_string());
+            component.vulnerabilities.push(vuln);
+            let mut sbom = NormalizedSbom::default();
+            sbom.add_component(component);
+            checker(ComplianceLevel::CraPhase2)
+                .check(&sbom)
+                .violations
+                .iter()
+                .any(|v| v.rule_id == "SBOM-CRA-VULN-METADATA")
+        };
+        let statement = |state: VexState, justified: bool, impact: Option<&str>| {
+            let mut vex = VexStatus::new(state);
+            if justified {
+                vex.justification = Some(VexJustification::VulnerableCodeNotInExecutePath);
+            }
+            vex.impact_statement = impact.map(str::to_string);
+            Some(vex)
+        };
+
+        assert!(
+            !warns(statement(VexState::NotAffected, true, None)),
+            "a justified not_affected statement documents the vulnerability"
+        );
+        assert!(warns(None), "an entry without a VEX statement warns");
+        assert!(
+            warns(statement(VexState::NotAffected, false, None)),
+            "a bare not_affected claim is no record"
+        );
+        assert!(
+            warns(statement(
+                VexState::NotAffected,
+                false,
+                Some("the parser is never called")
+            )),
+            "an impact statement without a justification is not enough"
+        );
+        for state in [
+            VexState::Affected,
+            VexState::Fixed,
+            VexState::UnderInvestigation,
+        ] {
+            assert!(
+                warns(statement(state.clone(), true, None)),
+                "a justification on a {state} statement does not count"
+            );
+        }
     }
 
     #[test]
@@ -4921,7 +4984,7 @@ mod tests {
         let result = checker(ComplianceLevel::CraPhase2)
             .with_sidecar(sidecar)
             .check(&sbom);
-        // PSIRT, 14(1), 14(2) suppressed; 14(7) (ENISA platform) remains as Info.
+        // PSIRT, 14(1), 14(2) suppressed; 14(7) (ENISA platform) remains.
         let art_14_psirt = result
             .violations
             .iter()

@@ -416,6 +416,55 @@ fn art_14_findings_escalate_on_2026_09_11() {
     }
 }
 
+/// The ENISA single reporting platform finding follows the same gate — Art.
+/// 14(1), (3) and (7) route every notification through the platform from 11
+/// September 2026 — but stays a Warning at every product class, so it never
+/// moves a verdict.
+#[test]
+fn enisa_platform_finding_escalates_but_never_errors() {
+    use ViolationSeverity::{Info, Warning};
+    let mut sidecar = cra_sidecar("cra-compliant.cra.json");
+    sidecar.enisa_reporting_platform_id = None;
+    let sbom = cra_fixture("cra-compliant.cdx.json");
+    let enisa = |result: &ComplianceResult| -> Vec<ViolationSeverity> {
+        result
+            .violations
+            .iter()
+            .filter(|v| v.rule_id == "SBOM-CRA-ART-14-ENISA")
+            .map(|v| v.severity)
+            .collect()
+    };
+    for class in [
+        None,
+        Some(CraProductClass::ImportantClass2),
+        Some(CraProductClass::Critical),
+    ] {
+        sidecar.product_class = class;
+        for level in [ComplianceLevel::CraPhase1, ComplianceLevel::CraPhase2] {
+            for (at, expected) in [
+                ("2026-09-10T00:00:00Z", Info),
+                ("2026-09-11T00:00:00Z", Warning),
+                ("2026-09-12T00:00:00Z", Warning),
+            ] {
+                let result = check_at(level, &sbom, Some(&sidecar), at);
+                assert_eq!(
+                    enisa(&result),
+                    [expected],
+                    "{level:?} {class:?} at {at}: one SBOM-CRA-ART-14-ENISA finding"
+                );
+                let mut with_id = sidecar.clone();
+                with_id.enisa_reporting_platform_id = Some("CERT-Bund via the SRP".to_string());
+                let baseline = check_at(level, &sbom, Some(&with_id), at);
+                assert_eq!(
+                    result.is_compliant, baseline.is_compliant,
+                    "{level:?} {class:?} at {at}: the finding never moves the verdict"
+                );
+                assert_eq!(result.error_count, baseline.error_count);
+            }
+        }
+    }
+}
+
 /// At Important Class II the same gate flips the verdict: once Art. 14
 /// applies, each missing reporting channel is an Error.
 #[test]

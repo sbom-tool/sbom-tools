@@ -13,6 +13,12 @@
 //! Other CSAF sections (notes, threats, references, document-level metadata)
 //! are accepted-but-ignored — VexEnricher only consumes status information.
 //!
+//! Any CSAF 2.x document is read, with the 2.0 rules. A document that
+//! declares a newer minor version (CSAF 2.1 is a Committee Specification
+//! Draft, CSD04 of 2026-10-21) gets a warning on the parsers' channel
+//! (`tracing::warn!`) until 2.1 is final and supported: whatever 2.1 adds
+//! is not read.
+//!
 //! See <https://docs.oasis-open.org/csaf/csaf/v2.0/csaf-v2.0.html>.
 
 use crate::model::{VexState, VexStatus};
@@ -171,6 +177,7 @@ pub(crate) fn parse_csaf(content: &str) -> Result<CsafVexResult, VexParseError> 
             doc.document.csaf_version
         )));
     }
+    let version_warning = newer_minor_warning(&doc.document.csaf_version);
 
     let product_lookup = build_product_lookup(doc.product_tree.as_ref());
 
@@ -226,7 +233,23 @@ pub(crate) fn parse_csaf(content: &str) -> Result<CsafVexResult, VexParseError> 
         scoped,
         statements_parsed,
         unresolved_products,
+        version_warning,
     })
+}
+
+/// The warning for a CSAF 2.x document whose minor version is newer than
+/// 2.0, the version this parser implements; `None` for 2.0. A minor that is
+/// not a number warns too.
+fn newer_minor_warning(csaf_version: &str) -> Option<String> {
+    let minor = csaf_version.strip_prefix("2.")?;
+    if minor.split('.').next().and_then(|m| m.parse::<u32>().ok()) == Some(0) {
+        return None;
+    }
+    Some(format!(
+        "CSAF document declares csaf_version {csaf_version}, newer than CSAF 2.0, the \
+         version sbom-tools implements; it is read with the CSAF 2.0 rules, so anything a \
+         newer version adds is not read (CSAF 2.1 is not final yet)"
+    ))
 }
 
 #[derive(Debug)]
@@ -237,6 +260,9 @@ pub(crate) struct CsafVexResult {
     /// Count of product_status entries dropped because their product_id could
     /// not be resolved to a PURL (never applied — see `parse_csaf`).
     pub unresolved_products: usize,
+    /// Set when the document declares a CSAF minor version newer than 2.0
+    /// (see `newer_minor_warning`); the caller logs it.
+    pub version_warning: Option<String>,
 }
 
 // ============================================================================
@@ -373,6 +399,32 @@ mod tests {
             ))
             .expect("fixed entry");
         assert_eq!(fixed.status, VexState::Fixed);
+    }
+
+    #[test]
+    fn csaf_2_0_parses_without_a_version_warning() {
+        let result = parse_csaf(MINIMAL_CSAF).expect("CSAF 2.0 parses");
+        assert!(result.version_warning.is_none());
+    }
+
+    #[test]
+    fn newer_csaf_minor_parses_with_a_version_warning() {
+        let csaf_2_1 = MINIMAL_CSAF.replace(r#""csaf_version": "2.0""#, r#""csaf_version": "2.1""#);
+        assert_ne!(
+            csaf_2_1, MINIMAL_CSAF,
+            "the fixture declares csaf_version 2.0"
+        );
+        let result = parse_csaf(&csaf_2_1).expect("CSAF 2.1 still parses, with the 2.0 rules");
+        let warning = result.version_warning.expect("2.1 warns");
+        assert!(warning.contains("csaf_version 2.1"), "{warning}");
+        assert!(warning.contains("CSAF 2.0"), "{warning}");
+        // The statuses are still read.
+        assert_eq!(result.scoped.len(), 2);
+
+        assert!(newer_minor_warning("2.0").is_none());
+        assert!(newer_minor_warning("2.0.1").is_none());
+        assert!(newer_minor_warning("2.10").is_some());
+        assert!(newer_minor_warning("2.x").is_some());
     }
 
     #[test]

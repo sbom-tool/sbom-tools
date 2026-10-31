@@ -12,26 +12,25 @@ as_of: 2026-10-12T00:00:00Z
 [NtiaMinimum] NON-COMPLIANT · E1 W0 I1
   E SBOM-NTIA-SUPPLIER  pkg:cargo/legacy-service@1.4.2
   I SBOM-NTIA-ELEMENT-ID  pkg:cargo/legacy-service@1.4.2
-[CraPhase1] compliant · E0 W8 I6
+[CraPhase1] compliant · E0 W9 I5
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/legacy-service@1.4.2
   I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/1)
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/legacy-service@1.4.2
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (1/1)
   W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-ENISA  -
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/legacy-service@1.4.2
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2] compliant · E0 W11 I7
+[CraPhase2] compliant · E0 W12 I6
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/legacy-service@1.4.2
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
-  I SBOM-CRA-ART-14-ENISA  -
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/legacy-service@1.4.2
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
@@ -41,6 +40,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-13-5  - (1/1)
   W SBOM-CRA-ART-14-EARLY-WARNING  -
+  W SBOM-CRA-ART-14-ENISA  -
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/legacy-service@1.4.2

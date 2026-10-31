@@ -700,7 +700,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "standard-reference",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "EO 14028 Sec 4(e): Component unique identification"
+                "value": "EO 14028 §4(e) practice: Component unique identification"
               },
               {
                 "name": "rule-id",
@@ -741,7 +741,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "standard-reference",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "EO 14028 Sec 4(e): Component integrity verification"
+                "value": "EO 14028 §4(e) practice: Component integrity verification"
               },
               {
                 "name": "rule-id",
@@ -782,7 +782,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "standard-reference",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "EO 14028 Sec 4(g): Vulnerability disclosure process"
+                "value": "EO 14028 §4(e)(viii) practice: Vulnerability disclosure program"
               },
               {
                 "name": "rule-id",
@@ -823,7 +823,7 @@ source: tests/compliance_snapshots.rs
               {
                 "name": "standard-reference",
                 "ns": "https://sbom.tools/ns/oscal",
-                "value": "EO 14028 Sec 4(e): Supplier identification"
+                "value": "EO 14028 §4(e) practice: Supplier identification"
               },
               {
                 "name": "rule-id",

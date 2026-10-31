@@ -76,9 +76,15 @@ pub struct CraSidecarMetadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub incident_report_contact: Option<String>,
 
-    /// Manufacturer-side identifier for the ENISA single reporting platform
-    /// (Art. 14(7)). Until ENISA publishes the technical interface this is a
-    /// placeholder string — typically a manufacturer registration ID.
+    /// How the manufacturer reaches the ENISA Single Reporting Platform
+    /// (Art. 14(7); live since 2026-09-11 at
+    /// <https://portal.cra-srp.enisa.europa.eu/>). Naming the CSIRT
+    /// designated as coordinator is enough: the one Art. 14(7) assigns by
+    /// the manufacturer's main establishment and every notification selects
+    /// on the platform. No registration on the platform is needed before a
+    /// notification is due, and ENISA advises registering only then; a
+    /// registration already made may be recorded instead. Free text; the
+    /// platform publishes no machine-readable identifier.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enisa_reporting_platform_id: Option<String>,
 
@@ -207,7 +213,11 @@ pub struct ControlAssertion {
     pub note: Option<String>,
 }
 
-/// CRA product class per Regulation (EU) 2024/2847 Annex III/IV.
+/// CRA product class per Regulation (EU) 2024/2847 Annex III/IV. Commission
+/// Implementing Regulation (EU) 2025/2392 (Art. 7(4)) gives the technical
+/// description of each class's product categories: its Annex I for the
+/// Annex III classes I and II, its Annex II for the Annex IV critical
+/// products.
 ///
 /// The class drives the conformity-assessment route and the severity
 /// calibration of compliance checks (per CRA-P3.2 calibration table):
@@ -219,21 +229,26 @@ pub enum CraProductClass {
     /// Default — neither Annex III nor Annex IV. Module A self-assessment.
     #[serde(rename = "default")]
     Default,
-    /// Annex III items 1–11 (Important Class I). Module A or B+C.
+    /// Annex III class I (19 categories, e.g. identity management systems,
+    /// browsers, password managers, VPNs, operating systems, routers).
+    /// Module A or B+C.
     #[serde(
         rename = "important-class-1",
         alias = "important1",
         alias = "ImportantClass1"
     )]
     ImportantClass1,
-    /// Annex III items 12–17 (Important Class II). Module B+C, H, or EUCC.
+    /// Annex III class II (4 categories: hypervisors and container runtimes,
+    /// firewalls and intrusion detection/prevention, tamper-resistant
+    /// microprocessors and microcontrollers). Module B+C, H, or EUCC.
     #[serde(
         rename = "important-class-2",
         alias = "important2",
         alias = "ImportantClass2"
     )]
     ImportantClass2,
-    /// Annex IV (Critical). EUCC mandatory.
+    /// Annex IV (critical: hardware devices with security boxes, smart
+    /// meter gateways, smartcards and secure elements). EUCC mandatory.
     #[serde(rename = "critical")]
     Critical,
 }
@@ -255,8 +270,8 @@ impl CraProductClass {
     pub const fn name(self) -> &'static str {
         match self {
             Self::Default => "Default (no Annex)",
-            Self::ImportantClass1 => "Important Class I (Annex III items 1–11)",
-            Self::ImportantClass2 => "Important Class II (Annex III items 12–17)",
+            Self::ImportantClass1 => "Important Class I (Annex III, class I)",
+            Self::ImportantClass2 => "Important Class II (Annex III, class II)",
             Self::Critical => "Critical (Annex IV)",
         }
     }

@@ -177,8 +177,10 @@ pub(crate) const REMEDIATION_UNREGISTERED: &str = "This finding's rule is not in
 /// SSDF practices share one remediation paragraph.
 const REMEDIATION_SSDF: &str = "Follow NIST SP 800-218 SSDF practices: include tool provenance, source VCS references, build metadata, and cryptographic hashes for all components.";
 
-/// EO 14028 §4 requirements share one remediation paragraph.
-const REMEDIATION_EO14028: &str = "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information.";
+/// The EO 14028 §4 SBOM practice rules share one remediation paragraph.
+/// The profile follows EO 14028 practice: OMB M-26-05 (2026-01-23)
+/// rescinded the M-22-18 / M-23-16 attestation mandate built on it.
+const REMEDIATION_EO14028: &str = "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract.";
 
 /// Remediation for every `*-INVENTORY` rule: the document must list the
 /// software components it describes.
@@ -1447,14 +1449,18 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // vulnerabilities (description, impacts, severity, remediation).
         // One finding per vulnerability of a component, told apart by the
         // vulnerability id (`finding_detail`). The remediation-detail and
-        // SPDX 3.0 profile checks report under their own ids below.
+        // SPDX 3.0 profile checks report under their own ids below. Both
+        // per-vulnerability checks skip an entry whose own VEX statement
+        // is not_affected with a justification: the CRA FAQ (v1.4, 4.3.1)
+        // lets the manufacturer document a vulnerability that cannot be
+        // exploited and not fix it, and (4) covers fixed vulnerabilities.
         "SBOM-CRA-VULN-METADATA" => RuleMeta {
             sarif_id: "SBOM-CRA-VULN-METADATA",
             name: "CraVulnerabilityMetadata",
             short_description: "CRA Annex I Part II (4): Vulnerability entries carry a severity or CVSS score",
             default_severity: ViolationSeverity::Warning,
             refs: &[(ANNEX, "Annex I Part II (4)")],
-            remediation: "Give every vulnerability entry a severity or CVSS score (Annex I Part II (4)).",
+            remediation: "Give every vulnerability entry a severity or CVSS score (Annex I Part II (4)). An entry whose VEX statement is not_affected and names a justification needs neither: it documents a vulnerability that cannot be exploited in the product, which the CRA FAQ (v1.4, 4.3.1) says the manufacturer may decide not to fix.",
             advice: Some(&ADVICE_VULN_SEVERITY),
         },
         "SBOM-CRA-VULN-METADATA-REMEDIATION" => RuleMeta {
@@ -1463,7 +1469,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Annex I Part II (4): Vulnerability remediations name a fixed version or describe the fix",
             default_severity: ViolationSeverity::Info,
             refs: &[(ANNEX, "Annex I Part II (4)")],
-            remediation: "Give every vulnerability remediation a fixed version or a description of the fix (Annex I Part II (4)).",
+            remediation: "Give every vulnerability remediation a fixed version or a description of the fix (Annex I Part II (4)). A vulnerability whose VEX statement is not_affected and names a justification is exempt: it documents a vulnerability that cannot be exploited in the product, which the CRA FAQ (v1.4, 4.3.1) says the manufacturer may decide not to fix.",
             advice: Some(&ADVICE_VULN_REMEDIATION),
         },
         "SBOM-CRA-VULN-METADATA-PROFILE" => RuleMeta {
@@ -1623,8 +1629,8 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // findings on the document shared a finding key. A missing PSIRT,
         // early-warning or notification channel is a Warning since the
         // 2026-09-11 deadline (an Info before it), escalated to Error for
-        // important class II and critical products; the ENISA platform id
-        // stays an Info.
+        // important class II and critical products; the ENISA platform
+        // finding follows the same dates but is never escalated.
         "SBOM-CRA-ART-14-PSIRT" => RuleMeta {
             sarif_id: "SBOM-CRA-ART-14-PSIRT",
             name: "CraPsirtUrl",
@@ -1652,13 +1658,16 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar.",
             advice: None,
         },
+        // Warning once Art. 14 applies (2026-09-11), Info before, never an
+        // Error: the CRA routes every notification through the platform
+        // but names no manufacturer identifier on it.
         "SBOM-CRA-ART-14-ENISA" => RuleMeta {
             sarif_id: "SBOM-CRA-ART-14-ENISA",
             name: "CraEnisaPlatformIdentifier",
-            short_description: "CRA Art. 14(7): Manufacturer identifier on the ENISA single reporting platform",
-            default_severity: ViolationSeverity::Info,
+            short_description: "CRA Art. 14(7): How the manufacturer reaches the ENISA single reporting platform",
+            default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 14(7)")],
-            remediation: "Record the manufacturer's identifier on the ENISA single reporting platform (Art. 14(7)) once ENISA publishes it: set enisaReportingPlatformId in the CRA sidecar. This check reads only the sidecar.",
+            remediation: "Name the CSIRT designated as coordinator in enisaReportingPlatformId in the CRA sidecar: the one Art. 14(7) assigns by the manufacturer's main establishment and every notification selects on the ENISA Single Reporting Platform (https://portal.cra-srp.enisa.europa.eu/), through which Art. 14(1), (3) and (7) route notifications since 2026-09-11. Naming that CSIRT satisfies this finding. Do not register on the platform early to clear it: no registration is needed before a notification is due, and ENISA advises registering only then. A registration already made may be recorded instead. This check reads only the sidecar.",
             advice: None,
         },
         // The steward's vulnerability-handling floor is the one Art. 24
@@ -1801,7 +1810,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Annex IV: EUCC (Common Criteria) certification the product class requires",
             default_severity: ViolationSeverity::Info,
             refs: &[(ANNEX, "Annex IV")],
-            remediation: "Reference the EUCC (Common Criteria) certification the product class requires: set euccProtectionProfileId, euccTargetOfEvaluation, euccItsefIdentifier or an unexpired euccValidUntil in the CRA sidecar. Once euccValidUntil has passed, the certificate is expired and none of these keys counts.",
+            remediation: "Reference the EUCC (Common Criteria) certification the product class requires: set euccProtectionProfileId, euccTargetOfEvaluation, euccItsefIdentifier or an unexpired euccValidUntil in the CRA sidecar. Once euccValidUntil has passed, the certificate is expired and none of these keys counts. The product classes are CRA Annex III (important, class I and II) and Annex IV (critical); Implementing Regulation (EU) 2025/2392 describes which products each category covers.",
             advice: Some(&ADVICE_EUCC_ALT),
         },
         "SBOM-CRA-ANNEX-V" => RuleMeta {
@@ -1833,7 +1842,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Annex VIII: Conformity-assessment evidence for the resolved assessment route",
             default_severity: ViolationSeverity::Warning,
             refs: &[(ANNEX, "Annex VIII")],
-            remediation: "Reference the notified-body or certification-body certificate the conformity-assessment route requires — the EU-type examination certificate (Module B+C), the quality-system approval (Module H) or the EUCC certificate — as a certification external reference on the product component. An attestation reference does not count here, since it may be a self-attestation; it still serves as the Annex V Declaration of Conformity reference.",
+            remediation: "Reference the notified-body or certification-body certificate the conformity-assessment route requires — the EU-type examination certificate (Module B+C), the quality-system approval (Module H) or the EUCC certificate — as a certification external reference on the product component. An attestation reference does not count here, since it may be a self-attestation; it still serves as the Annex V Declaration of Conformity reference. The route follows the product class (Art. 32; Annex III class I and II, Annex IV critical), whose product categories Implementing Regulation (EU) 2025/2392 describes.",
             advice: Some(&ADVICE_CONFORMITY_EVIDENCE),
         },
         // The four [PRE-8-RQ-02] checks on a hardware component, one id each
@@ -2778,7 +2787,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-GENERAL" => RuleMeta {
             sarif_id: "SBOM-EO14028-GENERAL",
             name: "Eo14028GeneralRequirement",
-            short_description: "EO 14028: General SBOM requirement",
+            short_description: "EO 14028: General SBOM practice",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2881,7 +2890,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-FORMAT" => RuleMeta {
             sarif_id: "SBOM-EO14028-FORMAT",
             name: "Eo14028MachineReadable",
-            short_description: "EO 14028 Sec 4(e): Machine-readable SBOM format requirement",
+            short_description: "EO 14028 §4(e) practice: Machine-readable SBOM format",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2890,7 +2899,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-AUTOGEN" => RuleMeta {
             sarif_id: "SBOM-EO14028-AUTOGEN",
             name: "Eo14028AutoGeneration",
-            short_description: "EO 14028 Sec 4(e): Automated SBOM generation",
+            short_description: "EO 14028 §4(e) practice: Automated SBOM generation",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2899,7 +2908,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-CREATOR" => RuleMeta {
             sarif_id: "SBOM-EO14028-CREATOR",
             name: "Eo14028Creator",
-            short_description: "EO 14028 Sec 4(e): SBOM creator identification",
+            short_description: "EO 14028 §4(e) practice: SBOM creator identification",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2908,7 +2917,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-IDENTIFIER" => RuleMeta {
             sarif_id: "SBOM-EO14028-IDENTIFIER",
             name: "Eo14028Identifier",
-            short_description: "EO 14028 Sec 4(e): Component unique identification",
+            short_description: "EO 14028 §4(e) practice: Component unique identification",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2917,7 +2926,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-DEPENDENCY" => RuleMeta {
             sarif_id: "SBOM-EO14028-DEPENDENCY",
             name: "Eo14028Dependency",
-            short_description: "EO 14028 Sec 4(e): Dependency relationship information",
+            short_description: "EO 14028 §4(e) practice: Dependency relationship information",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2926,7 +2935,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-INVENTORY" => RuleMeta {
             sarif_id: "SBOM-EO14028-INVENTORY",
             name: "Eo14028Inventory",
-            short_description: "EO 14028 Sec 4(e): SBOM lists the software's components",
+            short_description: "EO 14028 §4(e) practice: SBOM lists the software's components",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_INVENTORY,
@@ -2935,7 +2944,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-VERSION" => RuleMeta {
             sarif_id: "SBOM-EO14028-VERSION",
             name: "Eo14028Version",
-            short_description: "EO 14028 Sec 4(e): Component version information",
+            short_description: "EO 14028 §4(e) practice: Component version information",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2944,7 +2953,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-INTEGRITY" => RuleMeta {
             sarif_id: "SBOM-EO14028-INTEGRITY",
             name: "Eo14028Integrity",
-            short_description: "EO 14028 Sec 4(e): Component integrity verification (hashes)",
+            short_description: "EO 14028 §4(e) practice: Component integrity verification (hashes)",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2953,7 +2962,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-DISCLOSURE" => RuleMeta {
             sarif_id: "SBOM-EO14028-DISCLOSURE",
             name: "Eo14028Disclosure",
-            short_description: "EO 14028 Sec 4(g): Vulnerability disclosure process",
+            short_description: "EO 14028 §4(e)(viii) practice: Vulnerability disclosure program",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2962,7 +2971,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-SUPPLIER" => RuleMeta {
             sarif_id: "SBOM-EO14028-SUPPLIER",
             name: "Eo14028Supplier",
-            short_description: "EO 14028 Sec 4(e): Supplier identification",
+            short_description: "EO 14028 §4(e) practice: Supplier identification",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4")],
             remediation: REMEDIATION_EO14028,
@@ -2971,7 +2980,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-TIMESTAMP" => RuleMeta {
             sarif_id: "SBOM-EO14028-TIMESTAMP",
             name: "Eo14028Timestamp",
-            short_description: "EO 14028 Sec 4(e): SBOM creation timestamp (NTIA baseline)",
+            short_description: "EO 14028 §4(e) practice: SBOM creation timestamp (NTIA baseline)",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eo14028, "EO 14028 §4"), (K::NtiaMinimum, "Timestamp")],
             remediation: REMEDIATION_EO14028,
@@ -2980,7 +2989,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EO14028-NAME" => RuleMeta {
             sarif_id: "SBOM-EO14028-NAME",
             name: "Eo14028ComponentName",
-            short_description: "EO 14028 Sec 4(e): Component name (NTIA baseline)",
+            short_description: "EO 14028 §4(e) practice: Component name (NTIA baseline)",
             default_severity: ViolationSeverity::Error,
             refs: &[
                 (K::Eo14028, "EO 14028 §4"),

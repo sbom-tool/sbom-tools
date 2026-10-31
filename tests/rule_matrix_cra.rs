@@ -357,6 +357,51 @@ fn with_response(s: &mut SbomFixture, response: &str, text: Option<(&str, &str)>
         .push(("CVE-2026-1111".to_string(), analysis));
 }
 
+/// The id of [`unrated_vulnerability`].
+const UNRATED_CVE: &str = "CVE-2026-2222";
+
+/// A vulnerability of libalpha with no rating: no severity, no CVSS score.
+fn unrated_vulnerability() -> (String, String, String) {
+    (
+        UNRATED_CVE.to_string(),
+        String::new(), // unrated
+        "ref-libalpha".to_string(),
+    )
+}
+
+/// Declare a VEX analysis on the embedded vulnerability `id`.
+fn with_analysis(s: &mut SbomFixture, id: &str, analysis: VulnAnalysisFixture) {
+    s.vulnerability_analyses.push((id.to_string(), analysis));
+}
+
+/// A bare VEX `not_affected` analysis: no justification, no detail.
+fn not_affected() -> VulnAnalysisFixture {
+    VulnAnalysisFixture {
+        state: Some("not_affected".to_string()),
+        ..VulnAnalysisFixture::default()
+    }
+}
+
+/// A VEX `not_affected` analysis that names its justification: the
+/// vulnerable code is never reached in the product.
+fn justified_not_affected() -> VulnAnalysisFixture {
+    VulnAnalysisFixture {
+        justification: Some("code_not_reachable".to_string()),
+        ..not_affected()
+    }
+}
+
+/// The unrated vulnerability, stated `not_affected` with the CycloneDX
+/// justification `justification`.
+fn not_affected_justified_by(s: &mut SbomFixture, justification: &str) {
+    s.vulnerabilities = vec![unrated_vulnerability()];
+    let analysis = VulnAnalysisFixture {
+        justification: Some(justification.to_string()),
+        ..not_affected()
+    };
+    with_analysis(s, UNRATED_CVE, analysis);
+}
+
 /// Add an external reference of `ref_type` carrying the SHA-256 of the
 /// referenced document to the product component.
 fn with_hashed_product_ref(s: &mut SbomFixture, ref_type: &str, url: &str) {
@@ -409,6 +454,10 @@ const SPDX3_PROFILES: &str = "only SPDX 3 documents declare profile conformance"
 const SPDX3_NO_VEX_RESPONSE: &str = "the case is about a VEX response: SPDX 3 has no response \
      field (the parser infers one from the action statement text and builds no remediation \
      record from SPDX 3, as the registry advice says)";
+/// SPDX 3 justifies only a not_affected statement.
+const SPDX3_JUSTIFICATION_ON_NOT_AFFECTED_ONLY: &str = "the case is about a justification on \
+     another state: SPDX 3 carries a justification only on a \
+     VexNotAffectedVulnAssessmentRelationship";
 
 /// Rows whose behaviour is identical under CRA Phase 1 and Phase 2.
 fn manufacturer_rows() -> Vec<RuleEntry> {
@@ -843,9 +892,10 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
         ),
         // Art. 14 channels past the 2026-09-11 deadline (the pinned clock):
         // each missing channel warns, escalated to Error for important class
-        // II and critical products, and the ENISA platform id stays an Info
-        // at every class. art_14_findings_escalate_on_2026_09_11
-        // (tests/pinned_clock_tests.rs) covers the pre-deadline Infos.
+        // II and critical products, and the ENISA platform finding warns at
+        // every class — never an Error. art_14_findings_escalate_on_2026_09_11
+        // and enisa_platform_finding_escalates_but_never_errors
+        // (tests/pinned_clock_tests.rs) cover the pre-deadline Infos.
         RuleEntry::tested(
             "SBOM-CRA-ART-14-PSIRT",
             Sev::Warning,
@@ -890,16 +940,24 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
         ),
         RuleEntry::tested(
             "SBOM-CRA-ART-14-ENISA",
-            Sev::Info,
+            Sev::Warning,
             broken(|s| s.sidecar_mut().enisa_reporting_platform_id = None),
             base(),
         )
         .with_firing(
             "important class II product",
-            Sev::Info,
+            Sev::Warning,
             broken(|s| {
                 s.sidecar_mut().enisa_reporting_platform_id = None;
                 pin_class(s, CraProductClass::ImportantClass2, None);
+            }),
+        )
+        .with_firing(
+            "critical product",
+            Sev::Warning,
+            broken(|s| {
+                s.sidecar_mut().enisa_reporting_platform_id = None;
+                pin_class(s, CraProductClass::Critical, None);
             }),
         ),
         // prEN 40000-1-3 [PRE-8-RQ-02] hardware checks: a conforming
@@ -1230,25 +1288,128 @@ fn cra_phase1_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     run_matrix(PHASE1, PHASE1_RULE_UNIVERSE, &entries);
 }
 
+/// Every CycloneDX justification but `code_not_reachable`, the one the
+/// row's `justified not_affected statement` case uses, as (case label,
+/// justification). The CycloneDX parser and the `--vex` reader map all nine
+/// (src/parsers/cyclonedx_analysis.rs), so each exempts the unrated entry;
+/// before WP 1.9, protected_by_compiler, protected_at_runtime and
+/// protected_at_perimeter read as none in the parser, and code_not_present
+/// as another justification in the `--vex` reader.
+const OTHER_CYCLONEDX_JUSTIFICATIONS: [(&str, &str); 8] = [
+    (
+        "not_affected statement justified by code_not_present",
+        "code_not_present",
+    ),
+    (
+        "not_affected statement justified by requires_configuration",
+        "requires_configuration",
+    ),
+    (
+        "not_affected statement justified by requires_dependency",
+        "requires_dependency",
+    ),
+    (
+        "not_affected statement justified by requires_environment",
+        "requires_environment",
+    ),
+    (
+        "not_affected statement justified by protected_by_compiler",
+        "protected_by_compiler",
+    ),
+    (
+        "not_affected statement justified by protected_at_runtime",
+        "protected_at_runtime",
+    ),
+    (
+        "not_affected statement justified by protected_at_perimeter",
+        "protected_at_perimeter",
+    ),
+    (
+        "not_affected statement justified by protected_by_mitigating_control",
+        "protected_by_mitigating_control",
+    ),
+];
+
+/// The CRA Phase 2 SBOM-CRA-VULN-METADATA row.
+///
+/// An unrated vulnerability lacks the severity Annex I Part II (4) asks
+/// for. A VEX not_affected statement that names a justification documents
+/// a vulnerability that cannot be exploited, which the CRA FAQ (v1.4,
+/// 4.3.1) lets the manufacturer leave unfixed; (4) covers fixed
+/// vulnerabilities, so the entry needs no severity, whichever CycloneDX
+/// justification it names. A bare not_affected claim, a free-text detail
+/// without a justification, a justification on another state and a
+/// justified statement on another vulnerability of the component are no
+/// such record.
+fn vuln_metadata_row() -> RuleEntry {
+    let mut row = RuleEntry::tested(
+        "SBOM-CRA-VULN-METADATA",
+        Sev::Warning,
+        broken(|s| s.vulnerabilities = vec![unrated_vulnerability()]),
+        base(),
+    )
+    .with_firing(
+        "unjustified not_affected statement",
+        Sev::Warning,
+        broken(|s| {
+            s.vulnerabilities = vec![unrated_vulnerability()];
+            with_analysis(s, UNRATED_CVE, not_affected());
+        }),
+    )
+    .with_firing(
+        "not_affected statement with a detail but no justification",
+        Sev::Warning,
+        broken(|s| {
+            s.vulnerabilities = vec![unrated_vulnerability()];
+            let mut analysis = not_affected();
+            analysis.detail = Some("libalpha's XML parser is never called".to_string());
+            with_analysis(s, UNRATED_CVE, analysis);
+        }),
+    )
+    .with_firing(
+        "justification on an exploitable statement",
+        Sev::Warning,
+        broken(|s| {
+            s.vulnerabilities = vec![unrated_vulnerability()];
+            let mut analysis = justified_not_affected();
+            analysis.state = Some("exploitable".to_string());
+            with_analysis(s, UNRATED_CVE, analysis);
+        }),
+    )
+    .with_firing(
+        "justified not_affected statement on another vulnerability of the component",
+        Sev::Warning,
+        broken(|s| {
+            s.vulnerabilities.push(unrated_vulnerability());
+            with_analysis(s, "CVE-2026-1111", justified_not_affected());
+        }),
+    )
+    .with_silent(
+        "justified not_affected statement",
+        broken(|s| {
+            s.vulnerabilities = vec![unrated_vulnerability()];
+            with_analysis(s, UNRATED_CVE, justified_not_affected());
+        }),
+    );
+    for (label, justification) in OTHER_CYCLONEDX_JUSTIFICATIONS {
+        row = row.with_silent(
+            label,
+            broken(move |s| not_affected_justified_by(s, justification)),
+        );
+    }
+    row.only(Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_VULNERABILITIES)
+        .case_only(
+            "justification on an exploitable statement",
+            Encoding::CYCLONEDX,
+            SPDX3_JUSTIFICATION_ON_NOT_AFFECTED_ONLY,
+        )
+}
+
 #[test]
 fn cra_phase2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     let mut entries = manufacturer_rows();
     entries.extend([
-        // An unrated vulnerability lacks the severity Annex I Part II (4)
-        // asks for.
-        RuleEntry::tested(
-            "SBOM-CRA-VULN-METADATA",
-            Sev::Warning,
-            broken(|s| {
-                s.vulnerabilities = vec![(
-                    "CVE-2026-2222".to_string(),
-                    String::new(), // unrated
-                    "ref-libalpha".to_string(),
-                )];
-            }),
-            base(),
-        )
-        .only(Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_VULNERABILITIES),
+        vuln_metadata_row(),
         // A declared remediation (analysis.response update or
         // workaround_available) with no recommendation or workaround text
         // gives users nothing to apply: an Info. CycloneDX has no
@@ -1288,6 +1449,25 @@ fn cra_phase2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "will_not_fix response declares no remediation",
             broken(|s| with_response(s, "will_not_fix", None)),
         )
+        // A justified not_affected statement exempts the entry (see the
+        // SBOM-CRA-VULN-METADATA row); a bare one does not.
+        .with_firing(
+            "update response on an unjustified not_affected statement",
+            Sev::Info,
+            broken(|s| {
+                let mut analysis = not_affected();
+                analysis.responses = vec!["update".to_string()];
+                with_analysis(s, "CVE-2026-1111", analysis);
+            }),
+        )
+        .with_silent(
+            "update response on a justified not_affected statement",
+            broken(|s| {
+                let mut analysis = justified_not_affected();
+                analysis.responses = vec!["update".to_string()];
+                with_analysis(s, "CVE-2026-1111", analysis);
+            }),
+        )
         .only(Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_VULNERABILITIES)
         .case_only("firing", Encoding::CYCLONEDX, SPDX3_NO_VEX_RESPONSE)
         .case_only(
@@ -1307,6 +1487,16 @@ fn cra_phase2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         )
         .case_only(
             "will_not_fix response declares no remediation",
+            Encoding::CYCLONEDX,
+            SPDX3_NO_VEX_RESPONSE,
+        )
+        .case_only(
+            "update response on an unjustified not_affected statement",
+            Encoding::CYCLONEDX,
+            SPDX3_NO_VEX_RESPONSE,
+        )
+        .case_only(
+            "update response on a justified not_affected statement",
             Encoding::CYCLONEDX,
             SPDX3_NO_VEX_RESPONSE,
         ),

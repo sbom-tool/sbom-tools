@@ -939,7 +939,8 @@ impl ComplianceChecker {
     /// Pre-deadline: missing channels surface as Info (preparation guidance).
     /// Post-deadline: missing channels become Warning. The CRA never demands
     /// the channel reside *inside* the SBOM — most manufacturers will set
-    /// these via `CraSidecarMetadata`.
+    /// these via `CraSidecarMetadata`. The ENISA platform finding follows
+    /// the same dates but never becomes an Error (see below).
     /// Internal entry point taking an explicit `now` so tests can pin it.
     pub(crate) fn check_article_14_readiness_at(
         &self,
@@ -1037,16 +1038,32 @@ impl ComplianceChecker {
             });
         }
 
-        // ENISA single reporting platform (Art. 14(7)) — the official URL is
-        // not yet published. We accept any sidecar identifier as a forward-
-        // compatible placeholder and only surface as Info regardless of date.
+        // ENISA single reporting platform (Art. 14(7)). Art. 14(1) and (3)
+        // require every notification "via the single reporting platform
+        // established pursuant to Article 16", and Art. 14(7) through the
+        // end-point of the CSIRT designated as coordinator; like the rest of
+        // Art. 14 that applies from 11 September 2026 (Art. 71(2)), the day
+        // ENISA launched the platform. So the finding follows the channel
+        // dates — Info before, Warning from then on — but stays a Warning at
+        // every product class: the CRA names no platform identifier, and
+        // ENISA advises registering only when a notification is due.
         let enisa_present = sidecar.is_some_and(|s| s.enisa_reporting_platform_id.is_some());
         if !enisa_present {
+            let (severity, message) = if art_14_active {
+                (
+                    ViolationSeverity::Warning,
+                    "[CRA Art. 14(7)] No record of how the manufacturer reaches the ENISA single reporting platform — every Art. 14 notification goes through it; set `enisaReportingPlatformId` in the CRA sidecar",
+                )
+            } else {
+                (
+                    ViolationSeverity::Info,
+                    "[CRA Art. 14(7)] No record of how the manufacturer reaches the ENISA single reporting platform — Art. 14 notifications go through it from 2026-09-11; set `enisaReportingPlatformId` in the CRA sidecar",
+                )
+            };
             violations.push(Violation {
-                severity: ViolationSeverity::Info,
+                severity,
                 category: ViolationCategory::SecurityInfo,
-                message: "[CRA Art. 14(7)] No ENISA single reporting platform identifier — track ENISA publication and add `enisaReportingPlatformId` to the CRA sidecar when available"
-                    .to_string(),
+                message: message.to_string(),
                 element: None,
                 requirement: "CRA Art. 14(7): ENISA single reporting platform".to_string(),
                 rule_id: "SBOM-CRA-ART-14-ENISA",

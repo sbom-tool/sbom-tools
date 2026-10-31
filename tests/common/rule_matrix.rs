@@ -540,14 +540,19 @@ impl CryptoAssetFixture {
 }
 
 /// The VEX analysis of an embedded vulnerability: CycloneDX
-/// `analysis.state` and `analysis.response[]`, and the `recommendation` and
-/// `workaround` texts.
+/// `analysis.state`, `analysis.justification`, `analysis.response[]` and
+/// `analysis.detail`, and the `recommendation` and `workaround` texts.
 #[derive(Debug, Clone, Default)]
 pub struct VulnAnalysisFixture {
     /// `analysis.state` (e.g. `exploitable`).
     pub state: Option<String>,
+    /// `analysis.justification`, a CycloneDX impactAnalysisJustification
+    /// (e.g. `code_not_reachable`).
+    pub justification: Option<String>,
     /// `analysis.response[]` (e.g. `update`, `workaround_available`).
     pub responses: Vec<String>,
+    /// `analysis.detail`, the free-text description of the impact.
+    pub detail: Option<String>,
     /// `recommendation`.
     pub recommendation: Option<String>,
     /// `workaround`.

@@ -565,6 +565,8 @@ struct ViewArgs {
 
     /// CRA Annex III/IV product class (drives severity calibration).
     /// One of: default, important-class-1, important-class-2, critical.
+    /// Implementing Regulation (EU) 2025/2392 gives the technical
+    /// description of each class's product categories.
     /// Sidecar `productClass` wins over this flag.
     #[arg(long, value_name = "CLASS")]
     cra_product_class: Option<String>,
@@ -693,6 +695,8 @@ struct ValidateArgs {
 
     /// CRA Annex III/IV product class (drives severity calibration).
     /// One of: default, important-class-1, important-class-2, critical.
+    /// Implementing Regulation (EU) 2025/2392 gives the technical
+    /// description of each class's product categories.
     /// Sidecar `productClass` wins over this flag.
     #[arg(long, value_name = "CLASS")]
     cra_product_class: Option<String>,
@@ -979,8 +983,9 @@ struct QualityArgs {
     profile: ScoringProfile,
 
     /// Output format (summary, json, sarif, sbomqs-json; auto = summary).
-    /// sbomqs-json emits interlynk-io/sbomqs `score --json`-shaped 0-10
-    /// scores for side-by-side comparison with sbomqs output.
+    /// sbomqs-json emits 0-10 scores in the shape of interlynk-io/sbomqs
+    /// v2.1.2 `score --legacy --json`, for side-by-side comparison with
+    /// sbomqs output.
     #[arg(short, long, default_value = "auto")]
     output: ReportFormat,
 
@@ -1034,6 +1039,8 @@ struct QualityArgs {
 
     /// CRA Annex III/IV product class (drives severity calibration).
     /// One of: default, important-class-1, important-class-2, critical.
+    /// Implementing Regulation (EU) 2025/2392 gives the technical
+    /// description of each class's product categories.
     /// Sidecar `productClass` wins over this flag.
     #[arg(long, value_name = "CLASS")]
     cra_product_class: Option<String>,
@@ -1698,6 +1705,8 @@ struct CraDocsArgs {
 
     /// CRA Annex III/IV product class.
     /// One of: default, important-class-1, important-class-2, critical.
+    /// Implementing Regulation (EU) 2025/2392 gives the technical
+    /// description of each class's product categories.
     /// Sidecar `productClass` wins.
     #[arg(long, value_name = "CLASS")]
     cra_product_class: Option<String>,

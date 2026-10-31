@@ -27,6 +27,7 @@
 //! ```
 
 mod cyclonedx;
+pub(crate) mod cyclonedx_analysis;
 mod detection;
 mod spdx;
 mod spdx3;

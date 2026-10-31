@@ -2,8 +2,9 @@
 //! read by its own parser, the renderers leave out exactly the fields
 //! `Encoding::no_counterpart` lists (so an omission can never hide a missing
 //! renderer), and one fixture normalizes to the same components, licences,
-//! hashes, creators and dependency graph in all four encodings, and to the
-//! same model metadata in the three that carry a model card.
+//! hashes, creators and dependency graph in all four encodings, to the same
+//! model metadata in the three that carry a model card, and to the same VEX
+//! statement in the three that carry vulnerability data.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
@@ -12,7 +13,7 @@ use rule_matrix::{
     ComponentFixture, CryptoAssetFixture, DatasetFixture, Encoding, MD5_FILLER, SHA256_FILLER,
     SbomFixture, VulnAnalysisFixture,
 };
-use sbom_tools::model::{CreatorType, NormalizedSbom};
+use sbom_tools::model::{CreatorType, NormalizedSbom, VexJustification, VexState};
 use std::collections::BTreeSet;
 
 /// A plain software SBOM: a primary product with two libraries, every
@@ -61,19 +62,42 @@ fn everything() -> SbomFixture {
     s.signature = Some(("ES256".to_string(), "c2lnbmF0dXJl".to_string()));
     s.undeclared_spdx3_profiles = vec!["security".to_string()];
     s.dynamic_links = vec![("ref-acme-app".to_string(), "ref-libb".to_string())];
-    s.vulnerabilities = vec![(
-        "CVE-2026-0001".to_string(),
-        "unknown".to_string(),
-        "ref-liba".to_string(),
-    )];
-    s.vulnerability_analyses = vec![(
-        "CVE-2026-0001".to_string(),
-        VulnAnalysisFixture {
-            state: Some("exploitable".to_string()),
-            responses: vec!["update".to_string()],
-            ..VulnAnalysisFixture::default()
-        },
-    )];
+    s.vulnerabilities = vec![
+        (
+            "CVE-2026-0001".to_string(),
+            "unknown".to_string(),
+            "ref-liba".to_string(),
+        ),
+        (
+            "CVE-2026-0002".to_string(),
+            "low".to_string(),
+            "ref-libb".to_string(),
+        ),
+    ];
+    s.vulnerability_analyses = vec![
+        (
+            "CVE-2026-0001".to_string(),
+            VulnAnalysisFixture {
+                state: Some("exploitable".to_string()),
+                responses: vec!["update".to_string()],
+                ..VulnAnalysisFixture::default()
+            },
+        ),
+        // A not_affected analysis carrying every analysis field: SPDX 3
+        // renders the state, the justification and the detail, and has no
+        // field for the response or the remediation texts.
+        (
+            "CVE-2026-0002".to_string(),
+            VulnAnalysisFixture {
+                state: Some("not_affected".to_string()),
+                justification: Some("code_not_reachable".to_string()),
+                responses: vec!["will_not_fix".to_string()],
+                detail: Some("libb's parser is never called".to_string()),
+                recommendation: Some("Upgrade libb to 2.0".to_string()),
+                workaround: Some("Disable the libb parser".to_string()),
+            },
+        ),
+    ];
     s.crypto_assets = vec![CryptoAssetFixture::algorithm("algo-aes", "AES")];
     let liba = s.component_mut("liba");
     liba.concluded_license = Some("MIT".to_string());
@@ -169,6 +193,63 @@ fn plain_software_renders_without_a_drop() {
             "{}: dropped {:?}",
             encoding.name(),
             rendered.dropped
+        );
+    }
+}
+
+/// A justified not_affected analysis reads as one vulnerability record with
+/// the same VEX state, justification and impact statement in every encoding
+/// that carries vulnerability data: SPDX 3 states it as a not_affected
+/// assessment instead of an AFFECTS relationship, which would contradict it.
+#[test]
+fn not_affected_analysis_reads_alike_in_every_encoding_with_vulnerabilities() {
+    let mut s = software();
+    s.vulnerabilities = vec![(
+        "CVE-2026-0002".to_string(),
+        String::new(),
+        "ref-liba".to_string(),
+    )];
+    s.vulnerability_analyses = vec![(
+        "CVE-2026-0002".to_string(),
+        VulnAnalysisFixture {
+            state: Some("not_affected".to_string()),
+            justification: Some("code_not_reachable".to_string()),
+            detail: Some("liba's parser is never called".to_string()),
+            ..VulnAnalysisFixture::default()
+        },
+    )];
+    for &encoding in Encoding::ALL_BUT_SPDX23 {
+        let rendered = s.render(encoding);
+        assert!(
+            rendered.dropped.is_empty(),
+            "{}: dropped {:?}",
+            encoding.name(),
+            rendered.dropped
+        );
+        let sbom = s.parse_in(encoding);
+        let records: Vec<_> = sbom
+            .all_vulnerabilities()
+            .into_iter()
+            .filter(|(_, v)| v.id == "CVE-2026-0002")
+            .collect();
+        assert_eq!(records.len(), 1, "{}: one record", encoding.name());
+        let vex = records[0]
+            .1
+            .vex_status
+            .as_ref()
+            .unwrap_or_else(|| panic!("{}: no VEX status", encoding.name()));
+        assert_eq!(vex.status, VexState::NotAffected, "{}", encoding.name());
+        assert_eq!(
+            vex.justification,
+            Some(VexJustification::VulnerableCodeNotInExecutePath),
+            "{}",
+            encoding.name()
+        );
+        assert_eq!(
+            vex.impact_statement.as_deref(),
+            Some("liba's parser is never called"),
+            "{}",
+            encoding.name()
         );
     }
 }

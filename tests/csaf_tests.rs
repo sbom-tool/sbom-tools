@@ -171,3 +171,54 @@ fn csaf_format_priority_over_cyclonedx_or_openvex() {
     let enricher = VexEnricher::from_files(&[path]).expect("must parse as CSAF");
     assert!(enricher.stats().statements_parsed > 0);
 }
+
+/// Run `vex status` on an SBOM with one CSAF document and return stderr,
+/// with warnings on (the parsers warn through `tracing::warn!`).
+fn vex_status_stderr(csaf: &std::path::Path) -> String {
+    let sbom =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/cyclonedx/minimal.cdx.json");
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_sbom-tools"))
+        .arg("--no-color")
+        .env("RUST_LOG", "warn")
+        .env("RUST_LOG_STYLE", "never")
+        .args(["vex", "status"])
+        .arg(sbom)
+        .arg("--vex")
+        .arg(csaf)
+        .args(["-o", "json"])
+        .output()
+        .expect("vex status should run");
+    let stderr = String::from_utf8(output.stderr).expect("stderr utf-8");
+    assert!(output.status.success(), "vex status failed: {stderr}");
+    stderr
+}
+
+#[test]
+fn csaf_2_0_document_loads_without_a_version_warning() {
+    let stderr = vex_status_stderr(&fixtures_dir().join("example-advisory.csaf.json"));
+    assert!(
+        !stderr.contains("csaf_version"),
+        "CSAF 2.0 must not warn about its version:\n{stderr}"
+    );
+}
+
+#[test]
+fn csaf_2_1_document_loads_with_a_version_warning() {
+    let fixture = std::fs::read_to_string(fixtures_dir().join("example-advisory.csaf.json"))
+        .expect("fixture readable");
+    let csaf_2_1 = fixture.replace(r#""csaf_version": "2.0""#, r#""csaf_version": "2.1""#);
+    assert_ne!(csaf_2_1, fixture, "the fixture declares csaf_version 2.0");
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("advisory-2.1.csaf.json");
+    std::fs::write(&path, csaf_2_1).expect("write CSAF 2.1 document");
+
+    let stderr = vex_status_stderr(&path);
+    assert!(
+        stderr.contains("WARN") && stderr.contains("declares csaf_version 2.1"),
+        "a CSAF 2.1 document must warn on the parsers' channel:\n{stderr}"
+    );
+
+    // The document is still read with the 2.0 rules.
+    let enricher = VexEnricher::from_files(&[path]).expect("CSAF 2.1 still parses");
+    assert!(enricher.stats().statements_parsed > 0);
+}

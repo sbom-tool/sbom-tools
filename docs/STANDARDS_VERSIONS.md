@@ -16,22 +16,26 @@ aliases were re-checked against the binary on 2026-07-31.
 
 | Profile / reference | Edition implemented | Canonical source | Notes |
 |---|---|---|---|
-| EU CRA (`cra`, `oss-steward`) | Regulation (EU) 2024/2847 (OJ L, 2024-11-20) | <https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng> | Art. 14 applies from 2026-09-11; full application 2027-12-11 (Art. 71(2)). No 2029 milestone exists. |
+| EU CRA (`cra`, `oss-steward`) | Regulation (EU) 2024/2847 (OJ L, 2024-11-20) | <https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng> | Art. 14 applies from 2026-09-11; full application 2027-12-11 (Art. 71(2)). No 2029 milestone exists. ENISA's Single Reporting Platform launched on 2026-09-11 ("The CRA Single Reporting Platform is launched", press release, 11 Sep 2026, <https://www.enisa.europa.eu/cra-srp/>). Art. 14(1) and (3) require each notification "via the single reporting platform established pursuant to Article 16" and Art. 14(7) through the end-point of the CSIRT designated as coordinator, so since 2026-10-26 `SBOM-CRA-ART-14-ENISA` follows the other Art. 14 channels — Info before 2026-09-11, Warning from then on — but stays a Warning at every product class: the CRA names no manufacturer identifier, and the SRP FAQ (updated 2026-10-15, <https://www.enisa.europa.eu/topics/product-security/single-reporting-platform-srp/frequently-asked-questions>) advises registering "only when they need to submit a notification" (FAQ 9) and has the manufacturer select "the correct CSIRT designated as coordinator (CDaC) in accordance with Art. 14(7)" when it submits one (FAQ 18). Naming that CSIRT in `enisaReportingPlatformId` therefore satisfies the finding; no early registration is needed (remediation, sidecar docs and `docs/CRA_COMPLIANCE.md` say so since 2026-10-26). Text read from the Official Journal (Publications Office Cellar manifestation of CELEX 32024R2847, the document EUR-Lex serves). |
 | BSI TR-03183-2 (`bsi`) | v2.1.0 (2025-08-20) | <https://bsi.bund.de/dok/TR-03183-en> | CycloneDX ≥ 1.6 / SPDX ≥ 3.0.1; SHA-512 hash of the deployable component; the §7 six-month grace for v2.0.0 ended 2026-02-20. |
 | NTIA minimum elements (`ntia`) | July 2021 report | <https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom> | Canonical host is ntia.gov (ntia.doc.gov survives via redirect). Superseded by the CISA 2026 Minimum Elements (below) but retained as the 2021 baseline many regulations still cite. |
-| CISA 2026 Minimum Elements (`cisa-2026`) | v2.1 final, 2026-07-29 (TLP:CLEAR; CISA/NSA/FBI + 15 international agencies) | <https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom> | "Updates and replaces" the NTIA 2021 elements (the Aug 2025 CISA draft was v2.0 of this document). Aliases `cisa`, `cisa2026`, `minimum-elements-2026`. 17 data fields + document-checkable practices, implemented as 17 `SBOM-CISA2026-*` rules (plus the `SBOM-CISA2026-GENERAL` fallback id); explicit-unknown markers (NOASSERTION) satisfy the 2026 escape hatches; required data fields fail as Error, evidence-limited or heuristic checks only Warn (Author Signature / Generation Context / SBOM Version / Coverage, plus Data Format Version, Tool Version and Hash Algorithm); Author Signature, Generation Context and Coverage are not evaluated on SPDX 2.x, which has no field for them, so a complete SPDX 2.x SBOM can pass `--fail-on-warning`; Hash Algorithm warns only for components with no hash in an accepted algorithm (MD5 and SHA-1 next to SHA-256 do not warn); the format-version floor (CycloneDX 1.4+ / SPDX 2.2+) is tool policy — CISA names no deprecated versions. Frequency, Distribution and Delivery, and Accommodation of Updates are organizational practices with no in-document evidence and carry no rules. Non-binding joint guidance. |
+| CISA 2026 Minimum Elements (`cisa-2026`) | v2.1 final, 2026-07-29 (TLP:CLEAR; CISA/NSA/FBI + 15 international agencies) | <https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom> | "Updates and replaces" the NTIA 2021 elements (the Aug 2025 CISA draft was v2.0 of this document). Aliases `cisa`, `cisa2026`, `minimum-elements-2026`. 17 data fields + document-checkable practices, implemented as 17 `SBOM-CISA2026-*` rules (plus the `SBOM-CISA2026-GENERAL` fallback id); explicit-unknown markers (NOASSERTION) satisfy the 2026 escape hatches; required data fields fail as Error, evidence-limited or heuristic checks only Warn (Author Signature / Generation Context / SBOM Version / Coverage, plus Data Format Version, Tool Version and Hash Algorithm); Author Signature, Generation Context and Coverage are not evaluated on SPDX 2.x, which has no field for them, so a complete SPDX 2.x SBOM can pass `--fail-on-warning`; Hash Algorithm warns only for components with no hash in an accepted algorithm (MD5 and SHA-1 next to SHA-256 do not warn); the format-version floor (CycloneDX 1.4+ / SPDX 2.2+) is tool policy — CISA names no deprecated versions. Frequency, Distribution and Delivery, and Accommodation of Updates are organizational practices with no in-document evidence and carry no rules. Non-binding joint guidance. Cross-checked on 2026-10-26 against the SPDX 2.3.1 Annex L.2.2 mapping of these elements onto SPDX fields; the six gaps are in the Backlog. |
 | FDA premarket cybersecurity (`fda`) | Final, 2026-02-03 — "Quality **Management** System Considerations…" | <https://www.fda.gov/media/119933/download> | Supersedes the June 2025 and Sept 2023 finals. SBOM elements (NTIA baseline + level of support + end-of-support date) unchanged. |
 | NIST SSDF (`ssdf`) | SP 800-218 v1.1 | <https://doi.org/10.6028/NIST.SP.800-218> | |
-| EO 14028 (`eo14028`) | May 2021 + NTIA elements | <https://www.federalregister.gov/d/2021-10460> | |
+| EO 14028 (`eo14028`) | EO 14028 §4(e) (May 2021) + NTIA elements | <https://www.federalregister.gov/d/2021-10460> | The profile follows EO 14028 §4(e) SBOM *practice*; its texts no longer read as a federal mandate (reworded 2026-10-26; no check or severity changed). OMB M-26-05, 2026-01-23 (<https://www.whitehouse.gov/wp-content/uploads/2026/01/M-26-05-Adopting-a-Risk-based-Approach-to-Software-and-Hardware-Security.pdf>): "OMB Memoranda M-22-18 and M-23-16, a companion policy, are hereby rescinded"; agencies "may choose to use" the Secure Software Development Attestation Form and "may also choose to adopt contractual terms that require a software producer to provide a current software bill of materials (SBOM) upon request". The memorandum does not mention the FAR case: the FAR Council's Regulatory Agenda (Federal Register 2026-16612, 2026-08-14, <https://www.federalregister.gov/d/2026-16612>) lists FAR Case 2023-002, Supply Chain Software Security (RIN 9000-AO49), as a completed action, "Withdrawn 03/06/26", "closed because it was intended to implement Office of Management and Budget (OMB) direction that has since been rescinded". The vulnerability-disclosure rule now cites §4(e)(viii) ("participating in a vulnerability disclosure program"); it cited §4(g), which defines "critical software". |
 | CNSA 2.0 (`cnsa2`) | Sept 2022 fact sheet (rev.) | NSA CSA CNSA 2.0 | 2030/2033 milestones not yet severity-scaled (see plan P2). PQ/T hybrids (verified 2026-10-26) pass when the post-quantum part is ML-KEM-1024 or ML-DSA-87 and the classical part is a CNSA 1.0 algorithm (ECDH/ECDSA P-384, RSA/DH ≥ 3072): the CNSA 2.0 FAQ (Dec 2024) does not require hybrids, and NSA's IPsec profile (draft-guthrie-cnsa2-ipsec-profile-04) is RFC 9370 P-384 or 3072/4096-bit MODP plus ML-KEM-1024. NSA's TLS and SSH profiles (draft-becker-cnsa2-tls-profile-05, -ssh-profile-05) negotiate ML-KEM-1024 alone; protocol-profile conformance is not judged. TLS 1.3 named groups and signature schemes (CycloneDX 1.7 `tlsGroups`, `tlsSignatureSchemes`; verified 2026-10-26) are judged one by one under PROTO-002, each an alternative a peer may negotiate: only MLKEM1024, SecP384r1MLKEM1024 (as an algorithm, by the hybrid rule above) and mldsa87 are approved. The TLS profile (draft-becker-cnsa2-tls-profile-05 §4, §7.2.1, §8.1) requires MLKEM1024 (`0x0202`) and mldsa87 (`0x0906`) and accepts nothing else for a CNSA connection, so a conformant server would not offer SecP384r1MLKEM1024; that profile rule is not implemented. |
 | NIST PQC (`pqc`) | **IR 8547 ipd (draft, Nov 2024)** + FIPS 203/204/205 (final, 2024-08-13) + SP 800-208 + SP 800-131A **Rev. 2** + SP 800-227 (final, 2025-09-18) | <https://csrc.nist.gov/projects/post-quantum-cryptography> | Cite IR 8547 as draft; SP 800-131A Rev. 3 is draft-only. PQ/T hybrids are judged by their post-quantum part: SP 800-227 §4.6.2 approves key combiners when one shared secret comes from an approved KEM, and IR 8547 ipd §3.2.2 accepts composite signatures with an approved component. TLS 1.3 groups and signature schemes are judged one by one under PROTO-002: every ML-KEM group, the ML-KEM hybrid groups, and the ML-DSA and SLH-DSA schemes pass; classical groups (ECDHE, FFDHE, X25519/X448, SM2, GOST) and schemes (ECDSA, RSA PKCS#1 and PSS, EdDSA, SM2, GOST) are quantum-vulnerable, and the two SHA-1 schemes broken. |
 | IANA TLS registries ("TLS Supported Groups", "TLS SignatureScheme") | As last updated 2026-10-21, verified against the CSV exports 2026-10-26 | <https://www.iana.org/assignments/tls-parameters/> | Every assigned entry (59 groups, 49 signature schemes) is transcribed with the algorithm it stands for in `src/model/crypto.rs` (`TLS_SUPPORTED_GROUPS`, `TLS_SIGNATURE_SCHEMES`) and pinned against the registry by `tests/crypto_tls_groups_tests.rs`. Entries are read by name (ASCII case-insensitive) or codepoint (decimal or `0x` hex), or by an unambiguous spelling from an explicit alias table (`TLS_GROUP_ALIASES`, `TLS_SIGNATURE_SCHEME_ALIASES`): the NIST, SSH (RFC 5656), ANSI X9.62 and Go names of the prime curves ("P-256", "nistp256", "prime256v1", "CurveP256"), the FIPS 203/204/205 names of the ML-KEM, ML-DSA and SLH-DSA parameter sets, and the hybrid group names with separators ("X25519_MLKEM768"); there is no fallback to the generic name classifier, and Kyber spellings are no aliases. GREASE values (RFC 8701 §2: 0x0A0A, 0x1A1A, …, 0xFAFA), which no peer negotiates (§3.2), are skipped: neither judged nor unverifiable. Other unassigned, reserved and private-use codepoints, names outside the registry and the alias tables, and the obsolete Kyber draft groups (25497, 25498) are unverifiable: an Error under CNSA 2.0, a Warning under NIST PQC. No composite ML-DSA signature scheme is registered yet. |
+| CRA product classes (`--cra-product-class`, sidecar `productClass`) | Commission Implementing Regulation (EU) 2025/2392 of 28 November 2025 "on the technical description of the categories of important and critical products with digital elements pursuant to Regulation (EU) 2024/2847" (OJ L, 2025/2392, 1.12.2025; in force on the twentieth day after publication) | <https://eur-lex.europa.eu/eli/reg_impl/2025/2392/oj/eng> | Adopted under CRA Art. 7(4). Its Annex I describes the Annex III class I and II categories, its Annex II the Annex IV critical ones (Art. 2). Cited since 2026-10-26 in the `--cra-product-class` help, the `SBOM-CRA-ANNEX-IV` and `SBOM-CRA-ANNEX-VIII` remediation, the `CraProductClass` docs and `docs/CRA_COMPLIANCE.md`; the class names no longer give Annex III item ranges ("items 1–11", "items 12–17") that the adopted Annex III, with 19 class I and 4 class II categories, does not have. Number and title read from the Official Journal (Publications Office Cellar manifestation of CELEX 32025R2392, the document EUR-Lex serves). |
+| CRA FAQ, VEX `not_affected` as evidence (`cra`) | "FAQs on the Cyber Resilience Act", version 1.4 of 04/09/2026 (version table: "Addition of FAQ 5.5"), prepared by the Commission services and "should not be considered as representative of the European Commission's official position" | <https://ec.europa.eu/newsroom/dae/redirection/document/123307> (the Commission's Markdown conversion; PDF dated 2026-09-04: <https://ec.europa.eu/newsroom/dae/redirection/document/122331>) | Since 2026-10-26 `SBOM-CRA-VULN-METADATA` and `SBOM-CRA-VULN-METADATA-REMEDIATION` skip a vulnerability whose own VEX statement is `not_affected` and names a justification (CycloneDX `analysis.justification`, OpenVEX `justification`, SPDX 3.0 `justificationType`). FAQ 4.3.1: "When discovering a vulnerability, manufacturers are expected to determine its relevance for their product, and assess the resulting risk, in the framework of the manufacturer's risk assessment"; of a router library vulnerability that "cannot be exploited, as the library functions are never called in the firmware": "The manufacturer may be expected, for example, to document the vulnerability, but may decide not to fix it with a dedicated update." FAQ 4.2.2 lists what the case-by-case assessment weighs: "the extent to which the vulnerable code is invoked or loaded when the product is in use; the level and type of access required to carry out the exploit; whether compensating controls are already in place to mitigate exploitation". FAQ 5.4: a vulnerability of an integrated component that "cannot be exploited in its product with digital elements" is "not actively exploited, and therefore it is not subject to mandatory reporting". Annex I Part II (4) concerns "fixed vulnerabilities". The FAQ never says "VEX" or "not affected". A bare `not_affected`, an impact statement or detail without a justification, and a justification on any other state do not count; CSAF `flags` and `threats` are not read, so CSAF `known_not_affected` entries do not count yet. The digital-strategy.ec.europa.eu FAQ page refused automated access (HTTP 403); both documents above are served by the Commission's newsroom. |
+| CycloneDX VEX justifications (CycloneDX parser, `--vex`) | CycloneDX 1.6 and 1.7 `impactAnalysisJustification` (nine values), mapped onto the five CISA justifications that OpenVEX and SPDX 3.0.1 `VexJustificationType` also use | <https://github.com/CycloneDX/specification/blob/1.7/schema/bom-1.7.schema.json> (the 1.6 schema defines the same nine); <https://github.com/openvex/spec/blob/main/OPENVEX-SPEC.md> ("Status Justifications"); <https://github.com/spdx/spdx-3-model/blob/3.0.1/model/Security/Vocabularies/VexJustificationType.md> | Since 2026-10-26 the CycloneDX SBOM parser and the reader of a CycloneDX VEX document passed with `--vex` share one mapping (`src/parsers/cyclonedx_analysis.rs`). Before, the parser read `protected_by_compiler`, `protected_at_runtime` and `protected_at_perimeter` as no justification; the VEX reader read `code_not_present` as ComponentNotPresent, `protected_at_runtime` and `protected_at_perimeter` as InlineMitigationsAlreadyExist and `protected_by_compiler` as none; and only the parser copied `detail` into the impact statement. Now `code_not_present` ("The code has been removed or tree-shaked") is VulnerableCodeNotPresent, since the component stays; `code_not_reachable` ("The vulnerable code is not invoked at runtime") is VulnerableCodeNotInExecutePath; `requires_configuration`, `requires_dependency`, `requires_environment` and `protected_at_perimeter` ("Attacks are blocked at physical, logical, or network perimeter") are VulnerableCodeCannotBeControlledByAdversary, since OpenVEX's inline mitigations are "built-in protections or features" that "cannot be configured or disabled by the user", which a perimeter is not; `protected_by_compiler` ("Exploitability requires a compiler flag to be set/unset"), `protected_at_runtime` ("Exploits are prevented at runtime") and `protected_by_mitigating_control` are InlineMitigationsAlreadyExist (SPDX 3: "Built-in inline controls or mitigations prevent an adversary from leveraging the vulnerability"). CycloneDX `detail`, the "Detailed description of the impact", is the impact statement (and detail) in both, and no justification. An unknown response is dropped in both (the parser read one as `update`). So every CycloneDX justification counts under the CRA `not_affected` rule above. |
 | EUCC (`eucc`) | Implementing Regulation (EU) 2024/482 | <https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng> | Reference-only profile. |
 | EU AI Act (`ai-act`) | Regulation (EU) 2024/1689 Annex IV | <https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng> | Readiness profile. |
 | BSI/G7 SBOM for AI (`bsi-ai`) | Final joint G7 guidance, 2026-05-12 | <https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements> | Supersedes the Feb 2026 BSI draft the profile was first built against; element clusters unchanged at the level we check. |
 | PCI DSS Req. 6.3.2 (`pci-dss`) | v4.0.1 (2024-06-11); Req. 6.3.2 with companion controls 6.3.1 / 11.3.1.1 | <https://www.pcisecuritystandards.org/document_library/> | Aliases `pci`, `pci-dss-6-3-2`, `pci-dss-4`. 10 rules: 9 × `SBOM-PCI-6-3-2-*` plus `SBOM-PCI-11-3-1-1-SEVERITY` (and the `SBOM-PCI-GENERAL` fallback id). Required in assessments since 2025-03-31 (v4.0 retired 2024-12-31); citations target v4.0.1 only. The standard PDF is license-gated, so the 6.3.2 requirement/testing-procedure text is secondary-sourced (consistent across independent sources). PCI DSS prescribes no SBOM format or field schema — no format gate; the SBOM-as-inventory mapping is guidance-derived, so a passing run evidences that the inventory exists and is usable, **not** PCI DSS compliance (interviews, inventory *use*, and the software-vs-inventory comparison are assessor work). The 365-day staleness advisory is tool policy, not standard text. |
 | CISA Framing Software Component Transparency (`fsct`) | Third Edition (document date 2024-09-03, published 2024-10-15) | <https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024> | Aliases `fsct-3`, `component-transparency`. 27 `SBOM-FSCT-*` rules (plus the `SBOM-FSCT-GENERAL` fallback id). Attribute-maturity profile: Minimum Expected → Error, Recommended Practice → Warning, Aspirational Goal → Info (Error means "fails the Minimum Expected tier" — the document is non-regulatory community guidance, distinct from the Minimum Elements line; no 4th edition exists as of 2026-07). The tier structure is asymmetric and preserved as-is; §2.3.2 Redacted Components has no rule (redaction markers are not modeled). Coverage floors (≥50% license/copyright), the ≥2-identifier-kinds threshold, the depth≥2 transitive proxy, and strict global-identifier enforcement (§2.2.2.4 only "prefers" it) are documented profile policy. SBOM Type, signature, concluded-license, and dynamic-dependency checks are evidence-gated by format (see `src/quality/compliance/fsct.rs` module docs). |
-| CSAF | v2.0 (OASIS Standard, 2022; ISO/IEC 20153:2025) | <https://docs.oasis-open.org/csaf/csaf/v2.0/csaf-v2.0.html> | |
+| SPDX 2.x (parser) | 2.2, 2.3 and 2.3.1 (tag `v2.3.1`, "Patch release 2.3.1 of the SPDX Specification", 2026-10-05; its CHANGELOG dates the release 2026-10-30) | <https://github.com/spdx/spdx-spec/tree/v2.3.1> | 2.3.1 is a maintenance release: "No new fields or relationship types were added" (CHANGELOG). It fixed the JSON schema's `primaryPackagePurpose` enum "from the wrong `OPERATING_SYSTEM`, to the correct `OPERATING-SYSTEM`" and added `PERSISTENT_ID` and `PACKAGE_MANAGER` beside the hyphenated `referenceCategory` values. The parser upper-cases a purpose and maps `-` to `_`, and maps `_` to `-` in a category, so every spelling reads the same, in JSON and in tag-value (`operating_system_purpose_reads_in_both_spellings`, `json_persistent_id_underscore_promotes_swhid` in `src/parsers/spdx.rs`; verified 2026-10-26). 2.3.1 moved the NTIA 2021 mapping from Annex K to a new Annex L ("Compliance with regulatory frameworks", `chapters/regulations-compliance.md`) and added the CISA 2026 mapping (L.2.2), against which the `cisa-2026` profile was cross-checked; the gaps are in the Backlog below. |
+| CSAF | v2.0 (OASIS Standard, 2022; ISO/IEC 20153:2025) | <https://docs.oasis-open.org/csaf/csaf/v2.0/csaf-v2.0.html> | The VEX reader (`src/enrichment/vex/csaf.rs`) accepts every CSAF 2.x document and reads it with the 2.0 rules. Since 2026-10-26 a document whose `csaf_version` minor is newer than 2.0 (or not a number) logs a warning on the parsers' channel (`tracing::warn!`, on stderr by default) that whatever the newer version adds is not read, until CSAF 2.1 is final and supported. CSAF 2.1 is a Committee Specification Draft (CSD04, 2026-10-21, "The value for this const is: 2.1"; <https://docs.oasis-open.org/csaf/csaf/v2.1/csaf-v2.1.html>). |
 | OSCAL assessment results (`validate -o oscal-json`) | v1.2.3 (2026-08-07), the latest release (verified 2026-10-26) | <https://github.com/usnistgov/OSCAL/releases/tag/v1.2.3> | The release's assessment-results JSON schema is vendored under `tests/fixtures/schemas/oscal/1.2.3/`, and every fixture's output is validated against it. 1.2.0 deprecated the observation type `finding` and named `discovery` its replacement (usnistgov/OSCAL#2105; the PR's title proposed `implementation-issue`, but the merged change and every 1.2.x tag say `discovery`). 1.2.1–1.2.3 changed nothing the export emits. See `docs/compliance-output.md`. |
 
 ## Attestation evidence (CycloneDX 1.6 `declarations`)
@@ -74,42 +78,112 @@ requirements before a rule changes).
 | CEN/CENELEC prEN 40000-1-3 (CRA vulnerability handling / SBOM) | Enquiry closed 2026-02-09; comment resolution before Formal Vote; publication expected H2 2026, may slip to 2027 | The `PRE-*-RQ-*` ids hardcoded in registry refs must be re-verified against the published EN; revisit `Pren40000_1_3` help-URI (currently None — draft is paywalled). |
 | NIST IR 8547 | Initial Public Draft only (comment period closed 2025-01-10) | Change "IR 8547 ipd" citations to final; re-check 2030/2035 timeline wording. |
 | CISA 2026 SBOM Minimum Elements | Final v2.1 published 2026-07-29; profile shipped 2026-07-30 as `cisa-2026` (plan P4); the `SBOM-CISA2026-SCAFFOLD` marker is gone from the registry (verified 2026-07-31) | Watch cisa.gov for errata to the 2026-07-29 v2.1; re-verify the 17 rules if an erratum moves a data field. |
-| OASIS CSAF 2.1 | Committee Specification Draft 02 (2026-02-25) | Update `Csaf2` references when it reaches OASIS Standard. |
+| OASIS CSAF 2.1 | Committee Specification Draft 04 (2026-10-21), the latest stage after CSD01–CSD03; no Committee Specification or OASIS Standard yet (verified 2026-10-26 at <https://docs.oasis-open.org/csaf/csaf/v2.1/>) | When it reaches OASIS Standard: support its additions in the VEX reader, drop the newer-minor warning for 2.1 (`newer_minor_warning` in `src/enrichment/vex/csaf.rs`), and update the `Csaf2` references. |
 | NIST SP 800-131A Rev. 3 | Draft only (ipd 2024-10-21) | Update PQC registry refs from Rev. 2. |
 | IETF LAMPS composite ML-DSA and ML-KEM | draft-ietf-lamps-pq-composite-sigs-19 and -kem-23 approved, in the RFC Editor queue (2026-10-26); OIDs 1.3.6.1.5.5.7.6.37–.66 early-allocated by IANA on 2025-10-20 | Cite the RFC numbers in `src/model/crypto.rs` (`COMPOSITES`) and re-verify the OID table. |
 | NSA CNSA 2.0 protocol profiles | draft-guthrie-cnsa2-ipsec-profile-04, draft-becker-cnsa2-tls-profile-05 and -ssh-profile-05 are individual drafts (2026-07) | Re-check the hybrid decisions in `cnsa2_hybrid_verdict` (`src/quality/compliance/crypto.rs`) when they publish. |
 | IETF drafts behind IANA TLS codepoints | draft-ietf-tls-mlkem-10 (groups 512-514) and draft-ietf-tls-mldsa-06 (schemes 0x0904-0x0906) approved, in the RFC Editor queue; individual drafts draft-reddy-tls-slhdsa-01 (0x0911-0x091C), draft-rosomakho-tls-ecdhe-mlkem512-00 (4585, 4586), draft-yang-tls-hybrid-sm2-mlkem-03 (4590) and draft-wang-tls-raw-public-key-with-ibc-02 (0x0704-0x0707) (2026-10-26) | Cite the RFC numbers in `src/model/crypto.rs` (`TLS_SUPPORTED_GROUPS`, `TLS_SIGNATURE_SCHEMES`); re-fetch both registries and update the table and `tests/crypto_tls_groups_tests.rs` together, including composite ML-DSA schemes once IANA assigns them. |
 | BSI TR-03183-2 | v2.1.0 current; no v2.2.0 exists (the `_v2_2_0.pdf` URL on bsi.bund.de serves the archived v1.1 — do not trust the filename) | Rebase `bsi` checker; §7 gives a six-month transition from publication of the next edition. |
 
+## Backlog (gaps found, not implemented)
+
+| Item | Source | Gap | Possible change |
+|---|---|---|---|
+| CISA 2026 SBOM Generation Context on SPDX 2.x | SPDX 2.3.1 Annex L.2.2 (<https://github.com/spdx/spdx-spec/blob/v2.3.1/chapters/regulations-compliance.md>): "SBOM Generation Context — (6.10) Creator Comment"; "The “Creator Comment” should contain the “SBOM Generation Context” using one of the six keywords “Design,” “Source,” “Build,” “Analyzed,” “Deployed,” “Runtime”" | `SBOM-CISA2026-GENERATION-CONTEXT` does not run on SPDX 2.x ("no standard field"), and the SPDX parser does not read `CreatorComment` | Read the keyword from the creator comment into the lifecycle phase and run the check on SPDX 2.x as on the other formats |
+| CISA 2026 Component Producer | Annex L.2.2: "Component Producer — (7.6) Package Originator" | `SBOM-CISA2026-PRODUCER` also accepts (7.5) Package Supplier and a manufacturer, so a supplier-only SPDX 2.x package passes | Decide whether a supplier alone names the producer (CISA's element is the 2026 rename of the NTIA "Supplier Name") |
+| CISA 2026 Component Dependency Relationship | Annex L.2.2: "Component Dependency Relationship — (11.1) Relationship: `DEPENDS_ON`" | `SBOM-CISA2026-DEPENDENCY` passes on any relationship that becomes an edge (CONTAINS, GENERATES, …) | Decide whether to ask for a dependency-type relationship |
+| CISA 2026 Component Identifiers | Annex L.2.2: "Component Identifiers — (7.21) External reference: PACKAGE-MANAGER for PURL (Package-URL); OTHER for SWID/gitoid" | The SPDX parser keeps a `gitoid` reference as a plain external reference, not an identifier, so a package identified only by a gitoid fails `SBOM-CISA2026-IDENTIFIER` | Read gitoid (OmniBOR) references as component identifiers |
+| CISA 2026 Component License | Annex L.2.2 note: "The “Component License” can be represented either by “Concluded License” or “Declared License”. At least one of these fields must be different from NOASSERTION." | The SPDX parser drops `NONE` as well as `NOASSERTION`, so a package whose license fields are `NONE` fails `SBOM-CISA2026-LICENSE` although `NONE` differs from NOASSERTION | Keep `NONE` as license information for this check |
+| SPDX 2.3.1 omitted fields and the CISA 2026 escape hatches | SPDX 2.3.1 §4.3 (`chapters/conformance.md`): "Unless specified otherwise, omission of an optional field should be interpreted as signaling NOASSERTION." | The `cisa-2026` explicit-unknown escape hatches for Component Version, Producer and Hash Value pass `NOASSERTION` but fail an omitted field; in an SPDX 2.3.1 document an omitted optional field signals NOASSERTION (Component License is not affected: the SPDX parser drops a `NOASSERTION` license, which Annex L does not accept either) | Decide whether omission in an SPDX ≥ 2.3.1 document counts as the explicit unknown (it would pass rules that fail today) |
+
+The rest of Annex L.2.2 agrees with the profile: SBOM Author maps to the
+(6.8) Creator field (the profile also requires that a Person or
+Organization, not only a tool, be named, as CISA's "entity that creates
+the SBOM data"); SBOM Author signature has "no field in SPDX 2.3.1" and
+"should be put in an external document" (the profile skips it on SPDX 2.x);
+the data format name and version are (6.1) SPDX version; the timestamp is
+(6.9) Created; tool name and version share a (6.8) Tool entry "separated by
+a “-”", which the tool-version heuristic reads; "The “SPDX Document
+Namespace” is the best approximation for the “SBOM Version”", which the
+profile accepts; the hash is (7.10) Package Checksum; name and version are
+(7.1) and (7.3). Cross-checked 2026-10-26.
+
 ## sbomqs interoperability (`quality -o sbomqs-json`)
 
-**Parity target: interlynk-io/sbomqs v2.0.11** (2026-07-10; all formulas below
-verified against the fetched v2.0.11 sources). sbomqs is a tool, not a
-standard; this view exists so its 0-10 quality scores can be compared with
-this tool's output side by side. Implemented in
-`src/reports/sbomqs_compat.rs`, surfaced as:
+**Parity target: interlynk-io/sbomqs v2.1.2** (released 2026-09-11; every
+formula below verified on 2026-10-26 against the v2.1.2 sources,
+<https://github.com/interlynk-io/sbomqs/tree/v2.1.2>, and against the
+v2.0.11 → v2.1.2 diff, <https://github.com/interlynk-io/sbomqs/compare/v2.0.11...v2.1.2>).
+v2.1.3 (2026-10-14) is the latest release; it changes nothing the v1 engine
+computes (its changes are the NTIA 2026 compliance and v2-profile mappings,
+SPDX 3 SWHID/OmniBOR content identifiers, dependency bumps and CI;
+<https://github.com/interlynk-io/sbomqs/compare/v2.1.2...v2.1.3>), so the
+pin stays at v2.1.2. sbomqs is a tool,
+not a standard; this view exists so its 0-10 quality scores can be compared
+with this tool's output side by side. Implemented in
+`src/reports/sbomqs_compat.rs` (with `sbomqs_compat/expression.rs`, a port
+of the go-spdx v2.7.0 expression reading sbomqs applies to every license
+string, and `sbomqs_compat/license_data.rs`, the license classes generated
+from the license files sbomqs v2.1.2 embeds), surfaced as:
 
 - `sbom-tools quality <sbom> -o sbomqs-json` — a report in the exact
-  `sbomqs score --json` schema (`pkg/reporter/json.go` field names/types:
-  `run_id`, `timestamp`, `creation_info{name,version,scoring_engine_version,`
-  `vendor}`, `files[]{file_name,spec,spec_version,file_format,avg_score,`
+  `sbomqs score --legacy --json` schema (`pkg/reporter/json.go` field
+  names/types: `run_id`, `timestamp`,
+  `creation_info{name,version,scoring_engine_version,vendor}`,
+  `files[]{file_name,spec,spec_version,file_format,avg_score,`
   `num_components,creation_time,gen_tool_name,gen_tool_version,`
-  `scores[]{category,feature,score,max_score,description,ignored}}`).
-  `creation_info` honestly identifies **sbom-tools** — it never impersonates
-  the sbomqs binary, so divergent scores cannot be mis-attributed to
-  Interlynk.
-- A compact "sbomqs-Comparable Scores" table appended to the plain-text
-  `quality` summary (per-category 0-10 rollups plus `avg_score` and the
-  sbomqs-bracket grade).
+  `scores[]{category,feature,score,max_score,description,ignored}}`). Since
+  sbomqs 2.0 a plain `sbomqs score --json` runs the v2 engine, whose report
+  has a different shape; `--legacy` selects the v1 engine this view
+  mirrors. `creation_info` honestly identifies **sbom-tools** — it never
+  impersonates the sbomqs binary, so divergent scores cannot be
+  mis-attributed to Interlynk — and its `scoring_engine_version` names the
+  pinned release (`parity target sbomqs v2.1.2 engine 7`).
+- A compact "sbomqs-Comparable Scores (sbomqs v2.1.2 score model, 0-10)"
+  table appended to the plain-text `quality` summary (per-category 0-10
+  rollups plus `avg_score` and the sbomqs-bracket grade). `quality --help`
+  names the pinned release too.
 
-Phase 1 emits the sbomqs **legacy (v1) engine's** five default categories
-(23 features). The v2 engine (8 weighted categories, `score` default since
-sbomqs 2.0) and the per-standard profile scores (`ntia`, `ntia-2025`,
-`bsi-v1.1/v2.0/v2.1`, …) are documented here for a later phase; note that
-sbomqs v2.0.11's `ntia-2025` profile tracks the superseded CISA **2025
-draft** — the successor guidance was finalized on 2026-07-29 as the **2026
-Minimum Elements for a SBOM** (CISA/NSA/FBI et al.), so do not describe the
-CISA elements as "not yet final".
+The view emits the 23 features of the v1 engine's five documented
+categories (NTIA-minimum-elements, Semantic, Quality, Sharing, Structural).
+A default `sbomqs score --legacy` run also scores the `bsi-v1.1` and
+`bsi-v2.0` categories (`pkg/scorer/scorer.go AllScores`, 59 entries) and
+averages over all of them, so this view's `avg_score` is the one of
+`sbomqs score --legacy --category ntia,semantic,quality,sharing,structural`
+(sbomqs `docs/specs/LEGACY-V1-QUIRKS.md` §2 and `docs/commands/score.md`,
+<https://github.com/interlynk-io/sbomqs/blob/v2.1.2/docs/specs/LEGACY-V1-QUIRKS.md>).
+The v2 engine and its per-standard profiles are out of scope. v2.1.0 added
+a CISA 2026 Minimum Elements profile as `cisa-2026` (interlynk-io/sbomqs#745,
+#750); v2.1.1 made it the meaning of the v2 profile key `ntia` and moved the
+2021 NTIA profile to `ntia-2021` (aliases `cisa-2021`, `ntia2021`; #754),
+while `ntia-2025` still tracks the CISA 2025 draft
+(`pkg/scorer/v2/registry`); v2.1.2 made `sbomqs compliance --ntia` check
+the 2026 elements as its help already said (#760). None of that touches the
+v1 `NTIA-minimum-elements` category this view mirrors.
+
+### What changed from v2.0.11 to v2.1.2
+
+| Change (sbomqs release, PR) | Source | Effect here |
+|---|---|---|
+| `comp_with_uniq_ids` counts components with a purl or a CPE, the NTIA "Other Unique Identifiers" element, instead of a non-empty bom-ref/SPDXID (v2.1.0, #734) | `pkg/scorer/ntia.go compWithUniqIDCheck` | the feature now equals `comp_with_any_vuln_lookup_id` |
+| A license is free for any use when its AboutCode category is Public Domain, which `CC0-1.0` is (v2.1.0, #732); before, no SPDX-listed id could be | `pkg/licenses/license.go overlayFreeAnyUseFromAboutCode`, `embed_licenses.go isFreeAnyUse` | `sbom_sharable` is 10 for a document whose every license token is free: every SPDX 2.x document with `dataLicense: CC0-1.0`; 23 SPDX ids and 20 AboutCode keys are free (`license_data::FREE_ANY_USE`) |
+| A license in AboutCode's Non-Commercial category is restrictive, and the AboutCode and SPDX license data were refreshed (v2.1.0, #732) | `embed_licenses.go isRestrictive`; `pkg/licenses/files/` (SPDX list revision `e4c1f27`, 733 ids) | `comp_with_restrictive_licenses` uses sbomqs' 252 restrictive SPDX ids (`license_data::RESTRICTIVE_SPDX`) instead of the `spdx` crate's copyleft flag, which missed 149 of them (EPL-2.0, MPL-2.0, CC-BY-NC-4.0, …) |
+| SPDX 3.0.x documents are scored, through a reader of their own on spdx-zen (v2.0.12, #712) | `pkg/sbom/sbom.go`, `pkg/sbom/spdx3.go` | `3.0.1` is a recognized SPDX spec version; the document half of `sbom_required_fields` is always present for SPDX 3 and a package needs a name and a supplier that is not NOASSERTION; SPDX 3 component licenses are the concluded ones only; an SPDX 3 `operatingSystem` purpose is not recognized |
+| SPDX 2.x inverse relationships are flipped (DEPENDENCY_OF, CONTAINED_BY, DESCRIBED_BY) and duplicates collapsed; DESCRIBED_BY names the primary component (v2.1.0, #744) | `pkg/sbom/spdx.go parseRelationships`, `parsePrimaryComponent` | this repo's SPDX parser already flips these, so `sbom_dependencies` and `sbom_with_primary_component` agree more often |
+| `sbom_required_fields` rewritten without a behaviour change; the 5.0 for a zero-component document stays (v2.1.0, #735) | `pkg/scorer/semantic.go` | none |
+| Grade bands: the code (`ToGrade`) is unchanged; v2.1.0 corrected the docs that listed A as 8.0-10.0 (#735) | `pkg/scorer/v2/formulae/farmulas.go`, `docs/commands/score.md` | none (this view always used the code's bands) |
+| Null entries in SPDX package, file and relationship arrays are skipped (v2.1.0, #731); case-insensitive comparisons (v2.1.2, #759) | `pkg/sbom/spdx.go`, `pkg/licenses/license.go` | none |
+
+While re-verifying, four places where this view had diverged from sbomqs
+since v2.0.11 were fixed, so their scores move too: license strings are read
+the way sbomqs' go-spdx parsing reads them (a string naming an id outside
+the SPDX list, or no valid expression, is one custom license; a `WITH`
+clause stays on its term; terms are deduplicated); an SPDX 2.x package
+contributes its concluded license, or its declared one when the concluded
+yields none; SPDX tool strings split at the last hyphen only (sbomqs
+`extractVersion`); and the primary component's dependencies count only
+targets sbomqs enumerates, while a CycloneDX `components[]` entry typed
+`service` now counts as the component sbomqs sees.
 
 ### Not convertible from the 0-100 score
 
@@ -117,10 +191,9 @@ The 0-100 `quality` score and the sbomqs 0-10 score use different category
 taxonomies, different weights, and different missing-data semantics (this
 repo renormalizes N/A categories; sbomqs keeps ignored checks in the
 `avg_score` denominator), and different grade cut lines (sbomqs `ToGrade`:
-A ≥ 9.0, B ≥ 8.0, C ≥ 7.0, D ≥ 5.0, F — source-verified; the sbomqs docs
-page saying "A = 8.0-10.0" is stale. This repo: A ≥ 90 … D ≥ 60).
-**Dividing the 0-100 score by 10 is not an sbomqs-comparable number and the
-emitter never does it** — every feature score is recomputed from the
+A ≥ 9.0, B ≥ 8.0, C ≥ 7.0, D ≥ 5.0, F otherwise. This repo: A ≥ 90 … D ≥
+60). **Dividing the 0-100 score by 10 is not an sbomqs-comparable number and
+the emitter never does it** — every feature score is recomputed from the
 normalized SBOM with sbomqs' own formulas (the emitter does not read
 `QualityReport` at all).
 
@@ -137,31 +210,45 @@ reason in `description` — never silently dropped (that would inflate
 | sbomqs feature (category) | Computed from | Fidelity |
 |---|---|---|
 | `sbom_spec` (Structural) | `DocumentMetadata.format` (both normalized formats are sbomqs-supported specs) | exact |
-| `sbom_spec_version` (Structural) | `DocumentMetadata.spec_version` vs sbomqs' recognized versions (CDX 1.0-1.7; SPDX 2.1-2.3) | exact |
-| `sbom_file_format` (Structural) | Serialization detected from the raw document text vs sbomqs' recognized formats (CDX json,xml; SPDX json,yaml,rdf,tag-value) | approximate (detection heuristic); **ignored + reason** when the raw text is unavailable (library callers) |
+| `sbom_spec_version` (Structural) | `DocumentMetadata.spec_version` vs sbomqs' recognized versions (CDX 1.0-1.7; SPDX 2.1-2.3 and 3.0.1, so an SPDX 3 document declaring `3.0` scores 0) | exact |
+| `sbom_file_format` (Structural) | Serialization detected from the raw document text vs sbomqs' recognized formats (CDX json,xml; SPDX json,yaml,rdf,tag-value) | approximate (detection heuristic; sbomqs has no SPDX RDF/XML detection path and does not score such a document); **ignored + reason** when the raw text is unavailable (library callers) |
 | `sbom_parsable` (Structural) | Always 10 — this pipeline only scores documents it parsed | exact, with the documented asymmetry that sbomqs can also score an unparsable file 0 |
 | `comp_with_name` / `comp_with_version` (NTIA) | `Component.name` / `Component.version`, proportional `10·have/total` | exact |
-| `comp_with_uniq_ids` (NTIA) | Non-empty **local id** (`identifiers.format_id`: bom-ref / SPDXID) — `compWithUniqIDCheck` semantics, NOT purl/cpe (that is the BSI variant) | exact |
-| `comp_with_supplier` (NTIA) | `Component.supplier.name`; for SPDX also the author field (this model maps the SPDX originator there, mirroring sbomqs' originator fallback) | approximate |
-| `sbom_creation_timestamp` (NTIA) | `DocumentMetadata.created` (epoch sentinel = missing/unparseable) | approximate (a document genuinely claiming 1970-01-01 reads as missing) |
+| `comp_with_uniq_ids` (NTIA) | `identifiers.purl` OR `identifiers.cpe` — the v2.1.x `compWithUniqIDCheck`, the same predicate as `comp_with_any_vuln_lookup_id` | exact for well-formed values (sbomqs drops a purl or CPE its parsers reject) |
+| `comp_with_supplier` (NTIA) | `Component.supplier.name`; for SPDX also the author field (this model maps the SPDX 2.x originator there, mirroring sbomqs' originator fallback; the SPDX 3 `originatedBy` fallback is not modeled) | approximate |
+| `sbom_creation_timestamp` (NTIA) | `DocumentMetadata.created` (epoch sentinel = missing/unparseable) | approximate (a document genuinely claiming 1970-01-01 reads as missing; sbomqs leaves the description empty when the timestamp is missing) |
 | `sbom_authors` (NTIA) | `DocumentMetadata.creators` non-empty (sbomqs counts authors **plus** tools; `creators` carries both) | exact |
-| `sbom_dependencies` (NTIA) | Binary: ≥ 1 edge from the **primary component** (verbatim `sbomWithDepedenciesCheck` — not arbitrary edges) | exact |
-| `sbom_required_fields` (Semantic) | Blended doc+package formula, quirks preserved: `!docOK → 0.0`; `docOK && all pkgs → 10.0`; else `(10 + 10·have/total)/2` (5.0 for a docOK zero-component SBOM). Doc/pkg sub-checks approximated where the model keeps less than sbomqs reads (CDX `bomFormat`/dependency-refs, SPDX `downloadLocation`/verification code are not modeled) | approximate (fractional formula exact; sub-checks approximate) |
-| `comp_with_licenses` / `comp_with_checksums` (Semantic) | `Component.licenses` (NOASSERTION/NONE excluded, as sbomqs does) / `Component.hashes`, proportional | exact |
-| `comp_valid_licenses` (Quality) | Mean over ALL components of per-component ratios `(SPDX-listed ids / total license ids)·10`; license-less components contribute 0. v1 counts **only SPDX-list membership** (`l.Spdx()`) — `LicenseRef-*`/custom ids do NOT count | approximate (expression tokenization + `spdx` crate list vs sbomqs' embedded list; `WITH` exception ids dropped) |
-| `comp_with_primary_purpose` (Quality) | `ComponentType` display string vs sbomqs' per-spec purpose lists (CDX list lacks e.g. `machine-learning-model`) | approximate (typed model defaults missing purpose to Library → over-counts) |
-| `comp_with_deprecated_licenses` / `comp_with_restrictive_licenses` (Quality) | Inverted proportional `10·(total−affected)/total`; 0.0 + "no licenses found" when the SBOM has no licenses. Deprecated = SPDX-list flag; restrictive ≈ copyleft flag (sbomqs uses AboutCode "copyleft/restricted" categories) | approximate |
-| `comp_with_any_vuln_lookup_id` / `comp_with_multi_vuln_lookup_id` (Quality) | `identifiers.purl` OR/AND `identifiers.cpe` | exact |
-| `sbom_with_creator_and_version` (Quality) | Tool creators with a digit-bearing trailing token as version (the same heuristic sbomqs applies to SPDX tool strings); zero tools replicate sbomqs' `0/0 → NaN → 0.0` coercion | approximate |
+| `sbom_dependencies` (NTIA) | Binary: ≥ 1 edge from the **primary component** to a component sbomqs enumerates (verbatim `sbomWithDepedenciesCheck` and `GetDirectDependencies` — not arbitrary edges, not edges to SPDX files or CycloneDX services) | approximate (the edges follow this repo's SPDX relationship mapping: sbomqs counts every relationship from the primary but DESCRIBES and flips only DEPENDENCY_OF, CONTAINED_BY and DESCRIBED_BY; for SPDX 3 sbomqs takes the primary from a DESCRIBES relationship, this repo from `rootElement`) |
+| `sbom_required_fields` (Semantic) | Blended doc+package formula, quirks preserved: `!docOK → 0.0`; `docOK && all pkgs → 10.0`; else `(10 + 10·have/total)/2` (5.0 for a docOK zero-component SBOM). SPDX 3: docOK always, pkgOK = name and a non-NOASSERTION supplier. Doc/pkg sub-checks approximated where the model keeps less than sbomqs reads (CDX `bomFormat`/dependency-refs, SPDX 2.x `downloadLocation`/verification code are not modeled) | approximate (fractional formula exact; sub-checks approximate) |
+| `comp_with_licenses` / `comp_with_checksums` (Semantic) | The component's licenses as each sbomqs reader takes them (CycloneDX every license choice; SPDX 2.x the concluded license, else the declared one; SPDX 3 the concluded only), NOASSERTION/NONE excluded / `Component.hashes`, proportional | exact |
+| `comp_valid_licenses` (Quality) | Mean over ALL components of per-component ratios `(SPDX-listed terms / total terms)·10`; license-less components contribute 0. v1 counts **only SPDX-list membership** (`l.Spdx()`) — `LicenseRef-*`, custom strings, `X WITH Y` and `X+` terms do NOT count | approximate (license strings read like sbomqs, but against the `spdx` crate's SPDX list 3.29.0, 747 ids, not sbomqs' 733-id list: 13 recent ids count here and not there) |
+| `comp_with_primary_purpose` (Quality) | `ComponentType` display string vs sbomqs' per-spec purpose lists (CDX list lacks e.g. `machine-learning-model`); an SPDX 3 operating system never counts | approximate (typed model defaults missing purpose to Library → over-counts; the SPDX 2.3 spelling `OPERATING_SYSTEM` counts here, not in sbomqs) |
+| `comp_with_deprecated_licenses` / `comp_with_restrictive_licenses` (Quality) | Inverted proportional `10·(total−affected)/total`; 0.0 + "no licenses found" when the SBOM has no licenses. Deprecated = SPDX-list flag (the `spdx` crate's 32 deprecated ids are sbomqs' 32); restrictive = sbomqs v2.1.2's AboutCode classes (Copyleft, Copyleft Limited, Free Restricted, Non-Commercial) for SPDX-listed ids | approximate (AboutCode-only `LicenseRef-scancode-*` ids — 572 of them restrictive in sbomqs — are never restrictive or deprecated here) |
+| `comp_with_any_vuln_lookup_id` / `comp_with_multi_vuln_lookup_id` (Quality) | `identifiers.purl` OR/AND `identifiers.cpe` | exact for well-formed values (sbomqs drops a purl or CPE its parsers reject) |
+| `sbom_with_creator_and_version` (Quality) | Tool creators with a version: SPDX `name-version` split at the last hyphen, the version holding a digit (sbomqs `extractVersion`); CycloneDX `"name version"` (the parser's join of the two fields) split at the last space; zero tools replicate sbomqs' `0/0 → NaN → 0.0` coercion | exact for SPDX; approximate for CycloneDX (a version without a digit, or a nameless tool) |
 | `sbom_with_primary_component` (Quality) | `primary_component_id` present | exact |
-| `sbom_sharable` (Sharing) | Quirk-faithful 0.0: sbomqs v2.0.11's vendored SPDX list carries **no** `isFreeAnyUse` flags, so every SPDX-listed document license — including `CC0-1.0` — counts non-free and the check scores 0.0 for essentially every real document. Only AboutCode "Public Domain"-category ids absent from the SPDX list would score 10 there (not replicable without its data — disclosed in the description) | exact for practical inputs; **ignored + reason** when the raw text is unavailable |
+| `sbom_sharable` (Sharing) | 10 when the document declares at least one license and every license token is free for any use (sbomqs `sharableLicenseCheck`): the SPDX 2.x `dataLicense` (JSON, tag-value), the SPDX 3 SpdxDocument `dataLicense` value as written (an IRI is one custom license, as in sbomqs), or the CycloneDX `metadata.licenses` choices (JSON, XML) | exact for practical inputs; **ignored + reason** when the raw text is unavailable |
 
 Component enumeration parity: SPDX file/snippet components and CycloneDX
-service components are excluded from every per-component denominator and
-from `num_components`, because sbomqs enumerates SPDX *packages* and CDX
-components only. Side effect: an SPDX package whose purpose is
-SOURCE/ARCHIVE/FILE is also excluded (the typed model collapses those into
-`ComponentType::File`).
+`services[]` entries are excluded from every per-component denominator,
+from `num_components` and as dependency targets, because sbomqs enumerates
+SPDX *packages* and CDX components only. A CycloneDX `components[]` entry
+counts whatever its `type` (sbomqs `walkComponents`), and an SPDX package
+whose purpose is SOURCE/ARCHIVE/FILE is a package (typed `Other(..)`, not
+`File`).
+
+### Score changes in the re-baseline (2026-10-26)
+
+Of the 129 SBOM fixtures, 89 move (`avg_score` −0.87 to +0.43) and 13 change
+sbomqs grade. Most of it is `comp_with_uniq_ids` (82 fixtures, down by up to
+10.0 where components carry bom-refs but no purl or CPE — every CBOM, AI-BOM
+and crypto regression fixture). `sbom_sharable` rises to 10.0 on the six
+SPDX 2.x fixtures (`dataLicense: CC0-1.0`). The four SPDX 3 fixtures gain
+`sbom_spec_version` and the `sbom_required_fields` document half, and lose
+declared-only licenses and space-separated tool versions. The two
+`showcase/graph-*` fixtures count their two `type: service` components
+(`comp_with_primary_purpose` 10.0 → 6.0). `showcase/fleet-v3.cdx.json`
+(`docs/USER_JOURNEYS.md`) stays at 7.22.
 
 Other categories of this repo's 0-100 pipeline map onto sbomqs territory
 only loosely (completeness → NTIA + Semantic; identifiers → the Quality

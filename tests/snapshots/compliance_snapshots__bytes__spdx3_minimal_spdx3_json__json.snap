@@ -205,7 +205,7 @@ source: tests/compliance_snapshots.rs
           "affected": 1,
           "total": 3
         },
-        "requirement": "EO 14028 Sec 4(e): Component unique identification",
+        "requirement": "EO 14028 §4(e) practice: Component unique identification",
         "rule_id": "SBOM-EO14028-IDENTIFIER",
         "sarif_rule_id": "SBOM-EO14028-IDENTIFIER",
         "standard_refs": [
@@ -215,7 +215,7 @@ source: tests/compliance_snapshots.rs
             "help_uri": "https://www.federalregister.gov/d/2021-10460"
           }
         ],
-        "remediation": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information. SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.",
+        "remediation": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract. SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.",
         "help_uri": "https://www.federalregister.gov/d/2021-10460"
       },
       {
@@ -227,7 +227,7 @@ source: tests/compliance_snapshots.rs
           "affected": 1,
           "total": 3
         },
-        "requirement": "EO 14028 Sec 4(e): Component integrity verification",
+        "requirement": "EO 14028 §4(e) practice: Component integrity verification",
         "rule_id": "SBOM-EO14028-INTEGRITY",
         "sarif_rule_id": "SBOM-EO14028-INTEGRITY",
         "standard_refs": [
@@ -237,7 +237,7 @@ source: tests/compliance_snapshots.rs
             "help_uri": "https://www.federalregister.gov/d/2021-10460"
           }
         ],
-        "remediation": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information. SPDX 3.0: add verifiedUsing[] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.",
+        "remediation": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract. SPDX 3.0: add verifiedUsing[] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.",
         "help_uri": "https://www.federalregister.gov/d/2021-10460"
       },
       {
@@ -245,7 +245,7 @@ source: tests/compliance_snapshots.rs
         "category": "SecurityInfo",
         "message": "No security contact or vulnerability disclosure reference found",
         "element": null,
-        "requirement": "EO 14028 Sec 4(g): Vulnerability disclosure process",
+        "requirement": "EO 14028 §4(e)(viii) practice: Vulnerability disclosure program",
         "rule_id": "SBOM-EO14028-DISCLOSURE",
         "sarif_rule_id": "SBOM-EO14028-DISCLOSURE",
         "standard_refs": [
@@ -255,7 +255,7 @@ source: tests/compliance_snapshots.rs
             "help_uri": "https://www.federalregister.gov/d/2021-10460"
           }
         ],
-        "remediation": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information. SPDX 3.0: add an externalRef[] entry with externalRefType securityAdvisory to the root package.",
+        "remediation": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract. SPDX 3.0: add an externalRef[] entry with externalRefType securityAdvisory to the root package.",
         "help_uri": "https://www.federalregister.gov/d/2021-10460"
       },
       {
@@ -267,7 +267,7 @@ source: tests/compliance_snapshots.rs
           "affected": 2,
           "total": 3
         },
-        "requirement": "EO 14028 Sec 4(e): Supplier identification",
+        "requirement": "EO 14028 §4(e) practice: Supplier identification",
         "rule_id": "SBOM-EO14028-SUPPLIER",
         "sarif_rule_id": "SBOM-EO14028-SUPPLIER",
         "standard_refs": [
@@ -277,7 +277,7 @@ source: tests/compliance_snapshots.rs
             "help_uri": "https://www.federalregister.gov/d/2021-10460"
           }
         ],
-        "remediation": "Follow EO 14028 Section 4(e) requirements: use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), auto-generate the SBOM, include unique identifiers, versions, hashes, dependencies, and supplier information. SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.",
+        "remediation": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract. SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.",
         "help_uri": "https://www.federalregister.gov/d/2021-10460"
       }
     ],

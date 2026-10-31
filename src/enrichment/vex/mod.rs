@@ -66,6 +66,9 @@ impl VexEnricher {
                 let result = parse_csaf(&content)?;
                 documents_loaded += 1;
                 statements_parsed += result.statements_parsed;
+                if let Some(warning) = &result.version_warning {
+                    tracing::warn!(file = %path.display(), "{warning}");
+                }
                 // CSAF has no document-wide statements: every product_status
                 // entry is product-scoped. Entries whose product_id did not
                 // resolve to a PURL are dropped in parse_csaf (never promoted

@@ -35,6 +35,7 @@ pub enum StandardSelector {
     #[value(name = "ssdf", alias = "nist-ssdf", alias = "nist_ssdf")]
     Ssdf,
     /// Executive Order 14028 Section 4 — software supply chain security
+    /// practice (no federal mandate: OMB M-26-05 rescinded M-22-18)
     #[value(name = "eo14028", alias = "eo-14028", alias = "eo_14028")]
     Eo14028,
     /// NSA CNSA 2.0 — Commercial National Security Algorithm Suite 2.0

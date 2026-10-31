@@ -413,8 +413,11 @@ fn assert_numbering(
 /// by an AFFECTS relationship and scores it by a CVSS assessment: one entry
 /// that carries the score, so SBOM-CRA-VULN-METADATA does not report it. It
 /// attaches CVE-2025-0002 to crypto-lib by an AFFECTS relationship and
-/// assesses it `not_affected`: the two contradict each other and stay two
-/// entries, `CVE-2025-0002` and `CVE-2025-0002#2`. Made an `affected`
+/// assesses it `not_affected` with a justification: the two contradict each
+/// other and stay two entries, and the justified `not_affected` one needs
+/// no severity (CRA FAQ v1.4, 4.3.1), so only the AFFECTS entry is reported
+/// and nothing is numbered. Without the justification both entries are
+/// reported, `CVE-2025-0002` and `CVE-2025-0002#2`. Made an `affected`
 /// assessment, it agrees with the relationship: one entry, and nothing in
 /// the document is numbered at any level. The CycloneDX fixture that lists
 /// four vulnerabilities twice for one component keeps its numbering.
@@ -430,6 +433,25 @@ fn only_entries_the_sbom_repeats_are_numbered() {
     assert_numbering(
         "security-profile",
         &as_is,
+        &[],
+        &[(CRYPTO_LIB, "CVE-2025-0002")],
+    );
+
+    let mut unjustified: serde_json::Value =
+        serde_json::from_str(&fixture).expect("fixture is JSON");
+    unjustified["element"]
+        .as_array_mut()
+        .expect("element array")
+        .iter_mut()
+        .find(|e| e["spdxId"] == "urn:spdx:assessment:vex-vuln2")
+        .expect("the crypto-lib VEX assessment")
+        .as_object_mut()
+        .expect("assessment object")
+        .remove("justification");
+    let unjustified = parse_sbom_str(&unjustified.to_string()).expect("variant parses");
+    assert_numbering(
+        "security-profile, crypto-lib assessed not_affected without a justification",
+        &unjustified,
         &["SBOM-CRA-VULN-METADATA CVE-2025-0002#2"],
         &[
             (CRYPTO_LIB, "CVE-2025-0002"),
