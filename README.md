@@ -1156,6 +1156,10 @@ cargo bench
   keys, filtered to the current context
 - [Changelog](CHANGELOG.md) — user-visible changes per release, with
   breaking changes called out first
+- [Migrating to 0.4](docs/MIGRATING-0.4.md) — every breaking change in
+  v0.4.0, who it affects and what to do
+- [GitHub code scanning](docs/github-code-scanning.md) — uploading SARIF
+  from a workflow, categories, limits and troubleshooting
 - [Releases](https://github.com/sbom-tool/sbom-tools/releases)
 
 ## Contributing
