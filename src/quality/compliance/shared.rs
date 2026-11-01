@@ -3,7 +3,7 @@
 use super::{Violation, ViolationCategory, ViolationSeverity};
 use crate::model::{
     Component, ComponentType, CreatorType, ExternalRefType, ExternalReference, Hash, HashAlgorithm,
-    NormalizedSbom, Organization, VexState, VulnerabilityRef,
+    NormalizedSbom, Organization, VexState, VulnerabilityRef, is_known_contact,
 };
 // The placeholder and sentinel tests every check reads live in the model,
 // which merges a component's entries with the same classification.
@@ -366,61 +366,13 @@ pub(crate) fn license_state(comp: &Component) -> ValueState {
         .unwrap_or(ValueState::Missing)
 }
 
-/// The domains RFC 2606 §3 reserves for documentation. Generator templates
-/// and the format specifications' examples use them, so a contact at one of
-/// them is a template value nobody filled in.
-const DOCUMENTATION_DOMAINS: [&str; 3] = ["example.com", "example.net", "example.org"];
-
-/// The host an email address or URL points at, lowercased: the domain after
-/// the last `@` of an address, or the host of a `scheme://` URL (without
-/// its user, port or path). For other text, the host characters it starts
-/// with.
-fn address_host(value: &str) -> String {
-    let value = value.trim();
-    let after_scheme = value.find("://").map_or(value, |i| &value[i + 3..]);
-    let authority = after_scheme
-        .split(['/', '?', '#'])
-        .next()
-        .unwrap_or(after_scheme);
-    let host = authority.rsplit('@').next().unwrap_or(authority);
-    host.chars()
-        .take_while(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-'))
-        .collect::<String>()
-        .trim_end_matches('.')
-        .to_ascii_lowercase()
-}
-
-/// Whether `value`, an email address or URL, points at one of the
-/// documentation domains (`example.com`, `example.net`, `example.org`) or a
-/// host under one, such as `psirt.example.com`.
-pub(crate) fn is_documentation_address(value: &str) -> bool {
-    let host = address_host(value);
-    DOCUMENTATION_DOMAINS.into_iter().any(|domain| {
-        host == domain
-            || host
-                .strip_suffix(domain)
-                .is_some_and(|sub| sub.ends_with('.'))
-    })
-}
-
-/// Whether `value` is a contact that reaches someone: an email address, URL
-/// or other text naming where to report a vulnerability or read the
-/// disclosure policy. A `mailto:` prefix is ignored. The rest must be a
-/// known value (see [`known_value`]: not empty, not a sentinel such as
-/// `NOASSERTION` or `unknown`, not a placeholder such as `n/a` or `TBD`) and
-/// no address at a documentation domain (see [`is_documentation_address`]).
-/// Every check that reads a vulnerability contact asks this, in the SBOM and
-/// in the CRA sidecar.
+/// Whether `value` is a contact that reaches someone: present, known and no
+/// address at a documentation domain such as `example.com` (see
+/// [`crate::model::is_known_contact`], beside the placeholder list). Every
+/// check that reads a vulnerability contact asks this, in the SBOM and in
+/// the CRA sidecar.
 pub(crate) fn known_contact(value: Option<&str>) -> bool {
-    let Some(value) = value else {
-        return false;
-    };
-    let value = value.trim();
-    let rest = match value.get(..7) {
-        Some(scheme) if scheme.eq_ignore_ascii_case("mailto:") => &value[7..],
-        _ => value,
-    };
-    known_value(Some(rest)).is_some() && !is_documentation_address(rest)
+    value.is_some_and(is_known_contact)
 }
 
 /// Whether `r` is a contact reference whose locator reaches someone: a
@@ -1019,43 +971,13 @@ mod tests {
         }
     }
 
+    /// The values themselves are judged beside the placeholder list
+    /// (`model::known`); this pins that the checks' helpers ask it.
     #[test]
     fn a_contact_must_reach_someone() {
-        for reachable in [
-            "psirt@acme.example",
-            "mailto:psirt@acme.example",
-            "https://acme.example/security",
-            "Security Team <security@acme.example>",
-            "+49 30 1234567",
-            // Look-alikes of the documentation domains are real domains.
-            "security@notexample.com",
-            "https://example.com.acme.example/security",
-            "security@example.com.au",
-            "https://example.community/security",
-        ] {
-            assert!(known_contact(Some(reachable)), "{reachable:?}");
-        }
-        for nobody in [
-            "",
-            " ",
-            "NOASSERTION",
-            "unknown",
-            "NONE",
-            "n/a",
-            "TBD",
-            "mailto:",
-            "MAILTO:n/a",
-            "security@example.com",
-            "mailto:Security@EXAMPLE.COM",
-            "https://example.org/security",
-            "https://psirt.example.net:8443/report?id=1",
-            "https://user@example.com/",
-            "Security Team <security@example.com>",
-            "example.com/security",
-            "https://example.com./security",
-        ] {
-            assert!(!known_contact(Some(nobody)), "{nobody:?}");
-        }
+        assert!(known_contact(Some("psirt@acme.example")));
+        assert!(!known_contact(Some("NOASSERTION")));
+        assert!(!known_contact(Some("security@example.com")));
         assert!(!known_contact(None));
         let reference = |ref_type, url: &str| ExternalReference {
             ref_type,
