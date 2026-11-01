@@ -134,6 +134,11 @@ warning on stderr: `--standard cra,cra-phase2` names CRA Phase 2 twice
 (`cra-phase2` is an alias of `cra`), and checking it twice would report
 every finding twice, in SARIF as a second alert.
 
+The standards of a run are checked in parallel, all at one instant (the
+`as_of` above), and reported in `--standard` order. The number of threads
+changes no output byte. `RAYON_NUM_THREADS` sets it: `RAYON_NUM_THREADS=1`
+checks one standard at a time.
+
 ## Score
 
 `score` sums a result up on a 0–100 scale. A compliant result (no error)
@@ -894,7 +899,9 @@ than 25,000 results, and shows only the 5,000 most severe. A run keeps at most
 notes and passes while room is left, the first in report order within a
 level, and the kept results stay in report order. The run then carries an
 `invocations[0]` notification saying how many results were omitted and to use
-`-o json` for the full list, and the same warning goes to stderr.
+`-o json` for the full list, and the same warning goes to stderr. Only the
+results a run keeps are built, so a capped run of a large SBOM spends little
+time on the results it leaves out.
 
 **`diff`.** A diff reports into the new SBOM only: a code-scanning alert
 belongs to a file in the repository, and the old SBOM of a diff is usually an
