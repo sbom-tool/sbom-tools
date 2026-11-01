@@ -8,7 +8,7 @@
 
 use super::ssdf::{cdxa_note, requirement_matches_id};
 use super::*;
-use crate::model::{AttestationRuleFamily, DefinedRequirement};
+use crate::model::{AttestationRuleFamily, Component, DefinedRequirement};
 
 /// Which attested requirements evidence automated, provenance-tracked SBOM
 /// generation (the EO 14028 §4(e) autogeneration proxy). Accepts the SSDF
@@ -264,13 +264,29 @@ impl ComplianceChecker {
             });
         }
 
-        // Sec 4(e) — Cryptographic hashes for integrity
-        let without_hash = packages.iter().filter(|c| c.hashes.is_empty()).count();
-        if without_hash > 0 {
+        // Sec 4(e) — Cryptographic hashes for integrity. Only plausible
+        // digests count (see `plausible_digest`); the message names the
+        // components whose present hashes did not.
+        let without_hash: Vec<&Component> = packages
+            .iter()
+            .copied()
+            .filter(|c| {
+                !c.hashes
+                    .iter()
+                    .any(|h| plausible_digest(&h.algorithm, &h.value))
+            })
+            .collect();
+        if !without_hash.is_empty() {
+            let mut message = format!(
+                "{}/{total} components missing cryptographic hashes",
+                without_hash.len()
+            );
+            message.push_str(&invalid_digest_note(without_hash.iter().copied()));
+            let without_hash = without_hash.len();
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::IntegrityInfo,
-                message: format!("{without_hash}/{total} components missing cryptographic hashes"),
+                message,
                 element: None,
                 requirement: "EO 14028 §4(e) practice: Component integrity verification"
                     .to_string(),
@@ -287,17 +303,15 @@ impl ComplianceChecker {
         }
 
         // Sec 4(e)(viii) — Vulnerability disclosure program. Component-level refs count
-        // only on the primary/root components — a dependency's upstream
-        // advisories URL is not the vendor's disclosure process.
+        // only on the described product components — a dependency's
+        // upstream advisories URL is not the vendor's disclosure process.
         let has_security_ref = sbom.document.security_contact.is_some()
             || sbom.document.vulnerability_disclosure_url.is_some()
-            || manufacturer_scope_components(sbom).iter().any(|comp| {
-                comp.external_refs.iter().any(|r| {
-                    matches!(
-                        r.ref_type,
-                        ExternalRefType::SecurityContact | ExternalRefType::Advisories
-                    )
-                })
+            || manufacturer_reference(sbom, |r| {
+                matches!(
+                    r.ref_type,
+                    ExternalRefType::SecurityContact | ExternalRefType::Advisories
+                )
             });
         if !has_security_ref {
             violations.push(Violation {

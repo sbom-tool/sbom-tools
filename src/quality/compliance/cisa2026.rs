@@ -74,12 +74,6 @@ fn tool_name_carries_version(name: &str) -> bool {
     last_seg.chars().any(|c| c.is_ascii_digit())
 }
 
-/// Whether a hash value is ASCII-hexadecimal encoded (the Component Hash
-/// Value element's required encoding).
-fn is_ascii_hex(value: &str) -> bool {
-    !value.is_empty() && value.chars().all(|c| c.is_ascii_hexdigit())
-}
-
 /// Why a hash algorithm falls short of the Component Hash Algorithm element,
 /// or `None` when it is acceptable. "The algorithm should be approved by a
 /// relevant authority, such as NIST": MD5 was never FIPS-approved; SHA-1 is
@@ -515,15 +509,19 @@ impl ComplianceChecker {
             // registry-fetched hashes to the same field post-parse, and
             // those are not part of the document under assessment (same
             // provenance posture as the BSI §5.2.2 hash check). The value
-            // must be ASCII-hexadecimal per the element; an explicit unknown
-            // marker satisfies the escape hatch for authors without access
-            // to the executable artifact.
+            // must be ASCII-hexadecimal per the element, and as long as the
+            // algorithm's digest (the shared `plausible_digest` check every
+            // hash rule uses); an explicit unknown marker satisfies the
+            // escape hatch for authors without access to the executable
+            // artifact.
             let authored: Vec<_> = comp
                 .hashes
                 .iter()
                 .filter(|h| h.provenance == HashProvenance::Authored)
                 .collect();
-            let has_hex_value = authored.iter().any(|h| is_ascii_hex(h.value.trim()));
+            let has_hex_value = authored
+                .iter()
+                .any(|h| plausible_digest(&h.algorithm, &h.value));
             let hash_marked_unknown = authored.iter().any(|h| is_unknown_marker(h.value.trim()));
             if authored.is_empty() {
                 violations.push(Violation {
@@ -550,8 +548,9 @@ impl ComplianceChecker {
                     category: ViolationCategory::IntegrityInfo,
                     message: format!(
                         "[CISA 2026] Component '{}' declares hash value(s) that are not \
-                         ASCII-hexadecimal encoded as the element requires",
-                        comp.name
+                         ASCII-hexadecimal digests of their algorithm, as the element requires: {}",
+                        comp.name,
+                        digest_problems(authored.iter().copied()).join("; ")
                     ),
                     element: Some(comp.name.clone()),
                     requirement: "CISA 2026 Minimum Elements: Component Hash Value".to_string(),
@@ -566,8 +565,8 @@ impl ComplianceChecker {
                 // Hash-value evidence is sound — assess the algorithms (see
                 // `hash_algorithm_shortfall`). "Should be approved by a
                 // relevant authority" is a 'should', hence Warning. One
-                // strong hash (an acceptable algorithm with an ASCII-hex
-                // value) satisfies the element: the cyclonedx-maven-plugin,
+                // strong hash (an acceptable algorithm with a plausible
+                // digest) satisfies the element: the cyclonedx-maven-plugin,
                 // for one, emits MD5 and SHA-1 beside SHA-256 and SHA-512 by
                 // default, and weak digests next to a strong one take nothing
                 // away. Components with only weak hashes still warn.
@@ -576,7 +575,8 @@ impl ComplianceChecker {
                     .filter_map(|h| hash_algorithm_shortfall(&h.algorithm))
                     .collect();
                 let has_strong_hash = authored.iter().any(|h| {
-                    hash_algorithm_shortfall(&h.algorithm).is_none() && is_ascii_hex(h.value.trim())
+                    hash_algorithm_shortfall(&h.algorithm).is_none()
+                        && plausible_digest(&h.algorithm, &h.value)
                 });
                 if !offending.is_empty() && !has_strong_hash {
                     violations.push(Violation {

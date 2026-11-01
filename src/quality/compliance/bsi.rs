@@ -228,21 +228,25 @@ impl ComplianceChecker {
             // clause names the algorithm — "as SHA-512" — so SHA-256 (or any
             // other algorithm) alone does not satisfy the field. Only
             // author-attested hashes count: enrichment-fetched hashes are
-            // not part of the document under assessment.
-            let mut has_authored_hash = false;
-            let mut has_sha512 = false;
-            for h in &comp.hashes {
-                if h.provenance == HashProvenance::Authored {
-                    has_authored_hash = true;
-                    if h.algorithm == HashAlgorithm::Sha512 {
-                        has_sha512 = true;
-                    }
-                }
-            }
-            if !has_authored_hash {
+            // not part of the document under assessment. The SHA-512 must be
+            // a plausible digest (128 hex characters, see
+            // `plausible_digest`): an empty or garbage value is a present
+            // field that fails, named with the reason, not an omission.
+            let authored: Vec<_> = comp
+                .hashes
+                .iter()
+                .filter(|h| h.provenance == HashProvenance::Authored)
+                .collect();
+            let has_sha512 = authored.iter().any(|h| {
+                h.algorithm == HashAlgorithm::Sha512 && plausible_digest(&h.algorithm, &h.value)
+            });
+            if authored.is_empty() {
                 without_hash += 1;
             } else if !has_sha512 {
-                sha512_missing.push(comp.name.clone());
+                sha512_missing.push(name_with_digest_problems(
+                    &comp.name,
+                    authored.iter().copied(),
+                ));
             }
 
             // Other unique identifiers (§5.2.4, ADDITIONAL tier).
@@ -386,8 +390,8 @@ impl ComplianceChecker {
                 category: ViolationCategory::IntegrityInfo,
                 message: format!(
                     "[BSI TR-03183-2 §5.2.2] {}/{package_total} component(s) carry hashes but none is \
-                     SHA-512 (the TR names the algorithm; SHA-256 or others alone do not \
-                     satisfy the required field): {}",
+                     a valid SHA-512 digest (the TR names the algorithm; SHA-256 or others alone \
+                     do not satisfy the required field): {}",
                     sha512_missing.len(),
                     truncate_list(&sha512_missing, 5)
                 ),

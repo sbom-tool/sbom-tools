@@ -290,11 +290,25 @@ impl ComplianceChecker {
         // PS.2 — Build integrity: components should have hashes. Package
         // practices (hash, identifier, supplier) judge package-scoped
         // components only — crypto assets, files and services carry none.
+        // Only plausible digests count (see `plausible_digest`).
         let packages: Vec<_> = package_components(sbom).collect();
         let total = packages.len();
-        let without_hash = packages.iter().filter(|c| c.hashes.is_empty()).count();
+        let without_hash_components: Vec<_> = packages
+            .iter()
+            .copied()
+            .filter(|c| {
+                !c.hashes
+                    .iter()
+                    .any(|h| plausible_digest(&h.algorithm, &h.value))
+            })
+            .collect();
+        let without_hash = without_hash_components.len();
         if without_hash > 0 {
             let pct = (without_hash * 100) / total.max(1);
+            let mut message = format!(
+                "{without_hash}/{total} components ({pct}%) missing cryptographic hashes for build integrity"
+            );
+            message.push_str(&invalid_digest_note(without_hash_components));
             violations.push(Violation {
                 severity: if pct > 50 {
                     ViolationSeverity::Error
@@ -302,9 +316,7 @@ impl ComplianceChecker {
                     ViolationSeverity::Warning
                 },
                 category: ViolationCategory::IntegrityInfo,
-                message: format!(
-                    "{without_hash}/{total} components ({pct}%) missing cryptographic hashes for build integrity"
-                ),
+                message,
                 element: None,
                 requirement: "NIST SSDF PS.2: Build integrity — component hashes".to_string(),
                 rule_id: "SBOM-SSDF-PS2",

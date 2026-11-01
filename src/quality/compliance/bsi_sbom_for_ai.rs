@@ -316,13 +316,19 @@ impl ComplianceChecker {
             }
 
             // Weight hash present (AI-010 logic: any hash on the component).
-            if c.hashes.is_empty() {
-                without_hash.push(c.name.clone());
-            } else if !c.hashes.iter().any(|h| nist_approved_hash(&h.algorithm)) {
+            // Only plausible digests count (see `plausible_digest`).
+            let plausible: Vec<_> = c
+                .hashes
+                .iter()
+                .filter(|h| plausible_digest(&h.algorithm, &h.value))
+                .collect();
+            if plausible.is_empty() {
+                without_hash.push(*c);
+            } else if !plausible.iter().any(|h| nist_approved_hash(&h.algorithm)) {
                 // Hash present but none use a NIST-approved algorithm
                 // (NIST-approved SHA-256+ — intentionally NOT the TR-03183-2 §5.2.2
                 // SHA-512 rule; the AI guidance asks for NIST-approved algorithms).
-                weak_hash.push(c.name.clone());
+                weak_hash.push(*c);
             }
 
             // Model card (AI-001): a modelCard-derived URL, or a spec-valid
@@ -384,20 +390,18 @@ impl ComplianceChecker {
             "BSI/G7 SBOM-for-AI — Models / Model identifier",
             "SBOM-BSIAI-MODEL-IDENTIFIER",
         );
-        push_model_finding(
+        push_hash_finding(
             violations,
             ViolationSeverity::Error,
-            ViolationCategory::IntegrityInfo,
             &without_hash,
             ml_components.len(),
             "carry no model-weight hash value",
             "BSI/G7 SBOM-for-AI — Models / Model hash value",
             "SBOM-BSIAI-MODEL-HASH",
         );
-        push_model_finding(
+        push_hash_finding(
             violations,
             ViolationSeverity::Error,
-            ViolationCategory::IntegrityInfo,
             &weak_hash,
             ml_components.len(),
             "use no NIST-approved hash algorithm (SHA-256+) for their weights",
@@ -480,8 +484,12 @@ impl ComplianceChecker {
             if !c.identifiers.has_cra_identifier() {
                 without_identifier.push(c.name.clone());
             }
-            if c.hashes.is_empty() {
-                without_hash.push(c.name.clone());
+            if !c
+                .hashes
+                .iter()
+                .any(|h| plausible_digest(&h.algorithm, &h.value))
+            {
+                without_hash.push(*c);
             }
             if !has_known_license(c) {
                 without_license.push(c.name.clone());
@@ -531,10 +539,9 @@ impl ComplianceChecker {
         );
 
         // SHOULD elements (Warning).
-        push_model_finding(
+        push_hash_finding(
             violations,
             ViolationSeverity::Warning,
-            ViolationCategory::IntegrityInfo,
             &without_hash,
             dataset_components.len(),
             "carry no hash value",
@@ -726,6 +733,38 @@ fn push_model_finding(
     });
 }
 
+/// [`push_model_finding`] for a hash element: the components are named in
+/// the message, which also says why their present hashes did not count
+/// (see `invalid_digest_note`).
+fn push_hash_finding(
+    violations: &mut Vec<Violation>,
+    severity: ViolationSeverity,
+    failing: &[&crate::model::Component],
+    total: usize,
+    verb: &str,
+    requirement: &str,
+    rule_id: &'static str,
+) {
+    let names: Vec<String> = failing.iter().map(|c| c.name.clone()).collect();
+    let before = violations.len();
+    push_model_finding(
+        violations,
+        severity,
+        ViolationCategory::IntegrityInfo,
+        &names,
+        total,
+        verb,
+        requirement,
+        rule_id,
+    );
+    if violations.len() > before
+        && let Some(v) = violations.last_mut()
+    {
+        v.message
+            .push_str(&invalid_digest_note(failing.iter().copied()));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -901,8 +940,10 @@ mod tests {
         let mut c = full_ml_component("model-a");
         // Replace the SHA-256 weight hash with a weak MD5 one.
         c.hashes.clear();
-        c.hashes
-            .push(Hash::new(HashAlgorithm::Md5, "abc".to_string()));
+        c.hashes.push(Hash::new(
+            HashAlgorithm::Md5,
+            "d41d8cd98f00b204e9800998ecf8427e".to_string(),
+        ));
         add(&mut sbom, c);
 
         let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
@@ -913,6 +954,40 @@ mod tests {
         );
         // A hash IS present, so the missing-hash element must not fire.
         assert!(!ids.contains(&"SBOM-BSIAI-MODEL-HASH"));
+    }
+
+    /// Only a plausible digest is a weight hash: an MD5 value that is not
+    /// 32 hex characters counts as no hash at all, and the finding says why.
+    #[test]
+    fn implausible_weight_digest_is_no_weight_hash() {
+        let mut sbom = NormalizedSbom::default();
+        let mut c = full_ml_component("model-a");
+        c.hashes.clear();
+        c.hashes
+            .push(Hash::new(HashAlgorithm::Md5, "abc".to_string()));
+        add(&mut sbom, c);
+
+        let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
+        let missing = result
+            .violations
+            .iter()
+            .find(|v| v.rule_id == "SBOM-BSIAI-MODEL-HASH")
+            .expect("an implausible digest is no weight hash");
+        assert!(
+            missing.message.ends_with(
+                "; hashes that do not count: model-a (MD5 digest is not 32 hex characters)"
+            ),
+            "the finding names why the present hash did not count: {}",
+            missing.message
+        );
+        assert_eq!(missing.element.as_deref(), Some("model-a"));
+        assert!(
+            !result
+                .violations
+                .iter()
+                .any(|v| v.rule_id == "SBOM-BSIAI-MODEL-HASH-ALGO"),
+            "no counted hash, so no algorithm to judge"
+        );
     }
 
     #[test]

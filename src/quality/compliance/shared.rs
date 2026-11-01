@@ -1,7 +1,10 @@
 //! Small shared helpers reused across the compliance checkers.
 
 use super::{Violation, ViolationCategory, ViolationSeverity};
-use crate::model::{Component, ComponentType, NormalizedSbom};
+use crate::model::{
+    Component, ComponentType, CreatorType, ExternalReference, Hash, HashAlgorithm, NormalizedSbom,
+    Organization,
+};
 
 /// The components package rules apply to: everything except files,
 /// snippets, cryptographic assets and services (see
@@ -114,37 +117,74 @@ pub(crate) fn future_timestamp_violation(
 }
 
 /// Components whose external references can carry manufacturer-level
-/// evidence (security contact, CVD policy, disclosure process): the primary
-/// component when one is identified, otherwise the root components (no
-/// incoming dependency edge).
+/// evidence (security contact, CVD policy, disclosure process, risk
+/// assessment, certificates and attestations): the components the document
+/// describes — the primary component and the other described roots (see
+/// [`NormalizedSbom::described_components`]; an SPDX document can describe
+/// several sibling products).
 ///
 /// SBOM generators routinely copy upstream registry metadata — a third-party
-/// dependency's own GitHub advisories or support URL — onto dependency
-/// components; such references say nothing about the *manufacturer's*
-/// obligations and must not satisfy them.
+/// dependency's own GitHub advisories, support URL or certification — onto
+/// dependency components; such references say nothing about the
+/// *manufacturer's* obligations and must not satisfy them, wherever the
+/// dependency sits in the graph (a sparse `dependencies` section leaves
+/// third-party libraries with no incoming edge).
+///
+/// Only a document that names no product falls back to the roots of its
+/// dependency graph (no incoming edge), or, when the graph is fully cyclic,
+/// to every component, rather than making the evidence unsatisfiable.
 pub(crate) fn manufacturer_scope_components(sbom: &NormalizedSbom) -> Vec<&Component> {
-    let mut incoming = std::collections::HashSet::new();
-    for edge in &sbom.edges {
-        incoming.insert(&edge.to);
+    let described = sbom.described_components();
+    if !described.is_empty() {
+        return described;
     }
-    let primary = sbom.primary_component_id.as_ref();
-    // The primary component plus every root (no incoming edge): an SPDX
-    // document can DESCRIBE several sibling products, and each is
-    // manufacturer-scoped evidence — not just the first one the parser
-    // happened to promote to primary.
-    let scope: Vec<&Component> = sbom
+    let incoming: std::collections::HashSet<_> = sbom.edges.iter().map(|e| &e.to).collect();
+    let roots: Vec<&Component> = sbom
         .components
         .iter()
-        .filter(|(id, _)| primary.is_some_and(|p| p == *id) || !incoming.contains(id))
+        .filter(|(id, _)| !incoming.contains(id))
         .map(|(_, c)| c)
         .collect();
-    if scope.is_empty() {
+    if roots.is_empty() {
         // Fully cyclic graph with no identified primary: no component is
         // provably a dependency-only node, so fall back to scanning all
         // components rather than making manufacturer evidence unsatisfiable.
         return sbom.components.values().collect();
     }
-    scope
+    roots
+}
+
+/// Whether any manufacturer-scope component (see
+/// [`manufacturer_scope_components`]) carries an external reference that
+/// `accepts`.
+pub(crate) fn manufacturer_reference(
+    sbom: &NormalizedSbom,
+    accepts: impl Fn(&ExternalReference) -> bool,
+) -> bool {
+    manufacturer_scope_components(sbom)
+        .iter()
+        .any(|c| c.external_refs.iter().any(&accepts))
+}
+
+/// Whether the SBOM names the product's manufacturer: an organization
+/// creator that is identified (see [`creator_identified`]), the supplier of
+/// the described product (CycloneDX `metadata.supplier`), or a known
+/// manufacturer or supplier on a component the document describes
+/// (CycloneDX `metadata.component.manufacturer` or `.supplier`, the SPDX
+/// described package's supplier). CycloneDX 1.6 moved the manufacturer of
+/// the product from `metadata.manufacture` to
+/// `metadata.component.manufacturer`. Placeholders such as `NOASSERTION` or
+/// `TBD` name nobody. The CRA sidecar is checked by the callers.
+pub(crate) fn manufacturer_identified(sbom: &NormalizedSbom) -> bool {
+    sbom.document
+        .creators
+        .iter()
+        .any(|c| c.creator_type == CreatorType::Organization && creator_identified(c))
+        || has_known_organization(sbom.document.supplier.as_ref())
+        || sbom.described_components().iter().any(|c| {
+            has_known_organization(c.manufacturer.as_ref())
+                || has_known_organization(c.supplier.as_ref())
+        })
 }
 
 /// Whether a component's name is real. Empty/whitespace and the SPDX
@@ -261,6 +301,12 @@ pub(crate) fn has_known_value(value: &Option<String>) -> bool {
     known_value(value.as_deref()).is_some()
 }
 
+/// Whether an organization is present and its name is not a placeholder
+/// sentinel.
+pub(crate) fn has_known_organization(org: Option<&Organization>) -> bool {
+    org.is_some_and(|o| known_value(Some(o.name.as_str())).is_some())
+}
+
 /// Whether a component carries real producer attribution: a supplier or
 /// manufacturer organization, or an author, whose name is not a placeholder
 /// sentinel. CycloneDX 1.6+ names the creating organization `manufacturer`
@@ -268,11 +314,9 @@ pub(crate) fn has_known_value(value: &Option<String>) -> bool {
 /// "the entity that creates, defines, and identifies components" as well as
 /// a supplier does.
 pub(crate) fn has_known_producer(comp: &crate::model::Component) -> bool {
-    let known_org = |org: &Option<crate::model::Organization>| {
-        org.as_ref()
-            .is_some_and(|o| known_value(Some(o.name.as_str())).is_some())
-    };
-    known_org(&comp.supplier) || known_org(&comp.manufacturer) || has_known_value(&comp.author)
+    has_known_organization(comp.supplier.as_ref())
+        || has_known_organization(comp.manufacturer.as_ref())
+        || has_known_value(&comp.author)
 }
 
 /// Whether the component carries at least one real license expression,
@@ -282,6 +326,122 @@ pub(crate) fn has_known_license(comp: &Component) -> bool {
         .all_licenses()
         .iter()
         .any(|l| known_value(Some(l.expression.as_str())).is_some())
+}
+
+/// How many hex digits a digest of `algorithm` has, when the algorithm fixes
+/// its output length. `None` for an extendable-output or unknown algorithm
+/// (BLAKE3, MD6, …). Algorithms the model has no variant for are matched by
+/// name, as the parsers keep it (SPDX `SHA224`, SPDX 3 `sha3_224`, …).
+fn digest_hex_digits(algorithm: &HashAlgorithm) -> Option<usize> {
+    match algorithm {
+        HashAlgorithm::Md5 => Some(32),
+        HashAlgorithm::Sha1 => Some(40),
+        HashAlgorithm::Sha256
+        | HashAlgorithm::Sha3_256
+        | HashAlgorithm::Blake2b256
+        | HashAlgorithm::Streebog256 => Some(64),
+        HashAlgorithm::Sha384 | HashAlgorithm::Sha3_384 | HashAlgorithm::Blake2b384 => Some(96),
+        HashAlgorithm::Sha512
+        | HashAlgorithm::Sha3_512
+        | HashAlgorithm::Blake2b512
+        | HashAlgorithm::Streebog512 => Some(128),
+        HashAlgorithm::Blake3 => None,
+        HashAlgorithm::Other(name) => {
+            let name: String = name
+                .chars()
+                .filter(char::is_ascii_alphanumeric)
+                .map(|c| c.to_ascii_uppercase())
+                .collect();
+            match name.as_str() {
+                "SHA224" | "SHA3224" => Some(56),
+                "MD2" | "MD4" => Some(32),
+                "ADLER32" => Some(8),
+                _ => None,
+            }
+        }
+    }
+}
+
+/// Why `value` is not a plausible digest of `algorithm`, or `None` when it
+/// is (see [`plausible_digest`]), e.g. "SHA-512 digest is not 128 hex
+/// characters".
+pub(crate) fn digest_problem(algorithm: &HashAlgorithm, value: &str) -> Option<String> {
+    let value = value.trim();
+    if value.is_empty() {
+        return Some(format!("{algorithm} digest is empty"));
+    }
+    if !value.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Some(format!("{algorithm} digest is not hexadecimal"));
+    }
+    match digest_hex_digits(algorithm) {
+        Some(digits) if value.len() != digits => {
+            Some(format!("{algorithm} digest is not {digits} hex characters"))
+        }
+        _ => None,
+    }
+}
+
+/// Whether `value` can be a digest of `algorithm`: hexadecimal digits only
+/// (upper or lower case; surrounding whitespace is ignored), as many as the
+/// algorithm's output has where the algorithm fixes it (MD5 32, SHA-1 40,
+/// SHA-224 56, SHA-256 / SHA3-256 / BLAKE2b-256 / Streebog-256 64, SHA-384 /
+/// SHA3-384 / BLAKE2b-384 96, SHA-512 / SHA3-512 / BLAKE2b-512 /
+/// Streebog-512 128), and at least one for a variable-length or unknown
+/// algorithm. Parsers keep a digest as the document gives it, so an empty
+/// or garbage value reaches the checks: every hash rule counts only
+/// plausible digests.
+pub(crate) fn plausible_digest(algorithm: &HashAlgorithm, value: &str) -> bool {
+    digest_problem(algorithm, value).is_none()
+}
+
+/// Why each of `hashes` that is no plausible digest does not count, each
+/// reason once, in order.
+pub(crate) fn digest_problems<'a>(hashes: impl IntoIterator<Item = &'a Hash>) -> Vec<String> {
+    let mut problems: Vec<String> = Vec::new();
+    for problem in hashes
+        .into_iter()
+        .filter_map(|h| digest_problem(&h.algorithm, &h.value))
+    {
+        if !problems.contains(&problem) {
+            problems.push(problem);
+        }
+    }
+    problems
+}
+
+/// `name` for a list in a finding message, followed by why its digests that
+/// are not plausible do not count: "libalpha (SHA-256 digest is empty)".
+/// Just `name` when every digest counts.
+pub(crate) fn name_with_digest_problems<'a>(
+    name: &str,
+    hashes: impl IntoIterator<Item = &'a Hash>,
+) -> String {
+    let problems = digest_problems(hashes);
+    if problems.is_empty() {
+        name.to_string()
+    } else {
+        format!("{name} ({})", problems.join("; "))
+    }
+}
+
+/// The tail of a coverage finding over `components`, which carry no
+/// plausible digest: the ones among them whose present hashes did not
+/// count, and why — "; hashes that do not count: libalpha (SHA-256 digest
+/// is empty)". Empty when none of them carries a hash at all, so the
+/// message of a document without bad digests is unchanged.
+pub(crate) fn invalid_digest_note<'a>(
+    components: impl IntoIterator<Item = &'a Component>,
+) -> String {
+    let named: Vec<String> = components
+        .into_iter()
+        .filter(|c| !c.hashes.is_empty())
+        .map(|c| name_with_digest_problems(&c.name, &c.hashes))
+        .collect();
+    if named.is_empty() {
+        String::new()
+    } else {
+        format!("; hashes that do not count: {}", truncate_list(&named, 5))
+    }
 }
 
 /// Whether a creator identifies a real entity: a known name, or failing
@@ -352,6 +512,213 @@ mod tests {
         assert_eq!(known_value(Some(" 1.0 ")), Some("1.0"));
         assert_eq!(known_value(Some("N/A")), None);
         assert_eq!(known_value(Some("NOASSERTION")), None);
+    }
+
+    #[test]
+    fn plausible_digests_are_hex_of_the_algorithms_length() {
+        use HashAlgorithm as A;
+        let hex = |n: usize| "a".repeat(n);
+        for (algorithm, digits) in [
+            (A::Md5, 32),
+            (A::Sha1, 40),
+            (A::Other("SHA224".to_string()), 56),
+            (A::Other("sha3_224".to_string()), 56),
+            (A::Sha256, 64),
+            (A::Sha3_256, 64),
+            (A::Blake2b256, 64),
+            (A::Streebog256, 64),
+            (A::Sha384, 96),
+            (A::Sha3_384, 96),
+            (A::Blake2b384, 96),
+            (A::Sha512, 128),
+            (A::Sha3_512, 128),
+            (A::Blake2b512, 128),
+            (A::Streebog512, 128),
+        ] {
+            assert!(plausible_digest(&algorithm, &hex(digits)), "{algorithm}");
+            for wrong in [digits - 1, digits + 1, digits / 2] {
+                assert_eq!(
+                    digest_problem(&algorithm, &hex(wrong)),
+                    Some(format!("{algorithm} digest is not {digits} hex characters")),
+                    "{algorithm} with {wrong} digits"
+                );
+            }
+        }
+        // Upper and lower case both count; surrounding whitespace is ignored.
+        let mixed = "E3B0C44298FC1C149AFBF4C8996FB92427ae41e4649b934ca495991b7852b855";
+        assert!(plausible_digest(&A::Sha256, mixed));
+        assert!(plausible_digest(&A::Sha256, &format!(" {mixed}\n")));
+        // Variable-length and unknown algorithms: any non-empty hex.
+        for algorithm in [A::Blake3, A::Other("MD6".to_string())] {
+            assert!(plausible_digest(&algorithm, "ab"), "{algorithm}");
+            assert!(plausible_digest(&algorithm, &hex(200)), "{algorithm}");
+        }
+        assert_eq!(
+            digest_problem(&A::Sha512, ""),
+            Some("SHA-512 digest is empty".to_string())
+        );
+        assert_eq!(
+            digest_problem(&A::Sha256, "   "),
+            Some("SHA-256 digest is empty".to_string())
+        );
+        assert_eq!(
+            digest_problem(&A::Blake3, "not-a-digest"),
+            Some("BLAKE3 digest is not hexadecimal".to_string())
+        );
+        // A hex-looking value with a stray character is not hex.
+        assert_eq!(
+            digest_problem(&A::Sha256, &format!("{}g", hex(63))),
+            Some("SHA-256 digest is not hexadecimal".to_string())
+        );
+    }
+
+    #[test]
+    fn digest_problems_name_each_reason_once() {
+        let hashes = [
+            Hash::new(HashAlgorithm::Sha256, String::new()),
+            Hash::new(HashAlgorithm::Sha256, " ".to_string()),
+            Hash::new(HashAlgorithm::Sha512, "abc".to_string()),
+            Hash::new(
+                HashAlgorithm::Md5,
+                "d41d8cd98f00b204e9800998ecf8427e".to_string(),
+            ),
+        ];
+        assert_eq!(
+            digest_problems(&hashes),
+            vec![
+                "SHA-256 digest is empty".to_string(),
+                "SHA-512 digest is not 128 hex characters".to_string(),
+            ]
+        );
+        assert_eq!(
+            name_with_digest_problems("lib", &hashes[2..]),
+            "lib (SHA-512 digest is not 128 hex characters)"
+        );
+        assert_eq!(name_with_digest_problems("lib", &hashes[3..]), "lib");
+    }
+
+    /// A component carrying one external reference of `ref_type`.
+    fn with_ref(name: &str, ref_type: crate::model::ExternalRefType) -> Component {
+        let mut c = Component::new(name.to_string(), name.to_string());
+        c.external_refs.push(ExternalReference {
+            ref_type,
+            url: format!("https://{name}.example/security"),
+            comment: None,
+            hashes: Vec::new(),
+        });
+        c
+    }
+
+    /// The scope is the described product: a third-party component outside
+    /// the dependency graph is no root of it once the document names the
+    /// product, and an SPDX document's other described roots join the
+    /// primary.
+    #[test]
+    fn manufacturer_scope_is_the_described_product() {
+        use crate::model::{DependencyEdge, DependencyType, ExternalRefType};
+        let mut sbom = NormalizedSbom::default();
+        let app = Component::new("app".to_string(), "app".to_string());
+        let lib = Component::new("lib".to_string(), "lib".to_string());
+        let orphan = with_ref("orphan", ExternalRefType::Advisories);
+        let (app_id, lib_id, orphan_id) = (
+            app.canonical_id.clone(),
+            lib.canonical_id.clone(),
+            orphan.canonical_id.clone(),
+        );
+        for c in [app, lib, orphan] {
+            sbom.add_component(c);
+        }
+        sbom.edges.push(DependencyEdge::new(
+            app_id.clone(),
+            lib_id,
+            DependencyType::DependsOn,
+        ));
+        let names = |sbom: &NormalizedSbom| -> Vec<String> {
+            manufacturer_scope_components(sbom)
+                .iter()
+                .map(|c| c.name.clone())
+                .collect()
+        };
+        let advisories = |sbom: &NormalizedSbom| {
+            manufacturer_reference(sbom, |r| r.ref_type == ExternalRefType::Advisories)
+        };
+
+        // No product named: the graph roots, the orphan among them.
+        assert_eq!(names(&sbom), vec!["app", "orphan"]);
+        assert!(advisories(&sbom));
+
+        // The primary named: the orphan dependency's references no longer
+        // count for the product.
+        sbom.set_primary_component(app_id);
+        assert_eq!(names(&sbom), vec!["app"]);
+        assert!(!advisories(&sbom));
+
+        // A second described product is in scope, once.
+        sbom.add_described_root(orphan_id.clone());
+        sbom.add_described_root(orphan_id);
+        assert_eq!(names(&sbom), vec!["app", "orphan"]);
+        assert!(advisories(&sbom));
+    }
+
+    #[test]
+    fn the_manufacturer_is_named_by_a_creator_the_supplier_or_the_product() {
+        use crate::model::{Creator, CreatorType};
+        let mut sbom = NormalizedSbom::default();
+        let mut app = Component::new("app".to_string(), "app".to_string());
+        app.author = Some("Dana Developer".to_string());
+        let app_id = app.canonical_id.clone();
+        sbom.add_component(app);
+        sbom.set_primary_component(app_id.clone());
+        let mut lib = Component::new("lib".to_string(), "lib".to_string());
+        lib.supplier = Some(Organization::new("Upstream Ltd".to_string()));
+        sbom.add_component(lib);
+        // A dependency's supplier and the product's author name no
+        // manufacturer.
+        assert!(!manufacturer_identified(&sbom));
+
+        fn product<'a>(
+            sbom: &'a mut NormalizedSbom,
+            id: &crate::model::CanonicalId,
+        ) -> &'a mut Component {
+            sbom.components.get_mut(id).expect("the primary is listed")
+        }
+        for placeholder in ["NOASSERTION", "TBD", "n/a", " "] {
+            product(&mut sbom, &app_id).manufacturer =
+                Some(Organization::new(placeholder.to_string()));
+            assert!(!manufacturer_identified(&sbom), "{placeholder:?}");
+        }
+        product(&mut sbom, &app_id).manufacturer = Some(Organization::new("Acme GmbH".to_string()));
+        assert!(manufacturer_identified(&sbom));
+        product(&mut sbom, &app_id).manufacturer = None;
+        product(&mut sbom, &app_id).supplier = Some(Organization::new("Acme GmbH".to_string()));
+        assert!(manufacturer_identified(&sbom));
+        product(&mut sbom, &app_id).supplier = None;
+
+        sbom.document.supplier = Some(Organization::new("NOASSERTION".to_string()));
+        assert!(!manufacturer_identified(&sbom));
+        sbom.document.supplier = Some(Organization::new("Acme GmbH".to_string()));
+        assert!(manufacturer_identified(&sbom));
+        sbom.document.supplier = None;
+
+        let creator = |name: &str, email: Option<&str>| Creator {
+            creator_type: CreatorType::Organization,
+            name: name.to_string(),
+            email: email.map(str::to_string),
+        };
+        sbom.document.creators = vec![creator("NOASSERTION", None)];
+        assert!(!manufacturer_identified(&sbom));
+        sbom.document.creators = vec![creator("N/A", Some("psirt@acme.example"))];
+        assert!(
+            manufacturer_identified(&sbom),
+            "a known email identifies it"
+        );
+        sbom.document.creators = vec![creator("Acme GmbH", None)];
+        assert!(manufacturer_identified(&sbom));
+        sbom.document.creators[0].creator_type = CreatorType::Person;
+        assert!(
+            !manufacturer_identified(&sbom),
+            "a person creator is no organization"
+        );
     }
 
     #[test]
