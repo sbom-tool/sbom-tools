@@ -91,6 +91,7 @@ impl CycloneDxParser {
                 authors: m.authors.map(|w| w.author),
                 manufacturer: m.manufacturer,
                 manufacture: m.manufacture,
+                supplier: m.supplier,
                 component: m.component.map(Into::into),
                 lifecycles: m.lifecycles.map(|w| w.lifecycle),
                 distribution_constraints: m.distribution_constraints,
@@ -167,18 +168,12 @@ impl CycloneDxParser {
             // Set as primary component
             sbom.set_primary_component(canonical_id);
 
-            // Extract security contact from primary component's external references
+            // Extract security contact from primary component's external
+            // references. The disclosure URL follows the rule every parser
+            // shares (`lift_disclosure_url`, once the component is added).
             for ext_ref in &comp.external_refs {
-                match ext_ref.ref_type {
-                    ExternalRefType::SecurityContact => {
-                        sbom.document.security_contact = Some(ext_ref.url.clone());
-                    }
-                    ExternalRefType::Advisories | ExternalRefType::Support
-                        if sbom.document.vulnerability_disclosure_url.is_none() =>
-                    {
-                        sbom.document.vulnerability_disclosure_url = Some(ext_ref.url.clone());
-                    }
-                    _ => {}
+                if ext_ref.ref_type == ExternalRefType::SecurityContact {
+                    sbom.document.security_contact = Some(ext_ref.url.clone());
                 }
             }
 
@@ -212,6 +207,7 @@ impl CycloneDxParser {
             }
 
             sbom.add_component(comp);
+            super::lift_disclosure_url(&mut sbom);
         }
 
         // Build scope map from bom-ref to DependencyScope
@@ -550,6 +546,38 @@ impl CycloneDxParser {
         // Count citations for provenance tracking (1.7+)
         let citations_count = cdx.citations.as_ref().map_or(0, Vec::len);
 
+        // metadata.supplier: the organization that supplied the described
+        // component. As for a component supplier, it may carry only a URL.
+        let supplier = cdx
+            .metadata
+            .as_ref()
+            .and_then(|m| m.supplier.as_ref())
+            .and_then(|entity| {
+                let urls: Vec<String> = entity
+                    .url
+                    .iter()
+                    .flatten()
+                    .filter(|u| !u.trim().is_empty())
+                    .cloned()
+                    .collect();
+                let name = entity.name.clone().or_else(|| urls.first().cloned())?;
+                let contacts = entity
+                    .contact
+                    .iter()
+                    .flatten()
+                    .map(|c| Contact {
+                        name: c.name.clone(),
+                        email: c.email.clone(),
+                        phone: c.phone.clone(),
+                    })
+                    .collect();
+                Some(Organization {
+                    name,
+                    urls,
+                    contacts,
+                })
+            });
+
         DocumentMetadata {
             format: SbomFormat::CycloneDx,
             format_version: cdx.spec_version.clone(),
@@ -560,6 +588,7 @@ impl CycloneDxParser {
             doc_version: cdx.version,
             created,
             creators,
+            supplier,
             name: cdx
                 .metadata
                 .as_ref()
@@ -2440,6 +2469,8 @@ struct CdxMetadata {
     /// Deprecated pre-1.6 spelling: manufacturer of the described component,
     /// historically also used for the BOM creator. Accepted as a fallback.
     manufacture: Option<CdxOrgEntity>,
+    /// Organization that supplied the described component (1.2+).
+    supplier: Option<CdxOrgEntity>,
     component: Option<CdxComponent>,
     /// Lifecycles field (1.5+) - contains phases like end-of-support dates
     lifecycles: Option<Vec<CdxLifecycle>>,
@@ -2447,8 +2478,8 @@ struct CdxMetadata {
     distribution_constraints: Option<CdxDistributionConstraints>,
 }
 
-/// `CycloneDX` organizational entity (`metadata.manufacturer` /
-/// deprecated `metadata.manufacture`).
+/// `CycloneDX` organizational entity (`metadata.manufacturer`, the
+/// deprecated `metadata.manufacture`, `metadata.supplier`).
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
@@ -3632,6 +3663,8 @@ struct CdxMetadataXml {
     manufacturer: Option<CdxOrgEntity>,
     /// Deprecated pre-1.6 spelling, accepted as a fallback as in JSON
     manufacture: Option<CdxOrgEntity>,
+    /// Organization that supplied the described component (1.2+)
+    supplier: Option<CdxOrgEntity>,
     /// Distribution constraints (1.7+) with TLP classification
     distribution_constraints: Option<CdxDistributionConstraints>,
 }
@@ -3990,12 +4023,14 @@ struct CdxHashesXml {
     hash: Vec<CdxHashXml>,
 }
 
-/// Hash element for XML format
+/// Hash element for XML format. An empty element (`<hash alg="…"/>`) is an
+/// empty digest, as an empty JSON `content` is: the hash checks report it
+/// instead of the whole document failing to parse.
 #[derive(Debug, Deserialize)]
 struct CdxHashXml {
     #[serde(rename = "@alg")]
     alg: String,
-    #[serde(rename = "$value")]
+    #[serde(rename = "$value", default)]
     content: String,
 }
 
@@ -4785,6 +4820,37 @@ mod tests {
         assert_eq!(
             lib.manufacturer.as_ref().map(|m| m.name.as_str()),
             Some("Maker GmbH")
+        );
+    }
+
+    /// An empty `<hash>` element parses to an empty digest, as an empty JSON
+    /// `content` does, so the hash checks can say it does not count instead
+    /// of the document failing to parse.
+    #[test]
+    fn xml_empty_hash_content_parses_as_an_empty_digest() {
+        let sbom = parse(
+            r#"<?xml version="1.0"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" version="1">
+  <components>
+    <component type="library">
+      <name>lib</name>
+      <hashes>
+        <hash alg="SHA-256"></hash>
+        <hash alg="SHA-512"/>
+      </hashes>
+    </component>
+  </components>
+</bom>"#,
+        );
+        let lib = component(&sbom, "lib");
+        let digests: Vec<(&HashAlgorithm, &str)> = lib
+            .hashes
+            .iter()
+            .map(|h| (&h.algorithm, h.value.as_str()))
+            .collect();
+        assert_eq!(
+            digests,
+            vec![(&HashAlgorithm::Sha256, ""), (&HashAlgorithm::Sha512, "")]
         );
     }
 
@@ -6494,6 +6560,84 @@ mod tests {
         assert_eq!(
             ml.fairness[0].group_at_risk.as_deref(),
             Some("assessed for demographic parity")
+        );
+    }
+
+    /// metadata.supplier, the organization that supplied the described
+    /// component, is kept on the document in both encodings (it was not
+    /// parsed at all before v0.4.0). A URL-only supplier is named by its URL.
+    #[test]
+    fn metadata_supplier_is_kept_in_json_and_xml() {
+        let json = parse_json(
+            r#"{
+              "bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
+              "metadata": {
+                "supplier": {
+                  "name": "Acme Distribution",
+                  "url": ["https://acme.example"],
+                  "contact": [{"name": "Desk", "email": "desk@acme.example"}]
+                }
+              },
+              "components": []
+            }"#,
+        );
+        let supplier = json.document.supplier.expect("metadata.supplier is kept");
+        assert_eq!(supplier.name, "Acme Distribution");
+        assert_eq!(supplier.urls, vec!["https://acme.example".to_string()]);
+        assert_eq!(
+            supplier.contacts[0].email.as_deref(),
+            Some("desk@acme.example")
+        );
+
+        let xml = CycloneDxParser::new()
+            .parse_str(
+                r#"<?xml version="1.0"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" version="1">
+  <metadata>
+    <supplier>
+      <url>https://acme.example</url>
+      <contact><email>desk@acme.example</email></contact>
+    </supplier>
+  </metadata>
+  <components/>
+</bom>"#,
+            )
+            .expect("XML should parse");
+        let supplier = xml.document.supplier.expect("metadata.supplier is kept");
+        assert_eq!(supplier.name, "https://acme.example");
+        assert_eq!(
+            supplier.contacts[0].email.as_deref(),
+            Some("desk@acme.example")
+        );
+    }
+
+    /// The primary's URL-shaped advisories reference becomes the disclosure
+    /// URL, as in the SPDX parsers; a support reference never does (a
+    /// helpdesk is no vulnerability-disclosure policy), nor does a locator
+    /// that is no URL.
+    #[test]
+    fn only_a_url_shaped_advisory_becomes_the_disclosure_url() {
+        let parse = |refs: &str| {
+            parse_json(&format!(
+                r#"{{
+                  "bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
+                  "metadata": {{"component": {{"type": "application", "name": "app",
+                    "externalReferences": [{refs}]}}}},
+                  "components": []
+                }}"#
+            ))
+        };
+        let support = r#"{"type": "support", "url": "https://acme.example/support"}"#;
+        let bare = r#"{"type": "advisories", "url": "acme-advisories"}"#;
+        let advisories = r#"{"type": "advisories", "url": "https://acme.example/advisories"}"#;
+        assert_eq!(parse(support).document.vulnerability_disclosure_url, None);
+        assert_eq!(parse(bare).document.vulnerability_disclosure_url, None);
+        assert_eq!(
+            parse(&format!("{support}, {bare}, {advisories}"))
+                .document
+                .vulnerability_disclosure_url
+                .as_deref(),
+            Some("https://acme.example/advisories")
         );
     }
 

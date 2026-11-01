@@ -41,6 +41,10 @@ pub struct NormalizedSbomPayload {
     pub content_hash: u64,
     /// Primary component, when the document declares one.
     pub primary_component_id: Option<CanonicalId>,
+    /// The other components the document describes, besides the primary
+    /// (an SPDX document can describe several). Omitted when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub described_root_ids: Vec<CanonicalId>,
     /// Number of canonical-id collisions resolved during parsing.
     pub collision_count: usize,
 }
@@ -63,6 +67,7 @@ impl NormalizedSbomPayload {
             extensions: sbom.extensions,
             content_hash: sbom.content_hash,
             primary_component_id: sbom.primary_component_id,
+            described_root_ids: sbom.described_root_ids,
             collision_count: sbom.collision_count,
         }
     }
@@ -83,6 +88,7 @@ impl NormalizedSbomPayload {
             extensions: self.extensions,
             content_hash: self.content_hash,
             primary_component_id: self.primary_component_id,
+            described_root_ids: self.described_root_ids,
             collision_count: self.collision_count,
         }
     }

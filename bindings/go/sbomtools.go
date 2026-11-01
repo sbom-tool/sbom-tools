@@ -76,6 +76,7 @@ type NormalizedSbomPayload struct {
 	Extensions         map[string]any                 `json:"extensions"`
 	ContentHash        uint64                         `json:"content_hash"`
 	PrimaryComponentID map[string]any                 `json:"primary_component_id"`
+	DescribedRootIDs   []map[string]any               `json:"described_root_ids,omitempty"`
 	CollisionCount     uint64                         `json:"collision_count"`
 }
 

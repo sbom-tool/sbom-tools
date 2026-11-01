@@ -30,6 +30,14 @@ pub struct NormalizedSbom {
     /// Primary/root product component (`CycloneDX` metadata.component or SPDX documentDescribes)
     /// This identifies the main product that this SBOM describes, important for CRA compliance.
     pub primary_component_id: Option<CanonicalId>,
+    /// The other components the document describes, besides the primary:
+    /// an SPDX document can describe several sibling products (SPDX 2
+    /// `documentDescribes` and `DESCRIBES` targets, SPDX 3 `rootElement`s).
+    /// A CycloneDX document describes one, `metadata.component`, the
+    /// primary. In document order, each once; see
+    /// [`Self::described_components`]. Additive: skipped in JSON when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub described_root_ids: Vec<CanonicalId>,
     /// Number of canonical ID collisions encountered during parsing
     #[serde(skip)]
     pub collision_count: usize,
@@ -46,6 +54,7 @@ impl NormalizedSbom {
             extensions: FormatExtensions::default(),
             content_hash: 0,
             primary_component_id: None,
+            described_root_ids: Vec::new(),
             collision_count: 0,
         }
     }
@@ -269,6 +278,33 @@ impl NormalizedSbom {
     /// Set the primary component by its canonical ID
     pub fn set_primary_component(&mut self, id: CanonicalId) {
         self.primary_component_id = Some(id);
+    }
+
+    /// Record another component the document describes (see
+    /// [`Self::described_root_ids`]). The primary component and an id
+    /// already recorded are skipped, so parsers can pass every described
+    /// id once the primary is set.
+    pub fn add_described_root(&mut self, id: CanonicalId) {
+        if self.primary_component_id.as_ref() != Some(&id) && !self.described_root_ids.contains(&id)
+        {
+            self.described_root_ids.push(id);
+        }
+    }
+
+    /// The components the document describes: the primary component, then
+    /// the other described roots, each once. Empty when the document names
+    /// no product (or the ids resolve to no component). Compliance checks
+    /// read manufacturer evidence, such as a security contact or a
+    /// certificate reference, from these components only.
+    #[must_use]
+    pub fn described_components(&self) -> Vec<&Component> {
+        let mut seen = std::collections::HashSet::new();
+        self.primary_component_id
+            .iter()
+            .chain(&self.described_root_ids)
+            .filter(|id| seen.insert(*id))
+            .filter_map(|id| self.components.get(id))
+            .collect()
     }
 
     /// Get all unique ecosystems in the SBOM

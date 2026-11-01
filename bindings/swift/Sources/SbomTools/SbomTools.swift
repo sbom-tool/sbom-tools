@@ -122,6 +122,9 @@ public struct NormalizedSbomPayload: Codable, Equatable {
     public let extensions: [String: JSONValue]
     public let contentHash: UInt64
     public let primaryComponentID: [String: JSONValue]
+    /// The other components the document describes, besides the primary;
+    /// absent from the payload when there are none.
+    public var describedRootIDs: [[String: JSONValue]]? = nil
     public let collisionCount: Int
 
     enum CodingKeys: String, CodingKey {
@@ -131,6 +134,7 @@ public struct NormalizedSbomPayload: Codable, Equatable {
         case extensions
         case contentHash = "content_hash"
         case primaryComponentID = "primary_component_id"
+        case describedRootIDs = "described_root_ids"
         case collisionCount = "collision_count"
     }
 

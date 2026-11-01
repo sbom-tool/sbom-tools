@@ -40,6 +40,12 @@ pub struct DocumentMetadata {
     pub created: DateTime<Utc>,
     /// Creators/authors
     pub creators: Vec<Creator>,
+    /// The organization that supplied the product the document describes
+    /// (CycloneDX `metadata.supplier`), often its manufacturer. SPDX keeps
+    /// the supplier on the described package instead. Additive: skipped in
+    /// JSON when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supplier: Option<Organization>,
     /// Document name
     pub name: Option<String>,
     /// Security contact for vulnerability disclosure (CRA requirement)
@@ -189,6 +195,7 @@ impl Default for DocumentMetadata {
             doc_version: None,
             created: Utc::now(),
             creators: Vec::new(),
+            supplier: None,
             name: None,
             security_contact: None,
             vulnerability_disclosure_url: None,

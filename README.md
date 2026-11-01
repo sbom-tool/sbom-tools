@@ -838,8 +838,8 @@ Which JSON payloads are a compatibility contract, and how firm it is
   the `-o json` output of `diff`, `diff-multi`, `matrix`, `timeline`,
   `validate`, and `quality`. Field names are `snake_case` with no serde
   renames; `Option` fields serialize as `null`, except a few additive blocks
-  (e.g. `crypto_properties`, `ml_model`-adjacent extensions) that are omitted
-  when absent.
+  (e.g. `crypto_properties`, `document.supplier`, `ml_model`-adjacent
+  extensions) that are omitted when absent.
 - **`view -o json` is a projection, not the normalized model.** It emits a
   `summary` block plus, per component, `name`, `version`, `ecosystem`,
   `licenses`, `supplier`, `dependency_kind`, `vulnerability_count`,
@@ -850,8 +850,9 @@ Which JSON payloads are a compatibility contract, and how firm it is
   `tests/ffi_schema_snapshots.rs`). It is the canonical model as JSON:
   `document`, `components[]` as `{canonical_id, component}` entries in SBOM
   order, `edges`, `extensions`, `content_hash`, `primary_component_id`,
-  `collision_count`. Lossless, and carries every parsed field including
-  `crypto_properties`.
+  `collision_count`, and `described_root_ids` when an SPDX document
+  describes more than one product (omitted otherwise). Lossless, and carries
+  every parsed field including `crypto_properties`.
 
   ```sh
   sbom-tools convert --to normalized my.cbom.json | jq '.components[].component.crypto_properties'

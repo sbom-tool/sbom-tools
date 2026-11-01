@@ -22,6 +22,7 @@ fn base_document_metadata() -> DocumentMetadata {
             name: "Acme Corp".to_string(),
             email: None,
         }],
+        supplier: None,
         name: Some("Acme Product".to_string()),
         security_contact: None,
         vulnerability_disclosure_url: None,
