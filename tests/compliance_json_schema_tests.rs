@@ -178,7 +178,11 @@ fn assert_subject(envelope: &Value, sbom: &NormalizedSbom, raw: &str, rel: &str,
         subject["spec_version"], sbom.document.spec_version,
         "{label}"
     );
-    let name = rel.rsplit('/').next().expect("a file name");
+    // `rel` uses the platform's separator (`\` on Windows).
+    let name = std::path::Path::new(rel)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .expect("a file name");
     assert_eq!(subject["file_name"], name, "{label}");
     assert_eq!(subject["components"], sbom.component_count(), "{label}");
     let duplicates = &subject["duplicates"];
