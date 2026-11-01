@@ -450,7 +450,12 @@ The `conformity_summary` block is the Annex VIII checklist emitted next to
 `violations` by `validate --standard cra -o json` (and `cra-phase1`). It
 only appears once a product class is pinned — via `--cra-product-class` or
 the sidecar `productClass` — since the class picks the conformity route
-whose rows are listed, and never on `oss-steward` results. A row strengthened by attestation names the level it was satisfied
+whose rows are listed, and never on `oss-steward` results. Without a pinned
+class, the result lists `SBOM-CRA-ANNEX-IV` and `SBOM-CRA-ANNEX-VIII` under
+`evaluated`, as checks that did not run, so their silence does not read as
+a pass. An SBOM without device, firmware or device-driver components lists
+the four `SBOM-CRA-PRE-8-RQ-02-*` hardware checks there too (see
+[Checks not evaluated](compliance-output.md#checks-not-evaluated)). A row strengthened by attestation names the level it was satisfied
 at:
 
 ```text
