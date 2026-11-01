@@ -1006,6 +1006,33 @@ fn add_offender(
     }
 }
 
+/// Why SBOM-PQC-PROTO-003 did not run: the federal TLS 1.3 deadline applies
+/// to the federal profile of deadline mode only.
+const FEDERAL_TLS13_NOT_RUN: &str = "the federal TLS 1.3 deadline is checked only under \
+     --pqc-mode deadline --pqc-profile federal";
+
+/// What a protocol asset declares of itself, as a finding's observed value:
+/// its type and version (`tls 1.2`), or its type alone.
+fn observed_protocol(proto: &ProtocolProperties) -> Option<String> {
+    match proto.version.as_deref() {
+        Some(version) => observed(&format!("{} {version}", proto.protocol_type)),
+        None => observed(&proto.protocol_type.to_string()),
+    }
+}
+
+/// The algorithm identity a crypto asset declares, as the observed value of
+/// a finding about an algorithm the classifier cannot name: its
+/// `algorithmFamily`, else its OID. `None` when it declares neither (its
+/// name is the finding's element).
+fn observed_identity(comp: &Component) -> Option<String> {
+    let cp = comp.crypto_properties.as_ref()?;
+    cp.algorithm_properties
+        .as_ref()
+        .and_then(|a| a.algorithm_family.as_deref())
+        .or(cp.oid.as_deref())
+        .and_then(observed)
+}
+
 /// The requirement string displayed for each CNSA 2.0 rule.
 fn cnsa2_requirement(rule_id: &str) -> &'static str {
     match rule_id {
@@ -1176,6 +1203,8 @@ impl ComplianceChecker {
                                     remediation: None,
                                     finding_detail: Some(sig_ref.to_string()),
                                     deadline: calendared.deadline,
+                                    field: None,
+                                    observed: observed(&cls.label()),
                                 });
                             }
                             // An unclassifiable signature ref fails closed —
@@ -1201,6 +1230,8 @@ impl ComplianceChecker {
                                     remediation: None,
                                     finding_detail: Some(sig_ref.to_string()),
                                     deadline: None,
+                                    field: None,
+                                    observed: observed(sig_ref),
                                 });
                             }
                         }
@@ -1245,6 +1276,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
     }
@@ -1297,6 +1330,8 @@ impl ComplianceChecker {
                             remediation: None,
                             finding_detail: None,
                             deadline: None,
+                            field: None,
+                            observed: None,
                         });
                     }
                 } else {
@@ -1316,6 +1351,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: None,
                     });
                 }
             }
@@ -1353,6 +1390,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: calendared.deadline,
+                    field: None,
+                    observed: observed(&cls.label()),
                 });
                 true
             }
@@ -1401,6 +1440,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: observed_identity(comp),
                     });
                 }
                 declared_vulnerable
@@ -1443,6 +1484,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed_protocol(proto),
             });
         } else if matches!(proto.protocol_type, ProtocolType::Tls | ProtocolType::Dtls)
             && proto.version.as_deref().and_then(parse_tls_version) != Some((1, 3))
@@ -1483,6 +1526,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: calendared.deadline,
+                field: None,
+                observed: observed_protocol(proto),
             });
         }
         let version_rejected = violations.len() > violations_before;
@@ -1496,10 +1541,10 @@ impl ComplianceChecker {
                     return;
                 }
                 let labels: Vec<&str> = offenders.iter().map(|o| o.label.as_str()).collect();
+                let labels = labels.join(", ");
                 let message = format!(
-                    "Protocol '{}' {context} non-CNSA 2.0 algorithms: {}",
-                    comp.name,
-                    labels.join(", ")
+                    "Protocol '{}' {context} non-CNSA 2.0 algorithms: {labels}",
+                    comp.name
                 );
                 let calendared = Calendared::most_urgent(offenders.into_iter().map(|o| o.verdict));
                 violations.push(Violation {
@@ -1515,6 +1560,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: Some(detail),
                     deadline: calendared.deadline,
+                    field: None,
+                    observed: observed(&labels),
                 });
             };
         // References that resolve nowhere and carry no recognizable token
@@ -1678,6 +1725,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed(&unverifiable.join(", ")),
             });
         } else if judged == 0 && !version_rejected {
             let detail = if substantive {
@@ -1704,6 +1753,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
         version_rejected || judged > 0
@@ -1717,12 +1768,20 @@ impl ComplianceChecker {
         use crate::model::ComponentType;
 
         let Findings {
-            violations, passed, ..
+            violations,
+            passed,
+            not_evaluated,
+            ..
         } = findings;
         let index = sbom.build_index();
         // Deadline mode's calendar; `None` in readiness mode.
         let calendar = self.pqc_calendar();
         let calendar = calendar.as_ref();
+        // The federal TLS 1.3 deadline (PQC-PROTO-003) is judged under the
+        // federal profile of deadline mode only.
+        if calendar.and_then(Calendar::federal_tls13).is_none() {
+            not_evaluated.push("SBOM-PQC-PROTO-003", FEDERAL_TLS13_NOT_RUN);
+        }
 
         // Track whether we actually evaluated any cryptographic asset. A tool
         // asserting PQC compliance must not report "compliant" when it found
@@ -1815,6 +1874,8 @@ impl ComplianceChecker {
                                 remediation: None,
                                 finding_detail: Some(sig_ref.to_string()),
                                 deadline: calendared.deadline,
+                                field: None,
+                                observed: observed(&cls.label()),
                             });
                         } else if subject.class == AlgorithmClass::Unknown {
                             // An unclassifiable signature ref must warn, never
@@ -1840,6 +1901,8 @@ impl ComplianceChecker {
                                 remediation: None,
                                 finding_detail: Some(sig_ref.to_string()),
                                 deadline: None,
+                                field: None,
+                                observed: observed(sig_ref),
                             });
                         }
                     }
@@ -1904,6 +1967,8 @@ impl ComplianceChecker {
                                     remediation: None,
                                     finding_detail: None,
                                     deadline: calendared.deadline,
+                                    field: None,
+                                    observed: observed(&format!("{size} bits")),
                                 });
                             }
                         }
@@ -1934,6 +1999,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
     }
@@ -1990,6 +2057,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed_identity(comp),
             });
         }
 
@@ -2029,6 +2098,12 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: calendared.deadline,
+                field: None,
+                observed: cls
+                    .family
+                    .is_some()
+                    .then(|| cls.label())
+                    .and_then(|label| observed(&label)),
             });
         }
 
@@ -2047,6 +2122,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -2079,6 +2156,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: calendared.deadline,
+                field: None,
+                observed: observed(&cls.label()),
             });
         }
 
@@ -2100,6 +2179,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -2219,6 +2300,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed_protocol(proto),
             });
         } else if matches!(proto.protocol_type, ProtocolType::Tls | ProtocolType::Dtls)
             && let Some(version) = proto.version.as_deref()
@@ -2242,6 +2325,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed_protocol(proto),
             });
         }
         let version_rejected = violations.len() > violations_before;
@@ -2270,6 +2355,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: Some(dated.deadline),
+                field: None,
+                observed: observed_protocol(proto),
             });
         }
 
@@ -2292,10 +2379,10 @@ impl ComplianceChecker {
                     return;
                 }
                 let labels: Vec<&str> = offenders.iter().map(|o| o.label.as_str()).collect();
+                let labels = labels.join(", ");
                 let message = format!(
-                    "Protocol '{}' {context} broken or quantum-vulnerable algorithms: {}",
-                    comp.name,
-                    labels.join(", ")
+                    "Protocol '{}' {context} broken or quantum-vulnerable algorithms: {labels}",
+                    comp.name
                 );
                 let calendared = Calendared::most_urgent(offenders.into_iter().map(|o| o.verdict));
                 violations.push(Violation {
@@ -2311,6 +2398,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: Some(detail),
                     deadline: calendared.deadline,
+                    field: None,
+                    observed: observed(&labels),
                 });
             };
         // How many algorithms the classifier could identify, ready or not.
@@ -2480,6 +2569,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed(&unverifiable.join(", ")),
             });
         } else if judged.get() == 0 && !version_rejected {
             // Nothing the classifier can name: a TLS 1.3 asset whose suites
@@ -2506,6 +2597,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
         version_rejected || judged.get() > 0

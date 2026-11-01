@@ -39,6 +39,7 @@
         "counts": {"$ref": "#/$defs/counts"},
         "violations": {"type": "array", "items": {"$ref": "#/$defs/violation"}},
         "passed": {"type": "array", "description": "Checks the SBOM passed, such as an algorithm NIST approves for post-quantum use. Not violations: no severity count includes them. Empty when the standard passed no check or did not apply.", "items": {"$ref": "#/$defs/passed_check"}},
+        "evaluated": {"type": "array", "description": "Checks of the standard that did not run on this SBOM, each with the reason: the format or spec version cannot carry what the check reads, the version does not parse, the run's inputs leave it out, the SBOM lists none of the components it is about, or the SBOM is too large. Absent when every check ran, and for a standard that did not apply.", "minItems": 1, "items": {"$ref": "#/$defs/rule_evaluation"}},
         "conformity_summary": {"$ref": "#/$defs/conformity_summary"}
       }
     },
@@ -94,12 +95,24 @@
         "counts": {"$ref": "#/$defs/violation_counts"},
         "deadline": {"type": "string", "format": "date", "description": "Under --pqc-mode deadline, the migration milestone a cnsa2 or pqc finding is judged against: the last day before its severity rises, or for an error the last day the algorithm was allowed. Absent in readiness mode and for a finding no schedule dates; present exactly when `deadline_source` is."},
         "deadline_source": {"type": "string", "minLength": 1, "description": "The schedule that sets `deadline`, e.g. `NIST IR 8547 Table 4`. Present exactly when `deadline` is."},
+        "field": {"type": "string", "minLength": 1, "description": "Where the field the rule checks lives in the SBOM's own format, in its JSON shape: `components[].supplier.name` (CycloneDX; `metadata.component.…` for the primary component), `packages[].supplier` (SPDX 2.x), `suppliedBy` (SPDX 3.0). The registry's per-format field, as `sbom-tools rules explain` shows it. Absent when the rule names no field in the document's format."},
+        "observed": {"type": "string", "maxLength": 200, "description": "The value the check read from the SBOM, such as a placeholder supplier, a digest that does not count (`SHA-256:<value>`), a future timestamp or a rejected algorithm. Line breaks show as `\\n`, other control and bidi characters are removed and a leading `:` is escaped; at most 200 characters, ending in `…` when cut. Absent when the field is missing or the check reads no single value."},
         "requirement": {"type": "string"},
         "rule_id": {"type": "string", "minLength": 1, "description": "Stable internal rule key."},
         "sarif_rule_id": {"type": "string", "minLength": 1, "description": "Rule id the SARIF output reports for this violation."},
         "standard_refs": {"type": "array", "items": {"$ref": "#/$defs/standard_ref"}},
         "remediation": {"type": "string", "description": "How to fix the violation (populated by a later release)."},
         "help_uri": {"type": "string", "description": "Documentation link for the rule (populated by a later release)."}
+      }
+    },
+    "rule_evaluation": {
+      "type": "object",
+      "description": "A check the standard did not evaluate on the SBOM. It reports no violation and no passed check.",
+      "required": ["rule_id", "status", "reason"],
+      "properties": {
+        "rule_id": {"type": "string", "minLength": 1, "description": "The rule of the check, one of the rules `sbom-tools rules --standard` lists for the standard."},
+        "status": {"enum": ["not_evaluated"], "description": "Always `not_evaluated`."},
+        "reason": {"type": "string", "minLength": 1, "description": "Why the check did not run, in sbom-tools' own words."}
       }
     },
     "violation_counts": {

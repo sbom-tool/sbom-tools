@@ -7,9 +7,29 @@
 //! [`ComplianceChecker`]; the bodies are unchanged, so the dispatch is a pure
 //! structural reorganisation of the previous `match self.level { … }` in
 //! `ComplianceChecker::check`.
+//!
+//! # Checks that do not run
+//!
+//! A check that skips the SBOM on purpose says so: where it decides not to
+//! run, it records the rule and the reason with [`NotEvaluated::push`], and
+//! the result lists the entry under `evaluated` (see
+//! [`RuleEvaluation`](super::RuleEvaluation) for which skips count). Without
+//! the entry a skipped check reads like a passed one. A checker gets the list
+//! as [`Findings::not_evaluated`] (the `findings` form of
+//! `dedicated_checker!`), or as a `&mut NotEvaluated` argument in a check
+//! method the generic path calls:
+//!
+//! ```ignore
+//! if spdx2 {
+//!     not_evaluated.push("SBOM-CISA2026-SIGNATURE", SPDX2_NO_SIGNATURE);
+//! } else if !has_signature {
+//!     violations.push(/* … */);
+//! }
+//! ```
 
 use super::{
-    Applicability, ComplianceChecker, ComplianceLevel, NormalizedSbom, PassedCheck, Violation,
+    Applicability, ComplianceChecker, ComplianceLevel, NormalizedSbom, PassedCheck, RuleEvaluation,
+    Violation,
 };
 use crate::model::{AttestationDeclarations, AttestationRuleFamily, SupportedRequirement};
 
@@ -75,14 +95,16 @@ impl<'a> ComplianceContext<'a> {
 }
 
 /// What one standard's checks report: the violations found, the checks the
-/// SBOM passed, and whether the standard applied to the SBOM at all.
+/// SBOM passed, the checks that did not run, and whether the standard applied
+/// to the SBOM at all.
 ///
 /// An affirming check (a pass-only rule, [`RuleKind::Pass`](super::RuleKind))
-/// pushes a [`PassedCheck`] to `passed`, never a violation. A readiness
-/// profile that does not apply (the EU AI Act and BSI/G7 SBOM-for-AI
-/// profiles on an SBOM without AI/ML content) says so through
+/// pushes a [`PassedCheck`] to `passed`, never a violation. A check skipped
+/// on purpose records itself in `not_evaluated` (see the module docs). A
+/// readiness profile that does not apply (the EU AI Act and BSI/G7
+/// SBOM-for-AI profiles on an SBOM without AI/ML content) says so through
 /// [`Findings::not_applicable`] instead of reporting a placeholder violation.
-/// [`ComplianceChecker::check`] copies all three into the
+/// [`ComplianceChecker::check`] copies all four into the
 /// [`ComplianceResult`](super::ComplianceResult).
 #[derive(Debug, Default)]
 pub(crate) struct Findings {
@@ -90,17 +112,20 @@ pub(crate) struct Findings {
     pub(crate) violations: Vec<Violation>,
     /// The checks the SBOM passed.
     pub(crate) passed: Vec<PassedCheck>,
+    /// The checks that did not run on the SBOM.
+    pub(crate) not_evaluated: NotEvaluated,
     /// Whether the standard evaluated the SBOM.
     pub(crate) applicability: Applicability,
 }
 
 impl Findings {
-    /// The findings of a standard that applied and passed no check: these
-    /// violations.
+    /// The findings of a standard that applied, passed no check and skipped
+    /// none: these violations.
     pub(crate) const fn from_violations(violations: Vec<Violation>) -> Self {
         Self {
             violations,
             passed: Vec::new(),
+            not_evaluated: NotEvaluated(Vec::new()),
             applicability: Applicability::Applicable,
         }
     }
@@ -108,6 +133,31 @@ impl Findings {
     /// Mark the standard as not applicable to the SBOM, for `reason`.
     pub(crate) fn not_applicable(&mut self, reason: impl Into<String>) {
         self.applicability = Applicability::NotApplicable(reason.into());
+    }
+}
+
+/// The checks a standard did not run on the SBOM, in the order its checker
+/// recorded them (see the module docs).
+#[derive(Debug, Default)]
+pub(crate) struct NotEvaluated(Vec<RuleEvaluation>);
+
+impl NotEvaluated {
+    /// Record that the check of `rule_id` did not run, for `reason`: one of
+    /// the standard's rules, and sbom-tools' own words (no SBOM text). A
+    /// rule is listed once; a repeat keeps the first reason.
+    pub(crate) fn push(&mut self, rule_id: &'static str, reason: impl Into<String>) {
+        debug_assert!(
+            super::rule_kind(rule_id).is_some(),
+            "{rule_id} is not a registered rule"
+        );
+        if !self.0.iter().any(|e| e.rule_id == rule_id) {
+            self.0.push(RuleEvaluation::not_evaluated(rule_id, reason));
+        }
+    }
+
+    /// The recorded checks.
+    pub(crate) fn into_vec(self) -> Vec<RuleEvaluation> {
+        self.0
     }
 }
 
@@ -147,38 +197,43 @@ impl StandardChecker for GenericChecker {
     fn check(&self, ctx: &ComplianceContext) -> Findings {
         let checker = ctx.checker;
         let sbom = ctx.sbom;
-        let mut violations = Vec::new();
+        let mut findings = Findings::default();
+        let Findings {
+            violations,
+            not_evaluated,
+            ..
+        } = &mut findings;
 
         // Check document-level requirements
-        checker.check_document_metadata(sbom, &mut violations);
+        checker.check_document_metadata(sbom, violations, not_evaluated);
 
         // Check component requirements
-        checker.check_components(sbom, &mut violations);
+        checker.check_components(sbom, violations);
 
         // Check dependency requirements
-        checker.check_dependencies(sbom, &mut violations);
+        checker.check_dependencies(sbom, violations);
 
         // Check vulnerability metadata (CRA readiness)
-        checker.check_vulnerability_metadata(sbom, &mut violations);
+        checker.check_vulnerability_metadata(sbom, violations);
 
         // Check format-specific requirements
-        checker.check_format_specific(sbom, &mut violations);
+        checker.check_format_specific(sbom, violations, not_evaluated);
 
         // Check CRA-specific gap requirements (SBOM freshness, Art. 13(5), 13(9), Annex I Part II, document integrity)
         if checker.level.is_cra() {
-            checker.check_cra_gaps(sbom, &mut violations);
-            checker.check_hardware_components(sbom, &mut violations);
+            checker.check_cra_gaps(sbom, violations, not_evaluated);
+            checker.check_hardware_components(sbom, violations, not_evaluated);
         }
 
-        Findings::from_violations(violations)
+        findings
     }
 }
 
 /// Generates a thin [`StandardChecker`] struct whose `check()` delegates to a
 /// single dedicated method on [`ComplianceChecker`]. The method takes the
 /// violations it pushes to, or, with the trailing `findings`, the whole
-/// [`Findings`] (for a standard that reports passed checks or can decide it
-/// does not apply).
+/// [`Findings`] (for a standard that reports passed checks, skips a check on
+/// purpose, or can decide it does not apply).
 macro_rules! dedicated_checker {
     ($name:ident, $level:expr, $method:ident) => {
         pub(crate) struct $name;
@@ -213,7 +268,12 @@ macro_rules! dedicated_checker {
 }
 
 dedicated_checker!(NistSsdfChecker, ComplianceLevel::NistSsdf, check_nist_ssdf);
-dedicated_checker!(Eo14028Checker, ComplianceLevel::Eo14028, check_eo14028);
+dedicated_checker!(
+    Eo14028Checker,
+    ComplianceLevel::Eo14028,
+    check_eo14028,
+    findings
+);
 dedicated_checker!(Cnsa2Checker, ComplianceLevel::Cnsa2, check_cnsa2);
 dedicated_checker!(
     NistPqcChecker,
@@ -224,12 +284,14 @@ dedicated_checker!(
 dedicated_checker!(
     BsiTr03183Checker,
     ComplianceLevel::BsiTr03183_2,
-    check_bsi_tr_03183_2
+    check_bsi_tr_03183_2,
+    findings
 );
 dedicated_checker!(
     CraOssStewardChecker,
     ComplianceLevel::CraOssSteward,
-    check_cra_oss_steward
+    check_cra_oss_steward,
+    findings
 );
 dedicated_checker!(
     EuccSubstantialChecker,
@@ -248,13 +310,18 @@ dedicated_checker!(
     check_bsi_sbom_for_ai,
     findings
 );
-dedicated_checker!(Cisa2026Checker, ComplianceLevel::Cisa2026, check_cisa2026);
+dedicated_checker!(
+    Cisa2026Checker,
+    ComplianceLevel::Cisa2026,
+    check_cisa2026,
+    findings
+);
 dedicated_checker!(
     PciDss632Checker,
     ComplianceLevel::PciDss632,
     check_pci_dss_6_3_2
 );
-dedicated_checker!(FsctChecker, ComplianceLevel::Fsct, check_fsct);
+dedicated_checker!(FsctChecker, ComplianceLevel::Fsct, check_fsct, findings);
 
 /// Resolve the [`StandardChecker`] for a given level. The dedicated profiles
 /// get their own checker; everything else takes the generic path.

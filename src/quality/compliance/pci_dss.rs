@@ -91,6 +91,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
     }
@@ -134,6 +136,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed(&comp.name),
                 });
             }
 
@@ -161,6 +165,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: comp.version.as_deref().and_then(observed),
                 });
             }
 
@@ -189,6 +195,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
 
@@ -225,6 +233,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed_producer(comp),
                 });
             }
         }
@@ -295,6 +305,8 @@ impl ComplianceChecker {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -345,6 +357,8 @@ impl ComplianceChecker {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -377,6 +391,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed_unparsed_timestamp(sbom),
             });
             return;
         }
@@ -412,6 +428,13 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed(
+                    &sbom
+                        .document
+                        .created
+                        .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                ),
             });
         }
     }
@@ -467,6 +490,8 @@ impl ComplianceChecker {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: unreachable_contact(sbom).and_then(observed),
         });
     }
 
@@ -545,6 +570,8 @@ impl ComplianceChecker {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 }

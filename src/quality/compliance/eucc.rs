@@ -48,6 +48,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -69,6 +71,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -90,6 +94,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -109,6 +115,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
             Some(until) if until <= self.now() => {
@@ -128,6 +136,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed(&until.format("%Y-%m-%d").to_string()),
                 });
             }
             Some(until) if until <= self.now() + chrono::Duration::days(180) => {
@@ -147,6 +157,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed(&until.format("%Y-%m-%d").to_string()),
                 });
             }
             Some(_) => {}
@@ -193,6 +205,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
     }

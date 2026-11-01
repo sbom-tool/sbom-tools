@@ -270,6 +270,14 @@ fn check(root: &Value, schema: &Value, instance: &Value, path: &str, errors: &mu
                     }
                 }
             }
+            "maxLength" => {
+                if let Value::String(s) = instance {
+                    let max = value.as_u64().expect("maxLength is an integer");
+                    if (s.chars().count() as u64) > max {
+                        errors.push(format!("{path}: longer than {max} characters"));
+                    }
+                }
+            }
             "pattern" => {
                 if let Value::String(s) = instance {
                     let pattern = value.as_str().expect("pattern is a string");

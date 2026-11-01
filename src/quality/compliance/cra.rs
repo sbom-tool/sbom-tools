@@ -7,6 +7,23 @@ use super::ssdf::{cdxa_note, standard_references_eucc};
 use super::*;
 use crate::model::{AttestationRuleFamily, EvidenceLevel};
 
+/// Why the class-conditional checks (EUCC reference, conformity-module
+/// certificate) did not run: they depend on the product class, which the
+/// run did not pin.
+const NO_PRODUCT_CLASS: &str = "the check depends on the CRA product class, and none is pinned \
+     (--cra-product-class, or productClass in the CRA sidecar)";
+
+/// The hardware checks of prEN 40000-1-3 [PRE-8-RQ-02].
+const HARDWARE_RULE_IDS: [&str; 4] = [
+    "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
+    "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
+    "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
+    "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
+];
+
+/// Why the hardware checks did not run on a software-only SBOM.
+const NO_HARDWARE: &str = "the SBOM lists no device, firmware or device-driver component";
+
 impl ComplianceChecker {
     /// Build the per-route evidence checklist (CRA-P4.3). Each route lists
     /// the external references manufacturers are expected to attach to
@@ -197,7 +214,12 @@ impl ComplianceChecker {
     }
 
     /// CRA gap checks: SBOM freshness (Art. 13(7)), 13(5), 13(9), Annex I Part II supply chain, document integrity
-    pub(crate) fn check_cra_gaps(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
+    pub(crate) fn check_cra_gaps(
+        &self,
+        sbom: &NormalizedSbom,
+        violations: &mut Vec<Violation>,
+        not_evaluated: &mut NotEvaluated,
+    ) {
         // B1: Art. 13(7) / Annex I Part II (1) — SBOM freshness. Keeping the
         // documented component inventory current is the systematic-
         // documentation duty applied to the SBOM element. A missing
@@ -225,6 +247,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed_unparsed_timestamp(sbom),
             });
         } else if let Some(future) = future_timestamp_violation(
             sbom,
@@ -252,6 +276,13 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed(
+                        &sbom
+                            .document
+                            .created
+                            .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                    ),
                 });
             } else if age_days > 30 {
                 violations.push(Violation {
@@ -269,6 +300,13 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed(
+                        &sbom
+                            .document
+                            .created
+                            .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                    ),
                 });
             }
         }
@@ -309,6 +347,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -347,6 +387,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -418,6 +460,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
 
@@ -450,6 +494,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
         }
@@ -559,6 +605,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: None,
                     });
                 }
             }
@@ -607,6 +655,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -641,6 +691,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
         }
@@ -687,6 +739,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -713,6 +767,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -750,6 +806,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
 
@@ -781,16 +839,23 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
         }
 
         // CRA-P3.2: Class-conditional EUCC and Module-attestation references
         // (only fire when the operator pinned a product class — preserves
-        // pre-P3.2 behavior for callers that didn't opt in).
+        // pre-P3.2 behavior for callers that didn't opt in). Unpinned, the
+        // result says the two checks did not run.
         if self.has_explicit_product_class() {
             self.check_class_eucc_reference(sbom, violations);
             self.check_class_module_attestation(sbom, violations);
+        } else {
+            for rule_id in ["SBOM-CRA-ANNEX-IV", "SBOM-CRA-ANNEX-VIII"] {
+                not_evaluated.push(rule_id, NO_PRODUCT_CLASS);
+            }
         }
 
         // CRA-P5.5: prEN 40000-1-2/1-4 controls-assertion sanity checks.
@@ -830,6 +895,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: Some(id.clone()),
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
         }
@@ -898,6 +965,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
     }
@@ -952,6 +1021,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
     }
@@ -1023,6 +1094,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -1046,6 +1119,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -1069,6 +1144,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -1107,6 +1184,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
     }
@@ -1116,13 +1195,14 @@ impl ComplianceChecker {
     /// Implements CRA prEN 40000-1-3 `[PRE-8-RQ-02]`: hardware components must
     /// carry producer, component name, unique identifier, and firmware version
     /// where applicable. Operates on components classified as
-    /// `Device`, `Firmware`, or `DeviceDriver`. The check is silent when the
-    /// SBOM contains no hardware components, so software-only SBOMs are
-    /// unaffected.
+    /// `Device`, `Firmware`, or `DeviceDriver`. A software-only SBOM gets no
+    /// hardware finding, and the result lists the four checks as not
+    /// evaluated.
     pub(crate) fn check_hardware_components(
         &self,
         sbom: &NormalizedSbom,
         violations: &mut Vec<Violation>,
+        not_evaluated: &mut NotEvaluated,
     ) {
         use crate::model::ComponentType;
 
@@ -1141,6 +1221,9 @@ impl ComplianceChecker {
             .collect();
 
         if hardware_components.is_empty() {
+            for rule_id in HARDWARE_RULE_IDS {
+                not_evaluated.push(rule_id, NO_HARDWARE);
+            }
             return;
         }
 
@@ -1163,6 +1246,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed_producer(comp),
                 });
             }
 
@@ -1188,6 +1273,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
 
@@ -1209,6 +1296,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
 
@@ -1237,6 +1326,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: None,
                     });
                 }
             }
@@ -1263,11 +1354,13 @@ impl ComplianceChecker {
     //
     // The check below runs the must-have subset and skips the rest.
 
-    pub(crate) fn check_cra_oss_steward(
-        &self,
-        sbom: &NormalizedSbom,
-        violations: &mut Vec<Violation>,
-    ) {
+    pub(crate) fn check_cra_oss_steward(&self, sbom: &NormalizedSbom, findings: &mut Findings) {
+        let Findings {
+            violations,
+            not_evaluated,
+            ..
+        } = findings;
+
         // -- Must-haves (Article 24 floor) ----------------------------------
 
         // SBOM completeness — basic structural requirements (re-uses the
@@ -1310,6 +1403,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -1338,11 +1433,13 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
         // Format-specific (CycloneDX/SPDX integrity, e.g., bomFormat field)
-        self.check_format_specific(sbom, violations);
+        self.check_format_specific(sbom, violations, not_evaluated);
 
         // -- Explicitly NOT enforced ----------------------------------------
         // - Manufacturer email contact (Art. 13(16))

@@ -590,6 +590,7 @@ pub fn generate_ai_readiness_sarif_with(
         sbom: Some(sbom_name.to_string()),
         profile: Some(profile.to_string()),
         compliant: None,
+        not_evaluated: Vec::new(),
         standards: Vec::new(),
     };
     render_log(
@@ -635,6 +636,7 @@ pub fn generate_compliance_sarif_with(
         sbom: None,
         profile: Some(result.level.name().to_string()),
         compliant: None,
+        not_evaluated: SarifNotEvaluated::of(result),
         standards: Vec::new(),
     };
     let rules = rules::complete_rule_catalogue(rules::rules_for_standard(result.level), &results);
@@ -701,6 +703,7 @@ pub fn generate_multi_compliance_sarif_with(
         sbom: None,
         profile: None,
         compliant: None,
+        not_evaluated: Vec::new(),
         standards: results
             .iter()
             .map(StandardRunSummary::from_result)
@@ -811,6 +814,7 @@ pub fn generate_quality_sarif_with(
         sbom: Some(sbom_name.to_string()),
         profile: Some(profile.to_string()),
         compliant: Some(report.compliance.is_compliant),
+        not_evaluated: SarifNotEvaluated::of(&report.compliance),
         standards: Vec::new(),
     };
     render_log(
@@ -1245,6 +1249,8 @@ fn compliance_results_to_sarif(
                     total: v.counts.map(|c| c.total),
                     deadline: v.deadline.as_ref().map(|d| d.date.to_string()),
                     deadline_source: v.deadline.as_ref().map(|d| d.source.clone()),
+                    field: v.field.clone(),
+                    observed: v.observed.clone(),
                     ..SarifResultProperties::default()
                 },
             )
@@ -1428,6 +1434,11 @@ struct SarifRunProperties {
     /// Compliance verdict for the embedded standard (quality reports only).
     #[serde(skip_serializing_if = "Option::is_none")]
     compliant: Option<bool>,
+    /// The checks the standard did not evaluate on the SBOM, with the
+    /// reason (`ComplianceResult::evaluated`). Single-standard and quality
+    /// runs only; a multi-standard run lists them per standard.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    not_evaluated: Vec<SarifNotEvaluated>,
     /// Per-standard summaries for multi-standard compliance runs — one entry
     /// per checked standard, so a not-applicable standard stays
     /// machine-distinguishable from a pass when several standards share one
@@ -1457,6 +1468,34 @@ struct StandardRunSummary {
     /// Raw verdict. Stays `true` for not-applicable standards by the
     /// documented `ComplianceResult` contract — check `applicable` first.
     compliant: bool,
+    /// The checks the standard did not evaluate on the SBOM; omitted when
+    /// it evaluated them all.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    not_evaluated: Vec<SarifNotEvaluated>,
+}
+
+/// One `notEvaluated` entry of the run properties: a check a standard did
+/// not evaluate on the SBOM, and why — mirrors a `RuleEvaluation` of
+/// `ComplianceResult::evaluated`. The rule is one the run declares in
+/// `rules[]`.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SarifNotEvaluated {
+    rule_id: &'static str,
+    reason: String,
+}
+
+impl SarifNotEvaluated {
+    fn of(result: &ComplianceResult) -> Vec<Self> {
+        result
+            .evaluated
+            .iter()
+            .map(|entry| Self {
+                rule_id: entry.rule_id,
+                reason: entry.reason.clone(),
+            })
+            .collect()
+    }
 }
 
 impl StandardRunSummary {
@@ -1471,6 +1510,7 @@ impl StandardRunSummary {
             not_applicable_reason,
             overall_score: result.score().map(f32::from),
             compliant: result.is_compliant,
+            not_evaluated: SarifNotEvaluated::of(result),
         }
     }
 }
@@ -1594,6 +1634,14 @@ struct SarifResultProperties {
     /// 4`.
     #[serde(skip_serializing_if = "Option::is_none")]
     deadline_source: Option<String>,
+    /// Where the checked field lives in the SBOM's format, e.g.
+    /// `components[].supplier.name` — mirrors `Violation::field`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    field: Option<String>,
+    /// The value the check read, cleaned and cut to 200 characters —
+    /// mirrors `Violation::observed`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    observed: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -1936,6 +1984,8 @@ mod passed_check_tests {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             }],
         );
         let sarif = generate_compliance_sarif_with(&result, &SarifOptions::new().with_passes(true))

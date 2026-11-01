@@ -75,6 +75,25 @@ pub fn render_violation_detail_overlay(
         Span::styled(violation.rule_id, Style::default().fg(scheme.accent)),
     ]));
 
+    // Where the checked field lives in the SBOM's format, and the value the
+    // check read there, as the JSON `field` / `observed` and the text
+    // report's `observed:` line show them.
+    if let Some(field) = &violation.field {
+        lines.push(Line::from(vec![
+            Span::styled("Field: ", Style::default().fg(scheme.muted)),
+            Span::styled(field.as_str(), Style::default().fg(scheme.text)),
+        ]));
+    }
+    if let Some(observed) = &violation.observed {
+        lines.push(Line::from(vec![
+            Span::styled("Observed: ", Style::default().fg(scheme.muted)),
+            Span::styled(
+                format!("\"{observed}\""),
+                Style::default().fg(scheme.warning),
+            ),
+        ]));
+    }
+
     // Under `--pqc-mode deadline`, the migration milestone the finding is
     // judged against and the schedule that sets it, as the text report's
     // `deadline:` line shows them.
@@ -222,6 +241,8 @@ mod tests {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         }
     }
 
@@ -274,6 +295,8 @@ mod tests {
             ),
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         }
     }
 
@@ -365,6 +388,29 @@ mod tests {
             )),
             "{text}"
         );
+    }
+
+    /// The overlay names the field the rule checks and the value the check
+    /// read, when the finding carries them.
+    #[test]
+    fn overlay_shows_the_field_and_the_observed_value() {
+        let plain = ai_act_violation();
+        let text = render_to_text(100, 24, |frame| {
+            super::render_violation_detail_overlay(frame, frame.area(), &plain);
+        });
+        assert!(
+            !text.contains("Field:") && !text.contains("Observed:"),
+            "{text}"
+        );
+
+        let mut violation = ai_act_violation();
+        violation.field = Some("components[].supplier.name".to_string());
+        violation.observed = Some("NOASSERTION".to_string());
+        let text = render_to_text(100, 24, |frame| {
+            super::render_violation_detail_overlay(frame, frame.area(), &violation);
+        });
+        assert!(text.contains("Field: components[].supplier.name"), "{text}");
+        assert!(text.contains("Observed: \"NOASSERTION\""), "{text}");
     }
 
     #[test]

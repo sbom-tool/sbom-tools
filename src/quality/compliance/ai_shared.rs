@@ -201,6 +201,8 @@ pub(crate) fn push_untyped_ml_warning(
         remediation: None,
         finding_detail: None,
         deadline: None,
+        field: None,
+        observed: None,
     });
 }
 
