@@ -10,8 +10,11 @@ ENISA / industry guidance. Use it to:
 - **Engineers**: see which sidecar field (`CraSidecarMetadata`), SBOM
   field, or CycloneDX 1.6 [attestation](#attestation-evidence-cyclonedx-16-declarations)
   clears each violation.
-- **GRC / dashboards**: cross-reference SARIF `properties.standardIds`
-  and `properties.standardHelpUris` to produce control-mapping reports.
+- **GRC / dashboards**: cross-reference the standard references of each
+  finding to produce control-mapping reports: `standard_refs` in `-o json`,
+  `properties.standardRefs` (and the compact `standardIds` and
+  `standardHelpUris`) in SARIF, the `standard-ref` properties and
+  `reference` links of each OSCAL observation.
 
 > Generated and maintained alongside the sbom-tools source tree.
 > If a check or article moves, send a PR — the reverse map is the
@@ -450,7 +453,9 @@ violation messages.
 | `SBOM-CRA-ART-14-PSIRT` / `-EARLY-WARNING` / `-NOTIFICATION` / `-ENISA` channels + the `conformity_summary` PSIRT row | no | sidecar fields |
 
 The `conformity_summary` block is the Annex VIII checklist emitted next to
-`violations` by `validate --standard cra -o json` (and `cra-phase1`). It
+`violations` by `validate --standard cra -o json` (and `cra-phase1`); SARIF
+carries it as the standard's `conformitySummary` and OSCAL as the result's
+`conformity-*` properties. It
 only appears once a product class is pinned — via `--cra-product-class` or
 the sidecar `productClass` — since the class picks the conformity route
 whose rows are listed, and never on `oss-steward` results. Without a pinned

@@ -528,8 +528,14 @@ fails, scaled by the errors and warnings per element checked (see
 checks in the SBOM's format (`field`) and the value it read there
 (`observed`, such as a `NOASSERTION` supplier), and the checks a standard
 did not evaluate on the SBOM are listed under `evaluated` with the reason
-(CISA 2026's signature check on SPDX 2.x, say). The text report names the
-rule of each finding and lists the same checks under `Not evaluated:`.
+(CISA 2026's signature check on SPDX 2.x, say). The envelope states the
+instant the standards were judged at (`as_of`) and the SBOM it judged
+(`subject`: its SHA-256, format, version and file name, and how the document
+was read, such as duplicate entries merged). `-o sarif` and `-o oscal-json`
+carry the same fields for every finding and every standard's verdict (see
+[Fields in every output](docs/compliance-output.md#fields-in-every-output)).
+The text report names the rule of each finding and lists the same checks
+under `Not evaluated:`.
 
 </details>
 
@@ -931,7 +937,10 @@ with one run, shaped for GitHub code scanning:
   [finding identity](docs/compliance-output.md#finding-identity)), never from
   its line or message, so moving, reformatting or reordering the SBOM keeps
   its alerts. `properties.findingKey` and `properties.findingId` carry the
-  same identity.
+  same identity, and the other properties the finding's severity, rule,
+  references, field and observed value, remediation and help URI, as
+  `-o json` does. The run's properties carry each standard's verdict, keyed
+  by its canonical `--standard` value.
 - **One category per kind of run.** `automationDetails.id` is
   `sbom-tools/<standards>/` for `validate` (the canonical `--standard` values,
   sorted and joined by `+`, as in `sbom-tools/cra+ntia/`),
