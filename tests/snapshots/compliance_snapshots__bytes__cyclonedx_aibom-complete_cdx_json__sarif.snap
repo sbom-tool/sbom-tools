@@ -724,7 +724,8 @@ source: tests/compliance_snapshots.rs
             ],
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
-            ]
+            ],
+            "field": "signature"
           }
         },
         {
@@ -759,7 +760,8 @@ source: tests/compliance_snapshots.rs
             ],
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
-            ]
+            ],
+            "field": "components[].supplier.name"
           }
         },
         {
@@ -831,7 +833,8 @@ source: tests/compliance_snapshots.rs
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             ],
             "affected": 1,
-            "total": 1
+            "total": 1,
+            "field": "components[].purl"
           }
         },
         {
@@ -868,7 +871,8 @@ source: tests/compliance_snapshots.rs
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             ],
             "affected": 1,
-            "total": 1
+            "total": 1,
+            "field": "components[].licenses[]"
           }
         },
         {
@@ -905,7 +909,8 @@ source: tests/compliance_snapshots.rs
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             ],
             "affected": 1,
-            "total": 1
+            "total": 1,
+            "field": "components[].purl"
           }
         },
         {
@@ -942,7 +947,8 @@ source: tests/compliance_snapshots.rs
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             ],
             "affected": 1,
-            "total": 1
+            "total": 1,
+            "field": "components[].hashes[]"
           }
         },
         {
@@ -979,7 +985,8 @@ source: tests/compliance_snapshots.rs
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             ],
             "affected": 1,
-            "total": 1
+            "total": 1,
+            "field": "components[].licenses[]"
           }
         },
         {
@@ -1016,7 +1023,8 @@ source: tests/compliance_snapshots.rs
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             ],
             "affected": 1,
-            "total": 1
+            "total": 1,
+            "field": "data[].governance"
           }
         },
         {
@@ -1051,7 +1059,8 @@ source: tests/compliance_snapshots.rs
             ],
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
-            ]
+            ],
+            "field": "dependencies[]"
           }
         },
         {

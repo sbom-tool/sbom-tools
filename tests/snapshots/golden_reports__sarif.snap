@@ -1866,7 +1866,8 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
-            ]
+            ],
+            "field": "metadata.authors[]"
           }
         },
         {
@@ -1903,7 +1904,8 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
-            ]
+            ],
+            "field": "metadata.component.manufacturer"
           }
         },
         {
@@ -1942,7 +1944,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
-            ]
+            ],
+            "field": "metadata.component.externalReferences[]"
           }
         },
         {
@@ -1981,7 +1984,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
-            ]
+            ],
+            "field": "metadata.component.properties[]"
           }
         },
         {
@@ -2026,7 +2030,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "acme-webapp"
+            "componentId": "acme-webapp",
+            "field": "metadata.component.purl"
           }
         },
         {
@@ -2064,7 +2069,8 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
-            ]
+            ],
+            "field": "metadata.component.externalReferences[]"
           }
         },
         {
@@ -2101,7 +2107,8 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
-            ]
+            ],
+            "field": "components[].properties[]"
           }
         },
         {
@@ -2136,7 +2143,8 @@ expression: "render(&SarifReporter::new())"
             ],
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
-            ]
+            ],
+            "field": "metadata.component.externalReferences[]"
           }
         },
         {
@@ -2173,7 +2181,8 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
-            ]
+            ],
+            "field": "serialNumber"
           }
         },
         {
@@ -2220,7 +2229,8 @@ expression: "render(&SarifReporter::new())"
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "acme-webapp"
+            "componentId": "acme-webapp",
+            "field": "metadata.component.purl"
           }
         },
         {
@@ -2265,7 +2275,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "acme-webapp"
+            "componentId": "acme-webapp",
+            "field": "metadata.component.supplier.name"
           }
         },
         {
@@ -2309,7 +2320,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "acme-webapp"
+            "componentId": "acme-webapp",
+            "field": "metadata.component.hashes[]"
           }
         },
         {
@@ -2354,7 +2366,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/lodash@4.17.21"
+            "componentId": "pkg:npm/lodash@4.17.21",
+            "field": "components[].supplier.name"
           }
         },
         {
@@ -2398,7 +2411,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/lodash@4.17.21"
+            "componentId": "pkg:npm/lodash@4.17.21",
+            "field": "components[].hashes[]"
           }
         },
         {
@@ -2443,7 +2457,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/express@4.18.2"
+            "componentId": "pkg:npm/express@4.18.2",
+            "field": "components[].supplier.name"
           }
         },
         {
@@ -2487,7 +2502,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/express@4.18.2"
+            "componentId": "pkg:npm/express@4.18.2",
+            "field": "components[].hashes[]"
           }
         },
         {
@@ -2532,7 +2548,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/dayjs@1.11.7"
+            "componentId": "pkg:npm/dayjs@1.11.7",
+            "field": "components[].supplier.name"
           }
         },
         {
@@ -2576,7 +2593,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/dayjs@1.11.7"
+            "componentId": "pkg:npm/dayjs@1.11.7",
+            "field": "components[].hashes[]"
           }
         },
         {
@@ -2621,7 +2639,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/axios@1.4.0"
+            "componentId": "pkg:npm/axios@1.4.0",
+            "field": "components[].supplier.name"
           }
         },
         {
@@ -2665,7 +2684,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/axios@1.4.0"
+            "componentId": "pkg:npm/axios@1.4.0",
+            "field": "components[].hashes[]"
           }
         },
         {
@@ -2710,7 +2730,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/react@18.2.0"
+            "componentId": "pkg:npm/react@18.2.0",
+            "field": "components[].supplier.name"
           }
         },
         {
@@ -2754,7 +2775,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/react@18.2.0"
+            "componentId": "pkg:npm/react@18.2.0",
+            "field": "components[].hashes[]"
           }
         },
         {
@@ -2799,7 +2821,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/typescript@5.0.4"
+            "componentId": "pkg:npm/typescript@5.0.4",
+            "field": "components[].supplier.name"
           }
         },
         {
@@ -2843,7 +2866,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/typescript@5.0.4"
+            "componentId": "pkg:npm/typescript@5.0.4",
+            "field": "components[].hashes[]"
           }
         },
         {
@@ -2888,7 +2912,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/zod@3.21.4"
+            "componentId": "pkg:npm/zod@3.21.4",
+            "field": "components[].supplier.name"
           }
         },
         {
@@ -2932,7 +2957,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/zod@3.21.4"
+            "componentId": "pkg:npm/zod@3.21.4",
+            "field": "components[].hashes[]"
           }
         },
         {
@@ -2977,7 +3003,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/prisma@4.15.0"
+            "componentId": "pkg:npm/prisma@4.15.0",
+            "field": "components[].supplier.name"
           }
         },
         {
@@ -3021,7 +3048,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "pkg:npm/prisma@4.15.0"
+            "componentId": "pkg:npm/prisma@4.15.0",
+            "field": "components[].hashes[]"
           }
         },
         {
@@ -3065,7 +3093,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "componentId": "acme-webapp"
+            "componentId": "acme-webapp",
+            "field": "dependencies[]"
           }
         },
         {
@@ -3107,7 +3136,9 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "componentId": "acme-webapp"
+            "componentId": "acme-webapp",
+            "field": "bom-ref",
+            "observed": "acme-webapp"
           }
         },
         {
@@ -3149,7 +3180,9 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "componentId": "pkg:npm/lodash@4.17.21"
+            "componentId": "pkg:npm/lodash@4.17.21",
+            "field": "bom-ref",
+            "observed": "lodash"
           }
         },
         {
@@ -3191,7 +3224,9 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "componentId": "pkg:npm/express@4.18.2"
+            "componentId": "pkg:npm/express@4.18.2",
+            "field": "bom-ref",
+            "observed": "express"
           }
         },
         {
@@ -3233,7 +3268,9 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "componentId": "pkg:npm/dayjs@1.11.7"
+            "componentId": "pkg:npm/dayjs@1.11.7",
+            "field": "bom-ref",
+            "observed": "dayjs"
           }
         },
         {
@@ -3275,7 +3312,9 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "componentId": "pkg:npm/axios@1.4.0"
+            "componentId": "pkg:npm/axios@1.4.0",
+            "field": "bom-ref",
+            "observed": "axios"
           }
         },
         {
@@ -3317,7 +3356,9 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "componentId": "pkg:npm/react@18.2.0"
+            "componentId": "pkg:npm/react@18.2.0",
+            "field": "bom-ref",
+            "observed": "react"
           }
         },
         {
@@ -3359,7 +3400,9 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "componentId": "pkg:npm/typescript@5.0.4"
+            "componentId": "pkg:npm/typescript@5.0.4",
+            "field": "bom-ref",
+            "observed": "typescript"
           }
         },
         {
@@ -3401,7 +3444,9 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "componentId": "pkg:npm/zod@3.21.4"
+            "componentId": "pkg:npm/zod@3.21.4",
+            "field": "bom-ref",
+            "observed": "zod"
           }
         },
         {
@@ -3443,7 +3488,9 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "componentId": "pkg:npm/prisma@4.15.0"
+            "componentId": "pkg:npm/prisma@4.15.0",
+            "field": "bom-ref",
+            "observed": "prisma"
           }
         },
         {
@@ -3482,7 +3529,8 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
-            ]
+            ],
+            "observed": "[TIMESTAMP]"
           }
         },
         {
@@ -3521,7 +3569,8 @@ expression: "render(&SarifReporter::new())"
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "affected": 1,
-            "total": 9
+            "total": 9,
+            "field": "components[].licenses[]"
           }
         },
         {
@@ -3562,7 +3611,8 @@ expression: "render(&SarifReporter::new())"
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "affected": 9,
-            "total": 9
+            "total": 9,
+            "field": "components[].supplier.name"
           }
         },
         {
@@ -3599,7 +3649,8 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
-            ]
+            ],
+            "field": "serialNumber"
           }
         },
         {
@@ -3634,7 +3685,8 @@ expression: "render(&SarifReporter::new())"
             ],
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
-            ]
+            ],
+            "field": "metadata.component.externalReferences[]"
           }
         },
         {

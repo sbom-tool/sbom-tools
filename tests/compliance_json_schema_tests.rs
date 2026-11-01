@@ -434,6 +434,67 @@ fn schema_declares_finding_detail() {
     );
 }
 
+/// [`minimal_envelope`] with a violation's `field` and `observed`, and the
+/// result's checks not evaluated.
+fn envelope_with_explainability() -> Value {
+    let mut document = minimal_envelope();
+    let violation = &mut document["results"][0]["violations"][0];
+    violation["field"] = json!("metadata.authors[]");
+    violation["observed"] = json!("NOASSERTION");
+    document["results"][0]["evaluated"] = json!([{
+        "rule_id": "SBOM-NTIA-SPEC-VERSION",
+        "status": "not_evaluated",
+        "reason": "the document's spec version does not parse, so its range cannot be checked"
+    }]);
+    document
+}
+
+/// `field`, `observed` and `evaluated` are declared, so the strict copy
+/// accepts them.
+#[test]
+fn schema_declares_explainability_fields() {
+    let schema = schema();
+    let document = envelope_with_explainability();
+    assert_valid(&schema, &document, "explainability");
+    assert_valid(
+        &json_schema::strict_copy(&schema),
+        &document,
+        "explainability (strict)",
+    );
+    let cases: Vec<(&str, Breakage)> = vec![
+        ("observed over 200 characters", |d| {
+            d["results"][0]["violations"][0]["observed"] = json!("x".repeat(201));
+        }),
+        ("unknown evaluation status", |d| {
+            d["results"][0]["evaluated"][0]["status"] = json!("passed");
+        }),
+        ("evaluation without a reason", |d| {
+            d["results"][0]["evaluated"][0]
+                .as_object_mut()
+                .expect("object")
+                .remove("reason");
+        }),
+        ("empty evaluated list", |d| {
+            d["results"][0]["evaluated"] = json!([])
+        }),
+    ];
+    for (what, mutate) in cases {
+        let mut document = envelope_with_explainability();
+        mutate(&mut document);
+        assert!(
+            json_schema::validate(&schema, &document).is_err(),
+            "{what} must fail validation"
+        );
+    }
+    let strict = json_schema::strict_copy(&schema);
+    let mut document = envelope_with_explainability();
+    document["results"][0]["evaluated"][0]["undeclared"] = json!(0);
+    assert!(
+        json_schema::validate(&strict, &document).is_err(),
+        "an undeclared field in an evaluation must fail the strict copy"
+    );
+}
+
 fn minimal_envelope() -> Value {
     json!({
         "schema": "sbom-tools/compliance/v2",

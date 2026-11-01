@@ -43,12 +43,14 @@
 //!    to be extended instead of silently escaping it. The universe must be
 //!    the level's rule list (`rules_for_level`), so the matrix proves that
 //!    list: every listed rule fires in a case (or is skipped with a reason),
-//!    and no case emits a rule outside it.
+//!    and no case emits a rule outside it. A check the result lists as not
+//!    evaluated must lie in the universe too, and report nothing.
 //!
 //! 5. **An every-level sweep**: each fixture, in every encoding it runs in,
 //!    is also checked at every other compliance level, and what each level
-//!    reports must lie in that level's rule list. Every level's list is thus
-//!    held against the fixtures of every matrix, not only its own.
+//!    reports, or lists as not evaluated, must lie in that level's rule
+//!    list. Every level's list is thus held against the fixtures of every
+//!    matrix, not only its own.
 
 // Each per-standard matrix binary uses a subset of the DSL (mirrors the
 // existing tests/common/ffi_helpers.rs posture).
@@ -1883,11 +1885,13 @@ fn level_sweep(
     strays: &mut BTreeMap<String, String>,
 ) {
     let listed = rules_for_level(checked);
+    // A check listed as not evaluated is one of the level's rules too.
     let emitted = result
         .violations
         .iter()
         .map(|v| (v.rule_id, v.sarif_rule_id()))
-        .chain(result.passed.iter().map(|p| (p.rule_id, p.sarif_rule_id())));
+        .chain(result.passed.iter().map(|p| (p.rule_id, p.sarif_rule_id())))
+        .chain(result.evaluated.iter().map(|e| (e.rule_id, e.rule_id)));
     for (rule, sarif) in emitted {
         if !listed.contains(&sarif) {
             strays
@@ -1982,6 +1986,25 @@ fn sweep(
             failures.push(format!(
                 "[{level:?}] fixture for {id} ({label}) in {enc} emitted unregistered rule \
                  {rule}",
+            ));
+        }
+    }
+    // A check the standard did not evaluate lies in its universe and
+    // reports nothing.
+    for entry in &result.evaluated {
+        let rule = entry.rule_id;
+        if !universe.contains(rule) {
+            failures.push(format!(
+                "[{level:?}] fixture for {id} ({label}) in {enc} lists {rule} as not \
+                 evaluated, outside the declared rule universe",
+            ));
+        }
+        if result.violations.iter().any(|v| v.rule_id == rule)
+            || result.passed.iter().any(|p| p.rule_id == rule)
+        {
+            failures.push(format!(
+                "[{level:?}] fixture for {id} ({label}) in {enc} lists {rule} as not \
+                 evaluated but reports it",
             ));
         }
     }

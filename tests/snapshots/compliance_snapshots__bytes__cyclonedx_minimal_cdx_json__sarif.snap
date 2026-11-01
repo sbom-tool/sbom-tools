@@ -605,7 +605,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "test-app"
+            "componentId": "test-app",
+            "field": "metadata.component.purl"
           }
         },
         {
@@ -647,7 +648,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "test-app"
+            "componentId": "test-app",
+            "field": "metadata.component.supplier.name"
           }
         },
         {
@@ -689,7 +691,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "pkg:npm/lodash@4.17.21"
+            "componentId": "pkg:npm/lodash@4.17.21",
+            "field": "components[].supplier.name"
           }
         },
         {
@@ -731,7 +734,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "pkg:npm/express@4.18.2"
+            "componentId": "pkg:npm/express@4.18.2",
+            "field": "components[].supplier.name"
           }
         },
         {
@@ -773,7 +777,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "test-app"
+            "componentId": "test-app",
+            "field": "dependencies[]"
           }
         },
         {
@@ -815,7 +820,9 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "test-app"
+            "componentId": "test-app",
+            "field": "bom-ref",
+            "observed": "test-app"
           }
         },
         {
@@ -850,7 +857,8 @@ source: tests/compliance_snapshots.rs
             ],
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
-            ]
+            ],
+            "field": "metadata.authors[]"
           }
         },
         {
@@ -885,7 +893,8 @@ source: tests/compliance_snapshots.rs
             ],
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
-            ]
+            ],
+            "field": "signature"
           }
         },
         {
@@ -920,7 +929,8 @@ source: tests/compliance_snapshots.rs
             ],
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
-            ]
+            ],
+            "field": "metadata.lifecycles[]"
           }
         },
         {
@@ -962,7 +972,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "test-app"
+            "componentId": "test-app",
+            "field": "metadata.component.supplier.name"
           }
         },
         {
@@ -1004,7 +1015,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "test-app"
+            "componentId": "test-app",
+            "field": "metadata.component.purl"
           }
         },
         {
@@ -1046,7 +1058,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "test-app"
+            "componentId": "test-app",
+            "field": "metadata.component.hashes[]"
           }
         },
         {
@@ -1088,7 +1101,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "test-app"
+            "componentId": "test-app",
+            "field": "metadata.component.licenses[]"
           }
         },
         {
@@ -1130,7 +1144,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "pkg:npm/lodash@4.17.21"
+            "componentId": "pkg:npm/lodash@4.17.21",
+            "field": "components[].supplier.name"
           }
         },
         {
@@ -1172,7 +1187,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "pkg:npm/lodash@4.17.21"
+            "componentId": "pkg:npm/lodash@4.17.21",
+            "field": "components[].hashes[]"
           }
         },
         {
@@ -1214,7 +1230,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "pkg:npm/express@4.18.2"
+            "componentId": "pkg:npm/express@4.18.2",
+            "field": "components[].supplier.name"
           }
         },
         {
@@ -1256,7 +1273,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "pkg:npm/express@4.18.2"
+            "componentId": "pkg:npm/express@4.18.2",
+            "field": "components[].hashes[]"
           }
         },
         {
@@ -1293,7 +1311,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
               "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
-            ]
+            ],
+            "field": "compositions[].aggregate"
           }
         }
       ],

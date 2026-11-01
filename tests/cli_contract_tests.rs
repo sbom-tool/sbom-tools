@@ -528,6 +528,8 @@ fn json_schema_v1_keeps_the_pre_0_4_shape() {
 
     // The v1 layout predates passed checks: they simply stop appearing
     // there (they used to be Info violations), and no `passed` field joins.
+    // Nor does `evaluated`, the checks a standard did not evaluate (PQC's
+    // federal TLS check, outside deadline mode).
     let cbom = fixture_path("cyclonedx/cbom-quantum-ready.cdx.json");
     let cbom_raw = std::fs::read_to_string(&cbom).expect("fixture readable");
     let cbom_sbom = sbom_tools::parse_sbom_str(&cbom_raw).expect("fixture parses");
@@ -535,7 +537,9 @@ fn json_schema_v1_keeps_the_pre_0_4_shape() {
         .with_as_of(as_of)
         .check(&cbom_sbom);
     assert!(!pqc.passed.is_empty(), "the fixture passes PQC checks");
+    assert!(!pqc.evaluated.is_empty(), "PQC skips its federal TLS check");
     pqc.passed.clear();
+    pqc.evaluated.clear();
     let cbom = cbom.to_str().expect("utf-8");
     let pqc_v1 = run(&[
         "validate",
@@ -558,6 +562,7 @@ fn json_schema_v1_keeps_the_pre_0_4_shape() {
     );
     let json: Value = serde_json::from_str(&stdout(&pqc_v1)).expect("v1 is JSON");
     assert!(json.get("passed").is_none(), "{json}");
+    assert!(json.get("evaluated").is_none(), "{json}");
     assert_eq!(json["info_count"], 0, "{json}");
 
     // The deprecation note goes to stderr, never into the JSON.
@@ -1731,8 +1736,16 @@ fn every_text_output_neutralizes_sbom_text() {
 
 /// Every finding line (one starting with a `markers` prefix) is followed,
 /// `offset` lines later, by a non-empty `fix:` line with its remediation.
+/// The finding's `observed:` and `deadline:` lines, when it has them, come
+/// before the `fix:` line and do not count toward the offset.
 fn assert_fix_line_per_finding(label: &str, text: &str, markers: &[&str], offset: usize) {
-    let lines: Vec<&str> = text.lines().collect();
+    let lines: Vec<&str> = text
+        .lines()
+        .filter(|line| {
+            let line = line.trim_start();
+            !(line.starts_with("observed: ") || line.starts_with("deadline: "))
+        })
+        .collect();
     let findings: Vec<usize> = lines
         .iter()
         .enumerate()
@@ -1813,6 +1826,49 @@ fn validate_remediation_follows_the_input_format() {
             );
         }
     }
+}
+
+/// `validate` text names the rule of each finding, so it matches the SARIF
+/// alert and the JSON entry, and lists the checks the standard did not
+/// evaluate, with the reason.
+#[test]
+fn validate_text_names_rules_and_lists_checks_not_evaluated() {
+    let sbom = fixture_path("spdx/minimal.spdx.json");
+    let text = stdout(
+        &base_command()
+            .arg("validate")
+            .arg(&sbom)
+            .args(["--standard", "cisa-2026", "--as-of", AS_OF])
+            .output()
+            .expect("validate should run"),
+    );
+    let findings: Vec<&str> = text
+        .lines()
+        .filter(|l| {
+            ["[ERROR] ", "[WARN] ", "[INFO] "]
+                .iter()
+                .any(|m| l.starts_with(m))
+        })
+        .collect();
+    assert!(!findings.is_empty(), "{text}");
+    for line in findings {
+        let rule = line
+            .split(" | ")
+            .next()
+            .and_then(|head| head.split_once("] "))
+            .map(|(_, rule)| rule);
+        assert!(
+            rule.is_some_and(|r| r.starts_with("SBOM-CISA2026-")),
+            "the finding line names no rule: {line:?}"
+        );
+    }
+    assert!(
+        text.contains(
+            "\nNot evaluated:\n  SBOM-CISA2026-SIGNATURE: SPDX 2.x has no field for an \
+             in-document signature\n"
+        ),
+        "{text}"
+    );
 }
 
 /// The `diff` table report sanitized names but kept their newlines.

@@ -313,13 +313,14 @@ fn render_outputs(rel: &str, standards: &[&str]) -> [(&'static str, String); 4] 
         })
         .collect();
     let results = run(sidecar.as_ref()).check_levels(&levels, &sbom);
-    // The `--json-schema v1` layout predates passed checks and leaves them
-    // out, as `validate` does.
+    // The `--json-schema v1` layout predates passed checks and the checks
+    // not evaluated and leaves them out, as `validate` does.
     let v1: Vec<ComplianceResult> = results
         .iter()
         .cloned()
         .map(|mut result| {
             result.passed.clear();
+            result.evaluated.clear();
             result
         })
         .collect();
