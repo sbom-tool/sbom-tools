@@ -127,9 +127,12 @@ Color is resolved once at startup by `theme::startup_theme(no_color_flag, prefs_
 
 - NormalizedSbom is the single source of truth for parsed data.
 - Components are keyed by CanonicalId for stability across formats. Entries
-  that share a canonical id, name and version are one component listed twice:
-  `NormalizedSbom::add_component` merges them without regard to their order
-  (`src/model/merge.rs`) and records them in `duplicate_components`.
+  that share a canonical id, and whose names and versions agree where both
+  are real values, are one component listed twice:
+  `NormalizedSbom::add_component` merges them without regard to their order,
+  a real value always winning over a placeholder (`src/model/merge.rs`), and
+  records them in `duplicate_components`. One placeholder classification
+  (`src/model/known.rs`) serves the merge and every compliance check.
 - DiffResult summary values are derived from change lists.
 - Similarity/deviation scales are fixed and test-pinned: `DiffResult.semantic_score` is **0-100** (single-diff scale), `MatrixResult::similarity_scores` is **0-1** (`semantic_score / 100`), and multi-SBOM `deviation_scores`/`max_deviation` are **0-1** (`1 - similarity`).
 - Multi-SBOM aggregation (variable/inconsistent/divergent/evolution entries) is keyed by the **version-stripped logical purl**, so a version bump is one component with a version spread rather than an Added + Removed pair.

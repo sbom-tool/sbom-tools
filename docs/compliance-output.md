@@ -363,18 +363,25 @@ Three cases used to change a verdict, or hide a problem, without a word.
 ### Duplicate components
 
 A document can list one component more than once: the same purl under two
-`bom-ref`s, or one `bom-ref` twice. Entries with the same canonical id, name
-and version are one component. sbom-tools merges them, and the merged
-component does not depend on the order of the entries:
+`bom-ref`s, or one `bom-ref` twice. Entries with the same canonical id are one
+component when their names and versions agree; a name or version that is
+absent or not a real value (`NOASSERTION`, `NONE`, `UNKNOWN`, a placeholder
+such as `TBD` or `N/A`, or blank) agrees with any. sbom-tools merges them, and
+the merged component does not depend on the order of the entries:
 
 - A list field (hashes, licences, external references, identifiers,
   properties, annotations, vulnerabilities) keeps every value of every entry
-  once, sorted.
-- A single-valued field that one entry leaves empty takes the other entry's
-  value.
-- When the entries give a single-valued field two different values, the
+  once, sorted. A licence that is not a real value is dropped when another
+  entry names a real one.
+- A single-valued field that one entry leaves empty, or fills with a value
+  that is not a real one, takes the other entry's real value. A real
+  supplier, author, version, licence or identifier always wins over
+  `NOASSERTION`, `NONE`, `TBD` or a blank, and that is no conflict.
+- When the entries give a single-valued field two different real values, the
   value that sorts first (by its JSON form) is kept, and the field is
   recorded as a conflict.
+
+What counts as a real value is what every check counts as one.
 
 Every check then judges the merged component. Until v0.4.0 the last entry
 replaced the others, so a verdict could depend on the order of the entries.
