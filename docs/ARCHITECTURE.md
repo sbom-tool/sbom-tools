@@ -117,7 +117,7 @@ The TUI has two independent app types:
 
 - **DiffApp** (`src/tui/app.rs`, `src/tui/views/`): Handles diff mode with `App` struct holding all state — 10 tabs (Summary, Components, Dependencies, Licenses, Vulnerabilities, Quality, Compliance, Side-by-Side, Graph, Source; Graph appears only when the diff contains graph changes, and Source takes key `9` in its absence and `0` when it is present). Digit keys are reserved for tab jumps in diff mode — per-tab filters live behind letter keys and modals instead. Multi-diff, timeline, and matrix modes reuse the same `App` but render full-screen dashboards with panel navigation instead of tabs (no tab bar, so no digit dispatch). Uses `ViewState` trait with per-tab state structs for all tabs.
 
-- **ViewApp** (`src/tui/view/app.rs`, `src/tui/view/views/`): Handles single-SBOM/CBOM/AI-BOM view mode. Profile-driven tab system via `ViewTab::tabs_for_profile(BomProfile)` — SBOM mode shows 8 tabs, CBOM mode shows 8 crypto-specific tabs, AI-BOM mode shows 6 tabs (Overview, Models, Datasets, AI Readiness, Compliance, Source). Quality scoring uses `ScoringProfile::Cbom` when CBOM is detected. Runtime toggle via `P` key re-scores with the selected profile.
+- **ViewApp** (`src/tui/view/app.rs`, `src/tui/view/views/`): Handles single-SBOM/CBOM/AI-BOM view mode. Profile-driven tab system via `ViewTab::tabs_for_profile(BomProfile)` — SBOM mode shows 8 tabs, CBOM mode shows 8 crypto-specific tabs, AI-BOM mode shows 6 tabs (Overview, Models, Datasets, AI Readiness, Compliance, Source). Quality scoring uses `ScoringProfile::Cbom` when CBOM is detected. Runtime toggle via `P` key re-scores with the selected profile. When `view --severity`, `--ecosystem` or `--vulnerable-only` filter the component list, the app keeps the whole SBOM (`ViewApp::new_filtered`), and the compliance tab, its exports and the quality score judge it (`ViewApp::judged_sbom`).
 
 Both app types share rendering utilities in `src/tui/shared/` (quality charts, component info, theme) and use `RenderContext` for read-only frame preparation.
 
@@ -126,7 +126,10 @@ Color is resolved once at startup by `theme::startup_theme(no_color_flag, prefs_
 ## Invariants and Conventions
 
 - NormalizedSbom is the single source of truth for parsed data.
-- Components are keyed by CanonicalId for stability across formats.
+- Components are keyed by CanonicalId for stability across formats. Entries
+  that share a canonical id, name and version are one component listed twice:
+  `NormalizedSbom::add_component` merges them without regard to their order
+  (`src/model/merge.rs`) and records them in `duplicate_components`.
 - DiffResult summary values are derived from change lists.
 - Similarity/deviation scales are fixed and test-pinned: `DiffResult.semantic_score` is **0-100** (single-diff scale), `MatrixResult::similarity_scores` is **0-1** (`semantic_score / 100`), and multi-SBOM `deviation_scores`/`max_deviation` are **0-1** (`1 - similarity`).
 - Multi-SBOM aggregation (variable/inconsistent/divergent/evolution entries) is keyed by the **version-stripped logical purl**, so a version bump is one component with a version spread rather than an Added + Removed pair.

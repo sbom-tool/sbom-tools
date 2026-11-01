@@ -207,11 +207,14 @@ The generic checks that the CRA profiles share with the other standards —
 the SBOM creator (`SBOM-CRA-CREATOR`), a document identifier
 (`SBOM-CRA-SERIAL`), component names (`SBOM-CRA-COMPONENT-NAME`), a spec
 version sbom-tools reads (`SBOM-CRA-SPEC-VERSION`,
-`SBOM-CRA-SPEC-VERSION-UNKNOWN`) and element identifiers
-(`SBOM-CRA-ELEMENT-ID`) — cite Annex I Part II (1), the clause that asks for
-an SBOM of the product's components in a machine-readable format. They cited
-no clause before v0.4.0, so their findings carried no reference and no
-`help_uri`.
+`SBOM-CRA-SPEC-VERSION-UNKNOWN`), element identifiers
+(`SBOM-CRA-ELEMENT-ID`) and one entry per component
+(`SBOM-CRA-DUPLICATE-COMPONENT`, an Info since v0.4.0) — cite Annex I Part II
+(1), the clause that asks for an SBOM of the product's components in a
+machine-readable format. They cited no clause before v0.4.0, so their
+findings carried no reference and no `help_uri`. A component the document
+lists more than once is merged into one before any check reads it (see
+[Duplicate components](compliance-output.md#duplicate-components)).
 
 External-reference types. The `Attestation`, `Certification`,
 `RiskAssessment`, `VulnerabilityAssertion` and `ExploitabilityStatement`
@@ -313,7 +316,7 @@ Annex V DoC, Annex VIII certificate, Article 14 channels, hardware
 product class either: its results carry no `conformity_summary`, and
 `SBOM-CRA-CYCLES` stays a Warning whatever the class (before v0.4.0 a
 sidecar `productClass` reached it). `sbom-tools rules --standard
-oss-steward` lists the 14 rules the steward profile checks. The
+oss-steward` lists the 15 rules the steward profile checks. The
 vulnerability-handling gate (`SBOM-CRA-ART-24`) cites Art. 24, with the
 EUR-Lex URL of the other CRA references; before v0.4.0 it cited nothing, so
 its findings had no reference and no `help_uri`.
@@ -353,6 +356,10 @@ the class from those descriptions.
 | EUCC reference                 | n/a     | n/a         | Info        | Error    |
 | PSIRT documented               | Warning | Warning     | Error       | Error    |
 | Module certificate reference   | n/a     | Warning (B+C) | Error (B+C/H) | Error (EUCC) |
+
+The cycle check (`SBOM-CRA-CYCLES`) counts the cycles of a dependency graph
+of any size. Until v0.4.0 it skipped every graph above 1,000,000 edges, which
+then passed.
 
 Default conformity routes per class:
 

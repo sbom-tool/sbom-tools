@@ -324,7 +324,9 @@ component's findings new ids. Generators that write random UUIDs as `bom-ref`s
 therefore produce new ids on every regeneration for components without a purl,
 CPE, SWHID or SWID. When two different components share a canonical id, the
 later one in the document is re-keyed by appending `#` and its `bom-ref` or
-`SPDXID`, so reordering such components can move that suffix. A finding with a
+`SPDXID`, so reordering such components can move that suffix. Entries with
+the same canonical id, name and version are one component, merged into one
+(see [Duplicate components](#duplicate-components)). A finding with a
 `finding_detail` also changes id with its detail, which comes from the SBOM's
 own data (a vulnerability id, a cipher suite name), never from the message.
 
@@ -353,6 +355,59 @@ VEX statement) and two when they contradict each other (`not_affected`,
 Passed checks are numbered the same way. The test suite checks the guarantee,
 over a result's violations and passed checks together, on every fixture at
 every level.
+
+## How the checks read the SBOM
+
+Three cases used to change a verdict, or hide a problem, without a word.
+
+### Duplicate components
+
+A document can list one component more than once: the same purl under two
+`bom-ref`s, or one `bom-ref` twice. Entries with the same canonical id, name
+and version are one component. sbom-tools merges them, and the merged
+component does not depend on the order of the entries:
+
+- A list field (hashes, licences, external references, identifiers,
+  properties, annotations, vulnerabilities) keeps every value of every entry
+  once, sorted.
+- A single-valued field that one entry leaves empty takes the other entry's
+  value.
+- When the entries give a single-valued field two different values, the
+  value that sorts first (by its JSON form) is kept, and the field is
+  recorded as a conflict.
+
+Every check then judges the merged component. Until v0.4.0 the last entry
+replaced the others, so a verdict could depend on the order of the entries.
+The generic checks report one Info finding per document, under the rule of
+the standard's family: `SBOM-QUALITY-DUPLICATE-COMPONENT` (`minimum`,
+`standard`, `comprehensive`), `SBOM-NTIA-DUPLICATE-COMPONENT`,
+`SBOM-CRA-DUPLICATE-COMPONENT` (`cra-phase1`, `cra`, `oss-steward`) and
+`SBOM-FDA-DUPLICATE-COMPONENT`. Its `counts` are the duplicated components and
+all components, and its message names up to five of them, with their numbers
+of entries, and the fields the entries disagree on:
+
+```text
+2/9 components are listed more than once (5 entries), and the entries of each were merged into one: pkg:npm/lodash@4.17.21 (3 entries), ref-libbeta (2 entries); the entries disagree on description, and the value that sorts first is kept
+```
+
+`convert --to normalized` lists each one under `duplicate_components`, as
+`{canonical_id, entries, format_ids, conflicts}`.
+
+### Dependency cycles
+
+`SBOM-CRA-CYCLES` counts the cycles of the dependency graph in linear time,
+for a graph of any size. Until v0.4.0 it skipped every graph above 1,000,000
+edges, which then passed. The graph metrics of the quality score
+(`dependency_metrics`) still skip graph analysis above that size.
+
+### Creation timestamps
+
+A creation timestamp that is not an RFC 3339 date-time (CycloneDX
+`metadata.timestamp`, SPDX `created`) counts as absent, as before, but every
+timestamp check now quotes it: "SBOM has an unparseable creation timestamp
+'2026-13-45 noon', not an RFC 3339 date-time" instead of "missing". A value
+longer than 64 characters is cut. `convert --to normalized` keeps it as
+`document.created_unparsed`.
 
 ## Compatibility
 
