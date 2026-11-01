@@ -476,6 +476,11 @@ impl Spdx3Parser {
             sbom.extensions.spdx = Some(serde_json::Value::Object(spdx_ext));
         }
 
+        // Components that only design, development, build or test
+        // relationships bring in are not needed at runtime: the component
+        // scope CycloneDX states on the component.
+        super::mark_non_runtime_components(&mut sbom);
+
         sbom.calculate_content_hash();
         sbom
     }
@@ -1352,6 +1357,9 @@ impl Spdx3Parser {
         dep_type: DependencyType,
         swap: bool,
     ) {
+        // A LifecycleScopedRelationship says when in the lifecycle the
+        // relationship holds; its edges carry that as their scope.
+        let scope = rel.scope.as_deref().and_then(lifecycle_scope);
         if let Some(from_ref) = &rel.from
             && let Some(from_id) = id_map.get(from_ref)
             && let Some(to_refs) = &rel.to
@@ -1363,7 +1371,11 @@ impl Spdx3Parser {
                     } else {
                         (from_id.clone(), to_id.clone())
                     };
-                    sbom.add_edge(DependencyEdge::new(src, dst, dep_type.clone()));
+                    let mut edge = DependencyEdge::new(src, dst, dep_type.clone());
+                    if let Some(scope) = &scope {
+                        edge = edge.with_scope(scope.clone());
+                    }
+                    sbom.add_edge(edge);
                 }
             }
         }
@@ -1773,6 +1785,21 @@ fn merge_vex(slot: &mut Option<VexStatus>, incoming: &VexStatus) {
 fn fill<T: Clone>(slot: &mut Option<T>, value: Option<&T>) {
     if slot.is_none() {
         *slot = value.cloned();
+    }
+}
+
+/// The edge scope of a `LifecycleScopedRelationship` of lifecycle `scope`
+/// (a `LifecycleScopeType`, bare or as its full IRI): `runtime` holds while
+/// the product runs; `design`, `development`, `build` and `test` do not.
+/// `other`, or a value the vocabulary does not have, says nothing.
+fn lifecycle_scope(scope: &str) -> Option<crate::model::DependencyScope> {
+    let name = scope.rsplit(['/', '#']).next().unwrap_or(scope);
+    match name.trim().to_ascii_lowercase().as_str() {
+        "runtime" => Some(crate::model::DependencyScope::Required),
+        "design" | "development" | "build" | "test" => {
+            Some(crate::model::DependencyScope::Excluded)
+        }
+        _ => None,
     }
 }
 
@@ -2507,6 +2534,9 @@ struct Spdx3Relationship {
     from: Option<String>,
     to: Option<Vec<String>>,
     relationship_type: Option<String>,
+    /// `LifecycleScopedRelationship.scope`: `design`, `development`,
+    /// `build`, `test`, `runtime` or `other`.
+    scope: Option<String>,
     start_time: Option<String>,
     end_time: Option<String>,
     completeness: Option<String>,

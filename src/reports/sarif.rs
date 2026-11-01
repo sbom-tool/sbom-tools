@@ -592,6 +592,8 @@ pub fn generate_ai_readiness_sarif_with(
         compliant: None,
         not_evaluated: Vec::new(),
         standards: Vec::new(),
+        suppressed: None,
+        excluded_components: None,
     };
     render_log(
         automation_id(options.category(), quality_category(profile)),
@@ -638,6 +640,8 @@ pub fn generate_compliance_sarif_with(
         compliant: None,
         not_evaluated: SarifNotEvaluated::of(result),
         standards: Vec::new(),
+        suppressed: nonzero(result.suppressed_count()),
+        excluded_components: nonzero(result.excluded_components),
     };
     let rules = rules::complete_rule_catalogue(rules::rules_for_standard(result.level), &results);
     render_log(
@@ -708,6 +712,8 @@ pub fn generate_multi_compliance_sarif_with(
             .iter()
             .map(StandardRunSummary::from_result)
             .collect(),
+        suppressed: None,
+        excluded_components: None,
     };
     render_log(
         automation_id(
@@ -816,6 +822,8 @@ pub fn generate_quality_sarif_with(
         compliant: Some(report.compliance.is_compliant),
         not_evaluated: SarifNotEvaluated::of(&report.compliance),
         standards: Vec::new(),
+        suppressed: nonzero(report.compliance.suppressed_count()),
+        excluded_components: nonzero(report.compliance.excluded_components),
     };
     render_log(
         automation_id(options.category(), quality_category(profile)),
@@ -1251,6 +1259,8 @@ fn compliance_results_to_sarif(
                     deadline_source: v.deadline.as_ref().map(|d| d.source.clone()),
                     field: v.field.clone(),
                     observed: v.observed.clone(),
+                    default_severity: v.severity_override.map(|o| o.default.name().to_string()),
+                    severity_source: v.severity_override.map(|o| o.source.name().to_string()),
                     ..SarifResultProperties::default()
                 },
             )
@@ -1446,6 +1456,16 @@ struct SarifRunProperties {
     /// on the flat fields above.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     standards: Vec<StandardRunSummary>,
+    /// Findings the run's rule settings turned off (`--rule RULE=off`), which
+    /// report no result. Omitted when none, and on multi-standard runs,
+    /// which carry it per standard in `standards`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    suppressed: Option<usize>,
+    /// Components the package rules left out for their excluded scope.
+    /// Omitted when none, and on multi-standard runs, which carry it per
+    /// standard in `standards`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    excluded_components: Option<usize>,
 }
 
 /// One `properties.standards` entry of a multi-standard compliance run.
@@ -1468,6 +1488,13 @@ struct StandardRunSummary {
     /// Raw verdict. Stays `true` for not-applicable standards by the
     /// documented `ComplianceResult` contract — check `applicable` first.
     compliant: bool,
+    /// Findings the run's rule settings turned off; omitted when none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    suppressed: Option<usize>,
+    /// Components the package rules left out for their excluded scope;
+    /// omitted when none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    excluded_components: Option<usize>,
     /// The checks the standard did not evaluate on the SBOM; omitted when
     /// it evaluated them all.
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -1511,8 +1538,15 @@ impl StandardRunSummary {
             overall_score: result.score().map(f32::from),
             compliant: result.is_compliant,
             not_evaluated: SarifNotEvaluated::of(result),
+            suppressed: nonzero(result.suppressed_count()),
+            excluded_components: nonzero(result.excluded_components),
         }
     }
+}
+
+/// `count`, or `None` when it is zero (an omitted property).
+const fn nonzero(count: usize) -> Option<usize> {
+    if count == 0 { None } else { Some(count) }
 }
 
 #[derive(Serialize)]
@@ -1642,6 +1676,15 @@ struct SarifResultProperties {
     /// mirrors `Violation::observed`.
     #[serde(skip_serializing_if = "Option::is_none")]
     observed: Option<String>,
+    /// The severity the check gave a compliance finding whose rule the run
+    /// sets (`--rule`): mirrors `Violation::default_severity`. The result's
+    /// `level` follows the severity the setting gives it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    default_severity: Option<String>,
+    /// Where that setting comes from (`config` or `cli`): mirrors
+    /// `Violation::severity_source`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    severity_source: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -1983,6 +2026,7 @@ mod passed_check_tests {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,

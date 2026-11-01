@@ -86,7 +86,7 @@ impl ComplianceChecker {
             not_evaluated,
             ..
         } = findings;
-        let evidence = FsctEvidence::collect(sbom);
+        let evidence = FsctEvidence::collect(self, sbom);
         fsct_minimum_expected(sbom, &evidence, violations);
         fsct_recommended_practice(sbom, &evidence, violations);
         fsct_aspirational_goals(sbom, &evidence, violations, not_evaluated);
@@ -216,7 +216,7 @@ struct FsctEvidence {
 
 impl FsctEvidence {
     #[allow(clippy::too_many_lines)]
-    fn collect(sbom: &NormalizedSbom) -> Self {
+    fn collect(checker: &ComplianceChecker, sbom: &NormalizedSbom) -> Self {
         let total = sbom.components.len();
         let mut pkg_total = 0usize;
         let mut nameless = 0usize;
@@ -242,7 +242,7 @@ impl FsctEvidence {
             // File/snippet entries and cryptographic assets are exempt from
             // the remaining per-component baseline attributes (see field doc
             // above).
-            if !comp.component_type.is_package_scoped() {
+            if !checker.judges_package(sbom, comp) {
                 continue;
             }
             pkg_total += 1;
@@ -417,7 +417,7 @@ impl FsctEvidence {
             .components
             .iter()
             .filter(|(id, c)| {
-                c.component_type.is_package_scoped()
+                checker.judges_package(sbom, c)
                     && !touched.contains(id)
                     && sbom.primary_component_id.as_ref() != Some(id)
             })
@@ -441,7 +441,7 @@ impl FsctEvidence {
             let Some(comp) = sbom.components.get(*id) else {
                 continue;
             };
-            if !comp.component_type.is_package_scoped() {
+            if !checker.judges_package(sbom, comp) {
                 continue;
             }
             let has_children = edge_sources.contains(id);
@@ -530,6 +530,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: sbom
@@ -570,6 +571,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: observed_unparsed_timestamp(sbom),
@@ -595,6 +597,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -628,6 +631,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -654,6 +658,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -681,6 +686,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -711,6 +717,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -741,6 +748,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -774,6 +782,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -806,6 +815,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -839,6 +849,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -866,6 +877,7 @@ fn fsct_minimum_expected(
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -892,6 +904,7 @@ fn fsct_minimum_expected(
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -927,6 +940,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: evidence.first_placeholder.as_deref().and_then(observed),
@@ -978,6 +992,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1002,6 +1017,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1035,6 +1051,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1067,6 +1084,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1108,6 +1126,7 @@ fn fsct_recommended_practice(
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -1140,6 +1159,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1174,6 +1194,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1203,6 +1224,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1233,6 +1255,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1263,6 +1286,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1295,6 +1319,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1353,6 +1378,7 @@ fn fsct_aspirational_goals(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1382,6 +1408,7 @@ fn fsct_aspirational_goals(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1412,6 +1439,7 @@ fn fsct_aspirational_goals(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1438,6 +1466,7 @@ fn fsct_aspirational_goals(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1468,6 +1497,7 @@ fn fsct_aspirational_goals(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1499,6 +1529,7 @@ fn fsct_aspirational_goals(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,

@@ -510,6 +510,9 @@ Checks an SBOM against a compliance standard and reports missing fields or faili
 | `--pqc-mode <readiness\|deadline>` | How `cnsa2` and `pqc` judge quantum-vulnerable cryptography: `readiness` (default) makes each one an error; `deadline` judges each by its migration date at `--as-of` (info, then warning, then error) and adds `deadline` and `deadline_source` to the finding; see [PQC deadline mode](docs/compliance-output.md#pqc-deadline-mode) |
 | `--pqc-profile <nist\|federal>` | With `--pqc-mode deadline`, whose dates `pqc` applies: `nist` (default, NIST IR 8547) or `federal` (EO 14412 / OMB M-26-15: PQC key establishment by 2030-12-31, signatures by 2031-12-31, TLS 1.3 by 2030-01-02) |
 | `--cnsa-category <category>` | With `--pqc-mode deadline`, the CNSA 2.0 equipment category whose timeline `cnsa2` applies: `software-signing`, `web-cloud`, `networking`, `operating-systems`, `niche`, `custom-legacy`; the strictest when unset |
+| `--rule <RULE=SETTING>` | Set a rule's severity for this run (`off`, `info`, `warning`, `error`; repeatable, e.g. `--rule SBOM-NTIA-SUPPLIER=warning`). The verdict, the counts, the score and the exit code follow it; each finding keeps the severity its check gave it as `default_severity`, and `off` counts the dropped findings under `suppressed`. Wins over the config file's `compliance.rules`; see [Rule settings](docs/compliance-output.md#rule-settings) |
+| `--fail-on <RULE>` | Exit `1` on any finding of this rule, whatever its severity (repeatable; config key `compliance.fail_on`) |
+| `--include-excluded-scope` | Also judge components whose scope is excluded (CycloneDX `scope: excluded`, SPDX development, build and test dependencies) by the package rules; by default they are left out and each result counts them in `excluded_components` |
 | `--sarif-include-passes` | With `-o sarif`, also report every check the SBOM passed (e.g. an approved post-quantum algorithm) as a result of `kind: "pass"`, level `none`. Off by default, so code scanning shows no pass as an alert |
 | `--sarif-base <dir>`, `--sarif-category <name>`, `--sarif-max-results <n>` | Where `-o sarif` results point, the code-scanning category they report under, and the most results a run keeps (25,000 by default); see [SARIF and code scanning](#sarif-and-code-scanning) |
 
@@ -678,6 +681,12 @@ sbom-tools matrix sbom1.json sbom2.json sbom3.json
 ```
 
 Each command opens a full-screen dashboard: press `p`/`Tab` to switch panels, `v` for the variable-components drill-down (multi-diff), `Enter` for a pair diff (matrix), and `d` to compare adjacent versions (timeline).
+
+`timeline` takes the compliance inputs of a run as `validate` does
+(`--as-of`, `--cra-product-class`, the PQC flags, `--rule`,
+`--include-excluded-scope`, with the config file's defaults) and checks every
+SBOM of its compliance trend with them, so `--as-of` pins the trend.
+`diff-multi` and `matrix` check no compliance and take none of them.
 
 These three commands accept `-o auto|tui|json` only (`auto` = TUI on a TTY,
 JSON when piped); any other value is rejected as a usage error before any
@@ -1118,7 +1127,7 @@ jobs:
 | Code | Meaning |
 |------|---------|
 | `0` | Success (no changes detected, or run without `--fail-on-change`) |
-| `1` | Changes detected (`--fail-on-change`) / compliance errors, or a not-applicable standard under `--require-applicable` (`validate`) / quality score below `--min-score` or non-compliant with `--fail-on-noncompliant` (`quality`) / no query matches |
+| `1` | Changes detected (`--fail-on-change`) / compliance errors, a `--fail-on` finding, or a not-applicable standard under `--require-applicable` (`validate`) / quality score below `--min-score` or non-compliant with `--fail-on-noncompliant` (`quality`) / no query matches |
 | `2` | New vulnerabilities introduced (`--fail-on-vuln`) / compliance warnings (`validate --fail-on-warning`) |
 | `3` | Usage error (unknown flag or value, missing argument) or operational error (I/O, parse, config, invalid flag values) |
 | `4` | VEX coverage gaps found (`--fail-on-vex-gap`) |
@@ -1131,8 +1140,10 @@ report. Every usage error (an unknown flag or standard, an invalid flag value,
 a missing argument) and every operational error — I/O, parse failures, an
 unsupported `-o` format for the command, an invalid `--as-of`/
 `--cra-product-class` value, `--pqc-profile` or `--cnsa-category` without
-`--pqc-mode deadline`, a broken explicit `--cra-sidecar`, or an invalid
-config file — exits `3`, in every command. `--help` and `--version` exit `0`.
+`--pqc-mode deadline`, an unknown `--rule` or `--fail-on` rule id, a broken
+explicit `--cra-sidecar`, or an invalid config file — exits `3`, in every
+command. `--help` and `--version` exit `0`. The compliance gates read the
+severities `--rule` sets.
 CI pipelines should therefore only interpret a nonzero exit as a gate verdict
 when the expected report output was produced.
 

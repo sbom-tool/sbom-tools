@@ -199,7 +199,7 @@ impl ComplianceChecker {
 
         // PS.3.2 provenance data must cover the release's components; the
         // per-component practices below have nothing to judge without one.
-        violations.extend(inventory_absent_violation(
+        violations.extend(self.inventory_absent_violation(
             sbom,
             "SBOM-SSDF-INVENTORY",
             "NIST SSDF PS.3.2: provenance data for the release's components",
@@ -252,6 +252,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -287,6 +288,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -297,7 +299,7 @@ impl ComplianceChecker {
         // practices (hash, identifier, supplier) judge package-scoped
         // components only — crypto assets, files and services carry none.
         // Only plausible digests count (see `plausible_digest`).
-        let packages: Vec<_> = package_components(sbom).collect();
+        let packages: Vec<_> = self.package_components(sbom).collect();
         let total = packages.len();
         let without_hash_components: Vec<_> = packages
             .iter()
@@ -334,6 +336,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -360,6 +363,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -402,6 +406,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -424,6 +429,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -476,6 +482,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -508,6 +515,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -535,6 +543,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,

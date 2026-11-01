@@ -1187,6 +1187,53 @@ fn diff_compliance_header_uses_shared_score_formula() {
     );
 }
 
+/// The compliance tab counts what the run's inputs kept out of the
+/// violations, as the view tab does: the header shows the new side's
+/// suppressed findings and excluded components, and the overview both
+/// sides, old → new. A side with neither shows nothing.
+#[test]
+fn diff_compliance_counts_suppressed_findings_and_excluded_components() {
+    use crate::quality::{SettingSource, SuppressedRule};
+
+    let mut app = demo_app(TabKind::Compliance);
+    pin_snapshot_compliance(&mut app);
+    let idx = app.diff_compliance_state().selected_standard;
+    let baseline = render_to_text(120, 40, |frame| {
+        app.prepare_render();
+        render(frame, &mut app);
+    });
+    assert!(
+        !baseline.contains("Suppressed") && !baseline.contains("Excluded"),
+        "nothing kept out, nothing shown:\n{baseline}"
+    );
+
+    let suppressed = |findings| SuppressedRule {
+        rule_id: "SBOM-NTIA-SUPPLIER".to_string(),
+        findings,
+        source: SettingSource::Cli,
+    };
+    {
+        let old = &mut app.data.old_compliance_results.as_mut().expect("pinned")[idx];
+        old.suppressed = vec![suppressed(1)];
+        old.excluded_components = 1;
+        let new = &mut app.data.new_compliance_results.as_mut().expect("pinned")[idx];
+        new.suppressed = vec![suppressed(3)];
+        new.excluded_components = 2;
+    }
+    let text = render_to_text(120, 40, |frame| {
+        app.prepare_render();
+        render(frame, &mut app);
+    });
+    assert!(
+        text.contains("Suppressed: 3") && text.contains("Excluded: 2"),
+        "the header counts the new side:\n{text}"
+    );
+    assert!(
+        text.contains("Suppressed:   1 \u{2192} 3") && text.contains("Excluded:     1 \u{2192} 2"),
+        "the overview shows both sides:\n{text}"
+    );
+}
+
 #[test]
 fn policy_preset_na_standard_is_not_rendered_as_pass() {
     use crate::tui::app_states::PolicyPreset;

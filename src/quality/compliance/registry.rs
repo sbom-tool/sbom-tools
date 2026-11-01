@@ -4558,6 +4558,47 @@ pub(crate) fn lookup_static_rule_id(rule_id: &str) -> Option<&'static str> {
     ALL_RULE_IDS.iter().find(|k| **k == rule_id).copied()
 }
 
+/// The registry's spelling of the rule id `value`, ignoring case and
+/// surrounding whitespace: how the command line (`--rule`, `--fail-on`,
+/// `rules explain`) and the config file (`compliance.rules`) name a rule.
+///
+/// # Errors
+///
+/// `value` names no registered rule. The message says how to list the rule
+/// ids and names the closest one, if one is a few edits away.
+pub fn resolve_rule_id(value: &str) -> Result<&'static str, String> {
+    let value = value.trim();
+    if let Some(id) = ALL_RULE_IDS
+        .iter()
+        .find(|id| id.eq_ignore_ascii_case(value))
+    {
+        return Ok(id);
+    }
+    Err(match closest_rule_id(value) {
+        Some(id) => {
+            format!("unknown rule id (did you mean {id}?); `sbom-tools rules` lists every rule id")
+        }
+        None => "unknown rule id; `sbom-tools rules` lists every rule id".to_string(),
+    })
+}
+
+/// The registered rule id closest to `value`, when it is a few edits away
+/// (with or without the `SBOM-` prefix).
+fn closest_rule_id(value: &str) -> Option<&'static str> {
+    let upper = value.to_ascii_uppercase();
+    let prefixed = if upper.starts_with("SBOM-") {
+        upper
+    } else {
+        format!("SBOM-{upper}")
+    };
+    ALL_RULE_IDS
+        .iter()
+        .map(|id| (strsim::levenshtein(&prefixed, id), *id))
+        .filter(|(distance, _)| *distance <= 3)
+        .min_by_key(|(distance, _)| *distance)
+        .map(|(_, id)| id)
+}
+
 // ---------------------------------------------------------------------------
 // Standard membership: the rules each compliance level reports.
 //

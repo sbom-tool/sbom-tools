@@ -35,7 +35,7 @@ impl ComplianceChecker {
 
         // §5.2.2 per-component fields have nothing to judge without a
         // package-scoped component.
-        violations.extend(inventory_absent_violation(
+        violations.extend(self.inventory_absent_violation(
             sbom,
             "SBOM-BSI-TR-03183-2-INVENTORY",
             "BSI TR-03183-2 §5.2.2: component inventory",
@@ -76,6 +76,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: observed(&format!(
@@ -123,6 +124,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -150,6 +152,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    severity_override: None,
                     deadline: None,
                     field: None,
                     observed: unreachable_creator(contacts()).and_then(observed),
@@ -177,6 +180,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: observed_unparsed_timestamp(sbom),
@@ -197,7 +201,7 @@ impl ComplianceChecker {
         // hash, identifier) only to package-scoped components — files,
         // crypto assets and services carry none of them.
         let total = sbom.components.len();
-        let package_total = package_components(sbom).count();
+        let package_total = self.package_components(sbom).count();
         let mut nameless = 0usize;
         let mut without_version: Vec<String> = Vec::new();
         let mut without_license: Vec<String> = Vec::new();
@@ -218,7 +222,7 @@ impl ComplianceChecker {
             if !comp.vulnerabilities.is_empty() {
                 with_vulnerabilities += 1;
             }
-            if !comp.component_type.is_package_scoped() {
+            if !self.judges_package(sbom, comp) {
                 continue;
             }
             if !has_known_value(&comp.version) {
@@ -304,6 +308,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -334,6 +339,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -362,6 +368,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -391,6 +398,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: first_non_spdx.as_deref().and_then(observed),
@@ -418,6 +426,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -448,6 +457,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -478,6 +488,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -501,6 +512,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -533,6 +545,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -565,6 +578,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -600,6 +614,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,

@@ -1023,6 +1023,11 @@ impl SpdxParser {
             sbom.document.support_end_date = Some(dt.with_timezone(&Utc));
         }
 
+        // Development, build and test dependencies (`DEV_DEPENDENCY_OF`
+        // and its kin) are not needed at runtime: the component scope
+        // CycloneDX states on the component.
+        super::mark_non_runtime_components(&mut sbom);
+
         sbom.calculate_content_hash();
         sbom
     }

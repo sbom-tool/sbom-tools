@@ -49,6 +49,9 @@ pub use compliance::{
     DOCUMENT_SUBJECT, FINDING_ID_PREFIX, FindingIdentity, finding_fingerprint, finding_id,
     finding_key, finding_subject, standard_key,
 };
+pub use compliance::{
+    RuleSetting, RuleSettings, SettingSource, SeverityOverride, SuppressedRule, resolve_rule_id,
+};
 pub(crate) use compliance::{compose_finding_key, rule_family_help_uri};
 // The `cra-docs` dossier names the manufacturer the Art. 13(16) check
 // accepts.

@@ -217,6 +217,10 @@ pub fn run_timeline(config: TimelineConfig) -> Result<i32> {
     // formats and unknown filter labels fail fast.
     let output_mode = resolve_multi_output(&config.output)?;
     validate_post_diff_filters(&config.filtering, &config.graph_diff)?;
+    // The compliance trend checks every standard.
+    config
+        .compliance
+        .warn_on_unmatched_rules(crate::quality::ComplianceLevel::all(), "the standards");
 
     let (sboms, _enrich_stats) =
         parse_and_enrich_sboms(&config.sbom_paths, &config.enrichment, quiet)?;
@@ -263,6 +267,10 @@ pub fn run_timeline(config: TimelineConfig) -> Result<i32> {
         &config.graph_diff,
         &config.rules,
     );
+    // The compliance trend checks every SBOM with the run's inputs
+    // (`--as-of`, `--cra-product-class`, the PQC flags, `--rule`,
+    // `--include-excluded-scope`).
+    engine = engine.with_compliance(config.compliance.clone());
     let mut result = engine.timeline(&sbom_refs)?;
 
     // Apply severity/VEX/graph-impact post-processing to each incremental diff.

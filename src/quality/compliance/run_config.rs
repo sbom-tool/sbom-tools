@@ -8,15 +8,18 @@
 
 use super::{
     CnsaCategory, ComplianceChecker, ComplianceLevel, ComplianceResult, PqcMode, PqcProfile,
+    RuleSettings,
 };
 use crate::model::{CraProductClass, CraSidecarMetadata, NormalizedSbom};
 use chrono::{DateTime, Utc};
 
 /// The inputs of one compliance run: the evaluation clock (`--as-of`), the
 /// CRA sidecar (`--cra-sidecar`, or the one found next to the SBOM), the
-/// CRA product class (`--cra-product-class`) and how the crypto standards
+/// CRA product class (`--cra-product-class`), how the crypto standards
 /// judge quantum-vulnerable cryptography (`--pqc-mode`, `--pqc-profile`,
-/// `--cnsa-category`).
+/// `--cnsa-category`), the rule settings (`--rule`) and whether the package
+/// rules judge components whose scope is excluded
+/// (`--include-excluded-scope`).
 ///
 /// [`Self::checker`] builds the checker for a level with exactly the inputs
 /// that level reads, so no caller decides that itself.
@@ -47,11 +50,14 @@ pub struct ComplianceRunConfig {
     pqc_mode: PqcMode,
     pqc_profile: PqcProfile,
     cnsa_category: Option<CnsaCategory>,
+    rule_settings: RuleSettings,
+    include_excluded_scope: bool,
 }
 
 impl ComplianceRunConfig {
     /// A run with no inputs: the wall clock, no sidecar, no product class,
-    /// PQC readiness mode.
+    /// PQC readiness mode, no rule settings, and components whose scope is
+    /// excluded left out of the package rules.
     #[must_use]
     pub const fn new() -> Self {
         Self {
@@ -61,6 +67,8 @@ impl ComplianceRunConfig {
             pqc_mode: PqcMode::Readiness,
             pqc_profile: PqcProfile::Nist,
             cnsa_category: None,
+            rule_settings: RuleSettings::new(),
+            include_excluded_scope: false,
         }
     }
 
@@ -117,6 +125,32 @@ impl ComplianceRunConfig {
         self
     }
 
+    /// The rule settings (`--rule`, the config file's `compliance.rules`):
+    /// per rule, off or the severity its findings get. They are applied
+    /// after the checks, so the verdict, the counts, the score and the exit
+    /// code follow the severities they set; a finding keeps its check's
+    /// severity as [`Violation::severity_override`](super::Violation::severity_override),
+    /// and the findings of a rule that is off are counted in
+    /// [`ComplianceResult::suppressed`].
+    #[must_use]
+    pub fn with_rule_settings(mut self, settings: RuleSettings) -> Self {
+        self.rule_settings = settings;
+        self
+    }
+
+    /// Whether the package rules (version, supplier, license, hash,
+    /// identifier, dependency-graph membership) judge components whose
+    /// scope is excluded too (`--include-excluded-scope`). By default they
+    /// leave them out: CycloneDX `scope: excluded` marks a component the
+    /// product does not need at runtime, such as a test or development
+    /// dependency (SPDX: see `Component::scope`). Each result counts the
+    /// components it left out ([`ComplianceResult::excluded_components`]).
+    #[must_use]
+    pub const fn with_include_excluded_scope(mut self, include: bool) -> Self {
+        self.include_excluded_scope = include;
+        self
+    }
+
     /// The pinned evaluation clock, or `None` for the wall clock.
     #[must_use]
     pub const fn as_of(&self) -> Option<DateTime<Utc>> {
@@ -152,6 +186,19 @@ impl ComplianceRunConfig {
     #[must_use]
     pub const fn cnsa_category(&self) -> Option<CnsaCategory> {
         self.cnsa_category
+    }
+
+    /// The rule settings set with [`Self::with_rule_settings`].
+    #[must_use]
+    pub const fn rule_settings(&self) -> &RuleSettings {
+        &self.rule_settings
+    }
+
+    /// Whether the package rules judge components whose scope is excluded
+    /// (see [`Self::with_include_excluded_scope`]).
+    #[must_use]
+    pub const fn include_excluded_scope(&self) -> bool {
+        self.include_excluded_scope
     }
 
     /// The product class the CRA phase checks use: the sidecar's
@@ -220,6 +267,21 @@ impl ComplianceRunConfig {
         matches!(level, ComplianceLevel::Cnsa2)
     }
 
+    /// Whether a run hands its choice about components whose scope is
+    /// excluded to `level`'s checker: whether `level` has package rules.
+    /// See [`Self::checker`] for why.
+    #[must_use]
+    pub const fn excluded_scope_applies(level: ComplianceLevel) -> bool {
+        !matches!(
+            level,
+            ComplianceLevel::Cnsa2
+                | ComplianceLevel::NistPqc
+                | ComplianceLevel::EuccSubstantial
+                | ComplianceLevel::EuAiAct
+                | ComplianceLevel::BsiSbomForAi
+        )
+    }
+
     /// The checker for `level`, given the inputs of this run that `level`
     /// reads. This is the one place that decides which input reaches which
     /// level:
@@ -232,6 +294,8 @@ impl ComplianceRunConfig {
     /// | PQC mode | CNSA 2.0, NIST PQC | Only the crypto standards judge quantum-vulnerable cryptography; deadline mode dates their findings by the migration schedules. |
     /// | PQC profile | NIST PQC | The federal deadlines (EO 14412, OMB M-26-15) bind federal civilian systems on NIST's schedule; national security systems follow CNSA 2.0. |
     /// | CNSA 2.0 category | CNSA 2.0 | The equipment category picks NSA's CNSA 2.0 preference and exclusive-use years. |
+    /// | rule settings | every level | A setting names a rule, and each level reports only its own rules, so it reaches only the levels whose checks report that rule. It is applied after the checks. |
+    /// | excluded scope | every level but CNSA 2.0, NIST PQC, EUCC, EU AI Act and BSI SBOM-for-AI | It decides which components the package rules judge. The crypto standards judge cryptographic assets, EUCC the certificate evidence and the AI profiles ML models and datasets: none has package rules. |
     ///
     /// The sidecar's `productClass` and `conformityAssessmentRoute` are the
     /// product class input too, so a level outside the product-class row
@@ -268,6 +332,12 @@ impl ComplianceRunConfig {
         {
             checker = checker.with_product_class(class);
         }
+        if !self.rule_settings.is_empty() {
+            checker = checker.with_rule_settings(self.rule_settings.clone());
+        }
+        if Self::excluded_scope_applies(level) {
+            checker = checker.with_include_excluded_scope(self.include_excluded_scope);
+        }
         checker
     }
 
@@ -290,14 +360,30 @@ impl ComplianceRunConfig {
             .collect()
     }
 
-    /// Log a warning when the configured product class and the sidecar's
-    /// differ (see [`Self::product_class_conflict`]).
-    pub(crate) fn warn_on_product_class_conflict(&self) {
+    /// Log a warning naming `sbom` when the configured product class and
+    /// the sidecar's differ (see [`Self::product_class_conflict`]). `diff`
+    /// warns once per side, each with its own sidecar.
+    pub(crate) fn warn_on_product_class_conflict(&self, sbom: &std::path::Path) {
         if let Some((configured, sidecar)) = self.product_class_conflict() {
             tracing::warn!(
-                "CRA product class mismatch: --cra-product-class={} but sidecar says {}; using sidecar.",
+                "CRA product class mismatch for {}: --cra-product-class={} but its sidecar says {}; using the sidecar.",
+                sbom.display(),
                 configured.label(),
                 sidecar.label()
+            );
+        }
+    }
+
+    /// Log a warning for each rule setting no check of `levels` reports
+    /// (see [`RuleSettings::unmatched`]): it changes nothing in this run.
+    /// `what` names the levels, e.g. `the selected standards`. Only the CLI
+    /// commands warn, so a build without them does not call it.
+    #[cfg_attr(not(feature = "cli"), allow(dead_code))]
+    pub(crate) fn warn_on_unmatched_rules(&self, levels: &[ComplianceLevel], what: &str) {
+        for (rule_id, setting, source) in self.rule_settings.unmatched(levels) {
+            tracing::warn!(
+                "rule setting {rule_id}={setting} (from {}) changes nothing: {what} report no {rule_id} finding",
+                source.label()
             );
         }
     }
@@ -324,6 +410,18 @@ mod tests {
         }
     }
 
+    fn rule_settings() -> RuleSettings {
+        let mut settings = RuleSettings::new();
+        settings
+            .set(
+                "SBOM-NTIA-SUPPLIER",
+                super::super::RuleSetting::Warning,
+                super::super::SettingSource::Cli,
+            )
+            .expect("a registered rule");
+        settings
+    }
+
     fn full_run() -> ComplianceRunConfig {
         ComplianceRunConfig::new()
             .with_as_of(as_of())
@@ -332,19 +430,39 @@ mod tests {
             .with_pqc_mode(PqcMode::Deadline)
             .with_pqc_profile(PqcProfile::Federal)
             .with_cnsa_category(CnsaCategory::Niche)
+            .with_rule_settings(rule_settings())
+            .with_include_excluded_scope(true)
     }
 
-    /// The policy table of `checker`: every level gets the clock; the
-    /// sidecar reaches the CRA, EUCC and AI Act profiles; the product class
-    /// (from either channel) reaches the CRA phases only; the PQC mode
-    /// reaches CNSA 2.0 and NIST PQC, the PQC profile NIST PQC and the CNSA
-    /// 2.0 category CNSA 2.0.
+    /// The policy table of `checker`: every level gets the clock and the
+    /// rule settings; the sidecar reaches the CRA, EUCC and AI Act profiles;
+    /// the product class (from either channel) reaches the CRA phases only;
+    /// the PQC mode reaches CNSA 2.0 and NIST PQC, the PQC profile NIST PQC
+    /// and the CNSA 2.0 category CNSA 2.0; the choice about components
+    /// whose scope is excluded reaches every level with package rules.
     #[test]
     fn checker_hands_each_level_its_inputs() {
         let run = full_run();
         for level in ComplianceLevel::all() {
             let checker = run.checker(*level);
             assert_eq!(checker.now(), as_of(), "{level:?} reads the pinned clock");
+            assert_eq!(
+                checker.rule_settings,
+                rule_settings(),
+                "{level:?}: rule settings"
+            );
+            let packages = !matches!(
+                level,
+                ComplianceLevel::Cnsa2
+                    | ComplianceLevel::NistPqc
+                    | ComplianceLevel::EuccSubstantial
+                    | ComplianceLevel::EuAiAct
+                    | ComplianceLevel::BsiSbomForAi
+            );
+            assert_eq!(
+                checker.include_excluded_scope, packages,
+                "{level:?}: excluded scope"
+            );
             let crypto = matches!(level, ComplianceLevel::Cnsa2 | ComplianceLevel::NistPqc);
             assert_eq!(
                 checker.pqc_mode(),
@@ -419,10 +537,14 @@ mod tests {
         assert_eq!(run.pqc_mode(), PqcMode::Readiness);
         assert_eq!(run.pqc_profile(), PqcProfile::Nist);
         assert_eq!(run.cnsa_category(), None);
+        assert!(run.rule_settings().is_empty());
+        assert!(!run.include_excluded_scope());
         let checker = run.checker(ComplianceLevel::CraPhase2);
         assert!(checker.as_of.is_none());
         assert!(checker.sidecar.is_none());
         assert!(!checker.has_explicit_product_class());
+        assert!(checker.rule_settings.is_empty());
+        assert!(!checker.include_excluded_scope);
         assert_eq!(
             run.checker(ComplianceLevel::NistPqc).pqc_mode(),
             PqcMode::Readiness
@@ -455,6 +577,35 @@ mod tests {
             .with_sidecar(sidecar())
             .with_product_class(CraProductClass::Critical);
         assert_eq!(agreeing.product_class_conflict(), None);
+    }
+
+    /// The settings apply after the checks whichever way a caller checks:
+    /// through `check` or through the checker `checker` builds.
+    #[test]
+    fn rule_settings_apply_through_check_and_through_checker() {
+        let run = ComplianceRunConfig::new()
+            .with_as_of(as_of())
+            .with_rule_settings(rule_settings());
+        let mut sbom = NormalizedSbom::default();
+        let comp = crate::model::Component::new("left-pad".to_string(), "left-pad".to_string())
+            .with_version("1.3.0".to_string())
+            .with_purl("pkg:npm/left-pad@1.3.0".to_string());
+        sbom.add_component(comp);
+        for result in [
+            run.check(ComplianceLevel::NtiaMinimum, &sbom),
+            run.checker(ComplianceLevel::NtiaMinimum).check(&sbom),
+        ] {
+            let supplier = result
+                .violations
+                .iter()
+                .find(|v| v.rule_id == "SBOM-NTIA-SUPPLIER")
+                .expect("the component names no supplier");
+            assert_eq!(supplier.severity, super::super::ViolationSeverity::Warning);
+            assert_eq!(
+                supplier.severity_override.map(|o| o.default),
+                Some(super::super::ViolationSeverity::Error)
+            );
+        }
     }
 
     #[test]

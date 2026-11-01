@@ -10,71 +10,79 @@ use crate::model::{
 // which merges a component's entries with the same classification.
 pub(crate) use crate::model::{is_declared_unknown, is_placeholder};
 
-/// The components package rules apply to: everything except files,
-/// snippets, cryptographic assets and services (see
-/// [`ComponentType::is_package_scoped`]). Every per-component package check
-/// iterates through this, so no standard can forget the carve-out.
-pub(crate) fn package_components(sbom: &NormalizedSbom) -> impl Iterator<Item = &Component> {
-    sbom.components
-        .values()
-        .filter(|c| c.component_type.is_package_scoped())
-}
-
-/// The inventory-absent finding for `rule_id`, or `None` when the SBOM lists
-/// at least one package-scoped component.
-///
-/// Package rules (version, supplier, identifier, hash, license) only judge
-/// package-scoped components, so a document with no components at all — or
-/// with only files, snippets or cryptographic assets — used to pass them
-/// vacuously, scoring like a perfect SBOM. Every standard that judges a
-/// software inventory reports that instead, as PCI DSS already did. The
-/// primary component counts: a leaf application with no dependencies is a
-/// legitimate inventory.
-pub(crate) fn inventory_absent_violation(
-    sbom: &NormalizedSbom,
-    rule_id: &'static str,
-    requirement: &str,
-) -> Option<Violation> {
-    if package_components(sbom).next().is_some() {
-        return None;
-    }
-    let total = sbom.components.len();
-    let message = if total == 0 {
-        "SBOM lists no components; an empty document is not a software inventory".to_string()
-    } else {
-        let all_crypto = sbom
+impl super::ComplianceChecker {
+    /// The inventory-absent finding for `rule_id`, or `None` when the
+    /// package rules judge at least one component (see
+    /// [`Self::package_components`]).
+    ///
+    /// Package rules (version, supplier, identifier, hash, license) only
+    /// judge package-scoped components, so a document with no components at
+    /// all — or with only files, snippets or cryptographic assets — used to
+    /// pass them vacuously, scoring like a perfect SBOM. Every standard that
+    /// judges a software inventory reports that instead, as PCI DSS already
+    /// did. The primary component counts: a leaf application with no
+    /// dependencies is a legitimate inventory. Components the run leaves out
+    /// for their excluded scope do not: they are not part of what the
+    /// product ships.
+    pub(crate) fn inventory_absent_violation(
+        &self,
+        sbom: &NormalizedSbom,
+        rule_id: &'static str,
+        requirement: &str,
+    ) -> Option<Violation> {
+        if self.package_components(sbom).next().is_some() {
+            return None;
+        }
+        let total = sbom.components.len();
+        let excluded = sbom
             .components
             .values()
-            .all(|c| c.component_type == ComponentType::Cryptographic);
-        let what = if all_crypto {
-            "cryptographic assets"
+            .filter(|c| c.component_type.is_package_scoped())
+            .count();
+        let message = if total == 0 {
+            "SBOM lists no components; an empty document is not a software inventory".to_string()
+        } else if excluded > 0 {
+            format!(
+                "SBOM lists no software components besides {excluded} whose scope is excluded, \
+                 which the package rules leave out (--include-excluded-scope judges them); it is \
+                 not an inventory of what the product ships"
+            )
         } else {
-            "files, snippets, services or cryptographic assets"
+            let all_crypto = sbom
+                .components
+                .values()
+                .all(|c| c.component_type == ComponentType::Cryptographic);
+            let what = if all_crypto {
+                "cryptographic assets"
+            } else {
+                "files, snippets, services or cryptographic assets"
+            };
+            let mut message = format!(
+                "SBOM lists no software components, only {total} {what}; it is not a software inventory"
+            );
+            if all_crypto {
+                message.push_str(" (validate a CBOM with --standard cnsa2 or pqc)");
+            }
+            message
         };
-        let mut message = format!(
-            "SBOM lists no software components, only {total} {what}; it is not a software inventory"
-        );
-        if all_crypto {
-            message.push_str(" (validate a CBOM with --standard cnsa2 or pqc)");
-        }
-        message
-    };
-    Some(Violation {
-        severity: ViolationSeverity::Error,
-        category: ViolationCategory::DocumentMetadata,
-        message,
-        element: None,
-        requirement: requirement.to_string(),
-        rule_id,
-        component_id: None,
-        counts: None,
-        standard_refs: Vec::new(),
-        remediation: None,
-        finding_detail: None,
-        deadline: None,
-        field: None,
-        observed: None,
-    })
+        Some(Violation {
+            severity: ViolationSeverity::Error,
+            severity_override: None,
+            category: ViolationCategory::DocumentMetadata,
+            message,
+            element: None,
+            requirement: requirement.to_string(),
+            rule_id,
+            component_id: None,
+            counts: None,
+            standard_refs: Vec::new(),
+            remediation: None,
+            finding_detail: None,
+            deadline: None,
+            field: None,
+            observed: None,
+        })
+    }
 }
 
 /// The longest SBOM value a finding message quotes, in characters. A longer
@@ -158,6 +166,7 @@ pub(crate) fn future_timestamp_violation(
         standard_refs: Vec::new(),
         remediation: None,
         finding_detail: None,
+        severity_override: None,
         deadline: None,
         field: None,
         observed: observed(&created.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),

@@ -1,0 +1,123 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:3f8a2c51-7d4e-4b9a-a1c6-5e0f2d7b9c48",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-01T12:00:00Z",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "test-generator",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    "authors": [
+      {
+        "name": "Release Engineering",
+        "email": "release@example.com"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "bom-ref": "scoped-app@2.0.0",
+      "supplier": {
+        "name": "Acme Corp"
+      },
+      "name": "scoped-app",
+      "version": "2.0.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9f2c4a6e8b0d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c3e5b7d9f1a"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/scoped-app@2.0.0"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "express@4.18.2",
+      "supplier": {
+        "name": "OpenJS Foundation"
+      },
+      "name": "express",
+      "version": "4.18.2",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1a3c5e7f9b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/express@4.18.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "fsevents@2.3.3",
+      "supplier": {
+        "name": "fsevents maintainers"
+      },
+      "name": "fsevents",
+      "version": "2.3.3",
+      "scope": "optional",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:npm/fsevents@2.3.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "jest@29.7.0",
+      "name": "jest",
+      "version": "29.7.0",
+      "scope": "excluded",
+      "purl": "pkg:npm/jest@29.7.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "eslint-dev",
+      "name": "eslint",
+      "scope": "excluded",
+      "purl": "pkg:npm/eslint"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "scoped-app@2.0.0",
+      "dependsOn": [
+        "express@4.18.2",
+        "fsevents@2.3.3",
+        "jest@29.7.0",
+        "eslint-dev"
+      ]
+    }
+  ]
+}

@@ -246,6 +246,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: observed_unparsed_timestamp(sbom),
@@ -275,6 +276,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    severity_override: None,
                     deadline: None,
                     field: None,
                     observed: observed(
@@ -299,6 +301,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    severity_override: None,
                     deadline: None,
                     field: None,
                     observed: observed(
@@ -318,7 +321,7 @@ impl ComplianceChecker {
         // Licence evidence and the supply-chain cohorts below concern
         // package-scoped components: crypto assets, files and services are
         // not third-party components with licences or suppliers.
-        let packages: Vec<_> = package_components(sbom).collect();
+        let packages: Vec<_> = self.package_components(sbom).collect();
         let total = packages.len();
         let without_license = packages.iter().filter(|c| !has_known_license(c)).count();
         if without_license > 0 {
@@ -346,6 +349,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -386,6 +390,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -411,7 +416,7 @@ impl ComplianceChecker {
                 .filter(|id| {
                     sbom.components
                         .get(id)
-                        .is_some_and(|c| c.component_type.is_package_scoped())
+                        .is_some_and(|c| self.judges_package(sbom, c))
                 })
                 .collect();
             let mut direct_missing: Vec<String> = Vec::new();
@@ -459,6 +464,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    severity_override: None,
                     deadline: None,
                     field: None,
                     observed: None,
@@ -493,6 +499,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    severity_override: None,
                     deadline: None,
                     field: None,
                     observed: None,
@@ -505,9 +512,16 @@ impl ComplianceChecker {
         // author and a PURL/CPE/SWHID/SWID) must carry the upstream-supplied
         // cryptographic hash through into the SBOM. Components without one of
         // those identifiers are excluded because nothing ties them to an
-        // upstream artefact.
+        // upstream artefact, as are the components the run leaves out for
+        // their excluded scope.
         {
-            let metrics = crate::quality::HashQualityMetrics::from_sbom(sbom);
+            // All components: the metric classifies the vendor cohort by
+            // producer and identifier, whatever the component type.
+            let metrics = crate::quality::HashQualityMetrics::from_components(
+                sbom.components
+                    .values()
+                    .filter(|c| !self.leaves_out(sbom, c)),
+            );
             if let Some(coverage) = metrics.vendor_hash_coverage() {
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let pct = (coverage * 100.0).round() as usize;
@@ -580,7 +594,8 @@ impl ComplianceChecker {
                         metrics.vendor_components_with_hash, metrics.vendor_components_total
                     );
                     message.push_str(&invalid_digest_note(sbom.components.values().filter(|c| {
-                        has_known_producer(c)
+                        !self.leaves_out(sbom, c)
+                            && has_known_producer(c)
                             && c.identifiers.has_cra_identifier()
                             && !c
                                 .hashes
@@ -604,6 +619,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: None,
+                        severity_override: None,
                         deadline: None,
                         field: None,
                         observed: None,
@@ -654,6 +670,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -690,6 +707,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    severity_override: None,
                     deadline: None,
                     field: None,
                     observed: None,
@@ -710,7 +728,8 @@ impl ComplianceChecker {
 
         // B6: Art. 13(8) / Annex II (7) — Component lifecycle / EOL detection
         // If EOL enrichment data is present, warn about EOL components
-        let eol_count = package_components(sbom)
+        let eol_count = self
+            .package_components(sbom)
             .filter(|c| {
                 c.eol
                     .as_ref()
@@ -738,13 +757,15 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
             });
         }
 
-        let approaching_eol_count = package_components(sbom)
+        let approaching_eol_count = self
+            .package_components(sbom)
             .filter(|c| {
                 c.eol
                     .as_ref()
@@ -766,6 +787,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -805,6 +827,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    severity_override: None,
                     deadline: None,
                     field: None,
                     observed: None,
@@ -838,6 +861,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    severity_override: None,
                     deadline: None,
                     field: None,
                     observed: None,
@@ -894,6 +918,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: Some(id.clone()),
+                    severity_override: None,
                     deadline: None,
                     field: None,
                     observed: None,
@@ -964,6 +989,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -1020,6 +1046,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -1093,6 +1120,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -1118,6 +1146,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -1143,6 +1172,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -1183,6 +1213,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -1245,6 +1276,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    severity_override: None,
                     deadline: None,
                     field: None,
                     observed: observed_producer(comp),
@@ -1272,6 +1304,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    severity_override: None,
                     deadline: None,
                     field: None,
                     observed: None,
@@ -1295,6 +1328,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    severity_override: None,
                     deadline: None,
                     field: None,
                     observed: None,
@@ -1325,6 +1359,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: None,
+                        severity_override: None,
                         deadline: None,
                         field: None,
                         observed: None,
@@ -1402,6 +1437,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -1432,6 +1468,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,

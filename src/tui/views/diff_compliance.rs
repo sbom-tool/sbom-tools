@@ -385,6 +385,17 @@ fn render_compliance_header(frame: &mut Frame, area: Rect, ctx: &RenderContext) 
     } else {
         format!(" Passed: {} ", new_result.passed.len())
     };
+    // What the run's inputs kept out of the violations, when anything: the
+    // findings the rule settings turned off and the components the package
+    // rules left out for their excluded scope.
+    let kept_out: String = [
+        ("Suppressed", new_result.suppressed_count()),
+        ("Excluded", new_result.excluded_components),
+    ]
+    .into_iter()
+    .filter(|(_, count)| *count > 0)
+    .map(|(what, count)| format!(" {what}: {count} "))
+    .collect();
     let content = Line::from(vec![
         Span::styled(
             format!("Errors: {} ", new_result.error_count),
@@ -399,6 +410,7 @@ fn render_compliance_header(frame: &mut Frame, area: Rect, ctx: &RenderContext) 
             Style::default().fg(colors().info),
         ),
         Span::styled(passed, Style::default().fg(colors().success)),
+        Span::styled(kept_out, Style::default().fg(colors().text_muted)),
         Span::styled(" \u{2502} ", Style::default().fg(colors().muted)),
         Span::styled(
             format!(" New: {new_count}"),
@@ -922,6 +934,42 @@ fn render_overview(frame: &mut Frame, area: Rect, old: &ComplianceResult, new: &
         Span::styled(delta_str, Style::default().fg(delta_color)),
         Span::raw(")"),
     ]));
+
+    // The findings the rule settings turned off and the components left out
+    // for their excluded scope, side by side, when either side has any: a
+    // verdict that moved because fewer components or findings were judged
+    // says so.
+    for (label, old_count, new_count) in [
+        (
+            "Suppressed:   ",
+            old.suppressed_count(),
+            new.suppressed_count(),
+        ),
+        (
+            "Excluded:     ",
+            old.excluded_components,
+            new.excluded_components,
+        ),
+    ] {
+        if old_count == 0 && new_count == 0 {
+            continue;
+        }
+        let what = if label.starts_with("Suppressed") {
+            "  findings turned off by rule settings"
+        } else {
+            "  components with scope excluded"
+        };
+        lines.push(Line::from(vec![
+            Span::raw(format!("    {label}")),
+            Span::styled(
+                format!("{old_count}"),
+                Style::default().fg(colors().text_muted),
+            ),
+            Span::raw(" \u{2192} "),
+            Span::styled(format!("{new_count}"), Style::default().fg(colors().text)),
+            Span::styled(what, Style::default().fg(colors().text_muted)),
+        ]));
+    }
 
     lines.push(Line::from(""));
     lines.push(Line::from(vec![Span::styled(
@@ -1508,6 +1556,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1539,6 +1588,8 @@ mod tests {
             conformity_summary: None,
             applicability: crate::quality::Applicability::Applicable,
             elements_checked: 1,
+            suppressed: Vec::new(),
+            excluded_components: 0,
         }
     }
 

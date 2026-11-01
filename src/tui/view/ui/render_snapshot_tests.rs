@@ -1677,6 +1677,7 @@ fn pqc_cnsa_cell_ignores_non_error_violations() {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    severity_override: None,
                     deadline: None,
                     field: None,
                     observed: None,

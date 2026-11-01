@@ -150,7 +150,7 @@ pub fn discover_cra_sidecar(
 /// contact change between releases (old sidecar vs new sidecar) shows up in
 /// the diff instead of being masked by one side's evidence. A sidecar
 /// `productClass` that differs from `--cra-product-class` wins, with a
-/// warning on stderr.
+/// warning on stderr that names the SBOM.
 pub(crate) fn side_compliance(
     shared: &ComplianceRunConfig,
     sbom_path: &std::path::Path,
@@ -159,7 +159,7 @@ pub(crate) fn side_compliance(
     if let Some(sidecar) = discover_cra_sidecar(sbom_path)? {
         config = config.with_sidecar(sidecar);
     }
-    config.warn_on_product_class_conflict();
+    config.warn_on_product_class_conflict(sbom_path);
     Ok(config)
 }
 

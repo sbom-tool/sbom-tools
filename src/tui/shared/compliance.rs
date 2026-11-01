@@ -36,16 +36,30 @@ pub fn render_violation_detail_overlay(
         ViolationSeverity::Info => ("INFO", scheme.info),
     };
 
-    let mut lines = vec![
-        Line::from(vec![
-            Span::styled("Severity:    ", Style::default().fg(scheme.muted)),
-            Span::styled(
-                severity_text,
-                Style::default()
-                    .fg(severity_color)
-                    .add_modifier(Modifier::BOLD),
+    let mut severity_line = vec![
+        Span::styled("Severity:    ", Style::default().fg(scheme.muted)),
+        Span::styled(
+            severity_text,
+            Style::default()
+                .fg(severity_color)
+                .add_modifier(Modifier::BOLD),
+        ),
+    ];
+    // A rule the run sets (`--rule`, the config file): the severity the
+    // check gave the finding and where the setting comes from, as the text
+    // report's `severity:` line shows them.
+    if let Some(severity_override) = &violation.severity_override {
+        severity_line.push(Span::styled(
+            format!(
+                "  (default {}, from {})",
+                severity_override.default.name().to_uppercase(),
+                severity_override.source.label()
             ),
-        ]),
+            Style::default().fg(scheme.text_muted),
+        ));
+    }
+    let mut lines = vec![
+        Line::from(severity_line),
         Line::from(vec![
             Span::styled("Category:    ", Style::default().fg(scheme.muted)),
             Span::styled(violation.category.name(), Style::default().fg(scheme.text)),
@@ -246,6 +260,7 @@ mod tests {
             standard_refs: vec![StandardRef::new(StandardKind::EuAiAct, "Annex IV §2(d)")],
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -300,6 +315,7 @@ mod tests {
                     .remediation_for(crate::quality::RemediationFormat::CycloneDx),
             ),
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,

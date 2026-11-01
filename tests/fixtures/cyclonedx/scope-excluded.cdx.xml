@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:3f8a2c51-7d4e-4b9a-a1c6-5e0f2d7b9c48" version="1">
+  <metadata>
+    <timestamp>2026-10-01T12:00:00Z</timestamp>
+    <tools>
+      <components>
+        <component type="application">
+          <name>test-generator</name>
+          <version>1.0.0</version>
+        </component>
+      </components>
+    </tools>
+    <authors>
+      <author>
+        <name>Release Engineering</name>
+        <email>release@example.com</email>
+      </author>
+    </authors>
+    <component type="application" bom-ref="scoped-app@2.0.0">
+      <supplier>
+        <name>Acme Corp</name>
+      </supplier>
+      <name>scoped-app</name>
+      <version>2.0.0</version>
+      <hashes>
+        <hash alg="SHA-256">9f2c4a6e8b0d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c3e5b7d9f1a</hash>
+      </hashes>
+      <licenses>
+        <license>
+          <id>MIT</id>
+        </license>
+      </licenses>
+      <purl>pkg:npm/scoped-app@2.0.0</purl>
+    </component>
+  </metadata>
+  <components>
+    <component type="library" bom-ref="express@4.18.2">
+      <supplier>
+        <name>OpenJS Foundation</name>
+      </supplier>
+      <name>express</name>
+      <version>4.18.2</version>
+      <scope>required</scope>
+      <hashes>
+        <hash alg="SHA-256">1a3c5e7f9b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a</hash>
+      </hashes>
+      <licenses>
+        <license>
+          <id>MIT</id>
+        </license>
+      </licenses>
+      <purl>pkg:npm/express@4.18.2</purl>
+    </component>
+    <component type="library" bom-ref="fsevents@2.3.3">
+      <supplier>
+        <name>fsevents maintainers</name>
+      </supplier>
+      <name>fsevents</name>
+      <version>2.3.3</version>
+      <scope>optional</scope>
+      <hashes>
+        <hash alg="SHA-256">2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d</hash>
+      </hashes>
+      <licenses>
+        <license>
+          <id>MIT</id>
+        </license>
+      </licenses>
+      <purl>pkg:npm/fsevents@2.3.3</purl>
+    </component>
+    <component type="library" bom-ref="jest@29.7.0">
+      <name>jest</name>
+      <version>29.7.0</version>
+      <scope>excluded</scope>
+      <purl>pkg:npm/jest@29.7.0</purl>
+    </component>
+    <component type="library" bom-ref="eslint-dev">
+      <name>eslint</name>
+      <scope>excluded</scope>
+      <purl>pkg:npm/eslint</purl>
+    </component>
+  </components>
+  <dependencies>
+    <dependency ref="scoped-app@2.0.0">
+      <dependency ref="express@4.18.2"/>
+      <dependency ref="fsevents@2.3.3"/>
+      <dependency ref="jest@29.7.0"/>
+      <dependency ref="eslint-dev"/>
+    </dependency>
+  </dependencies>
+</bom>
