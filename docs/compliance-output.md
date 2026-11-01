@@ -210,6 +210,15 @@ Under `pqc`, NIST IR 8547 (final, October 2026) sets the schedule:
 | A quantum-vulnerable scheme of Table 2 or 4 (ECDSA, EdDSA, RSA, finite-field and elliptic-curve DH and MQV) at 112 bits of classical security or more, or of unknown strength (`SBOM-PQC-001`, `-CERT-001`, `-PROTO-002`) | Info through 2030 (deprecated after 2030) | Warning through 2035 (disallowed after 2035) | Error from 2036 |
 | SHA-1 outside a signature (`SBOM-PQC-005`, `-PROTO-002`; Table 8, note 4) | Warning through 2030 (deprecated now) | Error from 2031 | |
 | A symmetric key of 112 to 127 bits (`SBOM-PQC-KEY-001`; §4.1.3) | Info through 2030 | Error from 2031 | |
+| A hash function at 112 bits of collision strength: SHA-224, SHA-512/224 or SHA3-224 (`SBOM-PQC-HASH-001`; Table 8, §4.1.3) | Info through 2030 | Error from 2031 | |
+
+In readiness mode `SBOM-PQC-HASH-001` is an error, as a 112-bit key is.
+It reads the hash algorithm assets of a CBOM, by family and parameter
+set, OID or name. A keyed use is not judged: HMAC, HKDF or PBKDF2 built
+on one of these hashes, or an asset declared a MAC, KDF or DRBG. The 112
+bits of Table 8 are collision strength, which those uses do not rely on.
+The hash values that identify a component are not cryptographic assets,
+so no PQC rule reads them.
 
 `--pqc-profile federal` applies the deadlines of federal high value assets
 and high impact systems instead (EO 14412 §4(b), OMB M-26-15): post-quantum
