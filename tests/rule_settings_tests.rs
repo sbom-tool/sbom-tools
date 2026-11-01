@@ -522,6 +522,40 @@ fn sarif_and_oscal_carry_the_settings_and_the_counts() {
     );
 }
 
+/// The text report lists the rules the settings turned off under
+/// `Suppressed by settings:`, after the checks that did not run under
+/// `Not evaluated:`, and marks each overridden finding with a `severity:`
+/// line.
+#[test]
+fn text_lists_suppressed_rules_after_the_checks_not_evaluated() {
+    let output = run_cli(&[
+        "validate",
+        fixture("spdx/dev-dependencies.spdx.json")
+            .to_str()
+            .expect("utf-8 path"),
+        "--standard",
+        "cisa-2026",
+        "--as-of",
+        AS_OF,
+        "--include-excluded-scope",
+        "--rule",
+        "SBOM-CISA2026-LICENSE=off",
+        "--rule",
+        "SBOM-CISA2026-HASH=warning",
+    ]);
+    let text = stdout(&output);
+    let not_evaluated = text.find("Not evaluated:").expect("SPDX 2.x skips checks");
+    let suppressed = text
+        .find("Suppressed by settings:\n  SBOM-CISA2026-LICENSE: 2 findings turned off by --rule")
+        .unwrap_or_else(|| panic!("the suppressed section:\n{text}"));
+    assert!(not_evaluated < suppressed, "{text}");
+    assert!(
+        text.contains("  severity: WARN from --rule (default ERROR)"),
+        "{text}"
+    );
+    assert!(!text.contains("SBOM-CISA2026-LICENSE |"), "{text}");
+}
+
 /// The exit code follows the severities a setting sets: errors made
 /// warnings exit 0, or 2 under `--fail-on-warning`; warnings made errors
 /// exit 1.
