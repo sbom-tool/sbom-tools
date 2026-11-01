@@ -21,8 +21,8 @@
 use super::ReportError;
 use super::audit::{AssessedSbom, instant_text};
 use crate::quality::{
-    Applicability, ComplianceResult, ConformityAssessmentSummary, FindingIdentity, PassedCheck,
-    RuleEvaluation, Violation, finding_id, finding_key, standard_key,
+    Applicability, ComplianceLevel, ComplianceResult, ConformityAssessmentSummary, FindingIdentity,
+    PassedCheck, RuleEvaluation, Violation, finding_id, finding_key, standard_key,
 };
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -130,8 +130,8 @@ struct EnvelopeResult<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     score_basis: Option<ScoreBasis>,
     counts: Counts,
-    violations: Vec<Identified<'a, Violation>>,
-    passed: Vec<Identified<'a, PassedCheck>>,
+    violations: IdentifiedAll<'a, Violation>,
+    passed: IdentifiedAll<'a, PassedCheck>,
     /// The checks the standard did not evaluate, in their own field order;
     /// omitted when it evaluated them all.
     #[serde(skip_serializing_if = "<[_]>::is_empty")]
@@ -189,13 +189,31 @@ struct Identified<'a, F: Serialize> {
 }
 
 impl<'a, F: Serialize + FindingIdentity> Identified<'a, F> {
-    fn new(result: &ComplianceResult, finding: &'a F) -> Self {
-        let finding_key = finding_key(result.level, finding);
+    fn new(level: ComplianceLevel, finding: &'a F) -> Self {
+        let finding_key = finding_key(level, finding);
         Self {
             finding_id: finding_id(&finding_key),
             finding_key,
             finding,
         }
+    }
+}
+
+/// A result's violations or passed checks, each written as an
+/// [`Identified`] built as it is written, so no list of identities is
+/// held.
+struct IdentifiedAll<'a, F> {
+    level: ComplianceLevel,
+    findings: &'a [F],
+}
+
+impl<F: Serialize + FindingIdentity> Serialize for IdentifiedAll<'_, F> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_seq(
+            self.findings
+                .iter()
+                .map(|finding| Identified::new(self.level, finding)),
+        )
     }
 }
 
@@ -263,13 +281,9 @@ fn passed_through(mut fields: Map<String, Value>) -> (Map<String, Value>, Map<St
 }
 
 fn envelope_result(result: &ComplianceResult) -> Result<EnvelopeResult<'_>, ReportError> {
-    let Value::Object(fields) =
-        serde_json::to_value(result).map_err(|e| ReportError::SerializationError(e.to_string()))?
-    else {
-        return Err(ReportError::SerializationError(
-            "a compliance result must serialize to a JSON object".to_string(),
-        ));
-    };
+    let fields = result
+        .serialize(UnrenderedFields)
+        .map_err(|e| ReportError::SerializationError(e.to_string()))?;
     let (other_counts, rest) = passed_through(fields);
 
     let not_applicable_reason = match &result.applicability {
@@ -295,20 +309,167 @@ fn envelope_result(result: &ComplianceResult) -> Result<EnvelopeResult<'_>, Repo
             suppressed: result.suppressed_count(),
             other: other_counts,
         },
-        violations: result
-            .violations
-            .iter()
-            .map(|violation| Identified::new(result, violation))
-            .collect(),
-        passed: result
-            .passed
-            .iter()
-            .map(|pass| Identified::new(result, pass))
-            .collect(),
+        violations: IdentifiedAll {
+            level: result.level,
+            findings: &result.violations,
+        },
+        passed: IdentifiedAll {
+            level: result.level,
+            findings: &result.passed,
+        },
         evaluated: &result.evaluated,
         conformity_summary: result.conformity_summary.as_ref(),
         rest,
     })
+}
+
+/// Serializes a [`ComplianceResult`] into the fields of its serialization
+/// that the envelope does not render itself, as JSON values: what
+/// `serde_json::to_value` gives once [`RENDERED_FIELDS`] are removed. The
+/// rendered fields are skipped unread, so the violations and passed checks
+/// are never turned into values.
+struct UnrenderedFields;
+
+/// [`UnrenderedFields`] collecting a result's fields.
+struct UnrenderedFieldMap(Map<String, Value>);
+
+/// The error for anything but a struct: a compliance result serializes to
+/// a JSON object.
+fn not_an_object() -> serde_json::Error {
+    serde::ser::Error::custom("a compliance result must serialize to a JSON object")
+}
+
+/// `Serializer` methods of [`UnrenderedFields`] for what a compliance result
+/// never serializes as.
+macro_rules! not_an_object {
+    ($($method:ident($($arg:ty),*)),* $(,)?) => {
+        $(fn $method(self, $(_: $arg),*) -> Result<Self::Ok, Self::Error> {
+            Err(not_an_object())
+        })*
+    };
+}
+
+impl serde::Serializer for UnrenderedFields {
+    type Ok = Map<String, Value>;
+    type Error = serde_json::Error;
+    type SerializeSeq = serde::ser::Impossible<Self::Ok, Self::Error>;
+    type SerializeTuple = serde::ser::Impossible<Self::Ok, Self::Error>;
+    type SerializeTupleStruct = serde::ser::Impossible<Self::Ok, Self::Error>;
+    type SerializeTupleVariant = serde::ser::Impossible<Self::Ok, Self::Error>;
+    type SerializeMap = serde::ser::Impossible<Self::Ok, Self::Error>;
+    type SerializeStruct = UnrenderedFieldMap;
+    type SerializeStructVariant = serde::ser::Impossible<Self::Ok, Self::Error>;
+
+    not_an_object!(
+        serialize_bool(bool),
+        serialize_i8(i8),
+        serialize_i16(i16),
+        serialize_i32(i32),
+        serialize_i64(i64),
+        serialize_u8(u8),
+        serialize_u16(u16),
+        serialize_u32(u32),
+        serialize_u64(u64),
+        serialize_f32(f32),
+        serialize_f64(f64),
+        serialize_char(char),
+        serialize_str(&str),
+        serialize_bytes(&[u8]),
+        serialize_none(),
+        serialize_unit(),
+        serialize_unit_struct(&'static str),
+        serialize_unit_variant(&'static str, u32, &'static str),
+    );
+
+    fn serialize_some<T: ?Sized + Serialize>(self, _: &T) -> Result<Self::Ok, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_newtype_struct<T: ?Sized + Serialize>(
+        self,
+        _: &'static str,
+        _: &T,
+    ) -> Result<Self::Ok, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_newtype_variant<T: ?Sized + Serialize>(
+        self,
+        _: &'static str,
+        _: u32,
+        _: &'static str,
+        _: &T,
+    ) -> Result<Self::Ok, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_seq(self, _: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_tuple(self, _: usize) -> Result<Self::SerializeTuple, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_tuple_struct(
+        self,
+        _: &'static str,
+        _: usize,
+    ) -> Result<Self::SerializeTupleStruct, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_tuple_variant(
+        self,
+        _: &'static str,
+        _: u32,
+        _: &'static str,
+        _: usize,
+    ) -> Result<Self::SerializeTupleVariant, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_map(self, _: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_struct(
+        self,
+        _: &'static str,
+        _: usize,
+    ) -> Result<Self::SerializeStruct, Self::Error> {
+        Ok(UnrenderedFieldMap(Map::new()))
+    }
+
+    fn serialize_struct_variant(
+        self,
+        _: &'static str,
+        _: u32,
+        _: &'static str,
+        _: usize,
+    ) -> Result<Self::SerializeStructVariant, Self::Error> {
+        Err(not_an_object())
+    }
+}
+
+impl serde::ser::SerializeStruct for UnrenderedFieldMap {
+    type Ok = Map<String, Value>;
+    type Error = serde_json::Error;
+
+    fn serialize_field<T: ?Sized + Serialize>(
+        &mut self,
+        key: &'static str,
+        value: &T,
+    ) -> Result<(), Self::Error> {
+        if !RENDERED_FIELDS.contains(&key) {
+            self.0.insert(key.to_string(), serde_json::to_value(value)?);
+        }
+        Ok(())
+    }
+
+    fn end(self) -> Result<Self::Ok, Self::Error> {
+        Ok(self.0)
+    }
 }
 
 #[cfg(test)]
