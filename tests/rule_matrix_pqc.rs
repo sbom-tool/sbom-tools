@@ -64,6 +64,18 @@ fn sha224() -> CryptoAssetFixture {
     hash("algo-sha224", "SHA-2", "224")
 }
 
+/// An RSA-3072 signature over a SHA-224 digest, by its JCA name.
+fn rsa_sha224_signature() -> CryptoAssetFixture {
+    rsa_signature().named("SHA224withRSA")
+}
+
+/// A SHA-2 hash asset that states no digest size.
+fn sha2_unsized() -> CryptoAssetFixture {
+    CryptoAssetFixture::algorithm("algo-sha2", "SHA-2")
+        .primitive("hash")
+        .quantum_level(1)
+}
+
 /// The ready baseline plus `asset`, judged in deadline mode by `deadline`.
 fn dated(asset: CryptoAssetFixture, deadline: DeadlineFixture) -> SbomFixture {
     broken(|s| {
@@ -257,6 +269,59 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     .parameter_set("2048")
                     .quantum_level(0),
                 DeadlineFixture::nist(BEFORE_2031),
+            ),
+        )
+        // A signature over a 112-bit digest takes the digest's earlier
+        // deadline (IR 8547 §4.1.3, Table 8): an Error from 2031, not a
+        // Warning until 2035. Key establishment does not rest on the
+        // collision resistance of the hash it names.
+        .with_departing_firing(
+            "deadline mode on 2030-12-31: a signature over SHA-224",
+            Sev::Info,
+            dated(rsa_sha224_signature(), DeadlineFixture::nist(END_OF_2030)),
+        )
+        .with_firing(
+            "deadline mode on 2031-01-01: a signature over SHA-224, disallowed with its digest",
+            Sev::Error,
+            dated(rsa_sha224_signature(), DeadlineFixture::nist(START_OF_2031)),
+        )
+        .with_firing(
+            "deadline mode on 2031-01-01: ecdsa-with-SHA224 identified by OID only",
+            Sev::Error,
+            dated(
+                CryptoAssetFixture::unidentified_algorithm("algo-ecdsa-sha224")
+                    .primitive("signature")
+                    .oid("1.2.840.10045.4.3.1")
+                    .quantum_level(0),
+                DeadlineFixture::nist(START_OF_2031),
+            ),
+        )
+        .with_departing_firing(
+            "federal deadline mode on 2030-12-31: a signature over SHA-224",
+            Sev::Warning,
+            dated(
+                rsa_sha224_signature(),
+                DeadlineFixture::federal(END_OF_2030),
+            ),
+        )
+        .with_firing(
+            "federal deadline mode on 2031-01-01: a signature over SHA-224, before 2031-12-31",
+            Sev::Error,
+            dated(
+                rsa_sha224_signature(),
+                DeadlineFixture::federal(START_OF_2031),
+            ),
+        )
+        .with_departing_firing(
+            "deadline mode on 2031-01-01: key agreement with a SHA-224 KDF keeps Table 4",
+            Sev::Warning,
+            dated(
+                CryptoAssetFixture::algorithm("algo-ecdh", "ECDH")
+                    .named("ECDH-P256-SHA224-KDF")
+                    .primitive("key-agree")
+                    .curve("secp256r1")
+                    .quantum_level(0),
+                DeadlineFixture::nist(START_OF_2031),
             ),
         )
         // A 112-bit hash's declared level 0 is its collision strength,
@@ -501,9 +566,41 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             dated(sha224(), DeadlineFixture::nist(START_OF_2031)),
         )
+        // A SHA-2 hash that states no digest size could be SHA-224: a
+        // Warning in either mode, at any date.
+        .with_departing_firing(
+            "SHA-2 that states no digest size",
+            Sev::Warning,
+            broken(|s| s.crypto_assets.push(sha2_unsized())),
+        )
+        .with_departing_firing(
+            "deadline mode in 2026: SHA-2 that states no digest size",
+            Sev::Warning,
+            dated(sha2_unsized(), DeadlineFixture::nist(BEFORE_2031)),
+        )
+        .with_departing_firing(
+            "deadline mode on 2031-01-01: SHA-2 that states no digest size",
+            Sev::Warning,
+            dated(sha2_unsized(), DeadlineFixture::nist(START_OF_2031)),
+        )
         .with_silent(
             "SHA-256",
             broken(|s| s.crypto_assets.push(hash("algo-sha256", "SHA-2", "256"))),
+        )
+        .with_silent(
+            "SHA-2 of no stated size declared a MAC",
+            broken(|s| s.crypto_assets.push(sha2_unsized().primitive("mac"))),
+        )
+        .with_silent(
+            "SHAKE128, a SHA-3 function of no stated size",
+            broken(|s| {
+                s.crypto_assets.push(
+                    CryptoAssetFixture::algorithm("algo-shake128", "SHA-3")
+                        .named("SHAKE128")
+                        .primitive("xof")
+                        .quantum_level(2),
+                );
+            }),
         )
         .with_silent(
             "SHA-512/256",
@@ -568,6 +665,25 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     CryptoAssetFixture::certificate("leaf-cert", "ecdsa-p384")
                         .valid_until("2032-06-30T00:00:00Z");
                 s.deadline = Some(DeadlineFixture::federal(BEFORE_2031));
+            }),
+        )
+        // Signed over a SHA-224 digest: the digest's earlier deadline.
+        .with_departing_firing(
+            "deadline mode on 2030-12-31: signed with sha224WithRSAEncryption",
+            Sev::Info,
+            broken(|s| {
+                s.crypto_mut("leaf-cert").signature_algorithm_ref =
+                    Some("sha224WithRSAEncryption".to_string());
+                s.deadline = Some(DeadlineFixture::nist(END_OF_2030));
+            }),
+        )
+        .with_firing(
+            "deadline mode on 2031-01-01: signed with sha224WithRSAEncryption",
+            Sev::Error,
+            broken(|s| {
+                s.crypto_mut("leaf-cert").signature_algorithm_ref =
+                    Some("sha224WithRSAEncryption".to_string());
+                s.deadline = Some(DeadlineFixture::nist(START_OF_2031));
             }),
         ),
         RuleEntry::tested(
@@ -683,6 +799,22 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                         .cipher_suite("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA", &[]),
                 );
                 s.deadline = Some(DeadlineFixture::nist(BEFORE_2031));
+            }),
+        )
+        // A reference to a signature over SHA-224 takes its digest's
+        // deadline, as the asset does.
+        .with_firing(
+            "deadline mode on 2031-01-01: a reference to a signature over SHA-224",
+            Sev::Error,
+            broken(|s| {
+                s.crypto_assets.push(rsa_sha224_signature());
+                replace(
+                    s,
+                    "tls13",
+                    CryptoAssetFixture::protocol("tls13", "tls", Some("1.3"))
+                        .crypto_ref("algo-rsa"),
+                );
+                s.deadline = Some(DeadlineFixture::nist(START_OF_2031));
             }),
         ),
         // TLS 1.2 against the federal TLS 1.3 deadline (EO 14306, OMB

@@ -258,7 +258,7 @@ const REMEDIATION_PQC_PROTO: &str = "Disable SSL and TLS versions below 1.2 (SP 
 
 /// Remediation for a hash function at the 112-bit security level
 /// (SBOM-PQC-HASH-001).
-const REMEDIATION_PQC_HASH: &str = "NIST IR 8547 gives SHA-224, SHA-512/224 and SHA3-224 112 bits of collision strength (Table 8), a security level it disallows after 2030 (§4.1.3): replace them with a hash function of at least 128 bits, such as SHA-256, SHA-384, SHA-512 or SHA3-256. The rule reads the algorithm assets of a CBOM, not the hash values that identify components.";
+const REMEDIATION_PQC_HASH: &str = "NIST IR 8547 gives SHA-224, SHA-512/224 and SHA3-224 112 bits of collision strength (Table 8), a security level it disallows after 2030 (§4.1.3): replace them with a hash function of at least 128 bits, such as SHA-256, SHA-384, SHA-512 or SHA3-256. State the digest size of every SHA-2 asset (parameterSetIdentifier), so that it can be judged. The rule reads the algorithm assets of a CBOM, not the hash values that identify components.";
 
 /// NIST PQC certificate remediation.
 const REMEDIATION_PQC_CERT: &str = "Re-issue the certificate with a NIST-approved post-quantum signature algorithm (FIPS 204 ML-DSA, FIPS 205 SLH-DSA, or SP 800-208 LMS/XMSS/HSS).";
@@ -3584,7 +3584,10 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // collision strength, and §4.1.3 disallows that level "in 2030".
         // An Error in readiness mode, as a 112-bit key is (SBOM-PQC-KEY-001);
         // `--pqc-mode deadline` makes it Info through 2030 and an Error
-        // after. Keyed uses (HMAC, HKDF, a MAC, KDF or DRBG) are not judged.
+        // after. A SHA-2 asset that states no digest size could be SHA-224:
+        // a Warning in either mode. Keyed uses (HMAC, HKDF, a MAC, KDF or
+        // DRBG) are not judged. A signature over a 112-bit digest keeps its
+        // scheme's rule, with the digest's earlier deadline.
         "SBOM-PQC-HASH-001" => RuleMeta {
             sarif_id: "SBOM-PQC-HASH-001",
             name: "PqcHashCollisionStrength",
