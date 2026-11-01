@@ -817,6 +817,24 @@ const ADVICE_SIGNATURE: FormatAdvice = FormatAdvice {
     },
 };
 
+/// Document integrity (CRA Annex I Part I (2)(f)): an in-document signature,
+/// or an attestation or certification reference on the product that carries
+/// the hash of the referenced document.
+const ADVICE_DOC_INTEGRITY: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "sign the BOM (a JSF signature object at the document root in JSON, an enveloped XML-DSig <Signature> element on <bom> in XML), or add hashes[] to a metadata.component.externalReferences[] entry of type attestation or certification-report.",
+        field: Some("signature"),
+    },
+    spdx2: FieldAdvice {
+        text: "no in-document signature field exists and external references carry no hash, so the check cannot be satisfied from the document.",
+        field: None,
+    },
+    spdx3: FieldAdvice {
+        text: "add a verifiedUsing[] entry of type signature (algorithm, hashValue) to the SpdxDocument.",
+        field: Some("verifiedUsing[]"),
+    },
+};
+
 /// Risk ranking on embedded vulnerability entries.
 const ADVICE_VULN_SEVERITY: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
@@ -1020,7 +1038,7 @@ const ADVICE_EUCC_ALT: FormatAdvice = FormatAdvice {
 /// reference whose URL names EUCC, or (CycloneDX 1.6+) a CDXA attestation.
 const ADVICE_EUCC_CERTREF: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "add an externalReferences[] entry of type certification-report (or attestation) whose URL contains eucc or common-criteria, or a fresh, fully conformant attestation in declarations (CycloneDX 1.6+) of a CRA standard that names EUCC or Common Criteria.",
+        text: "add an externalReferences[] entry of type certification-report (or attestation) whose URL contains eucc, common-criteria or commoncriteria, or a fresh, fully conformant attestation in declarations (CycloneDX 1.6+) of a CRA standard that names EUCC or Common Criteria.",
         field: Some("externalReferences[]"),
     },
     spdx2: FieldAdvice {
@@ -1028,7 +1046,7 @@ const ADVICE_EUCC_CERTREF: FormatAdvice = FormatAdvice {
         field: None,
     },
     spdx3: FieldAdvice {
-        text: "add an externalRef[] entry with externalRefType certificationReport (or secureSoftwareAttestation) whose locator contains eucc or common-criteria.",
+        text: "add an externalRef[] entry with externalRefType certificationReport (or secureSoftwareAttestation) whose locator contains eucc, common-criteria or commoncriteria.",
         field: Some("externalRef[]"),
     },
 };
@@ -1482,7 +1500,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
                 (ANNEX, "Annex I Part II (6)"),
                 (ANNEX, "Annex II (2)"),
             ],
-            remediation: "Give the product a single point of contact for vulnerability reports (Art. 13(17)): a security contact or vulnerability-disclosure URL referenced from the product component. securityContact or vulnerabilityDisclosureUrl in the CRA sidecar lowers the finding to Info.",
+            remediation: "Give the product a single point of contact for vulnerability reports (Art. 13(17)): a security contact or vulnerability-disclosure URL referenced from the product component. securityContact or vulnerabilityDisclosureUrl in the CRA sidecar lowers the finding to Info. A contact must reach someone: placeholders such as NOASSERTION, unknown, n/a or TBD, and addresses at example.com, example.net or example.org, do not count.",
             advice: Some(&ADVICE_SECURITY_CONTACT),
         },
         // Vulnerability severity/remediation metadata. Anchored to the
@@ -1535,7 +1553,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
                 (CRA, "Art. 13(8)"),
                 (PREN, "RLS-2-RQ-03-RE"),
             ],
-            remediation: "Reference the coordinated vulnerability disclosure policy (Annex I Part II (5)) from the product component. In the CRA sidecar, coordinatedDisclosurePolicyUrl satisfies the open-source steward profile and vulnerabilityDisclosureUrl lowers the manufacturer finding to Info.",
+            remediation: "Reference the coordinated vulnerability disclosure policy (Annex I Part II (5)) from the product component. In the CRA sidecar, coordinatedDisclosurePolicyUrl satisfies the open-source steward profile and vulnerabilityDisclosureUrl lowers the manufacturer finding to Info. A placeholder URL or an address at example.com, example.net or example.org does not count.",
             advice: Some(&ADVICE_CVD),
         },
         "SBOM-CRA-ART-13-8" => RuleMeta {
@@ -1686,7 +1704,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Art. 14: Public PSIRT URL that receives external vulnerability reports",
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 14")],
-            remediation: "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar.",
+            remediation: "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar; a placeholder such as TBD or an address at example.com, example.net or example.org does not count.",
             advice: None,
         },
         "SBOM-CRA-ART-14-EARLY-WARNING" => RuleMeta {
@@ -1695,7 +1713,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Art. 14(2)(a) / 14(4)(a): Channel for the 24-hour early warning",
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 14(2)(a)"), (CRA, "Art. 14(4)(a)")],
-            remediation: "Document the channel for the 24-hour early warning of an actively exploited vulnerability or a severe incident (Art. 14(2)(a) / 14(4)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar.",
+            remediation: "Document the channel for the 24-hour early warning of an actively exploited vulnerability or a severe incident (Art. 14(2)(a) / 14(4)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar; a placeholder such as TBD or an address at example.com, example.net or example.org does not count.",
             advice: None,
         },
         "SBOM-CRA-ART-14-NOTIFICATION" => RuleMeta {
@@ -1704,7 +1722,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Art. 14(2)(b) / 14(4)(b): Channel for the 72-hour vulnerability and incident notifications",
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 14(2)(b)"), (CRA, "Art. 14(4)(b)")],
-            remediation: "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar.",
+            remediation: "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar; a placeholder such as TBD or an address at example.com, example.net or example.org does not count.",
             advice: None,
         },
         // Warning once Art. 14 applies (2026-09-11), Info before, never an
@@ -1727,7 +1745,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Art. 24: Open-source steward vulnerability-handling process (security contact or disclosure URL)",
             default_severity: ViolationSeverity::Error,
             refs: &[(CRA, "Art. 24")],
-            remediation: "Show the open-source steward's vulnerability-handling process (Art. 24): reference a security contact or vulnerability-disclosure URL from the product component, or set psirtUrl or vulnerabilityDisclosureUrl in the CRA sidecar.",
+            remediation: "Show the open-source steward's vulnerability-handling process (Art. 24): reference a security contact or vulnerability-disclosure URL from the product component, or set psirtUrl or vulnerabilityDisclosureUrl in the CRA sidecar. A contact must reach someone: placeholders such as NOASSERTION or n/a, and addresses at example.com, example.net or example.org, do not count.",
             advice: Some(&ADVICE_SECURITY_CONTACT),
         },
         // ---- CRA Annexes -------------------------------------------------
@@ -1854,15 +1872,17 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // Document-level integrity. Formerly mis-cited Annex III (the
         // important-products class list); integrity protection is Annex I
         // Part I (2)(f). The clause covers integrity only — it does not
-        // mention authenticity.
+        // mention authenticity. A signature or a hashed attestation protects
+        // the document; a serial number only identifies it, and until v0.4.0
+        // satisfied the check alone while the signature was not read.
         "SBOM-CRA-DOC-INTEGRITY" => RuleMeta {
             sarif_id: "SBOM-CRA-DOC-INTEGRITY",
             name: "CraDocumentIntegrity",
-            short_description: "CRA Annex I Part I (2)(f): Document integrity — serial number, hash, or digital signature",
+            short_description: "CRA Annex I Part I (2)(f): Document integrity — a digital signature, or an attestation carrying a hash",
             default_severity: ViolationSeverity::Info,
             refs: &[(ANNEX, "Annex I Part I (2)(f)"), (ENISA, "§2.2.1")],
-            remediation: "Add document-level integrity metadata (Annex I Part I (2)(f)): a unique document serial number or namespace.",
-            advice: Some(&ADVICE_SERIAL),
+            remediation: "Protect the SBOM's integrity (Annex I Part I (2)(f)): sign the document, or reference from the product component an attestation or certification that carries the hash of the referenced document. A serial number identifies the document but does not protect its integrity.",
+            advice: Some(&ADVICE_DOC_INTEGRITY),
         },
         "SBOM-CRA-ANNEX-IV" => RuleMeta {
             sarif_id: "SBOM-CRA-ANNEX-IV",
@@ -2104,7 +2124,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "SBOM quality: Every component records its license, declared or concluded",
             default_severity: ViolationSeverity::Warning,
             refs: &[],
-            remediation: "Record every component's license, declared or concluded.",
+            remediation: "Record every component's license, declared or concluded: an SPDX expression or a LicenseRef-* id. Sentinels such as NOASSERTION and placeholders such as TBD name no license.",
             advice: Some(&ADVICE_LICENSE),
         },
         "SBOM-QUALITY-HASH" => RuleMeta {
@@ -2722,7 +2742,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "FDA Medical Device: Security vulnerability information",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
-            remediation: "Address every critical and high-severity vulnerability the SBOM lists before the premarket submission: upgrade the affected components, and document your assessment of any that remain. The finding counts these vulnerabilities whatever their VEX state.",
+            remediation: "Address every critical and high-severity vulnerability the SBOM lists before the premarket submission: upgrade the affected components, and document your assessment of any that remain. A vulnerability whose own VEX statement is not_affected and names a justification is not counted, as under the CRA profiles: it records why the device is not affected. A bare not_affected claim still counts.",
             advice: None,
         },
         "SBOM-FDA-INVENTORY" => RuleMeta {
@@ -3739,7 +3759,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CISA 2026: Component License — license identifier, license pointer, or explicit unknown",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::CisaMinimum2026, "Component License")],
-            remediation: "Declare each component's license(s), preferring machine-processable SPDX license identifiers; a LicenseRef-* expression or a pointer to where the full license details are available also satisfies the element, and an explicit unknown (NOASSERTION) is required when the author is unaware. Silent absence fails.",
+            remediation: "Declare each component's license(s), preferring machine-processable SPDX license identifiers; a LicenseRef-* expression or a pointer to where the full license details are available also satisfies the element, and an explicit unknown (NOASSERTION) is required when the author is unaware. Silent absence and a placeholder such as TBD fail.",
             advice: Some(&ADVICE_LICENSE),
         },
         "SBOM-CISA2026-DEPENDENCY" => RuleMeta {
@@ -3855,7 +3875,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "PCI DSS TP 6.3.2.a: vulnerability-management hooks (embedded data, advisory refs, or security contact)",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::PciDss4, "TP 6.3.2.a")],
-            remediation: "Surface vulnerability-management hooks: embedded vulnerability entries, an Advisories / vulnerability-assertion / linked-VDR external reference, a security contact, or a disclosure URL. Absence is not a Req. 6.3.2 failure — the inventory may feed an external scanner; actual use of the inventory is assessor-verified.",
+            remediation: "Surface vulnerability-management hooks: embedded vulnerability entries, an Advisories / vulnerability-assertion / linked-VDR external reference, a security contact, or a disclosure URL. A contact must reach someone: placeholders such as NOASSERTION or n/a, and addresses at example.com, example.net or example.org, do not count. Absence is not a Req. 6.3.2 failure — the inventory may feed an external scanner; actual use of the inventory is assessor-verified.",
             advice: Some(&ADVICE_SECURITY_CONTACT),
         },
         "SBOM-PCI-11-3-1-1-SEVERITY" => RuleMeta {

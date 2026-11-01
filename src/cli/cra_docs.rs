@@ -149,15 +149,15 @@ fn render_doc(
     class: CraProductClass,
     route: ConformityRoute,
 ) -> String {
+    // The sidecar's manufacturerName, as for the product name, else the
+    // manufacturer the Art. 13(16) check accepts, from the same sources in
+    // the same order (`manufacturer_name`: an organization creator, the
+    // product's supplier, the described product's manufacturer or
+    // supplier). Placeholders name nobody. Until v0.4.0 only the first
+    // organization creator was read, whatever its name.
     let manufacturer = sidecar
         .and_then(|s| s.manufacturer_name.as_deref())
-        .or_else(|| {
-            sbom.document
-                .creators
-                .iter()
-                .find(|c| matches!(c.creator_type, crate::model::CreatorType::Organization))
-                .map(|c| c.name.as_str())
-        })
+        .or_else(|| crate::quality::manufacturer_name(sbom))
         .map_or_else(
             || "_TBD: manufacturer name_".to_string(),
             escape_markdown_inline,
@@ -696,6 +696,82 @@ mod tests {
         assert!(doc.contains("EU-DoC-2026-001"));
         assert!(doc.contains("Important Class I"));
         assert!(doc.contains("Module A"));
+    }
+
+    /// Without a sidecar name, the dossier names the manufacturer the CRA
+    /// Art. 13(16) check accepts, from the same sources in the same order:
+    /// an organization creator, the product's supplier, the described
+    /// product's manufacturer or supplier. A placeholder names nobody, and
+    /// `_TBD_` stays only when no source names one. Until v0.4.0 only the
+    /// first organization creator was read, whatever its name.
+    #[test]
+    fn doc_names_the_manufacturer_the_art_13_16_check_accepts() {
+        use crate::model::{Creator, CreatorType, Organization};
+        let manufacturer_line = |sbom: &NormalizedSbom, sidecar: Option<&CraSidecarMetadata>| {
+            let doc = render_doc(
+                sbom,
+                sidecar,
+                CraProductClass::Default,
+                ConformityRoute::ModuleA,
+            );
+            let manufacturer = doc
+                .split("**2. Manufacturer**\n")
+                .nth(1)
+                .expect("the manufacturer section");
+            manufacturer
+                .lines()
+                .next()
+                .expect("the name line")
+                .to_string()
+        };
+        let mut sbom = NormalizedSbom::default();
+        let mut product = Component::new("router-os".to_string(), "router-os".to_string());
+        product.supplier = Some(Organization::new("Acme Networks GmbH".to_string()));
+        let product_id = product.canonical_id.clone();
+        sbom.add_component(product);
+        sbom.set_primary_component(product_id);
+        assert_eq!(
+            manufacturer_line(&sbom, None),
+            "- Name: Acme Networks GmbH",
+            "the described product's supplier"
+        );
+
+        sbom.document.supplier = Some(Organization::new("Acme Holding AG".to_string()));
+        assert_eq!(manufacturer_line(&sbom, None), "- Name: Acme Holding AG");
+
+        sbom.document.creators = vec![Creator {
+            creator_type: CreatorType::Organization,
+            name: "NOASSERTION".to_string(),
+            email: None,
+        }];
+        assert_eq!(
+            manufacturer_line(&sbom, None),
+            "- Name: Acme Holding AG",
+            "a placeholder creator names nobody"
+        );
+        sbom.document.creators[0].name = "Acme Security Team".to_string();
+        assert_eq!(manufacturer_line(&sbom, None), "- Name: Acme Security Team");
+
+        let sidecar = CraSidecarMetadata {
+            manufacturer_name: Some("ExCorp".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(
+            manufacturer_line(&sbom, Some(&sidecar)),
+            "- Name: ExCorp",
+            "the sidecar's manufacturerName comes first, as the product name's does"
+        );
+
+        let mut unnamed = NormalizedSbom::default();
+        let mut product = Component::new("router-os".to_string(), "router-os".to_string());
+        product.supplier = Some(Organization::new("TBD".to_string()));
+        let product_id = product.canonical_id.clone();
+        unnamed.add_component(product);
+        unnamed.set_primary_component(product_id);
+        assert_eq!(
+            manufacturer_line(&unnamed, None),
+            "- Name: _TBD: manufacturer name_"
+        );
     }
 
     #[test]

@@ -65,12 +65,17 @@ pub use selector::StandardSelector;
 pub(crate) use shared::has_known_producer;
 // The same metric counts only plausible digests, as every hash rule does.
 pub(crate) use shared::plausible_digest;
+// The `cra-docs` dossier names the manufacturer the Art. 13(16) check
+// accepts.
+pub(crate) use shared::manufacturer_name;
 use shared::{
-    ValueState, creator_identified, digest_problems, future_timestamp_violation, has_known_license,
-    has_known_value, invalid_digest_note, inventory_absent_violation, is_declared_unknown,
-    is_placeholder, is_valid_email_format, known_component_name, known_value,
-    manufacturer_identified, manufacturer_reference, name_with_digest_problems, package_components,
-    truncate_list, unparseable_timestamp, value_state,
+    ValueState, creator_identified, digest_problems, document_signed, future_timestamp_violation,
+    has_known_license, has_known_value, invalid_digest_note, inventory_absent_violation,
+    is_contact_reference, is_declared_unknown, is_eucc_reference, is_placeholder,
+    is_valid_email_format, justified_not_affected, known_component_name, known_contact,
+    known_value, license_state, manufacturer_identified, manufacturer_reference,
+    name_with_digest_problems, package_components, truncate_list, unparseable_timestamp,
+    unreachable_contact_note, unreachable_sidecar_note, value_state,
 };
 
 /// CRA enforcement phase
@@ -1951,7 +1956,7 @@ mod tests {
         use crate::model::{Component, DocumentMetadata, NormalizedSbom};
         let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
         sbom.document.vulnerability_disclosure_url =
-            Some("https://example.org/security".to_string());
+            Some("https://acme.example/security".to_string());
         sbom.add_component(
             Component::new("lib".to_string(), "lib@1".to_string())
                 .with_version("1.0".to_string())
@@ -2276,12 +2281,12 @@ mod tests {
         let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
         // Steward vuln-handling satisfied so only completeness is under test.
         sbom.document.vulnerability_disclosure_url =
-            Some("https://example.org/security".to_string());
+            Some("https://acme.example/security".to_string());
         for n in ["a", "b", "c"] {
             let mut c = Component::new(n.to_string(), n.to_string());
             c.external_refs.push(crate::model::ExternalReference {
                 ref_type: ExternalRefType::Advisories,
-                url: "https://example.org/advisories".to_string(),
+                url: "https://acme.example/advisories".to_string(),
                 comment: None,
                 hashes: Vec::new(),
             });
@@ -2733,7 +2738,7 @@ mod tests {
         use crate::model::{Component, DocumentMetadata, NormalizedSbom};
         let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
         sbom.document.vulnerability_disclosure_url =
-            Some("https://example.org/security".to_string());
+            Some("https://acme.example/security".to_string());
         sbom.add_component(
             Component::new("lib".to_string(), "lib@1".to_string())
                 .with_version("1.0".to_string())
@@ -4915,7 +4920,7 @@ mod tests {
 
         // With sidecar that supplies security_contact: same finding becomes Info
         let sidecar = CraSidecarMetadata {
-            security_contact: Some("security@example.com".to_string()),
+            security_contact: Some("security@acme.example".to_string()),
             ..Default::default()
         };
         let withsc = checker(ComplianceLevel::CraPhase2)
@@ -5041,7 +5046,7 @@ mod tests {
         use crate::model::CraSidecarMetadata;
         let sbom = NormalizedSbom::default();
         let sidecar = CraSidecarMetadata {
-            vulnerability_disclosure_url: Some("https://example.com/security".to_string()),
+            vulnerability_disclosure_url: Some("https://acme.example/security".to_string()),
             ..Default::default()
         };
         let result = checker(ComplianceLevel::CraPhase2)
@@ -5495,9 +5500,9 @@ mod tests {
         use crate::model::CraSidecarMetadata;
         let sbom = NormalizedSbom::default();
         let sidecar = CraSidecarMetadata {
-            psirt_url: Some("https://example.com/psirt".to_string()),
-            early_warning_contact: Some("psirt@example.com".to_string()),
-            incident_report_contact: Some("ir@example.com".to_string()),
+            psirt_url: Some("https://acme.example/psirt".to_string()),
+            early_warning_contact: Some("psirt@acme.example".to_string()),
+            incident_report_contact: Some("ir@acme.example".to_string()),
             ..Default::default()
         };
         let result = checker(ComplianceLevel::CraPhase2)

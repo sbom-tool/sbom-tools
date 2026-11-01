@@ -429,31 +429,35 @@ impl ComplianceChecker {
             .components
             .values()
             .any(|c| !c.vulnerabilities.is_empty());
+        // A contact (an advisories or security-contact reference, the
+        // document's security contact or disclosure URL) counts only when it
+        // reaches someone (`known_contact`), as for the CRA and EO 14028
+        // checks; a VDR or linked BOM is a document, not a contact.
         let has_hook_ref = sbom.components.values().any(|c| {
-            c.external_refs.iter().any(|r| {
-                matches!(
-                    r.ref_type,
-                    ExternalRefType::Advisories
-                        | ExternalRefType::VulnerabilityAssertion
-                        | ExternalRefType::Bom
-                        | ExternalRefType::SecurityContact
-                )
+            c.external_refs.iter().any(|r| match r.ref_type {
+                ExternalRefType::Advisories | ExternalRefType::SecurityContact => {
+                    is_contact_reference(r)
+                }
+                ExternalRefType::VulnerabilityAssertion | ExternalRefType::Bom => true,
+                _ => false,
             })
         });
-        let has_contact = has_known_value(&sbom.document.security_contact)
-            || has_known_value(&sbom.document.vulnerability_disclosure_url);
+        let has_contact = known_contact(sbom.document.security_contact.as_deref())
+            || known_contact(sbom.document.vulnerability_disclosure_url.as_deref());
         if has_embedded_vulns || has_hook_ref || has_contact {
             return;
         }
         violations.push(Violation {
             severity: ViolationSeverity::Info,
             category: ViolationCategory::SecurityInfo,
-            message: "[PCI DSS TP 6.3.2.a] SBOM carries no vulnerability-management hooks (no \
-                      embedded vulnerability data, no advisories / vulnerability-assertion / \
-                      linked-VDR external reference, no security contact or disclosure URL); \
-                      this is not a Req. 6.3.2 failure — the inventory may feed an external \
-                      scanner, and actual use of the inventory is assessor-verified"
-                .to_string(),
+            message: format!(
+                "[PCI DSS TP 6.3.2.a] SBOM carries no vulnerability-management hooks (no \
+                 embedded vulnerability data, no advisories / vulnerability-assertion / \
+                 linked-VDR external reference, no security contact or disclosure URL); this \
+                 is not a Req. 6.3.2 failure — the inventory may feed an external scanner, and \
+                 actual use of the inventory is assessor-verified{}",
+                unreachable_contact_note(sbom)
+            ),
             element: None,
             requirement: "PCI DSS v4.0.1 TP 6.3.2.a: vulnerability-management hooks".to_string(),
             rule_id: "SBOM-PCI-6-3-2-VULN-EVIDENCE",

@@ -1378,13 +1378,7 @@ fn fsct_aspirational_goals(
     // digital signature. Evidence-gated to CycloneDX (JSF signature); SPDX
     // has no in-band signature field, so sidecar/envelope signatures are
     // unobservable there.
-    if sbom.document.format == SbomFormat::CycloneDx
-        && !sbom
-            .document
-            .signature
-            .as_ref()
-            .is_some_and(|s| s.has_value)
-    {
+    if sbom.document.format == SbomFormat::CycloneDx && !document_signed(sbom) {
         violations.push(Violation {
             severity: ViolationSeverity::Info,
             category: ViolationCategory::IntegrityInfo,

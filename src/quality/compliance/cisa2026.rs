@@ -181,11 +181,7 @@ impl ComplianceChecker {
         // invisible to a document checker, so absence must not hard-fail the
         // run. Presence is structural (algorithm + non-empty value) — nothing
         // is cryptographically verified.
-        let has_signature = sbom
-            .document
-            .signature
-            .as_ref()
-            .is_some_and(|s| s.has_value);
+        let has_signature = document_signed(sbom);
         if !has_signature && !spdx2 {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
@@ -629,17 +625,16 @@ impl ComplianceChecker {
                 }
             }
 
-            // Component License (Error). Any declared/concluded expression
-            // counts: SPDX identifiers are preferred, but LicenseRef-*
-            // expressions, license names, and URL pointers all satisfy
-            // "indicate through other means where the full license details
-            // are available", and NOASSERTION is the element's explicit
-            // unknown. Only silent absence of any license information fails.
-            let has_license_info = comp
-                .licenses
-                .all_licenses()
-                .iter()
-                .any(|l| !l.expression.trim().is_empty());
+            // Component License (Error). Any real declared/concluded
+            // expression counts: SPDX identifiers are preferred, but
+            // LicenseRef-* expressions, license names, and URL pointers all
+            // satisfy "indicate through other means where the full license
+            // details are available", and NOASSERTION is the element's
+            // explicit unknown. The licence test is the one every standard
+            // shares (`license_state`), which also accepts the explicit
+            // unknown here: absence and a placeholder such as TBD fail, as
+            // everywhere (until v0.4.0 any non-empty value passed).
+            let has_license_info = license_state(comp) != ValueState::Missing;
             if !has_license_info {
                 violations.push(Violation {
                     severity: ViolationSeverity::Error,

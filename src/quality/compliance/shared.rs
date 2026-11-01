@@ -2,8 +2,8 @@
 
 use super::{Violation, ViolationCategory, ViolationSeverity};
 use crate::model::{
-    Component, ComponentType, CreatorType, ExternalReference, Hash, HashAlgorithm, NormalizedSbom,
-    Organization,
+    Component, ComponentType, CreatorType, ExternalRefType, ExternalReference, Hash, HashAlgorithm,
+    NormalizedSbom, Organization, VexState, VulnerabilityRef,
 };
 // The placeholder and sentinel tests every check reads live in the model,
 // which merges a component's entries with the same classification.
@@ -212,14 +212,33 @@ pub(crate) fn manufacturer_reference(
 /// `metadata.component.manufacturer`. Placeholders such as `NOASSERTION` or
 /// `TBD` name nobody. The CRA sidecar is checked by the callers.
 pub(crate) fn manufacturer_identified(sbom: &NormalizedSbom) -> bool {
+    manufacturer_name(sbom).is_some()
+        || sbom
+            .document
+            .creators
+            .iter()
+            .any(|c| c.creator_type == CreatorType::Organization && creator_identified(c))
+}
+
+/// The manufacturer's name: the first one the sources of
+/// [`manufacturer_identified`] give, in its order. That is an organization
+/// creator of the SBOM, then the supplier of the described product
+/// (CycloneDX `metadata.supplier`), then the manufacturer or supplier of a
+/// component the document describes. Placeholders name nobody. `None` when
+/// no source gives a name, which includes an organization creator known only
+/// by its email address. The `cra-docs` dossier prints this name.
+pub(crate) fn manufacturer_name(sbom: &NormalizedSbom) -> Option<&str> {
     sbom.document
         .creators
         .iter()
-        .any(|c| c.creator_type == CreatorType::Organization && creator_identified(c))
-        || has_known_organization(sbom.document.supplier.as_ref())
-        || sbom.described_components().iter().any(|c| {
-            has_known_organization(c.manufacturer.as_ref())
-                || has_known_organization(c.supplier.as_ref())
+        .filter(|c| c.creator_type == CreatorType::Organization)
+        .find_map(|c| known_value(Some(c.name.as_str())))
+        .or_else(|| known_organization_name(sbom.document.supplier.as_ref()))
+        .or_else(|| {
+            sbom.described_components().into_iter().find_map(|c| {
+                known_organization_name(c.manufacturer.as_ref())
+                    .or_else(|| known_organization_name(c.supplier.as_ref()))
+            })
         })
 }
 
@@ -299,7 +318,13 @@ pub(crate) fn has_known_value(value: &Option<String>) -> bool {
 /// Whether an organization is present and its name is not a placeholder
 /// sentinel.
 pub(crate) fn has_known_organization(org: Option<&Organization>) -> bool {
-    org.is_some_and(|o| known_value(Some(o.name.as_str())).is_some())
+    known_organization_name(org).is_some()
+}
+
+/// The organization's trimmed name, when it is present and its name is not
+/// a placeholder sentinel.
+fn known_organization_name(org: Option<&Organization>) -> Option<&str> {
+    known_value(Some(org?.name.as_str()))
 }
 
 /// Whether a component carries real producer attribution: a supplier or
@@ -315,12 +340,203 @@ pub(crate) fn has_known_producer(comp: &crate::model::Component) -> bool {
 }
 
 /// Whether the component carries at least one real license expression,
-/// declared or concluded (sentinels and placeholders do not count).
+/// declared or concluded: an SPDX expression or a `LicenseRef-*`, not a
+/// sentinel such as `NOASSERTION` and not a placeholder such as `TBD` (see
+/// [`license_state`]). Every licence check asks this, except CISA 2026,
+/// which also accepts the explicit unknown.
 pub(crate) fn has_known_license(comp: &Component) -> bool {
+    license_state(comp) == ValueState::Known
+}
+
+/// What the component's licences say about its licence: [`ValueState::Known`]
+/// when one of them, declared or concluded, is a real expression,
+/// [`ValueState::DeclaredUnknown`] when the best of them is a sentinel such
+/// as `NOASSERTION` (a CycloneDX licence with neither an id nor a name reads
+/// as one), and [`ValueState::Missing`] otherwise.
+pub(crate) fn license_state(comp: &Component) -> ValueState {
     comp.licenses
         .all_licenses()
         .iter()
-        .any(|l| known_value(Some(l.expression.as_str())).is_some())
+        .map(|l| value_state(Some(l.expression.as_str())))
+        .min_by_key(|state| match state {
+            ValueState::Known => 0,
+            ValueState::DeclaredUnknown => 1,
+            ValueState::Missing => 2,
+        })
+        .unwrap_or(ValueState::Missing)
+}
+
+/// The domains RFC 2606 §3 reserves for documentation. Generator templates
+/// and the format specifications' examples use them, so a contact at one of
+/// them is a template value nobody filled in.
+const DOCUMENTATION_DOMAINS: [&str; 3] = ["example.com", "example.net", "example.org"];
+
+/// The host an email address or URL points at, lowercased: the domain after
+/// the last `@` of an address, or the host of a `scheme://` URL (without
+/// its user, port or path). A value naming no host gives what it starts
+/// with.
+fn address_host(value: &str) -> String {
+    let value = value.trim();
+    let after_scheme = value.find("://").map_or(value, |i| &value[i + 3..]);
+    let authority = after_scheme
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or(after_scheme);
+    let host = authority.rsplit('@').next().unwrap_or(authority);
+    host.chars()
+        .take_while(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-'))
+        .collect::<String>()
+        .trim_end_matches('.')
+        .to_ascii_lowercase()
+}
+
+/// Whether `value`, an email address or URL, points at one of the
+/// documentation domains (`example.com`, `example.net`, `example.org`) or a
+/// host under one, such as `psirt.example.com`.
+pub(crate) fn is_documentation_address(value: &str) -> bool {
+    let host = address_host(value);
+    DOCUMENTATION_DOMAINS.into_iter().any(|domain| {
+        host == domain
+            || host
+                .strip_suffix(domain)
+                .is_some_and(|sub| sub.ends_with('.'))
+    })
+}
+
+/// Whether `value` is a contact that reaches someone: an email address, URL
+/// or other text naming where to report a vulnerability or read the
+/// disclosure policy. A `mailto:` prefix is ignored. The rest must be a
+/// known value (see [`known_value`]: not empty, not a sentinel such as
+/// `NOASSERTION` or `unknown`, not a placeholder such as `n/a` or `TBD`) and
+/// no address at a documentation domain (see [`is_documentation_address`]).
+/// Every check that reads a vulnerability contact asks this, in the SBOM and
+/// in the CRA sidecar.
+pub(crate) fn known_contact(value: Option<&str>) -> bool {
+    let Some(value) = value else {
+        return false;
+    };
+    let value = value.trim();
+    let rest = match value.get(..7) {
+        Some(scheme) if scheme.eq_ignore_ascii_case("mailto:") => &value[7..],
+        _ => value,
+    };
+    known_value(Some(rest)).is_some() && !is_documentation_address(rest)
+}
+
+/// Whether `r` is a contact reference whose locator reaches someone: a
+/// security contact, advisories or support reference (see
+/// [`known_contact`]).
+pub(crate) fn is_contact_reference(r: &ExternalReference) -> bool {
+    is_contact_type(&r.ref_type) && known_contact(Some(r.url.as_str()))
+}
+
+/// Whether `ref_type` is a contact reference type: a security contact,
+/// advisories or support reference.
+fn is_contact_type(ref_type: &ExternalRefType) -> bool {
+    matches!(
+        ref_type,
+        ExternalRefType::SecurityContact | ExternalRefType::Advisories | ExternalRefType::Support
+    )
+}
+
+/// The first vulnerability contact the SBOM gives that reaches nobody (see
+/// [`known_contact`]): its security contact, its disclosure URL, or the
+/// locator of a contact reference on a manufacturer-scope component. A
+/// finding about a missing contact names it, so the reader sees why the
+/// contact did not count.
+pub(crate) fn unreachable_contact(sbom: &NormalizedSbom) -> Option<&str> {
+    let document = [
+        sbom.document.security_contact.as_deref(),
+        sbom.document.vulnerability_disclosure_url.as_deref(),
+    ];
+    document
+        .into_iter()
+        .flatten()
+        .chain(
+            manufacturer_scope_components(sbom)
+                .into_iter()
+                .flat_map(|c| {
+                    c.external_refs
+                        .iter()
+                        .filter(|r| is_contact_type(&r.ref_type))
+                        .map(|r| r.url.as_str())
+                }),
+        )
+        .find(|value| !known_contact(Some(*value)))
+}
+
+/// The clause a contact finding appends when the SBOM gives a contact that
+/// reaches nobody (see [`unreachable_contact`]), or an empty string.
+pub(crate) fn unreachable_contact_note(sbom: &NormalizedSbom) -> String {
+    unreachable_contact(sbom).map_or_else(String::new, |value| {
+        format!(
+            "; the contact '{}' reaches nobody (a placeholder, or an address at example.com, \
+             example.net or example.org)",
+            value.trim()
+        )
+    })
+}
+
+/// The clause a contact finding appends when the CRA sidecar gives a
+/// contact that reaches nobody (see [`known_contact`]), or an empty string.
+pub(crate) fn unreachable_sidecar_note(value: Option<&str>) -> String {
+    match value {
+        Some(v) if !known_contact(Some(v)) => format!(
+            "; the sidecar value '{}' reaches nobody (a placeholder, or an address at \
+             example.com, example.net or example.org)",
+            v.trim()
+        ),
+        _ => String::new(),
+    }
+}
+
+/// Whether `r` references the product's EUCC (Common Criteria) certificate:
+/// a certification or attestation reference whose URL names the scheme
+/// (`eucc`, `common-criteria` or `commoncriteria`, in any case). The CRA
+/// Annex IV check, the conformity summary's EUCC rows and
+/// SBOM-EUCC-CERTREF all ask this.
+pub(crate) fn is_eucc_reference(r: &ExternalReference) -> bool {
+    let url = r.url.to_ascii_lowercase();
+    matches!(
+        r.ref_type,
+        ExternalRefType::Certification | ExternalRefType::Attestation
+    ) && ["eucc", "common-criteria", "commoncriteria"]
+        .iter()
+        .any(|keyword| url.contains(keyword))
+}
+
+/// Whether the SBOM carries an in-document signature with a value: a
+/// CycloneDX JSF signature or enveloped XML-DSig, or an SPDX 3 `verifiedUsing`
+/// signature on the document. Nothing is verified cryptographically; an
+/// entry without a value is no signature.
+pub(crate) fn document_signed(sbom: &NormalizedSbom) -> bool {
+    sbom.document
+        .signature
+        .as_ref()
+        .is_some_and(|s| s.has_value)
+}
+
+/// Whether the vulnerability's own VEX statement is `not_affected` and names
+/// its justification (CycloneDX `analysis.justification`, OpenVEX
+/// `justification`, SPDX 3.0 `justificationType`).
+///
+/// The CRA FAQ (v1.4, 4.3.1) has the manufacturer judge a vulnerability's
+/// relevance for the product; where it "cannot be exploited", the
+/// manufacturer "may be expected, for example, to document the
+/// vulnerability, but may decide not to fix it with a dedicated update". A
+/// justified `not_affected` statement is that record (Annex I Part II (1)),
+/// and Annex I Part II (4), which asks for the severity and the remediation,
+/// covers fixed vulnerabilities. A bare `not_affected` claim gives no reason
+/// and counts for nothing, nor does a free-text detail without a
+/// justification. Only the vulnerability's own statement counts: the
+/// component-level VEX status sums up all of the component's statements and
+/// is no statement about this one. Every check that asks whether a
+/// vulnerability is still open (the CRA Phase 2 vulnerability checks and
+/// SBOM-FDA-SECURITY) skips such a vulnerability.
+pub(crate) fn justified_not_affected(vuln: &VulnerabilityRef) -> bool {
+    vuln.vex_status
+        .as_ref()
+        .is_some_and(|vex| vex.status == VexState::NotAffected && vex.justification.is_some())
 }
 
 /// How many hex digits a digest of `algorithm` has, when the algorithm fixes
@@ -714,6 +930,183 @@ mod tests {
             !manufacturer_identified(&sbom),
             "a person creator is no organization"
         );
+    }
+
+    /// The manufacturer's name comes from the first source that gives one,
+    /// in the order `manufacturer_identified` reads them, and exists exactly
+    /// when that test passes, but for a creator known by its email alone.
+    #[test]
+    fn the_manufacturer_name_follows_the_sources_in_order() {
+        use crate::model::{Creator, CreatorType};
+        let mut sbom = NormalizedSbom::default();
+        let mut app = Component::new("app".to_string(), "app".to_string());
+        app.supplier = Some(Organization::new("Product Supplier Ltd".to_string()));
+        app.manufacturer = Some(Organization::new("Product Maker GmbH".to_string()));
+        let app_id = app.canonical_id.clone();
+        sbom.add_component(app);
+        sbom.set_primary_component(app_id.clone());
+        assert_eq!(manufacturer_name(&sbom), Some("Product Maker GmbH"));
+
+        sbom.components
+            .get_mut(&app_id)
+            .expect("listed")
+            .manufacturer = Some(Organization::new("NOASSERTION".to_string()));
+        assert_eq!(manufacturer_name(&sbom), Some("Product Supplier Ltd"));
+
+        sbom.document.supplier = Some(Organization::new("Document Supplier AG".to_string()));
+        assert_eq!(manufacturer_name(&sbom), Some("Document Supplier AG"));
+
+        let organization = |name: &str, email: Option<&str>| Creator {
+            creator_type: CreatorType::Organization,
+            name: name.to_string(),
+            email: email.map(str::to_string),
+        };
+        sbom.document.creators = vec![
+            organization("TBD", Some("sbom@acme.example")),
+            organization("Acme Networks GmbH", None),
+        ];
+        assert_eq!(
+            manufacturer_name(&sbom),
+            Some("Acme Networks GmbH"),
+            "the first organization creator with a name, a placeholder skipped"
+        );
+
+        // A creator known only by its email identifies the manufacturer but
+        // gives no name.
+        let mut email_only = NormalizedSbom::default();
+        email_only.document.creators = vec![organization("N/A", Some("sbom@acme.example"))];
+        assert!(manufacturer_identified(&email_only));
+        assert_eq!(manufacturer_name(&email_only), None);
+        assert!(!manufacturer_identified(&NormalizedSbom::default()));
+        assert_eq!(manufacturer_name(&NormalizedSbom::default()), None);
+    }
+
+    #[test]
+    fn a_licence_is_known_declared_unknown_or_missing() {
+        use crate::model::LicenseExpression;
+        let with = |declared: &[&str], concluded: Option<&str>| {
+            let mut c = Component::new("lib".to_string(), "lib".to_string());
+            for l in declared {
+                c.licenses
+                    .add_declared(LicenseExpression::new((*l).to_string()));
+            }
+            c.licenses.concluded = concluded.map(|l| LicenseExpression::new(l.to_string()));
+            c
+        };
+        for known in [
+            with(&["MIT"], None),
+            with(&["LicenseRef-acme-proprietary"], None),
+            with(&["NOASSERTION"], Some("Apache-2.0")),
+            with(&["TBD", "MIT OR Apache-2.0"], None),
+        ] {
+            assert_eq!(license_state(&known), ValueState::Known);
+            assert!(has_known_license(&known));
+        }
+        for declared_unknown in [with(&["NOASSERTION"], None), with(&["NONE", "TBD"], None)] {
+            assert_eq!(
+                license_state(&declared_unknown),
+                ValueState::DeclaredUnknown
+            );
+            assert!(!has_known_license(&declared_unknown));
+        }
+        for missing in [
+            with(&[], None),
+            with(&["TBD"], None),
+            with(&["N/A", " "], None),
+        ] {
+            assert_eq!(license_state(&missing), ValueState::Missing);
+            assert!(!has_known_license(&missing));
+        }
+    }
+
+    #[test]
+    fn a_contact_must_reach_someone() {
+        for reachable in [
+            "psirt@acme.example",
+            "mailto:psirt@acme.example",
+            "https://acme.example/security",
+            "Security Team <security@acme.example>",
+            "+49 30 1234567",
+            // Look-alikes of the documentation domains are real domains.
+            "security@notexample.com",
+            "https://example.com.acme.example/security",
+            "security@example.com.au",
+            "https://example.community/security",
+        ] {
+            assert!(known_contact(Some(reachable)), "{reachable:?}");
+        }
+        for nobody in [
+            "",
+            " ",
+            "NOASSERTION",
+            "unknown",
+            "NONE",
+            "n/a",
+            "TBD",
+            "mailto:",
+            "MAILTO:n/a",
+            "security@example.com",
+            "mailto:Security@EXAMPLE.COM",
+            "https://example.org/security",
+            "https://psirt.example.net:8443/report?id=1",
+            "https://user@example.com/",
+            "Security Team <security@example.com>",
+            "example.com/security",
+            "https://example.com./security",
+        ] {
+            assert!(!known_contact(Some(nobody)), "{nobody:?}");
+        }
+        assert!(!known_contact(None));
+        let reference = |ref_type, url: &str| ExternalReference {
+            ref_type,
+            url: url.to_string(),
+            comment: None,
+            hashes: Vec::new(),
+        };
+        assert!(is_contact_reference(&reference(
+            ExternalRefType::Advisories,
+            "https://acme.example/advisories"
+        )));
+        assert!(!is_contact_reference(&reference(
+            ExternalRefType::Advisories,
+            "https://example.com/advisories"
+        )));
+        assert!(!is_contact_reference(&reference(
+            ExternalRefType::Vcs,
+            "https://acme.example/repo.git"
+        )));
+    }
+
+    #[test]
+    fn an_eucc_reference_names_the_scheme_in_its_url() {
+        let reference = |ref_type, url: &str| ExternalReference {
+            ref_type,
+            url: url.to_string(),
+            comment: None,
+            hashes: Vec::new(),
+        };
+        for url in [
+            "https://certification.enisa.europa.eu/eucc/certificates/1.pdf",
+            "https://lab.acme.example/Common-Criteria/cert.pdf",
+            "https://www.commoncriteriaportal.org/files/epfiles/cert.pdf",
+        ] {
+            assert!(is_eucc_reference(&reference(
+                ExternalRefType::Certification,
+                url
+            )));
+            assert!(is_eucc_reference(&reference(
+                ExternalRefType::Attestation,
+                url
+            )));
+            assert!(
+                !is_eucc_reference(&reference(ExternalRefType::Advisories, url)),
+                "only a certification or attestation reference is a certificate"
+            );
+        }
+        assert!(!is_eucc_reference(&reference(
+            ExternalRefType::Certification,
+            "https://notified-body.acme.example/certificates/0815.pdf"
+        )));
     }
 
     #[test]

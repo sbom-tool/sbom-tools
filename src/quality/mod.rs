@@ -49,7 +49,7 @@ pub use compliance::{
     DOCUMENT_SUBJECT, FINDING_ID_PREFIX, FindingIdentity, finding_fingerprint, finding_id,
     finding_key, finding_subject, standard_key,
 };
-pub(crate) use compliance::{compose_finding_key, rule_family_help_uri};
+pub(crate) use compliance::{compose_finding_key, manufacturer_name, rule_family_help_uri};
 pub use metrics::{
     AuditabilityMetrics, CompletenessMetrics, ComplexityFactors, ComplexityLevel,
     CryptographyMetrics, DependencyMetrics, HashQualityMetrics, IdentifierMetrics, LicenseMetrics,

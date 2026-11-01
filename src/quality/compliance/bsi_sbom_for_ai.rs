@@ -185,8 +185,10 @@ impl ComplianceChecker {
             });
         }
 
-        // Signature present (informational when absent — discretionary element).
-        if doc.signature.is_none() {
+        // Signature present (informational when absent — discretionary
+        // element). An entry without a value is no signature, as for the
+        // CRA, CISA 2026 and FSCT checks (`document_signed`).
+        if !document_signed(sbom) {
             violations.push(Violation {
                 severity: ViolationSeverity::Info,
                 category: ViolationCategory::IntegrityInfo,
