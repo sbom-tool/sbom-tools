@@ -505,16 +505,15 @@ impl Spdx3Parser {
                 }
             });
 
-        let created = creation_info
-            .and_then(|ci| ci.created.as_ref())
-            .and_then(|t| DateTime::parse_from_rfc3339(t).ok())
-            // Deterministic fallback: a document with a missing/invalid
-            // timestamp must hash identically on every parse (created is
-            // folded into the content hash; Utc::now() here made every
-            // parse of such a document content-unique, defeating diff
-            // identity and the incremental cache). Epoch is an honest
-            // "unknown" sentinel rather than a fabricated parse time.
-            .map_or(DateTime::UNIX_EPOCH, |dt| dt.with_timezone(&Utc));
+        // Deterministic fallback: a document with a missing or invalid
+        // timestamp must hash identically on every parse (created is folded
+        // into the content hash; Utc::now() here made every parse of such a
+        // document content-unique, defeating diff identity and the
+        // incremental cache). Epoch is an honest "unknown" sentinel rather
+        // than a fabricated parse time. An invalid value is kept, so the
+        // checks report it as unparseable rather than missing.
+        let (created, created_unparsed) =
+            DocumentMetadata::parse_created(creation_info.and_then(|ci| ci.created.as_deref()));
 
         let mut creators = Vec::new();
         if let Some(ci) = creation_info {
@@ -587,6 +586,7 @@ impl Spdx3Parser {
             serial_number: doc.spdx_id.clone(),
             doc_version: None, // SPDX has no document revision counter
             created,
+            created_unparsed,
             creators,
             supplier: None, // SPDX keeps the supplier on the described package
             name: doc.name.clone(),
