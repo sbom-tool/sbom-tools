@@ -940,7 +940,9 @@ with one run, shaped for GitHub code scanning:
   same identity, and the other properties the finding's severity, rule,
   references, field and observed value, remediation and help URI, as
   `-o json` does. The run's properties carry each standard's verdict, keyed
-  by its canonical `--standard` value.
+  by its canonical `--standard` value, with its counts, and `validate` adds
+  the instant (`asOf`) and the SBOM it judged (`subject`, and the SBOM's
+  SHA-256 in `artifacts`).
 - **One category per kind of run.** `automationDetails.id` is
   `sbom-tools/<standards>/` for `validate` (the canonical `--standard` values,
   sorted and joined by `+`, as in `sbom-tools/cra+ntia/`),

@@ -50,7 +50,9 @@ and its remediation; see [Rule catalogue](#rule-catalogue).
 | `subject` | object | The SBOM the results judge, and how its document was read, described below. |
 | `results` | array | One entry per checked standard, in `--standard` order. Never empty. A standard named twice is checked once (see [Inputs of a run](#inputs-of-a-run)). |
 
-`validate` always writes `as_of` and `subject`. The library's
+`validate` always writes `as_of` and `subject`, and `-o sarif` and
+`-o oscal-json` state the same (see
+[Fields in every output](#fields-in-every-output)). The library's
 `generate_compliance_json` leaves both out, since it is not given the SBOM;
 `generate_compliance_json_at` adds them.
 
@@ -828,7 +830,10 @@ should note:
 - A result's `standard` property is the canonical `--standard` value
   (`ntia`, `cra`), as in `-o json` and SARIF, not the level's name
   (`NtiaMinimum`, `CraPhase2`), and the roll-up finding's objective follows
-  it: `cra-compliance`, not `craphase2-compliance`.
+  it: `cra-compliance`, not `craphase2-compliance`. The assessment UUIDs,
+  which derive from the standards' names, change once in v0.4.0 and are
+  stable from then on; the UUIDs of the SBOM and its components do not
+  change.
 - The observation property that held the requirement text,
   `standard-reference`, is `requirement`, as in `-o json`. The standard
   references themselves are the new `standard-ref` properties.
@@ -856,7 +861,8 @@ finding keys of their own, scoped `diff`, `view`, `quality` or
 | `runs[0].automationDetails.id` | The analysis category, ending in `/`: `sbom-tools/` and the canonical `--standard` values, sorted and joined by `+` (`sbom-tools/cra+ntia/`), or the value of `--sarif-category`. GitHub code scanning keeps one set of alerts per category. |
 | `runs[0].originalUriBaseIds.SRCROOT` | Declared when the SBOM's URI is relative, which is the default: relative to the repository the SBOM file is in, or to `--sarif-base`. It carries a description only, no absolute URI, so the log names no path on the machine that wrote it. |
 | `runs[0].tool.driver.rules[]` | Exactly the rules of the standards checked: the rules each standard's checks can report, one per check and each once, in `--standard` order and in the order of each standard's list. `sbom-tools rules --standard <std>` prints the same list (see [Rule catalogue](#rule-catalogue)). `diff` and `view` check the SBOM against CRA Phase 2, so they list its rules after their own; `quality` lists the rules of its profile's standard, then the `SBOM-QUALITY-REC-*` rules of the recommendations it reports. `id` is the `rule_id`. Each has `shortDescription`, `fullDescription` (with the standard references), `defaultConfiguration.level`, `help.text` and `help.markdown` (the remediation, where the fix goes in each SBOM format, the references) and, where one is known, `helpUri`: the first reference with a URL, else the standard's own page. A `SBOM-<FAMILY>-GENERAL` fallback rule is listed only in a run that has a finding without a registered rule. |
-| `runs[0].properties` | The verdict of each standard: for one standard, the run's own properties; for several, `applicable` (whether any standard applied) and `standards[]`, one verdict each. A verdict has `standard` (the canonical `--standard` value, as in `-o json`), `profile` (the display name, `name` in `-o json`), `compliant`, `applicable` (with `notApplicableReason` when it is false), `overallScore` (the [score](#score); absent when the standard did not apply), `suppressed` and `excludedComponents` when not zero (the findings the rule settings turned off, and the components left out for their excluded scope), `notEvaluated` (the [checks not evaluated](#checks-not-evaluated), as `{ruleId, reason}`), `suppressedRules` (the rules turned off, as `{ruleId, findings, source}`) and `conformitySummary` (the CRA Annex VIII checklist, as `{productClass, route, evidence[{label, detail, satisfied}]}`), each absent when empty. `quality -o sarif` carries its embedded standard's verdict the same way, but with the run's own `profile` and quality `overallScore`, and `grade` and `sbom`. |
+| `runs[0].artifacts[0]` | The SBOM the run judged: `location`, the file the results point into, and `hashes."sha-256"`, the SHA-256 of the bytes read (`subject.sha256` in `-o json`). |
+| `runs[0].properties` | What the run judged and the verdict of each standard. `asOf` is the instant every standard was judged at, and `subject` the SBOM as `-o json`'s [subject](#subject) describes it: `format`, `specVersion`, `components`, `duplicates` (`{components, entries, conflicts}`) and `timestampUnparsed` (its SHA-256 and file are the artifact's). The verdict is the run's own properties for one standard; for several, `applicable` (whether any standard applied) and `standards[]`, one verdict each. A verdict has `standard` (the canonical `--standard` value, as in `-o json`), `profile` (the display name, `name` in `-o json`), `compliant`, `applicable` (with `notApplicableReason` when it is false), `errorCount`, `warningCount`, `infoCount` and `passedCount` (as `counts` in `-o json`, so a capped run still counts every finding), `overallScore` (the [score](#score); absent when the standard did not apply), `suppressed` and `excludedComponents` when not zero (the findings the rule settings turned off, and the components left out for their excluded scope), `notEvaluated` (the [checks not evaluated](#checks-not-evaluated), as `{ruleId, reason}`), `suppressedRules` (the rules turned off, as `{ruleId, findings, source}`) and `conformitySummary` (the CRA Annex VIII checklist, as `{productClass, route, evidence[{label, detail, satisfied}]}`), each absent when empty. `quality -o sarif` carries its embedded standard's verdict the same way, but with the run's own `profile` and quality `overallScore`, and `grade` and `sbom`. |
 | `results[].ruleId`, `ruleIndex` | The violation's `rule_id` and the index of its rule in `rules[]`. |
 | `results[].kind` | `pass` for a [passed check](#passed-checks), reported only under `--sarif-include-passes`; absent (SARIF's default, `fail`) for a violation. |
 | `results[].level` | `error`, `warning` or `note`, from the violation's severity (the one a [rule setting](#rule-settings) sets, if any); `none` for a pass. A pass-only rule's descriptor keeps `defaultConfiguration.level: note`, the lowest level GitHub accepts there. A rule that is `off` reports no result. |
@@ -864,7 +870,7 @@ finding keys of their own, scoped `diff`, `view`, `quality` or
 | `results[].locations[0].physicalLocation` | The SBOM file (`artifactLocation.uri`, with `uriBaseId: SRCROOT` when relative) and `region.startLine`: the line of the component's `bom-ref`, `SPDXID`, `spdxId` or `@id`, or, for a finding about the document, the line of the CycloneDX `metadata` or the SPDX creation information. A component whose id the text does not state gets line 1, as does every result for a minified, single-line SBOM. |
 | `results[].locations[0].logicalLocations[0]` | For a finding about a component, `name` (its purl, else its `bom-ref`, `SPDXID` or `spdxId`) and `kind: component`. |
 | `results[].partialFingerprints` | `sbomToolsFinding/v1`: the full SHA-256 of the `finding_key` (64 hex digits). `primaryLocationLineHash`: its first 16 hex digits and `:1`. |
-| `results[].properties` | `findingKey` and `findingId` as in `-o json`; `standardIds` (`<label>:<clause>`, e.g. `CRA:Art. 13(8)`) and `standardHelpUris` (the URLs of the references that have one), the references in the compact form of earlier releases; then the finding's [audit fields](#fields-in-every-output): `severity` (as in `-o json`: `Error`, `Warning`, `Info`), `defaultSeverity` and `severitySource` when a [rule setting](#rule-settings) set the rule, `ruleId` (the `rule_id`), `componentId` for a component finding, `affected` and `total` when the violation counts items, `deadline` and `deadlineSource` when [deadline mode](#pqc-deadline-mode) dates the finding, `field` and `observed` (see [Field and observed value](#field-and-observed-value)), `standardRefs` (the references as `-o json` gives them: `{standard, id, helpUri?}`), `remediation` and `helpUri`. A pass carries `ruleId`, `componentId` and `standardRefs`. |
+| `results[].properties` | `findingKey` and `findingId` as in `-o json`; `standardIds` (`<label>:<clause>`, e.g. `CRA:Art. 13(8)`) and `standardHelpUris` (the URLs of the references that have one), the references in the compact form of earlier releases, deprecated in v0.4.0 and removed in v0.5.0 (read `standardRefs`); then the finding's [audit fields](#fields-in-every-output): `severity` (as in `-o json`: `Error`, `Warning`, `Info`), `defaultSeverity` and `severitySource` when a [rule setting](#rule-settings) set the rule, `ruleId` (the `rule_id`), `componentId` for a component finding, `affected` and `total` when the violation counts items, `deadline` and `deadlineSource` when [deadline mode](#pqc-deadline-mode) dates the finding, `field` and `observed` (see [Field and observed value](#field-and-observed-value)), `standardRefs` (the references as `-o json` gives them: `{standard, id, helpUri?}`), `remediation` and `helpUri`. A pass carries `ruleId`, `componentId` and `standardRefs`. |
 
 Both fingerprints depend on the finding identity alone, never on a line
 number or the message, so moving, reformatting or reordering the SBOM keeps
@@ -912,20 +918,24 @@ before v0.4.0 put dozens of checks under shared rules (`SBOM-CRA-ANNEX-I`,
 `SBOM-QUALITY-GENERAL`), set no `automationDetails`, and gave results no
 location; code scanning drops a result without one. A run's verdict names its
 standard by the canonical `--standard` value (`standard`) beside the display
-name (`profile`); a run of one standard now says whether it is `compliant`
-(it never did) and carries the CRA conformity summary, and each
-`standards[]` entry puts `compliant` before `applicable`. Results carry the
-finding's severity, rule, references, remediation and help URI as
-properties, as `-o json` does.
+name (`profile`) and counts its findings by severity; a run of one standard
+now says whether it is `compliant` (it never did) and carries the CRA
+conformity summary, and each `standards[]` entry puts `compliant` before
+`applicable`. The run lists the SBOM in `artifacts` with its SHA-256, and
+states `asOf` and the `subject` as properties. Results carry the finding's
+severity, rule, references, remediation and help URI as properties, as
+`-o json` does. `standardIds` and `standardHelpUris` are deprecated in
+v0.4.0 and removed in v0.5.0: read `standardRefs`, which gives each
+reference's standard, clause and URL.
 
 ## Fields in every output
 
 `-o json`, `-o sarif` and `-o oscal-json` carry the same fields for every
-finding and every standard's verdict, each under its own format's name. The
-fields are declared once in sbom-tools, so a field one output carries, the
-others carry too; the test suite checks, for the pinned fixtures of the
-snapshot tests, that every finding and every verdict reads the same in all
-three.
+finding, every standard's verdict, the SBOM and the instant it was judged
+at, each under its own format's name. The fields are declared once in
+sbom-tools, so a field one output carries, the others carry too; the test
+suite checks, for the pinned fixtures of the snapshot tests, that every
+finding, every verdict and the SBOM read the same in all three.
 
 | `-o json` | SARIF | OSCAL |
 |---|---|---|
@@ -951,7 +961,7 @@ three.
 | `name` | `profile` | `standard-name` |
 | `compliant` | `compliant` | `is-compliant` |
 | `applicable`, `not_applicable_reason` | `applicable`, `notApplicableReason` | `applicability` (`applicable`, `not-applicable`), `not-applicable-reason` |
-| `counts.error`, `warning`, `info`, `passed` | — (the results) | `error-count`, `warning-count`, `info-count`, `passed-count` |
+| `counts.error`, `warning`, `info`, `passed` | `errorCount`, `warningCount`, `infoCount`, `passedCount` | `error-count`, `warning-count`, `info-count`, `passed-count` |
 | `score` | `overallScore` | `score` |
 | `counts.suppressed` | `suppressed` | `suppressed-count` |
 | `excluded_components` | `excludedComponents` | `excluded-components` |
@@ -959,14 +969,22 @@ three.
 | `suppressed[]` | `suppressedRules[]` | `suppressed-rule`, `suppressed-findings`, `suppressed-source` (the three of one rule share a `group`) |
 | `conformity_summary` | `conformitySummary` | `conformity-product-class`, `conformity-route`, `conformity-evidence` |
 
+| `-o json` | SARIF run | OSCAL |
+|---|---|---|
+| `as_of` | `properties.asOf` | `metadata.last-modified`, each result's `start` and observation's `collected` |
+| `subject.sha256` | `artifacts[0].hashes."sha-256"` | SBOM resource `sha256` |
+| `subject.file_name` | `artifacts[0].location.uri` (the path in the repository) | SBOM resource `file-name` |
+| `subject.format`, `spec_version` | `properties.subject.format`, `specVersion` | SBOM resource `format`, `spec-version` |
+| `subject.components` | `properties.subject.components` | SBOM resource `component-count` |
+| `subject.duplicates.components`, `entries`, `conflicts` | `properties.subject.duplicates.components`, `entries`, `conflicts` | SBOM resource `duplicate-components`, `duplicate-entries`, `duplicate-conflict` |
+| `subject.timestamp_unparsed` | `properties.subject.timestampUnparsed` | SBOM resource `timestamp-unparsed` |
+
 `category`, `finding_detail` and `score_basis` are in `-o json` only; the
-detail is part of the finding key. The JSON `subject` is the OSCAL SBOM
-resource (see [OSCAL assessment results](#oscal-assessment-results)); SARIF
-names the SBOM file in each result's location instead. A finding built
-outside the checks, with no registered rule (a payload of another tool, say),
-is the one exception: SARIF files it under the standard's fallback rule and
-cites that rule's references in `standardIds`, while its own `rule_id` and
-references stay as they are.
+detail is part of the finding key. A finding built outside the checks, with
+no registered rule (a payload of another tool, say), is the one exception:
+SARIF files it under the standard's fallback rule and cites that rule's
+references in `standardIds`, while its own `rule_id` and references stay as
+they are.
 
 ## Rule catalogue
 

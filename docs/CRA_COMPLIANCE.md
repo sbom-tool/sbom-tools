@@ -12,9 +12,9 @@ ENISA / industry guidance. Use it to:
   clears each violation.
 - **GRC / dashboards**: cross-reference the standard references of each
   finding to produce control-mapping reports: `standard_refs` in `-o json`,
-  `properties.standardRefs` (and the compact `standardIds` and
-  `standardHelpUris`) in SARIF, the `standard-ref` properties and
-  `reference` links of each OSCAL observation.
+  `properties.standardRefs` in SARIF (the compact `standardIds` and
+  `standardHelpUris` are deprecated and go in v0.5.0), the `standard-ref`
+  properties and `reference` links of each OSCAL observation.
 
 > Generated and maintained alongside the sbom-tools source tree.
 > If a check or article moves, send a PR — the reverse map is the
@@ -64,7 +64,8 @@ follow. See [Inputs of a run](compliance-output.md#inputs-of-a-run).
 Each row maps a sbom-tools `Violation::requirement` string to its
 regulatory anchor, the harmonised-standard requirement ID
 (prEN 40000-1-3 where known), the BSI section, and the canonical URL
-that ends up in SARIF `properties.standardHelpUris`.
+that ends up in each reference's `help_uri` (`-o json`), `helpUri`
+(SARIF `properties.standardRefs`) and `reference` link (OSCAL).
 
 The SBOM-content rules also cite the ENISA Technical Advisory for Software
 Bill of Materials (v1.10, 22 October 2026), after their CRA and prEN
